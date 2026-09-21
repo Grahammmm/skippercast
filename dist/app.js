@@ -1,7 +1,8 @@
 import { initWeather } from "./weather-ui.js?v=5.6";
 import { initNavigation } from "./navigation.js?v=5.4";
 import { initChart } from "./chart-map.js?v=5.4";
-import { initSpecies, matchesSpecies } from "./species.js?v=5.6";
+import { initSpecies, matchesSpecies } from "./species.js?v=5.7";
+import { initRegulations } from "./regulations.js?v=5.7";
 import { initCharterGrounds } from "./charter-grounds.js?v=5.6";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
@@ -487,6 +488,7 @@ $("charter-status").addEventListener("click", () => {
   location.hash = "charter-evidence";
 });
 initAISContext();
+initRegulations($("species-regulations"), $("species-select"));
 
 try {
   const response = await fetch("data/atlas.json");

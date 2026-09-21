@@ -226,20 +226,13 @@ export async function initSpecies(
         ["What to look for", p.approach],
         ["Conditions that help", p.conditions],
         ["What changes on the map", p.map],
-        ["Season & access", p.season],
+        ["Season & access", "Select this species on the map and open Regulations for local season dates, limits, gear rules and current source-check status."],
         ["What we still cannot see", p.unknown],
       ]
         .map(([h, t]) => `<div><h3>${h}</h3><p>${t}</p></div>`)
         .join(
           "",
         )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${p.sources.map((s) => `<a href="${s.url}" target="_blank" rel="noopener">${s.title} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
-    $("species-season").hidden = !["salmon", "dungeness"].includes(id());
-    $("species-season").textContent =
-      id() === "dungeness"
-        ? "Closed in Sep 21 record · check current season"
-        : id() === "salmon"
-          ? "Season can close early · check CDFW today"
-          : "";
     $("filter-options").hidden = !["reef", "soft"].includes(p.kind);
     for (const control of ["grade", "geometry"])
       $(control).disabled = p.kind !== "reef";
@@ -283,7 +276,7 @@ export async function initSpecies(
       <button id="area-weather" class="primary">Conditions for this area ↗</button>
       <details class="detail-section"><summary>Approach & sources</summary><p>${escapeHTML(PROFILES[id()].approach)}</p><p>${escapeHTML(a.evidence || "No catch evidence or surveyed bottom-depth assurance.")}</p>
       ${off ? `<p>At least ${dist.toFixed(1)} nm from the harbor entrance; ≥${Math.ceil((dist / 20) * 60)} min each way at 20 kt. Straight-line lower bound; harbor travel, charted route, sea-state slowdown, search and reserve are additional.</p>` : ""}
-      ${id() === "dungeness" ? "<p>Closed in the September 21 research record. Check current season and gear rules.</p>" : ""}
+      <p>Use the selected species’ Regulations card on the map for current season-check status and limits.</p>
       <p>Reference position ${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}. ${a.depth_ft ? "Survey depth datum MLLW · 2008. Verify present depths with sonar." : ""}</p>
       ${(a.source_urls || []).map((url) => `<a href="${url}" target="_blank" rel="noopener">USGS survey record ↗</a>`).join(" · ")}</details>`;
     onSelect(html, a);
@@ -360,6 +353,7 @@ export async function initSpecies(
   function refresh() {
     guide();
     map.closePopup();
+    document.dispatchEvent(new CustomEvent("skippercast:species"));
   }
   $("species-select").addEventListener("change", () => {
     refresh();

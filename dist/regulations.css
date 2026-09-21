@@ -1,0 +1,62 @@
+.regulations-card {
+  position: absolute;
+  z-index: 510;
+  top: 72px;
+  left: 12px;
+  width: min(390px, calc(100% - 78px));
+  border: 1px solid #b7cccc;
+  border-radius: 14px;
+  background: #fff;
+  color: #143642;
+  box-shadow: 0 3px 12px #14394720;
+  font-size: .875rem;
+  overflow: hidden;
+}
+.regulations-card > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 650;
+}
+.regulations-card > summary::-webkit-details-marker { display: none; }
+.regulations-card > summary:focus-visible { outline: 3px solid #087b78; outline-offset: -3px; }
+.reg-chevron { margin-left: auto; }
+.regulations-card[open] .reg-chevron { transform: rotate(180deg); }
+.reg-badge { padding: 4px 7px; border-radius: 6px; font-size: .75rem; line-height: 1.25; }
+.reg-open { color: #155743; background: #e5f4ea; }
+.reg-closed { color: #883924; background: #fff0e8; }
+.reg-unknown, .reg-scheduled { color: #765216; background: #fff5da; }
+.reg-body {
+  padding: 2px 14px 14px;
+  max-height: min(48dvh, calc(100dvh - 340px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  scrollbar-gutter: stable;
+}
+.reg-body h2 { margin: 3px 0; font-size: 1.1rem; }
+.reg-context, .reg-area, .reg-freshness { font-size: .75rem; color: #51666c; }
+.reg-area { margin: 0 0 10px; }
+.reg-notice { padding: 8px 10px; border-radius: 7px; font-size: .8125rem; }
+.reg-limits { margin: 12px 0; }
+.reg-limits dt { font-weight: 700; font-size: .75rem; color: #51666c; margin-top: 10px; }
+.reg-limits dd { margin: 2px 0 0; }
+.reg-body details { border-top: 1px solid #dbe5e6; }
+.reg-body details summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-weight: 600; }
+.reg-body ul { padding-left: 19px; }
+.reg-body li + li { margin-top: 8px; }
+.reg-body a { color: #006e6a; text-underline-offset: 3px; }
+.reg-official { display: flex; align-items: center; min-height: 44px; font-weight: 700; }
+.reg-links { display: grid; }
+.reg-links a { padding: 10px 0; min-height: 44px; }
+.regulations-card ~ .charter-map-chip { top: 128px; }
+.regulations-card[open] ~ .charter-map-chip { display: none; }
+@media (max-height: 540px) {
+  .reg-body { max-height: 35dvh; }
+  .regulations-card[open] { z-index: 550; }
+}

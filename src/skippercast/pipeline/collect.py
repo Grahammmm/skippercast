@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from . import parsers
+from .regulations import regulatory_snapshot
 
 UA = "SkipperCast/0.2 (https://github.com/Grahammmm/skippercast)"
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap"
@@ -21,6 +22,12 @@ DATASETS = {
     "currents": ("ucsdHfrW6", ["water_u", "water_v", "number_of_sites", "hdop"], 1, 12),
 }
 WATCHES = {
+    "rules-central": ("CDFW Central Region rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central", ["Dungeness", "halibut", "Conception"]),
+    "rules-gear": ("CDFW finfish gear and general rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs", ["28.65", "27.60"]),
+    "rules-invertebrates": ("CDFW invertebrate gear rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs", ["29.80", "trap"]),
+    "rules-whales": ("CDFW whale-safe crab restrictions", "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries", ["recreational", "crab"]),
+    "rules-health": ("CDFW fishery health closures", "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories", ["Dungeness", "health"]),
+    "rules-ocean": ("CDFW official regulation index", "https://wildlife.ca.gov/Fishing/Ocean", ["2026", "Tunas"]),
     "rules-groundfish": ("CDFW groundfish", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary", ["groundfish", "regulations"]),
     "rules-inseason": ("CDFW in-season changes", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason", ["in-season", "ocean"]),
     "rules-salmon": ("CDFW salmon", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon", ["salmon", "season"]),
@@ -56,21 +63,28 @@ class Client:
         self.now = now
         self.requests = []
 
-    def get(self, url, as_json=False):
+    def get(self, url, as_json=False, as_pdf=False):
         for attempt in range(2):
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
             try:
                 with urlopen(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*"}), timeout=25) as response:
-                    body = response.read(5_000_001)
+                    limit = 35_000_000 if as_pdf else 5_000_000
+                    body = response.read(limit + 1)
                     record.update(http_status=response.status, http_date=response.headers.get("Date"),
                                   last_modified=response.headers.get("Last-Modified"), bytes=len(body),
                                   sha256=hashlib.sha256(body).hexdigest())
-                if len(body) > 5_000_000:
+                if len(body) > limit:
                     raise ValueError("Response exceeds bounded collection size")
                 if not body.strip():
                     raise ValueError("Empty response")
-                text = body.decode("utf-8")
-                result = json.loads(text) if as_json else text
+                if as_pdf:
+                    if not body.startswith(b"%PDF-"):
+                        raise ValueError("Expected an official PDF; received another content type")
+                    result = {"content_sha256": hashlib.sha256(body).hexdigest(),
+                              "interpretation": "manual review required", "permission_to_fish": None}
+                else:
+                    text = body.decode("utf-8")
+                    result = json.loads(text) if as_json else text
                 if isinstance(result, dict) and result.get("error"):
                     raise ValueError("Provider returned an error response")
                 self.requests.append(record)
@@ -184,6 +198,9 @@ def collect(now, previous=None, days=30):
         jobs.append(("alerts-" + zone, "NWS " + zone + " advisories", "advisory", url, 36, lambda c, u=url: parsers.alerts(c.get(u, True))))
     for ident, (name, url, keywords) in WATCHES.items():
         jobs.append((ident, name, "page-watch", url, 36, lambda c, u=url, k=keywords: parsers.page_watch(c.get(u), k)))
+    url = "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985"
+    jobs.append(("rules-book", "CDFW 2026 ocean regulations booklet", "page-watch", url, 36,
+                 lambda c, u=url: c.get(u, as_pdf=True)))
     for model in MODEL_META:
         url, loader = model_loader(model)
         jobs.append(("model-" + model, model + " via Open-Meteo", "forecast", url, 36, loader))
@@ -218,6 +235,7 @@ def collect(now, previous=None, days=30):
                                   "end": (local_day - timedelta(days=1)).isoformat(), "days": days},
                 "sources": sources, "reports": sorted(reports, key=lambda r: (r["date"], r["id"]), reverse=True),
                 "catch_probability": None, "bite_score": None,
+                "regulations": regulatory_snapshot(sources, now),
                 "limitations": ["Landing port is not a catch position; named grounds are broad reports, not GPS fixes.",
                                 "Reports are a selected sample, with unknown effort and missing unsuccessful trips.",
                                 "Satellite temperature and HF radar measure surface context, not bottom conditions.",

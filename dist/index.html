@@ -22,8 +22,9 @@
     <link rel="stylesheet" href="marine.css?v=5.4" />
     <link rel="stylesheet" href="map-first.css?v=5.5" />
     <link rel="stylesheet" href="bite-evidence.css?v=5.6" />
+    <link rel="stylesheet" href="regulations.css?v=5.7" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js?v=5.6"></script>
+    <script type="module" src="app.js?v=5.7"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -67,7 +68,9 @@
               Options
             </button>
           </div>
-          <div id="species-season" class="species-season" hidden></div>
+          <details id="species-regulations" class="regulations-card" aria-label="Local fishing regulations">
+            <summary>Regulations · checking sources…</summary>
+          </details>
           <button id="show-charter-grounds" class="charter-map-chip" hidden>
             Charter grounds
           </button>

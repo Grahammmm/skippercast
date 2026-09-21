@@ -10,6 +10,7 @@ on:
     paths:
       - "src/skippercast/pipeline/**"
       - ".github/workflows/daily-data.yml"
+      - "dist/data/regulations.json"
 
 permissions:
   contents: write
@@ -30,7 +31,7 @@ jobs:
       - name: Test evidence parsing and failure handling
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests -p 'test_pipeline.py' -v
+        run: python -m unittest discover -s tests -p 'test_pipeline*.py' -v
       - name: Load previous published facts
         run: |
           mkdir -p var/daily
@@ -76,6 +77,10 @@ jobs:
           for ident in h['issues']:
               s = d['sources'][ident]
               summary.append(f"- {s['name']}: {s['status']} — {s.get('issue', 'See source record')}")
+          review = d.get('regulations', {}).get('review_required', [])
+          if review:
+              summary.append('\nRegulations require review: ' + ', '.join(review))
+              print('::warning::Official regulation sources changed or could not be checked. Season-open badges are withheld for affected species until review.')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('\n'.join(summary))
           if h['issues']:
