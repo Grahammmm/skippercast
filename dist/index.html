@@ -19,8 +19,9 @@
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="marine.css?v=4.1" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=4.1"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -30,7 +31,7 @@
       >
       <div class="location">
         <strong>Central California</strong
-        ><span>Avila / Point Buchon → Point Estero</span>
+        ><span>Coastal habitat &amp; offshore conditions</span>
       </div>
       <button
         class="quiet light"
@@ -43,8 +44,8 @@
         class="download"
         href="downloads/complete.gpx"
         download="SkipperCast-complete.gpx"
-        aria-label="Export all spots to iNavX"
-        >↓ Export</a
+        aria-label="Export the 132 rocky targets to iNavX"
+        >↓ Reef GPX</a
       >
     </header>
     <main id="workspace" class="workspace" tabindex="-1">
@@ -57,8 +58,9 @@
       >
         <div class="side-head">
           <h1>Fishing spots</h1>
-          <p>Avila → Point Estero · survey depths ≤200 ft</p>
+          <p id="species-list-context">Rocky habitat · survey depths ≤200 ft</p>
         </div>
+        <div id="species-list-guide" class="species-list-guide"></div>
         <div class="search-field">
           <label for="search">Find a spot</label
           ><input
@@ -149,6 +151,12 @@
             <details class="layers">
               <summary>Layers</summary>
               <label
+                >Base map<select id="base-map">
+                  <option value="nautical">NOAA nautical chart</option>
+                  <option value="street">Street map</option>
+                </select></label
+              >
+              <label
                 ><input id="layer-targets" type="checkbox" checked /><span
                   class="legend-dot"
                 ></span>
@@ -164,14 +172,34 @@
                 ></span>
                 Drift alignments</label
               ><label
-                ><input id="layer-forecast" type="checkbox" /><span
+                ><input id="layer-forecast" type="checkbox" checked /><span
                   class="legend-wind"
                   >↗</span
                 >
-                Forecast stations</label
+                Weather overlay</label
               >
             </details>
           </div>
+          <div class="species-bar">
+            <label for="species-select">Target species</label>
+            <select id="species-select">
+              <option value="lingcod">Lingcod</option>
+              <option value="rockfish">Rockfish / rock cod</option>
+              <option value="halibut">California halibut</option>
+              <option value="salmon">Chinook salmon</option>
+              <option value="albacore">Albacore tuna · offshore</option>
+              <option value="bluefin">Bluefin tuna · offshore</option>
+              <option value="dungeness">Dungeness crab</option>
+            </select>
+            <button
+              id="species-info"
+              class="text-button"
+              aria-label="Read conditions and habitat for selected species"
+            >
+              Field notes ↗
+            </button>
+          </div>
+          <div id="species-season" class="species-season" hidden></div>
           <div class="map-banner">
             <span>Avila → Point Estero</span
             ><a
@@ -199,8 +227,13 @@
             aria-haspopup="dialog"
             hidden
           ></button>
+          <div
+            id="map-time-dock"
+            class="time-dock"
+            aria-label="Weather forecast timeline"
+          ></div>
           <div class="map-note">
-            Research layer · use a nautical chart for navigation.
+            Planning only · keep your navigation chart aboard.
           </div>
         </div>
       </section>
@@ -214,15 +247,12 @@
         <div class="forecast-heading">
           <div>
             <div class="eyebrow">ON THE WATER</div>
-            <h2 id="forecast-heading">Marine forecast</h2>
+            <h2 id="forecast-heading">Weather &amp; ocean</h2>
           </div>
-          <button id="load-forecast" class="primary">
-            Load latest forecast
-          </button>
+          <button id="load-forecast" class="primary">Refresh</button>
         </div>
         <p id="forecast-status" role="status">
-          Compare wind and waves across independent models. Forecasts load when
-          you ask.
+          Loading wind, waves, temperature, and NOAA tides…
         </p>
         <div id="forecast-content"></div>
       </section>
@@ -241,6 +271,11 @@
             the spots with you.
           </p>
         </div>
+        <section
+          id="species-guide"
+          class="map-guide"
+          aria-label="Species field guide"
+        ></section>
         <section
           id="grade-guide"
           class="map-guide"
@@ -331,13 +366,15 @@
           <h2>Take the atlas with you</h2>
           <p>
             Download the GPX file, then use Share → iNavX on your iPad. The full
-            set includes 132 spots, partial reef outlines, and drift alignments.
+            set includes 132 rocky targets, partial reef outlines, and drift
+            alignments. Sediment windows and offshore search references are
+            currently map-only.
           </p>
           <a
             class="download"
             href="downloads/complete.gpx"
             download="SkipperCast-complete.gpx"
-            >↓ Export full atlas to iNavX</a
+            >↓ Export rocky atlas to iNavX</a
           >
           <div class="source-links">
             <a href="downloads/spot-notes.html" target="_blank" rel="noopener"

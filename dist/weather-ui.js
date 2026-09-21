@@ -1,269 +1,404 @@
 import {
-  STATIONS,
-  WIND_MODELS,
-  WAVE_MODELS,
-  TIMEZONE,
-  futureDates,
-  forecastURLs,
-  valueAt,
-  compass,
-  range,
-  evidenceFlags,
-  coverageNote,
-  fetchJSON,
-} from "./forecast.js";
+  POINTS,
+  MODELS,
+  HOUR,
+  timeline,
+  readConditions,
+  comfort,
+  directionTo,
+  angleBetween,
+  distanceNm,
+  loadMarine,
+} from "./marine-data.js?v=4.1";
+import { esc, num, local, full, day } from "./marine-charts.js?v=4.1";
+import { detailHTML } from "./marine-detail.js?v=4.1";
 const $ = (id) => document.getElementById(id);
-const esc = (v) =>
-  String(v ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-const fmt = (v, suffix = "", digits = 1) =>
-  Number.isFinite(v) ? `${v.toFixed(digits)}${suffix}` : "Unavailable";
-const dateLabel = (d) =>
-  new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${d}T12:00:00Z`));
-const dateTime = (v) => {
-  const date = typeof v === "number" ? new Date(v * 1000) : new Date(v);
-  return Number.isFinite(date.getTime())
-    ? new Intl.DateTimeFormat("en-US", {
-        timeZone: TIMEZONE,
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short",
-      }).format(date)
-    : "Unavailable";
+const colors = {
+  calmer: "#278f87",
+  mixed: "#be7a29",
+  rough: "#c45d4e",
+  hazard: "#b0395b",
+  unknown: "#778995",
 };
-const goodList = (result) =>
-  result.status === "fulfilled" &&
-  Array.isArray(result.value) &&
-  result.value.length === STATIONS.length
-    ? result.value
-    : null;
 
-export function initWeather(map, forecastLayer, onSelectStation = () => {}) {
-  let data,
+export function initWeather(map, layer, onOpen) {
+  let bundle = null,
+    hours = timeline(),
+    index = 0,
+    point = 1,
+    family = "gfs",
+    overlay = "waves",
+    play = null,
     loading = false,
-    dates = futureDates(),
-    stationIndex = 1,
-    day = dates[0],
-    hour = "08";
-  const urls = forecastURLs();
-  const status = () => {
-    if (!data) return;
-    const stale = Date.now() - data.retrievedAt > 60 * 60 * 1000;
-    $("forecast-status").textContent =
-      `${stale ? "Refresh needed. " : ""}Retrieved ${dateTime(new Date(data.retrievedAt).toISOString())}. All forecast times are Pacific. ${data.wind && data.wave ? "Wind and wave responses loaded." : "Some forecast sources are unavailable."}`;
-  };
-  async function load() {
+    requested = null,
+    lastSpecies = "lingcod",
+    heading = 0;
+  const dock = $("map-time-dock");
+  dock.innerHTML = `<div class="dock-controls"><label class="sr-only" for="ocean-layer">Ocean overlay</label><select id="ocean-layer"><option value="waves">Waves · ft</option><option value="wind">Wind · kt</option><option value="comfort">Comfort</option><option value="sst">Sea temp · °F</option><option value="none">Chart only</option></select><label class="sr-only" for="forecast-model">Forecast model</label><select id="forecast-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select><button id="ocean-now" class="text-button">Now</button></div><button id="map-weather-summary" class="map-weather-summary" aria-label="Open detailed weather and tide chart"><span>Loading ocean conditions…</span><span aria-hidden="true">↗</span></button><div class="time-heading"><button id="time-play" aria-label="Play hourly forecast">▶</button><strong id="map-time-label">Now · forecast</strong><span id="map-time-range">+7 days</span></div><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><div id="day-strip" class="day-strip" aria-label="Choose forecast date"></div><div id="overlay-legend" class="overlay-legend"></div>`;
+  $("forecast-content").innerHTML =
+    `<div class="marine-controls"><label>Forecast sample<select id="marine-point">${POINTS.map((s, i) => `<option value="${i}" ${i === point ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Model<select id="detail-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label><div><span id="detail-provisional" class="eyebrow">HOURLY FORECAST · PACIFIC TIME</span><strong id="detail-time-label"></strong></div></div><div class="detail-time"><button id="previous-hour" aria-label="Previous forecast hour">←</button><label class="sr-only" for="detail-hour">Forecast hour</label><input id="detail-hour" type="range" min="0" max="168" value="0" step="1"/><button id="next-hour" aria-label="Next forecast hour">→</button></div><div id="marine-detail-body"><p>Loading forecast sources…</p></div>`;
+  for (const el of [
+    dock,
+    document.querySelector(".species-bar"),
+    document.querySelector(".map-toolbar"),
+  ]) {
+    L.DomEvent.disableClickPropagation(el);
+    L.DomEvent.disableScrollPropagation(el);
+  }
+  function setHour(v) {
+    index = Math.max(0, Math.min(168, Number(v)));
+    render();
+  }
+  function stop() {
+    if (play) clearInterval(play);
+    play = null;
+    $("time-play").textContent = "▶";
+    $("time-play").setAttribute("aria-label", "Play hourly forecast");
+  }
+  $("time-play").addEventListener("click", () => {
+    if (play) {
+      stop();
+      return;
+    }
+    $("time-play").textContent = "Ⅱ";
+    $("time-play").setAttribute("aria-label", "Pause hourly forecast");
+    play = setInterval(() => {
+      if (index >= 168) {
+        stop();
+        return;
+      }
+      setHour(index + 1);
+    }, 1000);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stop();
+    else if (bundle && Date.now() - bundle.retrieved >= 3600000) load();
+  });
+  for (const key of ["map-time", "detail-hour"])
+    $(key).addEventListener("input", (e) => {
+      stop();
+      setHour(e.target.value);
+    });
+  $("ocean-now").addEventListener("click", () => {
+    stop();
+    hours = timeline();
+    setHour(0);
+    if (!bundle || Date.now() - bundle.retrieved >= 3600000) load();
+  });
+  $("ocean-layer").addEventListener("change", (e) => {
+    overlay = e.target.value;
+    draw();
+  });
+  for (const key of ["forecast-model", "detail-model"])
+    $(key).addEventListener("change", (e) => {
+      family = e.target.value;
+      $("forecast-model").value = family;
+      $("detail-model").value = family;
+      render();
+    });
+  $("map-weather-summary").addEventListener("click", onOpen);
+  $("day-strip").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-hour]");
+    if (b) {
+      stop();
+      setHour(b.dataset.hour);
+    }
+  });
+  $("marine-point").addEventListener("change", (e) => {
+    point = Number(e.target.value);
+    requested = null;
+    render();
+  });
+  $("previous-hour").addEventListener("click", () => setHour(index - 1));
+  $("next-hour").addEventListener("click", () => setHour(index + 1));
+  function alertsFor(i, t) {
+    const items = bundle?.alerts?.[POINTS[i].offshore ? "offshore" : "coastal"];
+    return Array.isArray(items)
+      ? items
+          .filter(
+            (a) =>
+              (!Number.isFinite(a.starts) || a.starts <= t) &&
+              (!Number.isFinite(a.ends) || a.ends >= t),
+          )
+          .map((a) => a.title)
+      : null;
+  }
+  function statusFor(i, t, c, other) {
+    const result = comfort(c, other, alertsFor(i, t));
+    const stale = Date.now() - bundle.retrieved > 3 * 3600000;
+    const ids = [
+      "gfs_global",
+      "ecmwf_ifs025",
+      "ncep_gfswave025",
+      "ecmwf_wam025",
+    ];
+    const unavailable = ids.some(
+      (id) =>
+        !Number.isFinite(bundle.models[id]?.meta?.last_run_initialisation_time),
+    );
+    const old = ids.some((id) => {
+      const m = bundle.models[id]?.meta;
+      return (
+        m && Date.now() / 1000 - m.last_run_initialisation_time > 36 * HOUR
+      );
+    });
+    if ((stale || unavailable || old) && result.level !== "hazard")
+      return {
+        level: "unknown",
+        label: "Uncertain",
+        flags: [
+          stale
+            ? "Forecast retrieval is over 3 hours old"
+            : old
+              ? "One or more model runs are over 36 hours old"
+              : "Model initialization unavailable",
+          ...result.flags,
+        ],
+      };
+    return result;
+  }
+  function draw() {
+    layer.clearLayers();
+    const legend = $("overlay-legend");
+    if (!bundle) {
+      legend.textContent = "Loading live sources; no values assumed.";
+      return;
+    }
+    if (overlay === "none") {
+      legend.textContent = "NOAA chart · depth labels use the chart’s units.";
+      return;
+    }
+    const labels = {
+      waves: "Seas · ft · arrows travel toward",
+      wind: "Wind · kt · arrows blow toward",
+      sst: "Modeled SST · °F · ~8 km source",
+      comfort: "Hourly comfort · not a trip clearance",
+    };
+    legend.innerHTML = `<span>${labels[overlay]}</span><span class="legend-scale ${overlay}"></span><span>${overlay === "waves" ? "0 → 8+ ft" : overlay === "wind" ? "0 → 20+ kt" : overlay === "sst" ? "50 → 75 °F" : "Calmer → mixed → more motion · gray unknown"}</span>`;
+    const seen = new Set(),
+      t = hours[index];
+    const id =
+      overlay === "sst"
+        ? "meteofrance_currents"
+        : overlay === "wind"
+          ? family === "gfs"
+            ? "gfs_global"
+            : "ecmwf_ifs025"
+          : family === "gfs"
+            ? "ncep_gfswave025"
+            : "ecmwf_wam025";
+    POINTS.forEach((p, i) => {
+      const grid = bundle.models[id]?.data?.[i];
+      if (!Number.isFinite(grid?.latitude) || !Number.isFinite(grid?.longitude))
+        return;
+      const key = `${grid.latitude},${grid.longitude}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const c = readConditions(bundle, i, t, family),
+        other = readConditions(
+          bundle,
+          i,
+          t,
+          family === "gfs" ? "ecmwf" : "gfs",
+        );
+      const n =
+        overlay === "waves"
+          ? c.sea.height
+          : overlay === "wind"
+            ? c.wind
+            : overlay === "sst"
+              ? c.sst
+              : null;
+      const status = statusFor(i, t, c, other);
+      const color =
+        overlay === "comfort"
+          ? colors[status.level]
+          : !Number.isFinite(n)
+            ? "#8d9aa2"
+            : overlay === "sst"
+              ? `hsl(${Math.max(0, Math.min(230, 230 - (n - 50) * 9))} 62% 48%)`
+              : overlay === "waves"
+                ? `hsl(${Math.max(0, 180 - n * 22)} 58% 45%)`
+                : `hsl(${Math.max(0, 185 - n * 8)} 58% 43%)`;
+      L.circle([grid.latitude, grid.longitude], {
+        radius: overlay === "sst" ? 4400 : 10500,
+        color,
+        weight: 1,
+        fillOpacity: 0.2,
+        interactive: false,
+        pane: "overlayPane",
+      }).addTo(layer);
+      const direction =
+        overlay === "wind"
+          ? c.windFrom
+          : overlay === "waves"
+            ? c.sea.from
+            : null;
+      const label = overlay === "comfort" ? status.label : num(n);
+      L.marker([grid.latitude, grid.longitude], {
+        keyboard: true,
+        title: `${p.name}: ${label}; ${full(t)}`,
+        icon: L.divIcon({
+          className: "weather-sample",
+          html: `<span class="weather-arrow" style="transform:rotate(${directionTo(direction) ?? 0}deg)" aria-hidden="true">${Number.isFinite(direction) ? "↑" : "·"}</span><b>${esc(label)}</b>`,
+          iconSize: [76, 48],
+          iconAnchor: [38, 24],
+        }),
+        zIndexOffset: -100,
+      })
+        .on("click", () => {
+          point = i;
+          requested = null;
+          render();
+          onOpen();
+        })
+        .addTo(layer);
+    });
+  }
+  function render() {
+    const t = hours[index],
+      provisional = index >= 72;
+    $("map-time-label").textContent = (index === 0 ? "Now · " : "") + full(t);
+    for (const key of ["map-time", "detail-hour"]) {
+      $(key).value = index;
+      $(key).setAttribute(
+        "aria-valuetext",
+        full(t) + (provisional ? " · provisional" : ""),
+      );
+    }
+    $("map-time-range").textContent = provisional
+      ? "Provisional"
+      : `+${index}h`;
+    $("detail-time-label").textContent = full(t);
+    $("detail-provisional").textContent =
+      (provisional ? "PROVISIONAL OUTLOOK" : "HOURLY FORECAST") +
+      " · PACIFIC TIME";
+    $("marine-point").value = point;
+    const dates = new Map();
+    hours.forEach((t, i) => {
+      const d = day(t);
+      if (!dates.has(d)) dates.set(d, i);
+    });
+    $("day-strip").innerHTML = [...dates.entries()]
+      .map(
+        ([d, i], n) =>
+          `<button data-hour="${i}" aria-pressed="${d === day(t)}">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small></button>`,
+      )
+      .join("");
+    draw();
+    if (!bundle) return;
+    const c = readConditions(bundle, point, t, family),
+      other = readConditions(
+        bundle,
+        point,
+        t,
+        family === "gfs" ? "ecmwf" : "gfs",
+      ),
+      status = statusFor(point, t, c, other),
+      p = POINTS[point];
+    $("map-weather-summary").innerHTML =
+      `<span><strong>${esc(p.name)}${p.offshore ? " · offshore" : ""}</strong><span>${num(c.sea.height)} ft · ${num(c.sea.period)} s ${family === "gfs" ? "primary" : "mean"} · wind ${num(c.wind, 0)} / gust ${num(c.gust, 0)} kt</span></span><span class="comfort-pill ${status.level}">${status.label} ↗</span>`;
+    const body = $("marine-detail-body"),
+      sourcesOpen = body.querySelector("#marine-sources")?.open;
+    body.innerHTML = detailHTML({
+      bundle,
+      hours,
+      index,
+      point,
+      family,
+      requested,
+      c,
+      other,
+      status,
+      sourcesOpen,
+      heading,
+    });
+    const explain = () => {
+      const a = angleBetween(heading, c.swell.from);
+      $("encounter-note").textContent =
+        a === null || heading < 0 || heading >= 360
+          ? "Enter a heading from 0° to 359°; swell direction must be available."
+          : `Primary swell approaches approximately ${a < 45 ? "from ahead" : a > 135 ? "from behind" : "across the beam"} (${num(a, 0)}° off the bow). Beam seas can increase roll; head seas can shorten time between encounters.`;
+    };
+    $("boat-heading").addEventListener("input", (e) => {
+      heading = e.target.value === "" ? NaN : Number(e.target.value);
+      explain();
+    });
+    explain();
+  }
+  async function load(force = false) {
     if (loading) return;
     loading = true;
+    stop();
     $("load-forecast").disabled = true;
-    $("load-forecast").textContent = "Loading…";
     $("forecast-status").textContent =
-      "Fetching wind, waves, model metadata, and current NWS advisories…";
+      "Loading hourly wind and waves from two independent models, ocean context, and NOAA tides…";
     try {
-      const result = await Promise.allSettled([
-        fetchJSON(urls.wind),
-        fetchJSON(urls.wave),
-        ...WIND_MODELS.concat(WAVE_MODELS).map((m) => fetchJSON(m.meta)),
-        fetchJSON("https://api.weather.gov/alerts/active/zone/PZZ645"),
-      ]);
-      data = {
-        wind: goodList(result[0]),
-        wave: goodList(result[1]),
-        metadata: result
-          .slice(2, 6)
-          .map((r) => (r.status === "fulfilled" ? r.value : null)),
-        alerts: result[6].status === "fulfilled" ? result[6].value : null,
-        retrievedAt: Date.now(),
-      };
-      dates = futureDates();
-      if (!dates.includes(day)) day = dates[0];
-      $("layer-forecast").checked = true;
-      forecastLayer.addTo(map);
-      render();
-      status();
-    } catch {
+      let cached;
+      try {
+        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v1"));
+      } catch {
+        /* Storage is optional. */
+      }
+      bundle =
+        !force && cached?.models && Date.now() - cached.retrieved < 3600000
+          ? cached
+          : await loadMarine();
+      try {
+        sessionStorage.setItem("skippercast-marine-v1", JSON.stringify(bundle));
+      } catch {
+        /* No cache is needed to browse. */
+      }
+      hours = timeline();
+      const failed = MODELS.filter((m) => bundle.models[m.id]?.error).map(
+        (m) => m.name,
+      );
       $("forecast-status").textContent =
-        "Forecasts could not load. Try again or use the official NWS forecast.";
+        `Retrieved ${full(bundle.retrieved / 1000)}. ${failed.length ? `Unavailable: ${failed.join(", ")}. Missing values remain blank.` : "Now is a forecast hour; observations carry separate timestamps."}`;
+      render();
+    } catch (e) {
+      $("forecast-status").textContent =
+        "Marine sources could not load. Refresh to retry; no calm conditions are assumed.";
+      $("map-weather-summary").textContent =
+        "Forecast unavailable · open details ↗";
     } finally {
       loading = false;
       $("load-forecast").disabled = false;
-      $("load-forecast").textContent = "Refresh forecast";
     }
   }
-  function render() {
-    const time = `${day}T${hour}:00`,
-      wind = data.wind?.[stationIndex],
-      wave = data.wave?.[stationIndex];
-    const val = (kind, m, key, unit) =>
-      valueAt(kind === "wind" ? wind : wave, m, key, time, unit);
-    const windCards = WIND_MODELS.map((m) => {
-      const direction = val("wind", m.id, "wind_direction_10m", "°");
-      return `<article class="weather-card"><h3>${m.name} · wind</h3><strong>${fmt(val("wind", m.id, "wind_speed_10m", "kn"), " kt")}</strong><p>Gusts ${fmt(val("wind", m.id, "wind_gusts_10m", "kn"), " kt")} · from ${compass(direction)}</p></article>`;
-    }).join("");
-    const waveCards = WAVE_MODELS.map(
-      (m) =>
-        `<article class="weather-card"><h3>${m.name} · combined seas</h3><strong>${fmt(val("wave", m.id, "wave_height", "ft"), " ft")}</strong><p>${fmt(val("wave", m.id, "wave_period", "s"), " s")} mean period · from ${compass(val("wave", m.id, "wave_direction", "°"))}</p></article>`,
-    ).join("");
-    const flags = evidenceFlags(wind, wave, time);
-    WIND_MODELS.concat(WAVE_MODELS).forEach((m, i) => {
-      const selected = coverageNote(data.metadata[i], time),
-        window = coverageNote(data.metadata[i], `${day}T13:00`);
-      if (selected || window)
-        flags.push(
-          `${m.name}: ${selected || "Part of the 06:00–13:00 window is beyond latest published model coverage."}`,
-        );
-    });
-    const windowHours = Array.from(
-      { length: 8 },
-      (_, i) => `${day}T${String(i + 6).padStart(2, "0")}:00`,
-    );
-    const windowRows = [
-      ...WIND_MODELS.map((m) => {
-        const speeds = windowHours.map((t) =>
-            valueAt(wind, m.id, "wind_speed_10m", t, "kn"),
-          ),
-          gusts = windowHours.map((t) =>
-            valueAt(wind, m.id, "wind_gusts_10m", t, "kn"),
-          );
-        const conflict = speeds.some(
-          (v, i) =>
-            Number.isFinite(v) && Number.isFinite(gusts[i]) && gusts[i] < v,
-        );
-        return `<tr><th>${m.name}</th><td>${range(speeds) ? range(speeds) + " kt" : "Incomplete"}</td><td>${range(gusts) ? range(gusts) + " kt" : "Incomplete"}${conflict ? " · inconsistent" : ""}</td></tr>`;
-      }),
-      ...WAVE_MODELS.map((m) => {
-        const heights = windowHours.map((t) =>
-          valueAt(wave, m.id, "wave_height", t, "ft"),
-        );
-        return `<tr><th>${m.name}</th><td>${range(heights) ? range(heights) + " ft" : "Incomplete"}</td><td>Combined seas</td></tr>`;
-      }),
-    ].join("");
-    const components = ["wind_wave", "swell_wave", "secondary_swell_wave"]
-      .map(
-        (k, i) =>
-          `<tr><th>${["Wind chop", "Primary swell", "Secondary swell"][i]}</th>${WAVE_MODELS.map(
-            (m) => {
-              const h = val("wave", m.id, `${k}_height`, "ft"),
-                p = val("wave", m.id, `${k}_period`, "s"),
-                d = val("wave", m.id, `${k}_direction`, "°");
-              return `<td>${h === null ? "Unavailable" : h === 0 ? "0.0 ft" : `${fmt(h, " ft")} / ${fmt(p, " s")} / ${compass(d)}`}</td>`;
-            },
-          ).join("")}</tr>`,
-      )
-      .join("");
-    const alerts = Array.isArray(data.alerts?.features)
-      ? data.alerts.features
-      : null;
-    const alertText =
-      alerts === null
-        ? "NWS advisory access unavailable — open the official forecast."
-        : alerts.length
-          ? alerts
-              .map(
-                (a) =>
-                  `${a.properties?.event || "Marine alert"}: ${a.properties?.headline || "See NWS for details"}`,
-              )
-              .join(" | ")
-          : "No active PZZ645 alerts returned at retrieval. This does not clear future trips or the harbor entrance.";
-    const metadataRows = WIND_MODELS.concat(WAVE_MODELS)
-      .map((m, i) => {
-        const meta = data.metadata[i];
-        return `<tr><th>${m.name}</th><td>${meta?.last_run_initialisation_time ? dateTime(meta.last_run_initialisation_time) : "Unavailable"}</td><td>${meta?.last_run_availability_time ? dateTime(meta.last_run_availability_time) : "Unavailable"}</td><td>${meta?.data_end_time ? dateTime(meta.data_end_time) : "Unavailable"}</td></tr>`;
-      })
-      .join("");
-    const grid = (d) =>
-      Number.isFinite(d?.latitude) && Number.isFinite(d?.longitude)
-        ? `${d.latitude.toFixed(3)}, ${d.longitude.toFixed(3)}`
-        : "Unavailable";
-    const requested = STATIONS[stationIndex];
-    const visibility = val("wind", "gfs_global", "visibility", "m"),
-      rain = val("wind", "gfs_global", "precipitation", "mm");
-    $("forecast-content").innerHTML =
-      `<div class="forecast-controls"><label>Offshore sample<select id="weather-station">${STATIONS.map((s, i) => `<option value="${i}" ${i === stationIndex ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Date<select id="weather-day">${dates.map((d, i) => `<option value="${d}" ${d === day ? "selected" : ""}>${dateLabel(d)}${i >= 3 ? " · provisional" : ""}</option>`).join("")}</select></label><label>Hour (Pacific)<select id="weather-hour">${Array.from(
-        { length: 8 },
-        (_, i) => String(i + 6).padStart(2, "0"),
-      )
-        .map(
-          (h) =>
-            `<option value="${h}" ${h === hour ? "selected" : ""}>${Number(h) > 12 ? Number(h) - 12 : Number(h)}:00 ${Number(h) >= 12 ? "PM" : "AM"}</option>`,
-        )
-        .join(
-          "",
-        )}</select></label></div><div class="weather-cards">${windCards}${waveCards}</div>${flags.length ? `<div class="forecast-notice">${flags.map(esc).join("<br>")}</div>` : ""}<div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><caption>Selected hour · component height / period / from</caption><thead><tr><th>Component</th><th>ECMWF WAM</th><th>NOAA GFS Wave</th></tr></thead><tbody>${components}</tbody></table></div><div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><caption>06:00–13:00 Pacific · full-window ranges</caption><thead><tr><th>Model</th><th>Wind / seas</th><th>Gusts / metric</th></tr></thead><tbody>${windowRows}</tbody></table></div><p class="small">NOAA GFS at the selected hour: visibility ${visibility === null ? "unavailable" : (visibility / 1609.344).toFixed(1) + " mi"} · precipitation ${rain === null ? "unavailable" : (rain / 25.4).toFixed(2) + " in"}. ECMWF visibility may be unavailable.</p><div class="forecast-notice">${esc(alertText)}</div><p class="small">${dates.indexOf(day) >= 3 ? "This date is provisional. " : ""}No trip rating is assigned. Check current observations, visibility, advisories, entrance conditions, daylight, and the entire route before departure. A 06:00–13:00 screen does not establish four fishing hours.</p><details class="forecast-metadata"><summary>Source times &amp; grid locations</summary><p class="small">Requested: ${requested.latitude}, ${requested.longitude}. Response grid: wind ${grid(wind)}; waves ${grid(wave)}. Coarse offshore samples cannot resolve individual reefs or the harbor entrance.</p><div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><thead><tr><th>Model</th><th>Latest initialization</th><th>Available via provider</th><th>Latest coverage end</th></tr></thead><tbody>${metadataRows}</tbody></table></div><p class="small">Latest-run metadata describes provider availability. It is not a guaranteed run attribution for every rolling forecast value. Retrieval time is not forecast issue time. Unpopulated forecast hours remain unavailable.</p><a href="${urls.wind}" target="_blank" rel="noopener">Raw wind response ↗</a> · <a href="${urls.wave}" target="_blank" rel="noopener">Raw wave response ↗</a></details><div class="forecast-links"><a href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645" target="_blank" rel="noopener">NWS marine forecast ↗</a><a href="https://www.ndbc.noaa.gov/station_page.php?station=46215" target="_blank" rel="noopener">Diablo Canyon buoy ↗</a><a href="https://www.morrobayca.gov/144/Harbor" target="_blank" rel="noopener">Harbor information ↗</a><a href="https://open-meteo.com/" target="_blank" rel="noopener">Data: Open-Meteo · CC BY 4.0 ↗</a></div>`;
-    $("weather-station").addEventListener("change", (e) => {
-      stationIndex = Number(e.target.value);
+  $("load-forecast").addEventListener("click", () => load(true));
+  render();
+  load();
+  return {
+    selectLocation(p) {
+      requested = p;
+      point = POINTS.reduce(
+        (best, s, i) =>
+          distanceNm(s, p) < distanceNm(POINTS[best], p) ? i : best,
+        0,
+      );
+      if (bundle) render();
+    },
+    setSpecies(id) {
+      if (
+        ["albacore", "bluefin"].includes(id) &&
+        !["albacore", "bluefin"].includes(lastSpecies)
+      ) {
+        overlay = "sst";
+        $("ocean-layer").value = "sst";
+        point = 8;
+        requested = null;
+      } else if (
+        !["albacore", "bluefin"].includes(id) &&
+        ["albacore", "bluefin"].includes(lastSpecies)
+      ) {
+        overlay = "waves";
+        $("ocean-layer").value = "waves";
+        point = 1;
+        requested = null;
+      }
+      lastSpecies = id;
       render();
-      $("weather-station").focus({ preventScroll: true });
-    });
-    $("weather-day").addEventListener("change", (e) => {
-      day = e.target.value;
-      render();
-      $("weather-day").focus({ preventScroll: true });
-    });
-    $("weather-hour").addEventListener("change", (e) => {
-      hour = e.target.value;
-      render();
-      $("weather-hour").focus({ preventScroll: true });
-    });
-    drawStations(time);
-  }
-  function drawStations(time) {
-    forecastLayer.clearLayers();
-    STATIONS.forEach((s, i) => {
-      const wind = data.wind?.[i],
-        wave = data.wave?.[i];
-      const speed = valueAt(wind, "gfs_global", "wind_speed_10m", time, "kn"),
-        direction = valueAt(
-          wind,
-          "gfs_global",
-          "wind_direction_10m",
-          time,
-          "°",
-        ),
-        sea = valueAt(wave, "ncep_gfswave025", "wave_height", time, "ft");
-      const arrow =
-        direction !== null
-          ? `<span class="wind-arrow" style="transform:rotate(${(direction + 180) % 360}deg)">↑</span>`
-          : "";
-      const html = `${arrow} ${fmt(speed, " kt")} · ${fmt(sea, " ft")}`;
-      L.marker([s.latitude, s.longitude], {
-        icon: L.divIcon({
-          className: "station-marker",
-          html,
-          iconSize: [160, 34],
-          iconAnchor: [80, 17],
-        }),
-        title: `${s.name}: NOAA GFS wind and wave model values at ${time} Pacific`,
-      })
-        .bindTooltip(
-          `${s.name} · NOAA GFS wind / GFS Wave · ${time.replace("T", " ")} Pacific`,
-        )
-        .on("click", () => {
-          stationIndex = i;
-          render();
-          onSelectStation();
-        })
-        .addTo(forecastLayer);
-    });
-  }
-  $("load-forecast").addEventListener("click", load);
-  $("layer-forecast").addEventListener("change", (e) => {
-    if (e.target.checked && !data) load();
-  });
-  const timer = setInterval(status, 60000);
-  window.addEventListener("pagehide", () => clearInterval(timer), {
-    once: true,
-  });
+    },
+  };
 }

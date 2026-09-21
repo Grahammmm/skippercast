@@ -1,5 +1,7 @@
-import { initWeather } from "./weather-ui.js";
-import { initNavigation } from "./navigation.js";
+import { initWeather } from "./weather-ui.js?v=4.1";
+import { initNavigation } from "./navigation.js?v=4.1";
+import { initChart } from "./chart-map.js?v=4.1";
+import { initSpecies, matchesSpecies } from "./species.js?v=4.1";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -39,6 +41,7 @@ let atlas,
   selected,
   initialFitPending = true,
   visible = [];
+let speciesUI, weather;
 const layers = {},
   markers = new Map();
 const navigation = initNavigation({
@@ -58,20 +61,7 @@ function initMap() {
   L.control
     .scale({ imperial: true, metric: false, position: "bottomleft" })
     .addTo(map);
-  const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  }).addTo(map);
-  let failed = false;
-  tiles.on("tileerror", () => {
-    if (!failed) {
-      failed = true;
-      toast(
-        "Base map unavailable. Habitat layers and coordinates remain available.",
-      );
-    }
-  });
+  initChart(map, toast);
   for (const name of ["targets", "areas", "drifts", "forecast"]) {
     layers[name] = L.layerGroup();
     if ($(`layer-${name}`).checked) layers[name].addTo(map);
@@ -97,6 +87,7 @@ function filterTargets() {
   visible = atlas.targets
     .filter(
       (t) =>
+        matchesSpecies(t, $("species-select").value) &&
         ($("area").value === "all" || t.source_id === $("area").value) &&
         ($("grade").value === "all" || t.habitat_grade === $("grade").value) &&
         t.neighborhood_depth_ft[1] <= Number($("depth").value) &&
@@ -142,6 +133,7 @@ function filterTargets() {
         .join("")
     : '<p class="no-results">No targets match. Try another area, grade, or depth.</p>';
   drawHabitat();
+  speciesUI?.draw();
   if (selected) selectTarget(selected.id, false);
 }
 
@@ -191,6 +183,7 @@ function selectTarget(id, pan = true) {
   const target = atlas.targets.find((t) => t.id === id);
   if (!target) return;
   selected = target;
+  weather?.selectLocation(target);
   for (const t of visible) markers.get(t.id)?.setIcon(pin(t));
   for (const button of document.querySelectorAll("[data-target]"))
     button.setAttribute("aria-pressed", String(button.dataset.target === id));
@@ -342,6 +335,8 @@ function registerTools() {
         $("search").value = "";
         for (const id of ["area", "grade", "geometry"]) $(id).value = "all";
         $("depth").value = "200";
+        $("species-select").value = "rockfish";
+        speciesUI?.refresh();
         filterTargets();
         selectTarget(input.target_id);
         requestAnimationFrame(() => navigation.openDetails());
@@ -364,13 +359,17 @@ function registerTools() {
 }
 
 function fitTargets() {
+  if (speciesUI?.fit()) {
+    initialFitPending = false;
+    return;
+  }
   if (visible.length && !$("map-panel").hidden && map?.getSize().y) {
     const height = map.getSize().y;
     map.fitBounds(
       visible.map((t) => [t.latitude, t.longitude]),
       {
-        paddingTopLeft: [35, Math.min(125, height * 0.22)],
-        paddingBottomRight: [35, Math.min(selected ? 185 : 60, height * 0.3)],
+        paddingTopLeft: [35, Math.min(155, height * 0.27)],
+        paddingBottomRight: [35, Math.min(selected ? 320 : 215, height * 0.42)],
         maxZoom: 14,
       },
     );
@@ -421,10 +420,25 @@ try {
     throw new Error(`Atlas request failed (${response.status})`);
   atlas = await response.json();
   initMap();
+  speciesUI = await initSpecies(map, layers, {
+    onChange: () => {
+      filterTargets();
+      fitTargets();
+      weather?.setSpecies($("species-select").value);
+    },
+    onConditions: (p) => {
+      weather?.selectLocation(p);
+      navigation.showView("forecast");
+    },
+    showGuide: () => navigation.showView("guide"),
+  });
   filterTargets();
-  selectTarget(visible[0].id, false);
+  if (visible[0]) selectTarget(visible[0].id, false);
   fitTargets();
-  initWeather(map, layers.forecast, () => navigation.showView("forecast"));
+  weather = initWeather(map, layers.forecast, () =>
+    navigation.showView("forecast"),
+  );
+  if (selected) weather.selectLocation(selected);
   registerTools();
 } catch (error) {
   $("result-count").textContent = "Atlas unavailable";
