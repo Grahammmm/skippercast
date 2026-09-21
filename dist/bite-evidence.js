@@ -61,6 +61,32 @@ export function validFeed(data) {
   );
 }
 
+let feedPromise = null,
+  feedRequestedAt = 0;
+export function loadDailyEvidence(force = false) {
+  if (feedPromise && !force && Date.now() - feedRequestedAt < HOUR)
+    return feedPromise;
+  feedRequestedAt = Date.now();
+  feedPromise = (async () => {
+    for (const url of [FEED_URL, "data/daily-evidence.json"]) {
+      try {
+        const r = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
+          cache: "no-cache",
+        });
+        if (!r.ok) throw new Error("Feed request failed");
+        const data = await r.json();
+        if (!validFeed(data)) throw new Error("Feed schema changed");
+        return { data, fallback: url !== FEED_URL };
+      } catch {
+        /* The bundled fallback keeps its own timestamps. */
+      }
+    }
+    throw new Error("Daily fishing evidence unavailable");
+  })();
+  return feedPromise;
+}
+
 export function reportEvidence(
   data,
   species,
@@ -195,6 +221,27 @@ const interpretations = {
     "For Dungeness, these sportfishing reports provide little effort coverage. Habitat, legal season and gear rules matter; no catch-probability inference is made from missing crab reports.",
 };
 
+function buoyHTML(data) {
+  return ["buoy-46215", "buoy-46028"]
+    .map((id) => {
+      const source = data?.sources?.[id];
+      const row = source?.data?.observations?.find(
+        (r) => Number.isFinite(r.WVHT) && Number.isFinite(r.DPD),
+      );
+      const label =
+        id === "buoy-46215"
+          ? "Diablo Canyon · 46215"
+          : "Cape San Martin · 46028";
+      if (!row) return `<p>${label}: wave observation unavailable.</p>`;
+      const fresh =
+        source.status === "ok" &&
+        age(row.time, Date.now()) >= -1 &&
+        age(row.time, Date.now()) <= 6;
+      return `<p><strong>${label}: ${(row.WVHT * 3.28084).toFixed(1)} ft at ${row.DPD.toFixed(0)} s</strong>${Number.isFinite(row.MWD) ? ` · mean direction from ${row.MWD}° true` : ""}<br><small>${fresh ? "Dated observation" : "Stale observation"} · ${when(row.time)}. Dominant wave period; this is regional buoy water, not the selected reef. <a href="${esc(safeURL(source.url))}" target="_blank" rel="noopener">Source ↗</a></small></p>`;
+    })
+    .join("");
+}
+
 export function evidenceHTML(
   data,
   species,
@@ -206,7 +253,7 @@ export function evidenceHTML(
   const allSources = Object.values(data?.sources || {});
   const mainSources = allSources.filter((s) => s.kind !== "charter-reports");
   const issues = allSources.filter((s) => s.status !== "ok").length;
-  return `<details class="bite-card" ${open ? "open" : ""}><summary><span><small>RECENT FISHING EVIDENCE</small><strong>${esc(names[species] || species)} · ${e.reports.length ? e.reports.length + " reported trips" : "Reports limited"}</strong></span><b class="evidence-confidence ${e.confidence.toLowerCase()}">${e.confidence}</b></summary><div class="bite-body"><p>${esc(e.reason)}</p><p class="small">${day(e.start)}–${day(e.end)} · ${e.boats} boats · ${e.days} reporting dates · Morro Bay / Avila landings. Confidence describes the <strong>evidence for recent activity</strong>, not your chance of a bite or a seven-day prediction.</p>${
+  return `<details class="bite-card" ${open ? "open" : ""}><summary><span><small>RECENT FISHING EVIDENCE</small><strong>${esc(names[species] || species)} · ${e.reports.length ? e.reports.length + (e.reports.length === 1 ? " reported trip" : " reported trips") : "Reports limited"}</strong></span><b class="evidence-confidence ${e.confidence.toLowerCase()}">${e.confidence}</b></summary><div class="bite-body"><p>${esc(e.reason)}</p><p class="small">${day(e.start)}–${day(e.end)} · ${e.boats} boat${e.boats === 1 ? "" : "s"} · ${e.days} reporting date${e.days === 1 ? "" : "s"} · Morro Bay / Avila landings. Confidence describes the <strong>evidence for recent activity</strong>, not your chance of a bite or a seven-day prediction.</p>${
     reports.length
       ? `<div class="evidence-reports">${reports
           .map(
@@ -223,7 +270,7 @@ export function evidenceHTML(
           )
           .join("")}</div>`
       : ""
-  }<p>${esc(interpretations[species] || "")}</p><h3>Ocean context · ${esc(point.name || "Selected location")}</h3><div class="evidence-signals">${["sst", "chlorophyll", "currents"].map((k) => gridHTML(data?.sources?.[k], point, k)).join("")}</div><p class="small">Latest available dated samples. MUR is an interpolated surface analysis; chlorophyll can have cloud gaps. HF radar represents roughly the upper 2.4 m, not bottom current or a seven-day drift forecast. The hourly weather and tide views refresh separately.</p><details class="evidence-method"><summary>Why there is no bite-probability score yet</summary><p>We need successful <em>and zero-catch</em> trips with species targeted, time fishing, anglers, gear, depth and location, plus bait and sonar observations. Charter totals lack that denominator and can reflect limits or selective reporting. A model must then be tested on future trips and different locations before publishing a calibrated probability.</p><p>Moderate evidence requires a fresh daily feed, all seven recent report pages checked, and at least five positive trips from two boats across three dates. Smaller samples are Low; no reports are Insufficient. This transparent rule is not a statistical confidence interval. No High category or numeric bite score is currently earned.</p><a href="https://github.com/Grahammmm/skippercast/blob/main/docs/bite-evidence.md" target="_blank" rel="noopener">Research, product comparison & data method ↗</a></details><details class="evidence-health"><summary>Daily data · ${e.fresh && !fallback ? "updated" : fallback ? "saved snapshot" : "stale"}${issues ? " · " + issues + " source issues" : ""}</summary><p class="small">Collected ${when(data?.generated_at)}. ${fallback ? "Live feed could not load; this saved edition keeps its original dates. " : ""}Cloud refresh scheduled daily at 4:17 a.m. Pacific; delays and failures stay visible. The job does not depend on this Mac.</p><ul>${mainSources.map((s) => `<li><a href="${esc(safeURL(s.url))}" target="_blank" rel="noopener">${esc(s.name)}</a> · <strong>${esc(s.status)}</strong><small>${s.data?.sample_at ? "Source time " + when(s.data.sample_at) + ". " : ""}Checked ${when(s.checked_at)}.${s.changed_since_previous ? " Page changed; rules need review." : ""}${s.issue ? " " + esc(s.issue) : ""}</small></li>`).join("")}</ul><p class="small">A regulation-page check detects access and changes, not permission to fish. Harbor information is not live entrance clearance. NOAA, NASA JPL/GSFC, IOOS/HFRNet and Open-Meteo retain their data credits; landing facts link to SoCalFishReports.</p><a href="https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml" target="_blank" rel="noopener">Daily job status ↗</a></details></div></details>`;
+  }<p>${esc(interpretations[species] || "")}</p><h3>Ocean context · ${esc(point.name || point.label || "Selected location")}</h3><div class="evidence-signals">${["sst", "chlorophyll", "currents"].map((k) => gridHTML(data?.sources?.[k], point, k)).join("")}</div><p class="small">Latest available dated samples. MUR is an interpolated surface analysis; chlorophyll can have cloud gaps. HF radar represents roughly the upper 2.4 m, not bottom current or a seven-day drift forecast. The hourly weather and tide views refresh separately.</p><details class="evidence-method"><summary>Observed seas · daily buoy sample</summary>${buoyHTML(data)}<p class="small">Collected once daily. Recheck live buoy observations before departure; a calm observation does not verify a future forecast.</p></details><details class="evidence-method"><summary>Why there is no bite-probability score yet</summary><p>We need successful <em>and zero-catch</em> trips with species targeted, time fishing, anglers, gear, depth and location, plus bait and sonar observations. Charter totals lack that denominator and can reflect limits or selective reporting. A model must then be tested on future trips and different locations before publishing a calibrated probability.</p><p>Moderate evidence requires a fresh daily feed, all seven recent report pages checked, and at least five positive trips from two boats across three dates. Smaller samples are Low; no reports are Insufficient. This transparent rule is not a statistical confidence interval. No High category or numeric bite score is currently earned.</p><a href="https://github.com/Grahammmm/skippercast/blob/main/docs/bite-evidence.md" target="_blank" rel="noopener">Research, product comparison & data method ↗</a></details><details class="evidence-health"><summary>Daily data · ${e.fresh && !fallback ? "updated" : fallback ? "saved snapshot" : "stale"}${issues ? " · " + issues + (issues === 1 ? " source issue" : " source issues") : ""}</summary><p class="small">Collected ${when(data?.generated_at)}. ${fallback ? "Live feed could not load; this saved edition keeps its original dates. " : ""}Cloud refresh scheduled daily at 4:17 a.m. Pacific; delays and failures stay visible. The job does not depend on this Mac.</p><ul>${mainSources.map((s) => `<li><a href="${esc(safeURL(s.url))}" target="_blank" rel="noopener">${esc(s.name)}</a> · <strong>${esc(s.status)}</strong><small>${s.data?.sample_at ? "Source time " + when(s.data.sample_at) + ". " : ""}Checked ${when(s.checked_at)}.${s.changed_since_previous ? " Page changed; rules need review." : ""}${s.issue ? " " + esc(s.issue) : ""}</small></li>`).join("")}</ul><p class="small">A regulation-page check detects access and changes, not permission to fish. Harbor information is not live entrance clearance. NOAA, NASA JPL/GSFC, IOOS/HFRNet and Open-Meteo retain their data credits; landing facts link to SoCalFishReports.</p><a href="https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml" target="_blank" rel="noopener">Daily job status ↗</a></details></div></details>`;
 }
 
 export function initBiteEvidence(host) {
@@ -241,36 +288,34 @@ export function initBiteEvidence(host) {
       ? evidenceHTML(data, species, point, { open, fallback })
       : '<p class="small">Daily fishing evidence is loading…</p>';
   }
-  async function load() {
-    for (const url of [FEED_URL, "data/daily-evidence.json"]) {
-      try {
-        const r = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
-          cache: "no-cache",
-        });
-        if (!r.ok) throw new Error("Feed request failed");
-        const value = await r.json();
-        if (!validFeed(value)) throw new Error("Feed schema changed");
-        data = value;
-        fallback = url !== FEED_URL;
-        render(true);
-        return;
-      } catch {
-        /* Try the explicitly dated bundled edition; never fabricate data. */
-      }
+  async function load(force = false) {
+    try {
+      const result = await loadDailyEvidence(force);
+      data = result.data;
+      fallback = result.fallback;
+      render(true);
+      return;
+    } catch {
+      /* Both public feed and dated fallback failed. */
     }
     host.innerHTML =
       '<div class="bite-card"><p>Daily fishing evidence is unavailable. No bite score is assumed. <button id="retry-bite-evidence">Retry</button></p></div>';
-    host.querySelector("button").addEventListener("click", load);
+    host.querySelector("button").addEventListener("click", () => load(true));
   }
   render(true);
   load();
+  setInterval(() => {
+    if (document.visibilityState === "visible") load();
+  }, HOUR);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") load();
+  });
   return {
     select(id, location) {
       species = id;
       point = location;
       render();
     },
-    refresh: load,
+    refresh: () => load(true),
   };
 }

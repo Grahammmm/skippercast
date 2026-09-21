@@ -152,3 +152,12 @@
     padding: 0 14px 14px;
   }
 }
+
+.bite-card > summary::after {
+  content: "⌄";
+  color: #526d72;
+  font-size: 18px;
+}
+.bite-card[open] > summary::after {
+  content: "⌃";
+}

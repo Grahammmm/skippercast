@@ -39,7 +39,8 @@ The browser base map is © [OpenStreetMap contributors](https://www.openstreetma
 ## Published charter-ground facts
 
 The separate charter-report layer attributes concise dated trip facts to SoCalFishReports and the reporting boats/landings, with original links in `dist/data/charter-grounds.json`. Reports are not independently observed catches. Raw pages, articles, photos and audio are not redistributed. The publisher retains rights in its material. Search outlines are new geographic interpretations using the already credited USGS surveys and dated CDFW/restricted-area screens; they are not reported tracks or the withheld DS1091 ground layer. See `docs/charter-grounds.md`.
-# Daily public evidence
+
+## Daily public evidence
 
 The daily pipeline and evidence panel use separately attributed provider facts. MUR sea-temperature data were provided by JPL under support by NASA MEaSUREs; source metadata permits free use and redistribution. Aqua MODIS chlorophyll is NASA GSFC Ocean Biology Processing Group data under NASA's data policy. NOAA IOOS/HFRNet provides surface radar currents through NOAA CoastWatch ERDDAP; its dataset metadata permits free use and redistribution. Native units, source dates, metadata links and missing cells are retained; compact regional sampling and confidence notes are SkipperCast processing. No provider endorsement is implied.
 

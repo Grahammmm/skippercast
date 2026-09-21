@@ -1,3 +1,4 @@
+import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=5.6";
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -122,6 +123,7 @@ export async function initCharterGrounds(
       <p class="charter-lead"><strong>${g.report_count} reported trips · ${g.boats.length} boat${g.boats.length === 1 ? "" : "s"}</strong><br>Latest report ${date(g.latest_report)}</p>
       <p class="evidence-note charter-note"><strong>Reported area, exact stops unknown.</strong><br>Captains named “${esc(g.reported_ground)}”; they did not publish GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.</p>
       <div class="stats"><div class="stat"><span>Trips reporting ${speciesName}</span><strong>${summary.trips}</strong><span>on ${summary.dates} dates</span></div><div class="stat"><span>Outline survey depths</span><strong>${g.depth_ft.join("–")} ft</strong><span>${g.survey_year} · MLLW</span></div></div>
+      <div id="charter-recent-evidence" class="evidence-note"><p class="small">Checking recent reports for this named ground…</p></div>
       <p>${esc(g.approach)}</p>
       <button id="charter-weather" class="primary">Conditions for this area ↗</button>
       <details class="detail-section" open><summary>Boats & dated reports</summary>
@@ -144,6 +146,18 @@ export async function initCharterGrounds(
       <p><a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central" target="_blank" rel="noopener">Current CDFW rules ↗</a> · <a href="https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon" target="_blank" rel="noopener">Point Buchon MPAs ↗</a> · <a href="https://www.ecfr.gov/current/title-33/section-165.1155" target="_blank" rel="noopener">Diablo security zone ↗</a></p>
       <p>Research checked ${date(evidence.audit_date)}. This sample supports prior reported use of a named ground, not current fish presence. AIS-confirmed visits remain unavailable. <a href="sources.html#charter-reports">Full method and coverage</a>.</p></details>`;
     onSelect(html, g);
+    const recentHost = $("charter-recent-evidence");
+    loadDailyEvidence()
+      .then(({ data, fallback }) => {
+        if (!recentHost?.isConnected) return;
+        const recent = reportEvidence(data, species, Date.now(), g.id);
+        recentHost.innerHTML = `<strong>Recent ${esc(speciesName)} evidence · ${recent.confidence}</strong><p>${recent.reports.length} positive reports from ${recent.boats} boat${recent.boats === 1 ? "" : "s"} naming this ground, ${date(recent.start)}–${date(recent.end)}. ${esc(recent.reason)}</p><p class="small">${fallback ? "Saved snapshot. " : "Updated by the daily data feed. "}No exact charter stops are inferred. The historical totals above remain a separate dated audit.</p>`;
+      })
+      .catch(() => {
+        if (recentHost?.isConnected)
+          recentHost.textContent =
+            "Recent report feed unavailable; the historical audit above is unchanged.";
+      });
     for (const button of document.querySelectorAll("[data-charter-target]"))
       button.addEventListener("click", () =>
         onTarget(button.dataset.charterTarget),

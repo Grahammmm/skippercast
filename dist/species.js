@@ -340,20 +340,21 @@ export async function initSpecies(
   function fit() {
     if (PROFILES[id()].kind === "reef" || !current.length) return false;
     const h = map.getSize().y;
-    map.fitBounds(
-      L.featureGroup(
-        current.map((a) =>
-          a.geometry
-            ? L.geoJSON(a.geometry)
-            : L.circle([a.latitude, a.longitude], { radius: a.radius_m }),
-        ),
-      ).getBounds(),
-      {
-        paddingTopLeft: [40, Math.min(80, h * 0.17)],
-        paddingBottomRight: [40, Math.min(145, h * 0.28)],
-        maxZoom: 12,
-      },
-    );
+    const bounds = L.latLngBounds([]);
+    for (const a of current) {
+      // An unattached Leaflet circle has no projection for getBounds().
+      // Geographic bounds also work when the area layer is switched off.
+      bounds.extend(
+        a.geometry
+          ? L.geoJSON(a.geometry).getBounds()
+          : L.latLng(a.latitude, a.longitude).toBounds(a.radius_m * 2),
+      );
+    }
+    map.fitBounds(bounds, {
+      paddingTopLeft: [40, Math.min(80, h * 0.17)],
+      paddingBottomRight: [40, Math.min(145, h * 0.28)],
+      maxZoom: 12,
+    });
     return true;
   }
   function refresh() {

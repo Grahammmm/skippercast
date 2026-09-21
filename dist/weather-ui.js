@@ -13,7 +13,7 @@ import {
 } from "./marine-data.js?v=5.4";
 import { esc, num, local, full, day } from "./marine-charts.js?v=5.4";
 import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.6";
-import { detailHTML } from "./marine-detail.js?v=5.4";
+import { detailHTML } from "./marine-detail.js?v=5.6";
 const $ = (id) => document.getElementById(id);
 const colors = {
   calmer: "#278f87",
