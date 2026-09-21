@@ -40,7 +40,7 @@ export const PROFILES = {
     season:
       "Check current species sublimits, prohibited species, depth rules, and descending-device requirements.",
     unknown:
-      "No species-level catch model or confirmed charter hotspot is available.",
+      "The purple charter layer identifies reported grounds, not exact stops. No species-level catch model or verified catch positions are available.",
     sources: [
       fishSource,
       rules,

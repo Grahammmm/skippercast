@@ -35,3 +35,7 @@ See [data sources and processing](docs/data-sources.md) for dataset metadata, th
 The static app bundles Leaflet 1.9.4 under its BSD 2-Clause license, preserved in [LEAFLET-LICENSE.txt](dist/vendor/LEAFLET-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace Leaflet's terms.
 
 The browser base map is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under ODbL; standard tile access follows the [OSMF tile policy](https://operations.osmfoundation.org/policies/tiles/). Tiles are requested for the visible map, not redistributed in this repository or bulk-cached. The map is geographic context, not a nautical chart. Open-Meteo forecast data retain the attribution and terms above.
+
+## Published charter-ground facts
+
+The separate charter-report layer attributes concise dated trip facts to SoCalFishReports and the reporting boats/landings, with original links in `dist/data/charter-grounds.json`. Reports are not independently observed catches. Raw pages, articles, photos and audio are not redistributed. The publisher retains rights in its material. Search outlines are new geographic interpretations using the already credited USGS surveys and dated CDFW/restricted-area screens; they are not reported tracks or the withheld DS1091 ground layer. See `docs/charter-grounds.md`.

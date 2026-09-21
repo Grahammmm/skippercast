@@ -58,6 +58,12 @@ The Cambria constraints were inspected in the bathymetric-grid metadata included
 
 The original personal atlas remains a separate edition. Permission uncertainty is not a finding that the sources are unusable under every circumstance; it limits what this repository distributes now.
 
+## Published charter trip reports
+
+The [charter-ground register](charter-grounds.md) documents three named grounds from 45 single-ground trips in a 601-trip, 173-day public-report sample (April 1–September 20, 2026). Sources are landing-reported facts on SoCalFishReports, with the provider relationship linked from operator pages. The public JSON includes concise date/boat/ground/species facts and source references, not copied articles, media or raw pages. No permission to republish the publisher's expressive material is claimed.
+
+Search outlines are new editorial geographic interpretations clipped to the reviewed USGS depth grids and dated closures; they are not the publisher's fishing boundaries or exact charter stops. Underlying public-domain and CDFW data retain their existing terms and attribution. These outlines are separate from the withheld DS1091 layer. The layer does not add an AIS bonus or change any terrain grade.
+
 ## AIS evidence
 
 The [NOAA MarineCadastre AIS archive](https://hub.marinecadastre.gov/pages/vesseltraffic) is a free public research source. Its [official repository](https://github.com/ocm-marinecadastre/ais-vessel-traffic) and inspected 2024 broadcast-point and vessel-track readmes identify their content as [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Credit NOAA Office for Coastal Management and acknowledge the U.S. Coast Guard Navigation Center; consult each downloaded product's metadata rather than assuming all archives have identical terms.

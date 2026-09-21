@@ -14,10 +14,10 @@ Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas 
 - Filter 132 targets by area, terrain grade, maximum survey-neighborhood depth, and linked geometry; search names and marker IDs.
 - Select a target from a marker, a reef footprint, or a drift alignment. Its detail panel shows coordinates, survey depths, terrain metrics, notes, evidence limitations, and source links.
 - Compare A/B/C definitions in Guide and inspect all four weighted score contributions for each target, with plain-language explanations of points, partial reef areas, and drift alignments.
-- Read the dated historical AIS research summary, exact sample coverage, aggregate counts, and limitations. No verified local sportfishing-charter tracks or charter-activity overlays are currently available.
+- Tap purple boat labels for three charter-reported grounds: Pecho Rock, Diablo coast, and the broader Morro Bay coast. Inspect boats, dates, primary report links, approximate search outlines and nearby separate terrain candidates. The layer is backed by 45 single-ground reports from a 601-trip sample. It has no verified local charter AIS tracks. Read [the charter-ground method](charter-grounds.md).
 - Use the detailed NOAA ENC chart basemap or street-map fallback; toggle reef outlines, drift lines, markers, and weather samples.
 - Select lingcod, rockfish, California halibut, Chinook salmon, albacore, bluefin, or Dungeness. Reef subsets, connected surveyed sediment outlines, and explicit pelagic search references have different evidence and no shared catch rank. Read [the species research](species-research.md).
-- Download the complete 132-target rocky atlas GPX or a single rocky target with its linked geometry using direct file links, including from the mobile sheet. The sediment regions and pelagic search references are currently map-only. GPX polygons are separate track rings; they are not navigable routes. Share the downloaded file to iNavX.
+- Download the complete 132-target rocky atlas GPX or a single rocky target with its linked geometry using direct file links, including from the mobile sheet. Charter search outlines, sediment regions and pelagic search references are currently map-only. GPX polygons are separate track rings; they are not navigable routes. Share the downloaded file to iNavX.
 - Scrub or play 169 hourly samples from the current forecast hour through seven days ahead. Weather loads automatically at 13 coastal/offshore reference locations. Choose wind, waves, modeled sea-surface temperature, or a disclosed hourly comfort screen.
 - Inspect wind, gusts, visibility, precipitation, swell/chop heights and periods, direction arrows, a boat-heading comparison, 24-hour trends, NOAA Port San Luis tides, and a separately timestamped recent water-level observation.
 - Compare ECMWF IFS / NOAA GFS and ECMWF WAM / NOAA GFS Wave. Review per-model run metadata, returned grid coordinates, coverage, and active PZZ645/PZZ670 alerts. GFS primary-wave headline periods and ECMWF mean periods are labeled separately.
@@ -40,6 +40,7 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 | --- | --- |
 | `dist/index.html`, `styles.css`, `map-first.css` | Mobile-first app shell, bottom navigation, filters, map, sheets, and larger-screen layout |
 | `dist/app.js` | Target selection, geometry layers, GPX download, optional WebMCP interface |
+| `dist/charter-grounds.js`, `data/charter-grounds.json` | Named-ground report layer, dated boat histories, separate approximate search outlines |
 | `dist/navigation.js` | Hash-based view navigation, modal history/focus, and responsive detail placement |
 | `dist/forecast.js` | Original shared forecast helpers retained for the existing checks |
 | `dist/marine-data.js` | Per-model requests, UTC sampling, tides, units, direction and comfort checks |
@@ -53,7 +54,7 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 | `dist/data/`, `downloads/` | Copies of the reviewed public atlas and exports; dated aggregate AIS research summary |
 | `dist/vendor/` | Leaflet 1.9.4 plus its BSD license; exact hashes in `scripts/web-vendor-sha256.json` |
 
-`scripts/check_web.py` verifies that deployed copies match the canonical atlas and license, checks vendor hashes and local assets, and parses the shipped GPX. After an atlas refresh, run `node scripts/export_web_targets.mjs` to rebuild the direct downloads. JavaScript checks use `node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs` (Node 22+) and verify every prebuilt target file against the exporter; the existing Python checks remain independent.
+`scripts/check_web.py` verifies that deployed copies match the canonical atlas and license, checks vendor hashes and local assets, and parses the shipped GPX. After an atlas refresh, run `node scripts/export_web_targets.mjs` to rebuild the direct downloads. JavaScript checks use `node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs` (Node 22+) and verify every prebuilt target file against the exporter; the existing Python checks remain independent.
 
 Supported browsers can expose two page-scoped WebMCP tools: `list_fishing_targets` reads the currently filtered rocky-target list (sediment/search references are not yet part of that API); `show_fishing_target` resets filters and selects an existing target. Neither tool saves a trip, downloads a file, or sends an alert. Unsupported browsers retain the full visible interface.
 

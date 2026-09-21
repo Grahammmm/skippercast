@@ -1,7 +1,8 @@
 import { initWeather } from "./weather-ui.js?v=5.4";
 import { initNavigation } from "./navigation.js?v=5.4";
 import { initChart } from "./chart-map.js?v=5.4";
-import { initSpecies, matchesSpecies } from "./species.js?v=5.4";
+import { initSpecies, matchesSpecies } from "./species.js?v=5.5";
+import { initCharterGrounds } from "./charter-grounds.js?v=5.5";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -41,7 +42,7 @@ let atlas,
   selected,
   initialFitPending = true,
   visible = [];
-let speciesUI, weather;
+let speciesUI, charterUI, weather;
 const layers = {},
   markers = new Map();
 const navigation = initNavigation({
@@ -62,7 +63,7 @@ function initMap() {
     .scale({ imperial: true, metric: false, position: "bottomleft" })
     .addTo(map);
   initChart(map, toast);
-  for (const name of ["targets", "areas", "drifts", "forecast"]) {
+  for (const name of ["targets", "areas", "drifts", "forecast", "charters"]) {
     layers[name] = L.layerGroup();
     if ($(`layer-${name}`).checked) layers[name].addTo(map);
     $(`layer-${name}`).addEventListener("change", (e) =>
@@ -127,6 +128,7 @@ function filterTargets() {
   navigation.setHasSelection(!!selected);
   drawHabitat();
   speciesUI?.draw();
+  charterUI?.draw();
 }
 
 function drawHabitat() {
@@ -316,14 +318,10 @@ async function initAISContext() {
       throw new Error(`AIS summary request failed (${response.status})`);
     const evidence = await response.json();
     const count = evidence.summary;
-    panel.innerHTML = `<p><strong>There are currently no verified charter hotspot markers.</strong> A/B/C marks terrain quality; numbered clusters count nearby reef candidates. They do not show boat visits.</p><p><strong>Archive samples obtained; no verified local sportfishing-charter tracks yet.</strong> The current map has no charter-activity overlay. Its A/B/C grades use terrain only.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified sportfishing charters</span></div><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 consists of four consecutive daily files; the other dates are isolated samples. This is a limited search, not a season-wide charter history.</p><p>At this dated audit, the checked NOAA daily index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Vessel-name screening found no matches to the researched local fleet. Missing, changing, or differently reported identities and receiver coverage can hide trips; absence here does not mean charters never fish these areas.</p>`;
-    panel.insertAdjacentHTML(
-      "beforeend",
-      '<details><summary>Where charters have publicly reported fishing</summary><p>A first-hand June 10, 2019 report aboard the Fiesta describes Cape San Martin / southern Big Sur, with an initial stop in 280 ft followed by a shallower lingcod search. This is historical, broad-area evidence outside the Avila–Cambria / 200-ft bottom-fishing scope. It does not locate a current hotspot.</p><a href="https://wonews.com/a-trip-to-lingcod-alley/" target="_blank" rel="noopener">Read the dated Fiesta trip report ↗</a><p>Exact within-scope charter fishing positions remain unverified. Repeated visits require an independently identified vessel and complete timed tracks; reported catches alone do not provide GPS positions.</p></details>',
-    );
+    panel.innerHTML = `<p><strong>No independently verified local charter AIS tracks yet.</strong> The purple charter layer uses published named-ground reports. It does not use vessel tracks, and it does not change terrain grades.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified charter identities</span></div><details><summary>AIS sample coverage</summary><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 is a consecutive four-day block; the other dates are isolated samples.</p><p>The checked NOAA index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Missing identities and receiver gaps can hide trips. This limited sample cannot establish where charters do or do not fish.</p></details>`;
   } catch (error) {
     panel.innerHTML =
-      '<p class="error">The dated AIS research summary could not load. Charter activity remains unverified; see <a href="sources.html#ais">sources and coverage</a>.</p>';
+      '<p class="error">The dated AIS research summary could not load. AIS-derived charter activity remains unverified; see <a href="sources.html#ais">sources and coverage</a>.</p>';
     console.error(error);
   }
 }
@@ -408,7 +406,7 @@ function fitTargets() {
     initialFitPending = true;
     return;
   }
-  if (speciesUI?.fit()) {
+  if (speciesUI?.fit() || (!visible.length && charterUI?.fit?.())) {
     initialFitPending = false;
     return;
   }
@@ -432,6 +430,21 @@ function toast(message) {
   $("toast").hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => ($("toast").hidden = true), 6000);
+}
+
+function showAreaDetails(html, area, conditionsButton) {
+  selected = undefined;
+  drawHabitat();
+  speciesUI?.draw();
+  weather?.selectLocation(area);
+  $("detail").innerHTML = html;
+  $("export-selected").hidden = true;
+  $(conditionsButton).addEventListener("click", () =>
+    navigation.showView("forecast"),
+  );
+  navigation.setHasSelection(true);
+  navigation.openDetails();
+  $("spot-dialog-body").scrollTop = 0;
 }
 
 for (const id of ["about-button", "about-guide"])
@@ -493,22 +506,31 @@ try {
     },
     showGuide: () => navigation.showView("guide"),
     onSelect: (html, area) => {
-      selected = undefined;
-      weather?.selectLocation(area);
-      $("detail").innerHTML = html;
-      $("export-selected").hidden = true;
-      $("area-weather").addEventListener("click", () =>
-        navigation.showView("forecast"),
-      );
-      navigation.setHasSelection(true);
-      navigation.openDetails();
+      showAreaDetails(html, area, "area-weather");
     },
+  });
+  charterUI = await initCharterGrounds(map, layers.charters, {
+    onSelect: (html, area) => showAreaDetails(html, area, "charter-weather"),
+    onTarget: (id) => {
+      $("species-select").value = "rockfish";
+      $("search").value = "";
+      for (const name of ["area", "grade", "geometry"]) $(name).value = "all";
+      $("depth").value = "200";
+      speciesUI.refresh();
+      filterTargets();
+      weather?.setSpecies("rockfish");
+      selectTarget(id);
+      $("spot-dialog-body").scrollTop = 0;
+    },
+    showMap: () => navigation.showView("map"),
+    toast,
   });
   filterTargets();
   map.on("zoomend", () => {
     if (atlas) {
       drawHabitat();
       speciesUI?.draw();
+      charterUI?.draw();
     }
   });
   fitTargets();

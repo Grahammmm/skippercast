@@ -269,6 +269,117 @@
   font-size: 0.875rem;
   color: var(--muted);
 }
+.charter-map-chip {
+  position: absolute;
+  z-index: 500;
+  top: 72px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 6px 11px;
+  background: #fcf9ff;
+  border: 1px solid #b69ccc;
+  border-radius: 22px;
+  color: #613585;
+  font-size: 0.82rem;
+  box-shadow: 0 2px 8px #14394718;
+}
+.charter-map-chip[hidden] {
+  display: none;
+}
+.charter-map-chip svg,
+.charter-pin svg {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.charter-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 7px;
+  color: #613585;
+  background: #fffafd;
+  border: 2px solid #7540a0;
+  border-radius: 11px;
+  box-shadow: 0 2px 8px #2e193b38;
+  font:
+    650 0.79rem/1.3 system-ui,
+    sans-serif;
+}
+.charter-pin small {
+  display: block;
+  font-size: 0.69rem;
+  font-weight: 450;
+}
+.charter-ink {
+  color: #7540a0;
+}
+.charter-lead {
+  color: #613585;
+}
+.charter-note {
+  background: #f6effa;
+  border-color: #b798cf;
+}
+.charter-boats,
+.charter-ground-links,
+.charter-reef-links {
+  display: grid;
+  gap: 8px;
+}
+.charter-boats a {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  align-items: center;
+}
+.charter-boats a span {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.charter-ground-links button {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  background: #fbf6ff;
+  border-color: #d7c4e5;
+}
+.charter-ground-links button strong {
+  color: #613585;
+}
+.charter-ground-links button span,
+.charter-ground-links button small {
+  font-size: 0.8rem;
+}
+.charter-report-history ul {
+  list-style: none;
+  padding: 0;
+}
+.charter-report-history li {
+  display: grid;
+  gap: 4px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.charter-report-history li span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.charter-reef-links button {
+  min-height: 44px;
+  text-align: left;
+}
 .spot-sheet {
   height: auto;
   max-height: 76dvh;

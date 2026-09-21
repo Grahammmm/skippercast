@@ -20,9 +20,9 @@
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="marine.css?v=5.4" />
-    <link rel="stylesheet" href="map-first.css?v=5.4" />
+    <link rel="stylesheet" href="map-first.css?v=5.5" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js?v=5.4"></script>
+    <script type="module" src="app.js?v=5.5"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -67,6 +67,9 @@
             </button>
           </div>
           <div id="species-season" class="species-season" hidden></div>
+          <button id="show-charter-grounds" class="charter-map-chip" hidden>
+            Charter grounds
+          </button>
           <div id="map-empty" class="map-empty" hidden>
             <strong>No spots match</strong>
             <p>Adjust your filters to explore this area.</p>
@@ -195,7 +198,10 @@
           aria-labelledby="charter-title"
         >
           <div class="eyebrow">A SEPARATE KIND OF EVIDENCE</div>
-          <h2 id="charter-title">Historical charter AIS</h2>
+          <h2 id="charter-title">Where local charters report fishing</h2>
+          <div id="charter-ground-context" role="status">
+            <p>Loading named grounds and trip history…</p>
+          </div>
           <div id="ais-context" role="status">
             <p>Loading the dated research summary…</p>
           </div>
@@ -213,8 +219,8 @@
           <p>
             Download the GPX file, then use Share → iNavX on your iPad. The full
             set includes 132 rocky targets, partial reef outlines, and drift
-            alignments. Sediment regions and offshore search references are
-            currently map-only.
+            alignments. Charter-report search areas, sediment regions and
+            offshore search references are currently map-only.
           </p>
           <a
             class="download"
@@ -296,11 +302,16 @@
         <div id="weather-map-options"></div>
         <p class="small">
           Numbered clusters count nearby reef candidates. A/B/C grades describe
-          terrain; neither shows charter activity.
+          terrain. Purple boat labels mark charter-reported grounds; their
+          dashed outlines are approximate search areas.
         </p>
         <details>
-          <summary>Habitat layers</summary>
+          <summary>Map layers</summary>
           <div class="layer-options">
+            <label
+              ><input id="layer-charters" type="checkbox" checked />
+              Charter-reported grounds</label
+            >
             <label
               ><input id="layer-targets" type="checkbox" checked /> Reef
               markers</label
@@ -320,15 +331,15 @@
           </div>
         </details>
         <button id="charter-status" class="charter-status">
-          <strong>Charter hotspots</strong
-          ><span>0 verified · see evidence ↗</span>
+          <strong>Charter reports &amp; evidence</strong
+          ><span>Loading reported grounds…</span>
         </button>
         <div class="search-field">
           <label for="search">Find a spot</label
           ><input
             id="search"
             type="search"
-            placeholder="Name, marker ID, or terrain…"
+            placeholder="Ground, boat, marker ID…"
             autocomplete="off"
             enterkeyhint="search"
           />
@@ -373,7 +384,9 @@
             </div>
             <p class="small">
               Depth filters each spot’s 100 m neighborhood. Linked reef areas
-              and drift lines can extend deeper.
+              and drift lines can extend deeper. Charter outlines are shown only
+              when their full survey-depth range fits the depth limit; terrain
+              grade and geometry filters apply to reef candidates only.
             </p>
             <div class="filter-actions">
               <a href="#grade-guide">A / B / C explained</a
@@ -425,9 +438,11 @@
         with your sounder.
       </p>
       <p>
-        Cambria and historical charter annotations are excluded from this public
-        edition while source reuse terms are unresolved. Protected-area
-        boundaries and the Diablo Canyon security zone are
+        Cambria survey derivatives and the older DS1091 charter annotations are
+        excluded while source reuse terms are unresolved. The separate purple
+        charter layer uses dated public trip reports, with approximate search
+        outlines and no exact fishing positions. Protected-area boundaries and
+        the Diablo Canyon security zone are
         <strong>not displayed as a live layer</strong>. A marker does not
         establish current legal access.
       </p>

@@ -23,7 +23,12 @@
         It does not predict catches, issue trip recommendations, or provide
         navigation and legal clearance.
       </p>
-      <p><a href="species-research.html">New: species guidance, soft-bottom methods, NOAA chart, waves, tides, and comfort research</a></p>
+      <p>
+        <a href="species-research.html"
+          >New: species guidance, soft-bottom methods, NOAA chart, waves, tides,
+          and comfort research</a
+        >
+      </p>
       <h2>Mapped habitat</h2>
       <p>
         The 132 public targets come from 2008 surveys in three USGS releases,
@@ -171,18 +176,90 @@
         Cambria survey derivatives and older charter-ground annotations with
         unresolved reuse terms remain excluded from the public map.
       </p>
+      <h2 id="charter-reports">
+        Charter-reported grounds: boats, dates and approximate areas
+      </h2>
+      <p>
+        The purple layer uses landing-reported trip facts published by
+        SoCalFishReports: 173 daily pages from April 1 through September 20,
+        2026, with 601 Morro Bay / Avila Beach trip records. The operator
+        <a href="https://www.patriotsportfishing.com/">Patriot Sportfishing</a>
+        links to the publisher network;
+        <a href="https://www.virgslanding.com/boats/ritag.php"
+          >Virg’s Landing</a
+        >
+        credits SoCalFishReports for fish counts.
+      </p>
+      <p>
+        Three single-ground names support map entries: Pecho Rock (11 trips,
+        three boats), Diablo (20 trips, Sunny Day), and Morro Bay (14 trips,
+        Fiesta and Rita G). The latter is a broad regional reference, not a
+        localized reef. Each entry links every dated source. The sample is not a
+        complete fleet or season census, and reporting frequency is not fishing
+        effort or catch rate.
+      </p>
+      <p>
+        Reports publish neither GPS positions nor fishing depths. Our search
+        windows are geographic interpretations: 1.25 nautical miles around the
+        Pecho Rock landmark, two nautical miles around the Diablo Canyon
+        reference, and the reviewed offshore Morro Bay survey between 35.30° and
+        35.43° N. The displayed water is clipped to fully covered survey depths
+        of 25–195 ft MLLW and buffered dated closures. These planning windows
+        are not reported charter footprints; overlap with a reef candidate does
+        not establish a visit.
+      </p>
+      <p>
+        The bathymetry comes from the already credited 2008 USGS surveys. Native
+        minimum/maximum depths and coverage are aggregated to a 10 m grid.
+        Closed-area exclusions receive a 505 m planning buffer, followed by 20 m
+        erosion, a 12 m inward buffer and 8 m simplification. Only connected
+        pieces of at least 0.1 km² remain; gaps are not bridged. The final
+        rounded outlines were checked against all touched depth cells and
+        exclusions. Present sounder depth changes with tide.
+      </p>
+      <p>
+        The
+        <a href="https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon"
+          >CDFW Point Buchon page</a
+        >
+        was checked September 21. The
+        <a
+          href="https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol2/pdf/CFR-2025-title33-vol2-sec165-1155.pdf"
+          >published 2025 edition of 33 CFR 165.1155</a
+        >
+        supplies the Diablo security-zone reference; a current eCFR direct read
+        failed. The geometry is a dated screen, not live legal clearance.
+      </p>
+      <p>
+        344 trips have no ground label; 164 say only “Out Front.” Other named
+        grounds fall outside Avila–Cambria, and nine multi-ground reports are
+        not assigned to one location. Incidental salmon or halibut in a mixed
+        trip does not turn the outline into a species-specific hotspot. This
+        first charter layer is shown only for lingcod and rockfish.
+      </p>
+      <p>
+        <a href="data/charter-grounds.json"
+          >Download the dated charter-report dataset</a
+        >
+        for trip facts, source URLs, per-page retrieval times and hashes,
+        counts, geometry construction and limitations. Only concise facts are
+        republished; article text, photos, audio and raw HTML are not
+        distributed. No charter AIS track, exact catch position, present fish
+        abundance or catch-probability score is claimed.
+      </p>
       <h2 id="ais">Historical charter AIS: what we actually obtained</h2>
       <p>
         <strong
           >Raw archive samples were obtained, but no local sportfishing charter
           has been positively identified in them.</strong
         >
-        There is no charter-activity overlay or AIS bonus in the terrain grades.
-        The September 20, 2026 audit processed eight complete nationwide UTC-day
-        files: April 18, May 16, June 13, June 20, and June 27–30, 2026. The
-        Avila–Cambria regional screen retained 28,664 records with 51 distinct
-        vessel identifiers from 78,069,787 nationwide records. The public
-        habitat map still ends at Point Estero.
+        The purple charter-report layer below uses published named grounds, not
+        AIS. There is no AIS bonus in the terrain grades. The September 20, 2026
+        audit processed eight complete nationwide UTC-day files: April 18, May
+        16, June 13, June 20, and June 27–30, 2026. The Avila–Cambria regional
+        screen retained 28,664 records with 51 distinct vessel identifiers from
+        78,069,787 nationwide records. The public habitat map still ends at
+        Point Estero.
       </p>
       <p>
         June 27–30 provides one continuous four-day block; the other dates are
