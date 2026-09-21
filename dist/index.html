@@ -23,8 +23,9 @@
     <link rel="stylesheet" href="map-first.css?v=5.5" />
     <link rel="stylesheet" href="bite-evidence.css?v=5.6" />
     <link rel="stylesheet" href="regulations.css?v=5.7" />
+    <link rel="stylesheet" href="calm-layout.css?v=5.8" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js?v=5.7"></script>
+    <script type="module" src="app.js?v=5.8"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -37,7 +38,7 @@
         class="best-day-banner"
         aria-label="Open seven-day morning outlook"
       >
-        <span>7-day outlook</span><strong>Checking conditions…</strong>
+        <span>7-day outlook</span><strong>Checking…</strong>
       </button>
     </header>
     <main id="workspace" class="workspace" tabindex="-1">
@@ -52,8 +53,7 @@
           <div class="species-bar">
             <label for="species-select">Target species</label>
             <select id="species-select">
-              <option value="lingcod">Lingcod</option>
-              <option value="rockfish">Rockfish / rock cod</option>
+              <option value="reef">Lingcod &amp; rockfish</option>
               <option value="halibut">California halibut</option>
               <option value="salmon">Chinook salmon</option>
               <option value="albacore">Albacore tuna · offshore</option>
@@ -106,9 +106,9 @@
         <p id="forecast-status" role="status">
           Loading wind, waves, temperature, and NOAA tides…
         </p>
+        <div id="forecast-content"></div>
         <div id="morning-outlook"></div>
         <div id="bite-evidence" aria-label="Recent fishing evidence"></div>
-        <div id="forecast-content"></div>
       </section>
       <section
         id="guide-panel"
@@ -118,18 +118,17 @@
         hidden
       >
         <div class="view-heading">
-          <div class="eyebrow">KNOW YOUR MAP</div>
-          <h1>Fishing atlas guide</h1>
-          <p>
-            What the markers mean, what the evidence supports, and how to take
-            the spots with you.
-          </p>
+          <h1>Field guide</h1>
+          <p>Choose what you want to explore.</p>
         </div>
+        <details class="guide-topic"><summary>Fishing your target species</summary>
         <section
           id="species-guide"
           class="map-guide"
           aria-label="Species field guide"
         ></section>
+        </details>
+        <details class="guide-topic"><summary>Map symbols &amp; A/B/C grades</summary>
         <section
           id="grade-guide"
           class="map-guide"
@@ -197,6 +196,8 @@
             </p>
           </details>
         </section>
+        </details>
+        <details class="guide-topic"><summary>Where charters fish</summary>
         <section
           id="charter-evidence"
           class="map-guide charter-evidence"
@@ -219,6 +220,8 @@
             >.
           </p>
         </section>
+        </details>
+        <details class="guide-topic"><summary>Download to iNavX &amp; sources</summary>
         <section class="map-guide guide-downloads">
           <h2>Take the atlas with you</h2>
           <p>
@@ -242,6 +245,7 @@
             About this atlas &amp; current official checks
           </button>
         </section>
+        </details>
       </section>
     </main>
     <nav class="app-nav" aria-label="Main navigation">

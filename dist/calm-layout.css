@@ -1,0 +1,90 @@
+/* Keep the map clear; reveal the timeline, reference notes and extra controls on demand. */
+.masthead { min-height: 60px; padding: 6px 16px; }
+.best-day-banner { padding: 5px 10px; max-width: 52%; border: 0; background: #20434e; }
+.best-day-banner span { font-size: .75rem; }
+.best-day-banner strong { font-size: .9375rem; }
+.species-bar { max-width: 440px; }
+.regulations-card { width: min(360px, calc(100% - 78px)); }
+.regulations-card:not([open]) { width: fit-content; max-width: calc(100% - 78px); }
+.regulations-card > summary { gap: 9px; }
+.reg-body { font-size: 1rem; }
+.reg-context, .reg-area, .reg-freshness { font-size: .8125rem; }
+.reg-limits dt { font-size: .875rem; }
+.reg-child .reg-body { padding: 0; max-height: none; overflow: visible; }
+.reg-child .reg-body h2, .reg-child .reg-context, .reg-child .reg-area { display: none; }
+.reg-combined-limit { padding: 10px 0; border-bottom: 1px solid #dde8e8; }
+.reg-combined-limit h3 { font-size: 1rem; margin: 0 0 5px; }
+.reg-combined-limit p { margin: 4px 0; }
+.reg-separate { font-size: .875rem; color: #51666c; }
+.time-dock { padding: 6px 12px; max-width: 420px; background: #fff; box-shadow: 0 3px 16px #14394722; }
+.compact-time-row { height: auto; min-height: 48px; gap: 10px; }
+.compact-time-row #map-weather-summary { min-height: 48px; }
+#map-weather-summary strong { font-size: .9375rem; }
+#map-weather-summary > span { font-size: .8125rem; }
+.compact-time-row #toggle-map-timeline { padding: 6px 10px; min-height: 44px; border-radius: 9px; color: #086c65; background: #edf4f3; font-size: .875rem; }
+#toggle-map-timeline[aria-expanded="true"] { background: #d7efea; }
+.timeline-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #dde8e8; margin-top: 6px; padding-top: 4px; font-size: .875rem; }
+.timeline-actions button { min-width: 44px; min-height: 44px; padding: 6px; border: 0; background: transparent; color: #086c65; }
+.compact-time-caption { padding-bottom: 4px; }
+.forecast-settings { border: 1px solid #d3e0e1; border-radius: 12px; background: white; margin: 12px 0; }
+.forecast-settings > summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 48px; padding: 12px; list-style: none; }
+.forecast-settings > summary::-webkit-details-marker { display: none; }
+.forecast-settings > summary > span:last-child { color: #087a70; font-size: .875rem; }
+.forecast-settings .marine-controls { padding: 0 12px 12px; margin: 0; grid-template-columns: 1fr 1fr; }
+.selected-forecast-time { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 16px 0 2px; }
+.selected-forecast-time .eyebrow { font-size: .75rem; }
+.selected-forecast-time strong { font-size: 1rem; }
+.weather-extra { font-size: .875rem; font-weight: 400; }
+.weather-extra summary { cursor: pointer; min-height: 44px; padding: 12px 0; }
+.weather-extra span { display: block; }
+.direction-card > summary { padding: 6px 0; min-height: 44px; cursor: pointer; font-weight: 650; }
+.wave-card details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.ocean-detail-grid { align-items: start; }
+.guide-topic { border: 1px solid #d3e0e1; border-radius: 14px; margin: 14px 0; background: #fff; overflow: hidden; }
+.guide-topic > summary { min-height: 64px; padding: 20px; font-size: 1rem; font-weight: 650; cursor: pointer; }
+.guide-topic .map-guide { border: 0; margin: 0; box-shadow: none; }
+.field-note-grid { display: block; }
+.field-note { border-top: 1px solid #dce6e7; }
+.field-note > summary { min-height: 48px; padding: 14px 0; font-size: 1rem; font-weight: 600; cursor: pointer; }
+.field-note p { margin-top: 0; }
+#morning-outlook { scroll-margin-top: 12px; margin-top: 22px; }
+.condition-tabs { margin-top: 12px; }
+@media (max-width: 600px) {
+  .brand { font-size: 1rem; }
+  .masthead { min-height: 60px; padding: 6px 12px; gap: 12px; }
+  .best-day-banner { flex: 0 1 auto; padding: 4px 8px; }
+  .species-bar { top: 14px; left: 14px; right: 14px; padding: 3px 5px; }
+  .species-bar select { font-size: 1rem; padding-left: 8px; }
+  .species-bar .map-options-button { min-width: 62px; padding: 0 9px; }
+  .regulations-card { top: 76px; left: 14px; }
+  .regulations-card > summary { padding: 6px 10px; }
+  .regulations-card .reg-badge { font-size: .8125rem; }
+  .charter-map-chip { display: none; } /* Available through Map options and the guide. */
+  .leaflet-top.leaflet-right { top: 130px; }
+  .time-dock { left: 14px; right: 14px; bottom: 24px; padding: 5px 10px; }
+  .app-nav { padding-top: 5px; padding-bottom: max(5px, env(safe-area-inset-bottom)); }
+  .app-nav a { min-height: 52px; }
+  .app-nav a span { font-size: .8125rem; }
+  .forecast, .guide-panel { padding: 22px 16px; }
+  .forecast-heading .eyebrow { display: none; }
+  .forecast-heading { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+  #load-forecast { width: auto; min-width: 76px; min-height: 44px; padding: 8px 12px; font-size: .875rem; }
+  .forecast-heading h2 { font-size: 1.5rem; }
+  #forecast-status { font-size: .8125rem; line-height: 1.5; margin: 8px 0 16px; }
+  .selected-forecast-time .eyebrow { display: none; } /* Pacific time remains in the date label. */
+  .selected-forecast-time strong { font-size: .875rem; }
+  .marine-controls { grid-template-columns: 1fr !important; }
+  .ocean-detail-grid { display: block; }
+  .direction-card { margin-top: 12px; }
+  .conditions-hero { padding: 16px; gap: 14px; margin: 14px 0; }
+  .conditions-hero .sea-number { font-size: 2.4rem; }
+  .conditions-hero .eyebrow { font-size: .75rem; line-height: 1.5; }
+  .hero-wind strong { font-size: 1.7rem; }
+  .conditions-hero > div > span, .hero-wind > span { font-size: .875rem; }
+  .marine-card { padding: 16px; }
+  .marine-card .small, .comfort-explainer .small { font-size: .875rem; }
+  .view-heading { padding: 0 0 8px; }
+  .view-heading h1 { font-size: 1.7rem; }
+  .view-heading p { font-size: 1rem; }
+  .guide-topic .map-guide { padding: 0 18px 18px; }
+}

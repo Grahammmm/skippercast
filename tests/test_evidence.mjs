@@ -55,6 +55,14 @@ test("port reports and zero counts do not establish a named ground or presence",
   for (const r of data.reports) r.catches[0].count = 0;
   assert.equal(reportEvidence(data, "lingcod", now).confidence, "Insufficient");
 });
+
+test("combined lingcod and rockfish reports count each trip once", () => {
+  const d = feed();
+  d.reports[0].catches.push({ species: "rockfish", count: 20 });
+  d.reports[1].catches = [{ species: "rockfish", count: 10 }];
+  assert.equal(reportEvidence(d, "reef", now).reports.length, 7);
+  assert.equal(reportEvidence(d, "lingcod", now).reports.length, 6);
+});
 test("ocean samples preserve cloud gaps and source time rather than nearest available water", () => {
   const source = {
     status: "ok",

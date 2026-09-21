@@ -172,7 +172,8 @@ test("species filters separate reef candidates, sediment windows, and pelagic se
       new URL("../dist/data/species-habitat.json", import.meta.url),
     ),
   );
-  assert.equal(Object.keys(PROFILES).length, 7);
+  assert.equal(Object.keys(PROFILES).length, 8); // Seven species plus their shared reef view.
+  assert.equal(atlas.targets.filter((t) => matchesSpecies(t, "reef")).length, 132);
   assert.equal(
     atlas.targets.filter((t) => matchesSpecies(t, "rockfish")).length,
     132,

@@ -9,6 +9,17 @@ const rules = {
   url: "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
 };
 export const PROFILES = {
+  reef: {
+    name: "Lingcod & rockfish",
+    short: "Rocky reefs, raised structure & edges",
+    kind: "reef",
+    habitat: "Search rough rock and reef edges for lingcod. For rockfish, also watch for schools above the reef and along changes in bottom type.",
+    approach: "Sound the high points and surrounding water. Start a short controlled drift, keep the rig near marks or bottom, and reset when line angle makes contact difficult.",
+    conditions: "Light wind and manageable chop help you hold bottom. Measure the drift at the reef; the surface-current forecast cannot determine bottom current or sinker weight.",
+    map: "All 132 rocky habitat candidates, with charter-reported grounds. A/B/C ranks surveyed terrain, not catches. Individual fish presence remains unverified.",
+    unknown: "Bottom current, bait and fish presence are not measured. Lingcod and each rockfish species keep separate size, bag and identification rules.",
+    sources: [fishSource, rules],
+  },
   lingcod: {
     name: "Lingcod",
     short: "Raised rock & reef edges",
@@ -186,7 +197,7 @@ export const PROFILES = {
   },
 };
 export function matchesSpecies(target, id) {
-  if (id === "rockfish") return true;
+  if (id === "reef" || id === "rockfish") return true;
   return (
     id === "lingcod" &&
     target.metrics.relief_210m_m >= 3 &&
@@ -229,7 +240,7 @@ export async function initSpecies(
         ["Season & access", "Select this species on the map and open Regulations for local season dates, limits, gear rules and current source-check status."],
         ["What we still cannot see", p.unknown],
       ]
-        .map(([h, t]) => `<div><h3>${h}</h3><p>${t}</p></div>`)
+        .map(([h, t]) => `<details class="field-note"><summary>${h}</summary><p>${t}</p></details>`)
         .join(
           "",
         )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${p.sources.map((s) => `<a href="${s.url}" target="_blank" rel="noopener">${s.title} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;

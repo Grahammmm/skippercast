@@ -1,4 +1,5 @@
-import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=5.6";
+import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=5.8";
+import { matchesTargetSpecies } from "./target-groups.js?v=5.8";
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -25,8 +26,8 @@ export function matchingGrounds(
   const query = search.toLowerCase().trim();
   return grounds.filter(
     (g) =>
-      g.map_species.includes(species) &&
-      g.reports.some((r) => r.species.includes(species)) &&
+      g.map_species.some((id) => matchesTargetSpecies(id, species)) &&
+      g.reports.some((r) => r.species.some((id) => matchesTargetSpecies(id, species))) &&
       (area === "all" || area === g.source_id) &&
       g.depth_ft[1] <= depth &&
       `${g.id} ${g.label} ${g.reported_ground} ${g.boats.join(" ")}`
@@ -36,7 +37,7 @@ export function matchingGrounds(
 }
 
 export function reportSummary(ground, species) {
-  const reports = ground.reports.filter((r) => r.species.includes(species));
+  const reports = ground.reports.filter((r) => r.species.some((id) => matchesTargetSpecies(id, species)));
   return {
     trips: reports.length,
     dates: new Set(reports.map((r) => r.date)).size,
@@ -112,7 +113,7 @@ export async function initCharterGrounds(
   function select(g) {
     const species = $("species-select").value;
     const summary = reportSummary(g, species);
-    const speciesName = species === "lingcod" ? "lingcod" : "rockfish";
+    const speciesName = species === "reef" ? "lingcod or rockfish" : species === "lingcod" ? "lingcod" : "rockfish";
     const boatFacts = g.boats.map((boat) => ({
       boat,
       count: g.reports.filter((r) => r.boat === boat).length,
@@ -166,7 +167,7 @@ export async function initCharterGrounds(
   function draw() {
     layer.clearLayers();
     current = choose();
-    const bottom = ["lingcod", "rockfish"].includes($("species-select").value);
+    const bottom = ["reef", "lingcod", "rockfish"].includes($("species-select").value);
     chip.hidden = !bottom;
     chip.innerHTML = `${boatIcon}<span>${current.length ? `Charter grounds · ${current.length}` : "Charter grounds · filtered"}</span>`;
     chip.setAttribute(
@@ -242,7 +243,7 @@ export async function initCharterGrounds(
   for (const button of context.querySelectorAll("[data-charter-ground]")) {
     button.addEventListener("click", () => {
       const ground = grounds.find((g) => g.id === button.dataset.charterGround);
-      $("species-select").value = "rockfish";
+      $("species-select").value = "reef";
       $("search").value = "";
       $("area").value = "all";
       $("depth").value = "200";

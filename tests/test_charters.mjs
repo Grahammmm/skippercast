@@ -10,6 +10,15 @@ const atlas = JSON.parse(
   readFileSync(new URL("../dist/data/atlas.json", import.meta.url)),
 );
 
+test("combined reef view includes either species without counting a trip twice", () => {
+  const combined = matchingGrounds(evidence.grounds, { species: "reef" });
+  const union = new Set(["lingcod", "rockfish"].flatMap((species) => matchingGrounds(evidence.grounds, { species }).map((g) => g.id)));
+  assert.deepEqual(new Set(combined.map((g) => g.id)), union);
+  for (const ground of combined) {
+    assert.equal(reportSummary(ground, "reef").trips, ground.reports.filter((r) => r.species.includes("lingcod") || r.species.includes("rockfish")).length);
+  }
+});
+
 test("reported grounds preserve provenance, counts and uncertainty without changing terrain", () => {
   const coverage = evidence.coverage;
   assert.equal(

@@ -1,10 +1,12 @@
 import { esc } from "./marine-charts.js?v=5.4";
 import { distanceNm } from "./marine-data.js?v=5.4";
+import { matchesTargetSpecies } from "./target-groups.js?v=5.8";
 
 export const FEED_URL =
   "https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json";
 const HOUR = 3600000;
 const names = {
+  reef: "Lingcod & rockfish",
   lingcod: "Lingcod",
   rockfish: "Rockfish",
   halibut: "California halibut",
@@ -106,7 +108,7 @@ export function reportEvidence(
       r.date >= first &&
       r.date < today &&
       (!groundId || r.ground_id === groundId) &&
-      r.catches?.some((c) => c.species === species && c.count > 0),
+      r.catches?.some((c) => matchesTargetSpecies(c.species, species) && c.count > 0),
   );
   const boats = new Set(reports.map((r) => r.boat)).size;
   const days = new Set(reports.map((r) => r.date)).size;
@@ -259,7 +261,7 @@ export function evidenceHTML(
           .map(
             (r) =>
               `<a href="${esc(safeURL(r.source_url))}" target="_blank" rel="noopener"><span>${day(r.date)} · ${esc(r.boat)}</span><strong>${r.catches
-                .filter((c) => c.species === species && c.count > 0)
+                .filter((c) => matchesTargetSpecies(c.species, species) && c.count > 0)
                 .map(
                   (c) =>
                     `${c.count} ${esc(c.label)}${c.disposition === "released" ? " released" : " reported"}`,
@@ -276,7 +278,7 @@ export function evidenceHTML(
 export function initBiteEvidence(host) {
   let data = null,
     fallback = false,
-    species = "lingcod",
+    species = "reef",
     point = { name: "Estero Bay", latitude: 35.36, longitude: -120.94 };
   let key = "";
   function render(force = false) {

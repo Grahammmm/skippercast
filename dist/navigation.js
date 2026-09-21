@@ -29,6 +29,8 @@ export function initNavigation({ onMapVisible }) {
       if (view === "map") onMapVisible();
       if (["#grade-guide", "#charter-evidence"].includes(location.hash)) {
         const section = $(location.hash.slice(1));
+        for (let node = section.parentElement; node; node = node.parentElement)
+          if (node.tagName === "DETAILS") node.open = true;
         section.tabIndex = -1;
         section.focus({ preventScroll: true });
         section.scrollIntoView({ block: "start" });

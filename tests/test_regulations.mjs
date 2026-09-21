@@ -63,3 +63,16 @@ test("data is escaped and links stay on official sources", () => {
   assert.equal(officialURL("javascript:alert(1)"), "https://wildlife.ca.gov/Fishing/Ocean");
   assert.equal(officialURL("https://wildlife.ca.gov.attacker.example/"), "https://wildlife.ca.gov/Fishing/Ocean");
 });
+
+test("combined reef selector keeps both legal limits and does not mask an unverified species", () => {
+  const d = data();
+  assert.equal(regulationState(d, "reef", now).status, "open");
+  const html = regulationsHTML(d, "reef", now);
+  assert.match(html, /2 per person daily/);
+  assert.match(html, /10 total rockfish, cabezon and greenlings/);
+  assert.match(html, /22 in minimum/);
+  assert.match(html, /Keep the limits separate/);
+  d.checks["rules-groundfish"].status = "changed";
+  assert.equal(regulationState(d, "reef", now).status, "unknown");
+  assert.equal(regulationState(null, "reef", now).status, "unknown");
+});

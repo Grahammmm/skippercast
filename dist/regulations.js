@@ -1,5 +1,5 @@
 import { esc } from "./marine-charts.js?v=5.4";
-import { loadDailyEvidence } from "./bite-evidence.js?v=5.6";
+import { loadDailyEvidence } from "./bite-evidence.js?v=5.8";
 
 const HOUR = 3600000;
 const IDS = ["lingcod", "rockfish", "halibut", "salmon", "albacore", "bluefin", "dungeness"];
@@ -32,6 +32,13 @@ export function validRegulations(data) {
 }
 
 export function regulationState(data, species, now = Date.now()) {
+  if (species === "reef") {
+    const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now));
+    const status = ["unknown", "closed", "scheduled", "open"].find((s) => members.some((m) => m.status === s));
+    return { ...members.find((m) => m.status === status), members,
+      issues: [...new Set(members.flatMap((m) => m.issues))],
+      label: status === "closed" && members.some((m) => m.status !== "closed") ? "Check both seasons" : members.find((m) => m.status === status).label };
+  }
   const today = dateFormat.format(new Date(now));
   if (!validRegulations(data) || !IDS.includes(species))
     return { status: "unknown", label: "Check rules", today, reason: "Regulations unavailable. Open the official CDFW rules before fishing.", issues: [] };
@@ -62,7 +69,21 @@ export function regulationState(data, species, now = Date.now()) {
 
 export function regulationsHTML(data, species, now = Date.now(), fallback = false) {
   const state = regulationState(data, species, now);
-  const summary = `<summary><span>Regulations</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
+  const summary = `<summary><span>Rules</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
+  if (species === "reef" && validRegulations(data)) {
+    const ids = ["lingcod", "rockfish"];
+    const seasonsMatch = data.species.lingcod.season === data.species.rockfish.season;
+    return summary + `<div class="reg-body" tabindex="0" aria-label="Lingcod and rockfish regulation details">
+      <div class="reg-context">Today · ${esc(state.today)} · Pacific time</div>
+      <h2>Lingcod &amp; rockfish</h2><p class="reg-area">Avila–Cambria · recreational boat fishing</p>
+      <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
+      ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
+      ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(data.species[id].name)}</h3><p>${esc(data.species[id].bag)}</p><p>${esc(data.species[id].size)}</p></section>`).join("")}
+      <p class="reg-separate">Keep the limits separate. Rockfish identification and species sublimits matter.</p>
+      ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
+      <a class="reg-official" href="${esc(officialURL(data.sources["rules-groundfish"].url))}" target="_blank" rel="noopener">Official groundfish rules ↗</a>
+    </div>`;
+  }
   if (!state.profile) return summary + `<div class="reg-body"><p>${esc(state.reason)}</p><a href="https://wildlife.ca.gov/Fishing/Ocean" target="_blank" rel="noopener">Official CDFW rules ↗</a></div>`;
   const p = state.profile;
   const timestamps = p.source_ids.map((id) => data.checks[id]?.data_retrieved_at).filter((s) => Number.isFinite(Date.parse(s)));

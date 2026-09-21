@@ -1,9 +1,9 @@
-import { initWeather } from "./weather-ui.js?v=5.6";
-import { initNavigation } from "./navigation.js?v=5.4";
+import { initWeather } from "./weather-ui.js?v=5.8";
+import { initNavigation } from "./navigation.js?v=5.8";
 import { initChart } from "./chart-map.js?v=5.4";
-import { initSpecies, matchesSpecies } from "./species.js?v=5.7";
-import { initRegulations } from "./regulations.js?v=5.7";
-import { initCharterGrounds } from "./charter-grounds.js?v=5.6";
+import { initSpecies, matchesSpecies } from "./species.js?v=5.8";
+import { initRegulations } from "./regulations.js?v=5.8";
+import { initCharterGrounds } from "./charter-grounds.js?v=5.8";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -42,6 +42,7 @@ let atlas,
   map,
   selected,
   initialFitPending = true,
+  initialViewShown = false,
   visible = [];
 let speciesUI, charterUI, weather;
 const layers = {},
@@ -56,8 +57,8 @@ const navigation = initNavigation({
 
 function initMap() {
   map = L.map("map", { zoomControl: false, minZoom: 7, maxZoom: 18 }).setView(
-    [35.36, -120.95],
-    10,
+    [35.34, -120.965],
+    11,
   );
   L.control.zoom({ position: "topright" }).addTo(map);
   L.control
@@ -379,7 +380,7 @@ function registerTools() {
         $("search").value = "";
         for (const id of ["area", "grade", "geometry"]) $(id).value = "all";
         $("depth").value = "200";
-        $("species-select").value = "rockfish";
+        $("species-select").value = "reef";
         speciesUI?.refresh();
         filterTargets();
         selectTarget(input.target_id);
@@ -405,6 +406,12 @@ function registerTools() {
 function fitTargets() {
   if ($("map-panel").hidden || !map?.getSize().y) {
     initialFitPending = true;
+    return;
+  }
+  if (!initialViewShown) {
+    map.setView([35.34, -120.965], 11);
+    initialViewShown = true;
+    initialFitPending = false;
     return;
   }
   if (speciesUI?.fit() || (!visible.length && charterUI?.fit?.())) {
@@ -514,13 +521,13 @@ try {
   charterUI = await initCharterGrounds(map, layers.charters, {
     onSelect: (html, area) => showAreaDetails(html, area, "charter-weather"),
     onTarget: (id) => {
-      $("species-select").value = "rockfish";
+      $("species-select").value = "reef";
       $("search").value = "";
       for (const name of ["area", "grade", "geometry"]) $(name).value = "all";
       $("depth").value = "200";
       speciesUI.refresh();
       filterTargets();
-      weather?.setSpecies("rockfish");
+      weather?.setSpecies("reef");
       selectTarget(id);
       $("spot-dialog-body").scrollTop = 0;
     },
