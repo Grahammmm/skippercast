@@ -1,0 +1,2833 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="SkipperCast 0.1.0">
+  <metadata>
+    <name>SkipperCast Avila–Point Estero habitat atlas</name>
+    <desc>Dated survey-derived habitat candidates and optional fishing alignments. Source-datum depth screen &lt;=200 ft. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon source survey and metadata</text>
+    </link>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay source survey and metadata</text>
+    </link>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero source survey and metadata</text>
+    </link>
+  </metadata>
+  <wpt lat="35.164314" lon="-120.843179">
+    <name>SC26-001-A</name>
+    <cmt>Habitat priority A; source depth 140 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (88/100); tied rank 4 of 132. Not a catch prediction.
+Raised, rough bedrock within a deeper rocky complex.
+Source depth: center 140 ft; 100-m neighborhood 135–184 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 46 ft; mapped rough habitat 97%; usable nearby rough habitat 41.8 acres.
+Partial reef outlines: SC-AREA-014 (21.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-001: 400 m alignment, 114/294 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-001. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.171180" lon="-120.854196">
+    <name>SC26-002-A</name>
+    <cmt>Habitat priority A; source depth 146 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (86/100); tied rank 5 of 132. Not a catch prediction.
+Local high point with rough rock extending around the marker.
+Source depth: center 146 ft; 100-m neighborhood 139–180 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 43 ft; mapped rough habitat 93%; usable nearby rough habitat 34.9 acres.
+Partial reef outlines: SC-AREA-018 (30.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-002. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.182333" lon="-120.852695">
+    <name>SC26-003-A</name>
+    <cmt>Habitat priority A; source depth 101 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (83/100); tied rank 9 of 132. Not a catch prediction.
+Prominent local rock high southeast of the Diablo security zone.
+Source depth: center 101 ft; 100-m neighborhood 97–136 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 38 ft; mapped rough habitat 96%; usable nearby rough habitat 44.3 acres.
+Partial reef outlines: SC-AREA-025 (36.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-003: 400 m alignment, 113/293 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 861 m from the Diablo security-zone boundary. Plan the full drift and approach outside it.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-003. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.259204" lon="-120.912987">
+    <name>SC26-004-A</name>
+    <cmt>Habitat priority A; source depth 61 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (98/100); tied rank 1 of 132. Not a catch prediction.
+Strong relief on rough rock north of the Point Buchon MPAs.
+Source depth: center 61 ft; 100-m neighborhood 47–105 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 55 ft; mapped rough habitat 94%; usable nearby rough habitat 25.3 acres.
+Partial reef outlines: SC-AREA-029 (45.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-004: 200 m alignment, 106/286 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 558 m north of the Point Buchon closure boundary; closest marker to a screened closure. The 100 m circle leaves about 458 m.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-004. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.384039" lon="-120.885778">
+    <name>SC26-005-A</name>
+    <cmt>Habitat priority A; source depth 54 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (79/100); tied rank 19 of 132. Not a catch prediction.
+Compact, steep rocky high surrounded by deeper terrain.
+Source depth: center 54 ft; 100-m neighborhood 37–92 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 42 ft; mapped rough habitat 76%; usable nearby rough habitat 23.8 acres.
+Partial reef outlines: SC-AREA-051 (31.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-005: 400 m alignment, 057/237 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Parts of the 100 m area map shallower than 40 ft.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-005. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.408112" lon="-120.943399">
+    <name>SC26-006-A</name>
+    <cmt>Habitat priority A; source depth 131 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Raised rough reef with deeper terrain on its flanks.
+Source depth: center 131 ft; 100-m neighborhood 123–162 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 34 ft; mapped rough habitat 100%; usable nearby rough habitat 36.7 acres.
+Partial reef outlines: SC-AREA-057 (54.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-006. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.410384" lon="-120.955124">
+    <name>SC26-007-A</name>
+    <cmt>Habitat priority A; source depth 147 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (79/100); tied rank 19 of 132. Not a catch prediction.
+Local crest within a wider area of rough seafloor.
+Source depth: center 147 ft; 100-m neighborhood 140–174 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 96%; usable nearby rough habitat 39.1 acres.
+Partial reef outlines: SC-AREA-059 (59.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-007. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.411253" lon="-120.895528">
+    <name>SC26-008-A</name>
+    <cmt>Habitat priority A; source depth 49 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (86/100); tied rank 5 of 132. Not a catch prediction.
+Distinct shallow mound with nearly continuous rough-rock classification.
+Source depth: center 49 ft; 100-m neighborhood 43–80 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 37 ft; mapped rough habitat 100%; usable nearby rough habitat 26.1 acres.
+Partial reef outlines: SC-AREA-060 (25.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-008: 400 m alignment, 154/334 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-008. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.477428" lon="-121.051513">
+    <name>SC26-009-A</name>
+    <cmt>Habitat priority A; source depth 131 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (82/100); tied rank 13 of 132. Not a catch prediction.
+Raised rough-rock patch within a larger reef complex.
+Source depth: center 131 ft; 100-m neighborhood 126–167 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 45 ft; mapped rough habitat 92%; usable nearby rough habitat 39.0 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-009. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.491555" lon="-121.066714">
+    <name>SC26-010-A</name>
+    <cmt>Habitat priority A; source depth 135 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (80/100); tied rank 16 of 132. Not a catch prediction.
+Broad rough-rock high with sloping flanks.
+Source depth: center 135 ft; 100-m neighborhood 125–165 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 41 ft; mapped rough habitat 98%; usable nearby rough habitat 35.3 acres.
+Partial reef outlines: SC-AREA-100 (57.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-010: 400 m alignment, 039/219 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-010. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.495769" lon="-121.076534">
+    <name>SC26-011-A</name>
+    <cmt>Habitat priority A; source depth 137 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (89/100); tied rank 3 of 132. Not a catch prediction.
+Distinct high point in nearly continuous rough seafloor.
+Source depth: center 137 ft; 100-m neighborhood 130–171 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 44 ft; mapped rough habitat 99%; usable nearby rough habitat 36.7 acres.
+Partial reef outlines: SC-AREA-101 (53.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-011. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.540362" lon="-121.114515">
+    <name>SC26-012-A</name>
+    <cmt>Habitat priority A; source depth 96 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (93/100); tied rank 2 of 132. Not a catch prediction.
+Strong relief and closely spaced rock highs west of White Rock SMCA.
+Source depth: center 96 ft; 100-m neighborhood 47–131 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 71 ft; mapped rough habitat 93%; usable nearby rough habitat 28.3 acres.
+Partial reef outlines: SC-AREA-107 (59.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Near a source-coverage edge; checked 100 m circle is complete.
+About 625 m outside White Rock SMCA; the 100 m circle leaves about 525 m. Survey gap about 200 m from marker. Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-012. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.145341" lon="-120.790888">
+    <name>SC26-017-C</name>
+    <cmt>Habitat priority C; source depth 88 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (45/100); tied rank 117 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.6 m relief across 210 m.
+Source depth: center 88 ft; 100-m neighborhood 87–108 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 19 ft; mapped rough habitat 65%; usable nearby rough habitat 10.3 acres.
+Partial reef outlines: SC-AREA-001 (4.2 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-017. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.146525" lon="-120.806441">
+    <name>SC26-018-B</name>
+    <cmt>Habitat priority B; source depth 106 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (68/100); tied rank 61 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.6 m relief across 210 m.
+Source depth: center 106 ft; 100-m neighborhood 102–127 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 25 ft; mapped rough habitat 99%; usable nearby rough habitat 37.7 acres.
+Partial reef outlines: SC-AREA-002 (120.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-018. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.147099" lon="-120.798304">
+    <name>SC26-019-B</name>
+    <cmt>Habitat priority B; source depth 91 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.1 m relief across 210 m.
+Source depth: center 91 ft; 100-m neighborhood 88–105 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 95%; usable nearby rough habitat 41.6 acres.
+Partial reef outlines: SC-AREA-004 (123.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-019. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.147255" lon="-120.826946">
+    <name>SC26-020-B</name>
+    <cmt>Habitat priority B; source depth 157 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.1 m relief across 210 m.
+Source depth: center 157 ft; 100-m neighborhood 153–186 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 33 ft; mapped rough habitat 83%; usable nearby rough habitat 32.2 acres.
+Partial reef outlines: SC-AREA-003 (54.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-020. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.148717" lon="-120.812968">
+    <name>SC26-021-B</name>
+    <cmt>Habitat priority B; source depth 134 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (58/100); tied rank 99 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.8 m relief across 210 m.
+Source depth: center 134 ft; 100-m neighborhood 130–148 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 90%; usable nearby rough habitat 35.3 acres.
+Partial reef outlines: SC-AREA-002 (120.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-021. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.150128" lon="-120.841358">
+    <name>SC26-022-B</name>
+    <cmt>Habitat priority B; source depth 180 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (58/100); tied rank 99 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.4 m relief across 210 m.
+Source depth: center 180 ft; 100-m neighborhood 174–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 89%; usable nearby rough habitat 23.5 acres.
+Partial reef outlines: SC-AREA-005 (76.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-022. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.152369" lon="-120.795637">
+    <name>SC26-023-B</name>
+    <cmt>Habitat priority B; source depth 83 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.8 m relief across 210 m.
+Source depth: center 83 ft; 100-m neighborhood 81–100 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 91%; usable nearby rough habitat 34.1 acres.
+Partial reef outlines: SC-AREA-004 (123.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-023. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.153685" lon="-120.788686">
+    <name>SC26-024-A</name>
+    <cmt>Habitat priority A; source depth 68 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (86/100); tied rank 5 of 132. Not a catch prediction.
+Mapped rough-rock high; 16.3 m relief across 210 m.
+Source depth: center 68 ft; 100-m neighborhood 44–94 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 53 ft; mapped rough habitat 76%; usable nearby rough habitat 16.3 acres.
+Partial reef outlines: SC-AREA-006 (17.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-024: 400 m alignment, 137/317 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-024. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.154261" lon="-120.830492">
+    <name>SC26-025-B</name>
+    <cmt>Habitat priority B; source depth 133 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.4 m relief across 210 m.
+Source depth: center 133 ft; 100-m neighborhood 125–153 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 85%; usable nearby rough habitat 39.7 acres.
+Partial reef outlines: SC-AREA-007 (64.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-025. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.155095" lon="-120.806760">
+    <name>SC26-026-B</name>
+    <cmt>Habitat priority B; source depth 103 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.5 m relief across 210 m.
+Source depth: center 103 ft; 100-m neighborhood 102–118 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 93%; usable nearby rough habitat 40.3 acres.
+Partial reef outlines: SC-AREA-008 (70.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-026. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.155295" lon="-120.837929">
+    <name>SC26-027-B</name>
+    <cmt>Habitat priority B; source depth 165 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (55/100); tied rank 109 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.7 m relief across 210 m.
+Source depth: center 165 ft; 100-m neighborhood 162–180 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 85%; usable nearby rough habitat 29.5 acres.
+Partial reef outlines: SC-AREA-005 (76.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-027. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.159784" lon="-120.796864">
+    <name>SC26-028-B</name>
+    <cmt>Habitat priority B; source depth 64 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (68/100); tied rank 61 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.3 m relief across 210 m.
+Source depth: center 64 ft; 100-m neighborhood 62–86 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 84%; usable nearby rough habitat 37.1 acres.
+Partial reef outlines: SC-AREA-009 (5.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-028: 400 m alignment, 013/193 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-028. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.162739" lon="-120.790856">
+    <name>SC26-029-B</name>
+    <cmt>Habitat priority B; source depth 51 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (60/100); tied rank 90 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.9 m relief across 210 m.
+Source depth: center 51 ft; 100-m neighborhood 47–76 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 26 ft; mapped rough habitat 70%; usable nearby rough habitat 29.6 acres.
+Partial reef outlines: SC-AREA-010 (33.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-029. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.162812" lon="-120.809736">
+    <name>SC26-030-B</name>
+    <cmt>Habitat priority B; source depth 72 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.4 m relief across 210 m.
+Source depth: center 72 ft; 100-m neighborhood 70–96 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 92%; usable nearby rough habitat 42.6 acres.
+Partial reef outlines: SC-AREA-012 (135.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-030: 400 m alignment, 068/248 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-030. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.163172" lon="-120.834756">
+    <name>SC26-031-A</name>
+    <cmt>Habitat priority A; source depth 109 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (86/100); tied rank 5 of 132. Not a catch prediction.
+Mapped rough-rock high; 14.0 m relief across 210 m.
+Source depth: center 109 ft; 100-m neighborhood 97–142 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 46 ft; mapped rough habitat 97%; usable nearby rough habitat 42.7 acres.
+Partial reef outlines: SC-AREA-011 (84.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-031. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.164276" lon="-120.815954">
+    <name>SC26-032-B</name>
+    <cmt>Habitat priority B; source depth 80 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (70/100); tied rank 54 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.6 m relief across 210 m.
+Source depth: center 80 ft; 100-m neighborhood 77–106 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 96%; usable nearby rough habitat 34.6 acres.
+Partial reef outlines: SC-AREA-012 (135.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-032. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.165456" lon="-120.801432">
+    <name>SC26-033-B</name>
+    <cmt>Habitat priority B; source depth 54 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (56/100); tied rank 106 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.3 m relief across 210 m.
+Source depth: center 54 ft; 100-m neighborhood 52–82 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 27 ft; mapped rough habitat 57%; usable nearby rough habitat 21.8 acres.
+Partial reef outlines: SC-AREA-013 (27.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-033: 350 m alignment, 059/239 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-033. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.168752" lon="-120.849429">
+    <name>SC26-034-A</name>
+    <cmt>Habitat priority A; source depth 154 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (82/100); tied rank 13 of 132. Not a catch prediction.
+Mapped rough-rock high; 14.0 m relief across 210 m.
+Source depth: center 154 ft; 100-m neighborhood 141–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 46 ft; mapped rough habitat 86%; usable nearby rough habitat 30.1 acres.
+Partial reef outlines: SC-AREA-015 (10.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-034: 400 m alignment, 126/306 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-034. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.169945" lon="-120.830404">
+    <name>SC26-035-B</name>
+    <cmt>Habitat priority B; source depth 68 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.7 m relief across 210 m.
+Source depth: center 68 ft; 100-m neighborhood 65–90 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 22 ft; mapped rough habitat 100%; usable nearby rough habitat 41.0 acres.
+Partial reef outlines: SC-AREA-016 (21.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-035: 400 m alignment, 102/282 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-035. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.170898" lon="-120.803261">
+    <name>SC26-036-B</name>
+    <cmt>Habitat priority B; source depth 40 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.2 m relief across 210 m.
+Source depth: center 40 ft; 100-m neighborhood 37–75 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 33 ft; mapped rough habitat 82%; usable nearby rough habitat 36.1 acres.
+Partial reef outlines: SC-AREA-017 (59.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Parts of the investigation circle are shallower than 40 ft.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-036. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.173530" lon="-120.849413">
+    <name>SC26-037-A</name>
+    <cmt>Habitat priority A; source depth 122 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.5 m relief across 210 m.
+Source depth: center 122 ft; 100-m neighborhood 119–154 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 31 ft; mapped rough habitat 98%; usable nearby rough habitat 42.9 acres.
+Partial reef outlines: SC-AREA-019 (35.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-037. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.174864" lon="-120.818196">
+    <name>SC26-038-A</name>
+    <cmt>Habitat priority A; source depth 53 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.8 m relief across 210 m.
+Source depth: center 53 ft; 100-m neighborhood 44–84 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 39 ft; mapped rough habitat 88%; usable nearby rough habitat 35.7 acres.
+Partial reef outlines: SC-AREA-020 (20.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-038. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.176124" lon="-120.858458">
+    <name>SC26-039-B</name>
+    <cmt>Habitat priority B; source depth 156 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (63/100); tied rank 84 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.3 m relief across 210 m.
+Source depth: center 156 ft; 100-m neighborhood 151–181 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 27 ft; mapped rough habitat 78%; usable nearby rough habitat 33.5 acres.
+Partial reef outlines: SC-AREA-021 (79.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-039. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.177920" lon="-120.847870">
+    <name>SC26-040-A</name>
+    <cmt>Habitat priority A; source depth 104 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (75/100); tied rank 32 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.1 m relief across 210 m.
+Source depth: center 104 ft; 100-m neighborhood 95–136 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 33 ft; mapped rough habitat 97%; usable nearby rough habitat 39.6 acres.
+Partial reef outlines: SC-AREA-022 (32.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-040. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.178331" lon="-120.830511">
+    <name>SC26-041-A</name>
+    <cmt>Habitat priority A; source depth 58 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.3 m relief across 210 m.
+Source depth: center 58 ft; 100-m neighborhood 45–87 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 37 ft; mapped rough habitat 93%; usable nearby rough habitat 38.3 acres.
+Partial reef outlines: SC-AREA-023 (32.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-041. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.179122" lon="-120.864858">
+    <name>SC26-042-B</name>
+    <cmt>Habitat priority B; source depth 176 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (61/100); tied rank 85 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.3 m relief across 210 m.
+Source depth: center 176 ft; 100-m neighborhood 167–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 21 ft; mapped rough habitat 87%; usable nearby rough habitat 25.3 acres.
+Partial reef outlines: SC-AREA-021 (79.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-042: 400 m alignment, 112/292 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 905 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-042. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.179244" lon="-120.836196">
+    <name>SC26-043-B</name>
+    <cmt>Habitat priority B; source depth 73 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.2 m relief across 210 m.
+Source depth: center 73 ft; 100-m neighborhood 66–98 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 27 ft; mapped rough habitat 98%; usable nearby rough habitat 45.3 acres.
+Partial reef outlines: SC-AREA-024 (37.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-043. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.184419" lon="-120.833204">
+    <name>SC26-044-A</name>
+    <cmt>Habitat priority A; source depth 62 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (82/100); tied rank 13 of 132. Not a catch prediction.
+Mapped rough-rock high; 12.1 m relief across 210 m.
+Source depth: center 62 ft; 100-m neighborhood 49–84 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 40 ft; mapped rough habitat 95%; usable nearby rough habitat 41.8 acres.
+Partial reef outlines: SC-AREA-026 (35.2 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-044. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.184997" lon="-120.840326">
+    <name>SC26-045-B</name>
+    <cmt>Habitat priority B; source depth 81 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (60/100); tied rank 90 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.5 m relief across 210 m.
+Source depth: center 81 ft; 100-m neighborhood 78–95 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 18 ft; mapped rough habitat 92%; usable nearby rough habitat 39.9 acres.
+Partial reef outlines: SC-AREA-027 (33.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 959 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-045. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.190288" lon="-120.833707">
+    <name>SC26-046-B</name>
+    <cmt>Habitat priority B; source depth 48 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.6 m relief across 210 m.
+Source depth: center 48 ft; 100-m neighborhood 35–69 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 31 ft; mapped rough habitat 74%; usable nearby rough habitat 24.5 acres.
+Partial reef outlines: SC-AREA-028 (19.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 902 m from screened closed/access-restricted area; plan entire drift clear. Parts of the investigation circle are shallower than 40 ft.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-046. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.266250" lon="-120.919072">
+    <name>SC26-047-A</name>
+    <cmt>Habitat priority A; source depth 131 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (83/100); tied rank 9 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.9 m relief across 210 m.
+Source depth: center 131 ft; 100-m neighborhood 123–154 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 39 ft; mapped rough habitat 99%; usable nearby rough habitat 42.5 acres.
+Partial reef outlines: SC-AREA-030 (70.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-047. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.268905" lon="-120.910979">
+    <name>SC26-048-A</name>
+    <cmt>Habitat priority A; source depth 63 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (80/100); tied rank 16 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.9 m relief across 210 m.
+Source depth: center 63 ft; 100-m neighborhood 54–92 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 99%; usable nearby rough habitat 47.5 acres.
+Partial reef outlines: SC-AREA-031 (95.2 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-048. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.272486" lon="-120.904292">
+    <name>SC26-049-A</name>
+    <cmt>Habitat priority A; source depth 51 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (83/100); tied rank 9 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.0 m relief across 210 m.
+Source depth: center 51 ft; 100-m neighborhood 46–84 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 100%; usable nearby rough habitat 44.5 acres.
+Partial reef outlines: SC-AREA-032 (11.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-049. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.278227" lon="-120.913049">
+    <name>SC26-050-B</name>
+    <cmt>Habitat priority B; source depth 108 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.8 m relief across 210 m.
+Source depth: center 108 ft; 100-m neighborhood 105–134 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 26 ft; mapped rough habitat 100%; usable nearby rough habitat 47.2 acres.
+Partial reef outlines: SC-AREA-033 (92.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-050. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.281992" lon="-120.901408">
+    <name>SC26-051-A</name>
+    <cmt>Habitat priority A; source depth 44 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (79/100); tied rank 19 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.2 m relief across 210 m.
+Source depth: center 44 ft; 100-m neighborhood 40–76 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 33 ft; mapped rough habitat 100%; usable nearby rough habitat 43.5 acres.
+Partial reef outlines: SC-AREA-034 (72.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-051. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.288232" lon="-120.923457">
+    <name>SC26-052-A</name>
+    <cmt>Habitat priority A; source depth 160 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (76/100); tied rank 29 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.1 m relief across 210 m.
+Source depth: center 160 ft; 100-m neighborhood 151–183 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 33 ft; mapped rough habitat 100%; usable nearby rough habitat 39.0 acres.
+Partial reef outlines: SC-AREA-035 (35.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9KBGELE. Legacy ID: MB26-052. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.291634" lon="-120.895991">
+    <name>SC26-053-B</name>
+    <cmt>Habitat priority B; source depth 48 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (73/100); tied rank 38 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.7 m relief across 210 m.
+Source depth: center 48 ft; 100-m neighborhood 44–73 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 97%; usable nearby rough habitat 44.9 acres.
+Partial reef outlines: SC-AREA-037 (37.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-053. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.292087" lon="-120.927427">
+    <name>SC26-054-B</name>
+    <cmt>Habitat priority B; source depth 161 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (70/100); tied rank 54 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.5 m relief across 210 m.
+Source depth: center 161 ft; 100-m neighborhood 156–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 95%; usable nearby rough habitat 28.6 acres.
+Partial reef outlines: SC-AREA-036 (36.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-054. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.294892" lon="-120.917569">
+    <name>SC26-055-B</name>
+    <cmt>Habitat priority B; source depth 152 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (61/100); tied rank 85 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.4 m relief across 210 m.
+Source depth: center 152 ft; 100-m neighborhood 145–165 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 21 ft; mapped rough habitat 91%; usable nearby rough habitat 34.2 acres.
+Partial reef outlines: SC-AREA-038 (41.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-055. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.298008" lon="-120.925736">
+    <name>SC26-056-B</name>
+    <cmt>Habitat priority B; source depth 170 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (67/100); tied rank 65 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.5 m relief across 210 m.
+Source depth: center 170 ft; 100-m neighborhood 166–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 21 ft; mapped rough habitat 100%; usable nearby rough habitat 33.2 acres.
+Partial reef outlines: SC-AREA-039 (39.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-056. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.300359" lon="-120.915669">
+    <name>SC26-057-C</name>
+    <cmt>Habitat priority C; source depth 155 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (41/100); tied rank 120 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.1 m relief across 210 m.
+Source depth: center 155 ft; 100-m neighborhood 151–166 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 63%; usable nearby rough habitat 16.0 acres.
+Partial reef outlines: SC-AREA-040 (10.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-057. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.308116" lon="-120.921189">
+    <name>SC26-058-B</name>
+    <cmt>Habitat priority B; source depth 176 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (57/100); tied rank 104 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.1 m relief across 210 m.
+Source depth: center 176 ft; 100-m neighborhood 174–191 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 87%; usable nearby rough habitat 30.7 acres.
+Partial reef outlines: SC-AREA-041 (10.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-058. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.309335" lon="-120.903011">
+    <name>SC26-059-B</name>
+    <cmt>Habitat priority B; source depth 124 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (61/100); tied rank 85 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.9 m relief across 210 m.
+Source depth: center 124 ft; 100-m neighborhood 119–135 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 19 ft; mapped rough habitat 98%; usable nearby rough habitat 33.4 acres.
+Partial reef outlines: SC-AREA-042 (52.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-059. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.312326" lon="-120.914372">
+    <name>SC26-060-B</name>
+    <cmt>Habitat priority B; source depth 163 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (58/100); tied rank 99 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.1 m relief across 210 m.
+Source depth: center 163 ft; 100-m neighborhood 160–179 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 17 ft; mapped rough habitat 89%; usable nearby rough habitat 38.3 acres.
+Partial reef outlines: SC-AREA-043 (98.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-060. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.313668" lon="-120.887832">
+    <name>SC26-061-C</name>
+    <cmt>Habitat priority C; source depth 74 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (45/100); tied rank 117 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.0 m relief across 210 m.
+Source depth: center 74 ft; 100-m neighborhood 67–85 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 20 ft; mapped rough habitat 60%; usable nearby rough habitat 17.5 acres.
+Partial reef outlines: SC-AREA-044 (11.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-061. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.315914" lon="-120.908121">
+    <name>SC26-062-B</name>
+    <cmt>Habitat priority B; source depth 141 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.0 m relief across 210 m.
+Source depth: center 141 ft; 100-m neighborhood 137–158 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 20 ft; mapped rough habitat 78%; usable nearby rough habitat 26.2 acres.
+Partial reef outlines: SC-AREA-046 (76.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-062. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.316262" lon="-120.917791">
+    <name>SC26-063-B</name>
+    <cmt>Habitat priority B; source depth 175 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.3 m relief across 210 m.
+Source depth: center 175 ft; 100-m neighborhood 171–188 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 17 ft; mapped rough habitat 88%; usable nearby rough habitat 28.4 acres.
+Partial reef outlines: SC-AREA-043 (98.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-063. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.317319" lon="-120.895546">
+    <name>SC26-064-B</name>
+    <cmt>Habitat priority B; source depth 95 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (69/100); tied rank 56 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.3 m relief across 210 m.
+Source depth: center 95 ft; 100-m neighborhood 88–114 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 100%; usable nearby rough habitat 45.9 acres.
+Partial reef outlines: SC-AREA-045 (79.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-064. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.319880" lon="-120.913298">
+    <name>SC26-065-B</name>
+    <cmt>Habitat priority B; source depth 165 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (57/100); tied rank 104 of 132. Not a catch prediction.
+Mapped rough-rock high; 5.0 m relief across 210 m.
+Source depth: center 165 ft; 100-m neighborhood 162–178 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 89%; usable nearby rough habitat 34.8 acres.
+Partial reef outlines: SC-AREA-046 (76.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-065. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.321262" lon="-120.889064">
+    <name>SC26-066-C</name>
+    <cmt>Habitat priority C; source depth 83 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (49/100); tied rank 115 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.5 m relief across 210 m.
+Source depth: center 83 ft; 100-m neighborhood 81–98 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 82%; usable nearby rough habitat 18.7 acres.
+Partial reef outlines: SC-AREA-047 (17.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-066. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.325221" lon="-120.914591">
+    <name>SC26-067-C</name>
+    <cmt>Habitat priority C; source depth 177 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (29/100); tied rank 125 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.9 m relief across 210 m.
+Source depth: center 177 ft; 100-m neighborhood 170–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 35%; usable nearby rough habitat 8.6 acres.
+Partial reef outlines: SC-AREA-048 (3.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-067. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.335569" lon="-120.908274">
+    <name>SC26-068-C</name>
+    <cmt>Habitat priority C; source depth 175 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (7/100); tied rank 132 of 132. Not a catch prediction.
+Mapped rough-rock high; 2.6 m relief across 210 m.
+Source depth: center 175 ft; 100-m neighborhood 173–181 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 8 ft; mapped rough habitat 1%; usable nearby rough habitat 0.2 acres.
+No outline selected. Start a sounder search near this habitat candidate.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-068. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.375050" lon="-120.913199">
+    <name>SC26-069-C</name>
+    <cmt>Habitat priority C; source depth 173 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (42/100); tied rank 119 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.9 m relief across 210 m.
+Source depth: center 173 ft; 100-m neighborhood 170–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 52%; usable nearby rough habitat 17.5 acres.
+Partial reef outlines: SC-AREA-049 (12.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-069. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.376893" lon="-120.879250">
+    <name>SC26-070-B</name>
+    <cmt>Habitat priority B; source depth 56 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (68/100); tied rank 61 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.3 m relief across 210 m.
+Source depth: center 56 ft; 100-m neighborhood 48–75 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 27 ft; mapped rough habitat 93%; usable nearby rough habitat 22.3 acres.
+Partial reef outlines: SC-AREA-050 (25.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-070: 400 m alignment, 056/236 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-070. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.387961" lon="-120.893602">
+    <name>SC26-071-A</name>
+    <cmt>Habitat priority A; source depth 85 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (75/100); tied rank 32 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.0 m relief across 210 m.
+Source depth: center 85 ft; 100-m neighborhood 74–113 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 87%; usable nearby rough habitat 22.0 acres.
+Partial reef outlines: SC-AREA-052 (14.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-071. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.390125" lon="-120.883307">
+    <name>SC26-072-C</name>
+    <cmt>Habitat priority C; source depth 74 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (39/100); tied rank 121 of 132. Not a catch prediction.
+Mapped rough-rock high; 3.1 m relief across 210 m.
+Source depth: center 74 ft; 100-m neighborhood 69–85 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 10 ft; mapped rough habitat 53%; usable nearby rough habitat 21.5 acres.
+Partial reef outlines: SC-AREA-053 (7.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-072: 250 m alignment, 156/336 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-072. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.393804" lon="-120.877156">
+    <name>SC26-073-C</name>
+    <cmt>Habitat priority C; source depth 52 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (20/100); tied rank 130 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.2 m relief across 210 m.
+Source depth: center 52 ft; 100-m neighborhood 46–59 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 22%; usable nearby rough habitat 3.6 acres.
+No outline selected. Start a sounder search near this habitat candidate.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-073. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.395872" lon="-120.892295">
+    <name>SC26-074-C</name>
+    <cmt>Habitat priority C; source depth 91 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (31/100); tied rank 124 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.1 m relief across 210 m.
+Source depth: center 91 ft; 100-m neighborhood 89–107 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 35%; usable nearby rough habitat 12.2 acres.
+Partial reef outlines: SC-AREA-054 (3.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-074. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.399049" lon="-120.878120">
+    <name>SC26-075-C</name>
+    <cmt>Habitat priority C; source depth 47 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (22/100); tied rank 128 of 132. Not a catch prediction.
+Mapped rough-rock high; 3.9 m relief across 210 m.
+Source depth: center 47 ft; 100-m neighborhood 43–57 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 28%; usable nearby rough habitat 4.4 acres.
+Partial reef outlines: SC-AREA-055 (2.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-075. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.404772" lon="-120.880612">
+    <name>SC26-076-C</name>
+    <cmt>Habitat priority C; source depth 47 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (37/100); tied rank 122 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.6 m relief across 210 m.
+Source depth: center 47 ft; 100-m neighborhood 43–59 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 57%; usable nearby rough habitat 11.4 acres.
+Partial reef outlines: SC-AREA-056 (7.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-076. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.410313" lon="-120.883000">
+    <name>SC26-077-C</name>
+    <cmt>Habitat priority C; source depth 46 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (46/100); tied rank 116 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.0 m relief across 210 m.
+Source depth: center 46 ft; 100-m neighborhood 42–55 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 77%; usable nearby rough habitat 19.4 acres.
+Partial reef outlines: SC-AREA-058 (19.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-077. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.414165" lon="-120.965490">
+    <name>SC26-078-B</name>
+    <cmt>Habitat priority B; source depth 151 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (64/100); tied rank 80 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.8 m relief across 210 m.
+Source depth: center 151 ft; 100-m neighborhood 146–177 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 29 ft; mapped rough habitat 72%; usable nearby rough habitat 26.4 acres.
+Partial reef outlines: SC-AREA-064 (119.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-078: 400 m alignment, 029/209 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-078. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.415771" lon="-120.948490">
+    <name>SC26-079-B</name>
+    <cmt>Habitat priority B; source depth 110 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.3 m relief across 210 m.
+Source depth: center 110 ft; 100-m neighborhood 103–130 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 31 ft; mapped rough habitat 87%; usable nearby rough habitat 34.5 acres.
+Partial reef outlines: SC-AREA-066 (209.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-079: 400 m alignment, 171/351 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-079. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.415906" lon="-120.888359">
+    <name>SC26-080-B</name>
+    <cmt>Habitat priority B; source depth 43 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (56/100); tied rank 106 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.4 m relief across 210 m.
+Source depth: center 43 ft; 100-m neighborhood 40–56 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 93%; usable nearby rough habitat 28.6 acres.
+Partial reef outlines: SC-AREA-061 (28.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-080. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.416191" lon="-120.973368">
+    <name>SC26-081-C</name>
+    <cmt>Habitat priority C; source depth 173 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (37/100); tied rank 122 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.1 m relief across 210 m.
+Source depth: center 173 ft; 100-m neighborhood 166–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 20 ft; mapped rough habitat 47%; usable nearby rough habitat 9.2 acres.
+Partial reef outlines: SC-AREA-063 (11.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-081: 250 m alignment, 178/358 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-081. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.416368" lon="-120.930635">
+    <name>SC26-082-B</name>
+    <cmt>Habitat priority B; source depth 88 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (67/100); tied rank 65 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.0 m relief across 210 m.
+Source depth: center 88 ft; 100-m neighborhood 85–107 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 23 ft; mapped rough habitat 96%; usable nearby rough habitat 45.5 acres.
+Partial reef outlines: SC-AREA-062 (64.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-082. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.418630" lon="-120.941700">
+    <name>SC26-083-B</name>
+    <cmt>Habitat priority B; source depth 90 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.4 m relief across 210 m.
+Source depth: center 90 ft; 100-m neighborhood 82–117 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 34 ft; mapped rough habitat 80%; usable nearby rough habitat 29.9 acres.
+Partial reef outlines: SC-AREA-065 (39.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-083. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.419890" lon="-120.962813">
+    <name>SC26-084-B</name>
+    <cmt>Habitat priority B; source depth 115 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (64/100); tied rank 80 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.8 m relief across 210 m.
+Source depth: center 115 ft; 100-m neighborhood 114–137 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 22 ft; mapped rough habitat 91%; usable nearby rough habitat 41.3 acres.
+Partial reef outlines: SC-AREA-064 (119.1 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-084. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.421222" lon="-120.950995">
+    <name>SC26-085-B</name>
+    <cmt>Habitat priority B; source depth 73 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.2 m relief across 210 m.
+Source depth: center 73 ft; 100-m neighborhood 73–96 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 97%; usable nearby rough habitat 44.3 acres.
+Partial reef outlines: SC-AREA-066 (209.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-085. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.422582" lon="-120.972767">
+    <name>SC26-086-C</name>
+    <cmt>Habitat priority C; source depth 143 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (51/100); tied rank 111 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.6 m relief across 210 m.
+Source depth: center 143 ft; 100-m neighborhood 140–157 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 83%; usable nearby rough habitat 21.4 acres.
+Partial reef outlines: SC-AREA-067 (24.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-086. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.424436" lon="-120.986598">
+    <name>SC26-087-B</name>
+    <cmt>Habitat priority B; source depth 164 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.6 m relief across 210 m.
+Source depth: center 164 ft; 100-m neighborhood 158–184 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 99%; usable nearby rough habitat 28.5 acres.
+Partial reef outlines: SC-AREA-072 (88.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-087. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.424898" lon="-120.955087">
+    <name>SC26-088-B</name>
+    <cmt>Habitat priority B; source depth 74 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (69/100); tied rank 56 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.5 m relief across 210 m.
+Source depth: center 74 ft; 100-m neighborhood 70–94 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 96%; usable nearby rough habitat 42.2 acres.
+Partial reef outlines: SC-AREA-066 (209.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-088. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.425394" lon="-120.936572">
+    <name>SC26-089-B</name>
+    <cmt>Habitat priority B; source depth 71 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (56/100); tied rank 106 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.2 m relief across 210 m.
+Source depth: center 71 ft; 100-m neighborhood 69–86 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 85%; usable nearby rough habitat 33.7 acres.
+Partial reef outlines: SC-AREA-068 (43.7 acres), SC-AREA-069 (8.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-089: 400 m alignment, 148/328 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-089. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.426968" lon="-120.902389">
+    <name>SC26-090-C</name>
+    <cmt>Habitat priority C; source depth 50 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (50/100); tied rank 113 of 132. Not a catch prediction.
+Mapped rough-rock high; 3.7 m relief across 210 m.
+Source depth: center 50 ft; 100-m neighborhood 46–59 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 12 ft; mapped rough habitat 86%; usable nearby rough habitat 21.5 acres.
+Partial reef outlines: SC-AREA-070 (21.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-090: 400 m alignment, 133/313 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-090. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.427418" lon="-120.970884">
+    <name>SC26-091-B</name>
+    <cmt>Habitat priority B; source depth 117 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (65/100); tied rank 76 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.3 m relief across 210 m.
+Source depth: center 117 ft; 100-m neighborhood 110–133 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 95%; usable nearby rough habitat 37.3 acres.
+Partial reef outlines: SC-AREA-071 (55.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-091. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.429006" lon="-120.963464">
+    <name>SC26-092-B</name>
+    <cmt>Habitat priority B; source depth 80 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.5 m relief across 210 m.
+Source depth: center 80 ft; 100-m neighborhood 76–105 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 28 ft; mapped rough habitat 96%; usable nearby rough habitat 34.5 acres.
+Partial reef outlines: SC-AREA-073 (48.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-092. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.430055" lon="-120.929734">
+    <name>SC26-093-B</name>
+    <cmt>Habitat priority B; source depth 41 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (65/100); tied rank 76 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.4 m relief across 210 m.
+Source depth: center 41 ft; 100-m neighborhood 41–65 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 21 ft; mapped rough habitat 98%; usable nearby rough habitat 45.9 acres.
+Partial reef outlines: SC-AREA-074 (37.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Parallel bands visible in survey rendering; confirm small-scale relief by sonar.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-093. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.430427" lon="-120.989092">
+    <name>SC26-094-A</name>
+    <cmt>Habitat priority A; source depth 138 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (76/100); tied rank 29 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.6 m relief across 210 m.
+Source depth: center 138 ft; 100-m neighborhood 130–162 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 35 ft; mapped rough habitat 99%; usable nearby rough habitat 37.2 acres.
+Partial reef outlines: SC-AREA-072 (88.9 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-094. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.431456" lon="-120.948423">
+    <name>SC26-095-B</name>
+    <cmt>Habitat priority B; source depth 55 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.4 m relief across 210 m.
+Source depth: center 55 ft; 100-m neighborhood 53–74 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 100%; usable nearby rough habitat 40.4 acres.
+Partial reef outlines: SC-AREA-075 (73.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-095: 400 m alignment, 114/294 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-095. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.431806" lon="-120.996107">
+    <name>SC26-096-B</name>
+    <cmt>Habitat priority B; source depth 149 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (69/100); tied rank 56 of 132. Not a catch prediction.
+Mapped rough-rock high; 8.4 m relief across 210 m.
+Source depth: center 149 ft; 100-m neighborhood 148–172 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 27 ft; mapped rough habitat 97%; usable nearby rough habitat 42.8 acres.
+Partial reef outlines: SC-AREA-076 (94.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-096. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.432907" lon="-120.938362">
+    <name>SC26-097-B</name>
+    <cmt>Habitat priority B; source depth 46 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (59/100); tied rank 93 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.7 m relief across 210 m.
+Source depth: center 46 ft; 100-m neighborhood 42–60 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 98%; usable nearby rough habitat 39.2 acres.
+Partial reef outlines: SC-AREA-077 (72.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-097. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.433621" lon="-120.922153">
+    <name>SC26-098-C</name>
+    <cmt>Habitat priority C; source depth 42 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (50/100); tied rank 113 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.9 m relief across 210 m.
+Source depth: center 42 ft; 100-m neighborhood 38–63 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 23 ft; mapped rough habitat 53%; usable nearby rough habitat 16.0 acres.
+Partial reef outlines: SC-AREA-078 (4.2 acres), SC-AREA-080 (10.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Parts of the investigation circle are shallower than 40 ft.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-098. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.434448" lon="-120.965420">
+    <name>SC26-099-B</name>
+    <cmt>Habitat priority B; source depth 72 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (60/100); tied rank 90 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.3 m relief across 210 m.
+Source depth: center 72 ft; 100-m neighborhood 71–89 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 21 ft; mapped rough habitat 85%; usable nearby rough habitat 35.1 acres.
+Partial reef outlines: SC-AREA-079 (65.0 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-099. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.434795" lon="-120.980722">
+    <name>SC26-100-A</name>
+    <cmt>Habitat priority A; source depth 108 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.9 m relief across 210 m.
+Source depth: center 108 ft; 100-m neighborhood 99–125 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 99%; usable nearby rough habitat 38.6 acres.
+Partial reef outlines: SC-AREA-081 (60.2 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-100. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.435899" lon="-121.009224">
+    <name>SC26-101-B</name>
+    <cmt>Habitat priority B; source depth 159 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (67/100); tied rank 65 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.1 m relief across 210 m.
+Source depth: center 159 ft; 100-m neighborhood 158–186 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 23 ft; mapped rough habitat 99%; usable nearby rough habitat 40.9 acres.
+Partial reef outlines: SC-AREA-084 (146.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-101. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.436760" lon="-121.001272">
+    <name>SC26-102-B</name>
+    <cmt>Habitat priority B; source depth 141 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (71/100); tied rank 48 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.0 m relief across 210 m.
+Source depth: center 141 ft; 100-m neighborhood 137–168 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 99%; usable nearby rough habitat 36.0 acres.
+Partial reef outlines: SC-AREA-082 (58.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-102: 400 m alignment, 128/308 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-102. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.437525" lon="-120.913350">
+    <name>SC26-103-C</name>
+    <cmt>Habitat priority C; source depth 41 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (27/100); tied rank 127 of 132. Not a catch prediction.
+Mapped rough-rock high; 2.1 m relief across 210 m.
+Source depth: center 41 ft; 100-m neighborhood 37–47 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 7 ft; mapped rough habitat 42%; usable nearby rough habitat 11.1 acres.
+Partial reef outlines: SC-AREA-083 (11.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Parts of the investigation circle are shallower than 40 ft. Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-103. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.438616" lon="-120.988227">
+    <name>SC26-104-B</name>
+    <cmt>Habitat priority B; source depth 99 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (65/100); tied rank 76 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.0 m relief across 210 m.
+Source depth: center 99 ft; 100-m neighborhood 96–118 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 23 ft; mapped rough habitat 94%; usable nearby rough habitat 43.0 acres.
+Partial reef outlines: SC-AREA-085 (226.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-104. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.441721" lon="-121.012385">
+    <name>SC26-105-B</name>
+    <cmt>Habitat priority B; source depth 141 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (67/100); tied rank 65 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.4 m relief across 210 m.
+Source depth: center 141 ft; 100-m neighborhood 138–172 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 31 ft; mapped rough habitat 81%; usable nearby rough habitat 37.8 acres.
+Partial reef outlines: SC-AREA-084 (146.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-105. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.443072" lon="-120.995938">
+    <name>SC26-106-B</name>
+    <cmt>Habitat priority B; source depth 101 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (65/100); tied rank 76 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.2 m relief across 210 m.
+Source depth: center 101 ft; 100-m neighborhood 93–115 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 23 ft; mapped rough habitat 100%; usable nearby rough habitat 40.0 acres.
+Partial reef outlines: SC-AREA-085 (226.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-106: 400 m alignment, 163/343 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-106. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.443859" lon="-120.989088">
+    <name>SC26-107-B</name>
+    <cmt>Habitat priority B; source depth 75 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (58/100); tied rank 99 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.8 m relief across 210 m.
+Source depth: center 75 ft; 100-m neighborhood 73–90 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 90%; usable nearby rough habitat 41.4 acres.
+Partial reef outlines: SC-AREA-085 (226.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-107. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.444207" lon="-120.961429">
+    <name>SC26-108-B</name>
+    <cmt>Habitat priority B; source depth 47 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (61/100); tied rank 85 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.8 m relief across 210 m.
+Source depth: center 47 ft; 100-m neighborhood 41–61 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 16 ft; mapped rough habitat 99%; usable nearby rough habitat 30.9 acres.
+Partial reef outlines: SC-AREA-086 (27.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9HEZNRO. Legacy ID: MB26-108. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.444904" lon="-121.019578">
+    <name>SC26-109-B</name>
+    <cmt>Habitat priority B; source depth 161 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (69/100); tied rank 56 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.1 m relief across 210 m.
+Source depth: center 161 ft; 100-m neighborhood 155–185 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 94%; usable nearby rough habitat 28.8 acres.
+Partial reef outlines: SC-AREA-087 (40.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-109. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.446726" lon="-120.977229">
+    <name>SC26-110-B</name>
+    <cmt>Habitat priority B; source depth 57 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (58/100); tied rank 99 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.3 m relief across 210 m.
+Source depth: center 57 ft; 100-m neighborhood 53–71 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 96%; usable nearby rough habitat 39.0 acres.
+Partial reef outlines: SC-AREA-088 (88.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-110. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.450111" lon="-121.023747">
+    <name>SC26-111-B</name>
+    <cmt>Habitat priority B; source depth 148 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (66/100); tied rank 70 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.0 m relief across 210 m.
+Source depth: center 148 ft; 100-m neighborhood 145–182 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 87%; usable nearby rough habitat 34.0 acres.
+Partial reef outlines: SC-AREA-089 (46.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-111. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.450953" lon="-120.981971">
+    <name>SC26-112-C</name>
+    <cmt>Habitat priority C; source depth 44 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (51/100); tied rank 111 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.4 m relief across 210 m.
+Source depth: center 44 ft; 100-m neighborhood 40–55 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 14 ft; mapped rough habitat 85%; usable nearby rough habitat 20.5 acres.
+Partial reef outlines: SC-AREA-088 (88.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option., Near a source-coverage edge; checked 100 m circle is complete.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-112. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.451727" lon="-120.990545">
+    <name>SC26-113-B</name>
+    <cmt>Habitat priority B; source depth 48 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (61/100); tied rank 85 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.1 m relief across 210 m.
+Source depth: center 48 ft; 100-m neighborhood 44–65 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 20 ft; mapped rough habitat 94%; usable nearby rough habitat 41.4 acres.
+Partial reef outlines: SC-AREA-090 (64.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-113. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.452197" lon="-121.008051">
+    <name>SC26-114-B</name>
+    <cmt>Habitat priority B; source depth 83 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (64/100); tied rank 80 of 132. Not a catch prediction.
+Mapped rough-rock high; 7.4 m relief across 210 m.
+Source depth: center 83 ft; 100-m neighborhood 80–101 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 24 ft; mapped rough habitat 93%; usable nearby rough habitat 32.2 acres.
+Partial reef outlines: SC-AREA-091 (60.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-114: 400 m alignment, 025/205 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-114. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.453787" lon="-121.000630">
+    <name>SC26-115-B</name>
+    <cmt>Habitat priority B; source depth 52 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (64/100); tied rank 80 of 132. Not a catch prediction.
+Mapped rough-rock high; 6.8 m relief across 210 m.
+Source depth: center 52 ft; 100-m neighborhood 47–69 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 22 ft; mapped rough habitat 93%; usable nearby rough habitat 41.1 acres.
+Partial reef outlines: SC-AREA-092 (65.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-115. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.456924" lon="-121.026886">
+    <name>SC26-116-B</name>
+    <cmt>Habitat priority B; source depth 130 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (74/100); tied rank 36 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.6 m relief across 210 m.
+Source depth: center 130 ft; 100-m neighborhood 122–159 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 38 ft; mapped rough habitat 92%; usable nearby rough habitat 42.8 acres.
+Partial reef outlines: SC-AREA-093 (82.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-116. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.457740" lon="-121.016178">
+    <name>SC26-117-B</name>
+    <cmt>Habitat priority B; source depth 73 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (69/100); tied rank 56 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.0 m relief across 210 m.
+Source depth: center 73 ft; 100-m neighborhood 70–95 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 94%; usable nearby rough habitat 44.7 acres.
+Partial reef outlines: SC-AREA-094 (91.2 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-117. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.461983" lon="-121.033043">
+    <name>SC26-118-B</name>
+    <cmt>Habitat priority B; source depth 135 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (67/100); tied rank 65 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.8 m relief across 210 m.
+Source depth: center 135 ft; 100-m neighborhood 131–163 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 32 ft; mapped rough habitat 81%; usable nearby rough habitat 36.8 acres.
+Partial reef outlines: SC-AREA-095 (53.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-118: 400 m alignment, 044/224 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-118. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.465035" lon="-121.037817">
+    <name>SC26-119-B</name>
+    <cmt>Habitat priority B; source depth 138 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (73/100); tied rank 38 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.7 m relief across 210 m.
+Source depth: center 138 ft; 100-m neighborhood 134–168 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 32 ft; mapped rough habitat 98%; usable nearby rough habitat 42.3 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-119. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.468647" lon="-121.043680">
+    <name>SC26-120-B</name>
+    <cmt>Habitat priority B; source depth 153 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.2 m relief across 210 m.
+Source depth: center 153 ft; 100-m neighborhood 146–184 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 37 ft; mapped rough habitat 82%; usable nearby rough habitat 32.2 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-120. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.471212" lon="-121.029622">
+    <name>SC26-121-B</name>
+    <cmt>Habitat priority B; source depth 63 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (72/100); tied rank 42 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.3 m relief across 210 m.
+Source depth: center 63 ft; 100-m neighborhood 56–83 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 99%; usable nearby rough habitat 43.2 acres.
+Partial reef outlines: SC-AREA-096 (11.8 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-121: 400 m alignment, 004/184 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-121. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.472660" lon="-121.046558">
+    <name>SC26-122-A</name>
+    <cmt>Habitat priority A; source depth 135 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (75/100); tied rank 32 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.4 m relief across 210 m.
+Source depth: center 135 ft; 100-m neighborhood 125–165 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 37 ft; mapped rough habitat 96%; usable nearby rough habitat 46.1 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-122. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.474487" lon="-121.036926">
+    <name>SC26-123-A</name>
+    <cmt>Habitat priority A; source depth 69 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (76/100); tied rank 29 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.7 m relief across 210 m.
+Source depth: center 69 ft; 100-m neighborhood 66–99 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 35 ft; mapped rough habitat 98%; usable nearby rough habitat 45.5 acres.
+Partial reef outlines: SC-AREA-097 (88.7 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-123. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.478112" lon="-121.043671">
+    <name>SC26-124-A</name>
+    <cmt>Habitat priority A; source depth 75 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (80/100); tied rank 16 of 132. Not a catch prediction.
+Mapped rough-rock high; 12.3 m relief across 210 m.
+Source depth: center 75 ft; 100-m neighborhood 65–103 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 40 ft; mapped rough habitat 100%; usable nearby rough habitat 48.2 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-124. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.482228" lon="-121.047319">
+    <name>SC26-125-A</name>
+    <cmt>Habitat priority A; source depth 73 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (75/100); tied rank 32 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.9 m relief across 210 m.
+Source depth: center 73 ft; 100-m neighborhood 63–97 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 36 ft; mapped rough habitat 100%; usable nearby rough habitat 47.8 acres.
+Partial reef outlines: SC-AREA-098 (434.3 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-125: 400 m alignment, 004/184 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-125. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.483922" lon="-121.057308">
+    <name>SC26-126-A</name>
+    <cmt>Habitat priority A; source depth 132 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (83/100); tied rank 9 of 132. Not a catch prediction.
+Mapped rough-rock high; 17.0 m relief across 210 m.
+Source depth: center 132 ft; 100-m neighborhood 112–153 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 56 ft; mapped rough habitat 90%; usable nearby rough habitat 42.0 acres.
+Partial reef outlines: SC-AREA-099 (79.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-126: 400 m alignment, 028/208 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-126. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.497842" lon="-121.065240">
+    <name>SC26-127-B</name>
+    <cmt>Habitat priority B; source depth 72 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (74/100); tied rank 36 of 132. Not a catch prediction.
+Mapped rough-rock high; 10.2 m relief across 210 m.
+Source depth: center 72 ft; 100-m neighborhood 70–101 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 34 ft; mapped rough habitat 100%; usable nearby rough habitat 47.6 acres.
+Partial reef outlines: SC-AREA-102 (160.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-127. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.501521" lon="-121.069782">
+    <name>SC26-128-A</name>
+    <cmt>Habitat priority A; source depth 91 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (79/100); tied rank 19 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.6 m relief across 210 m.
+Source depth: center 91 ft; 100-m neighborhood 77–115 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 38 ft; mapped rough habitat 98%; usable nearby rough habitat 40.8 acres.
+Partial reef outlines: SC-AREA-102 (160.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 757 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-128. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.503585" lon="-121.086160">
+    <name>SC26-129-C</name>
+    <cmt>Habitat priority C; source depth 153 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (53/100); tied rank 110 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.1 m relief across 210 m.
+Source depth: center 153 ft; 100-m neighborhood 150–184 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 30 ft; mapped rough habitat 59%; usable nearby rough habitat 14.2 acres.
+Partial reef outlines: SC-AREA-104 (13.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-129: 400 m alignment, 131/311 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 586 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-129. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.503766" lon="-121.080533">
+    <name>SC26-130-B</name>
+    <cmt>Habitat priority B; source depth 116 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (68/100); tied rank 61 of 132. Not a catch prediction.
+Mapped rough-rock high; 12.4 m relief across 210 m.
+Source depth: center 116 ft; 100-m neighborhood 97–155 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 41 ft; mapped rough habitat 86%; usable nearby rough habitat 13.6 acres.
+Partial reef outlines: SC-AREA-103 (20.4 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 507 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-130. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.503837" lon="-121.096407">
+    <name>SC26-131-A</name>
+    <cmt>Habitat priority A; source depth 159 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority A (77/100); tied rank 23 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.0 m relief across 210 m.
+Source depth: center 159 ft; 100-m neighborhood 157–189 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 29 ft; mapped rough habitat 92%; usable nearby rough habitat 33.6 acres.
+Partial reef outlines: SC-AREA-105 (58.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-131: 400 m alignment, 142/322 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-131. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.510111" lon="-121.099787">
+    <name>SC26-132-B</name>
+    <cmt>Habitat priority B; source depth 160 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (73/100); tied rank 38 of 132. Not a catch prediction.
+Mapped rough-rock high; 9.8 m relief across 210 m.
+Source depth: center 160 ft; 100-m neighborhood 151–186 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 32 ft; mapped rough habitat 77%; usable nearby rough habitat 26.6 acres.
+Partial reef outlines: SC-AREA-106 (42.6 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+SC-DRIFT-132: 400 m alignment, 152/332 degrees TRUE. Use whichever direction measured drift supports. A 25-m corridor each side was screened in the source survey. This is not an approach or navigation route.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-132. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.516455" lon="-121.096219">
+    <name>SC26-133-C</name>
+    <cmt>Habitat priority C; source depth 152 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (12/100); tied rank 131 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.0 m relief across 210 m.
+Source depth: center 152 ft; 100-m neighborhood 148–159 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 13 ft; mapped rough habitat 3%; usable nearby rough habitat 0.3 acres.
+No outline selected. Start a sounder search near this habitat candidate.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Lower.
+Survey flags: Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+About 547 m from screened closed/access-restricted area; plan entire drift clear. Subtle local relief in the rendered grid; primarily a mapped-bottom investigation option.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-133. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.523117" lon="-121.107089">
+    <name>SC26-134-C</name>
+    <cmt>Habitat priority C; source depth 155 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (22/100); tied rank 128 of 132. Not a catch prediction.
+Mapped rough-rock high; 4.7 m relief across 210 m.
+Source depth: center 155 ft; 100-m neighborhood 153–167 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 15 ft; mapped rough habitat 22%; usable nearby rough habitat 4.2 acres.
+No outline selected. Start a sounder search near this habitat candidate.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-134. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.526934" lon="-121.103250">
+    <name>SC26-135-C</name>
+    <cmt>Habitat priority C; source depth 133 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority C (28/100); tied rank 126 of 132. Not a catch prediction.
+Mapped rough-rock high; 3.8 m relief across 210 m.
+Source depth: center 133 ft; 100-m neighborhood 119–141 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 12 ft; mapped rough habitat 40%; usable nearby rough habitat 2.3 acres.
+No outline selected. Start a sounder search near this habitat candidate.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 504 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-135. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+  <wpt lat="35.535789" lon="-121.110321">
+    <name>SC26-136-B</name>
+    <cmt>Habitat priority B; source depth 104 ft MLLW; AIS unverified.</cmt>
+    <desc>Habitat search priority B (73/100); tied rank 38 of 132. Not a catch prediction.
+Mapped rough-rock high; 11.9 m relief across 210 m.
+Source depth: center 104 ft; 100-m neighborhood 90–142 ft below MLLW. Confirm actual depth &lt;=200 ft with a sounder.
+Local relief 39 ft; mapped rough habitat 91%; usable nearby rough habitat 19.6 acres.
+Partial reef outlines: SC-AREA-107 (59.5 acres). These are selected mapped footprints, not entire reefs or individual boulders.
+No fixed drift alignment selected; establish the drift on the water.
+No verified charter identity match in the reviewed AIS sample; no AIS-confirmed hotspot.
+Survey-derived habitat candidate; no verified catch at this coordinate.
+Historical charter-ground annotations are not included in the public edition.
+Habitat confidence: Moderate.
+About 556 m from screened closed/access-restricted area; plan entire drift clear.
+Survey: 2008; https://doi.org/10.5066/P9ZSTUK1. Legacy ID: MB26-136. Edition: 2026-09-20-public-1.
+Recheck current rules, closures, weather, and entrance conditions. Source measurements and screening are dated.</desc>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero USGS survey</text>
+    </link>
+    <sym>Fishing Area</sym>
+    <type>Survey-derived habitat candidate</type>
+  </wpt>
+</gpx>

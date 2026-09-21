@@ -1,0 +1,34 @@
+{
+  "source_profile": "morro-bay",
+  "timezone": "America/Los_Angeles",
+  "weather_sampling_points": [
+    {
+      "name": "north_cambria",
+      "latitude": 35.56,
+      "longitude": -121.13
+    },
+    {
+      "name": "central_estero_transit",
+      "latitude": 35.4,
+      "longitude": -120.96
+    },
+    {
+      "name": "south_buchon_approach",
+      "latitude": 35.24,
+      "longitude": -120.97
+    },
+    {
+      "name": "morro_entrance_weather",
+      "latitude": 35.358,
+      "longitude": -120.877
+    }
+  ],
+  "planning": {
+    "cruise_knots": 20,
+    "maximum_fishing_depth_ft": 200,
+    "minimum_fishing_hours": 4,
+    "harbor_minutes_each_way": 15,
+    "planned_return_local": "12:30",
+    "latest_return_local": "13:00"
+  }
+}

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skippercast"
+version = "0.1.0"
+description = "A personal boat-fishing research toolkit: habitat atlases and forecast evidence."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "SkipperCast contributors" }]
+dependencies = []
+
+[project.scripts]
+skippercast = "skippercast.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

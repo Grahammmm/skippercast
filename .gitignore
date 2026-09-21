@@ -1,0 +1,38 @@
+# Local configuration, credentials, forecasts, and delivery records
+.env
+.env.*
+!.env.example
+config.json
+*.local.json
+secrets/
+credentials/
+var/
+runs/
+outbox/
+state.json
+*.log
+
+# Large source surveys are obtained from the publishers, not committed here.
+downloads/
+!dist/downloads/
+!dist/downloads/**
+raw-data/
+*.tif
+*.tiff
+*.parquet
+*.arrow
+*.zip
+
+# Python and OS artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+# dist/ is authored, tracked static website source in this project.
+node_modules/
+.sites-runtime/
+.coverage
+.pytest_cache/
+.DS_Store

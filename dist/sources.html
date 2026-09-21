@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sources & methods · SkipperCast</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="./">⌁ SkipperCast</a
+      ><a class="download" href="./">Back to the map</a>
+    </header>
+    <main class="source-page">
+      <h1>Sources &amp; methods</h1>
+      <p>
+        The map is a place to investigate habitat and compare forecast evidence.
+        It does not predict catches, issue trip recommendations, or provide
+        navigation and legal clearance.
+      </p>
+      <h2>Mapped habitat</h2>
+      <p>
+        The 132 public targets come from 2008 surveys in three USGS releases,
+        with a research depth and closure screen dated September 20, 2026.
+        Survey depths use MLLW. Actual water depth changes with the tide.
+      </p>
+      <ul>
+        <li>
+          <a href="https://doi.org/10.5066/P9KBGELE"
+            >USGS Point Buchon release</a
+          >
+        </li>
+        <li>
+          <a href="https://doi.org/10.5066/P9HEZNRO">USGS Morro Bay release</a>
+        </li>
+        <li>
+          <a href="https://doi.org/10.5066/P9ZSTUK1"
+            >USGS Point Estero release</a
+          >
+        </li>
+      </ul>
+      <p>
+        Survey credits: U.S. Geological Survey, California State University
+        Monterey Bay Seafloor Mapping Lab, and University of California Center
+        for Integrated Spatial Research. The inspected USGS releases identify
+        these data as U.S. public domain. This does not assign the same rights
+        to other providers’ data.
+      </p>
+      <h2>What the grades mean</h2>
+      <p>
+        The score weights local relief (35%), rough or bedrock cover (30%),
+        detrended terrain complexity (20%), and nearby rough habitat area (15%),
+        with caps on each contribution. Grade A is 75 or higher, B is 55–74, and
+        C is below 55. These are research priorities, not a calibrated
+        fishing-success model. Boulder dimensions and fish presence have not
+        been verified.
+      </p>
+      <p>
+        Reef outlines are partial footprints. Drift lines follow an axis of
+        mapped structure; they do not predict current or establish a safe boat
+        route. No target is verified as a charter hotspot from historical AIS.
+        Cambria and historical charter annotations remain excluded because reuse
+        terms are unresolved.
+      </p>
+      <h2>Marine forecasts</h2>
+      <p>
+        <a href="https://open-meteo.com/en/docs">Open-Meteo</a> provides access
+        to ECMWF IFS and NOAA GFS wind forecasts. Its
+        <a href="https://open-meteo.com/en/docs/marine-weather-api"
+          >Marine API</a
+        >
+        provides ECMWF WAM and NOAA GFS Wave. Open-Meteo is a delivery service,
+        not an additional independent model. These are coarse offshore model
+        samples, not observations at a specific rock or the Morro Bay entrance.
+      </p>
+      <p>
+        Forecast data are requested when you press “Load latest forecast.” Times
+        are Pacific, winds are knots, heights are feet, and periods are seconds.
+        Missing fields stay unavailable. Provider retrieval time is separate
+        from model initialization. Latest-run metadata cannot tie each value in
+        the rolling forecast to an immutable model run. Hourly output can
+        include provider interpolation of lower-frequency model data.
+      </p>
+      <p>
+        Forecasts four to seven days away are provisional. The page displays
+        numerical evidence, not an automated go/no-go score. You still need
+        current advisories, buoy observations, harbor entrance conditions,
+        visibility, daylight, and a charted departure-to-return plan. Wind and
+        wave direction labels indicate where they come from; map arrows point
+        downwind.
+      </p>
+      <p>
+        Open-Meteo data are available under
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>;
+        its free API is for noncommercial use and has service limits. Review
+        <a href="https://open-meteo.com/en/terms">the provider’s terms</a>
+        before operating a larger service.
+      </p>
+      <h2>Map and software</h2>
+      <p>
+        Base map ©
+        <a href="https://www.openstreetmap.org/copyright"
+          >OpenStreetMap contributors</a
+        >, ODbL. Standard tiles follow the
+        <a href="https://operations.osmfoundation.org/policies/tiles/"
+          >OpenStreetMap tile policy</a
+        >; this app does not bulk-download them. The base map is not a nautical
+        chart.
+      </p>
+      <p>
+        <a href="https://leafletjs.com/">Leaflet 1.9.4</a> is bundled under its
+        <a href="vendor/LEAFLET-LICENSE.txt">BSD 2-Clause license</a>.
+        SkipperCast’s original code and documentation use the
+        <a href="downloads/LICENSE.txt">SkipperCast Personal Use License</a>:
+        source available for personal recreation and learning. This is not an
+        OSI open-source license. Third-party rights remain separate.
+      </p>
+      <h2>Current official checks</h2>
+      <ul>
+        <li>
+          <a
+            href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645"
+            >NWS PZZ645 marine forecast</a
+          >
+        </li>
+        <li>
+          <a href="https://www.ndbc.noaa.gov/station_page.php?station=46215"
+            >NOAA / CDIP Diablo Canyon buoy 46215</a
+          >
+        </li>
+        <li>
+          <a href="https://www.morrobayca.gov/144/Harbor"
+            >Morro Bay Harbor Department</a
+          >
+        </li>
+        <li>
+          <a
+            href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary"
+            >CDFW groundfish regulations</a
+          >
+        </li>
+        <li>
+          <a href="https://wildlife.ca.gov/Conservation/Marine/MPAs"
+            >CDFW protected areas</a
+          >
+        </li>
+      </ul>
+      <p>
+        <a href="https://github.com/Grahammmm/skippercast"
+          >Project source on GitHub</a
+        >
+      </p>
+    </main>
+  </body>
+</html>

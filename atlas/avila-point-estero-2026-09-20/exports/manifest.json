@@ -1,0 +1,44 @@
+{
+  "targets": 132,
+  "areas": 107,
+  "drifts": 31,
+  "grades": {
+    "A": 35,
+    "B": 74,
+    "C": 23
+  },
+  "validation_scope": "Structure and recorded survey evidence only; no current legal, depth, or navigation clearance.",
+  "edition": "2026-09-20-public-1",
+  "files": [
+    {
+      "name": "atlas.geojson",
+      "bytes": 538678,
+      "sha256": "da499f2d2648426c057dd3cfd394bbcb203eee5c8dd656aeca1245fae8d493cc"
+    },
+    {
+      "name": "complete.gpx",
+      "bytes": 572576,
+      "sha256": "4457031dd767c854a10632b80abfeb131652227ec1f9073b6962c900d12154a7"
+    },
+    {
+      "name": "drift-lines.gpx",
+      "bytes": 22010,
+      "sha256": "9bda0bb35592f98fcf3c4b95b91aa55769bf701dc90ceedff2d806973569a951"
+    },
+    {
+      "name": "reef-outlines.gpx",
+      "bytes": 362008,
+      "sha256": "112192b9df91ef4a4e4c3f3c076083e428efbf4844f8cb9375e71013a28d78d6"
+    },
+    {
+      "name": "spot-notes.html",
+      "bytes": 166217,
+      "sha256": "5086f0695b68a037a0e450f3e9690ccdc11895f435d4c3b781a551292e603ed6"
+    },
+    {
+      "name": "waypoints.gpx",
+      "bytes": 190542,
+      "sha256": "db1f6a3542e64f665695782b2a69ac81d2d2ceb4256aa06b922e3868665d9f28"
+    }
+  ]
+}

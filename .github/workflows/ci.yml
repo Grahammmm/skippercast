@@ -1,0 +1,37 @@
+name: Offline checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit and artifact tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+      - name: Offline demonstration
+        env:
+          PYTHONPATH: src
+        run: python -m skippercast demo
+      - name: Documentation and publication checks
+        run: python scripts/check_repository.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Forecast handling and GPX checks
+        run: node --test tests/test_web.mjs
+      - name: Website assets and data consistency
+        run: python scripts/check_web.py

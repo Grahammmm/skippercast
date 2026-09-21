@@ -1,0 +1,419 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="SkipperCast 0.1.0">
+  <metadata>
+    <name>SkipperCast Avila–Point Estero habitat atlas</name>
+    <desc>Dated survey-derived habitat candidates and optional fishing alignments. Source-datum depth screen &lt;=200 ft. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.</desc>
+    <link href="https://doi.org/10.5066/P9KBGELE">
+      <text>PointBuchon source survey and metadata</text>
+    </link>
+    <link href="https://doi.org/10.5066/P9HEZNRO">
+      <text>MorroBay source survey and metadata</text>
+    </link>
+    <link href="https://doi.org/10.5066/P9ZSTUK1">
+      <text>PointEstero source survey and metadata</text>
+    </link>
+  </metadata>
+  <rte>
+    <name>SC-DRIFT-001</name>
+    <desc>Optional structure alignment for SC26-001. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.163582" lon="-120.841173">
+      <name>SC-DRIFT-001-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.165046" lon="-120.845185">
+      <name>SC-DRIFT-001-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-003</name>
+    <desc>Optional structure alignment for SC26-003. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.181629" lon="-120.850674">
+      <name>SC-DRIFT-003-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.183037" lon="-120.854716">
+      <name>SC-DRIFT-003-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-004</name>
+    <desc>Optional structure alignment for SC26-004. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.258963" lon="-120.911928">
+      <name>SC-DRIFT-004-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.259445" lon="-120.914046">
+      <name>SC-DRIFT-004-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-024</name>
+    <desc>Optional structure alignment for SC26-024. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.152363" lon="-120.787194">
+      <name>SC-DRIFT-024-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.155007" lon="-120.790178">
+      <name>SC-DRIFT-024-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-028</name>
+    <desc>Optional structure alignment for SC26-028. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.158025" lon="-120.797344">
+      <name>SC-DRIFT-028-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.161543" lon="-120.796384">
+      <name>SC-DRIFT-028-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-030</name>
+    <desc>Optional structure alignment for SC26-030. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.163474" lon="-120.807694">
+      <name>SC-DRIFT-030-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.162150" lon="-120.811778">
+      <name>SC-DRIFT-030-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-033</name>
+    <desc>Optional structure alignment for SC26-033. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.166266" lon="-120.799784">
+      <name>SC-DRIFT-033-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.164646" lon="-120.803080">
+      <name>SC-DRIFT-033-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-034</name>
+    <desc>Optional structure alignment for SC26-034. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.167701" lon="-120.847646">
+      <name>SC-DRIFT-034-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.169803" lon="-120.851212">
+      <name>SC-DRIFT-034-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-035</name>
+    <desc>Optional structure alignment for SC26-035. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.169560" lon="-120.828259">
+      <name>SC-DRIFT-035-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.170330" lon="-120.832549">
+      <name>SC-DRIFT-035-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-042</name>
+    <desc>Optional structure alignment for SC26-042. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.178449" lon="-120.862821">
+      <name>SC-DRIFT-042-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.179795" lon="-120.866895">
+      <name>SC-DRIFT-042-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-005</name>
+    <desc>Optional structure alignment for SC26-005. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.385028" lon="-120.883938">
+      <name>SC-DRIFT-005-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.383050" lon="-120.887618">
+      <name>SC-DRIFT-005-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-008</name>
+    <desc>Optional structure alignment for SC26-008. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.409626" lon="-120.894579">
+      <name>SC-DRIFT-008-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.412880" lon="-120.896477">
+      <name>SC-DRIFT-008-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-070</name>
+    <desc>Optional structure alignment for SC26-070. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.377908" lon="-120.877432">
+      <name>SC-DRIFT-070-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.375877" lon="-120.881068">
+      <name>SC-DRIFT-070-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-072</name>
+    <desc>Optional structure alignment for SC26-072. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.389092" lon="-120.882758">
+      <name>SC-DRIFT-072-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.391158" lon="-120.883856">
+      <name>SC-DRIFT-072-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-078</name>
+    <desc>Optional structure alignment for SC26-078. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.412583" lon="-120.966545">
+      <name>SC-DRIFT-078-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.415747" lon="-120.964435">
+      <name>SC-DRIFT-078-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-079</name>
+    <desc>Optional structure alignment for SC26-079. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.413990" lon="-120.948152">
+      <name>SC-DRIFT-079-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.417552" lon="-120.948828">
+      <name>SC-DRIFT-079-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-089</name>
+    <desc>Optional structure alignment for SC26-089. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.423865" lon="-120.935405">
+      <name>SC-DRIFT-089-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.426923" lon="-120.937739">
+      <name>SC-DRIFT-089-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-090</name>
+    <desc>Optional structure alignment for SC26-090. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.425728" lon="-120.900791">
+      <name>SC-DRIFT-090-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.428208" lon="-120.903987">
+      <name>SC-DRIFT-090-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-095</name>
+    <desc>Optional structure alignment for SC26-095. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.430734" lon="-120.946405">
+      <name>SC-DRIFT-095-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.432178" lon="-120.950441">
+      <name>SC-DRIFT-095-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-010</name>
+    <desc>Optional structure alignment for SC26-010. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.490160" lon="-121.068109">
+      <name>SC-DRIFT-010-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.492950" lon="-121.065319">
+      <name>SC-DRIFT-010-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-081</name>
+    <desc>Optional structure alignment for SC26-081. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.415065" lon="-120.973314">
+      <name>SC-DRIFT-081-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.417317" lon="-120.973422">
+      <name>SC-DRIFT-081-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-102</name>
+    <desc>Optional structure alignment for SC26-102. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.435639" lon="-120.999547">
+      <name>SC-DRIFT-102-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.437881" lon="-121.002997">
+      <name>SC-DRIFT-102-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-106</name>
+    <desc>Optional structure alignment for SC26-106. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.441348" lon="-120.995295">
+      <name>SC-DRIFT-106-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.444796" lon="-120.996581">
+      <name>SC-DRIFT-106-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-114</name>
+    <desc>Optional structure alignment for SC26-114. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.450562" lon="-121.008980">
+      <name>SC-DRIFT-114-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.453832" lon="-121.007122">
+      <name>SC-DRIFT-114-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-118</name>
+    <desc>Optional structure alignment for SC26-118. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.460697" lon="-121.034587">
+      <name>SC-DRIFT-118-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.463269" lon="-121.031499">
+      <name>SC-DRIFT-118-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-121</name>
+    <desc>Optional structure alignment for SC26-121. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.469414" lon="-121.029779">
+      <name>SC-DRIFT-121-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.473010" lon="-121.029465">
+      <name>SC-DRIFT-121-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-125</name>
+    <desc>Optional structure alignment for SC26-125. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.480429" lon="-121.047466">
+      <name>SC-DRIFT-125-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.484027" lon="-121.047172">
+      <name>SC-DRIFT-125-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-126</name>
+    <desc>Optional structure alignment for SC26-126. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.482333" lon="-121.058348">
+      <name>SC-DRIFT-126-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.485511" lon="-121.056268">
+      <name>SC-DRIFT-126-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-129</name>
+    <desc>Optional structure alignment for SC26-129. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.502396" lon="-121.084503">
+      <name>SC-DRIFT-129-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.504774" lon="-121.087817">
+      <name>SC-DRIFT-129-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-131</name>
+    <desc>Optional structure alignment for SC26-131. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.502424" lon="-121.095038">
+      <name>SC-DRIFT-131-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.505250" lon="-121.097776">
+      <name>SC-DRIFT-131-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+  <rte>
+    <name>SC-DRIFT-132</name>
+    <desc>Optional structure alignment for SC26-132. Principal axis of raised mapped rough habitat within 180 m of target. Optional structure alignment; actual drift depends on measured wind/current. Not a passage route or current forecast.</desc>
+    <type>Fishing structure alignment</type>
+    <rtept lat="35.508519" lon="-121.098752">
+      <name>SC-DRIFT-132-A</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+    <rtept lat="35.511703" lon="-121.100822">
+      <name>SC-DRIFT-132-B</name>
+      <desc>End of a fishing alignment, not a safe-passage waypoint.</desc>
+    </rtept>
+  </rte>
+</gpx>

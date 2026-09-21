@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Explore researched fishing habitat, reef outlines, drift alignments, and marine forecast evidence with SkipperCast."
+    />
+    <meta name="theme-color" content="#082e3b" />
+    <title>SkipperCast · Fishing atlas</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="vendor/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/leaflet.js" defer></script>
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#workspace">Skip to fishing atlas</a>
+    <header class="masthead">
+      <a class="brand" href="./" aria-label="SkipperCast home"
+        ><span class="brand-mark" aria-hidden="true">⌁</span> SkipperCast</a
+      >
+      <div class="location">
+        <strong>Central California</strong
+        ><span>Avila / Point Buchon → Point Estero</span>
+      </div>
+      <button class="quiet light" id="about-button">About this atlas</button>
+      <a
+        class="download"
+        href="downloads/complete.gpx"
+        download="SkipperCast-complete.gpx"
+        >↓ Export to iNavX</a
+      >
+    </header>
+    <main id="workspace" class="workspace">
+      <aside class="sidebar" aria-label="Fishing targets">
+        <div class="side-head">
+          <div class="eyebrow">FISHING ATLAS</div>
+          <h1>Find your next drift.</h1>
+          <p>Surveyed structure for rockfish &amp; lingcod.</p>
+        </div>
+        <section class="filters" aria-label="Filter targets">
+          <label for="search">Find a target</label
+          ><input
+            id="search"
+            type="search"
+            placeholder="Name, marker ID, or terrain…"
+            autocomplete="off"
+          />
+          <div class="filter-row">
+            <label
+              >Area<select id="area">
+                <option value="all">All areas</option>
+                <option value="PointBuchon">Avila / Point Buchon</option>
+                <option value="MorroBay">Morro Bay</option>
+                <option value="PointEstero">Point Estero</option>
+              </select></label
+            ><label
+              >Priority<select id="grade">
+                <option value="all">All grades</option>
+                <option value="A">A · highest</option>
+                <option value="B">B · strong</option>
+                <option value="C">C · explore</option>
+              </select></label
+            >
+          </div>
+          <div class="filter-row">
+            <label
+              >Target depth limit<select id="depth">
+                <option value="200">200 ft</option>
+                <option value="150">150 ft</option>
+                <option value="100">100 ft</option>
+              </select></label
+            ><label
+              >Geometry<select id="geometry">
+                <option value="all">All targets</option>
+                <option value="drift">With a drift line</option>
+                <option value="area">With a reef area</option>
+              </select></label
+            >
+          </div>
+          <p class="small">
+            Filters each target’s 100 m neighborhood. Linked reef areas and
+            drift lines can extend deeper.
+          </p>
+        </section>
+        <div class="list-head">
+          <strong id="result-count" role="status">Loading atlas…</strong
+          ><button id="fit-targets" class="text-button">Fit map</button>
+        </div>
+        <div
+          id="target-list"
+          class="target-list"
+          aria-label="Targets ranked by terrain"
+        ></div>
+        <div class="side-foot">
+          Terrain priority, not catch probability.<br />132 targets · 107 reef
+          areas · 31 drift lines
+        </div>
+      </aside>
+      <section class="map-column" aria-label="Fishing map and forecasts">
+        <div class="map-wrap">
+          <div id="map" aria-label="Interactive fishing habitat map"></div>
+          <div class="map-banner">
+            <span class="map-tag">RESEARCH LAYER</span
+            ><span>Survey depths ≤200 ft · MLLW</span>
+          </div>
+          <details class="layers" open>
+            <summary>Map layers</summary>
+            <label
+              ><input id="layer-targets" type="checkbox" checked />
+              <span class="legend-dot"></span> Fishing targets</label
+            ><label
+              ><input id="layer-areas" type="checkbox" checked />
+              <span class="legend-area"></span> Reef footprints</label
+            ><label
+              ><input id="layer-drifts" type="checkbox" checked />
+              <span class="legend-line"></span> Drift alignments</label
+            ><label
+              ><input id="layer-forecast" type="checkbox" />
+              <span class="legend-wind">↗</span> Forecast stations</label
+            >
+          </details>
+          <div class="map-note">
+            Planning map. Use a current nautical chart for navigation and
+            closures.
+          </div>
+        </div>
+        <section class="forecast" aria-labelledby="forecast-heading">
+          <div class="forecast-heading">
+            <div>
+              <div class="eyebrow">ON THE WATER</div>
+              <h2 id="forecast-heading">Marine forecast</h2>
+            </div>
+            <button id="load-forecast" class="primary">
+              Load latest forecast
+            </button>
+          </div>
+          <p id="forecast-status" role="status">
+            Compare wind and waves across independent models. Forecasts load
+            when you ask.
+          </p>
+          <div id="forecast-content"></div>
+        </section>
+      </section>
+      <aside id="detail" class="detail" aria-label="Selected target details">
+        <div class="empty-detail">
+          <span class="eyebrow">YOUR NEXT STOP</span>
+          <h2>Pick a target.</h2>
+          <p>
+            See the terrain, depth, evidence, and an optional alignment over the
+            structure.
+          </p>
+        </div>
+      </aside>
+    </main>
+    <dialog id="about-dialog" aria-labelledby="about-title">
+      <div class="dialog-head">
+        <h2 id="about-title">Know what’s on the map.</h2>
+        <button id="close-about" aria-label="Close about dialog">×</button>
+      </div>
+      <p>
+        This public edition contains
+        <strong
+          >132 habitat candidates, 107 partial reef outlines, and 31 optional
+          drift alignments</strong
+        >
+        derived from 2008 USGS surveys. The research screen is dated September
+        20, 2026.
+      </p>
+      <p>
+        Grades A–C rank measured terrain, not expected catches. There are no
+        verified catches or AIS-confirmed charter hotspots at these coordinates.
+        Outlines show selected habitat; they are not the complete reef. Lines
+        suggest an alignment over structure, not a boat route or a prediction of
+        your drift.
+      </p>
+      <p>
+        Depths use the survey’s MLLW reference. Tides, position uncertainty, and
+        seabed change affect the depth you find. Confirm depth and structure
+        with your sounder.
+      </p>
+      <p>
+        Cambria and historical charter annotations are excluded from this public
+        edition while source reuse terms are unresolved. Protected-area
+        boundaries and the Diablo Canyon security zone are
+        <strong>not displayed as a live layer</strong>. A marker does not
+        establish current legal access.
+      </p>
+      <div class="source-links">
+        <a
+          href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central"
+          target="_blank"
+          rel="noopener"
+          >CDFW current fishing rules ↗</a
+        ><a
+          href="https://wildlife.ca.gov/Conservation/Marine/MPAs"
+          target="_blank"
+          rel="noopener"
+          >CDFW marine protected areas ↗</a
+        ><a
+          href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645"
+          target="_blank"
+          rel="noopener"
+          >NWS coastal forecast ↗</a
+        ><a href="downloads/spot-notes.html" target="_blank" rel="noopener"
+          >Complete offline target notes ↗</a
+        ><a href="sources.html">Sources, methods &amp; license ↗</a>
+      </div>
+      <p class="small">
+        No sign-in, tracking, or personal trip records are collected by this
+        app. The map and forecast providers receive network requests when their
+        services are used.
+      </p>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
