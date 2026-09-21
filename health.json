@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-09-21T16:49:19Z",
+  "status": "degraded",
+  "critical_available": true,
+  "recent_report_days_ok": 7,
+  "sources_ok": 49,
+  "sources_total": 50,
+  "issues": [
+    "chlorophyll"
+  ]
+}
