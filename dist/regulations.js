@@ -47,7 +47,7 @@ export function regulationState(data, species, now = Date.now()) {
   let status = !window ? "closed" : window.requires_opening_review ? "scheduled" : "open";
   let reason = status === "closed" ? "Outside the reviewed local season." : status === "scheduled" ?
     "Scheduled opening only. A new review of season, health and trap restrictions is required before showing open." :
-    "Area-wide season is open in the reviewed rules. MPAs and local restrictions still apply.";
+    "Local closures, MPAs and gear restrictions still apply.";
   if (!reviewed) {
     status = "unknown";
     reason = "This date is outside the reviewed rule period. Current-year rules need review.";
@@ -62,7 +62,7 @@ export function regulationState(data, species, now = Date.now()) {
 
 export function regulationsHTML(data, species, now = Date.now(), fallback = false) {
   const state = regulationState(data, species, now);
-  const summary = `<summary><span>Regulations</span><span class="reg-badge reg-${state.status}">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
+  const summary = `<summary><span>Regulations</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
   if (!state.profile) return summary + `<div class="reg-body"><p>${esc(state.reason)}</p><a href="https://wildlife.ca.gov/Fishing/Ocean" target="_blank" rel="noopener">Official CDFW rules ↗</a></div>`;
   const p = state.profile;
   const timestamps = p.source_ids.map((id) => data.checks[id]?.data_retrieved_at).filter((s) => Number.isFinite(Date.parse(s)));
@@ -74,7 +74,7 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
     <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
     <dl class="reg-limits"><dt>Season</dt><dd>${esc(p.season)}</dd><dt>Daily / possession limit</dt><dd>${esc(p.bag)}</dd><dt>Minimum size</dt><dd>${esc(p.size)}</dd></dl>
     <details data-reg-section="gear"><summary>Gear, identification & other limits</summary><ul>${p.details.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></details>
-    <details data-reg-section="area"><summary>Where these rules apply</summary><p>${esc(data.scope)}</p><ul>${data.common_notes.map((s) => `<li>${esc(s)}</li>`).join("")}</ul><a href="${esc(officialURL(data.official_map_url))}" target="_blank" rel="noopener">CDFW map: check exact position & MPAs ↗</a></details>
+    <details data-reg-section="area"><summary>Where these rules apply</summary><p>${esc(data.scope)}</p><ul>${data.common_notes.filter((s) => species !== "dungeness" || !s.startsWith("For finfish,")).map((s) => `<li>${esc(s)}</li>`).join("")}</ul><a href="${esc(officialURL(data.official_map_url))}" target="_blank" rel="noopener">CDFW map: check exact position & MPAs ↗</a></details>
     <div class="reg-freshness"><p>Rules reviewed: ${esc(time(data.reviewed_at))}<br>Oldest required source check: ${esc(time(checked))}${fallback ? " · saved snapshot" : ""}</p><p>Official sources are checked daily. Changes need review; a successful download does not approve new rules. Recheck before each trip.</p></div>
     <a class="reg-official" href="${esc(officialURL(data.sources[species === "salmon" ? "rules-salmon" : species === "dungeness" ? "rules-crab" : "rules-central"].url))}" target="_blank" rel="noopener">Read current official rules ↗</a>
     <details data-reg-section="sources"><summary>All official sources & check status</summary><div class="reg-links">${links}</div>${state.issues.length ? `<p>Needs review / fresh check: ${state.issues.map((id) => esc(data.sources[id].name)).join("; ")}.</p>` : "<p>Required sources match the reviewed versions.</p>"}</details>

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-21.1",
-  "reviewed_at": "2026-09-21T17:22:23Z",
+  "revision": "2026-09-21.2",
+  "reviewed_at": "2026-09-21T17:32:58Z",
   "valid_from": "2026-09-21",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
@@ -13,67 +13,80 @@
     "rules-central": {
       "name": "CDFW Central Region rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
-      "approved_content_sha256": null
+      "approved_content_sha256": "fbd461da00400cdd360291de86cecac83c8650dbfc84daad892499d4d402653a",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-gear": {
       "name": "CDFW finfish gear and general rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
-      "approved_content_sha256": null
+      "approved_content_sha256": "3794060cd03fc9ce7a05ef13fc954612ef8a98db7effed5bf49e7688d3017f40",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-invertebrates": {
       "name": "CDFW invertebrate gear rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
-      "approved_content_sha256": null
+      "approved_content_sha256": "0179cba4337d3b51ac4a0305d2872ce1f9e668eeca75e7bb143d18167b2cf35d",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-whales": {
       "name": "CDFW whale-safe crab restrictions",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
-      "approved_content_sha256": null
+      "approved_content_sha256": "47d8da5000b31ae807a4291ec7893538f999eff17998f426cdf2de9e8f39ed06",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-health": {
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
-      "approved_content_sha256": null
+      "approved_content_sha256": "4690b9a4197495edb2e9aed7e2288ef323eb213a7cf65541283a832038d9da31",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-ocean": {
       "name": "CDFW official regulation index",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
-      "approved_content_sha256": null
+      "approved_content_sha256": "a1632a1228da247c95f320c80e0547022f4dff67a44432b80b8c474b49e66de3",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-groundfish": {
       "name": "CDFW groundfish",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
-      "approved_content_sha256": null
+      "approved_content_sha256": "da900a280dff595b389c46bc4e03b910b2922c5c481ae99a6f5a2a668265f247",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-inseason": {
       "name": "CDFW in-season changes",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
-      "approved_content_sha256": null
+      "approved_content_sha256": "aa876267727afe9b77a7fe0657f89e559b667e689a5ac28717bef354039f66cf",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-salmon": {
       "name": "CDFW salmon",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
-      "approved_content_sha256": null
+      "approved_content_sha256": "8d9363fa4014eb203fe8548ef75af3da1375dfb3757dcfaf3f6f697f0c1e8b0f",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-crab": {
       "name": "CDFW crab",
       "url": "https://wildlife.ca.gov/Crab",
-      "approved_content_sha256": null
+      "approved_content_sha256": "782928541e06488d421780cc986f609b13305ce000b8fef877655e31ef9d193e",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "mpa-buchon": {
       "name": "CDFW Point Buchon MPAs",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
-      "approved_content_sha256": null
+      "approved_content_sha256": "210cbcddd741804714128acac014589776587847bcda35c30f062add2302b968",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "mpa-cambria": {
       "name": "CDFW Cambria MPAs",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
-      "approved_content_sha256": null
+      "approved_content_sha256": "4096806572e4c7ad8fbc777370219a4102343d41a90702f538639896f5c93983",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-book": {
       "name": "CDFW 2026 ocean regulations booklet · §28.38 tuna",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
-      "approved_content_sha256": null
+      "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "reviewed_at": "2026-09-21T17:32:58Z"
     }
   },
   "species": {
@@ -117,7 +130,7 @@
         "Within the 10: at most 1 copper, 2 canary, and 2 vermilion/sunset rockfish combined.",
         "No retention of yelloweye, quillback, cowcod or bronzespotted rockfish.",
         "Use one line with no more than two hooks when targeting rockfish, or when rockfish are aboard. Carry a descending device ready for use.",
-        "Retained rockfish fillets must have all skin attached. Cabezon and greenlings have their own minimum sizes."
+        "Retained rockfish fillets must have all skin attached."
       ],
       "source_ids": [
         "rules-central",
@@ -268,21 +281,99 @@
     "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
-  "checks": {},
-  "checked_at": null,
-  "review_required": [
-    "rules-central",
-    "rules-gear",
-    "rules-invertebrates",
-    "rules-whales",
-    "rules-health",
-    "rules-ocean",
-    "rules-groundfish",
-    "rules-inseason",
-    "rules-salmon",
-    "rules-crab",
-    "mpa-buchon",
-    "mpa-cambria",
-    "rules-book"
-  ]
+  "checks": {
+    "rules-central": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "fbd461da00400cdd360291de86cecac83c8650dbfc84daad892499d4d402653a",
+      "source_status": "ok"
+    },
+    "rules-gear": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "3794060cd03fc9ce7a05ef13fc954612ef8a98db7effed5bf49e7688d3017f40",
+      "source_status": "ok"
+    },
+    "rules-invertebrates": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "0179cba4337d3b51ac4a0305d2872ce1f9e668eeca75e7bb143d18167b2cf35d",
+      "source_status": "ok"
+    },
+    "rules-whales": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "47d8da5000b31ae807a4291ec7893538f999eff17998f426cdf2de9e8f39ed06",
+      "source_status": "ok"
+    },
+    "rules-health": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "4690b9a4197495edb2e9aed7e2288ef323eb213a7cf65541283a832038d9da31",
+      "source_status": "ok"
+    },
+    "rules-ocean": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:54Z",
+      "content_sha256": "a1632a1228da247c95f320c80e0547022f4dff67a44432b80b8c474b49e66de3",
+      "source_status": "ok"
+    },
+    "rules-groundfish": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:55Z",
+      "content_sha256": "da900a280dff595b389c46bc4e03b910b2922c5c481ae99a6f5a2a668265f247",
+      "source_status": "ok"
+    },
+    "rules-inseason": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:55Z",
+      "content_sha256": "aa876267727afe9b77a7fe0657f89e559b667e689a5ac28717bef354039f66cf",
+      "source_status": "ok"
+    },
+    "rules-salmon": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:55Z",
+      "content_sha256": "8d9363fa4014eb203fe8548ef75af3da1375dfb3757dcfaf3f6f697f0c1e8b0f",
+      "source_status": "ok"
+    },
+    "rules-crab": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:55Z",
+      "content_sha256": "782928541e06488d421780cc986f609b13305ce000b8fef877655e31ef9d193e",
+      "source_status": "ok"
+    },
+    "mpa-buchon": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:56Z",
+      "content_sha256": "210cbcddd741804714128acac014589776587847bcda35c30f062add2302b968",
+      "source_status": "ok"
+    },
+    "mpa-cambria": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:56Z",
+      "content_sha256": "4096806572e4c7ad8fbc777370219a4102343d41a90702f538639896f5c93983",
+      "source_status": "ok"
+    },
+    "rules-book": {
+      "status": "unchanged",
+      "checked_at": "2026-09-21T17:30:53Z",
+      "data_retrieved_at": "2026-09-21T17:30:56Z",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "source_status": "ok"
+    }
+  },
+  "checked_at": "2026-09-21T17:30:53Z",
+  "review_required": []
 }

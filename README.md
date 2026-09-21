@@ -67,4 +67,9 @@ Third-party and public-domain data retain their own rights. The personal-use res
 
 ## Daily fishing evidence
 
+Selecting a target opens its local regulations card: season status and dates,
+size and bag limits, gear rules and official CDFW links. The daily job checks
+the official sources against reviewed versions. Changed, failed or stale checks
+withhold the open-season badge until reviewed. See [how regulation updates work](docs/regulations.md).
+
 The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. Weather continues to refresh separately. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).
