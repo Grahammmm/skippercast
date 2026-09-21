@@ -9,9 +9,10 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=4.1";
-import { esc, num, local, full, day } from "./marine-charts.js?v=4.1";
-import { detailHTML } from "./marine-detail.js?v=4.1";
+} from "./marine-data.js?v=5.4";
+import { esc, num, local, full, day } from "./marine-charts.js?v=5.4";
+import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.4";
+import { detailHTML } from "./marine-detail.js?v=5.4";
 const $ = (id) => document.getElementById(id);
 const colors = {
   calmer: "#278f87",
@@ -27,24 +28,73 @@ export function initWeather(map, layer, onOpen) {
     index = 0,
     point = 1,
     family = "gfs",
-    overlay = "waves",
+    overlay = "none",
     play = null,
     loading = false,
     requested = null,
     lastSpecies = "lingcod",
-    heading = 0;
+    heading = 0,
+    detailTab = "waves",
+    outlookKey = "";
   const dock = $("map-time-dock");
-  dock.innerHTML = `<div class="dock-controls"><label class="sr-only" for="ocean-layer">Ocean overlay</label><select id="ocean-layer"><option value="waves">Waves · ft</option><option value="wind">Wind · kt</option><option value="comfort">Comfort</option><option value="sst">Sea temp · °F</option><option value="none">Chart only</option></select><label class="sr-only" for="forecast-model">Forecast model</label><select id="forecast-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select><button id="ocean-now" class="text-button">Now</button></div><button id="map-weather-summary" class="map-weather-summary" aria-label="Open detailed weather and tide chart"><span>Loading ocean conditions…</span><span aria-hidden="true">↗</span></button><div class="time-heading"><button id="time-play" aria-label="Play hourly forecast">▶</button><strong id="map-time-label">Now · forecast</strong><span id="map-time-range">+7 days</span></div><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><div id="day-strip" class="day-strip" aria-label="Choose forecast date"></div><div id="overlay-legend" class="overlay-legend"></div>`;
+  dock.innerHTML = `<div class="compact-time-row"><button id="time-play" aria-label="Play hourly forecast">▶</button><button id="map-weather-summary" aria-label="Open detailed weather and tide chart">Loading conditions…</button><button id="ocean-now" aria-label="Jump to current forecast hour">Now</button></div><div class="scrub-row"><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><span>+7d</span></div><div class="compact-time-caption"><span id="map-time-label"></span><span id="map-time-range"></span></div>`;
+  $("weather-map-options").innerHTML =
+    `<label>Weather layer<select id="ocean-layer"><option value="none">Off · habitat only</option><option value="waves">Waves · feet</option><option value="wind">Wind · knots</option><option value="comfort">Hourly comfort</option><option value="sst">Sea temperature · °F</option></select></label><label>Forecast model<select id="forecast-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label><p id="overlay-legend" class="small"></p>`;
   $("forecast-content").innerHTML =
-    `<div class="marine-controls"><label>Forecast sample<select id="marine-point">${POINTS.map((s, i) => `<option value="${i}" ${i === point ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Model<select id="detail-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label><div><span id="detail-provisional" class="eyebrow">HOURLY FORECAST · PACIFIC TIME</span><strong id="detail-time-label"></strong></div></div><div class="detail-time"><button id="previous-hour" aria-label="Previous forecast hour">←</button><label class="sr-only" for="detail-hour">Forecast hour</label><input id="detail-hour" type="range" min="0" max="168" value="0" step="1"/><button id="next-hour" aria-label="Next forecast hour">→</button></div><div id="marine-detail-body"><p>Loading forecast sources…</p></div>`;
-  for (const el of [
-    dock,
-    document.querySelector(".species-bar"),
-    document.querySelector(".map-toolbar"),
-  ]) {
+    `<div class="marine-controls"><label>Forecast sample<select id="marine-point">${POINTS.map((s, i) => `<option value="${i}" ${i === point ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Model<select id="detail-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label><div><span id="detail-provisional" class="eyebrow">HOURLY FORECAST · PACIFIC TIME</span><strong id="detail-time-label"></strong></div></div><div class="detail-time"><button id="previous-hour" aria-label="Previous forecast hour">←</button><label class="sr-only" for="detail-hour">Forecast hour</label><input id="detail-hour" type="range" min="0" max="168" value="0" step="1"/><button id="next-hour" aria-label="Next forecast hour">→</button></div><div id="day-strip" class="day-strip" aria-label="Choose forecast date"></div><div class="condition-tabs" role="tablist" aria-label="Conditions detail"><button role="tab" data-condition-tab="waves" aria-selected="true">Waves</button><button role="tab" data-condition-tab="wind" aria-selected="false">Wind</button><button role="tab" data-condition-tab="tides" aria-selected="false">Tides</button><button role="tab" data-condition-tab="sources" aria-selected="false">Sources</button></div><div id="marine-detail-body"><p>Loading forecast sources…</p></div>`;
+  for (const el of [dock, document.querySelector(".species-bar")]) {
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
   }
+  $("best-day-banner").addEventListener("click", () => {
+    const epoch = Number($("best-day-banner").dataset.hour);
+    if (epoch) setHour(Math.round((epoch - hours[0]) / HOUR));
+    onOpen();
+    const summary = document.querySelector(".morning-summary");
+    if (summary) summary.open = true;
+  });
+  $("morning-outlook").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-morning]");
+    if (b) setHour(Math.round((Number(b.dataset.morning) - hours[0]) / HOUR));
+  });
+  function applyDetailTab() {
+    for (const b of document.querySelectorAll("[data-condition-tab]")) {
+      b.setAttribute(
+        "aria-selected",
+        String(b.dataset.conditionTab === detailTab),
+      );
+      b.tabIndex = b.dataset.conditionTab === detailTab ? 0 : -1;
+    }
+    for (const p of document.querySelectorAll("[data-condition-panel]"))
+      p.hidden = p.dataset.conditionPanel !== detailTab;
+  }
+  document.querySelector(".condition-tabs").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-condition-tab]");
+    if (b) {
+      detailTab = b.dataset.conditionTab;
+      applyDetailTab();
+    }
+  });
+  document.querySelector(".condition-tabs").addEventListener("keydown", (e) => {
+    const tabs = [...document.querySelectorAll("[data-condition-tab]")];
+    const index = tabs.indexOf(e.target);
+    if (
+      index < 0 ||
+      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
+    )
+      return;
+    e.preventDefault();
+    const next =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? tabs.length - 1
+          : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+            tabs.length;
+    detailTab = tabs[next].dataset.conditionTab;
+    applyDetailTab();
+    tabs[next].focus();
+  });
   function setHour(v) {
     index = Math.max(0, Math.min(168, Number(v)));
     render();
@@ -258,7 +308,9 @@ export function initWeather(map, layer, onOpen) {
   function render() {
     const t = hours[index],
       provisional = index >= 72;
-    $("map-time-label").textContent = (index === 0 ? "Now · " : "") + full(t);
+    $("map-time-label").textContent =
+      (index === 0 ? "Now · " : "") +
+      local(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
     for (const key of ["map-time", "detail-hour"]) {
       $(key).value = index;
       $(key).setAttribute(
@@ -297,7 +349,16 @@ export function initWeather(map, layer, onOpen) {
       status = statusFor(point, t, c, other),
       p = POINTS[point];
     $("map-weather-summary").innerHTML =
-      `<span><strong>${esc(p.name)}${p.offshore ? " · offshore" : ""}</strong><span>${num(c.sea.height)} ft · ${num(c.sea.period)} s ${family === "gfs" ? "primary" : "mean"} · wind ${num(c.wind, 0)} / gust ${num(c.gust, 0)} kt</span></span><span class="comfort-pill ${status.level}">${status.label} ↗</span>`;
+      `<strong>${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt ↗</span>`;
+    $("map-weather-summary").title = p.name + " · " + status.label;
+    const nextKey = `${bundle.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
+    if (nextKey !== outlookKey) {
+      renderOutlook(
+        rankMornings(bundle, point, lastSpecies, Date.now(), hours.at(-1)),
+        point,
+      );
+      outlookKey = nextKey;
+    }
     const body = $("marine-detail-body"),
       sourcesOpen = body.querySelector("#marine-sources")?.open;
     body.innerHTML = detailHTML({
@@ -325,6 +386,7 @@ export function initWeather(map, layer, onOpen) {
       explain();
     });
     explain();
+    applyDetailTab();
   }
   async function load(force = false) {
     if (loading) return;
@@ -392,12 +454,13 @@ export function initWeather(map, layer, onOpen) {
         !["albacore", "bluefin"].includes(id) &&
         ["albacore", "bluefin"].includes(lastSpecies)
       ) {
-        overlay = "waves";
-        $("ocean-layer").value = "waves";
+        overlay = "none";
+        $("ocean-layer").value = "none";
         point = 1;
         requested = null;
       }
       lastSpecies = id;
+      outlookKey = "";
       render();
     },
   };

@@ -82,6 +82,6 @@ Official [NWS marine forecasts](https://forecast.weather.gov/MapClick.php?TextTy
 
 ## Species and detailed marine views
 
-The [species research](species-research.md) records the ecology sources, interpretation limits, dated seasonal review, and new soft-bottom method. The new sediment circles derive only from the already-reviewed USGS releases; those source rights and credits remain unchanged. No commercial chart tiles, proprietary weather tiles, private catches, or charter trajectories were added.
+The [species research](species-research.md) records the ecology sources, interpretation limits, dated seasonal review, and new soft-bottom method. The connected sediment regions derive only from the already-reviewed USGS releases; those source rights and credits remain unchanged. No commercial chart tiles, proprietary weather tiles, private catches, or charter trajectories were added.
 
 [NOAA's ENC display service](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html) supplies chart images for the visible map at runtime, with attribution. No offline chart cache is bundled. Open-Meteo supplies explicit ECMWF/NOAA wind and wave models plus Météo-France/Copernicus surface temperature and current forecasts, under the access and attribution terms above. The public app remains noncommercial. NOAA tide predictions and the separately dated water-level observation come from station 9412110.

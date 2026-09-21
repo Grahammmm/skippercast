@@ -19,9 +19,10 @@
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="marine.css?v=4.1" />
+    <link rel="stylesheet" href="marine.css?v=5.4" />
+    <link rel="stylesheet" href="map-first.css?v=5.4" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js?v=4.1"></script>
+    <script type="module" src="app.js?v=5.4"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -29,109 +30,15 @@
       <a class="brand" href="#map" aria-label="SkipperCast home"
         ><span class="brand-mark" aria-hidden="true">⌁</span> SkipperCast</a
       >
-      <div class="location">
-        <strong>Central California</strong
-        ><span>Coastal habitat &amp; offshore conditions</span>
-      </div>
       <button
-        class="quiet light"
-        id="about-button"
-        aria-label="About this atlas"
+        id="best-day-banner"
+        class="best-day-banner"
+        aria-label="Open seven-day morning outlook"
       >
-        About
+        <span>7-day outlook</span><strong>Checking conditions…</strong>
       </button>
-      <a
-        class="download"
-        href="downloads/complete.gpx"
-        download="SkipperCast-complete.gpx"
-        aria-label="Export the 132 rocky targets to iNavX"
-        >↓ Reef GPX</a
-      >
     </header>
     <main id="workspace" class="workspace" tabindex="-1">
-      <aside
-        id="spots-panel"
-        class="sidebar app-panel"
-        data-panel="spots"
-        aria-label="Fishing spots"
-        hidden
-      >
-        <div class="side-head">
-          <h1>Fishing spots</h1>
-          <p id="species-list-context">Rocky habitat · survey depths ≤200 ft</p>
-        </div>
-        <div id="species-list-guide" class="species-list-guide"></div>
-        <div class="search-field">
-          <label for="search">Find a spot</label
-          ><input
-            id="search"
-            type="search"
-            placeholder="Name, marker ID, or terrain…"
-            autocomplete="off"
-            enterkeyhint="search"
-          />
-        </div>
-        <details class="filter-disclosure" id="filter-options">
-          <summary>
-            <span>Filters</span
-            ><span id="filter-summary">All areas · 200 ft</span>
-          </summary>
-          <section class="filters" aria-label="Filter spots">
-            <div class="filter-row">
-              <label
-                >Area<select id="area">
-                  <option value="all">All areas</option>
-                  <option value="PointBuchon">Avila / Point Buchon</option>
-                  <option value="MorroBay">Morro Bay</option>
-                  <option value="PointEstero">Point Estero</option>
-                </select></label
-              ><label
-                >Habitat grade<select id="grade">
-                  <option value="all">All grades</option>
-                  <option value="A">A · 75–100</option>
-                  <option value="B">B · 55–74</option>
-                  <option value="C">C · &lt;55</option>
-                </select></label
-              >
-            </div>
-            <div class="filter-row">
-              <label
-                >Target depth limit<select id="depth">
-                  <option value="200">200 ft</option>
-                  <option value="150">150 ft</option>
-                  <option value="100">100 ft</option>
-                </select></label
-              ><label
-                >Geometry<select id="geometry">
-                  <option value="all">All spots</option>
-                  <option value="drift">With a drift line</option>
-                  <option value="area">With a reef area</option>
-                </select></label
-              >
-            </div>
-            <p class="small">
-              Depth filters each spot’s 100 m neighborhood. Linked reef areas
-              and drift lines can extend deeper.
-            </p>
-            <div class="filter-actions">
-              <a href="#grade-guide">A / B / C explained</a
-              ><button id="reset-filters" class="text-button">
-                Reset filters
-              </button>
-            </div>
-          </section>
-        </details>
-        <div class="list-head">
-          <strong id="result-count" role="status">Loading atlas…</strong
-          ><button id="fit-targets" class="text-button">Show on map</button>
-        </div>
-        <div
-          id="target-list"
-          class="target-list"
-          aria-label="Spots ranked by terrain"
-        ></div>
-        <div class="side-foot">Terrain grades are not catch predictions.</div>
-      </aside>
       <section
         id="map-panel"
         class="map-column app-panel"
@@ -140,46 +47,6 @@
       >
         <div class="map-wrap">
           <div id="map" aria-label="Interactive fishing habitat map"></div>
-          <div class="map-toolbar">
-            <a class="map-search" href="#spots"
-              ><svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="10" cy="10" r="6" />
-                <path d="m15 15 5 5" /></svg
-              ><span>Find a fishing spot</span
-              ><strong id="map-result-count">…</strong></a
-            >
-            <details class="layers">
-              <summary>Layers</summary>
-              <label
-                >Base map<select id="base-map">
-                  <option value="nautical">NOAA nautical chart</option>
-                  <option value="street">Street map</option>
-                </select></label
-              >
-              <label
-                ><input id="layer-targets" type="checkbox" checked /><span
-                  class="legend-dot"
-                ></span>
-                Fishing spots</label
-              ><label
-                ><input id="layer-areas" type="checkbox" checked /><span
-                  class="legend-area"
-                ></span>
-                Reef footprints</label
-              ><label
-                ><input id="layer-drifts" type="checkbox" checked /><span
-                  class="legend-line"
-                ></span>
-                Drift alignments</label
-              ><label
-                ><input id="layer-forecast" type="checkbox" checked /><span
-                  class="legend-wind"
-                  >↗</span
-                >
-                Weather overlay</label
-              >
-            </details>
-          </div>
           <div class="species-bar">
             <label for="species-select">Target species</label>
             <select id="species-select">
@@ -192,41 +59,19 @@
               <option value="dungeness">Dungeness crab</option>
             </select>
             <button
-              id="species-info"
-              class="text-button"
-              aria-label="Read conditions and habitat for selected species"
+              id="open-map-options"
+              class="map-options-button"
+              aria-label="Open map options and charter evidence"
             >
-              Field notes ↗
+              Options
             </button>
           </div>
           <div id="species-season" class="species-season" hidden></div>
-          <div class="map-banner">
-            <span>Avila → Point Estero</span
-            ><a
-              href="#grade-guide"
-              aria-label="Explain habitat grades A, B, and C"
-              ><b class="legend-a">A</b><b class="legend-b">B</b
-              ><b class="legend-c">C</b><span>Terrain grades</span></a
-            >
-          </div>
-          <button
-            id="fit-map"
-            class="map-fit"
-            aria-label="Fit all filtered spots on the map"
-          >
-            ⌖ <span>Fit spots</span>
-          </button>
           <div id="map-empty" class="map-empty" hidden>
             <strong>No spots match</strong>
             <p>Adjust your filters to explore this area.</p>
-            <a href="#spots">Change filters</a>
+            <button id="empty-options">Change filters</button>
           </div>
-          <button
-            id="selected-preview"
-            class="selected-preview"
-            aria-haspopup="dialog"
-            hidden
-          ></button>
           <div
             id="map-time-dock"
             class="time-dock"
@@ -254,6 +99,7 @@
         <p id="forecast-status" role="status">
           Loading wind, waves, temperature, and NOAA tides…
         </p>
+        <div id="morning-outlook"></div>
         <div id="forecast-content"></div>
       </section>
       <section
@@ -367,7 +213,7 @@
           <p>
             Download the GPX file, then use Share → iNavX on your iPad. The full
             set includes 132 rocky targets, partial reef outlines, and drift
-            alignments. Sediment windows and offshore search references are
+            alignments. Sediment regions and offshore search references are
             currently map-only.
           </p>
           <a
@@ -386,23 +232,6 @@
           </button>
         </section>
       </section>
-      <aside
-        id="desktop-detail"
-        class="detail-pane"
-        aria-label="Selected spot details"
-        tabindex="-1"
-        hidden
-      >
-        <div id="detail" class="detail">
-          <div class="empty-detail">
-            <span class="eyebrow">YOUR NEXT STOP</span>
-            <h2>Pick a spot.</h2>
-            <p>
-              Tap a marker to see depth, terrain, notes, and drift alignments.
-            </p>
-          </div>
-        </div>
-      </aside>
     </main>
     <nav class="app-nav" aria-label="Main navigation">
       <a href="#map" data-nav="map" aria-label="Map" aria-current="page"
@@ -410,17 +239,12 @@
           <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
           <path d="M9 3v15m6-12v15" /></svg
         ><span>Map</span></a
-      ><a href="#spots" data-nav="spots" aria-label="Spots"
-        ><svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M8 6h13M8 12h13M8 18h13" />
-          <path d="M3 6h.01M3 12h.01M3 18h.01" /></svg
-        ><span>Spots</span></a
-      ><a href="#forecast" data-nav="forecast" aria-label="Forecast"
+      ><a href="#forecast" data-nav="forecast" aria-label="Conditions"
         ><svg viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5a3 3 0 1 1-3 3"
           /></svg
-        ><span>Forecast</span></a
+        ><span>Conditions</span></a
       ><a href="#guide" data-nav="guide" aria-label="Guide"
         ><svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
@@ -434,15 +258,140 @@
       aria-labelledby="spot-sheet-title"
     >
       <div class="sheet-header">
-        <h2 id="spot-sheet-title">Spot details</h2>
+        <h2 id="spot-sheet-title">Fishing area</h2>
         <button id="close-spot-dialog" aria-label="Close spot details">
           ×
         </button>
       </div>
-      <div id="spot-dialog-body" class="sheet-body"></div>
+      <div id="spot-dialog-body" class="sheet-body">
+        <div id="detail" class="detail"></div>
+      </div>
       <div class="sheet-actions">
         <button id="show-selected-map">Show on map</button
         ><a class="primary" id="export-selected" download>↓ Export GPX</a>
+      </div>
+    </dialog>
+    <dialog
+      id="map-options"
+      class="options-sheet"
+      aria-labelledby="map-options-title"
+    >
+      <div class="sheet-header">
+        <h2 id="map-options-title">Map options</h2>
+        <button id="close-map-options" aria-label="Close map options">×</button>
+      </div>
+      <div class="options-body">
+        <label
+          >Chart detail<select id="base-map">
+            <option value="fishing">Fishing chart · less clutter</option>
+            <option value="nautical">Full NOAA chart · all symbols</option>
+            <option value="street">Street map</option>
+          </select></label
+        >
+        <p class="small">
+          Fishing chart keeps depths and coastal features; the seabed-symbol
+          layer, including cables and obstructions, is hidden. Use Full NOAA
+          chart for those details.
+        </p>
+        <div id="weather-map-options"></div>
+        <p class="small">
+          Numbered clusters count nearby reef candidates. A/B/C grades describe
+          terrain; neither shows charter activity.
+        </p>
+        <details>
+          <summary>Habitat layers</summary>
+          <div class="layer-options">
+            <label
+              ><input id="layer-targets" type="checkbox" checked /> Reef
+              markers</label
+            >
+            <label
+              ><input id="layer-areas" type="checkbox" checked /> Habitat
+              outlines</label
+            >
+            <label
+              ><input id="layer-drifts" type="checkbox" /> All drift
+              alignments</label
+            >
+            <label
+              ><input id="layer-forecast" type="checkbox" checked /> Selected
+              weather overlay</label
+            >
+          </div>
+        </details>
+        <button id="charter-status" class="charter-status">
+          <strong>Charter hotspots</strong
+          ><span>0 verified · see evidence ↗</span>
+        </button>
+        <div class="search-field">
+          <label for="search">Find a spot</label
+          ><input
+            id="search"
+            type="search"
+            placeholder="Name, marker ID, or terrain…"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+        </div>
+        <details class="filter-disclosure" id="filter-options">
+          <summary>
+            <span>Filters</span
+            ><span id="filter-summary">All areas · 200 ft</span>
+          </summary>
+          <section class="filters" aria-label="Filter spots">
+            <div class="filter-row">
+              <label
+                >Area<select id="area">
+                  <option value="all">All areas</option>
+                  <option value="PointBuchon">Avila / Point Buchon</option>
+                  <option value="MorroBay">Morro Bay</option>
+                  <option value="PointEstero">Point Estero</option>
+                </select></label
+              ><label
+                >Habitat grade<select id="grade">
+                  <option value="all">All grades</option>
+                  <option value="A">A · 75–100</option>
+                  <option value="B">B · 55–74</option>
+                  <option value="C">C · &lt;55</option>
+                </select></label
+              >
+            </div>
+            <div class="filter-row">
+              <label
+                >Target depth limit<select id="depth">
+                  <option value="200">200 ft</option>
+                  <option value="150">150 ft</option>
+                  <option value="100">100 ft</option>
+                </select></label
+              ><label
+                >Geometry<select id="geometry">
+                  <option value="all">All spots</option>
+                  <option value="drift">With a drift line</option>
+                  <option value="area">With a reef area</option>
+                </select></label
+              >
+            </div>
+            <p class="small">
+              Depth filters each spot’s 100 m neighborhood. Linked reef areas
+              and drift lines can extend deeper.
+            </p>
+            <div class="filter-actions">
+              <a href="#grade-guide">A / B / C explained</a
+              ><button id="reset-filters" class="text-button">
+                Reset filters
+              </button>
+            </div>
+          </section>
+        </details>
+        <button id="fit-map">Fit fishing areas on map</button>
+        <button id="species-info">Species field notes</button>
+        <a
+          class="download"
+          href="downloads/complete.gpx"
+          download="SkipperCast-complete.gpx"
+          >Export 132 rocky targets · GPX</a
+        >
+        <button id="about-button">About the atlas</button>
       </div>
     </dialog>
     <dialog id="about-dialog" aria-labelledby="about-title">

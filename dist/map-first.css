@@ -1,0 +1,553 @@
+/* A single map surface at every width; detail lives in an on-demand sheet. */
+.atlas-app[data-view="map"] .workspace {
+  display: block;
+}
+.atlas-app[data-view="map"] .map-column {
+  width: 100%;
+  height: 100%;
+}
+.masthead {
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 6px 12px;
+  min-height: 64px;
+}
+.brand {
+  flex: 1 1 auto;
+  font-size: 1.1rem;
+}
+.best-day-banner {
+  min-width: 0;
+  max-width: 58%;
+  padding: 5px 10px;
+  color: #e6f8f4;
+  background: #174b58;
+  border-color: #47737b;
+  text-align: left;
+  line-height: 1.25;
+}
+.best-day-banner span {
+  display: block;
+  font-size: 0.75rem;
+}
+.best-day-banner strong {
+  display: block;
+  font-size: 0.9rem;
+}
+.best-day-banner small {
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+.best-day-banner.qualifying {
+  background: #b8f2dc;
+  color: #083e35;
+  border-color: #b8f2dc;
+}
+.species-bar {
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  max-width: 520px;
+  padding: 2px 6px;
+  gap: 4px;
+  z-index: 500;
+}
+.species-bar select {
+  font-size: 1rem;
+  min-height: 44px;
+}
+.species-bar .map-options-button {
+  font-size: 0.875rem;
+  padding: 0 12px;
+  background: #e9f3f3;
+  border: 0;
+  min-width: 78px;
+}
+.species-season {
+  top: 72px;
+  left: 12px;
+  right: auto;
+  max-width: calc(100% - 80px);
+  font-size: 0.75rem;
+  padding: 5px 9px;
+  pointer-events: none;
+}
+.leaflet-top.leaflet-right {
+  top: 76px;
+}
+.leaflet-control-zoom a {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+}
+.time-dock {
+  left: 12px;
+  right: 12px;
+  bottom: 26px;
+  width: auto;
+  max-width: 560px;
+  padding: 4px 8px 5px;
+  border-radius: 13px;
+  transform: none;
+}
+.compact-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+}
+.compact-time-row > button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  min-height: 44px;
+  min-width: 44px;
+}
+.compact-time-row #time-play {
+  color: #08756b;
+  font-size: 1rem;
+}
+.compact-time-row #map-weather-summary {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  line-height: 1.25;
+}
+#map-weather-summary strong {
+  font-size: 0.9rem;
+}
+#map-weather-summary strong span {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+#map-weather-summary > span {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+#ocean-now {
+  color: #006c63;
+  font-size: 0.875rem;
+}
+.scrub-row {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  gap: 7px;
+}
+.time-dock input[type="range"],
+.detail-time input[type="range"] {
+  min-height: 44px;
+}
+.scrub-row > span {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.compact-time-caption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  padding: 0 4px;
+  gap: 6px;
+  line-height: 1.25;
+}
+.map-note {
+  display: none;
+}
+.app-nav {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: 3px;
+}
+.app-nav a {
+  min-height: 50px;
+}
+.reef-cluster {
+  display: grid;
+  place-items: center;
+}
+.reef-cluster span {
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  background: #125e62;
+  box-shadow: 0 2px 7px #07303b40;
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+.area-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.area-label span {
+  background: #fffdf0ec;
+  border: 1px solid #a87937;
+  color: #493d21;
+  padding: 5px 9px;
+  border-radius: 7px;
+  text-align: center;
+  line-height: 1.25;
+  font-size: 0.8rem;
+  box-shadow: 0 1px 5px #14394720;
+}
+.options-sheet {
+  padding: 0;
+  width: calc(100% - 24px);
+  max-width: 500px;
+  max-height: 86dvh;
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.options-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+.options-body {
+  padding: 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.options-body > label,
+#weather-map-options > label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+  font-weight: 650;
+}
+.options-body select {
+  width: 100%;
+  min-height: 46px;
+  font-size: 1rem;
+}
+.options-body details {
+  border-top: 1px solid var(--line);
+  margin: 12px 0;
+}
+.options-body summary {
+  min-height: 48px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.options-body > button,
+.options-body > a {
+  width: 100%;
+  margin-top: 8px;
+  display: block;
+  text-align: center;
+}
+.options-body .filters {
+  padding: 8px 0;
+}
+.layer-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 1rem;
+}
+.charter-status {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left !important;
+  gap: 2px;
+  background: #edf4f5;
+}
+.charter-status span {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.spot-sheet {
+  height: auto;
+  max-height: 76dvh;
+  width: 100%;
+  max-width: 600px;
+}
+.spot-sheet .sheet-header {
+  padding: 6px 16px;
+}
+.spot-sheet .detail {
+  padding: 18px;
+}
+.sheet-actions {
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+}
+.sheet-actions:has(a[hidden]) {
+  grid-template-columns: 1fr;
+}
+.spot-sheet .detail .stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.spot-sheet .stat {
+  padding: 8px;
+}
+.spot-sheet .stat:nth-child(n + 3) {
+  display: none;
+}
+.spot-sheet .coordinates {
+  font-size: 0.8rem;
+  padding: 4px 7px;
+}
+.spot-sheet .detail p {
+  margin-bottom: 12px;
+}
+.spot-sheet .evidence-note {
+  padding: 10px;
+  font-size: 0.875rem;
+  margin-bottom: 12px;
+}
+.spot-sheet details {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 12px;
+}
+.spot-sheet summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 650;
+  padding: 8px 0;
+}
+.area-facts {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+}
+.forecast {
+  padding: 16px;
+}
+.forecast-heading h2 {
+  font-size: 1.4rem;
+}
+#forecast-status {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.morning-summary {
+  background: #eff7f6;
+  border: 1px solid #cce3df;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.morning-summary > summary {
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  min-height: 44px;
+}
+.morning-summary > summary span {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.morning-days {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.morning-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 8px;
+  font-size: 0.8rem;
+}
+.morning-day b {
+  font-size: 1rem;
+}
+.morning-day span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.morning-day.good {
+  border-color: #4b9e83;
+  background: #dff4ea;
+}
+.marine-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+  gap: 10px;
+}
+.marine-controls label {
+  font-size: 0.875rem;
+}
+.marine-controls select {
+  font-size: 1rem;
+  min-height: 44px;
+}
+.marine-controls > div {
+  grid-column: 1/-1;
+}
+#detail-time-label {
+  font-size: 1rem;
+}
+.day-strip {
+  display: flex !important;
+  gap: 4px;
+  margin: 4px 0 12px;
+}
+.day-strip button {
+  min-width: 52px;
+  flex: 1 0 52px;
+  font-size: 0.875rem;
+}
+.day-strip small {
+  font-size: 0.75rem;
+}
+.condition-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: -16px;
+  background: white;
+  padding: 8px 0;
+  z-index: 2;
+}
+.condition-tabs button {
+  font-size: 0.875rem;
+  padding: 6px 2px;
+  border: 0;
+  background: #eff3f5;
+}
+.condition-tabs button[aria-selected="true"] {
+  color: white;
+  background: #123f4e;
+}
+.conditions-hero {
+  padding: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.sea-number {
+  font-size: 2.4rem;
+}
+.hero-wind strong {
+  font-size: 1.6rem;
+}
+.comfort-explainer {
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+.comfort-explainer summary {
+  min-height: 24px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.comfort-explainer p {
+  margin-top: 10px;
+}
+[data-condition-panel] {
+  min-width: 0;
+}
+@media (min-width: 700px) {
+  .best-day-banner {
+    margin-left: auto;
+    min-width: 240px;
+  }
+  .species-bar {
+    top: 16px;
+    left: 16px;
+  }
+  .time-dock {
+    left: 16px;
+    bottom: 28px;
+  }
+  .spot-sheet {
+    margin: auto;
+    border-radius: 18px;
+  }
+  .forecast {
+    max-width: 1000px;
+    margin: auto;
+  }
+  .morning-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 350px) {
+  .masthead {
+    padding: 5px 8px;
+  }
+  .brand {
+    font-size: 1rem;
+  }
+  .brand-mark {
+    display: none;
+  }
+  .best-day-banner {
+    padding: 4px 7px;
+    max-width: 60%;
+  }
+  .best-day-banner strong {
+    font-size: 0.8rem;
+  }
+  .best-day-banner span {
+    font-size: 0.7rem;
+  }
+  .species-bar {
+    left: 8px;
+    right: 8px;
+  }
+  .species-bar select {
+    font-size: 0.9375rem;
+  }
+  .time-dock {
+    left: 8px;
+    right: 8px;
+  }
+  #map-weather-summary > span {
+    font-size: 0.7rem;
+  }
+  .forecast {
+    padding: 12px;
+  }
+}
+@media (max-height: 600px) {
+  .time-dock {
+    bottom: 24px;
+  }
+  .app-nav a {
+    min-height: 44px;
+    flex-direction: row;
+  }
+  .app-nav svg {
+    width: 18px;
+  }
+}
+.species-bar .map-options-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.atlas-app[data-view="map"] .time-dock {
+  left: 12px;
+  right: 12px;
+  bottom: 26px;
+  transform: none;
+  max-width: 560px;
+}
+.atlas-app .species-bar {
+  top: 12px;
+  right: 12px;
+  left: 12px;
+}

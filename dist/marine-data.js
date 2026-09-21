@@ -1,5 +1,5 @@
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=4.1";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=5.4";
 
 export const HOUR = 3600;
 export const POINTS = [

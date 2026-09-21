@@ -1,7 +1,7 @@
-import { initWeather } from "./weather-ui.js?v=4.1";
-import { initNavigation } from "./navigation.js?v=4.1";
-import { initChart } from "./chart-map.js?v=4.1";
-import { initSpecies, matchesSpecies } from "./species.js?v=4.1";
+import { initWeather } from "./weather-ui.js?v=5.4";
+import { initNavigation } from "./navigation.js?v=5.4";
+import { initChart } from "./chart-map.js?v=5.4";
+import { initSpecies, matchesSpecies } from "./species.js?v=5.4";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -107,9 +107,6 @@ function filterTargets() {
     $("detail").innerHTML =
       '<div class="empty-detail"><h2>Pick a target.</h2><p>Your selected target is outside these filters.</p></div>';
   }
-  $("result-count").textContent =
-    `${visible.length} spot${visible.length === 1 ? "" : "s"}`;
-  $("map-result-count").textContent = visible.length;
   $("filter-summary").textContent = [
     $("area").value === "all" ? "All areas" : areaNames[$("area").value],
     $("grade").value === "all" ? null : `Grade ${$("grade").value}`,
@@ -123,26 +120,21 @@ function filterTargets() {
     .filter(Boolean)
     .join(" · ");
   $("map-empty").hidden = visible.length > 0;
+  $("map-empty").querySelector("strong").textContent =
+    "No targets in these filters";
+  $("map-empty").querySelector("p").textContent =
+    "Try a wider area, depth or grade filter.";
   navigation.setHasSelection(!!selected);
-  $("target-list").innerHTML = visible.length
-    ? visible
-        .map(
-          (t) =>
-            `<button class="target-card" data-target="${t.id}" aria-pressed="${selected?.id === t.id}"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><span><strong>${escapeHTML(t.label)}</strong><span class="meta">${t.center_depth_ft} ft · ${t.habitat_score}/100 terrain${t.drift_id ? " · drift line" : ""}</span><span class="id">${t.id} · ${areaNames[t.source_id]}</span></span></button>`,
-        )
-        .join("")
-    : '<p class="no-results">No targets match. Try another area, grade, or depth.</p>';
   drawHabitat();
   speciesUI?.draw();
-  if (selected) selectTarget(selected.id, false);
 }
 
 function drawHabitat() {
   for (const name of ["targets", "areas", "drifts"]) layers[name].clearLayers();
   markers.clear();
   const ids = new Set(visible.map((t) => t.id));
-  for (const a of atlas.areas.filter((a) =>
-    a.target_ids.some((id) => ids.has(id)),
+  for (const a of atlas.areas.filter(
+    (a) => selected && a.target_ids.includes(selected.id),
   )) {
     L.geoJSON(a.geometry, {
       style: {
@@ -158,24 +150,60 @@ function drawHabitat() {
       .on("click", () => selectTarget(a.target_ids.find((id) => ids.has(id))))
       .addTo(layers.areas);
   }
-  for (const d of atlas.drifts.filter((d) => ids.has(d.target_id))) {
+  for (const d of atlas.drifts.filter(
+    (d) =>
+      ids.has(d.target_id) &&
+      ($("layer-drifts").checked || d.target_id === selected?.id),
+  )) {
     L.geoJSON(d.geometry, {
       style: { color: "#a66310", weight: 3, dashArray: "8 5" },
     })
       .bindTooltip(`${d.id} · ${Math.round(d.length_m)} m structure alignment`)
       .on("click", () => selectTarget(d.target_id))
-      .addTo(layers.drifts);
+      .addTo(d.target_id === selected?.id ? layers.areas : layers.drifts);
   }
+  const cells = new Map();
   for (const t of visible) {
-    const m = L.marker([t.latitude, t.longitude], {
-      icon: pin(t),
-      title: `${t.id}: ${t.label}, grade ${t.habitat_grade}, ${t.center_depth_ft} ft`,
-      keyboard: true,
-    })
-      .bindTooltip(`${escapeHTML(t.label)} · ${t.center_depth_ft} ft`)
-      .on("click", () => selectTarget(t.id))
-      .addTo(layers.targets);
-    markers.set(t.id, m);
+    const xy = map.project([t.latitude, t.longitude], map.getZoom());
+    const key =
+      map.getZoom() < 14
+        ? `${Math.floor(xy.x / 56)},${Math.floor(xy.y / 56)}`
+        : t.id;
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(t);
+  }
+  for (const group of cells.values()) {
+    if (group.length > 1) {
+      const lat = group.reduce((s, t) => s + t.latitude, 0) / group.length,
+        lon = group.reduce((s, t) => s + t.longitude, 0) / group.length;
+      L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: "reef-cluster",
+          html: `<span>${group.length}</span>`,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        }),
+        title: `${group.length} reef candidates · zoom to separate`,
+      })
+        .on("click", () =>
+          map.fitBounds(
+            group.map((t) => [t.latitude, t.longitude]),
+            { padding: [70, 120], maxZoom: 15 },
+          ),
+        )
+        .addTo(layers.targets);
+    } else {
+      const t = group[0];
+      const m = L.marker([t.latitude, t.longitude], {
+        icon: pin(t),
+        title: `${t.id}: ${t.label}, grade ${t.habitat_grade}, ${t.center_depth_ft} ft`,
+        keyboard: true,
+      })
+        .bindTooltip(`${escapeHTML(t.label)} · ${t.center_depth_ft} ft`)
+        .on("click", () => selectTarget(t.id))
+        .addTo(layers.targets);
+      markers.set(t.id, m);
+    }
   }
 }
 
@@ -183,6 +211,8 @@ function selectTarget(id, pan = true) {
   const target = atlas.targets.find((t) => t.id === id);
   if (!target) return;
   selected = target;
+  drawHabitat();
+  $("export-selected").hidden = false;
   weather?.selectLocation(target);
   for (const t of visible) markers.get(t.id)?.setIcon(pin(t));
   for (const button of document.querySelectorAll("[data-target]"))
@@ -245,14 +275,13 @@ function selectTarget(id, pan = true) {
     p.textContent = `${Math.round(drift.length_m)} m alignment · axis ${Math.round(drift.bearing_true_axis_deg)}° / ${Math.round((drift.bearing_true_axis_deg + 180) % 360)}° true · ${Math.round(drift.rough_fraction_in_corridor * 100)}% mapped rough habitat in its corridor.`;
     noteSection.append(p);
   }
-  $("selected-preview").innerHTML =
-    `<span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><span class="preview-copy"><span class="preview-kicker">${t.id} · ${grade.label}</span><strong>${escapeHTML(t.label)}</strong><span class="preview-meta">${t.center_depth_ft} ft · ${t.habitat_score}/100 terrain${t.drift_id ? " · drift line" : ""}</span></span><span class="preview-action"><span aria-hidden="true">⌃</span>Details</span>`;
   navigation.setHasSelection(true);
   if (pan) {
     navigation.showView("map");
     requestAnimationFrame(() => {
       map.invalidateSize({ pan: false });
       map.setView([t.latitude, t.longitude], Math.max(map.getZoom(), 14));
+      navigation.openDetails();
     });
   }
   const geometries = [
@@ -265,6 +294,18 @@ function selectTarget(id, pan = true) {
     p.textContent = `${shape.id}: ${Math.round(v.minimum_ft)}–${Math.round(v.maximum_ft)} ft survey depth across the geometry.${v.maximum_ft > Number($("depth").value) ? " Extends deeper than the selected target-neighborhood limit." : ""}`;
     noteSection.append(p);
   }
+  const extra = document.createElement("details");
+  extra.innerHTML = "<summary>Structure, grading & sources</summary>";
+  for (const el of [
+    ...$("detail").querySelectorAll(".grade-explanation,.detail-section"),
+  ])
+    extra.append(el);
+  $("detail").append(extra);
+  const conditions = document.createElement("button");
+  conditions.className = "primary";
+  conditions.textContent = "Conditions for this spot ↗";
+  conditions.addEventListener("click", () => navigation.showView("forecast"));
+  $("detail").insertBefore(conditions, extra);
 }
 
 async function initAISContext() {
@@ -275,7 +316,11 @@ async function initAISContext() {
       throw new Error(`AIS summary request failed (${response.status})`);
     const evidence = await response.json();
     const count = evidence.summary;
-    panel.innerHTML = `<p><strong>Archive samples obtained; no verified local sportfishing-charter tracks yet.</strong> The current map has no charter-activity overlay. Its A/B/C grades use terrain only.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified sportfishing charters</span></div><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 consists of four consecutive daily files; the other dates are isolated samples. This is a limited search, not a season-wide charter history.</p><p>At this dated audit, the checked NOAA daily index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Vessel-name screening found no matches to the researched local fleet. Missing, changing, or differently reported identities and receiver coverage can hide trips; absence here does not mean charters never fish these areas.</p>`;
+    panel.innerHTML = `<p><strong>There are currently no verified charter hotspot markers.</strong> A/B/C marks terrain quality; numbered clusters count nearby reef candidates. They do not show boat visits.</p><p><strong>Archive samples obtained; no verified local sportfishing-charter tracks yet.</strong> The current map has no charter-activity overlay. Its A/B/C grades use terrain only.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified sportfishing charters</span></div><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 consists of four consecutive daily files; the other dates are isolated samples. This is a limited search, not a season-wide charter history.</p><p>At this dated audit, the checked NOAA daily index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Vessel-name screening found no matches to the researched local fleet. Missing, changing, or differently reported identities and receiver coverage can hide trips; absence here does not mean charters never fish these areas.</p>`;
+    panel.insertAdjacentHTML(
+      "beforeend",
+      '<details><summary>Where charters have publicly reported fishing</summary><p>A first-hand June 10, 2019 report aboard the Fiesta describes Cape San Martin / southern Big Sur, with an initial stop in 280 ft followed by a shallower lingcod search. This is historical, broad-area evidence outside the Avila–Cambria / 200-ft bottom-fishing scope. It does not locate a current hotspot.</p><a href="https://wonews.com/a-trip-to-lingcod-alley/" target="_blank" rel="noopener">Read the dated Fiesta trip report ↗</a><p>Exact within-scope charter fishing positions remain unverified. Repeated visits require an independently identified vessel and complete timed tracks; reported catches alone do not provide GPS positions.</p></details>',
+    );
   } catch (error) {
     panel.innerHTML =
       '<p class="error">The dated AIS research summary could not load. Charter activity remains unverified; see <a href="sources.html#ais">sources and coverage</a>.</p>';
@@ -359,6 +404,10 @@ function registerTools() {
 }
 
 function fitTargets() {
+  if ($("map-panel").hidden || !map?.getSize().y) {
+    initialFitPending = true;
+    return;
+  }
   if (speciesUI?.fit()) {
     initialFitPending = false;
     return;
@@ -368,8 +417,8 @@ function fitTargets() {
     map.fitBounds(
       visible.map((t) => [t.latitude, t.longitude]),
       {
-        paddingTopLeft: [35, Math.min(155, height * 0.27)],
-        paddingBottomRight: [35, Math.min(selected ? 320 : 215, height * 0.42)],
+        paddingTopLeft: [35, 75],
+        paddingBottomRight: [35, Math.min(145, height * 0.27)],
         maxZoom: 14,
       },
     );
@@ -386,7 +435,10 @@ function toast(message) {
 }
 
 for (const id of ["about-button", "about-guide"])
-  $(id).addEventListener("click", () => $("about-dialog").showModal());
+  $(id).addEventListener("click", () => {
+    $("map-options").close();
+    $("about-dialog").showModal();
+  });
 $("close-about").addEventListener("click", () => $("about-dialog").close());
 function showFilteredMap() {
   navigation.showView("map");
@@ -395,7 +447,7 @@ function showFilteredMap() {
     fitTargets();
   });
 }
-$("fit-targets").addEventListener("click", showFilteredMap);
+
 $("fit-map").addEventListener("click", showFilteredMap);
 $("reset-filters").addEventListener("click", () => {
   $("search").value = "";
@@ -403,15 +455,24 @@ $("reset-filters").addEventListener("click", () => {
   $("depth").value = "200";
   if (atlas) filterTargets();
 });
-$("target-list").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-target]");
-  if (b) selectTarget(b.dataset.target);
-});
 for (const id of ["search", "area", "grade", "depth", "geometry"])
   $(id).addEventListener(id === "search" ? "input" : "change", () => {
     if (atlas) filterTargets();
   });
 
+$("open-map-options").addEventListener("click", () =>
+  $("map-options").showModal(),
+);
+$("empty-options").addEventListener("click", () =>
+  $("map-options").showModal(),
+);
+$("close-map-options").addEventListener("click", () =>
+  $("map-options").close(),
+);
+$("charter-status").addEventListener("click", () => {
+  $("map-options").close();
+  location.hash = "charter-evidence";
+});
 initAISContext();
 
 try {
@@ -431,9 +492,25 @@ try {
       navigation.showView("forecast");
     },
     showGuide: () => navigation.showView("guide"),
+    onSelect: (html, area) => {
+      selected = undefined;
+      weather?.selectLocation(area);
+      $("detail").innerHTML = html;
+      $("export-selected").hidden = true;
+      $("area-weather").addEventListener("click", () =>
+        navigation.showView("forecast"),
+      );
+      navigation.setHasSelection(true);
+      navigation.openDetails();
+    },
   });
   filterTargets();
-  if (visible[0]) selectTarget(visible[0].id, false);
+  map.on("zoomend", () => {
+    if (atlas) {
+      drawHabitat();
+      speciesUI?.draw();
+    }
+  });
   fitTargets();
   weather = initWeather(map, layers.forecast, () =>
     navigation.showView("forecast"),
@@ -441,12 +518,8 @@ try {
   if (selected) weather.selectLocation(selected);
   registerTools();
 } catch (error) {
-  $("result-count").textContent = "Atlas unavailable";
-  $("map-result-count").textContent = "!";
   $("map-empty").hidden = false;
   $("map-empty").innerHTML =
     '<strong>Atlas unavailable</strong><p>Refresh to try again, or use the <a href="downloads/complete.gpx">GPX download</a>.</p>';
-  $("target-list").innerHTML =
-    '<p class="error">The atlas could not load. Refresh the page, or use the GPX and offline notes from the download links.</p>';
   console.error(error);
 }

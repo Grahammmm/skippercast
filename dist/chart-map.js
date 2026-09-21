@@ -7,7 +7,7 @@ export function initChart(map, notify) {
   const chart = L.tileLayer.wms(
     "https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer",
     {
-      layers: "0,1,2,3,4,5,6,7",
+      layers: "0,1,2,4,5,6,7",
       format: "image/png",
       transparent: false,
       version: "1.3.0",
@@ -28,9 +28,14 @@ export function initChart(map, notify) {
       );
     }
   });
-  document
-    .getElementById("base-map")
-    .addEventListener("change", (e) =>
-      e.target.value === "nautical" ? chart.addTo(map) : map.removeLayer(chart),
-    );
+  document.getElementById("base-map").addEventListener("change", (e) => {
+    if (e.target.value === "street") map.removeLayer(chart);
+    else {
+      chart.setParams({
+        layers:
+          e.target.value === "nautical" ? "0,1,2,3,4,5,6,7" : "0,1,2,4,5,6,7",
+      });
+      chart.addTo(map);
+    }
+  });
 }
