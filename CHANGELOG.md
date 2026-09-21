@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-09-20
+
+- Mobile-first map with Map, Spots, Forecast, and Guide navigation; no long page scroll to reach the map or weather.
+- Compact spot cards expand into accessible detail sheets with persistent map and GPX actions; wide screens retain a docked list and detail panel.
+- Collapsible filters, a reset action, 44-pixel map-marker hit areas, safe-area spacing, and readable mobile forecast comparisons.
+- Direct single-spot GPX downloads for mobile and embedded browsers, with reproducible generation and checks for all 132 files.
+
 ## 0.2.1 — 2026-09-20
 
 - Visible A/B/C terrain-grade definitions and practical context for points, reef outlines, and drift alignments.

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import {
   valueAt,
   range,
@@ -11,6 +11,24 @@ import {
   pacificEpoch,
 } from "../dist/forecast.js";
 import { targetGPX } from "../dist/gpx.js";
+
+test("direct mobile downloads match every public target and its linked geometry", () => {
+  const atlas = JSON.parse(
+    readFileSync(new URL("../dist/data/atlas.json", import.meta.url)),
+  );
+  const directory = new URL("../dist/downloads/targets/", import.meta.url);
+  assert.deepEqual(
+    readdirSync(directory).sort(),
+    atlas.targets.map((t) => `${t.id}.gpx`).sort(),
+  );
+  for (const target of atlas.targets) {
+    assert.equal(
+      readFileSync(new URL(`${target.id}.gpx`, directory), "utf8"),
+      targetGPX(atlas, target.id),
+      target.id,
+    );
+  }
+});
 
 test("missing, null, invalid units, duplicates, and malformed arrays are unavailable", () => {
   const f = {

@@ -1,5 +1,5 @@
-import { targetGPX } from "./gpx.js";
 import { initWeather } from "./weather-ui.js";
+import { initNavigation } from "./navigation.js";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -37,9 +37,17 @@ const gradeGuide = {
 let atlas,
   map,
   selected,
+  initialFitPending = true,
   visible = [];
 const layers = {},
   markers = new Map();
+const navigation = initNavigation({
+  onMapVisible: () => {
+    if (!map) return;
+    map.invalidateSize({ pan: false });
+    if (initialFitPending) fitTargets();
+  },
+});
 
 function initMap() {
   map = L.map("map", { zoomControl: false, minZoom: 7, maxZoom: 18 }).setView(
@@ -48,7 +56,7 @@ function initMap() {
   );
   L.control.zoom({ position: "topright" }).addTo(map);
   L.control
-    .scale({ imperial: true, metric: false, position: "bottomright" })
+    .scale({ imperial: true, metric: false, position: "bottomleft" })
     .addTo(map);
   const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -78,9 +86,9 @@ function initMap() {
 function pin(target) {
   return L.divIcon({
     className: "target-pin",
-    html: `<span class="pin-content ${target.habitat_grade} ${selected?.id === target.id ? "selected" : ""}">${target.habitat_grade}</span>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    html: `<span aria-hidden="true" class="pin-content ${target.habitat_grade} ${selected?.id === target.id ? "selected" : ""}">${target.habitat_grade}</span><span class="sr-only">${escapeHTML(target.id)}: ${escapeHTML(target.label)}, grade ${target.habitat_grade}, ${target.center_depth_ft} feet</span>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
   });
 }
 
@@ -109,7 +117,22 @@ function filterTargets() {
       '<div class="empty-detail"><h2>Pick a target.</h2><p>Your selected target is outside these filters.</p></div>';
   }
   $("result-count").textContent =
-    `${visible.length} target${visible.length === 1 ? "" : "s"}`;
+    `${visible.length} spot${visible.length === 1 ? "" : "s"}`;
+  $("map-result-count").textContent = visible.length;
+  $("filter-summary").textContent = [
+    $("area").value === "all" ? "All areas" : areaNames[$("area").value],
+    $("grade").value === "all" ? null : `Grade ${$("grade").value}`,
+    `${$("depth").value} ft`,
+    $("geometry").value === "all"
+      ? null
+      : $("geometry").value === "drift"
+        ? "Drift lines"
+        : "Reef areas",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  $("map-empty").hidden = visible.length > 0;
+  navigation.setHasSelection(!!selected);
   $("target-list").innerHTML = visible.length
     ? visible
         .map(
@@ -174,11 +197,9 @@ function selectTarget(id, pan = true) {
   const t = selected;
   const grade = gradeGuide[t.habitat_grade];
   $("detail").innerHTML =
-    `<button class="detail-close text-button" id="back-map">↑ Back to map</button><div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · survey MLLW</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} The analysis uses a roughly 33-foot grid; it does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><button class="primary" id="download-target">↓ Export this target + geometry</button><div class="detail-section"><h3>Source</h3><p>${areaNames[t.source_id]} · USGS survey ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
-  $("back-map")?.addEventListener("click", () =>
-    $("map").scrollIntoView({ block: "center" }),
-  );
-  $("download-target").addEventListener("click", () => downloadTarget(t.id));
+    `<div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · survey MLLW</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} The analysis uses a roughly 33-foot grid; it does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><a class="primary" id="download-target" href="downloads/targets/${t.id}.gpx" download="SkipperCast-${t.id}.gpx">↓ Export this spot + geometry</a><div class="detail-section"><h3>Source</h3><p>${areaNames[t.source_id]} · USGS survey ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
+  $("export-selected").href = `downloads/targets/${t.id}.gpx`;
+  $("export-selected").download = `SkipperCast-${t.id}.gpx`;
   const noteSection = document.createElement("div");
   noteSection.className = "detail-section";
   const metrics = t.metrics;
@@ -231,7 +252,16 @@ function selectTarget(id, pan = true) {
     p.textContent = `${Math.round(drift.length_m)} m alignment · axis ${Math.round(drift.bearing_true_axis_deg)}° / ${Math.round((drift.bearing_true_axis_deg + 180) % 360)}° true · ${Math.round(drift.rough_fraction_in_corridor * 100)}% mapped rough habitat in its corridor.`;
     noteSection.append(p);
   }
-  if (pan) map.setView([t.latitude, t.longitude], Math.max(map.getZoom(), 14));
+  $("selected-preview").innerHTML =
+    `<span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><span class="preview-copy"><span class="preview-kicker">${t.id} · ${grade.label}</span><strong>${escapeHTML(t.label)}</strong><span class="preview-meta">${t.center_depth_ft} ft · ${t.habitat_score}/100 terrain${t.drift_id ? " · drift line" : ""}</span></span><span class="preview-action"><span aria-hidden="true">⌃</span>Details</span>`;
+  navigation.setHasSelection(true);
+  if (pan) {
+    navigation.showView("map");
+    requestAnimationFrame(() => {
+      map.invalidateSize({ pan: false });
+      map.setView([t.latitude, t.longitude], Math.max(map.getZoom(), 14));
+    });
+  }
   const geometries = [
     ...atlas.areas.filter((a) => t.area_ids.includes(a.id)),
     ...(drift ? [drift] : []),
@@ -242,22 +272,6 @@ function selectTarget(id, pan = true) {
     p.textContent = `${shape.id}: ${Math.round(v.minimum_ft)}–${Math.round(v.maximum_ft)} ft survey depth across the geometry.${v.maximum_ft > Number($("depth").value) ? " Extends deeper than the selected target-neighborhood limit." : ""}`;
     noteSection.append(p);
   }
-  if (pan && window.matchMedia("(max-width:1150px)").matches)
-    $("detail").scrollIntoView({ block: "start" });
-}
-
-function downloadTarget(id) {
-  const url = URL.createObjectURL(
-    new Blob([targetGPX(atlas, id)], { type: "application/gpx+xml" }),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `SkipperCast-${id}.gpx`;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-  toast("GPX prepared. On iPad, open the download and share it to iNavX.");
 }
 
 async function initAISContext() {
@@ -330,6 +344,7 @@ function registerTools() {
         $("depth").value = "200";
         filterTargets();
         selectTarget(input.target_id);
+        requestAnimationFrame(() => navigation.openDetails());
         return {
           selectedTarget: selected.id,
           terrainScore: selected.habitat_score,
@@ -349,25 +364,46 @@ function registerTools() {
 }
 
 function fitTargets() {
-  if (visible.length)
+  if (visible.length && !$("map-panel").hidden && map?.getSize().y) {
+    const height = map.getSize().y;
     map.fitBounds(
       visible.map((t) => [t.latitude, t.longitude]),
-      { padding: [40, 40], maxZoom: 14 },
+      {
+        paddingTopLeft: [35, Math.min(125, height * 0.22)],
+        paddingBottomRight: [35, Math.min(selected ? 185 : 60, height * 0.3)],
+        maxZoom: 14,
+      },
     );
+    initialFitPending = false;
+  }
 }
 let toastTimer;
 function toast(message) {
+  (document.querySelector("dialog[open]") || document.body).append($("toast"));
   $("toast").textContent = message;
   $("toast").hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => ($("toast").hidden = true), 6000);
 }
 
-$("about-button").addEventListener("click", () =>
-  $("about-dialog").showModal(),
-);
+for (const id of ["about-button", "about-guide"])
+  $(id).addEventListener("click", () => $("about-dialog").showModal());
 $("close-about").addEventListener("click", () => $("about-dialog").close());
-$("fit-targets").addEventListener("click", fitTargets);
+function showFilteredMap() {
+  navigation.showView("map");
+  requestAnimationFrame(() => {
+    map?.invalidateSize({ pan: false });
+    fitTargets();
+  });
+}
+$("fit-targets").addEventListener("click", showFilteredMap);
+$("fit-map").addEventListener("click", showFilteredMap);
+$("reset-filters").addEventListener("click", () => {
+  $("search").value = "";
+  for (const id of ["area", "grade", "geometry"]) $(id).value = "all";
+  $("depth").value = "200";
+  if (atlas) filterTargets();
+});
 $("target-list").addEventListener("click", (e) => {
   const b = e.target.closest("[data-target]");
   if (b) selectTarget(b.dataset.target);
@@ -386,12 +422,16 @@ try {
   atlas = await response.json();
   initMap();
   filterTargets();
-  fitTargets();
   selectTarget(visible[0].id, false);
-  initWeather(map, layers.forecast);
+  fitTargets();
+  initWeather(map, layers.forecast, () => navigation.showView("forecast"));
   registerTools();
 } catch (error) {
   $("result-count").textContent = "Atlas unavailable";
+  $("map-result-count").textContent = "!";
+  $("map-empty").hidden = false;
+  $("map-empty").innerHTML =
+    '<strong>Atlas unavailable</strong><p>Refresh to try again, or use the <a href="downloads/complete.gpx">GPX download</a>.</p>';
   $("target-list").innerHTML =
     '<p class="error">The atlas could not load. Refresh the page, or use the GPX and offline notes from the download links.</p>';
   console.error(error);

@@ -50,7 +50,7 @@ const goodList = (result) =>
     ? result.value
     : null;
 
-export function initWeather(map, forecastLayer) {
+export function initWeather(map, forecastLayer, onSelectStation = () => {}) {
   let data,
     loading = false,
     dates = futureDates(),
@@ -201,18 +201,21 @@ export function initWeather(map, forecastLayer) {
         )
         .join(
           "",
-        )}</select></label></div><div class="weather-cards">${windCards}${waveCards}</div>${flags.length ? `<div class="forecast-notice">${flags.map(esc).join("<br>")}</div>` : ""}<div class="forecast-table-wrap"><table><caption>Selected hour · component height / period / from</caption><thead><tr><th>Component</th><th>ECMWF WAM</th><th>NOAA GFS Wave</th></tr></thead><tbody>${components}</tbody></table></div><div class="forecast-table-wrap"><table><caption>06:00–13:00 Pacific · full-window ranges</caption><thead><tr><th>Model</th><th>Wind / seas</th><th>Gusts / metric</th></tr></thead><tbody>${windowRows}</tbody></table></div><p class="small">NOAA GFS at the selected hour: visibility ${visibility === null ? "unavailable" : (visibility / 1609.344).toFixed(1) + " mi"} · precipitation ${rain === null ? "unavailable" : (rain / 25.4).toFixed(2) + " in"}. ECMWF visibility may be unavailable.</p><div class="forecast-notice">${esc(alertText)}</div><p class="small">${dates.indexOf(day) >= 3 ? "This date is provisional. " : ""}No trip rating is assigned. Check current observations, visibility, advisories, entrance conditions, daylight, and the entire route before departure. A 06:00–13:00 screen does not establish four fishing hours.</p><details class="forecast-metadata"><summary>Source times &amp; grid locations</summary><p class="small">Requested: ${requested.latitude}, ${requested.longitude}. Response grid: wind ${grid(wind)}; waves ${grid(wave)}. Coarse offshore samples cannot resolve individual reefs or the harbor entrance.</p><div class="forecast-table-wrap"><table><thead><tr><th>Model</th><th>Latest initialization</th><th>Available via provider</th><th>Latest coverage end</th></tr></thead><tbody>${metadataRows}</tbody></table></div><p class="small">Latest-run metadata describes provider availability. It is not a guaranteed run attribution for every rolling forecast value. Retrieval time is not forecast issue time. Unpopulated forecast hours remain unavailable.</p><a href="${urls.wind}" target="_blank" rel="noopener">Raw wind response ↗</a> · <a href="${urls.wave}" target="_blank" rel="noopener">Raw wave response ↗</a></details><div class="forecast-links"><a href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645" target="_blank" rel="noopener">NWS marine forecast ↗</a><a href="https://www.ndbc.noaa.gov/station_page.php?station=46215" target="_blank" rel="noopener">Diablo Canyon buoy ↗</a><a href="https://www.morrobayca.gov/144/Harbor" target="_blank" rel="noopener">Harbor information ↗</a><a href="https://open-meteo.com/" target="_blank" rel="noopener">Data: Open-Meteo · CC BY 4.0 ↗</a></div>`;
+        )}</select></label></div><div class="weather-cards">${windCards}${waveCards}</div>${flags.length ? `<div class="forecast-notice">${flags.map(esc).join("<br>")}</div>` : ""}<div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><caption>Selected hour · component height / period / from</caption><thead><tr><th>Component</th><th>ECMWF WAM</th><th>NOAA GFS Wave</th></tr></thead><tbody>${components}</tbody></table></div><div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><caption>06:00–13:00 Pacific · full-window ranges</caption><thead><tr><th>Model</th><th>Wind / seas</th><th>Gusts / metric</th></tr></thead><tbody>${windowRows}</tbody></table></div><p class="small">NOAA GFS at the selected hour: visibility ${visibility === null ? "unavailable" : (visibility / 1609.344).toFixed(1) + " mi"} · precipitation ${rain === null ? "unavailable" : (rain / 25.4).toFixed(2) + " in"}. ECMWF visibility may be unavailable.</p><div class="forecast-notice">${esc(alertText)}</div><p class="small">${dates.indexOf(day) >= 3 ? "This date is provisional. " : ""}No trip rating is assigned. Check current observations, visibility, advisories, entrance conditions, daylight, and the entire route before departure. A 06:00–13:00 screen does not establish four fishing hours.</p><details class="forecast-metadata"><summary>Source times &amp; grid locations</summary><p class="small">Requested: ${requested.latitude}, ${requested.longitude}. Response grid: wind ${grid(wind)}; waves ${grid(wave)}. Coarse offshore samples cannot resolve individual reefs or the harbor entrance.</p><div class="forecast-table-wrap" tabindex="0" role="region" aria-label="Forecast comparison table; scroll horizontally for more columns"><table><thead><tr><th>Model</th><th>Latest initialization</th><th>Available via provider</th><th>Latest coverage end</th></tr></thead><tbody>${metadataRows}</tbody></table></div><p class="small">Latest-run metadata describes provider availability. It is not a guaranteed run attribution for every rolling forecast value. Retrieval time is not forecast issue time. Unpopulated forecast hours remain unavailable.</p><a href="${urls.wind}" target="_blank" rel="noopener">Raw wind response ↗</a> · <a href="${urls.wave}" target="_blank" rel="noopener">Raw wave response ↗</a></details><div class="forecast-links"><a href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645" target="_blank" rel="noopener">NWS marine forecast ↗</a><a href="https://www.ndbc.noaa.gov/station_page.php?station=46215" target="_blank" rel="noopener">Diablo Canyon buoy ↗</a><a href="https://www.morrobayca.gov/144/Harbor" target="_blank" rel="noopener">Harbor information ↗</a><a href="https://open-meteo.com/" target="_blank" rel="noopener">Data: Open-Meteo · CC BY 4.0 ↗</a></div>`;
     $("weather-station").addEventListener("change", (e) => {
       stationIndex = Number(e.target.value);
       render();
+      $("weather-station").focus({ preventScroll: true });
     });
     $("weather-day").addEventListener("change", (e) => {
       day = e.target.value;
       render();
+      $("weather-day").focus({ preventScroll: true });
     });
     $("weather-hour").addEventListener("change", (e) => {
       hour = e.target.value;
       render();
+      $("weather-hour").focus({ preventScroll: true });
     });
     drawStations(time);
   }
@@ -250,7 +253,7 @@ export function initWeather(map, forecastLayer) {
         .on("click", () => {
           stationIndex = i;
           render();
-          $("forecast-heading").scrollIntoView({ block: "start" });
+          onSelectStation();
         })
         .addTo(forecastLayer);
     });

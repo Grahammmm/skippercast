@@ -2,11 +2,11 @@
 
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**
 
-SkipperCast is a personal boat-fishing map and research toolkit. Explore ranked survey-derived habitat, reef outlines, optional drift alignments, and marine forecast evidence. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
+SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and download a GPX for your chartplotter. Separate Spots, Forecast, and Guide views keep terrain filters, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
 
 **[Open the app](https://skippercast.com)** · [Hosting address](https://skippercast.email-me-here-2016.chatgpt.site) · [Web app guide](docs/web-app.md)
 
-**Status:** first web app and research release. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
+**Status:** mobile web app and research release. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
 
 **See how it fits together:** [data flow, chart layers, and software stack](docs/system-overview.md).
 
