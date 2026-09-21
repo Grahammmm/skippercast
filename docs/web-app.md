@@ -79,3 +79,15 @@ buoy seas when fresh and explicitly labels a forecast fallback. Choose Waves, Wi
 or Tides for the modeled/predicted timeline; selecting a future hour leaves Live.
 The browser checks observations and marine alerts every five minutes while visible
 and forecasts every 30 minutes. [Sources and the cloud refresh](live-conditions.md).
+
+## Link previews
+
+The initial HTML contains Open Graph and X large-image metadata for
+`https://skippercast.com/`. Crawlers can read the title, description and absolute
+image URL without running JavaScript. All hash views share this site-wide card.
+
+The reviewed [share image](../dist/og.png) is an original 1737 × 906 PNG generated
+with the built-in image tool from this [prompt](social-preview-prompt.txt). Its
+SHA-256 is recorded with reviewed web assets in `scripts/web-vendor-sha256.json`.
+Keep the HTML image dimensions and hash in sync when replacing it. Link previews
+may retain an older card until the receiving app refreshes its cache.

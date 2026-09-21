@@ -1,0 +1,16 @@
+Use case: ads-marketing
+Asset type: branded Open Graph social-sharing large card for SkipperCast, landscape 1536 × 800 pixels (about 1.91:1).
+Primary request: Create one polished, cohesive brand image for a useful boat-fishing planning app.
+Scene/backdrop: Attractive early-morning ocean, subtly sunlit sea and distant low coastline, with a restrained bathymetric contour motif integrated into the deep navy portion of the composition.
+Subject: One small white pilothouse sportfishing boat on the ocean. The vessel is recognizably a private fishing boat, not a ferry or tour boat.
+Style/medium: Premium editorial ocean photography blended seamlessly with clean graphic brand design and crisp, bold sans-serif typography.
+Composition/framing: Wide social preview. Large, instantly readable typography in generous clean negative space, with the boat and ocean scene balancing the typography. Keep all four text elements in the central safe area with generous margins, no text near outer edges. Prioritize legibility when the card is reduced to a small link preview. Use a clear hierarchy with the brand name most prominent, supporting copy next, and feature line and domain smaller but readable.
+Lighting/mood: Fresh morning light, calm confidence, a great day on the water.
+Color palette: Deep navy #082e3b, vivid sea teal #54dacb, crisp white. Subtle realistic ocean tones that harmonize with this palette.
+Text (verbatim, each string exactly once; no other text):
+"SkipperCast"
+"Find your next great fishing day"
+"Fishing grounds · Weather · Waves · Tides"
+"skippercast.com"
+Constraints: Render SkipperCast with the exact uppercase S and C. All lettering must be crisp and accurately spelled. Preserve the centered middle-dot separators in the feature line. Convey a useful fishing app for boat anglers. Finished edge-to-edge image, no border.
+Avoid: Product UI mockups, invented forecast readings or numbers, tour-company branding, extra copy, additional logos, credentials, private information, watermarks.
