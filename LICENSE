@@ -1,0 +1,76 @@
+SkipperCast Personal Use License 1.0
+SPDX-License-Identifier: LicenseRef-SkipperCast-Personal-1.0
+
+Copyright (c) 2026 SkipperCast contributors
+
+1. Scope
+
+This license applies to original copyrightable SkipperCast software,
+documentation, and other material expressly offered under this license
+(the "Material"). It does not apply to third-party material, public-domain
+information, or underlying facts. Those retain their own terms as described
+in NOTICE.md and accompanying source notices.
+
+2. Personal-use permission
+
+Subject to this license, each individual is granted a worldwide, royalty-free,
+non-exclusive license to access, copy, run, study, and modify the Material
+solely for that individual's private, noncommercial recreation, learning,
+and personal boat-fishing planning ("Personal Use"). An individual may share
+the results of such Personal Use with family and friends without compensation.
+
+You may distribute unmodified or modified copies of the Material without
+charge for recipients' Personal Use, including through a public source-code
+fork, provided that you retain this license and applicable notices, identify
+your modifications, and license those copies and your modifications under
+these same terms. You may submit changes to this project on those terms.
+Intermediary storage and delivery of these permitted source or binary copies
+is allowed. This exception does not permit operating the software as a hosted
+application or service for others.
+
+3. Uses requiring separate permission
+
+No permission is granted for use of the Material for or on behalf of a
+business, employer, nonprofit, government body, school, or other organization;
+for charter operations or commercial fishing; for paid consulting or services;
+for a paid, advertising-supported, or sponsored product or service; or for
+any other commercial, professional, or organizational purpose. Individual
+unpaid private study is Personal Use; institutional use is not.
+
+You may not sell, sublicense under different terms, or otherwise commercially
+exploit the Material. Obtain separate written permission from the applicable
+rights holder for any use outside the permissions above. All rights not
+expressly granted are reserved.
+
+4. Attribution and outputs
+
+Preserve notices and separately applicable third-party license requirements.
+This license grants no trademark rights and no right to imply endorsement.
+It does not assert ownership of your independent trip notes, observations,
+catches, or other outputs merely because you used the software to create
+them. Outputs that reproduce protected Material remain subject to its terms.
+Nothing here limits rights you already have under applicable law or under
+another license, including rights in public-domain data.
+
+5. Termination
+
+These permissions terminate automatically if you violate this license.
+Termination does not remove obligations concerning notices or copies already
+distributed. A rights holder may separately reinstate permission in writing.
+
+6. No warranty; limitation of liability
+
+THE MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+ACCURACY, COMPLETENESS, NON-INFRINGEMENT, OR CONTINUED AVAILABILITY.
+IT IS NOT A NAVIGATION SYSTEM, A SAFETY CLEARANCE, A FORECAST GUARANTEE,
+OR A SUBSTITUTE FOR CURRENT OFFICIAL CHARTS, REGULATIONS, AND LOCAL CONDITIONS.
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE AUTHORS AND RIGHTS
+HOLDERS SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE MATERIAL OR ITS USE. NOTHING IN THIS LICENSE EXCLUDES
+LIABILITY THAT APPLICABLE LAW DOES NOT ALLOW TO BE EXCLUDED.
+
+This is a source-available personal-use license, not an Open Source
+Initiative-approved open-source license.
