@@ -1,0 +1,85 @@
+name: Daily fishing evidence
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+      timezone: America/Los_Angeles
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/skippercast/pipeline/**"
+      - ".github/workflows/daily-data.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-fishing-evidence
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test evidence parsing and failure handling
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -p 'test_pipeline.py' -v
+      - name: Load previous published facts
+        run: |
+          mkdir -p var/daily
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch origin data --depth=1
+            git worktree add --detach var/published FETCH_HEAD
+            cp var/published/latest.json var/previous.json
+            cp -R var/published/history var/daily/history
+          fi
+      - name: Collect and validate public sources
+        env:
+          PYTHONPATH: src
+        run: python -m skippercast.pipeline --output var/daily --previous var/previous.json
+      - name: Publish an atomic data snapshot
+        run: |
+          if [ -d var/published ]; then
+            cp var/daily/latest.json var/daily/health.json var/published/
+            rm -rf var/published/history
+            cp -R var/daily/history var/published/history
+          else
+            mkdir -p var/published
+            git -C var/published init -b data
+            git -C var/published remote add origin "$(git remote get-url origin)"
+            git -C var/published config http.https://github.com/.extraheader "$(git config --get http.https://github.com/.extraheader)"
+            cp -R var/daily/. var/published/
+          fi
+          cp docs/data-feed-readme.md var/published/README.md
+          git -C var/published config user.name 'github-actions[bot]'
+          git -C var/published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C var/published add latest.json health.json history README.md
+          git -C var/published commit -m 'Refresh public fishing evidence'
+          git -C var/published push origin HEAD:refs/heads/data
+      - name: Report source health
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          d = json.loads(Path('var/daily/latest.json').read_text())
+          h = d['health']
+          summary = [f"## Fishing evidence: {h['status']}", f"Collected {d['completed_at']}",
+                     f"{h['sources_ok']}/{h['sources_total']} sources healthy; {h['recent_report_days_ok']}/7 recent report pages available.",
+                     'Public feed: https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json', '']
+          for ident in h['issues']:
+              s = d['sources'][ident]
+              summary.append(f"- {s['name']}: {s['status']} — {s.get('issue', 'See source record')}")
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('\n'.join(summary))
+          if h['issues']:
+              print('::warning::Some sources are missing, stale, or failed. The feed preserves those statuses.')
+          if not h['critical_available']:
+              raise SystemExit('Core report/observation coverage failed; failure state published for the app.')
+          PY

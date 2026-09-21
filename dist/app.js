@@ -1,7 +1,7 @@
-import { initWeather } from "./weather-ui.js?v=5.4";
+import { initWeather } from "./weather-ui.js?v=5.6";
 import { initNavigation } from "./navigation.js?v=5.4";
 import { initChart } from "./chart-map.js?v=5.4";
-import { initSpecies, matchesSpecies } from "./species.js?v=5.5";
+import { initSpecies, matchesSpecies } from "./species.js?v=5.6";
 import { initCharterGrounds } from "./charter-grounds.js?v=5.5";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>

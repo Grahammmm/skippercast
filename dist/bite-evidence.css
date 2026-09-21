@@ -1,0 +1,154 @@
+.bite-card {
+  margin: 14px 0;
+  border: 1px solid #cededd;
+  border-radius: 16px;
+  background: #f5f9f8;
+  overflow: hidden;
+}
+.bite-card > summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px;
+  cursor: pointer;
+  min-height: 70px;
+}
+.bite-card > summary > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.bite-card > summary small {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: #536f76;
+}
+.bite-card > summary strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.evidence-confidence {
+  border: 1px solid #c6d7d5;
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #556e73;
+}
+.evidence-confidence.moderate {
+  color: #067970;
+  background: #e0f2ec;
+  border-color: #abd6c9;
+}
+.bite-body {
+  padding: 0 17px 17px;
+}
+.bite-body p {
+  line-height: 1.65;
+}
+.bite-body h3 {
+  margin-top: 24px;
+  font-size: 16px;
+}
+.evidence-reports {
+  display: grid;
+  gap: 1px;
+  border: 1px solid #d4e1df;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #d4e1df;
+}
+.evidence-reports a {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: white;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.evidence-reports span {
+  font-size: 13px;
+  color: #526d72;
+}
+.evidence-reports strong {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.evidence-reports small,
+.evidence-signal small {
+  color: #526d72;
+  line-height: 1.5;
+}
+.evidence-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.evidence-signal {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 10px;
+  border: 1px solid #d4e1df;
+  background: white;
+}
+.evidence-signal > span {
+  font-size: 12px;
+}
+.evidence-signal > strong {
+  font-size: 17px;
+}
+.evidence-method,
+.evidence-health {
+  border-top: 1px solid #d4e1df;
+  margin-top: 16px;
+  padding-top: 5px;
+}
+.evidence-method summary,
+.evidence-health summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.evidence-health ul {
+  padding-left: 18px;
+}
+.evidence-health li {
+  margin: 12px 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.evidence-health li small {
+  display: block;
+  color: #526d72;
+  margin-top: 4px;
+  line-height: 1.6;
+}
+@media (max-width: 540px) {
+  .evidence-signals {
+    grid-template-columns: 1fr;
+  }
+  .evidence-signal {
+    grid-template-columns: 1fr 1fr;
+  }
+  .evidence-signal small {
+    grid-column: 1 / -1;
+  }
+  .evidence-signal strong {
+    text-align: right;
+  }
+  .bite-card > summary {
+    padding: 14px;
+    gap: 8px;
+  }
+  .bite-card > summary strong {
+    font-size: 14px;
+  }
+  .bite-body {
+    padding: 0 14px 14px;
+  }
+}

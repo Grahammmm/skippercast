@@ -87,7 +87,7 @@ export const PROFILES = {
     season:
       "Checked Sep 21, 2026: south of Pigeon Point scheduled Sep 1–30, subject to early harvest closure. This dated note is not live permission. Check the salmon page on the trip day.",
     unknown:
-      "No live bait, salmon reports, thermocline, or migration forecast is integrated.",
+      "The daily evidence panel checks regional salmon reports. Live bait, thermocline and migration forecasts remain unavailable.",
     sources: [
       {
         title: "NOAA · Chinook salmon ecology",
@@ -117,7 +117,7 @@ export const PROFILES = {
     season:
       "Check current tuna regulations. Availability off Morro Bay varies with the ocean; the calendar does not guarantee accessible fish.",
     unknown:
-      "No satellite front analysis, chlorophyll, bait observations, or current tuna catch locations are included. SST is modeled at about 8 km.",
+      "The daily evidence panel checks satellite SST, chlorophyll and surface radar currents with dates and coverage. The map SST remains a modeled forecast at about 8 km. No verified tuna catch positions or bait observations are available.",
     sources: [
       {
         title: "NOAA · Pacific albacore ecology",

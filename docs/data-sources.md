@@ -91,3 +91,7 @@ Official [NWS marine forecasts](https://forecast.weather.gov/MapClick.php?TextTy
 The [species research](species-research.md) records the ecology sources, interpretation limits, dated seasonal review, and new soft-bottom method. The connected sediment regions derive only from the already-reviewed USGS releases; those source rights and credits remain unchanged. No commercial chart tiles, proprietary weather tiles, private catches, or charter trajectories were added.
 
 [NOAA's ENC display service](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html) supplies chart images for the visible map at runtime, with attribution. No offline chart cache is bundled. Open-Meteo supplies explicit ECMWF/NOAA wind and wave models plus Météo-France/Copernicus surface temperature and current forecasts, under the access and attribution terms above. The public app remains noncommercial. NOAA tide predictions and the separately dated water-level observation come from station 9412110.
+
+## Daily species evidence
+
+The [daily pipeline research and source register](bite-evidence.md) documents the rolling local charter-report sample, NASA/NOAA satellite grids, IOOS surface radar, buoy observations, tide predictions, advisories, forecast archives and legal-page change checks. Source timestamps, missing cells and failed reads remain explicit. The data branch updates independently of static habitat releases; no unsupported bite probability or charter GPS position is inferred.

@@ -54,7 +54,7 @@ atlas/                Dated, attributed public data and ready-to-import exports
 docs/                 Quickstart, workflow, scoring, methods, and source rights
 tests/                Offline tests for missing evidence, alert state, and exports
 scripts/              Repository checks used locally and in CI
-.github/workflows/    Offline CI; does not fetch forecasts or send alerts
+.github/workflows/    Offline CI and daily public-evidence collection
 ```
 
 Start with the [quickstart](docs/quickstart.md), then the [forecast workflow](docs/forecast-workflow.md) or [atlas methodology](docs/atlas-methodology.md). The [roadmap](docs/roadmap.md) separates future app work from shipped functionality. See [CONTRIBUTING.md](CONTRIBUTING.md) for development.
@@ -64,3 +64,7 @@ Start with the [quickstart](docs/quickstart.md), then the [forecast workflow](do
 The custom license permits individuals to use and modify SkipperCast for private recreation and learning, and to share free copies under the same terms. Commercial, charter, professional, and organizational use requires separate permission. A personal-use restriction makes this **source-available, not OSI open source**; see the [Open Source Definition](https://opensource.org/osd).
 
 Third-party and public-domain data retain their own rights. The personal-use restriction does not relicense underlying USGS facts, CDFW CC BY data, or other third-party material. See [NOTICE.md](NOTICE.md) and the full [LICENSE](LICENSE).
+
+## Daily fishing evidence
+
+The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. Weather continues to refresh separately. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).

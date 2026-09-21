@@ -1,3 +1,4 @@
+import { initBiteEvidence } from "./bite-evidence.js?v=5.6";
 import {
   POINTS,
   MODELS,
@@ -11,7 +12,7 @@ import {
   loadMarine,
 } from "./marine-data.js?v=5.4";
 import { esc, num, local, full, day } from "./marine-charts.js?v=5.4";
-import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.4";
+import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.6";
 import { detailHTML } from "./marine-detail.js?v=5.4";
 const $ = (id) => document.getElementById(id);
 const colors = {
@@ -36,6 +37,7 @@ export function initWeather(map, layer, onOpen) {
     heading = 0,
     detailTab = "waves",
     outlookKey = "";
+  const evidence = initBiteEvidence($("bite-evidence"));
   const dock = $("map-time-dock");
   dock.innerHTML = `<div class="compact-time-row"><button id="time-play" aria-label="Play hourly forecast">▶</button><button id="map-weather-summary" aria-label="Open detailed weather and tide chart">Loading conditions…</button><button id="ocean-now" aria-label="Jump to current forecast hour">Now</button></div><div class="scrub-row"><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><span>+7d</span></div><div class="compact-time-caption"><span id="map-time-label"></span><span id="map-time-range"></span></div>`;
   $("weather-map-options").innerHTML =
@@ -306,6 +308,7 @@ export function initWeather(map, layer, onOpen) {
     });
   }
   function render() {
+    evidence.select(lastSpecies, requested || POINTS[point]);
     const t = hours[index],
       provisional = index >= 72;
     $("map-time-label").textContent =
@@ -428,7 +431,10 @@ export function initWeather(map, layer, onOpen) {
       $("load-forecast").disabled = false;
     }
   }
-  $("load-forecast").addEventListener("click", () => load(true));
+  $("load-forecast").addEventListener("click", () => {
+    load(true);
+    evidence.refresh();
+  });
   render();
   load();
   return {
