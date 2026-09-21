@@ -1,16 +1,13 @@
-Use case: ads-marketing
-Asset type: branded Open Graph social-sharing large card for SkipperCast, landscape 1536 × 800 pixels (about 1.91:1).
-Primary request: Create one polished, cohesive brand image for a useful boat-fishing planning app.
-Scene/backdrop: Attractive early-morning ocean, subtly sunlit sea and distant low coastline, with a restrained bathymetric contour motif integrated into the deep navy portion of the composition.
-Subject: One small white pilothouse sportfishing boat on the ocean. The vessel is recognizably a private fishing boat, not a ferry or tour boat.
-Style/medium: Premium editorial ocean photography blended seamlessly with clean graphic brand design and crisp, bold sans-serif typography.
-Composition/framing: Wide social preview. Large, instantly readable typography in generous clean negative space, with the boat and ocean scene balancing the typography. Keep all four text elements in the central safe area with generous margins, no text near outer edges. Prioritize legibility when the card is reduced to a small link preview. Use a clear hierarchy with the brand name most prominent, supporting copy next, and feature line and domain smaller but readable.
-Lighting/mood: Fresh morning light, calm confidence, a great day on the water.
-Color palette: Deep navy #082e3b, vivid sea teal #54dacb, crisp white. Subtle realistic ocean tones that harmonize with this palette.
-Text (verbatim, each string exactly once; no other text):
-"SkipperCast"
+Use case: precise-object-edit.
+Edit the supplied SkipperCast social preview image. Preserve its wide landscape composition and framing (1737 x 906 if possible), all four text elements exactly, the existing typography, title treatments, text sizes, locations, line breaks, spacing, navy/teal palette, sunset, coast, ocean, and overall photographic quality. This is a focused edit with TWO changes only:
+
+1. Replace the fishing boat at lower right with a realistic 2019-era Parker 2320 Sport Cabin / 23-foot Parker pilothouse. Match the existing boat's position, scale, stern/port-quarter viewing angle, direction of travel, warm sunset lighting, perspective, and wake. The boat must be recognizably a Parker 2320: white deep-V fiberglass hull, compact high squared-off fully enclosed white pilothouse toward the front, near-upright framed windshield, large dark side windows, solid enclosed cabin sides and aft bulkhead with cabin door, low cuddy foredeck, stainless bow rail and practical grabrails, large unobstructed open aft fishing cockpit, full transom with external bracket/swim platform, and ONE substantial gray Yamaha-style outboard centered aft. The driver is inside the enclosed pilothouse. A modest white radar dome, VHF antenna, and a few fishing rods in cabin-top holders are plausible. Accurately render the full enclosure: not a center console, not an open-sided hardtop with exposed helm chairs, not a flybridge, no twin engines, no yacht. Do not add prominent manufacturer lettering or invented small print. Match the period manufacturer's Parker 2320 silhouette, not the source boat's open helm.
+
+2. Strengthen the bathymetric chart artwork on the LEFT side. Make the teal contour lines distinctly visible and confidently drawn, with clearer nested rock/reef contours, multiple line-weight levels, and subtle dark teal depth shading. The map should read immediately as a detailed nautical seafloor/bathymetric graphic at social-preview size. Increase contrast enough to clearly see the contour shapes while keeping the navy base, sophisticated palette, and original flowing geometry. Concentrate the clearest linework in the left margin, upper-left, and lower-left open spaces. Keep an uncluttered dark buffer immediately behind the text so every letter stays perfectly legible. Continue fading the map naturally into the photographic sea toward the middle. No new labels, depth numbers, pins, navigation controls, or other text.
+
+Hard preservation requirement: keep the exact existing copy, spelling, capitalization, layout and design:
+"SkipperCast" — Skipper in white, Cast in teal, same small white mark above the i.
 "Find your next great fishing day"
 "Fishing grounds · Weather · Waves · Tides"
-"skippercast.com"
-Constraints: Render SkipperCast with the exact uppercase S and C. All lettering must be crisp and accurately spelled. Preserve the centered middle-dot separators in the feature line. Convey a useful fishing app for boat anglers. Finished edge-to-edge image, no border.
-Avoid: Product UI mockups, invented forecast readings or numbers, tour-company branding, extra copy, additional logos, credentials, private information, watermarks.
+"skippercast.com" — same white text inside the teal-outlined rounded pill.
+Do not change or remove any of those words. Do not rebrand, rearrange, crop, add a border, or change the warm photographic coast/sunset scene. Preserve the scene and graphics outside the boat and left contour changes.

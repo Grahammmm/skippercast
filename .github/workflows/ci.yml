@@ -32,6 +32,6 @@ jobs:
         with:
           node-version: "22"
       - name: Forecast handling and GPX checks
-        run: node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs tests/test_evidence.mjs tests/test_regulations.mjs tests/test_live_conditions.mjs
+        run: node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs tests/test_evidence.mjs tests/test_regulations.mjs tests/test_live_conditions.mjs tests/test_planning.mjs
       - name: Website assets and data consistency
         run: python scripts/check_web.py

@@ -14,7 +14,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 
 | Part | What it does | Start here |
 | --- | --- | --- |
-| Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, seven species profiles, 132 reef candidates, 12 connected soft-bottom habitat outlines, three charter-reported grounds with dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
+| Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, seven species profiles, 132 reef candidates, 12 connected soft-bottom habitat outlines, two named charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
 | Fishing atlas | 132 noted habitat candidates, 107 partial reef outlines, and 31 optional drift alignments from Avila / Point Buchon to Point Estero. GPX for chartplotters, GeoJSON, and searchable offline notes. | [Atlas and downloads](atlas/avila-point-estero-2026-09-20/README.md) |
 | Forecast collector | Saves public forecast responses, model metadata, buoy observations, advisories, and access failures for a Morro Bay example profile. Compares numerical ranges and flags missing or inconsistent evidence. | [Run the collector](docs/quickstart.md#collect-live-evidence) |
 | Alert lifecycle | Given an already reviewed assessment and prior delivery state, decides whether an initial alert, update, retraction, or day-before assessment is due. | [Offline demo](#try-it-offline) · [Assessment workflow](docs/forecast-workflow.md) |
@@ -36,7 +36,7 @@ To use the existing atlas without Python, download [complete.gpx](atlas/avila-po
 
 ## Read the atlas correctly
 
-- A grade ranks **mapped habitat search priority**, not catch probability, boulder size, or a verified fishing hotspot. Purple boat labels mark [three charter-reported grounds](docs/charter-grounds.md), backed by 45 published trips. Their outlines are approximate search water, not exact boat positions. There are **no AIS-confirmed charter hotspots** in this release.
+- A grade ranks **mapped habitat search priority**, not catch probability, boulder size, or a verified fishing hotspot. Purple boat labels mark [two named charter vicinities](docs/charter-grounds.md), backed by 31 published trips. Their outlines are approximate search water, not exact boat positions. There are **no AIS-confirmed charter hotspots** in this release.
 - Outlines are selected portions of surveyed habitat. Drift lines are optional alignments over structure, **not safe approach or passage routes**.
 - Depths are referenced to the survey's MLLW datum. Actual sounder depth changes with water level; the example fishing limit is 200 feet.
 - This public atlas excludes 11 Cambria targets and the older DS1091 charter-ground annotations whose source reuse terms are unresolved. The [source register](docs/data-sources.md) explains the smaller public edition.
@@ -73,3 +73,5 @@ the official sources against reviewed versions. Changed, failed or stale checks
 withhold the open-season badge until reviewed. See [how regulation updates work](docs/regulations.md).
 
 The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. The Live tab shows dated NOAA buoy readings, local airport weather and measured water level. A separate cloud job refreshes buoy observations every 30 minutes; the app checks current observations and advisories every five minutes while open. [Live conditions and sources](docs/live-conditions.md). Weather forecasts refresh separately. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).
+
+Recent additions: [map protection, drift guides and forecast ratings](docs/map-and-forecast.md), [historical commercial AIS](docs/commercial-ais-research.md), and [feature research across 13 products](docs/product-research.md).

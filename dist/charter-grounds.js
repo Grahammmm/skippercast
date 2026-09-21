@@ -1,5 +1,5 @@
-import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=5.8";
-import { matchesTargetSpecies } from "./target-groups.js?v=5.8";
+import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=6.0";
+import { matchesTargetSpecies } from "./target-groups.js?v=6.0";
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -26,6 +26,7 @@ export function matchingGrounds(
   const query = search.toLowerCase().trim();
   return grounds.filter(
     (g) =>
+      g.precision !== "Broad regional name" &&
       g.map_species.some((id) => matchesTargetSpecies(id, species)) &&
       g.reports.some((r) => r.species.some((id) => matchesTargetSpecies(id, species))) &&
       (area === "all" || area === g.source_id) &&
@@ -53,7 +54,7 @@ export function reportSummary(ground, species) {
 export async function initCharterGrounds(
   map,
   layer,
-  { onSelect, onTarget, showMap, toast },
+  { onSelect, onTarget, showMap, toast, protectedAreas },
 ) {
   const chip = $("show-charter-grounds"),
     context = $("charter-ground-context");
@@ -71,7 +72,7 @@ export async function initCharterGrounds(
     console.error(error);
     return { draw() {} };
   }
-  const grounds = evidence.grounds;
+  const grounds = evidence.grounds.filter(g => g.precision !== "Broad regional name");
   let current = [];
   function choose() {
     return matchingGrounds(grounds, {
@@ -79,7 +80,7 @@ export async function initCharterGrounds(
       area: $("area").value,
       depth: Number($("depth").value),
       search: $("search").value,
-    });
+    }).filter(g => protectedAreas.pointAllowed(g) && protectedAreas.geometryAllowed(g.geometry));
   }
   function fit(items, separate = false) {
     if (!items.length) return false;
@@ -238,8 +239,8 @@ export async function initCharterGrounds(
   $("layer-charters").addEventListener("change", draw);
   const c = evidence.coverage;
   $("charter-status").querySelector("span").textContent =
-    `${grounds.length} reported grounds · boats, dates & sources ↗`;
-  context.innerHTML = `<p><strong>Purple boat labels and dashed outlines identify charter-reported grounds.</strong> These are named areas from published trip records, not AIS-confirmed fishing positions. A/B/C reef grades remain separate.</p><div class="charter-ground-links">${grounds.map((g) => `<button data-charter-ground="${g.id}"><strong>${esc(g.label)}</strong><span>${g.report_count} trips · ${g.boats.length} boat${g.boats.length === 1 ? "" : "s"} · latest ${date(g.latest_report)} →</span><small>${esc(g.precision)}</small></button>`).join("")}</div><p>Reviewed ${c.dates_available} daily pages from ${date(c.from)} through ${date(c.through)}: ${c.local_trips} local trip records, including ${c.mapped_single_ground_trips} single-ground reports mapped here. The ${c.ground_counts["Out Front"]} “Out Front” records are too vague to locate; other named grounds fall outside Avila–Cambria. Multi-ground trips are not allocated to a single area.</p><p class="small">The outlines are our survey-depth-screened search windows, not published charter boundaries. Only lingcod and rockfish are supported by this layer. No present bite or catch probability is inferred. <a href="sources.html#charter-reports">Method, coverage and source data ↗</a></p><h3>Separate AIS research</h3>`;
+    `${grounds.length} named vicinities · no verified charter AIS ↗`;
+  context.innerHTML = `<p><strong>Purple boat labels and dashed outlines identify charter-reported grounds.</strong> These are named areas from published trip records, not AIS-confirmed fishing positions. A/B/C reef grades remain separate.</p><div class="charter-ground-links">${grounds.map((g) => `<button data-charter-ground="${g.id}"><strong>${esc(g.label)}</strong><span>${g.report_count} trips · ${g.boats.length} boat${g.boats.length === 1 ? "" : "s"} · latest ${date(g.latest_report)} →</span><small>${esc(g.precision)}</small></button>`).join("")}</div><p>Reviewed ${c.dates_available} daily pages from ${date(c.from)} through ${date(c.through)}: ${c.local_trips} local trip records, including ${grounds.reduce((sum,g)=>sum+g.report_count,0)} single-ground reports in these two named vicinities. Broad Morro Bay and “Out Front” reports are retained as regional evidence but have no map outline. The ${c.ground_counts["Out Front"]} “Out Front” records are too vague to locate; other named grounds fall outside Avila–Cambria. Multi-ground trips are not allocated to a single area.</p><p class="small">The outlines are our survey-depth-screened search windows, not published charter boundaries. Only lingcod and rockfish are supported by this layer. No present bite or catch probability is inferred. <a href="sources.html#charter-reports">Method, coverage and source data ↗</a></p><h3>Separate AIS research</h3>`;
   for (const button of context.querySelectorAll("[data-charter-ground]")) {
     button.addEventListener("click", () => {
       const ground = grounds.find((g) => g.id === button.dataset.charterGround);

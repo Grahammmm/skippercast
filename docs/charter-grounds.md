@@ -16,6 +16,8 @@ The [public dataset](../dist/data/charter-grounds.json) contains each dated trip
 
 Of the other records, 344 have no ground label and 164 say only “Out Front.” Point Sal, Purisima Point and Shell Beach are outside the requested Avila–Cambria area. Nine multi-ground reports are not allocated to one place: catch totals do not reveal which ground produced the fish. Incidental salmon and halibut records do not support species-specific hotspot outlines. Reporting frequency is not fleet popularity, catch rate or standardized fishing effort.
 
+The map now shows only Pecho Rock and Diablo (31 reports). Morro Bay remains in the research dataset as regional context; its broad outline is withheld.
+
 ## What the outline means
 
 The reports do not supply boundaries. We construct **search water** around their named places, then apply the existing conservative depth and closure screens:
@@ -32,7 +34,7 @@ The Point Buchon [CDFW MPA page](https://wildlife.ca.gov/Conservation/Marine/MPA
 
 ## AIS remains separate
 
-The previously obtained eight daily NOAA samples still contain zero independently verified local sportfishing-charter identities. This turn also checked the `TRY MAGIC` name lead: its reported 14 × 10 m dimensions and sailing type do not match the [26 × 9 ft Magic charter listing](https://sportfishingreport.com/charter_boats/magic-morrobay.php). It contributes no charter-track evidence. No raw individual vessel trajectory is published.
+The expanded eleven-date NOAA sample contains zero independently verified local sportfishing-charter identities; see [the commercial AIS follow-up](commercial-ais-research.md). This turn also checked the `TRY MAGIC` name lead: its reported 14 × 10 m dimensions and sailing type do not match the [26 × 9 ft Magic charter listing](https://sportfishingreport.com/charter_boats/magic-morrobay.php). It contributes no charter-track evidence. No raw individual vessel trajectory is published.
 
 The older DS1091 interview-based fishing-ground layer remains excluded while reuse terms are unresolved. This new report layer does not reuse it or restore its annotations. See [source rights and AIS coverage](data-sources.md#ais-evidence).
 

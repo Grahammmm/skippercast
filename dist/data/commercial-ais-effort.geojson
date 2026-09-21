@@ -1,0 +1,266 @@
+{
+  "type": "FeatureCollection",
+  "name": "Historical commercial AIS effort \u00b7 July and September 2024",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "AIS-COMM-001",
+      "properties": {
+        "id": "AIS-COMM-001",
+        "label": "Offshore Point Buchon \u00b7 Unspecified fishing gear",
+        "evidence_type": "gfw_ais_apparent_commercial_fishing_effort",
+        "gear_type": "fishing",
+        "gear_label": "Unspecified fishing gear",
+        "cell_count": 1,
+        "cell_size_degrees": 0.01,
+        "resolution_note": "Original 0.01\u00b0 cells, about 0.9 \u00d7 1.1 km here. Outline is a statistical grid, not the boat\u2019s exact track or a reef boundary.",
+        "periods": [
+          {
+            "start": "2024-07-01",
+            "end": "2024-07-31"
+          },
+          {
+            "start": "2024-09-01",
+            "end": "2024-09-30"
+          }
+        ],
+        "active_dates_utc": [
+          "2024-07-08",
+          "2024-07-13",
+          "2024-07-29"
+        ],
+        "days_with_apparent_fishing": 3,
+        "qualifying_dates_utc": [
+          "2024-07-08",
+          "2024-07-13",
+          "2024-07-29"
+        ],
+        "minimum_repeat_days_per_cell": 3,
+        "apparent_fishing_hours": 2.391,
+        "hours_by_date": {
+          "2024-07-08": 0.7755,
+          "2024-07-13": 0.8669,
+          "2024-07-29": 0.7491
+        },
+        "max_mmsi_present_in_single_cell_day": 1,
+        "vessel_count_note": "Maximum in one cell/day, not unique boats across the period. The dataset does not identify charter operators.",
+        "flags": [
+          "USA"
+        ],
+        "source_confidence": "Published GFW model output; 2024 vessel classifications provisional",
+        "fishing_location_confidence": "Low for recreational targeting; historical model classification only",
+        "verified_charter": false,
+        "verified_catch": false,
+        "target_species": [],
+        "depth_ft": null,
+        "depth_status": "Unknown; offshore context, not qualified for the 200 ft fishing limit",
+        "suggested_use": "Context overlay only. Do not change habitat grades, bite scores, drift instructions or fish here recommendations.",
+        "latitude": 35.205,
+        "longitude": -121.085,
+        "source_url": "https://doi.org/10.5281/zenodo.14982712",
+        "license": "CC-BY-NC-4.0",
+        "attribution": "\u00a9 Global Fishing Watch. 2025. Global AIS-based Apparent Fishing Effort Dataset v3.0. SkipperCast regional extraction and aggregation; non-commercial use only."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -121.08,
+              35.2
+            ],
+            [
+              -121.08,
+              35.21
+            ],
+            [
+              -121.09,
+              35.21
+            ],
+            [
+              -121.09,
+              35.2
+            ],
+            [
+              -121.08,
+              35.2
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "AIS-COMM-002",
+      "properties": {
+        "id": "AIS-COMM-002",
+        "label": "Offshore Point Buchon \u00b7 Unspecified fishing gear",
+        "evidence_type": "gfw_ais_apparent_commercial_fishing_effort",
+        "gear_type": "fishing",
+        "gear_label": "Unspecified fishing gear",
+        "cell_count": 1,
+        "cell_size_degrees": 0.01,
+        "resolution_note": "Original 0.01\u00b0 cells, about 0.9 \u00d7 1.1 km here. Outline is a statistical grid, not the boat\u2019s exact track or a reef boundary.",
+        "periods": [
+          {
+            "start": "2024-07-01",
+            "end": "2024-07-31"
+          },
+          {
+            "start": "2024-09-01",
+            "end": "2024-09-30"
+          }
+        ],
+        "active_dates_utc": [
+          "2024-07-02",
+          "2024-07-08",
+          "2024-07-13",
+          "2024-07-29"
+        ],
+        "days_with_apparent_fishing": 4,
+        "qualifying_dates_utc": [
+          "2024-07-02",
+          "2024-07-08",
+          "2024-07-29"
+        ],
+        "minimum_repeat_days_per_cell": 3,
+        "apparent_fishing_hours": 2.159,
+        "hours_by_date": {
+          "2024-07-02": 0.7999,
+          "2024-07-08": 0.4263,
+          "2024-07-13": 0.1997,
+          "2024-07-29": 0.7333
+        },
+        "max_mmsi_present_in_single_cell_day": 1,
+        "vessel_count_note": "Maximum in one cell/day, not unique boats across the period. The dataset does not identify charter operators.",
+        "flags": [
+          "USA"
+        ],
+        "source_confidence": "Published GFW model output; 2024 vessel classifications provisional",
+        "fishing_location_confidence": "Low for recreational targeting; historical model classification only",
+        "verified_charter": false,
+        "verified_catch": false,
+        "target_species": [],
+        "depth_ft": null,
+        "depth_status": "Unknown; offshore context, not qualified for the 200 ft fishing limit",
+        "suggested_use": "Context overlay only. Do not change habitat grades, bite scores, drift instructions or fish here recommendations.",
+        "latitude": 35.185,
+        "longitude": -121.075,
+        "source_url": "https://doi.org/10.5281/zenodo.14982712",
+        "license": "CC-BY-NC-4.0",
+        "attribution": "\u00a9 Global Fishing Watch. 2025. Global AIS-based Apparent Fishing Effort Dataset v3.0. SkipperCast regional extraction and aggregation; non-commercial use only."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -121.07,
+              35.18
+            ],
+            [
+              -121.07,
+              35.19
+            ],
+            [
+              -121.08,
+              35.19
+            ],
+            [
+              -121.08,
+              35.18
+            ],
+            [
+              -121.07,
+              35.18
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "AIS-COMM-003",
+      "properties": {
+        "id": "AIS-COMM-003",
+        "label": "Offshore Morro Bay \u00b7 Trawler activity",
+        "evidence_type": "gfw_ais_apparent_commercial_fishing_effort",
+        "gear_type": "trawlers",
+        "gear_label": "Trawler activity",
+        "cell_count": 1,
+        "cell_size_degrees": 0.01,
+        "resolution_note": "Original 0.01\u00b0 cells, about 0.9 \u00d7 1.1 km here. Outline is a statistical grid, not the boat\u2019s exact track or a reef boundary.",
+        "periods": [
+          {
+            "start": "2024-07-01",
+            "end": "2024-07-31"
+          },
+          {
+            "start": "2024-09-01",
+            "end": "2024-09-30"
+          }
+        ],
+        "active_dates_utc": [
+          "2024-09-29",
+          "2024-09-30"
+        ],
+        "days_with_apparent_fishing": 2,
+        "qualifying_dates_utc": [
+          "2024-09-29",
+          "2024-09-30"
+        ],
+        "minimum_repeat_days_per_cell": 2,
+        "apparent_fishing_hours": 1.96,
+        "hours_by_date": {
+          "2024-09-29": 0.4761,
+          "2024-09-30": 1.4838
+        },
+        "max_mmsi_present_in_single_cell_day": 1,
+        "vessel_count_note": "Maximum in one cell/day, not unique boats across the period. The dataset does not identify charter operators.",
+        "flags": [
+          "USA"
+        ],
+        "source_confidence": "Published GFW model output; 2024 vessel classifications provisional",
+        "fishing_location_confidence": "Low for recreational targeting; historical model classification only",
+        "verified_charter": false,
+        "verified_catch": false,
+        "target_species": [],
+        "depth_ft": null,
+        "depth_status": "Unknown; offshore context, not qualified for the 200 ft fishing limit",
+        "suggested_use": "Context overlay only. Do not change habitat grades, bite scores, drift instructions or fish here recommendations.",
+        "latitude": 35.365,
+        "longitude": -121.225,
+        "source_url": "https://doi.org/10.5281/zenodo.14982712",
+        "license": "CC-BY-NC-4.0",
+        "attribution": "\u00a9 Global Fishing Watch. 2025. Global AIS-based Apparent Fishing Effort Dataset v3.0. SkipperCast regional extraction and aggregation; non-commercial use only."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -121.22,
+              35.36
+            ],
+            [
+              -121.22,
+              35.37
+            ],
+            [
+              -121.23,
+              35.37
+            ],
+            [
+              -121.23,
+              35.36
+            ],
+            [
+              -121.22,
+              35.36
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

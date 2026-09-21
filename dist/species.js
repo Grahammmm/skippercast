@@ -1,4 +1,5 @@
-import { POINTS, distanceNm } from "./marine-data.js?v=5.4";
+import { POINTS, distanceNm } from "./marine-data.js?v=6.0";
+import { circleGeometry } from "./geo-screen.js?v=6.0";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -215,7 +216,7 @@ const escapeHTML = (v) =>
 export async function initSpecies(
   map,
   layers,
-  { onChange, onConditions, showGuide, onSelect },
+  { onChange, onConditions, showGuide, onSelect, protectedAreas },
 ) {
   let habitats = [],
     error = false,
@@ -295,7 +296,7 @@ export async function initSpecies(
   function draw() {
     const p = PROFILES[id()];
     if (p.kind === "reef") return;
-    current = chooseAreas();
+    current = chooseAreas().filter(a => protectedAreas.pointAllowed(a) && protectedAreas.geometryAllowed(a.geometry || circleGeometry(a.latitude,a.longitude,a.radius_m)));
     $("map-empty").hidden = current.length > 0;
     if (!current.length) {
       $("map-empty").querySelector("strong").textContent = error

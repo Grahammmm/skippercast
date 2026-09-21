@@ -1,4 +1,4 @@
-import { initBiteEvidence } from "./bite-evidence.js?v=5.8";
+import { initBiteEvidence } from "./bite-evidence.js?v=6.0";
 import {
   POINTS,
   MODELS,
@@ -10,12 +10,15 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=5.4";
-import { esc, num, local, full, day } from "./marine-charts.js?v=5.4";
-import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.8";
-import { detailHTML } from "./marine-detail.js?v=5.8";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=5.9";
+} from "./marine-data.js?v=6.0";
+import { esc, num, local, full, day } from "./marine-charts.js?v=6.0";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=6.0";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=6.0";
+import { localDate } from "./forecast.js?v=6.0";
+import { detailHTML } from "./marine-detail.js?v=6.0";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=6.0";
 const $ = (id) => document.getElementById(id);
+const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
   calmer: "#278f87",
   mixed: "#be7a29",
@@ -24,7 +27,7 @@ const colors = {
   unknown: "#778995",
 };
 
-export function initWeather(map, layer, onOpen) {
+export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   let bundle = null,
     observations = null,
     liveLoading = false,
@@ -40,7 +43,8 @@ export function initWeather(map, layer, onOpen) {
     heading = 0,
     detailTab = "live",
     forecastError = null,
-    outlookKey = "";
+    outlookKey = "",
+    dayRatings = [];
   const evidence = initBiteEvidence($("bite-evidence"));
   const dock = $("map-time-dock");
   dock.innerHTML = `<div class="compact-time-row"><button id="map-weather-summary" aria-label="Open detailed weather and tide chart">Loading conditions…</button><button id="toggle-map-timeline" aria-expanded="false" aria-controls="map-timeline-controls">Timeline</button></div><div id="map-timeline-controls" hidden><div class="timeline-actions"><button id="time-play" aria-label="Play hourly forecast">▶</button><span>Now to 7 days</span><button id="ocean-now" aria-label="Jump to current forecast hour">Now</button></div><div class="scrub-row"><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><span>+7d</span></div><div class="compact-time-caption"><span id="map-time-label"></span><span id="map-time-range"></span></div></div>`;
@@ -58,6 +62,9 @@ export function initWeather(map, layer, onOpen) {
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
   }
+  const summary=document.createElement("div");
+  summary.id="forecast-hour-summary";
+  $("forecast-time-tools").append(summary);
   $("best-day-banner").addEventListener("click", () => {
     const epoch = Number($("best-day-banner").dataset.hour);
     if (epoch) setHour(Math.round((epoch - hours[0]) / HOUR));
@@ -75,7 +82,8 @@ export function initWeather(map, layer, onOpen) {
     $("live-conditions").hidden = !live;
     $("marine-detail-body").hidden = live;
     document.querySelector(".forecast-settings").hidden = live;
-    $("forecast-time-tools").hidden = live;
+    $("forecast-time-tools").hidden = false;
+    $("forecast-hour-summary").hidden = live;
     const failed = bundle ? MODELS.filter((m) => bundle.models[m.id]?.error).map((m) => m.name) : [];
     $("forecast-status").textContent = live
       ? "Auto refresh · observations every 5 min"
@@ -380,15 +388,24 @@ export function initWeather(map, layer, onOpen) {
       " · PACIFIC TIME";
     $("marine-point").value = point;
     $("forecast-context").textContent = POINTS[point].name + " · " + (family === "gfs" ? "NOAA GFS" : "ECMWF");
+    const nextKey = `${bundle?.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
+    if (nextKey !== outlookKey && bundle) {
+      dayRatings=rankTimelineDays(bundle,point,lastSpecies,hours);
+      renderOutlook(rankMornings(bundle,point,lastSpecies,Date.now(),hours.at(-1)),point);
+      outlookKey=nextKey;
+    }
     const dates = new Map();
     hours.forEach((t, i) => {
-      const d = day(t);
+      const d = isoDay(t);
       if (!dates.has(d)) dates.set(d, i);
     });
     $("day-strip").innerHTML = [...dates.entries()]
       .map(
         ([d, i], n) =>
-          `<button data-hour="${i}" aria-pressed="${d === day(t)}">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small></button>`,
+          {
+            const r=dayRatings.find(r=>r.date===d), at=r?Math.max(0,Math.round((r.time-hours[0])/HOUR)):i;
+            return `<button data-hour="${at}" aria-pressed="${d === isoDay(t)}" class="${r?.conditions>=8?'good':''}" title="${esc(r?.window||'Forecast loading')} · ${esc(r?.confidence||'')} confidence">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small><b>${Number.isFinite(r?.conditions)?num(r.conditions)+"/10":"—/10"}</b><small>${r?.confidence==='Low'?'Low':r?'Moderate':'Loading'}${r?.provisional?' · outlook':''}</small></button>`;
+          },
       )
       .join("");
     draw();
@@ -409,14 +426,8 @@ export function initWeather(map, layer, onOpen) {
     $("map-weather-summary").innerHTML =
       observation || `<strong>${index === 0 ? "Now forecast" : local(t, { weekday: "short", hour: "numeric" })}${provisional ? " · outlook" : ""} · ${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt</span>`;
     $("map-weather-summary").title = observation ? "Latest measured buoy seas · open current observations" : p.name + " · " + status.label;
-    const nextKey = `${bundle.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
-    if (nextKey !== outlookKey) {
-      renderOutlook(
-        rankMornings(bundle, point, lastSpecies, Date.now(), hours.at(-1)),
-        point,
-      );
-      outlookKey = nextKey;
-    }
+    $("forecast-hour-summary").innerHTML=forecastSummaryHTML(bundle,point,lastSpecies,t,family,dayRatings.find(r=>r.date===isoDay(t)));
+    onForecast({bundle,time:t,family,point,species:lastSpecies});
     const body = $("marine-detail-body"),
       sourcesOpen = body.querySelector("#marine-sources")?.open;
     const expanded = [...body.querySelectorAll("[data-disclosure][open]")].map((d) => d.dataset.disclosure);

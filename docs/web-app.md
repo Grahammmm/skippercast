@@ -14,7 +14,7 @@ Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas 
 - Filter 132 targets by area, terrain grade, maximum survey-neighborhood depth, and linked geometry; search names and marker IDs.
 - Select a target from a marker, a reef footprint, or a drift alignment. Its detail panel shows coordinates, survey depths, terrain metrics, notes, evidence limitations, and source links.
 - Compare A/B/C definitions in Guide and inspect all four weighted score contributions for each target, with plain-language explanations of points, partial reef areas, and drift alignments.
-- Tap purple boat labels for three charter-reported grounds: Pecho Rock, Diablo coast, and the broader Morro Bay coast. Inspect boats, dates, primary report links, approximate search outlines and nearby separate terrain candidates. The layer is backed by 45 single-ground reports from a 601-trip sample. It has no verified local charter AIS tracks. Read [the charter-ground method](charter-grounds.md).
+- Tap purple boat labels for two named charter vicinities: Pecho Rock and Diablo coast. Inspect boats, dates, primary report links, approximate search outlines and nearby separate terrain candidates. The layer is backed by 31 single-ground reports from a 601-trip sample; broad Morro Bay reports are retained as regional evidence without an outline. It has no verified local charter AIS tracks. Read [the charter-ground method](charter-grounds.md).
 - Use the detailed NOAA ENC chart basemap or street-map fallback; toggle reef outlines, drift lines, markers, and weather samples.
 - Select **Lingcod & rockfish**, California halibut, Chinook salmon, albacore, bluefin, or Dungeness. The combined reef view includes both species’ habitat and reports, counting each reported trip once. Their legal limits stay separate in the regulations card. Connected sediment outlines and pelagic search references retain their own evidence. Read [the species research](species-research.md).
 - Download the complete 132-target rocky atlas GPX or a single rocky target with its linked geometry using direct file links, including from the mobile sheet. Charter search outlines, sediment regions and pelagic search references are currently map-only. GPX polygons are separate track rings; they are not navigable routes. Share the downloaded file to iNavX.
@@ -28,7 +28,7 @@ Changing views preserves filters, selection, map position, and loaded forecasts 
 
 ## Evidence limits
 
-The atlas is a dated research layer, with no AIS-confirmed charter hotspots or verified catch success. It has no live closure overlay, nautical navigation route, harbor-current model, or trip qualification engine. Its surveyed public habitat ends at Point Estero; the excluded Cambria data remain excluded. Weather/search-reference coverage extends offshore. Search references are constructed samples, not species detections or charted routes.
+The atlas is a dated research layer, with no AIS-confirmed charter hotspots or verified catch success. It shows official MPA boundaries and screens all fishing geometries against them at load; this is not a complete live closure service. It has no nautical navigation route, harbor-current model, or trip qualification engine. Its surveyed public habitat ends at Point Estero; the excluded Cambria data remain excluded. Weather/search-reference coverage extends offshore. Search references are constructed samples, not species detections or charted routes.
 
 Forecasts are regional model values, not observations at individual targets. The browser checks units, timestamps, populated fields, published end times, model disagreements, and inconsistent gust/component values. It never assigns a go/no-go or a qualified trip recommendation. Morning ratings use a separate disclosed 0–10 conditions heuristic; bite potential stays unknown. The qualitative hourly comfort screen uses disclosed wind/sea preferences and does not calculate transit, verify four fishing hours, or certify an entrance. Days four through seven are provisional. Active alerts are a retrieval-time snapshot, not future clearance. Provider metadata are not guaranteed run attribution for every value in a rolling timeseries. Stale evidence cannot earn a calmer label.
 
@@ -86,8 +86,12 @@ The initial HTML contains Open Graph and X large-image metadata for
 `https://skippercast.com/`. Crawlers can read the title, description and absolute
 image URL without running JavaScript. All hash views share this site-wide card.
 
-The reviewed [share image](../dist/og.png) is an original 1737 × 906 PNG generated
+The reviewed [share image](../dist/og.png) is an original 1736 × 906 PNG generated
 with the built-in image tool from this [prompt](social-preview-prompt.txt). Its
 SHA-256 is recorded with reviewed web assets in `scripts/web-vendor-sha256.json`.
 Keep the HTML image dimensions and hash in sync when replacing it. Link previews
 may retain an older card until the receiving app refreshes its cache.
+
+## Map and forecast planning
+
+See [the release method](map-and-forecast.md) for persistent MPAs, zoom-driven reef outlines, time-varying surface-current guides, measured drift input, daily/hourly scores and compact variables. The opt-in [historical commercial AIS layer](commercial-ais-research.md) is separate from habitat and charter evidence. [Product research](product-research.md) records potential future additions; it is not a claim that those features ship.

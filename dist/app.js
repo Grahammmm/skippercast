@@ -1,9 +1,13 @@
-import { initWeather } from "./weather-ui.js?v=5.9";
-import { initNavigation } from "./navigation.js?v=5.8";
-import { initChart } from "./chart-map.js?v=5.4";
-import { initSpecies, matchesSpecies } from "./species.js?v=5.8";
-import { initRegulations } from "./regulations.js?v=5.8";
-import { initCharterGrounds } from "./charter-grounds.js?v=5.8";
+import { initWeather } from "./weather-ui.js?v=6.0";
+import { initNavigation } from "./navigation.js?v=6.0";
+import { initChart } from "./chart-map.js?v=6.0";
+import { initSpecies, matchesSpecies } from "./species.js?v=6.0";
+import { initRegulations } from "./regulations.js?v=6.0";
+import { initCharterGrounds } from "./charter-grounds.js?v=6.0";
+import { initProtectedAreas } from "./protected-areas.js?v=6.0";
+import { initDriftGuides } from "./drift-guides.js?v=6.0";
+import { initCommercialAIS } from "./commercial-ais.js?v=6.0";
+import { atlasExportAllowed } from "./export-screen.js?v=6.0";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -44,7 +48,7 @@ let atlas,
   initialFitPending = true,
   initialViewShown = false,
   visible = [];
-let speciesUI, charterUI, weather;
+let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI;
 const layers = {},
   markers = new Map();
 const navigation = initNavigation({
@@ -90,6 +94,7 @@ function filterTargets() {
   visible = atlas.targets
     .filter(
       (t) =>
+        protectedAreas?.pointAllowed(t) &&
         matchesSpecies(t, $("species-select").value) &&
         ($("area").value === "all" || t.source_id === $("area").value) &&
         ($("grade").value === "all" || t.habitat_grade === $("grade").value) &&
@@ -107,6 +112,8 @@ function filterTargets() {
     );
   if (selected && !visible.some((t) => t.id === selected.id)) {
     selected = undefined;
+    $("export-selected").hidden = true;
+    $("export-selected").removeAttribute("href");
     $("detail").innerHTML =
       '<div class="empty-detail"><h2>Pick a target.</h2><p>Your selected target is outside these filters.</p></div>';
   }
@@ -131,6 +138,21 @@ function filterTargets() {
   drawHabitat();
   speciesUI?.draw();
   charterUI?.draw();
+  driftGuides?.draw();
+  commercialUI?.draw();
+  updateExports();
+}
+
+function updateExports() {
+  const completeAllowed=atlasExportAllowed(atlas,protectedAreas);
+  const selectedAllowed=selected && atlasExportAllowed(atlas,protectedAreas,selected.id);
+  const complete=[...document.querySelectorAll('a[href="downloads/complete.gpx"],a[data-complete-export]')];
+  for(const link of complete) link.dataset.completeExport="true";
+  for(const link of [...complete,$("export-selected"),$("download-target")].filter(Boolean)) {
+    const allowed=link.dataset.completeExport ? completeAllowed : selectedAllowed;
+    if(allowed) {link.href=link.dataset.completeExport?"downloads/complete.gpx":`downloads/targets/${selected.id}.gpx`;link.removeAttribute("aria-disabled");link.removeAttribute("title");}
+    else {link.removeAttribute("href");link.setAttribute("aria-disabled","true");link.title="Export withheld: its points or geometry cannot pass the current MPA screen.";}
+  }
 }
 
 function drawHabitat() {
@@ -138,7 +160,9 @@ function drawHabitat() {
   markers.clear();
   const ids = new Set(visible.map((t) => t.id));
   for (const a of atlas.areas.filter(
-    (a) => selected && a.target_ids.includes(selected.id),
+    (a) => a.target_ids.some(id => ids.has(id)) &&
+      (map.getZoom() >= 13 || a.target_ids.includes(selected?.id)) &&
+      protectedAreas.geometryAllowed(a.geometry),
   )) {
     L.geoJSON(a.geometry, {
       style: {
@@ -157,6 +181,8 @@ function drawHabitat() {
   for (const d of atlas.drifts.filter(
     (d) =>
       ids.has(d.target_id) &&
+      (map.getZoom() >= 13 || d.target_id === selected?.id) &&
+      protectedAreas.geometryAllowed(d.geometry) &&
       ($("layer-drifts").checked || d.target_id === selected?.id),
   )) {
     L.geoJSON(d.geometry, {
@@ -178,8 +204,9 @@ function drawHabitat() {
   }
   for (const group of cells.values()) {
     if (group.length > 1) {
-      const lat = group.reduce((s, t) => s + t.latitude, 0) / group.length,
+      let lat = group.reduce((s, t) => s + t.latitude, 0) / group.length,
         lon = group.reduce((s, t) => s + t.longitude, 0) / group.length;
+      if(!protectedAreas.pointAllowed({latitude:lat,longitude:lon})) {lat=group[0].latitude;lon=group[0].longitude;}
       L.marker([lat, lon], {
         icon: L.divIcon({
           className: "reef-cluster",
@@ -213,9 +240,10 @@ function drawHabitat() {
 
 function selectTarget(id, pan = true) {
   const target = atlas.targets.find((t) => t.id === id);
-  if (!target) return;
+  if (!target || !protectedAreas?.pointAllowed(target)) return;
   selected = target;
   drawHabitat();
+  driftGuides?.draw();
   $("export-selected").hidden = false;
   weather?.selectLocation(target);
   for (const t of visible) markers.get(t.id)?.setIcon(pin(t));
@@ -227,6 +255,7 @@ function selectTarget(id, pan = true) {
     `<div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · survey MLLW</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} The analysis uses a roughly 33-foot grid; it does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><a class="primary" id="download-target" href="downloads/targets/${t.id}.gpx" download="SkipperCast-${t.id}.gpx">↓ Export this spot + geometry</a><div class="detail-section"><h3>Source</h3><p>${areaNames[t.source_id]} · USGS survey ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
   $("export-selected").href = `downloads/targets/${t.id}.gpx`;
   $("export-selected").download = `SkipperCast-${t.id}.gpx`;
+  updateExports();
   const noteSection = document.createElement("div");
   noteSection.className = "detail-section";
   const metrics = t.metrics;
@@ -320,7 +349,7 @@ async function initAISContext() {
       throw new Error(`AIS summary request failed (${response.status})`);
     const evidence = await response.json();
     const count = evidence.summary;
-    panel.innerHTML = `<p><strong>No independently verified local charter AIS tracks yet.</strong> The purple charter layer uses published named-ground reports. It does not use vessel tracks, and it does not change terrain grades.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified charter identities</span></div><details><summary>AIS sample coverage</summary><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 is a consecutive four-day block; the other dates are isolated samples.</p><p>The checked NOAA index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Missing identities and receiver gaps can hide trips. This limited sample cannot establish where charters do or do not fish.</p></details>`;
+    panel.innerHTML = `<p><strong>No independently verified local charter AIS tracks yet.</strong> The purple charter layer uses published named-ground reports. It does not use vessel tracks, and it does not change terrain grades.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified charter identities</span></div><details><summary>AIS sample coverage</summary><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 24–30 is a consecutive seven-day block; the other dates are isolated samples.</p><p>The checked NOAA index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Missing identities and receiver gaps can hide trips. This limited sample cannot establish where charters do or do not fish.</p></details>`;
   } catch (error) {
     panel.innerHTML =
       '<p class="error">The dated AIS research summary could not load. AIS-derived charter activity remains unverified; see <a href="sources.html#ais">sources and coverage</a>.</p>';
@@ -496,6 +525,7 @@ $("charter-status").addEventListener("click", () => {
 });
 initAISContext();
 initRegulations($("species-regulations"), $("species-select"));
+updateExports();
 
 try {
   const response = await fetch("data/atlas.json");
@@ -503,7 +533,9 @@ try {
     throw new Error(`Atlas request failed (${response.status})`);
   atlas = await response.json();
   initMap();
+  protectedAreas = await initProtectedAreas(map, () => filterTargets());
   speciesUI = await initSpecies(map, layers, {
+    protectedAreas,
     onChange: () => {
       filterTargets();
       fitTargets();
@@ -519,6 +551,7 @@ try {
     },
   });
   charterUI = await initCharterGrounds(map, layers.charters, {
+    protectedAreas,
     onSelect: (html, area) => showAreaDetails(html, area, "charter-weather"),
     onTarget: (id) => {
       $("species-select").value = "reef";
@@ -535,6 +568,8 @@ try {
     toast,
   });
   filterTargets();
+  commercialUI=await initCommercialAIS(map,{protectedAreas,onSelect:(html,area)=>showAreaDetails(html,area,"commercial-weather"),showMap:()=>navigation.showView("map")});
+  protectedAreas.refresh();
   map.on("zoomend", () => {
     if (atlas) {
       drawHabitat();
@@ -543,14 +578,14 @@ try {
     }
   });
   fitTargets();
-  weather = initWeather(map, layers.forecast, () =>
-    navigation.showView("forecast"),
-  );
+  driftGuides=initDriftGuides(map,{targets:()=>visible,selected:()=>selected,protectedAreas,selectTarget});
+  weather = initWeather(map, layers.forecast, () => navigation.showView("forecast"), driftGuides.update);
   if (selected) weather.selectLocation(selected);
   registerTools();
 } catch (error) {
   $("map-empty").hidden = false;
   $("map-empty").innerHTML =
-    '<strong>Atlas unavailable</strong><p>Refresh to try again, or use the <a href="downloads/complete.gpx">GPX download</a>.</p>';
+    '<strong>Atlas unavailable</strong><p>Refresh to reload the atlas and protected-area screen.</p>';
+  updateExports();
   console.error(error);
 }

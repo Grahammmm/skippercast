@@ -421,9 +421,9 @@
       </p>
       <p>
         The conditions score is the lower component score and the lowest hourly
-        value across the window. Missing critical fields, inconsistent sources,
+        value across the window. Missing critical fields, inconsistent wave components,
         stale/unidentified runs, active marine alerts or a fog/thunderstorm
-        signal prevent a score. If the only problem is material model
+        signal prevent a score. When one gust is below its model’s sustained wind, omit that gust, use the other model’s valid gust, retain both winds, and cap the score at 7.9 with Low confidence. Both invalid gusts still prevent a score. With material model
         disagreement, use the rougher forecast, label Low confidence and cap the
         conditions score at 7.9; such a day cannot qualify as 8+. Days four
         through seven are provisional. Current alerts do not establish that no
@@ -439,7 +439,7 @@
       <h2 id="charter-context">Charter context</h2>
       <p>
         No verified local sportfishing-charter tracks were identified in the
-        existing eight-day NOAA sample. Map Options now exposes that status
+        expanded eleven-date NOAA sample. Map Options now exposes that status
         directly. A first-hand
         <a href="https://wonews.com/a-trip-to-lingcod-alley/"
           >June 10, 2019 Fiesta report</a

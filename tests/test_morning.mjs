@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { hourScores, rankMornings } from "../dist/morning-outlook.js";
+import { hourScores, rankMornings, rateHour, rankTimelineDays } from "../dist/morning-outlook.js";
 import { futureDates, pacificEpoch } from "../dist/forecast.js";
 const now = Date.parse("2026-09-21T08:00:00-07:00");
 const times = futureDates(new Date(now)).flatMap((d) =>
@@ -74,7 +74,6 @@ test("full morning rating preserves unknown bite and uses the worst return hour"
 test("missing hours, inconsistent gusts, alert uncertainty and stale runs cannot qualify", () => {
   for (const mutate of [
     (b) => (b.models.ecmwf_wam025.data[0].hourly.wave_height[6] = null),
-    (b) => (b.models.gfs_global.data[0].hourly.wind_gusts_10m[4] = 2),
     (b) => (b.alerts.coastal = null),
     (b) => (b.models.ncep_gfswave025.data[0].hourly.wind_wave_period[3] = null),
     (b) =>
@@ -89,6 +88,25 @@ test("missing hours, inconsistent gusts, alert uncertainty and stale runs cannot
     mutate(b);
     assert.equal(rankMornings(b, 0, "lingcod", now)[0].conditions, null);
   }
+});
+test("a bad gust uses the independent valid gust with low confidence; two bad gusts stay unscored", () => {
+  const b=bundle();
+  b.models.gfs_global.data[0].hourly.wind_gusts_10m[4]=2;
+  const row=rankMornings(b,0,"reef",now)[0];
+  assert.ok(Number.isFinite(row.conditions) && row.conditions<=7.9);
+  assert.equal(row.confidence,"Low");
+  assert.ok(row.reasons.some(r=>r.includes("Inconsistent gust omitted")));
+  assert.equal(b.models.gfs_global.data[0].hourly.wind_gusts_10m[4],2);
+  b.models.ecmwf_ifs025.data[0].hourly.wind_gusts_10m[4]=3;
+  assert.equal(rankMornings(b,0,"reef",now)[0].conditions,null);
+});
+test("partial last day is disclosed and cannot get an 8+ score", () => {
+  const b=bundle(),hours=times.slice(0,-3);
+  const rows=rankTimelineDays(b,0,"reef",hours,now);
+  assert.equal(rows.at(-1).partial,true);
+  assert.equal(rows.at(-1).sampleCount,4);
+  assert.ok(rows.at(-1).conditions<=7.9);
+  assert.equal(rows.at(-1).confidence,"Low");
 });
 test("model disagreement can show a tentative best but never an 8+ highlight", () => {
   const b = bundle();

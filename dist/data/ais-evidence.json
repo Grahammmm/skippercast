@@ -1,30 +1,35 @@
 {
   "schema_version": 1,
-  "audit_date_pacific": "2026-09-20",
-  "status": "No verified local sportfishing-charter tracks in the sampled data",
+  "audit_date_pacific": "2026-09-21",
+  "status": "No verified local sportfishing-charter tracks in 11 sampled daily NOAA files",
   "archive": {
     "provider": "NOAA Office for Coastal Management / MarineCadastre; U.S. Coast Guard AIS",
     "portal_url": "https://hub.marinecadastre.gov/pages/vesseltraffic",
     "index_url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/index.html",
-    "index_retrieved_at_utc": "2026-09-21T04:24:11.722572+00:00",
+    "index_retrieved_at_utc": "2026-09-21T21:12:27.991303+00:00",
     "latest_listed_broadcast_date": "2026-06-30",
     "availability_note": "Latest date in this daily index at retrieval, not a claim about every NOAA product. File modification timestamps are not vessel broadcast dates."
   },
   "geographic_screen": {
-    "bbox_west_south_east_north": [-121.32, 35.14, -120.66, 35.65],
+    "bbox_west_south_east_north": [
+      -121.32,
+      35.14,
+      -120.66,
+      35.65
+    ],
     "description": "Regional inventory covering Avila\u2013Cambria; public habitat map ends at Point Estero. No speed, depth, or vessel-name prefilter was used while retaining regional broadcasts."
   },
   "summary": {
-    "sample_days": 8,
-    "nationwide_rows_scanned": 78069787,
-    "regional_records": 28664,
-    "unique_mmsi": 51,
-    "compressed_bytes_processed": 2349270586,
+    "sample_days": 11,
+    "nationwide_rows_scanned": 106892412,
+    "regional_records": 37202,
+    "unique_mmsi": 65,
+    "compressed_bytes_processed": 3224190973,
     "candidate_local_fleet_name_matches": 0,
     "verified_local_sportfishing_charters": 0,
     "qualified_repeated_visit_areas": 0
   },
-  "sample_design": "Eight selected spring/summer dates, not a seasonal census. June 27\u201330 is a continuous four-UTC-day block; other dates are isolated. UTC boundaries can split Pacific-local trips. Complete file processing does not establish complete reception or fleet coverage.",
+  "sample_design": "Eleven selected spring/summer dates. June 24\u201330 is a continuous seven-UTC-day block; the four other dates are isolated. This is not a full-season or full-fleet census. Bounding-box retention does not establish complete trip tracks or reception. UTC boundaries can split Pacific-local trips.",
   "daily_samples": [
     {
       "day_utc": "2026-04-18",
@@ -80,6 +85,48 @@
       "compressed_bytes": 272751638,
       "compressed_sha256": "7db24e1f1e92d8a2faddbf1611561e3ea7841b88e6463f3552fad6900d1e7bef",
       "regional_sha256": "914d451481045c45637cee8eeec371d76703dbec7dbc61acd833c795828eefd0",
+      "complete_archive_file_processed": true
+    },
+    {
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-24.csv.zst",
+      "day_utc": "2026-06-24",
+      "retrieved_at_utc": "2026-09-21T21:13:28.764823+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:13 GMT",
+      "nationwide_rows_scanned": 10179220,
+      "regional_records": 2643,
+      "compressed_bytes": 310163970,
+      "compressed_sha256": "b6ea2d885e6e4f4beb77d9abc791557fbe318a38454e18764ae04e5a016df8d9",
+      "regional_sha256": "19545d67de36c4bece191a3a323b676c7303d0b2d7b9e2f6a7514e52d3857897",
+      "unique_vessels": 24,
+      "complete_archive_file_processed": true
+    },
+    {
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-25.csv.zst",
+      "day_utc": "2026-06-25",
+      "retrieved_at_utc": "2026-09-21T21:13:28.765355+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:18 GMT",
+      "nationwide_rows_scanned": 9103736,
+      "regional_records": 2526,
+      "compressed_bytes": 276639974,
+      "compressed_sha256": "ad84da935b273f38d913ab8a14295a6e125c19f004d15be8b3485c0d7ae544f5",
+      "regional_sha256": "fdb6f275f7b36f0743638fac8394d990027f878902c4b04a4f85fd3b7063ee1f",
+      "unique_vessels": 19,
+      "complete_archive_file_processed": true
+    },
+    {
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-26.csv.zst",
+      "day_utc": "2026-06-26",
+      "retrieved_at_utc": "2026-09-21T21:14:17.726937+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:16 GMT",
+      "nationwide_rows_scanned": 9539669,
+      "regional_records": 3369,
+      "compressed_bytes": 288116443,
+      "compressed_sha256": "0ef4870e858f19b3caea8878285bb20405b5f45a3c0b13cc3ea1186a8b861064",
+      "regional_sha256": "b7e2f556d0f6bd5060bc2c5b535d3ac65489bc95fdfa5c8705e93ecd1edc5df9",
+      "unique_vessels": 16,
       "complete_archive_file_processed": true
     },
     {
@@ -193,6 +240,16 @@
     {
       "product": "2024/2025 monthly track GeoParquet",
       "result": "Name inventories inspected; geographic track extraction did not complete. No local track analysis is claimed from this product."
+    },
+    {
+      "product": "Global Fishing Watch v3 apparent commercial fishing effort, July and September 2024",
+      "result": "Public no-account Zenodo archive obtained via verified ranges. Regional 0.01-degree cells aggregated separately from charter evidence; no recreational operator, exact catch, species or depth qualification inferred. See commercial AIS metadata for completed coverage and filtering.",
+      "url": "https://doi.org/10.5281/zenodo.14982712",
+      "license": "CC-BY-NC-4.0, separate from app license"
+    },
+    {
+      "product": "NOAA 2026-06-24 through 2026-06-26 additional raw daily samples",
+      "result": "Three complete national files processed; 28,822,625 national rows and 8,538 regional broadcasts added. Zero researched local sportfishing-charter name matches. Repeated low-speed commercial name leads remain research context, not verified fishing stops."
     }
   ],
   "proposed_visit_evidence_gate": {

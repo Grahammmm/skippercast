@@ -1,0 +1,61 @@
+/* Dense forecast instruments; target details and reference prose stay on demand. */
+.forecast { max-width: 1180px; }
+.forecast-heading { align-items: center; }
+.forecast-heading h2 { font-size: 1.7rem; }
+#forecast-status { margin: 5px 0 8px; font-size: .875rem; }
+.forecast-settings { margin: 8px 0; }
+.forecast-settings > summary { padding: 7px 12px; }
+.selected-forecast-time { margin: 8px 0 0; }
+.detail-time { margin: 5px 0; gap: 10px; }
+.detail-time button { min-height: 44px; width: 44px; }
+.day-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(95px,1fr); grid-template-columns: none; gap: 5px; overflow-x: auto; padding: 5px 0 8px; margin: 0; }
+.day-strip button { min-width: 95px; min-height: 96px; padding: 7px; border: 1px solid #d3e0e1; border-radius: 10px; font-size: .9375rem; white-space: nowrap; }
+.day-strip button b { display: block; font-size: 1.125rem; margin: 3px 0; }
+.day-strip button small { font-size: .8125rem; line-height: 1.3; }
+.day-strip button.good { box-shadow: inset 0 -4px #1a9c7d; }
+.hour-score { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #143d4c; color: white; padding: 10px 14px; border-radius: 12px 12px 0 0; }
+.hour-score > div { display: flex; align-items: center; gap: 16px; }
+.hour-score > div > span { font-size: .875rem; max-width: 145px; }
+.hour-score strong { font-size: 1.8rem; white-space: nowrap; }
+.hour-score strong small { font-size: 1rem; color: #b7d1d7; }
+.hour-score p { margin: 0; font-size: .875rem; text-align: right; color: white; }
+.hour-score p span { color: #c7dbdf; }
+.forecast-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); background: #d9e4e6; gap: 1px; border: 1px solid #d9e4e6; border-radius: 0 0 12px 12px; overflow: hidden; }
+.forecast-metric { min-width: 0; background: #f5f9f9; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.forecast-metric > span { font-size: .875rem; color: #456471; }
+.forecast-metric strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.forecast-metric strong span { font-size: .9375rem; font-weight: 500; }
+.forecast-metric small { font-size: .8125rem; line-height: 1.3; color: #456471; }
+.rating-notes { font-size: .875rem; margin: 5px 0 8px; }
+.rating-notes summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.rating-notes p { margin: 7px 0; font-size: .875rem; }
+.condition-tabs { margin: 8px 0; }
+#marine-detail-body > .conditions-hero, #marine-detail-body > .comfort-explainer { display: none; }
+#marine-detail-body > .small { margin: 8px 0; }
+.mpa-label { background: #fff1f6; color: #8f2050; border: 1px solid #bd3869; border-radius: 4px; font-weight: 700; font-size: 12px; padding: 3px 5px; box-shadow: none; }
+.mpa-label::before { display:none; }
+.drift-setup { color: #1457a5; font-size: 12px; font-weight: 700; }
+.drift-setup span { background: #fff; border: 2px solid #216fc1; border-radius: 5px; padding: 3px 6px; }
+.drift-arrow { color: #216fc1; font-size: 25px; line-height: 26px; text-shadow: 0 1px #fff,1px 0 #fff; }
+.drift-arrow span { display:block; text-align:center; }
+#drift-options { border-top: 1px solid #d9e4e6; margin-top: 12px; padding-top: 10px; }
+.drift-inputs { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.drift-map-key { background: #ffffffed; border-radius: 5px; padding: 5px 8px; font-size: 12px; max-width: 220px; color: #244957; }
+.commercial-label span { background:#fff9e6; color:#735611; border:1px solid #bb8715; border-radius:6px; padding:5px 8px; font-size:12px; font-weight:700; white-space:nowrap; }
+a[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
+@media(max-width:600px) {
+  .drift-map-key { margin-bottom:100px!important; max-width:185px; }
+  body:has(#map-timeline-controls:not([hidden])) .drift-map-key { margin-bottom:195px!important; }
+  .forecast { padding: 16px 12px; }
+  .forecast-heading h2 { font-size: 1.35rem; }
+  .day-strip { grid-auto-columns: 92px; }
+  .day-strip button { min-width:92px; }
+  .forecast-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .forecast-metric { padding:9px; }
+  .forecast-metric strong { font-size: 1rem; }
+  .hour-score { padding:10px; gap:7px; }
+  .hour-score > div { gap:9px; }
+  .hour-score > div > span { max-width:82px; }
+  .hour-score strong { font-size:1.5rem; }
+  .hour-score p { font-size:.8125rem; }
+}

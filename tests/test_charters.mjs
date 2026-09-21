@@ -80,11 +80,11 @@ test("incidental catches do not turn broad bottom-fishing reports into species h
     assert.deepEqual(matchingGrounds(evidence.grounds, { species }), []);
   assert.equal(
     matchingGrounds(evidence.grounds, { species: "rockfish" }).length,
-    3,
+    2,
   );
   assert.equal(
     matchingGrounds(evidence.grounds, { species: "lingcod" }).length,
-    3,
+    2,
   );
   const diablo = evidence.grounds.find((g) => g.id === "CHARTER-DIABLO");
   assert.ok(diablo.reports.some((r) => r.species.includes("halibut")));
@@ -95,6 +95,9 @@ test("incidental catches do not turn broad bottom-fishing reports into species h
     boats: [],
     latest: null,
   });
+});
+test("broad Morro Bay reports never become a map hotspot",()=>{
+  assert.ok(!matchingGrounds(evidence.grounds,{species:"reef"}).some(g=>g.id==="CHARTER-MORRO"));
 });
 
 test("search includes boats, area and whole-outline depth filters exclude unsupported water", () => {
