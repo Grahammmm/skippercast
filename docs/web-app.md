@@ -24,7 +24,7 @@ Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas 
 
 Forecast requests go directly from the browser to the providers. There is no account, backend database, analytics code, saved trip record, or credential in this app. Hosting providers and external map/weather services process ordinary network requests. Base-map tiles are fetched only for the visible map; there is no bulk or offline tile download.
 
-Changing views preserves filters, selection, map position, and loaded forecasts during the page session. Browser Back also closes an opened spot sheet. A reload resets target selection; an old sheet URL returns to Map. Public forecast responses are cached in session storage for up to one hour to reduce repeated provider requests; the original retrieval time remains visible. Refresh bypasses the cache. The app is a mobile website, with no offline map cache or native installation required.
+Changing views preserves filters, selection, map position, and loaded forecasts during the page session. Browser Back also closes an opened spot sheet. A reload resets target selection; an old sheet URL returns to Map. Public forecast responses are cached in session storage for up to 30 minutes to reduce repeated provider requests; the original retrieval time remains visible. Refresh bypasses the cache. The app is a mobile website, with no offline map cache or native installation required.
 
 ## Evidence limits
 
@@ -32,7 +32,7 @@ The atlas is a dated research layer, with no AIS-confirmed charter hotspots or v
 
 Forecasts are regional model values, not observations at individual targets. The browser checks units, timestamps, populated fields, published end times, model disagreements, and inconsistent gust/component values. It never assigns a go/no-go or a qualified trip recommendation. Morning ratings use a separate disclosed 0–10 conditions heuristic; bite potential stays unknown. The qualitative hourly comfort screen uses disclosed wind/sea preferences and does not calculate transit, verify four fishing hours, or certify an entrance. Days four through seven are provisional. Active alerts are a retrieval-time snapshot, not future clearance. Provider metadata are not guaranteed run attribution for every value in a rolling timeseries. Stale evidence cannot earn a calmer label.
 
-NOAA chart images follow the service's portrayal units. Wave, tide, and habitat cards use feet; wind uses knots. Wave/wind directions are from; current direction is toward. All timestamps render in Pacific time. NOAA tides are astronomical predictions for Port San Luis, not Morro Bay bar currents. Live buoy and harbor pages are linked, not claimed to have been loaded inside the web app.
+NOAA chart images follow the service's portrayal units. Wave, tide, and habitat cards use feet; wind uses knots. Wave/wind directions are from; current direction is toward. All timestamps render in Pacific time. NOAA tides are astronomical predictions for Port San Luis, not Morro Bay bar currents. The Live tab loads dated buoy observations through the public conditions feed. Harbor pages remain external references, not live entrance clearance.
 
 ## Source layout
 
@@ -48,6 +48,7 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 | `dist/species.js`, `data/habitat-regions.json`, `data/species-habitat.json` | Sourced species guide, reef selection, connected surveyed sediment outlines, pelagic search references |
 | `dist/chart-map.js`, `marine.css` | NOAA nautical basemap and mobile ocean controls |
 | `dist/morning-outlook.js` | Seven-day morning ranking, missing-data safeguards, and top-bar highlights |
+| `dist/live-conditions.js` | Current buoy, airport weather, water level and alert loading, source timestamps and freshness |
 | `dist/weather-ui.js` | Shared map/detail timeline, playback, selected forecast sample, model choice, caching, overlay |
 | `dist/gpx.js` | Selected-target GPX with separate polygon rings |
 | `scripts/export_web_targets.mjs` | Generate the 132 direct single-target GPX files in `dist/downloads/targets/` |
@@ -66,6 +67,15 @@ The private personal Telegram monitor is not wired into the public web app. The 
 
 ## Map simplification and review
 
-The September 21 mobile review found obstructed popups, overlapping layer controls, crowded reef pins and excessive conditions scrolling. The app now uses a full-width map at every viewport, no permanent list or selected-detail sidebar, no automatic first selection, grid-clustered reef markers, and one native dialog for selected points and areas. NOAA cable/seabed symbols are off in Fishing chart and restored by Full NOAA chart. The initial map centers on the Morro Bay grounds at zoom 11; Fit map still shows all filtered grounds. Species and Options are the primary controls. The weather summary is compact, with the seven-day scrubber and playback behind Timeline. Rules start collapsed. The guide opens one topic at a time, and Conditions puts current weather ahead of expandable evidence and reference notes. Model/layer/filter/export controls are in Options. Conditions has Waves/Wind/Tides/Sources tabs.
+The September 21 mobile review found obstructed popups, overlapping layer controls, crowded reef pins and excessive conditions scrolling. The app now uses a full-width map at every viewport, no permanent list or selected-detail sidebar, no automatic first selection, grid-clustered reef markers, and one native dialog for selected points and areas. NOAA cable/seabed symbols are off in Fishing chart and restored by Full NOAA chart. The initial map centers on the Morro Bay grounds at zoom 11; Fit map still shows all filtered grounds. Species and Options are the primary controls. The weather summary is compact, with the seven-day scrubber and playback behind Timeline. Rules start collapsed. The guide opens one topic at a time, and Conditions puts current weather ahead of expandable evidence and reference notes. Model/layer/filter/export controls are in Options. Conditions has Live/Waves/Wind/Tides/Sources tabs.
 
 `dist/data/habitat-regions.json` contains connected soft-bottom outlines built by `scripts/build_habitat_regions.py`; the old 18-window artifact is retained but not rendered. `dist/morning-outlook.js` ranks complete future 7 a.m.–1 p.m. windows using two models and distinguishes conditions, comfort, gear control, confidence and unknown bite potential. The top bar links to the full evidence. [Research and scoring method](species-research.md#morning-ratings).
+
+## Live measurements
+
+Conditions opens to **Live**, showing dated NOAA buoy readings, KSBP airport weather
+and Port San Luis measured water level. The map’s current-hour summary uses measured
+buoy seas when fresh and explicitly labels a forecast fallback. Choose Waves, Wind
+or Tides for the modeled/predicted timeline; selecting a future hour leaves Live.
+The browser checks observations and marine alerts every five minutes while visible
+and forecasts every 30 minutes. [Sources and the cloud refresh](live-conditions.md).

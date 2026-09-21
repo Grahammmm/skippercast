@@ -14,6 +14,7 @@ import {
 import { esc, num, local, full, day } from "./marine-charts.js?v=5.4";
 import { rankMornings, renderOutlook } from "./morning-outlook.js?v=5.8";
 import { detailHTML } from "./marine-detail.js?v=5.8";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=5.9";
 const $ = (id) => document.getElementById(id);
 const colors = {
   calmer: "#278f87",
@@ -25,6 +26,8 @@ const colors = {
 
 export function initWeather(map, layer, onOpen) {
   let bundle = null,
+    observations = null,
+    liveLoading = false,
     hours = timeline(),
     index = 0,
     point = 1,
@@ -35,7 +38,8 @@ export function initWeather(map, layer, onOpen) {
     requested = null,
     lastSpecies = $("species-select").value,
     heading = 0,
-    detailTab = "waves",
+    detailTab = "live",
+    forecastError = null,
     outlookKey = "";
   const evidence = initBiteEvidence($("bite-evidence"));
   const dock = $("map-time-dock");
@@ -49,7 +53,7 @@ export function initWeather(map, layer, onOpen) {
   $("weather-map-options").innerHTML =
     `<label>Weather layer<select id="ocean-layer"><option value="none">Off · habitat only</option><option value="waves">Waves · feet</option><option value="wind">Wind · knots</option><option value="comfort">Hourly comfort</option><option value="sst">Sea temperature · °F</option></select></label><label>Forecast model<select id="forecast-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label><p id="overlay-legend" class="small"></p>`;
   $("forecast-content").innerHTML =
-    `<details class="forecast-settings"><summary><span id="forecast-context">Estero Bay · NOAA GFS</span><span>Change</span></summary><div class="marine-controls"><label>Forecast sample<select id="marine-point">${POINTS.map((s, i) => `<option value="${i}" ${i === point ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Model<select id="detail-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label></div></details><div class="selected-forecast-time"><span id="detail-provisional" class="eyebrow">HOURLY FORECAST · PACIFIC TIME</span><strong id="detail-time-label"></strong></div><div class="detail-time"><button id="previous-hour" aria-label="Previous forecast hour">←</button><label class="sr-only" for="detail-hour">Forecast hour</label><input id="detail-hour" type="range" min="0" max="168" value="0" step="1"/><button id="next-hour" aria-label="Next forecast hour">→</button></div><div id="day-strip" class="day-strip" aria-label="Choose forecast date"></div><div class="condition-tabs" role="tablist" aria-label="Conditions detail"><button role="tab" data-condition-tab="waves" aria-selected="true">Waves</button><button role="tab" data-condition-tab="wind" aria-selected="false">Wind</button><button role="tab" data-condition-tab="tides" aria-selected="false">Tides</button><button role="tab" data-condition-tab="sources" aria-selected="false">Sources</button></div><div id="marine-detail-body"><p>Loading forecast sources…</p></div>`;
+    `<details class="forecast-settings"><summary><span id="forecast-context">Estero Bay · NOAA GFS</span><span>Change</span></summary><div class="marine-controls"><label>Forecast sample<select id="marine-point">${POINTS.map((s, i) => `<option value="${i}" ${i === point ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Model<select id="detail-model"><option value="gfs">NOAA GFS</option><option value="ecmwf">ECMWF</option></select></label></div></details><div id="forecast-time-tools" class="forecast-time-tools" hidden><div class="selected-forecast-time"><span id="detail-provisional" class="eyebrow">HOURLY FORECAST · PACIFIC TIME</span><strong id="detail-time-label"></strong></div><div class="detail-time"><button id="previous-hour" aria-label="Previous forecast hour">←</button><label class="sr-only" for="detail-hour">Forecast hour</label><input id="detail-hour" type="range" min="0" max="168" value="0" step="1"/><button id="next-hour" aria-label="Next forecast hour">→</button></div><div id="day-strip" class="day-strip" aria-label="Choose forecast date"></div></div><div class="condition-tabs" role="tablist" aria-label="Conditions detail"><button role="tab" data-condition-tab="live" aria-selected="true">Live</button><button role="tab" data-condition-tab="waves" aria-selected="false">Waves</button><button role="tab" data-condition-tab="wind" aria-selected="false">Wind</button><button role="tab" data-condition-tab="tides" aria-selected="false">Tides</button><button role="tab" data-condition-tab="sources" aria-selected="false">Sources</button></div><div id="live-conditions" aria-label="Current measured conditions"></div><div id="marine-detail-body" hidden><p>Loading forecast sources…</p></div>`;
   for (const el of [dock, document.querySelector(".species-bar")]) {
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
@@ -67,6 +71,16 @@ export function initWeather(map, layer, onOpen) {
     if (b) setHour(Math.round((Number(b.dataset.morning) - hours[0]) / HOUR));
   });
   function applyDetailTab() {
+    const live = detailTab === "live";
+    $("live-conditions").hidden = !live;
+    $("marine-detail-body").hidden = live;
+    document.querySelector(".forecast-settings").hidden = live;
+    $("forecast-time-tools").hidden = live;
+    const failed = bundle ? MODELS.filter((m) => bundle.models[m.id]?.error).map((m) => m.name) : [];
+    $("forecast-status").textContent = live
+      ? "Auto refresh · observations every 5 min"
+      : forecastError || (bundle ? `Forecast updated ${local(bundle.retrieved / 1000, { hour: "numeric", minute: "2-digit" })} PT${failed.length ? ` · unavailable: ${failed.join(", ")}` : " · refreshes every 30 min"}`
+      : "Loading wind, waves and tide forecasts…");
     for (const b of document.querySelectorAll("[data-condition-tab]")) {
       b.setAttribute(
         "aria-selected",
@@ -81,6 +95,13 @@ export function initWeather(map, layer, onOpen) {
     const b = e.target.closest("[data-condition-tab]");
     if (b) {
       detailTab = b.dataset.conditionTab;
+      if (detailTab === "live") {
+        stop();
+        hours = timeline();
+        index = 0;
+        if (!observations || Date.now() - observations.retrieved >= OBSERVATION_REFRESH) loadLive();
+        render();
+      }
       applyDetailTab();
     }
   });
@@ -101,11 +122,16 @@ export function initWeather(map, layer, onOpen) {
           : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
             tabs.length;
     detailTab = tabs[next].dataset.conditionTab;
+    if (detailTab === "live") {
+      stop(); hours = timeline(); index = 0;
+      render();
+    }
     applyDetailTab();
     tabs[next].focus();
   });
   function setHour(v) {
     index = Math.max(0, Math.min(168, Number(v)));
+    if (detailTab === "live") detailTab = "waves";
     render();
   }
   function stop() {
@@ -131,8 +157,16 @@ export function initWeather(map, layer, onOpen) {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stop();
-    else if (bundle && Date.now() - bundle.retrieved >= 3600000) load();
+    else refreshDue();
   });
+  function refreshDue() {
+    if (document.hidden) return;
+    if (!observations || Date.now() - observations.retrieved >= OBSERVATION_REFRESH) loadLive();
+    if (!bundle || Date.now() - bundle.retrieved >= FORECAST_REFRESH) load();
+    if (index === 0) hours = timeline();
+    render();
+  }
+  setInterval(refreshDue, 60000);
   for (const key of ["map-time", "detail-hour"])
     $(key).addEventListener("input", (e) => {
       stop();
@@ -141,8 +175,10 @@ export function initWeather(map, layer, onOpen) {
   $("ocean-now").addEventListener("click", () => {
     stop();
     hours = timeline();
-    setHour(0);
-    if (!bundle || Date.now() - bundle.retrieved >= 3600000) load();
+    index = 0;
+    detailTab = "live";
+    render();
+    refreshDue();
   });
   $("ocean-layer").addEventListener("change", (e) => {
     overlay = e.target.value;
@@ -155,7 +191,10 @@ export function initWeather(map, layer, onOpen) {
       $("detail-model").value = family;
       render();
     });
-  $("map-weather-summary").addEventListener("click", onOpen);
+  $("map-weather-summary").addEventListener("click", () => {
+    if (index === 0) { detailTab = "live"; applyDetailTab(); }
+    onOpen();
+  });
   $("day-strip").addEventListener("click", (e) => {
     const b = e.target.closest("[data-hour]");
     if (b) {
@@ -315,6 +354,10 @@ export function initWeather(map, layer, onOpen) {
     });
   }
   function render() {
+    const expandedLive = [...$("live-conditions").querySelectorAll("[data-live-disclosure][open]")].map((d) => d.dataset.liveDisclosure);
+    $("live-conditions").innerHTML = observationsHTML(observations, !!POINTS[point].offshore);
+    for (const d of $("live-conditions").querySelectorAll("[data-live-disclosure]")) d.open = expandedLive.includes(d.dataset.liveDisclosure);
+    applyDetailTab();
     evidence.select(lastSpecies, requested || POINTS[point]);
     const t = hours[index],
       provisional = index >= 72;
@@ -349,7 +392,11 @@ export function initWeather(map, layer, onOpen) {
       )
       .join("");
     draw();
-    if (!bundle) return;
+    const observation = index === 0 ? observedDock(observations, !!POINTS[point].offshore) : null;
+    if (!bundle) {
+      if (observation) $("map-weather-summary").innerHTML = observation;
+      return;
+    }
     const c = readConditions(bundle, point, t, family),
       other = readConditions(
         bundle,
@@ -360,8 +407,8 @@ export function initWeather(map, layer, onOpen) {
       status = statusFor(point, t, c, other),
       p = POINTS[point];
     $("map-weather-summary").innerHTML =
-      `<strong>${index === 0 ? "Now" : local(t, { weekday: "short", hour: "numeric" })}${provisional ? " · outlook" : ""} · ${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt</span>`;
-    $("map-weather-summary").title = p.name + " · " + status.label;
+      observation || `<strong>${index === 0 ? "Now forecast" : local(t, { weekday: "short", hour: "numeric" })}${provisional ? " · outlook" : ""} · ${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt</span>`;
+    $("map-weather-summary").title = observation ? "Latest measured buoy seas · open current observations" : p.name + " · " + status.label;
     const nextKey = `${bundle.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
     if (nextKey !== outlookKey) {
       renderOutlook(
@@ -401,9 +448,25 @@ export function initWeather(map, layer, onOpen) {
     explain();
     applyDetailTab();
   }
+  async function loadLive() {
+    if (liveLoading) return;
+    liveLoading = true;
+    try {
+      observations = await loadObservations();
+      if (bundle) {
+        bundle.alerts = observations.alerts;
+        bundle.alertError = observations.alertError;
+        bundle.water = observations.water;
+        bundle.waterError = observations.waterError;
+        outlookKey = "";
+      }
+      render();
+    } finally { liveLoading = false; }
+  }
   async function load(force = false) {
     if (loading) return;
     loading = true;
+    forecastError = null;
     stop();
     $("load-forecast").disabled = true;
     $("forecast-status").textContent =
@@ -411,20 +474,28 @@ export function initWeather(map, layer, onOpen) {
     try {
       let cached;
       try {
-        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v1"));
+        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v2"));
       } catch {
         /* Storage is optional. */
       }
       bundle =
-        !force && cached?.models && Date.now() - cached.retrieved < 3600000
+        !force && cached?.models && Date.now() - cached.retrieved < FORECAST_REFRESH
           ? cached
           : await loadMarine();
       try {
-        sessionStorage.setItem("skippercast-marine-v1", JSON.stringify(bundle));
+        sessionStorage.setItem("skippercast-marine-v2", JSON.stringify(bundle));
       } catch {
         /* No cache is needed to browse. */
       }
+      const selected = hours[index], wasNow = index === 0;
       hours = timeline();
+      index = wasNow ? 0 : Math.max(0, Math.min(168, Math.round((selected - hours[0]) / HOUR)));
+      if (observations && Date.now() - observations.retrieved <= 10 * 60000) {
+        bundle.alerts = observations.alerts;
+        bundle.alertError = observations.alertError;
+        bundle.water = observations.water;
+        bundle.waterError = observations.waterError;
+      }
       const failed = MODELS.filter((m) => bundle.models[m.id]?.error).map(
         (m) => m.name,
       );
@@ -432,6 +503,7 @@ export function initWeather(map, layer, onOpen) {
         `Updated ${local(bundle.retrieved / 1000, { hour: "numeric", minute: "2-digit" })} PT.${failed.length ? ` Unavailable: ${failed.join(", ")}.` : " Forecasts, not observations."}`;
       render();
     } catch (e) {
+      forecastError = "Forecast refresh failed. Older values may be displayed; retry Refresh.";
       $("forecast-status").textContent =
         "Marine sources could not load. Refresh to retry; no calm conditions are assumed.";
       $("map-weather-summary").textContent =
@@ -443,10 +515,12 @@ export function initWeather(map, layer, onOpen) {
   }
   $("load-forecast").addEventListener("click", () => {
     load(true);
+    loadLive();
     evidence.refresh();
   });
   render();
   load();
+  loadLive();
   return {
     selectLocation(p) {
       requested = p;

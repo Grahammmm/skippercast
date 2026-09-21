@@ -1,0 +1,25 @@
+.condition-tabs { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.condition-tabs button { padding-inline: .45rem; min-height: 44px; }
+.forecast-time-tools[hidden], .forecast-settings[hidden], #live-conditions[hidden], #marine-detail-body[hidden] { display: none; }
+.live-check { display: flex; justify-content: space-between; gap: .75rem; font-size: .875rem; color: #526e7d; margin: 1rem 0; }
+.live-cards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.live-card { background: white; border: 1px solid #d7e3e8; border-radius: 16px; padding: 1.15rem; }
+.live-card-title { display: flex; align-items: baseline; justify-content: space-between; gap: .7rem; }
+.live-card-title h3 { margin: 0 0 .7rem; font-size: 1rem; line-height: 1.4; }
+.live-card-title a { white-space: nowrap; font-size: .875rem; }
+.observed-number { display: block; font-size: 2.5rem; line-height: 1.15; color: #123e50; }
+.observed-number small { font-size: 1rem; font-weight: 500; }
+.live-card p { margin: .55rem 0; line-height: 1.5; }
+.observation-stamp { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .65rem; margin-top: .7rem; }
+.observation-age { font-size: .8125rem; font-weight: 650; padding: .2rem .45rem; border-radius: 5px; background: #e6f3f0; color: #19685e; }
+.observation-age.stale { background: #fff0d9; color: #855010; }
+.observed-components { margin-top: .9rem; padding-top: .7rem; border-top: 1px solid #e1eaed; }
+.observed-components summary, .live-more summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: .875rem; color: #126c6b; }
+.observed-components summary::before, .live-more summary::before { content: '+'; margin-right: .5rem; }
+.observed-components[open] summary::before, .live-more[open] summary::before { content: '−'; }
+.water-observation { grid-column: 1 / -1; }
+.water-observation .observed-number { font-size: 2rem; }
+.live-more { margin-top: 1rem; padding: .4rem 1rem; border: 1px solid #d7e3e8; border-radius: 12px; }
+.live-alert { padding: 1rem; background: #fff0e1; color: #793f10; border-left: 4px solid #c87626; margin-bottom: 1rem; border-radius: 8px; }
+.live-alert p { margin-bottom: 0; }
+@media(max-width:600px) { .live-cards { grid-template-columns: 1fr; gap: .8rem; } .live-card { padding: 1rem; } .observed-number { font-size: 2.2rem; } .condition-tabs button { font-size: .875rem; padding-inline: .2rem; } }
