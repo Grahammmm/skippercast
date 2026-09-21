@@ -1,0 +1,72 @@
+"""Collect NOAA buoy observations for the half-hourly public conditions feed."""
+
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+
+from .collect import source, stamp
+from .parsers import ndbc
+
+BUOYS = (
+    ("diablo", "46215", "Diablo Canyon", False),
+    ("diablo-spectrum", "46215", "Diablo Canyon swell and wind waves", True),
+    ("offshore", "46028", "Cape San Martin · 55 nm WNW of Morro Bay", False),
+)
+
+
+def collect(now=None, previous=None):
+    now = now or datetime.now(timezone.utc)
+    previous = previous or {}
+
+    def one(item):
+        ident, station, name, spectral = item
+        url = f"https://www.ndbc.noaa.gov/data/realtime2/{station}.{'spec' if spectral else 'txt'}"
+
+        def read(client):
+            data = ndbc(client.get(url), station, spectral)
+            # Keep enough rows for waves reported less frequently than wind.
+            data["observations"] = sorted(data["observations"], key=lambda r: r["time"], reverse=True)[:24]
+            return data
+
+        row = source(ident, name, "observation", url, 2, read, now,
+                     previous.get("sources", {}).get(ident))
+        row["station_url"] = f"https://www.ndbc.noaa.gov/station_page.php?station={station}"
+        return ident, row
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        sources = dict(pool.map(one, BUOYS))
+    return {
+        "schema_version": 1,
+        "generated_at": stamp(now),
+        "completed_at": stamp(),
+        "schedule_minutes": 30,
+        "sources": sources,
+        "health": {
+            "status": "ok" if all(s["status"] == "ok" for s in sources.values()) else "degraded",
+            "issues": [key for key, s in sources.items() if s["status"] != "ok"],
+        },
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--previous", type=Path)
+    args = parser.parse_args()
+    previous = None
+    if args.previous and args.previous.exists():
+        previous = json.loads(args.previous.read_text())
+        if previous.get("schema_version") != 1:
+            raise ValueError("Unsupported previous observation feed")
+    data = collect(previous=previous)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    tmp = args.output.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, separators=(",", ":"), allow_nan=False) + "\n")
+    tmp.replace(args.output)
+    print(json.dumps({"completed_at": data["completed_at"], **data["health"]}))
+
+
+if __name__ == "__main__":
+    main()
