@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "audit_date_pacific": "2026-09-20",
+  "status": "No verified local sportfishing-charter tracks in the sampled data",
+  "archive": {
+    "provider": "NOAA Office for Coastal Management / MarineCadastre; U.S. Coast Guard AIS",
+    "portal_url": "https://hub.marinecadastre.gov/pages/vesseltraffic",
+    "index_url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/index.html",
+    "index_retrieved_at_utc": "2026-09-21T04:24:11.722572+00:00",
+    "latest_listed_broadcast_date": "2026-06-30",
+    "availability_note": "Latest date in this daily index at retrieval, not a claim about every NOAA product. File modification timestamps are not vessel broadcast dates."
+  },
+  "geographic_screen": {
+    "bbox_west_south_east_north": [-121.32, 35.14, -120.66, 35.65],
+    "description": "Regional inventory covering Avila\u2013Cambria; public habitat map ends at Point Estero. No speed, depth, or vessel-name prefilter was used while retaining regional broadcasts."
+  },
+  "summary": {
+    "sample_days": 8,
+    "nationwide_rows_scanned": 78069787,
+    "regional_records": 28664,
+    "unique_mmsi": 51,
+    "compressed_bytes_processed": 2349270586,
+    "candidate_local_fleet_name_matches": 0,
+    "verified_local_sportfishing_charters": 0,
+    "qualified_repeated_visit_areas": 0
+  },
+  "sample_design": "Eight selected spring/summer dates, not a seasonal census. June 27\u201330 is a continuous four-UTC-day block; other dates are isolated. UTC boundaries can split Pacific-local trips. Complete file processing does not establish complete reception or fleet coverage.",
+  "daily_samples": [
+    {
+      "day_utc": "2026-04-18",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-04-18.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:06:59.360878+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:15 GMT",
+      "nationwide_rows_scanned": 8213558,
+      "regional_records": 3296,
+      "unique_vessels": 16,
+      "compressed_bytes": 243178614,
+      "compressed_sha256": "321c1c11e518048c72ec9a35d418c006e09558bbf56cb84999156e6b1cc5503c",
+      "regional_sha256": "2e4bb997982c0011856e1eb126bd2232306f65d2dc832e55db3125d1e2894e1f",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-05-16",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-05-16.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:06:59.361637+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:13 GMT",
+      "nationwide_rows_scanned": 9079667,
+      "regional_records": 3287,
+      "unique_vessels": 7,
+      "compressed_bytes": 273548285,
+      "compressed_sha256": "1ce5bec9c531f2fc6a02337a364691408e75a141b9e662c2b057fee606ed603e",
+      "regional_sha256": "f67c81a20de515d2c475057ecedc389a8db9ecaaf14203e7b52010427da78e78",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-13",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-13.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:10:17.234849+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:17 GMT",
+      "nationwide_rows_scanned": 10891897,
+      "regional_records": 3696,
+      "unique_vessels": 18,
+      "compressed_bytes": 334825068,
+      "compressed_sha256": "9e549d1c4d320be46d7792d66536f137d659ea195265fe5d910beeb841ed49d4",
+      "regional_sha256": "57014b293e862779bf77aae2115e9be55107bab1975e3313d1eed18e94408937",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-20",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-20.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:02:55.264470+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:15 GMT",
+      "nationwide_rows_scanned": 9138296,
+      "regional_records": 1693,
+      "unique_vessels": 16,
+      "compressed_bytes": 272751638,
+      "compressed_sha256": "7db24e1f1e92d8a2faddbf1611561e3ea7841b88e6463f3552fad6900d1e7bef",
+      "regional_sha256": "914d451481045c45637cee8eeec371d76703dbec7dbc61acd833c795828eefd0",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-27",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-27.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:02:55.263925+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:17 GMT",
+      "nationwide_rows_scanned": 10249298,
+      "regional_records": 3492,
+      "unique_vessels": 14,
+      "compressed_bytes": 312573081,
+      "compressed_sha256": "8091bba4111668ea680f7779fe8391d87ef54af1a594db7f752cc4209307735a",
+      "regional_sha256": "7e1b4f2d34758d73938450ce071932d0fe1e1b6a6d2f8acb6c78f2bf1deab5c1",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-28",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-28.csv.zst",
+      "retrieved_at_utc": "2026-09-21T04:24:29.803986+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:12 GMT",
+      "nationwide_rows_scanned": 9735421,
+      "regional_records": 4258,
+      "unique_vessels": 18,
+      "compressed_bytes": 287432131,
+      "compressed_sha256": "c3271b533f0320bf1e5c570ac27a660e1dfe3f2c73a52f27f399afb1e857b197",
+      "regional_sha256": "86967b23b7d2b9c24aa8e677329eabd265ccdb1c7569bed0d0c9120e10831d2d",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-29",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-29.csv.zst",
+      "retrieved_at_utc": "2026-09-21T04:24:29.804448+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:08 GMT",
+      "nationwide_rows_scanned": 10139168,
+      "regional_records": 5315,
+      "unique_vessels": 15,
+      "compressed_bytes": 303624397,
+      "compressed_sha256": "fd9b1fd608d7cf60d3c4575841e8f6ef6dd4aceae1c6ffe223394eb0d849f7ba",
+      "regional_sha256": "8cb468306f67305de91bfadcb5a6cc04b1eaec01b839366844371e6c61486546",
+      "complete_archive_file_processed": true
+    },
+    {
+      "day_utc": "2026-06-30",
+      "url": "https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-30.csv.zst",
+      "retrieved_at_utc": "2026-09-20T22:10:43.475574+00:00",
+      "http_status": 200,
+      "last_modified": "Fri, 18 Sep 2026 19:32:07 GMT",
+      "nationwide_rows_scanned": 10622482,
+      "regional_records": 3627,
+      "unique_vessels": 16,
+      "compressed_bytes": 321337372,
+      "compressed_sha256": "eb757a0e76ed12b3510aff0da0fd26b05ae95a3858a4e7bb15ec6ded0307c417",
+      "regional_sha256": "d3b9509b26022933e9f4c589b12a63c55535f2b34aaefc2f61635c461e46f617",
+      "complete_archive_file_processed": true
+    }
+  ],
+  "fleet_name_screen": {
+    "normalization": "Uppercase; remove all characters except A\u2013Z and 0\u20139; exact comparison to researched names. Name matches are leads requiring independent identity confirmation, not vessel identifications.",
+    "names": [
+      "AVENGER",
+      "BLACKPEARL",
+      "ENDEAVOR",
+      "FIESTA",
+      "FLYINGFISH",
+      "MAGIC",
+      "PATRIOT",
+      "PHENIX",
+      "REELEZ",
+      "RITAG",
+      "STARFIRE",
+      "SUNNYDAY"
+    ],
+    "matches": [],
+    "reference_pages": [
+      "https://morrobaylanding.com/our-fleet/avenger/",
+      "https://morrobaylanding.com/our-fleet/endeavor/",
+      "https://www.virgslanding.com/",
+      "https://www.starfiresportfishing.net/",
+      "https://www.blackpearlsportfishing.net/"
+    ]
+  },
+  "other_name_leads_reviewed": [
+    {
+      "name": "ANGLER",
+      "operator_description": "Morro Bay whale-watching and harbor-tour vessel",
+      "source_url": "https://morrobaytikiboat.com/",
+      "disposition": "Does not establish recreational bottom-fishing activity."
+    },
+    {
+      "name": "PAPAGALLO II",
+      "operator_description": "Dining, sightseeing, and private-event cruise vessel",
+      "source_url": "https://www.cruisemorrobay.com/",
+      "disposition": "A charter designation does not establish a sportfishing trip."
+    },
+    {
+      "name": "BONNIE MARIETTA",
+      "operator_description": "Commercial salmon/albacore vessel with research and support charters",
+      "source_url": "https://www.morrobaydockside.com/bonniemarietta",
+      "disposition": "Does not verify recreational lingcod or rockfish charter visits."
+    }
+  ],
+  "lead_caveat": "These operator descriptions explain why name leads were not accepted as sportfishing evidence; they do not independently authenticate an AIS MMSI.",
+  "supplemental_research": [
+    {
+      "product": "NOAA PMEL AIS annual inventory samples, 2018\u20132024",
+      "result": "Sparse regional samples inspected for vessel identity leads; at most one retained position per vessel per UTC day. Not suitable for reconstructing fishing stops, drift lines, or trip coverage."
+    },
+    {
+      "product": "2024/2025 monthly track GeoParquet",
+      "result": "Name inventories inspected; geographic track extraction did not complete. No local track analysis is claimed from this product."
+    }
+  ],
+  "proposed_visit_evidence_gate": {
+    "implemented": false,
+    "minimum_distinct_dates": 3,
+    "minimum_bout_minutes": 15,
+    "maximum_reporting_gap_minutes": 10,
+    "requirements": [
+      "Independently verify the local sportfishing vessel identity, including MMSI and operator context.",
+      "Analyze full time-ordered trips and exclude harbor waiting, transit, and non-fishing operations.",
+      "Repeated low-speed bouts must overlap surveyed habitat within current legal and depth limits.",
+      "Record actual coverage, gaps, dates, and identity confidence alongside any inferred activity."
+    ],
+    "interpretation": "A research heuristic for repeated charter visits, not validated proof of fishing or catch success. No location presently passes the identity gate."
+  },
+  "limitations": [
+    "Not all fishing boats carry or transmit AIS.",
+    "Reception gaps, unknown vessel names and local-trip timing limit detection.",
+    "A vessel type of fishing does not establish recreational charter identity.",
+    "General traffic density, one daily point, and transit through a reef cannot establish a fishing hotspot.",
+    "Exact-name screening can miss changed, shortened, blank, or differently reported identities.",
+    "The eight dates do not cover the full season or establish current fishing activity.",
+    "AIS evidence is separate from terrain grades; no AIS bonus has been applied to any target."
+  ],
+  "rights_and_credit": {
+    "credit": "NOAA Office for Coastal Management; U.S. Coast Guard Navigation Center",
+    "official_archive_documentation": "https://github.com/ocm-marinecadastre/ais-vessel-traffic",
+    "documentation_license": "CC0 1.0 for the inspected official repository products; consult product metadata for each archive.",
+    "distribution": "This summary contains aggregate research results, source URLs, and integrity hashes. Raw vessel trajectories are not embedded in the app."
+  }
+}

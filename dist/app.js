@@ -14,6 +14,26 @@ const areaNames = {
   MorroBay: "Morro Bay",
   PointEstero: "Point Estero",
 };
+const gradeGuide = {
+  A: {
+    label: "First look",
+    range: "75–100",
+    description:
+      "A stronger combined terrain score makes this a sensible place to start a sounder search when access and conditions suit.",
+  },
+  B: {
+    label: "Useful alternative",
+    range: "55–74",
+    description:
+      "Meaningful mapped structure with a lower combined terrain score. Keep it as an alternative when another area is crowded or the drift is awkward.",
+  },
+  C: {
+    label: "Exploratory",
+    range: "below 55",
+    description:
+      "Less mapped relief, rough cover, complexity, or nearby habitat area. An isolated productive feature can still receive this grade.",
+  },
+};
 let atlas,
   map,
   selected,
@@ -152,8 +172,9 @@ function selectTarget(id, pan = true) {
   for (const button of document.querySelectorAll("[data-target]"))
     button.setAttribute("aria-pressed", String(button.dataset.target === id));
   const t = selected;
+  const grade = gradeGuide[t.habitat_grade];
   $("detail").innerHTML =
-    `<button class="detail-close text-button" id="back-map">↑ Back to map</button><div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · PRIORITY ${t.rank}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · survey MLLW</span></div><div class="stat"><span>Rough habitat</span><strong>${t.metrics.rough_habitat_within_250m_ha.toFixed(1)} ha</strong><span>within 250 m</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>No verified catches or AIS-confirmed charter hotspot. Source confidence: ${escapeHTML(t.confidence)}.</p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.drift_id ? "An optional drift alignment is available. Set up according to the wind and current you measure on the water." : "Explore the surrounding mapped structure and find fish with your sounder."} These are search targets, not safe navigation routes.</p></div><button class="primary" id="download-target">↓ Export this target + geometry</button><div class="detail-section"><h3>Source</h3><p>${areaNames[t.source_id]} · USGS survey ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
+    `<button class="detail-close text-button" id="back-map">↑ Back to map</button><div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · survey MLLW</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} The analysis uses a roughly 33-foot grid; it does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><button class="primary" id="download-target">↓ Export this target + geometry</button><div class="detail-section"><h3>Source</h3><p>${areaNames[t.source_id]} · USGS survey ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
   $("back-map")?.addEventListener("click", () =>
     $("map").scrollIntoView({ block: "center" }),
   );
@@ -166,25 +187,38 @@ function selectTarget(id, pan = true) {
       "Local relief",
       `${(metrics.relief_210m_m * 3.28084).toFixed(0)} ft`,
       Math.min(metrics.relief_210m_m / 15, 1),
+      35,
+      "Local height change. Full credit at about 49 ft (15 m); this is not boulder height.",
     ],
     [
       "Rough / bedrock cover",
       `${Math.round(metrics.rugose_or_bedrock_fraction_210m * 100)}%`,
       metrics.rugose_or_bedrock_fraction_210m,
+      30,
+      "The fraction of the local neighborhood classified as rough seabed or bedrock.",
     ],
     [
-      "Terrain complexity",
-      `${metrics.plane_residual_rms_250m_m.toFixed(1)} m RMS`,
+      "Seabed unevenness",
+      `${(metrics.plane_residual_rms_250m_m * 3.28084).toFixed(1)} ft RMS`,
       Math.min(metrics.plane_residual_rms_250m_m / 3, 1),
+      20,
+      "Variation after removing the overall slope. A smooth steep slope does not earn complexity points; full credit at 9.8 ft (3 m) RMS.",
+    ],
+    [
+      "Nearby rough habitat",
+      `${(metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres`,
+      Math.min(metrics.rough_habitat_within_250m_ha / 10, 1),
+      15,
+      "Mapped rough habitat within an 820-foot radius. Full credit at 24.7 acres (10 ha), so area alone cannot earn an A.",
     ],
   ]
     .map(
-      ([label, value, fraction]) =>
-        `<div class="metric-row"><div><span>${label}</span><strong>${value}</strong></div><div class="meter"><span style="width:${Math.round(fraction * 100)}%"></span></div></div>`,
+      ([label, value, fraction, weight, explanation]) =>
+        `<div class="metric-row"><div><span>${label}</span><strong>${value}</strong></div><div class="meter"><span style="width:${Math.round(fraction * 100)}%"></span></div><span class="score-points">${(fraction * weight).toFixed(1)} of ${weight} points</span><p class="small metric-explanation">${explanation}</p></div>`,
     )
     .join(
       "",
-    )}<p class="small">Relief, rock cover, complexity, and habitat area contribute to the score. It does not measure individual boulder sizes.</p>`;
+    )}<p class="small">The weighted contributions sum to the terrain score, rounded to a whole number. This formula has not been validated against catches; a higher score does not guarantee better fishing. <a href="sources.html#grades">Full grading method.</a></p>`;
   $("detail").insertBefore(noteSection, $("download-target"));
   if (t.special_note && !t.special_note.startsWith("No additional")) {
     const p = document.createElement("p");
@@ -224,6 +258,22 @@ function downloadTarget(id) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   toast("GPX prepared. On iPad, open the download and share it to iNavX.");
+}
+
+async function initAISContext() {
+  const panel = $("ais-context");
+  try {
+    const response = await fetch("data/ais-evidence.json");
+    if (!response.ok)
+      throw new Error(`AIS summary request failed (${response.status})`);
+    const evidence = await response.json();
+    const count = evidence.summary;
+    panel.innerHTML = `<p><strong>Archive samples obtained; no verified local sportfishing-charter tracks yet.</strong> The current map has no charter-activity overlay. Its A/B/C grades use terrain only.</p><div class="evidence-counts"><span>${count.sample_days} sampled UTC dates</span><span>${count.regional_records.toLocaleString()} regional AIS records</span><span>${count.unique_mmsi} vessel identifiers</span><span>${count.verified_local_sportfishing_charters} verified sportfishing charters</span></div><p>Research checked ${escapeHTML(evidence.audit_date_pacific)}. Sample dates: ${evidence.daily_samples.map((sample) => escapeHTML(sample.day_utc)).join(", ")}. June 27–30 consists of four consecutive daily files; the other dates are isolated samples. This is a limited search, not a season-wide charter history.</p><p>At this dated audit, the checked NOAA daily index listed broadcasts through ${escapeHTML(evidence.archive.latest_listed_broadcast_date)}. Vessel-name screening found no matches to the researched local fleet. Missing, changing, or differently reported identities and receiver coverage can hide trips; absence here does not mean charters never fish these areas.</p>`;
+  } catch (error) {
+    panel.innerHTML =
+      '<p class="error">The dated AIS research summary could not load. Charter activity remains unverified; see <a href="sources.html#ais">sources and coverage</a>.</p>';
+    console.error(error);
+  }
 }
 
 function registerTools() {
@@ -326,6 +376,8 @@ for (const id of ["search", "area", "grade", "depth", "geometry"])
   $(id).addEventListener(id === "search" ? "input" : "change", () => {
     if (atlas) filterTargets();
   });
+
+initAISContext();
 
 try {
   const response = await fetch("data/atlas.json");

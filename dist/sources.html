@@ -51,21 +51,206 @@
         these data as U.S. public domain. This does not assign the same rights
         to other providers’ data.
       </p>
-      <h2>What the grades mean</h2>
+      <h2 id="grades">What A, B, and C mean</h2>
       <p>
-        The score weights local relief (35%), rough or bedrock cover (30%),
-        detrended terrain complexity (20%), and nearby rough habitat area (15%),
-        with caps on each contribution. Grade A is 75 or higher, B is 55–74, and
-        C is below 55. These are research priorities, not a calibrated
-        fishing-success model. Boulder dimensions and fish presence have not
-        been verified.
+        These letters rank the mapped terrain as a starting point for a sounder
+        search. They do not rate catch probability, charter popularity, current
+        fishing conditions, access, or safety. Of the 132 public targets, 35 are
+        A, 74 are B, and 23 are C. Ranks use this public set and allow ties.
+      </p>
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th scope="col">Grade</th>
+            <th scope="col">Score</th>
+            <th scope="col">How to use it</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">A · First look</th>
+            <td>75–100</td>
+            <td>
+              Stronger combined terrain evidence. Start a search here when
+              conditions and access suit.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">B · Useful alternative</th>
+            <td>55–74</td>
+            <td>
+              Meaningful structure with a lower combined score. Useful options
+              when another area is crowded or the drift is awkward.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">C · Exploratory</th>
+            <td>Below 55</td>
+            <td>
+              Less mapped relief, rough cover, complexity, or nearby habitat. A
+              small productive feature can still score C.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Each spot’s detail panel shows its measured values and points from all
+        four factors:
+      </p>
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th scope="col">Factor</th>
+            <th scope="col">Maximum</th>
+            <th scope="col">What earns the points</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Local relief</th>
+            <td>35 points</td>
+            <td>
+              Height change, capped at 15 m (about 49 ft). This is not the
+              height of an individual boulder.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Rough / bedrock cover</th>
+            <td>30 points</td>
+            <td>
+              The fraction of the local neighborhood classified as rough seabed
+              or bedrock; full credit at 100%.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Seabed unevenness</th>
+            <td>20 points</td>
+            <td>
+              Terrain variation after removing the overall slope, capped at 3 m
+              (9.8 ft) RMS. A smooth slope alone does not earn complexity
+              points.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Nearby rough habitat</th>
+            <td>15 points</td>
+            <td>
+              Mapped rough habitat within 250 m (820 ft), capped at 10 ha (24.7
+              acres).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Contributions increase proportionally up to each cap, then sum to a
+        score rounded to a whole number. Relief and cover use the original 210-m
+        local neighborhood; unevenness and habitat area use a 250-m radius. The
+        analysis grid was 10 m (about 33 ft). These weights are a research
+        heuristic, not a model validated against catches. Larger habitat area
+        alone cannot earn an A, and the analysis does not measure individual
+        boulder sizes or establish fish presence.
+      </p>
+      <h2>Points, shaded areas, and dashed lines</h2>
+      <p>
+        A point is a starting position to investigate. A “localized rocky
+        target” describes a more concentrated mapped feature; a “reef area
+        search target” describes a broader search patch. Neither promises a rock
+        directly under the pin. Shaded areas show partial rough-habitat
+        footprints, not complete reef boundaries or boulder outlines.
       </p>
       <p>
-        Reef outlines are partial footprints. Drift lines follow an axis of
-        mapped structure; they do not predict current or establish a safe boat
-        route. No target is verified as a charter hotspot from historical AIS.
-        Cambria and historical charter annotations remain excluded because reuse
-        terms are unresolved.
+        Dashed lines follow a strong axis of mapped structure. They suggest
+        structure to work across, not a forecast of your drift or a boat route.
+        Measure wind and current on the water, then choose a setup position that
+        carries your rig across the structure. Either end may be appropriate.
+        Sounder depth also changes with the tide; MLLW survey depths are not
+        present water depths.
+      </p>
+      <p>
+        Cambria survey derivatives and older charter-ground annotations with
+        unresolved reuse terms remain excluded from the public map.
+      </p>
+      <h2 id="ais">Historical charter AIS: what we actually obtained</h2>
+      <p>
+        <strong
+          >Raw archive samples were obtained, but no local sportfishing charter
+          has been positively identified in them.</strong
+        >
+        There is no charter-activity overlay or AIS bonus in the terrain grades.
+        The September 20, 2026 audit processed eight complete nationwide UTC-day
+        files: April 18, May 16, June 13, June 20, and June 27–30, 2026. The
+        Avila–Cambria regional screen retained 28,664 records with 51 distinct
+        vessel identifiers from 78,069,787 nationwide records. The public
+        habitat map still ends at Point Estero.
+      </p>
+      <p>
+        June 27–30 provides one continuous four-day block; the other dates are
+        isolated samples. Complete processing of a file does not establish
+        complete AIS reception or fleet coverage. UTC boundaries can split local
+        trips. Exact normalized names were screened against the researched local
+        fleet and produced no matches; changed, shortened, missing, or
+        differently reported names can evade that screen. This limited sample
+        cannot show that charters avoid any particular reef.
+      </p>
+      <p>
+        The free
+        <a href="https://hub.marinecadastre.gov/pages/vesseltraffic"
+          >NOAA MarineCadastre archive</a
+        >
+        is the source. At the audit’s retrieval time, its
+        <a
+          href="https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/index.html"
+          >2026 daily index</a
+        >
+        listed broadcast dates through June 30; later file modification dates
+        are not later vessel observations. This is the limit of that checked
+        index, not every NOAA product. Credit NOAA Office for Coastal Management
+        and the U.S. Coast Guard Navigation Center. The
+        <a href="https://github.com/ocm-marinecadastre/ais-vessel-traffic"
+          >official archive documentation</a
+        >
+        describes the available products and their reuse terms.
+      </p>
+      <details>
+        <summary>
+          Why some local boat names did not become fishing hotspots
+        </summary>
+        <p>
+          Operator pages describe
+          <a href="https://morrobaytikiboat.com/">Angler</a>
+          as a whale-watching and harbor-tour boat,
+          <a href="https://www.cruisemorrobay.com/">Papagallo II</a> as a dining
+          and sightseeing charter, and
+          <a href="https://www.morrobaydockside.com/bonniemarietta"
+            >Bonnie Marietta</a
+          >
+          as a commercial fishing vessel also available for research and support
+          work. These name leads do not establish recreational bottom-fishing
+          trips or independently authenticate an AIS identity.
+        </p>
+        <p>
+          Supplemental 2018–2024 NOAA PMEL inventory samples retained at most
+          one position per vessel per UTC day and cannot reconstruct stops or
+          drifts. Geographic extraction from the 2024/2025 monthly track files
+          did not complete; no local track analysis is claimed from those files.
+        </p>
+      </details>
+      <p>
+        Before marking a repeated charter-visit area, we would first verify the
+        vessel’s identity and sportfishing role, then examine full trips,
+        reporting gaps, and repeated slow bouts over suitable legal habitat. The
+        proposed research screen is at least three distinct dates and 15 minutes
+        per bout, without a reporting gap over 10 minutes. It is not yet
+        implemented or validated. Slow movement can also be waiting,
+        sightseeing, or work; even repeated charter visits do not prove catches.
+      </p>
+      <p>
+        <a href="data/ais-evidence.json"
+          >Download the dated AIS research summary</a
+        >
+        for the exact daily source URLs, download times, record counts,
+        integrity hashes, screened fleet names, and limitations. Raw vessel
+        trajectories are not embedded in this app.
       </p>
       <h2>Marine forecasts</h2>
       <p>

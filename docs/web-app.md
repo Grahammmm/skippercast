@@ -12,6 +12,8 @@ Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas 
 
 - Filter 132 targets by area, terrain grade, maximum survey-neighborhood depth, and linked geometry; search names and marker IDs.
 - Select a target from the list, a marker, a reef footprint, or a drift alignment. Its detail panel shows coordinates, survey depths, terrain metrics, notes, evidence limitations, and source links.
+- Compare A/B/C definitions beside the map and inspect all four weighted score contributions for each target, with plain-language explanations of points, partial reef areas, and drift alignments.
+- Read the dated historical AIS research summary, exact sample coverage, aggregate counts, and limitations. No verified local sportfishing-charter tracks or charter-activity overlays are currently available.
 - Toggle reef outlines, drift lines, markers, and forecast sample labels.
 - Download the complete GPX or a single target with its linked geometry. GPX polygons are separate track rings; they are not navigable routes. Share the downloaded file to iNavX.
 - Request wind and wave forecasts for three fixed offshore samples. Compare ECMWF IFS / NOAA GFS and ECMWF WAM / NOAA GFS Wave, choose the next seven dates and hours 06:00–13:00 Pacific, inspect components, complete-window ranges, model metadata, returned grid coordinates, and current PZZ645 alerts.
@@ -33,7 +35,7 @@ Forecasts are coarse model values, not observations at individual targets. The b
 | `dist/forecast.js` | Provider requests and pure unit/time/missing-data checks |
 | `dist/weather-ui.js` | Forecast controls, comparison tables, metadata, station overlay |
 | `dist/gpx.js` | Selected-target GPX with separate polygon rings |
-| `dist/data/`, `downloads/` | Copies of the reviewed public atlas and exports |
+| `dist/data/`, `downloads/` | Copies of the reviewed public atlas and exports; dated aggregate AIS research summary |
 | `dist/vendor/` | Leaflet 1.9.4 plus its BSD license; exact hashes in `scripts/web-vendor-sha256.json` |
 
 `scripts/check_web.py` verifies that deployed copies match the canonical atlas and license, checks vendor hashes and local assets, and parses the shipped GPX. Run it after any export refresh. JavaScript checks use `node --test tests/test_web.mjs` (Node 22+); the existing Python checks remain independent.

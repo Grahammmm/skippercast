@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-09-20
+
+- Visible A/B/C terrain-grade definitions and practical context for points, reef outlines, and drift alignments.
+- Per-target explanations of all four grading factors, weighted points, and capped contributions.
+- Dated AIS evidence summary with eight sampled archive dates, source URLs, counts, hashes, and explicit lack of verified local sportfishing-charter tracks.
+
 ## 0.2.0 — 2026-09-20
 
 - Public browser map with target search, habitat grades, depth filters, reef outlines, and optional drift alignments.

@@ -284,6 +284,101 @@ input[type="search"] {
   font-size: 0.75rem;
   color: var(--muted);
 }
+.grade-hint {
+  margin: 0.5rem 0 0.8rem;
+}
+.map-guide {
+  padding: 1.5rem;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  scroll-margin-top: 1rem;
+}
+.map-guide h2 {
+  font-size: 1.25rem;
+  margin: 0.4rem 0 0.7rem;
+}
+.map-guide p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.grade-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.grade-guide-grid > div {
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.grade-guide-grid h3 {
+  font-size: 0.9rem;
+  margin: 0.6rem 0 0;
+}
+.grade-guide-grid h3 small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+.grade-guide-grid p {
+  margin-bottom: 0;
+}
+.geometry-guide summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.charter-evidence {
+  background: #f5f9fa;
+}
+.evidence-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.evidence-counts span {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+.grade-explanation {
+  padding: 0.75rem;
+  border-left: 3px solid var(--teal);
+  background: #f3faf8;
+}
+.metric-explanation {
+  margin: 0.25rem 0 0.7rem;
+}
+.score-points {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.evidence-table th,
+.evidence-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 0.7rem 0.5rem;
+  vertical-align: top;
+}
+@media (max-width: 760px) {
+  .grade-guide-grid {
+    grid-template-columns: 1fr;
+  }
+  .map-guide {
+    padding: 1rem;
+  }
+}
 .map-column {
   min-width: 0;
 }

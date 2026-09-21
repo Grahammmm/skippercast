@@ -61,14 +61,20 @@
                 <option value="PointEstero">Point Estero</option>
               </select></label
             ><label
-              >Priority<select id="grade">
+              >Habitat grade<select id="grade">
                 <option value="all">All grades</option>
-                <option value="A">A · highest</option>
-                <option value="B">B · strong</option>
-                <option value="C">C · explore</option>
+                <option value="A">A · 75–100</option>
+                <option value="B">B · 55–74</option>
+                <option value="C">C · &lt;55</option>
               </select></label
             >
           </div>
+          <p class="small grade-hint">
+            <strong>A 75+ · B 55–74 · C &lt;55</strong><br /><a
+              href="#grade-guide"
+              >What do the grades mean?</a
+            >
+          </p>
           <div class="filter-row">
             <label
               >Target depth limit<select id="depth">
@@ -131,6 +137,92 @@
             closures.
           </div>
         </div>
+        <section
+          id="grade-guide"
+          class="map-guide"
+          aria-labelledby="grade-title"
+        >
+          <div class="eyebrow">READING THE MAP</div>
+          <h2 id="grade-title">A starting point for your sounder.</h2>
+          <p>
+            The letters rank <strong>mapped rocky habitat</strong> for
+            investigation. They do not grade catches, charter popularity, or how
+            safe a spot is to fish.
+          </p>
+          <div class="grade-guide-grid">
+            <div>
+              <span class="grade A">A</span>
+              <h3>First look <small>75–100</small></h3>
+              <p>
+                The strongest overall combination of rocky cover, relief, uneven
+                terrain, and nearby habitat in this atlas. Start your search
+                here when conditions and access suit.
+              </p>
+            </div>
+            <div>
+              <span class="grade B">B</span>
+              <h3>Useful alternatives <small>55–74</small></h3>
+              <p>
+                Meaningful mapped structure, with a lower combined score in one
+                or more factors. Good options to investigate when another area
+                is crowded or the drift is awkward.
+              </p>
+            </div>
+            <div>
+              <span class="grade C">C</span>
+              <h3>Exploratory <small>Below 55</small></h3>
+              <p>
+                A lower terrain score, often reflecting less relief, less rocky
+                cover, or a smaller nearby patch. A productive isolated feature
+                can still score C.
+              </p>
+            </div>
+          </div>
+          <p class="small">
+            Score weights: relief 35 points, rough/bedrock cover 30, terrain
+            unevenness 20, nearby rough habitat area 15. A large rocky area
+            alone cannot earn A. These are chosen research weights; they have
+            not been validated against catches.
+            <a href="sources.html#grades">See the scoring method</a>.
+          </p>
+          <details class="geometry-guide">
+            <summary>Point, shaded area, or dashed line?</summary>
+            <p>
+              <strong>Lettered marker:</strong> a place to begin a sounder
+              search, not a confirmed individual boulder.
+              <strong>Shaded area:</strong> a selected footprint of mapped rocky
+              habitat, not the whole reef. <strong>Dashed line:</strong> an
+              alignment over structure you could try to cross if your measured
+              drift allows; it is not a safe approach route or a current
+              forecast.
+            </p>
+            <p>
+              Survey depths are referenced to MLLW. The water depth you see
+              depends on the tide. Confirm bottom and depth on your sounder, and
+              use current charts and protected-area boundaries before setting a
+              drift.
+            </p>
+          </details>
+        </section>
+        <section
+          id="charter-evidence"
+          class="map-guide charter-evidence"
+          aria-labelledby="charter-title"
+        >
+          <div class="eyebrow">A SEPARATE KIND OF EVIDENCE</div>
+          <h2 id="charter-title">Historical charter AIS</h2>
+          <div id="ais-context" role="status">
+            <p>Loading the dated research summary…</p>
+          </div>
+          <p class="small">
+            AIS records a boat’s reported position and movement. Even repeated
+            slow movement can mean wildlife watching, waiting, or other work. It
+            does not establish fishing or catches.
+            <a href="sources.html#ais"
+              >Sources, coverage, and what would qualify</a
+            >.
+          </p>
+        </section>
         <section class="forecast" aria-labelledby="forecast-heading">
           <div class="forecast-heading">
             <div>
@@ -174,7 +266,11 @@
         20, 2026.
       </p>
       <p>
-        Grades A–C rank measured terrain, not expected catches. There are no
+        <strong
+          >A = 75–100 (first look), B = 55–74 (useful alternatives), C = below
+          55 (exploratory).</strong
+        >
+        Grades rank measured terrain, not expected catches. There are no
         verified catches or AIS-confirmed charter hotspots at these coordinates.
         Outlines show selected habitat; they are not the complete reef. Lines
         suggest an alignment over structure, not a boat route or a prediction of

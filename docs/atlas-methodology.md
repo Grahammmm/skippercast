@@ -24,7 +24,9 @@ score = round(35 × min(R / 15, 1)
 
 Relief and rough-cover metrics use the original 210-m local neighborhood definition. Complexity and area use a 250-m-radius neighborhood; a fitted plane is removed before computing RMS so a smooth slope is not mistaken for complex terrain. The original workflow measured these on a 10-m analysis grid; the included record names preserve that provenance.
 
-Grades are A ≥75, B ≥55, and C below 55. The formula deliberately caps each contribution so a large footprint alone cannot dominate. [scoring.py](../src/skippercast/atlas/scoring.py) reproduces this arithmetic from included metrics. Tied ranks are recomputed within the 132 public targets. These weights are a research heuristic, not a validated ecological model.
+Grades are A ≥75 (first look), B 55–74 (useful alternatives), and C below 55 (exploratory). They guide a sounder search when access and conditions suit; they do not grade safety, present conditions, catch probability, or charter popularity. A productive isolated feature can score C because the surrounding terrain has lower relief, rough cover, complexity, or area. The formula deliberately caps each contribution so a large footprint alone cannot dominate. [scoring.py](../src/skippercast/atlas/scoring.py) reproduces this arithmetic from included metrics. Tied ranks are recomputed within the 132 public targets. These weights are a research heuristic, not a validated ecological model.
+
+The map detail panel shows each factor’s measured value and weighted contribution. Habitat area is also displayed in acres, heights in feet, and the underlying metric units remain documented. The dated [AIS research summary](../dist/data/ais-evidence.json) is separate from the terrain score; none of the eight sampled dates yielded a verified local sportfishing-charter identity.
 
 ## Outlines and drift alignments
 
