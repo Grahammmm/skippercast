@@ -12,3 +12,5 @@ Generation method: built-in image_gen edit tool. Input: existing SkipperCast dis
 Generated in one request; no retry or image postprocessing. The original tool output was copied unchanged to `dist/og.png`. Visual inspection confirms an enclosed white pilothouse, large open aft cockpit, single centered outboard, clearly stronger contour lines, and preserved text/copy/layout. It remains an illustrative Parker-style reconstruction and should not be presented as an exact photograph of a specific 2019 boat.
 
 Copied output dimensions verified with sips: 1736 by 906 pixels. The generator returned one pixel less width than the source; no resizing was performed.
+
+On 2026-09-21, the unchanged PNG was also encoded as `dist/skippercast-parker-preview.jpg` using macOS `sips -s format jpeg -s formatOptions 78`. This delivery copy retains all 1736 by 906 pixels and the original layout, with no cropping or resizing. Its 493,062-byte size fits Signal Desktop's 1,048,576-byte preview-image download limit; the 2,303,037-byte source PNG did not. Open Graph and X metadata now use the JPEG. The original generated PNG is retained unchanged.
