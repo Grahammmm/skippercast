@@ -1,5 +1,5 @@
-import { assetURL } from "./region.js?v=8.6";
-import { esc, num } from "./marine-charts.js?v=8.6";
+import { assetURL } from "./region.js?v=8.7";
+import { esc, num } from "./marine-charts.js?v=8.7";
 export async function initCommercialAIS(map,{protectedAreas,onSelect,showMap}) {
   const layer=L.layerGroup();
   const checkbox=document.getElementById("layer-commercial");

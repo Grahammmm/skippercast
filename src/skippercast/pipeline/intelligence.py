@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from .collect import Client, source, stamp, model_loader, MODEL_META
 from .ocean import collect_ocean
 from .parsers import ndbc
-from .verification import forecast_records, merge_records, observation_records, merge_observations, derived_wind_data, derived_wind_records, verify
+from .verification import ForecastCollectionDeferred, forecast_records, merge_records, observation_records, merge_observations, derived_wind_data, derived_wind_records, verify
 from .verification_archive import load_archive, write_archive
 from ..platform.contracts import load_region, atomic_json, read_json
 
@@ -71,6 +71,27 @@ def model_source(model,region,now,previous):
     return source('model-'+model,model,'forecast',url,36,coherent,now,previous)
 
 
+def model_verification_records(model, source_result, npoints, stations):
+    """Keep expected provider settling separate from actual collection failures."""
+    source_result.pop('verification_issue',None)
+    source_result.pop('verification_deferral',None)
+    if source_result['status']!='ok':return []
+    try:
+        return forecast_records(model,{**source_result['data'],'points':source_result['data']['points'][npoints:]},
+                                datetime.fromisoformat(source_result['data_retrieved_at'].replace('Z','+00:00')).timestamp(),stations)
+    except ForecastCollectionDeferred as error:
+        source_result['verification_deferral']=error.as_dict()
+    except ValueError as error:
+        source_result['verification_issue']=str(error)
+    return []
+
+
+def collection_health(sources):
+    return {'status':'ok' if all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
+            'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue')) and not (k.startswith('hfr-') and s['status']=='missing')],
+            'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral')]}
+
+
 def run(region_id,output,previous_root=None,now=None):
     now=now or datetime.now(timezone.utc);region=load_region(region_id);prior={};state={}
     if previous_root:
@@ -94,9 +115,7 @@ def run(region_id,output,previous_root=None,now=None):
     new=[];npoints=len(region['forecast_points']);stations=region['intelligence']['verification_stations']
     for model in models:
         s=sources['model-'+model]
-        if s['status']=='ok':
-            try:new+=forecast_records(model,{**s['data'],'points':s['data']['points'][npoints:]},datetime.fromisoformat(s['data_retrieved_at'].replace('Z','+00:00')).timestamp(),stations)
-            except ValueError as error:s['verification_issue']=str(error)
+        new+=model_verification_records(model,s,npoints,stations)
     records=merge_records(state.get('forecasts',[]),new,now.timestamp());new_observations=[]
     for station in stations:
         ident=station['id'];url=f'https://www.ndbc.noaa.gov/data/realtime2/{ident}.txt'
@@ -117,15 +136,14 @@ def run(region_id,output,previous_root=None,now=None):
     evaluated_at=max(now.timestamp(),datetime.now(timezone.utc).timestamp())
     observed=merge_observations(state.get('observations',[]),new_observations,evaluated_at)
     verification=verify(records,observed,evaluated_at,stations)
-    verification['collection_issues']={k:s.get('verification_issue') or s.get('issue') for k,s in sources.items()
-                                       if k.startswith(('model-','verify-')) and (s.get('verification_issue') or s['status']!='ok')}
+    verification['collection_issues']={k:s.get('verification_issue') or s.get('issue') or (s.get('verification_deferral') or {}).get('reason') for k,s in sources.items()
+                                       if k.startswith(('model-','verify-')) and (s.get('verification_issue') or s['status']!='ok' or s.get('verification_deferral'))}
+    verification['collection_deferrals']={k:s['verification_deferral'] for k,s in sources.items() if s.get('verification_deferral')}
     forecast={'region_id':region_id,'requested_points':[[p['id'],p['latitude'],p['longitude']] for p in region['forecast_points']],'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
         'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},'retrieved':int(now.timestamp()*1000)}
     data={'schema_version':1,'region_id':region_id,'generated_at':stamp(now),'completed_at':stamp(),'ocean_collected_at':ocean_at,
           'sources':sources,'verification':verification,'forecast':forecast,
-          'health':{'status':'ok' if all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
-                    'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue')) and not (k.startswith('hfr-') and s['status']=='missing')],
-                    'coverage_gaps':[k for k,s in sources.items() if k.startswith('hfr-') and s['status']=='missing']}}
+          'health':collection_health(sources)}
     target=output/'regions'/region_id
     write_archive(target,region_id,records,observed,evaluated_at,
                   previous_root/'regions'/region_id if previous_root else None)

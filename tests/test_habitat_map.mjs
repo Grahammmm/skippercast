@@ -48,3 +48,8 @@ test('verification describes a small archive without confusing repeated forecast
   const html=verificationHTML({verification:{status:'collecting',archived_forecasts:100,matched_samples:30,summary:{headline:'Collecting local history',matched_valid_times:3,coverage_fraction:.3,next_action:'Collect more days'},groups:[],comparisons:[],limitations:'No automatic correction.'}});
   assert.match(html,/30%/);assert.match(html,/station \/ variable \/ weather hours/);assert.match(html,/Collect more days/);assert.doesNotMatch(html,/NaN|undefined/);
 });
+
+test('verification shows provider deferrals without hiding actual collection failures',()=>{
+  const html=verificationHTML({verification:{groups:[],collection_deferrals:{'model-gfs_global':{code:'provider_update_settling',reason:'Provider update settling; excluded from archive',retry_at:1790099587}},collection_issues:{'model-example':'<failure>'}}});
+  assert.match(html,/Collection gaps & deferred samples/);assert.match(html,/excluded from archive/);assert.match(html,/&lt;failure&gt;/);assert.doesNotMatch(html,/<failure>|\[object Object\]/);
+});

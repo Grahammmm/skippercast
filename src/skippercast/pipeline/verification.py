@@ -17,6 +17,21 @@ MIN_COVERAGE = 0.7
 ACCEPTED_QA = {'provisional_automated', 'passed', 'legacy_unrecorded'}
 
 
+class ForecastCollectionDeferred(ValueError):
+    """A valid response is temporarily ineligible for prospective verification."""
+    code = 'provider_update_settling'
+
+    def __init__(self, available_at, acquired_at):
+        super().__init__('Forecast is inside the provider ten-minute update settling window')
+        self.available_at = available_at
+        self.acquired_at = acquired_at
+        self.retry_at = available_at + 600
+
+    def as_dict(self):
+        return {'code': self.code, 'reason': str(self), 'available_at': self.available_at,
+                'acquired_at': self.acquired_at, 'retry_at': self.retry_at}
+
+
 def number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
@@ -49,8 +64,7 @@ def forecast_records(model, data, received_at, stations):
         raise ValueError('Forecast availability is inconsistent with acquisition')
     # The provider documents eventual consistency across API servers. Do not
     # attribute a just-changing response to the new run during that interval.
-    if number(available) and received_at < available + 600:
-        raise ValueError('Forecast is inside the provider ten-minute update settling window')
+    settling = number(available) and received_at < available + 600
     records = []
     variable = 'wave_height' if 'wave' in model or 'wam' in model else 'wind_speed_10m'
     for station, point in zip(stations, data['points'], strict=True):
@@ -82,6 +96,10 @@ def forecast_records(model, data, received_at, stations):
                             'native_step_seconds': meta.get('temporal_resolution_seconds'),
                             'run_attribution': 'provider_metadata',
                             'anemometer_height_m': station.get('anemometer_height_m')})
+    # Validate the payload first: a malformed response must not be hidden by an
+    # expected timing deferral. No records escape while the provider is settling.
+    if settling:
+        raise ForecastCollectionDeferred(available, received_at)
     return records
 
 

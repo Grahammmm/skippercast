@@ -62,7 +62,7 @@ No predictive probability, confidence interval, ensemble calibration or adaptive
 | `comparisons` | Matched common-case empirical errors, sample support and coverage; no calibrated probabilities. |
 | `diagnostics`, `collection_issues` | Duplicate, rejected, distant, out-of-horizon and acquisition/provider failures. |
 
-Errors are null when no match exists. Coverage is null when no forecast is yet due. An empty archive says “collecting history,” not “zero error.” Readers must handle both v1 feeds during deployment and v2 feeds after the first refreshed conditions run.
+Errors are null when no match exists. Coverage is null when no forecast is yet due. An empty archive says “collecting history,” not “zero error.” A forecast caught inside the documented provider update settling window is deferred with its reason and retried on a later scheduled collection; it does not enter the archive. This expected coverage gap does not fail an otherwise successful publication. Invalid clocks, malformed data, failed access and corrupt archives remain operational failures. Readers must handle both v1 feeds during deployment and v2 feeds after the first refreshed conditions run.
 
 ## Repeatable regional rollout
 

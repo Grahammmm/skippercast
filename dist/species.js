@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.6";
-import { getRegion, assetURL } from "./region.js?v=8.6";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.6";
-import { circleGeometry } from "./geo-screen.js?v=8.6";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.7";
+import { getRegion, assetURL } from "./region.js?v=8.7";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.7";
+import { circleGeometry } from "./geo-screen.js?v=8.7";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",

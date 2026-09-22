@@ -1,6 +1,6 @@
 // Evidence geometry stays separate from depth-qualified/exportable fishing targets.
-import {assetURL,getRegion} from './region.js?v=8.6';
-import {esc} from './marine-charts.js?v=8.6';
+import {assetURL,getRegion} from './region.js?v=8.7';
+import {esc} from './marine-charts.js?v=8.7';
 
 export function habitatMatches(feature, species, region=getRegion()) {
   const p=feature.properties, target=region.target_options?.find(t=>t.id===species);
@@ -54,7 +54,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
   let screened=[],screenRevision=null,checking=false,checkError=false,request=0,worker,deadline;
   const fail=()=>{checkError=true;checking=false;screened=[];clearTimeout(deadline);worker?.terminate();draw();};
   try{
-    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.6',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.7',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',geometries:data.features.map(f=>f.geometry)});
     worker.addEventListener('message',({data:result})=>{
       if(checkError || result.request!==request || result.revision!==screen.revision() || !screen.ready())return;

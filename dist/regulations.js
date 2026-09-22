@@ -1,6 +1,6 @@
-import { getRegion, assetURL } from "./region.js?v=8.6";
-import { esc } from "./marine-charts.js?v=8.6";
-import { loadDailyEvidence } from "./bite-evidence.js?v=8.6";
+import { getRegion, assetURL } from "./region.js?v=8.7";
+import { esc } from "./marine-charts.js?v=8.7";
+import { loadDailyEvidence } from "./bite-evidence.js?v=8.7";
 
 const HOUR = 3600000;
 export const requiredRuleIDs = (region=getRegion()) => [...new Set(region.species.flatMap(id=>id==='reef'?['lingcod','rockfish']:[id]))];

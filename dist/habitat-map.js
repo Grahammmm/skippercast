@@ -1,6 +1,6 @@
-import {getRegion} from './region.js?v=8.6';
-import {esc,local,num} from './marine-charts.js?v=8.6';
-import {habitatFrame,habitatTileURL,decodeHabitatTile,habitatTileMatchesLayer,tileOverlaps,habitatColor,thermalReference,validHabitatManifest} from './habitat-data.js?v=8.6';
+import {getRegion} from './region.js?v=8.7';
+import {esc,local,num} from './marine-charts.js?v=8.7';
+import {habitatFrame,habitatTileURL,decodeHabitatTile,habitatTileMatchesLayer,tileOverlaps,habitatColor,thermalReference,validHabitatManifest} from './habitat-data.js?v=8.7';
 
 const names={'sst-analysis':'Satellite temperature analysis','chlorophyll-observation':'Satellite chlorophyll','wcofs-surface-forecast':'NOAA temperature & surface flow'};
 const roundTime=t=>local(t,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
