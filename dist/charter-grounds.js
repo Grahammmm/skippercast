@@ -1,5 +1,6 @@
-import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=6.0";
-import { matchesTargetSpecies } from "./target-groups.js?v=6.0";
+import { assetURL } from "./region.js?v=7.0";
+import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=7.0";
+import { matchesTargetSpecies } from "./target-groups.js?v=7.0";
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -58,9 +59,10 @@ export async function initCharterGrounds(
 ) {
   const chip = $("show-charter-grounds"),
     context = $("charter-ground-context");
+  if (!assetURL("charters")) { chip.hidden=true; $("charter-status").querySelector("span").textContent="No charter grounds verified for this region"; context.textContent="No geographically specific charter evidence is published here yet."; return {draw(){}}; }
   let evidence;
   try {
-    const r = await fetch("data/charter-grounds.json");
+    const r = await fetch(assetURL("charters"));
     if (!r.ok) throw Error(`Charter reports request failed (${r.status})`);
     evidence = await r.json();
   } catch (error) {

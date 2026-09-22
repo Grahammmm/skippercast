@@ -1,5 +1,7 @@
-import { POINTS, distanceNm } from "./marine-data.js?v=6.0";
-import { circleGeometry } from "./geo-screen.js?v=6.0";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=7.0";
+import { getRegion, assetURL } from "./region.js?v=7.0";
+import { POINTS, distanceNm } from "./marine-data.js?v=7.0";
+import { circleGeometry } from "./geo-screen.js?v=7.0";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -222,13 +224,13 @@ export async function initSpecies(
     error = false,
     current = [];
   try {
-    const r = await fetch("data/habitat-regions.json");
+    const r = await fetch(assetURL("habitats"));
     if (!r.ok) throw Error();
     habitats = (await r.json()).areas;
   } catch {
     error = true;
   }
-  const port = { latitude: 35.3667, longitude: -120.868 };
+  const port = getRegion().harbor;
   const id = () => $("species-select").value;
   function guide() {
     const p = PROFILES[id()];
@@ -245,6 +247,8 @@ export async function initSpecies(
         .join(
           "",
         )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${p.sources.map((s) => `<a href="${s.url}" target="_blank" rel="noopener">${s.title} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
+    $("species-guide").dataset.speciesEvidence=id();
+    appendSpeciesEvidence($("species-guide"),id());
     $("filter-options").hidden = !["reef", "soft"].includes(p.kind);
     for (const control of ["grade", "geometry"])
       $(control).disabled = p.kind !== "reef";
@@ -287,7 +291,7 @@ export async function initSpecies(
       <p class="evidence-note"><strong>Charter visits: unverified</strong><br>No verified sportfishing-charter AIS visits support this area. <a href="#charter-evidence">See evidence coverage</a></p>
       <button id="area-weather" class="primary">Conditions for this area ↗</button>
       <details class="detail-section"><summary>Approach & sources</summary><p>${escapeHTML(PROFILES[id()].approach)}</p><p>${escapeHTML(a.evidence || "No catch evidence or surveyed bottom-depth assurance.")}</p>
-      ${off ? `<p>At least ${dist.toFixed(1)} nm from the harbor entrance; ≥${Math.ceil((dist / 20) * 60)} min each way at 20 kt. Straight-line lower bound; harbor travel, charted route, sea-state slowdown, search and reserve are additional.</p>` : ""}
+      ${off ? `<p>At least ${dist.toFixed(1)} nm from the harbor entrance; ≥${Math.ceil((dist / getRegion().boat.cruise_knots) * 60)} min each way at ${getRegion().boat.cruise_knots} kt. Straight-line lower bound; harbor travel, charted route, sea-state slowdown, search and reserve are additional.</p>` : ""}
       <p>Use the selected species’ Regulations card on the map for current season-check status and limits.</p>
       <p>Reference position ${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}. ${a.depth_ft ? "Survey depth datum MLLW · 2008. Verify present depths with sonar." : ""}</p>
       ${(a.source_urls || []).map((url) => `<a href="${url}" target="_blank" rel="noopener">USGS survey record ↗</a>`).join(" · ")}</details>`;
@@ -297,7 +301,7 @@ export async function initSpecies(
     const p = PROFILES[id()];
     if (p.kind === "reef") return;
     current = chooseAreas().filter(a => protectedAreas.pointAllowed(a) && protectedAreas.geometryAllowed(a.geometry || circleGeometry(a.latitude,a.longitude,a.radius_m)));
-    $("map-empty").hidden = current.length > 0;
+    $("map-empty").hidden = current.length > 0 || !!assetURL("geology");
     if (!current.length) {
       $("map-empty").querySelector("strong").textContent = error
         ? "Habitat data unavailable"

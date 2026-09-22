@@ -1,9 +1,10 @@
-import { esc } from "./marine-charts.js?v=5.4";
-import { distanceNm } from "./marine-data.js?v=5.4";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=7.0";
+import { esc } from "./marine-charts.js?v=7.0";
+import { distanceNm } from "./marine-data.js?v=7.0";
 import { matchesTargetSpecies } from "./target-groups.js?v=5.8";
 
 export const FEED_URL =
-  "https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json";
+  getRegion().daily_feed;
 const HOUR = 3600000;
 const names = {
   reef: "Lingcod & rockfish",
@@ -16,7 +17,7 @@ const names = {
   dungeness: "Dungeness crab",
 };
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Los_Angeles",
+  timeZone: getRegion().timezone,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -24,7 +25,7 @@ const dateFormat = new Intl.DateTimeFormat("en-CA", {
 const when = (s) =>
   s && Number.isFinite(Date.parse(s))
     ? new Date(s).toLocaleString("en-US", {
-        timeZone: "America/Los_Angeles",
+        timeZone: getRegion().timezone,
         month: "short",
         day: "numeric",
         hour: "numeric",
@@ -70,7 +71,7 @@ export function loadDailyEvidence(force = false) {
     return feedPromise;
   feedRequestedAt = Date.now();
   feedPromise = (async () => {
-    for (const url of [FEED_URL, "data/daily-evidence.json"]) {
+    for (const url of [FEED_URL, getRegion().legacy_daily_feed, assetURL("daily_evidence")].filter(Boolean)) {
       try {
         const r = await fetch(url, {
           signal: AbortSignal.timeout(15000),
@@ -78,7 +79,7 @@ export function loadDailyEvidence(force = false) {
         });
         if (!r.ok) throw new Error("Feed request failed");
         const data = await r.json();
-        if (!validFeed(data)) throw new Error("Feed schema changed");
+        if (!acceptsFeed(data) || !validFeed(data)) throw new Error("Feed schema changed");
         return { data, fallback: url !== FEED_URL };
       } catch {
         /* The bundled fallback keeps its own timestamps. */
@@ -255,7 +256,7 @@ export function evidenceHTML(
   const allSources = Object.values(data?.sources || {});
   const mainSources = allSources.filter((s) => s.kind !== "charter-reports");
   const issues = allSources.filter((s) => s.status !== "ok").length;
-  return `<details class="bite-card" ${open ? "open" : ""}><summary><span><small>RECENT FISHING EVIDENCE</small><strong>${esc(names[species] || species)} · ${e.reports.length ? e.reports.length + (e.reports.length === 1 ? " reported trip" : " reported trips") : "Reports limited"}</strong></span><b class="evidence-confidence ${e.confidence.toLowerCase()}">${e.confidence}</b></summary><div class="bite-body"><p>${esc(e.reason)}</p><p class="small">${day(e.start)}–${day(e.end)} · ${e.boats} boat${e.boats === 1 ? "" : "s"} · ${e.days} reporting date${e.days === 1 ? "" : "s"} · Morro Bay / Avila landings. Confidence describes the <strong>evidence for recent activity</strong>, not your chance of a bite or a seven-day prediction.</p>${
+  return `<details class="bite-card" ${open ? "open" : ""}><summary><span><small>RECENT FISHING EVIDENCE</small><strong>${esc(names[species] || species)} · ${e.reports.length ? e.reports.length + (e.reports.length === 1 ? " reported trip" : " reported trips") : "Reports limited"}</strong></span><b class="evidence-confidence ${e.confidence.toLowerCase()}">${e.confidence}</b></summary><div class="bite-body"><p>${esc(e.reason)}</p><p class="small">${day(e.start)}–${day(e.end)} · ${e.boats} boat${e.boats === 1 ? "" : "s"} · ${e.days} reporting date${e.days === 1 ? "" : "s"} · ${esc(getRegion().landing_names.join(" / ") || "No local landing publisher bound")} landings. Confidence describes the <strong>evidence for recent activity</strong>, not your chance of a bite or a seven-day prediction.</p>${
     reports.length
       ? `<div class="evidence-reports">${reports
           .map(

@@ -1,5 +1,8 @@
 # SkipperCast
 
+[How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md)
+
+
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**
 
 SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and download a GPX for your chartplotter. Select a species, scrub seven days of ocean conditions, and inspect a tide chart and wave components. Map, Conditions, and Guide views keep habitat, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.

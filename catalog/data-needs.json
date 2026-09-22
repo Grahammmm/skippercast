@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "description": "What a fishing region needs, independently of which organization supplies it. A source binding is not proof of regional coverage.",
+  "needs": [
+    {
+      "id": "bathymetry",
+      "name": "Seabed depth and relief",
+      "question": "What is the shape and depth of the bottom here?",
+      "fields": [
+        "elevation",
+        "vertical_datum",
+        "horizontal_crs",
+        "native_resolution_m",
+        "survey_date",
+        "nodata_mask",
+        "uncertainty"
+      ],
+      "units": {
+        "elevation": "m"
+      },
+      "cadence": "Check catalog monthly; rebuild only after a reviewed survey change.",
+      "gates": [
+        "surveyed-bottom-targets",
+        "surveyed-bottom-images",
+        "fishing-exports"
+      ],
+      "must_not_infer": "A coarse grid cannot identify boulder dimensions, overhangs or small caves."
+    },
+    {
+      "id": "substrate",
+      "name": "Rock, sand, mud and habitat edges",
+      "question": "What is the seabed made of, and how was it verified?",
+      "fields": [
+        "class",
+        "classification_scheme",
+        "geometry",
+        "resolution_m",
+        "groundtruth_method",
+        "survey_date"
+      ],
+      "units": {},
+      "cadence": "Monthly catalog check; reviewed release updates.",
+      "gates": [
+        "surveyed-bottom-targets",
+        "fishing-exports"
+      ],
+      "must_not_infer": "Backscatter brightness alone is not rock hardness or fish abundance."
+    },
+    {
+      "id": "groundtruth",
+      "name": "Underwater imagery and samples",
+      "question": "Are local rock forms and substrate directly observed?",
+      "fields": [
+        "sample_id",
+        "time",
+        "geometry",
+        "position_uncertainty_m",
+        "method",
+        "media_rights",
+        "substrate_observation"
+      ],
+      "units": {
+        "position_uncertainty_m": "m"
+      },
+      "cadence": "Quarterly source discovery; import dated observations.",
+      "gates": [],
+      "must_not_infer": "A nearby camera tow is not a photograph at a target unless positions and accuracy support that match."
+    },
+    {
+      "id": "kelp",
+      "name": "Kelp canopy and vegetated habitat",
+      "question": "Where is vegetation observed, and how recently?",
+      "fields": [
+        "geometry",
+        "observation_date",
+        "sensor",
+        "cloud_mask",
+        "classification_confidence"
+      ],
+      "units": {},
+      "cadence": "Latest usable satellite or seasonal survey release.",
+      "gates": [],
+      "must_not_infer": "No surface canopy detection does not prove no submerged kelp."
+    },
+    {
+      "id": "protected-areas",
+      "name": "Protected-area boundaries",
+      "question": "Which areas must be excluded from fishing layers?",
+      "fields": [
+        "stable_id",
+        "geometry",
+        "designation",
+        "authority",
+        "effective_date",
+        "checked_at",
+        "coverage_complete"
+      ],
+      "units": {},
+      "cadence": "Daily source check and refresh while app is open.",
+      "gates": [
+        "surveyed-bottom-targets",
+        "fishing-exports"
+      ],
+      "must_not_infer": "A successful empty response does not prove an area has no closures."
+    },
+    {
+      "id": "regulations",
+      "name": "Species, season, size, bag and gear rules",
+      "question": "Which rules apply to this species, jurisdiction, date and gear?",
+      "fields": [
+        "jurisdiction",
+        "species_id",
+        "effective_from",
+        "effective_to",
+        "size_limits",
+        "bag_limits",
+        "gear",
+        "source_url",
+        "reviewed_at",
+        "source_fingerprint"
+      ],
+      "units": {
+        "size": "explicit original unit"
+      },
+      "cadence": "Daily check plus in-season change review.",
+      "gates": [
+        "season-status"
+      ],
+      "must_not_infer": "An unchanged or accessible page is not an automated legal interpretation."
+    },
+    {
+      "id": "dynamic-closures",
+      "name": "In-season, health, whale-risk and security restrictions",
+      "question": "Has an exceptional closure or gear restriction changed access?",
+      "fields": [
+        "authority",
+        "geography",
+        "species",
+        "gear",
+        "effective_from",
+        "effective_to",
+        "source_url",
+        "reviewed_at"
+      ],
+      "units": {},
+      "cadence": "Daily, plus official notices before a trip.",
+      "gates": [
+        "season-status"
+      ],
+      "must_not_infer": "A normal season table cannot override an emergency closure."
+    },
+    {
+      "id": "wind-forecast",
+      "name": "Hourly wind, gust and visibility forecast",
+      "question": "What will conditions be throughout the actual trip?",
+      "fields": [
+        "model_id",
+        "initialization_time",
+        "availability_time",
+        "valid_time",
+        "grid_coordinates",
+        "wind",
+        "gust",
+        "direction_from",
+        "visibility",
+        "precipitation",
+        "units"
+      ],
+      "units": {
+        "wind": "kn",
+        "gust": "kn",
+        "direction_from": "degrees true",
+        "visibility": "m"
+      },
+      "cadence": "Each model cycle; shared cache rather than a full request per visitor.",
+      "gates": [
+        "conditions-outlook"
+      ],
+      "must_not_infer": "Two delivery services for one model are not independent forecasts."
+    },
+    {
+      "id": "wave-forecast",
+      "name": "Combined seas, swell components and chop",
+      "question": "How large, steep and crossed are the seas?",
+      "fields": [
+        "model_id",
+        "initialization_time",
+        "valid_time",
+        "grid_coordinates",
+        "significant_height",
+        "period_definition",
+        "period",
+        "direction_from",
+        "components",
+        "units"
+      ],
+      "units": {
+        "height": "ft",
+        "period": "s",
+        "direction_from": "degrees true"
+      },
+      "cadence": "Each model cycle.",
+      "gates": [
+        "conditions-outlook"
+      ],
+      "must_not_infer": "Wave components do not add arithmetically, and surface waves do not establish bottom current."
+    },
+    {
+      "id": "wave-observations",
+      "name": "Observed buoy seas",
+      "question": "How are actual conditions comparing with the forecast?",
+      "fields": [
+        "station_id",
+        "coordinates",
+        "sample_at",
+        "height",
+        "period",
+        "direction",
+        "quality_flags",
+        "units"
+      ],
+      "units": {
+        "height": "m",
+        "period": "s"
+      },
+      "cadence": "30-minute cloud refresh; 5-minute app check.",
+      "gates": [],
+      "must_not_infer": "Today's observations do not validate a seven-day forecast."
+    },
+    {
+      "id": "weather-observations",
+      "name": "Observed wind and visibility",
+      "question": "What is being measured now, and where?",
+      "fields": [
+        "station_id",
+        "coordinates",
+        "sample_at",
+        "wind",
+        "gust",
+        "visibility",
+        "quality_flags"
+      ],
+      "units": {
+        "wind": "kn",
+        "visibility": "m"
+      },
+      "cadence": "5\u201330 minutes according to station updates.",
+      "gates": [],
+      "must_not_infer": "An inland airport is not an offshore wind observation."
+    },
+    {
+      "id": "tides",
+      "name": "Water-level predictions and observations",
+      "question": "What will the water level be at the reference station?",
+      "fields": [
+        "station_id",
+        "station_coordinates",
+        "datum",
+        "timezone",
+        "valid_time",
+        "height",
+        "prediction_or_observation"
+      ],
+      "units": {
+        "height": "ft"
+      },
+      "cadence": "Predictions daily; observations 5\u201330 minutes.",
+      "gates": [
+        "tide-chart"
+      ],
+      "must_not_infer": "High or low water is not slack current; a nearby station is not a harbor-bar current station."
+    },
+    {
+      "id": "surface-currents",
+      "name": "Observed or modeled surface currents",
+      "question": "Which way is the upper ocean moving?",
+      "fields": [
+        "product_id",
+        "valid_time",
+        "depth_represented_m",
+        "u",
+        "v",
+        "quality_flags",
+        "resolution_m"
+      ],
+      "units": {
+        "u": "m/s",
+        "v": "m/s"
+      },
+      "cadence": "Hourly when the source updates.",
+      "gates": [],
+      "must_not_infer": "Upper-ocean current is not bottom drift, windage or a safe boat setup position."
+    },
+    {
+      "id": "subsurface-ocean",
+      "name": "Bottom temperature, oxygen and water-column structure",
+      "question": "Are the depth-specific water conditions suitable?",
+      "fields": [
+        "depth_m",
+        "valid_time",
+        "temperature",
+        "oxygen",
+        "model_or_observation",
+        "resolution_m",
+        "quality_flags"
+      ],
+      "units": {
+        "temperature": "degC",
+        "oxygen": "explicit source unit"
+      },
+      "cadence": "Model cycles or observed profiles.",
+      "gates": [],
+      "must_not_infer": "Surface temperature cannot substitute for bottom temperature or oxygen."
+    },
+    {
+      "id": "sea-temperature",
+      "name": "Sea surface temperature and fronts",
+      "question": "Where are dated water-mass boundaries worth investigating?",
+      "fields": [
+        "valid_time",
+        "temperature",
+        "analysis_error",
+        "land_mask",
+        "cloud_or_interpolation_flags",
+        "resolution_m"
+      ],
+      "units": {
+        "temperature": "degC"
+      },
+      "cadence": "Daily latest valid satellite analysis.",
+      "gates": [],
+      "must_not_infer": "A sharp gradient in an interpolated image does not confirm a fish-bearing front."
+    },
+    {
+      "id": "chlorophyll",
+      "name": "Surface ocean color and productivity context",
+      "question": "Where is surface productivity observed?",
+      "fields": [
+        "valid_time",
+        "chlorophyll",
+        "sensor",
+        "quality_flags",
+        "cloud_mask",
+        "resolution_m"
+      ],
+      "units": {
+        "chlorophyll": "mg/m3"
+      },
+      "cadence": "Daily when cloud-free coverage exists.",
+      "gates": [],
+      "must_not_infer": "Chlorophyll is not bait biomass or immediate feeding activity."
+    },
+    {
+      "id": "species-occurrence",
+      "name": "Species-identified survey observations",
+      "question": "Has the target species been observed in comparable habitat?",
+      "fields": [
+        "taxon",
+        "life_stage",
+        "time",
+        "geometry",
+        "coordinate_uncertainty_m",
+        "method",
+        "effort",
+        "absence_recorded",
+        "license"
+      ],
+      "units": {},
+      "cadence": "New survey releases; quarterly discovery.",
+      "gates": [],
+      "must_not_infer": "An opportunistic presence point cannot establish abundance, absence elsewhere or current catch probability."
+    },
+    {
+      "id": "catch-effort",
+      "name": "Species-specific catches with fishing effort",
+      "question": "How did comparable trips perform, including zero-catch trips?",
+      "fields": [
+        "species_targeted",
+        "species_caught",
+        "date",
+        "location_precision",
+        "gear",
+        "depth",
+        "anglers",
+        "hours_fishing",
+        "retained",
+        "released",
+        "zero_catch",
+        "sampling_method"
+      ],
+      "units": {
+        "depth": "m",
+        "effort": "angler-hours"
+      },
+      "cadence": "Daily reported facts; consented trip logs after trips.",
+      "gates": [
+        "calibrated-catch-model"
+      ],
+      "must_not_infer": "Landing totals, reported limits and successful posts lack the denominator needed for bite probability."
+    },
+    {
+      "id": "charter-identity",
+      "name": "Verified charter vessel identities",
+      "question": "Does this MMSI belong to a local sportfishing operator?",
+      "fields": [
+        "mmsi",
+        "operator",
+        "vessel_name",
+        "identity_evidence",
+        "role",
+        "valid_from",
+        "valid_to",
+        "match_confidence"
+      ],
+      "units": {},
+      "cadence": "Monthly identity review; preserve changes in ownership and names.",
+      "gates": [
+        "verified-charter-hotspots"
+      ],
+      "must_not_infer": "Name similarity, AIS type or a home port alone is not verified charter identity."
+    },
+    {
+      "id": "ais-history",
+      "name": "Dated vessel movement and reception coverage",
+      "question": "Where did a verified boat repeatedly linger?",
+      "fields": [
+        "mmsi",
+        "timestamp",
+        "latitude",
+        "longitude",
+        "sog",
+        "cog",
+        "receiver_coverage",
+        "gap_flags",
+        "source_license"
+      ],
+      "units": {
+        "sog": "kn",
+        "cog": "degrees true"
+      },
+      "cadence": "Monthly archive availability; incremental import of new dates.",
+      "gates": [
+        "verified-charter-hotspots"
+      ],
+      "must_not_infer": "Slow speed is apparent activity, not proof of fishing or catches; daily sparse positions cannot reconstruct stops."
+    },
+    {
+      "id": "harbor-access",
+      "name": "Harbor, entrance and navigation notices",
+      "question": "Is departure and return access workable for this boat?",
+      "fields": [
+        "authority",
+        "issue_time",
+        "valid_time",
+        "geographic_scope",
+        "notice_type",
+        "direct_source"
+      ],
+      "units": {},
+      "cadence": "Daily notices and direct recheck before departure.",
+      "gates": [],
+      "must_not_infer": "A general harbor webpage is not live entrance clearance."
+    }
+  ]
+}

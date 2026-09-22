@@ -11,6 +11,12 @@ on:
       - "src/skippercast/pipeline/parsers.py"
       - "src/skippercast/pipeline/collect.py"
       - ".github/workflows/live-conditions.yml"
+      - "regions/**"
+      - "catalog/**"
+      - "jurisdictions/**"
+      - "src/skippercast/pipeline/settings.py"
+      - "src/skippercast/platform/**"
+      - "scripts/refresh_regions.py"
 
 permissions:
   contents: write
@@ -43,7 +49,7 @@ jobs:
       - name: Collect current NOAA observations
         env:
           PYTHONPATH: src
-        run: python -m skippercast.pipeline.live --output var/live/latest.json --previous var/live/previous.json
+        run: python scripts/refresh_regions.py live --output var/live --previous-root var/live-published
       - name: Publish the conditions feed
         run: |
           if [ ! -d var/live-published ]; then
@@ -53,10 +59,12 @@ jobs:
             git -C var/live-published config http.https://github.com/.extraheader "$(git config --get http.https://github.com/.extraheader)"
           fi
           cp var/live/latest.json var/live-published/
+          mkdir -p var/live-published/regions
+          cp -R var/live/regions/. var/live-published/regions/
           cp docs/live-conditions.md var/live-published/README.md
           git -C var/live-published config user.name 'github-actions[bot]'
           git -C var/live-published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/live-published add latest.json README.md
+          git -C var/live-published add latest.json regions README.md
           git -C var/live-published commit -m 'Refresh NOAA buoy observations'
           git -C var/live-published push origin HEAD:refs/heads/conditions
       - name: Report source failures after publishing their status
@@ -71,6 +79,9 @@ jobs:
               lines.append(f"- {source['name']}: {source['status']}; observed {sample}")
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('\n'.join(lines))
+          regional = json.loads(Path('var/live/regions/index.json').read_text())
+          if any(row['issues'] for row in regional['regions']):
+              raise SystemExit('One or more regional buoy feeds are degraded; source states were published.')
           if data['health']['issues']:
               raise SystemExit('Buoy feed degraded: ' + ', '.join(data['health']['issues']))
           PY

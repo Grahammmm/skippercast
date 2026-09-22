@@ -1,0 +1,48 @@
+"""One scheduled refresh across all published regions; retain the Morro Bay alias."""
+import argparse
+from datetime import datetime, timedelta, timezone
+import json
+from pathlib import Path
+import shutil
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"src"))
+from skippercast.platform.contracts import REPO, atomic_json, load_region, read_json
+from skippercast.pipeline.collect import collect as daily
+from skippercast.pipeline.live import collect as live
+
+
+def refresh(kind, output, previous_root=None):
+    now=datetime.now(timezone.utc)
+    summaries=[]
+    for path in sorted((REPO/"regions").glob("*/region.json")):
+        region=load_region(path.parent.name)
+        if region["status"]=="draft": continue
+        ident=region["id"]
+        prior_path=previous_root/"regions"/ident/"latest.json" if previous_root else None
+        if prior_path and not prior_path.exists() and ident=="morro-bay": prior_path=previous_root/"latest.json"
+        prior=read_json(prior_path) if prior_path and prior_path.is_file() else None
+        data=(daily(now,prior,region_id=ident) if kind=="daily" else live(now,prior,region_id=ident))
+        target=output/"regions"/ident
+        atomic_json(target/"latest.json",data)
+        atomic_json(target/"health.json",{"region_id":ident,"generated_at":data["generated_at"],**data["health"]})
+        if kind=="daily":
+            history=target/"history"
+            if prior_path and (prior_path.parent/"history").is_dir(): shutil.copytree(prior_path.parent/"history",history,dirs_exist_ok=True)
+            atomic_json(history/(now.strftime("%Y-%m-%d")+".json"),data)
+            for old in history.glob("*.json"):
+                if old.stem<(now-timedelta(days=90)).strftime("%Y-%m-%d"):old.unlink()
+        summaries.append({"region_id":ident,"status":data["health"]["status"],"completed_at":data["completed_at"],"issues":data["health"]["issues"]})
+    # Compatibility alias only; identities inside the files remain explicit.
+    for name in ("latest.json","health.json"):
+        shutil.copyfile(output/"regions/morro-bay"/name,output/name)
+    if kind=="daily": shutil.copytree(output/"regions/morro-bay/history",output/"history",dirs_exist_ok=True)
+    atomic_json(output/"regions/index.json",{"schema_version":1,"completed_at":datetime.now(timezone.utc).isoformat(),"regions":summaries})
+    return summaries
+
+
+if __name__=="__main__":
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("kind",choices=["daily","live"])
+    p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--previous-root",type=Path)
+    a=p.parse_args();print(json.dumps(refresh(a.kind,a.output,a.previous_root),indent=2))

@@ -1,5 +1,6 @@
-import { directionTo, HOUR } from "./marine-data.js?v=5.4";
-import { compass } from "./forecast.js?v=5.4";
+import { getRegion } from "./region.js?v=7.0";
+import { directionTo, HOUR } from "./marine-data.js?v=7.0";
+import { compass } from "./forecast.js?v=7.0";
 export const esc = (v) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -11,7 +12,7 @@ export const esc = (v) =>
 export const num = (n, d = 1) => (Number.isFinite(n) ? n.toFixed(d) : "—");
 export const local = (t, opts = {}) =>
   new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
+    timeZone: getRegion().timezone,
     ...opts,
   }).format(new Date(t * 1000));
 export const full = (t) =>

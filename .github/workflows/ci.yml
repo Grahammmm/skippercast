@@ -26,12 +26,16 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m skippercast demo
+      - name: Rebuild regional contracts
+        env:
+          PYTHONPATH: src
+        run: python -m skippercast.platform.build
       - name: Documentation and publication checks
         run: python scripts/check_repository.py
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Forecast handling and GPX checks
-        run: node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs tests/test_evidence.mjs tests/test_regulations.mjs tests/test_live_conditions.mjs tests/test_planning.mjs
+        run: node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs tests/test_evidence.mjs tests/test_regulations.mjs tests/test_live_conditions.mjs tests/test_planning.mjs tests/test_regions.mjs
       - name: Website assets and data consistency
         run: python scripts/check_web.py

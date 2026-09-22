@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .collect import source, stamp
 from .parsers import ndbc
+from .settings import settings, previous_for_region
 
 BUOYS = (
     ("diablo", "46215", "Diablo Canyon", False),
@@ -16,9 +17,13 @@ BUOYS = (
 )
 
 
-def collect(now=None, previous=None):
+def collect(now=None, previous=None, region_id="morro-bay"):
     now = now or datetime.now(timezone.utc)
-    previous = previous or {}
+    previous = previous_for_region(previous, region_id)
+    station = settings(region_id)["region"]["stations"]
+    buoys = (("diablo", station["nearshore_buoy"], station["nearshore_buoy_name"], False),
+             ("diablo-spectrum", station["nearshore_buoy"], station["nearshore_buoy_name"] + " swell and wind waves", True),
+             ("offshore", station["offshore_buoy"], station["offshore_buoy_name"], False))
 
     def one(item):
         ident, station, name, spectral = item
@@ -36,9 +41,10 @@ def collect(now=None, previous=None):
         return ident, row
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        sources = dict(pool.map(one, BUOYS))
+        sources = dict(pool.map(one, buoys))
     return {
         "schema_version": 1,
+        "region_id": region_id,
         "generated_at": stamp(now),
         "completed_at": stamp(),
         "schedule_minutes": 30,
@@ -54,13 +60,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--previous", type=Path)
+    parser.add_argument("--region", default="morro-bay")
     args = parser.parse_args()
     previous = None
     if args.previous and args.previous.exists():
         previous = json.loads(args.previous.read_text())
         if previous.get("schema_version") != 1:
             raise ValueError("Unsupported previous observation feed")
-    data = collect(previous=previous)
+    data = collect(previous=previous, region_id=args.region)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, separators=(",", ":"), allow_nan=False) + "\n")

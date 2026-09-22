@@ -1,4 +1,4 @@
-import { initBiteEvidence } from "./bite-evidence.js?v=6.0";
+import { initBiteEvidence } from "./bite-evidence.js?v=7.0";
 import {
   POINTS,
   MODELS,
@@ -10,13 +10,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=6.0";
-import { esc, num, local, full, day } from "./marine-charts.js?v=6.0";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=6.0";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=6.0";
-import { localDate } from "./forecast.js?v=6.0";
-import { detailHTML } from "./marine-detail.js?v=6.0";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=6.0";
+} from "./marine-data.js?v=7.0";
+import { esc, num, local, full, day } from "./marine-charts.js?v=7.0";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=7.0";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=7.0";
+import { localDate } from "./forecast.js?v=7.0";
+import { detailHTML } from "./marine-detail.js?v=7.0";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=7.0";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {

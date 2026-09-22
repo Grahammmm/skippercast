@@ -1,13 +1,16 @@
-import { initWeather } from "./weather-ui.js?v=6.0";
-import { initNavigation } from "./navigation.js?v=6.0";
-import { initChart } from "./chart-map.js?v=6.0";
-import { initSpecies, matchesSpecies } from "./species.js?v=6.0";
-import { initRegulations } from "./regulations.js?v=6.0";
-import { initCharterGrounds } from "./charter-grounds.js?v=6.0";
-import { initProtectedAreas } from "./protected-areas.js?v=6.0";
-import { initDriftGuides } from "./drift-guides.js?v=6.0";
-import { initCommercialAIS } from "./commercial-ais.js?v=6.0";
-import { atlasExportAllowed } from "./export-screen.js?v=6.0";
+import { getRegion, assetURL } from "./region.js?v=7.0";
+import { mountBottom } from "./bottom-view.js?v=7.0";
+import { initGeology } from "./geology.js?v=7.0";
+import { initWeather } from "./weather-ui.js?v=7.0";
+import { initNavigation } from "./navigation.js?v=7.0";
+import { initChart } from "./chart-map.js?v=7.0";
+import { initSpecies, matchesSpecies } from "./species.js?v=7.0";
+import { initRegulations } from "./regulations.js?v=7.0";
+import { initCharterGrounds } from "./charter-grounds.js?v=7.0";
+import { initProtectedAreas } from "./protected-areas.js?v=7.0";
+import { initDriftGuides } from "./drift-guides.js?v=7.0";
+import { initCommercialAIS } from "./commercial-ais.js?v=7.0";
+import { atlasExportAllowed } from "./export-screen.js?v=7.0";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -17,11 +20,7 @@ const escapeHTML = (value) =>
         c
       ],
   );
-const areaNames = {
-  PointBuchon: "Avila / Point Buchon",
-  MorroBay: "Morro Bay",
-  PointEstero: "Point Estero",
-};
+const areaNames = getRegion().source_names;
 const gradeGuide = {
   A: {
     label: "First look",
@@ -61,8 +60,8 @@ const navigation = initNavigation({
 
 function initMap() {
   map = L.map("map", { zoomControl: false, minZoom: 7, maxZoom: 18 }).setView(
-    [35.34, -120.965],
-    11,
+    getRegion().map.center,
+    getRegion().map.zoom,
   );
   L.control.zoom({ position: "topright" }).addTo(map);
   L.control
@@ -129,7 +128,7 @@ function filterTargets() {
   ]
     .filter(Boolean)
     .join(" · ");
-  $("map-empty").hidden = visible.length > 0;
+  $("map-empty").hidden = visible.length > 0 || !!assetURL("geology");
   $("map-empty").querySelector("strong").textContent =
     "No targets in these filters";
   $("map-empty").querySelector("p").textContent =
@@ -339,12 +338,14 @@ function selectTarget(id, pan = true) {
   conditions.textContent = "Conditions for this spot ↗";
   conditions.addEventListener("click", () => navigation.showView("forecast"));
   $("detail").insertBefore(conditions, extra);
+  mountBottom($("detail"), t);
 }
 
 async function initAISContext() {
   const panel = $("ais-context");
   try {
-    const response = await fetch("data/ais-evidence.json");
+    if (!assetURL("ais_evidence")) { panel.textContent = "No reviewed charter AIS archive is published for this region. Boat names and slow movement alone do not establish fishing spots."; return; }
+    const response = await fetch(assetURL("ais_evidence"));
     if (!response.ok)
       throw new Error(`AIS summary request failed (${response.status})`);
     const evidence = await response.json();
@@ -438,7 +439,7 @@ function fitTargets() {
     return;
   }
   if (!initialViewShown) {
-    map.setView([35.34, -120.965], 11);
+    map.setView(getRegion().map.center, getRegion().map.zoom);
     initialViewShown = true;
     initialFitPending = false;
     return;
@@ -475,6 +476,7 @@ function showAreaDetails(html, area, conditionsButton) {
   speciesUI?.draw();
   weather?.selectLocation(area);
   $("detail").innerHTML = html;
+  mountBottom($("detail"), area);
   $("export-selected").hidden = true;
   $(conditionsButton).addEventListener("click", () =>
     navigation.showView("forecast"),
@@ -528,12 +530,13 @@ initRegulations($("species-regulations"), $("species-select"));
 updateExports();
 
 try {
-  const response = await fetch("data/atlas.json");
+  const response = await fetch(assetURL("atlas"));
   if (!response.ok)
     throw new Error(`Atlas request failed (${response.status})`);
   atlas = await response.json();
   initMap();
   protectedAreas = await initProtectedAreas(map, () => filterTargets());
+  await initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather"));
   speciesUI = await initSpecies(map, layers, {
     protectedAreas,
     onChange: () => {

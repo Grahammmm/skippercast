@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-21",
+  "method": "Source-backed ecological dossiers. Operational suggestions are author interpretations; no universal perfect-condition or catch model is asserted.",
+  "species": [
+    {
+      "id": "lingcod",
+      "name": "Lingcod",
+      "scientific_name": "Ophiodon elongatus",
+      "life_stage": "Young adults and adults",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "Rocky habitat and vegetation with prey support an adult search; ledges and crevices have a seasonal spawning role. Juvenile sandy habitat cannot be substituted for the adult target.",
+          "source_url": "https://www.fisheries.noaa.gov/species/lingcod",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Local relief, rough cover and connected habitat support a sounder search. Large mapped relief is not a boulder measurement or proof of higher catch rate.",
+      "depth_strategy": "Keep the current 200-foot ceiling. Deeper rocky edges can be a later, separately qualified comparison; there is no demonstrated local catch advantage from 250 or 300 feet alone.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Native relief and substrate",
+        "Ground-truthed ledges/rock",
+        "Bottom contact and drift observed on the boat",
+        "Dated catch and effort by depth, including empty drifts"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "rockfish",
+      "name": "Rockfish",
+      "scientific_name": "Sebastes spp.",
+      "life_stage": "Species-dependent juveniles and adults",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "Rocky reefs host many rockfish, but species differ in habitat and height above bottom. The shared selector is a fishing convenience, not a single biological niche.",
+          "source_url": "https://www.fisheries.noaa.gov/west-coast/habitat-conservation/rocky-reef-west-coast",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Keep rocky candidates and inspect the water column with sonar. Split ecological models by identified species before fitting a catch relationship.",
+      "depth_strategy": "A deeper band may change species composition and handling demands. Depth is not a universal quality score; retain the user limit until a separate rollout is requested.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Species identification",
+        "Reef versus sediment interface",
+        "Survey gear and habitat sampling bias",
+        "Retained/released catch and effort",
+        "Dissolved oxygen and temperature at fishing depth"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "halibut",
+      "name": "California halibut",
+      "scientific_name": "Paralichthys californicus",
+      "life_stage": "Recreationally targeted fish; nursery data kept separate",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "California halibut use soft-bottom inner-shelf and estuarine habitat. CDFW describes most angler catches in shallow water; this does not establish a universal optimum at every port.",
+          "source_url": "https://wildlife.ca.gov/Conservation/Marine/Nearshore",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Show connected, fully depth-screened sediment areas and preserve holes. A sand/reef boundary is a search lead, not a catch claim.",
+      "depth_strategy": "The existing 100-foot habitat selection is an app planning cutoff. Automatically extending to 300 feet is not justified by the reviewed recreational evidence.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Sand/gravel classification with date",
+        "Near-bottom prey observations",
+        "Local depth and turbidity",
+        "Fishing effort with zero-catch trips"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "salmon",
+      "name": "Chinook salmon",
+      "scientific_name": "Oncorhynchus tshawytscha",
+      "life_stage": "Ocean-feeding older juveniles and adults",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "Migratory ocean fish follow changing prey and ocean conditions. NOAA reports anchovies dominating Central Coast ocean-caught Chinook diets in 2020\u20132021; that dated finding does not locate a current school.",
+          "source_url": "https://www.fisheries.noaa.gov/feature-story/era-surprises-studying-climate-change-and-salmon-nate-mantua",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Show coastal water-column search references, updated legal access and dated forage/catch context. Do not attach a salmon school to a reef pin or a juvenile survival index.",
+      "depth_strategy": "Water-column presentation depth and seafloor depth are different. Use observed bait/fish depth and lawful gear; a 300-foot seabed limit is not an ocean salmon optimum.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Current legal fishery status",
+        "Stock/run and season context",
+        "Forage schools and fish depth",
+        "Temperature/oxygen profiles",
+        "Geographically dated catch effort"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "albacore",
+      "name": "Albacore tuna",
+      "scientific_name": "Thunnus alalunga",
+      "life_stage": "Surface-oriented juveniles commonly encountered by troll fisheries",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "Ocean temperature and frontal structure influence albacore distribution. NOAA describes broad migrations; a suitable water mass does not establish fish presence.",
+          "source_url": "https://www.fisheries.noaa.gov/species/pacific-albacore-tuna",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Offshore sectors are geographic search references. Rank a real observed front only after checking acquisition time, masks and interpolation artifacts, with independent fish/forage evidence.",
+      "depth_strategy": "Bottom depth does not define pelagic access. Offshore distance, fuel reserve, return sea state and actual school depth constrain this boat more directly.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Quality-screened recent SST gradients",
+        "Chlorophyll with cloud gaps",
+        "Dated fish and bait observations",
+        "Surface-current fronts",
+        "Trip effort and search coverage"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "bluefin",
+      "name": "Pacific bluefin tuna",
+      "scientific_name": "Thunnus orientalis",
+      "life_stage": "Mobile juveniles and adults; size classes differ",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "Pacific bluefin occupy a broad range and migrate over large distances. Feeding, body size and depth behavior make a single fixed surface-temperature optimum inappropriate.",
+          "source_url": "https://www.fisheries.noaa.gov/species/pacific-bluefin-tuna",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Use offshore search references with distinct bluefin notes. Require dated school evidence before publishing species-specific hotspots; albacore evidence is not bluefin evidence.",
+      "depth_strategy": "Treat school depth separately from bottom depth. The 200-foot bottom-habitat ceiling is not a tuna-search boundary or a boat-range clearance.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Species and size-class observations",
+        "Recent school positions with uncertainty",
+        "Forage, fronts and vertical temperature",
+        "Search effort, distance and return conditions"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "dungeness",
+      "name": "Dungeness crab",
+      "scientific_name": "Metacarcinus magister",
+      "life_stage": "Legal-sized adults; larval and nursery evidence separate",
+      "region_scope": "California coast; local precision varies by source",
+      "reviewed_at": "2026-09-21",
+      "claims": [
+        {
+          "claim": "CDFW quality sampling uses depth strings at 90, 150\u2013180 and 210\u2013240 feet. Those are sampling strata, not proof that the deepest stratum maximizes recreational catch.",
+          "source_url": "https://marinespecies.wildlife.ca.gov/dungeness-crab/monitoring/",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
+          "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        }
+      ],
+      "map_policy": "Show connected soft-bottom areas and separate gear/season/whale-risk permission. The reported unsuccessful shallow trip and otter explanation are a local hypothesis to test, not a fitted depth rule.",
+      "depth_strategy": "A legal, comparable 210\u2013240-foot trial would be a more evidence-linked future experiment than assuming 300 feet is best. Keep published fishing targets within 200 feet until expansion is authorized and gear/depth/closure screens are complete.",
+      "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
+      "next_measurements": [
+        "Bottom substrate and true depth",
+        "Trap/hoop type, soak time and bait",
+        "Legal size, sex and zero-catch counts",
+        "Paired shallow/deeper sets and dates",
+        "Observed otter activity, not assumed predator absence"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    }
+  ]
+}

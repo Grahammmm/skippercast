@@ -11,6 +11,11 @@ on:
       - "src/skippercast/pipeline/**"
       - ".github/workflows/daily-data.yml"
       - "dist/data/regulations.json"
+      - "regions/**"
+      - "catalog/**"
+      - "jurisdictions/**"
+      - "src/skippercast/platform/**"
+      - "scripts/refresh_regions.py"
 
 permissions:
   contents: write
@@ -44,11 +49,17 @@ jobs:
       - name: Collect and validate public sources
         env:
           PYTHONPATH: src
-        run: python -m skippercast.pipeline --output var/daily --previous var/previous.json
+        run: python scripts/refresh_regions.py daily --output var/daily --previous-root var/published
+      - name: Audit source-document access
+        env:
+          PYTHONPATH: src
+        run: python -m skippercast.platform.source_audit --output var/daily/source-access.json
       - name: Publish an atomic data snapshot
         run: |
           if [ -d var/published ]; then
-            cp var/daily/latest.json var/daily/health.json var/published/
+            cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
+            mkdir -p var/published/regions
+            cp -R var/daily/regions/. var/published/regions/
             rm -rf var/published/history
             cp -R var/daily/history var/published/history
           else
@@ -61,7 +72,7 @@ jobs:
           cp docs/data-feed-readme.md var/published/README.md
           git -C var/published config user.name 'github-actions[bot]'
           git -C var/published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/published add latest.json health.json history README.md
+          git -C var/published add latest.json health.json source-access.json history regions README.md
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -85,6 +96,11 @@ jobs:
               f.write('\n'.join(summary))
           if h['issues']:
               print('::warning::Some sources are missing, stale, or failed. The feed preserves those statuses.')
+          regional = json.loads(Path('var/daily/regions/index.json').read_text())
+          for row in regional['regions']:
+              print(f"{row['region_id']}: {row['status']} ({len(row['issues'])} source issues)")
+          if any(row['status'] == 'failed' for row in regional['regions']):
+              raise SystemExit('A regional daily feed has failed core coverage; explicit failure state published.')
           if not h['critical_available']:
               raise SystemExit('Core report/observation coverage failed; failure state published for the app.')
           PY

@@ -1,0 +1,13 @@
+# Regional rollout validation
+
+The September 21, 2026 implementation was exercised against Morro Bay and the requested Cambria–San Simeon expansion. The region compiler produces an asset manifest and per-need coverage report for both, while exact depth-qualified targets remain unavailable in the expansion.
+
+An independent agent used the installed-workflow source instructions to discover a real candidate, run candidate and region validation, build a package in an isolated directory, collect regional feeds, and reject a prior feed from the wrong region. Its findings led to explicit producer/variable/unit/provenance fields, coverage interval and footprint semantics, an interpreter preflight, stricter export readiness and corrected regional regulation labels. The reviewed discovery output is retained in [the CSUMB Block05 candidate](../catalog/candidates/csumb-block05.json). It is not approved for redistribution or target generation.
+
+The documentation-access audit reached 22 of 32 catalog URLs during the run; failures remain in [the dated receipts](../catalog/source-access-2026-09-21.json). This is documentation access, not 22 validated live datasets. Native USGS survey grids were used to generate 132 masked bottom windows. The San Simeon geology archive downloaded successfully, passed ZIP reading, and supplied 625 records before regional clipping; it now provides 105 context polygons, all excluded from MPAs with a buffer. No fish or depth-qualified fishing locations were inferred from those polygons.
+
+Both regional live buoy collections returned healthy observations. Daily tests returned NOAA buoy/tide/advisory and four model products, but CoastWatch connectivity and CDFW certificate-chain validation failed in the local environment. Their source states remain degraded; TLS verification was not disabled. A successful command exit or model response does not establish complete regional readiness. The cloud scheduler's current status is available in GitHub Actions.
+
+Offline checks cover region and legacy-feed separation, invalid source contracts, source/target identity, every bottom tile's digest and native center, missing-cell decoding, original GPX equivalence, model units/timestamps, legal freshness, and MPA intersections. The browser's administrator-policy verification blocked the local UI test. No successful mobile visual pass is claimed for this release.
+
+The existing daily and half-hourly workflows discover published regional packages; source-document access is also audited daily. New-provider discovery is a research skill, not automatic approval or publication of whatever a crawler finds.

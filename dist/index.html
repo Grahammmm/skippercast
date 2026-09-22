@@ -10,6 +10,7 @@
       name="description"
       content="Explore fishing grounds, check live ocean conditions, and plan your next trip with wave, wind and tide forecasts."
     />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <meta name="theme-color" content="#082e3b" />
     <title>SkipperCast · Fishing grounds, weather &amp; tides</title>
     <link rel="canonical" href="https://skippercast.com/" />
@@ -37,15 +38,17 @@
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="marine.css?v=6.0" />
-    <link rel="stylesheet" href="map-first.css?v=6.0" />
-    <link rel="stylesheet" href="bite-evidence.css?v=6.0" />
-    <link rel="stylesheet" href="regulations.css?v=6.0" />
-    <link rel="stylesheet" href="live-conditions.css?v=6.0" />
-    <link rel="stylesheet" href="calm-layout.css?v=6.0" />
-    <link rel="stylesheet" href="planning.css?v=6.0" />
+    <link rel="stylesheet" href="marine.css?v=7.0" />
+    <link rel="stylesheet" href="map-first.css?v=7.0" />
+    <link rel="stylesheet" href="bite-evidence.css?v=7.0" />
+    <link rel="stylesheet" href="regulations.css?v=7.0" />
+    <link rel="stylesheet" href="live-conditions.css?v=7.0" />
+    <link rel="stylesheet" href="calm-layout.css?v=7.0" />
+    <link rel="stylesheet" href="planning.css?v=7.0" />
+    <link rel="stylesheet" href="platform.css?v=7.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="app.js?v=6.0"></script>
+    <script type="module" src="boot.js?v=7.0"></script>
   </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -69,7 +72,7 @@
         aria-label="Fishing map"
       >
         <div class="map-wrap">
-          <div id="map" aria-label="Interactive fishing habitat map"></div>
+          <div id="map" aria-label="Interactive fishing habitat map"></div><div id="region-note" class="region-note" hidden></div>
           <div class="species-bar">
             <label for="species-select">Target species</label>
             <select id="species-select">
@@ -141,6 +144,7 @@
           <h1>Field guide</h1>
           <p>Choose what you want to explore.</p>
         </div>
+        <details class="guide-topic"><summary>Regional data coverage</summary><div id="region-coverage"></div></details>
         <details class="guide-topic"><summary>Fishing your target species</summary>
         <section
           id="species-guide"
@@ -316,6 +320,7 @@
         <button id="close-map-options" aria-label="Close map options">×</button>
       </div>
       <div class="options-body">
+        <label class="region-control" for="region-select">Fishing region<select id="region-select"></select></label>
         <label
           >Chart detail<select id="base-map">
             <option value="fishing">Fishing chart · less clutter</option>

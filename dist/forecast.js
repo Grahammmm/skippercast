@@ -1,3 +1,4 @@
+import { getRegion } from "./region.js?v=7.0";
 // Pure data handling shared by the browser and offline checks. Missing is never calm.
 export const STATIONS = [
   {
@@ -43,7 +44,7 @@ export const WAVE_MODELS = [
     meta: "https://marine-api.open-meteo.com/data/ncep_gfswave025/static/meta.json",
   },
 ];
-export const TIMEZONE = "America/Los_Angeles";
+export const TIMEZONE = getRegion().timezone;
 export function localDate(date = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {

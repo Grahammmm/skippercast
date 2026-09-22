@@ -1,22 +1,9 @@
+import { getRegion } from "./region.js?v=7.0";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=5.4";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=7.0";
 
 export const HOUR = 3600;
-export const POINTS = [
-  { id: "north", name: "Point Estero", latitude: 35.45, longitude: -121.02 },
-  { id: "central", name: "Estero Bay", latitude: 35.36, longitude: -120.94 },
-  { id: "south", name: "Point Buchon", latitude: 35.24, longitude: -120.94 },
-  { id: "avila", name: "Off Avila", latitude: 35.1, longitude: -120.82 },
-  ...[35.05, 35.3, 35.55].flatMap((latitude, row) =>
-    [-121.25, -121.5, -121.75].map((longitude, col) => ({
-      id: `offshore-${row}-${col}`,
-      name: `Offshore ${["south", "central", "north"][row]} · ${["inner", "middle", "outer"][col]}`,
-      latitude,
-      longitude,
-      offshore: true,
-    })),
-  ),
-];
+export const POINTS = getRegion().forecast_points;
 export const MODELS = [
   ...WIND_MODELS.map((m) => ({
     ...m,
@@ -281,7 +268,7 @@ export function tideURL(now = Date.now(), interval = "6") {
     new URLSearchParams({
       product: "predictions",
       application: "SkipperCast",
-      station: "9412110",
+      station: getRegion().stations.tide,
       begin_date: date(now - 86400000),
       end_date: date(now + 8 * 86400000),
       datum: "MLLW",
@@ -344,10 +331,10 @@ export async function loadMarine() {
   const [tides, extremes, alerts, outerAlerts, water] = await Promise.all([
     attempt(tideURL()),
     attempt(tideURL(Date.now(), "hilo")),
-    attempt("https://api.weather.gov/alerts/active?zone=PZZ645"),
-    attempt("https://api.weather.gov/alerts/active?zone=PZZ670"),
+    attempt(`https://api.weather.gov/alerts/active?zone=${getRegion().marine_zones.coastal}`),
+    attempt(`https://api.weather.gov/alerts/active?zone=${getRegion().marine_zones.offshore}`),
     attempt(
-      "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=9412110&date=latest&datum=MLLW&time_zone=gmt&units=english&format=json",
+      `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=${getRegion().stations.tide}&date=latest&datum=MLLW&time_zone=gmt&units=english&format=json`,
     ),
   ]);
   const parseAlerts = (r) =>

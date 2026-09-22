@@ -1,12 +1,14 @@
-import { esc, num } from "./marine-charts.js?v=6.0";
+import { assetURL } from "./region.js?v=7.0";
+import { esc, num } from "./marine-charts.js?v=7.0";
 export async function initCommercialAIS(map,{protectedAreas,onSelect,showMap}) {
   const layer=L.layerGroup();
   const checkbox=document.getElementById("layer-commercial");
   const focus=document.getElementById("show-commercial-ais");
   const status=document.getElementById("commercial-ais-status");
+  if(!assetURL("commercial_ais")){status.textContent="No reviewed commercial AIS layer for this region.";checkbox.disabled=true;focus.disabled=true;return {draw(){}};}
   let features=[];
   try {
-    const r=await fetch("data/commercial-ais-effort.geojson");
+    const r=await fetch(assetURL("commercial_ais"));
     if(!r.ok) throw Error();
     features=(await r.json()).features;
   } catch {status.textContent="Historical commercial AIS unavailable.";checkbox.disabled=true;focus.disabled=true;return {draw(){}};}

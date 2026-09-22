@@ -1,16 +1,18 @@
-import { fetchJSON } from "./forecast.js?v=6.0";
-import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=6.0";
-import { esc } from "./marine-charts.js?v=6.0";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=7.0";
+import { fetchJSON } from "./forecast.js?v=7.0";
+import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=7.0";
+import { esc } from "./marine-charts.js?v=7.0";
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
-export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:"-121.9,34.95,-120.55,35.85",geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
+export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:getRegion().mpa.bounds.join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
 export function validMPAs(data) {
-  return data?.type === "FeatureCollection" && !data.exceededTransferLimit && data.features?.length >= 8 && data.features.every(f=>typeof f.properties?.NAME === "string" && ["Polygon","MultiPolygon"].includes(f.geometry?.type));
+  return data?.type === "FeatureCollection" && !data.exceededTransferLimit && data.features?.length >= getRegion().mpa.minimum_features && data.features.every(f=>typeof f.properties?.NAME === "string" && ["Polygon","MultiPolygon"].includes(f.geometry?.type));
 }
 const sourceFor = (name) => "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
 export async function initProtectedAreas(map, onChange) {
   const layer=L.layerGroup().addTo(map);
   const status=document.getElementById("mpa-status");
   let data=null, checked=null, live=false;
+  const freshEnough=()=>!!data && Number.isFinite(Date.parse(checked)) && Date.now()-Date.parse(checked) >= -300000 && Date.now()-Date.parse(checked) <= 36*3600000;
   map.createPane("protectedAreas").style.zIndex=440;
   function draw() {
     layer.clearLayers();
@@ -21,26 +23,35 @@ export async function initProtectedAreas(map, onChange) {
         .bindPopup(`<strong>${esc(p.FULLNAME||p.NAME)}</strong><p>Fishing targets are excluded from every MPA in SkipperCast, including conservation areas with species exceptions.</p><p>${esc(p.CCR)} · ${live?"Boundary checked this session":"Saved boundary snapshot"} ${esc(checked?.slice(0,10))}</p><a href="${sourceFor(p.NAME)}" target="_blank" rel="noopener">Official CDFW map & rules ↗</a>`).addTo(layer);
     }
     status.textContent = data ? `MPAs shown · targets excluded · ${live?"checked now":"snapshot "+checked?.slice(0,10)}` : "MPA boundaries unavailable · fishing targets withheld";
-    status.classList.toggle("error",!data);
+    if(data && !freshEnough()) status.textContent += " · boundary check stale; fishing targets withheld";
+    status.classList.toggle("error",!freshEnough());
   }
   try {
-    const saved=await fetchJSON("data/protected-areas.geojson");
+    const saved=await fetchJSON(assetURL("protected_areas"));
     if (!validMPAs(saved)) throw Error("Invalid MPA snapshot");
     data=saved; checked=saved.checked_at;
   } catch { /* Without a boundary dataset, fail closed for target layers. */ }
   draw();
   map.on("zoomend",draw);
   const screen={
-    ready:()=>!!data,
-    pointAllowed:p=>!!data && !data.features.some(f=>pointInGeometry([p.longitude,p.latitude],f.geometry)),
-    geometryAllowed:g=>!!data && !data.features.some(f=>geometryIntersects(g,f.geometry)),
+    ready:()=>freshEnough(),
+    pointAllowed:p=>freshEnough() && !data.features.some(f=>pointInGeometry([p.longitude,p.latitude],f.geometry)),
+    geometryAllowed:g=>freshEnough() && !data.features.some(f=>geometryIntersects(g,f.geometry)),
     async refresh() {
       try {
         const fresh=await fetchJSON(MPA_QUERY);
         if (!validMPAs(fresh)) throw Error("Incomplete MPA response");
         data=fresh; checked=new Date().toISOString(); live=true;
         draw(); onChange();
-      } catch { status.textContent += " · live check unavailable"; }
+      } catch {
+        try {
+          const feed=await fetchJSON(getRegion().daily_feed);
+          const record=feed.sources?.["mpa-boundaries"];
+          if(!acceptsFeed(feed) || record?.status!=="ok" || !validMPAs(record.data?.geojson)) throw Error();
+          data=record.data.geojson;checked=record.data_retrieved_at;live=false;
+          draw();onChange();
+        } catch {status.textContent += " · live check unavailable";onChange();}
+      }
     },
   };
   return screen;

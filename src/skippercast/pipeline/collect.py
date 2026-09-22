@@ -7,11 +7,14 @@ import json
 import time
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
 
 from . import parsers
 from .regulations import regulatory_snapshot
+from .settings import settings, previous_for_region
+from ..platform.contracts import public_url
+from ..platform.source_audit import PublicRedirect, check_public_address
 
 UA = "SkipperCast/0.2 (https://github.com/Grahammmm/skippercast)"
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap"
@@ -64,10 +67,12 @@ class Client:
         self.requests = []
 
     def get(self, url, as_json=False, as_pdf=False):
+        public_url(url)
         for attempt in range(2):
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
             try:
-                with urlopen(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*"}), timeout=25) as response:
+                check_public_address(url)
+                with build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*"}), timeout=25) as response:
                     limit = 35_000_000 if as_pdf else 5_000_000
                     body = response.read(limit + 1)
                     record.update(http_status=response.status, http_date=response.headers.get("Date"),
@@ -125,25 +130,31 @@ def source(ident, name, kind, url, max_age, loader, now, previous=None):
     return result
 
 
-def grid_loader(kind):
+def grid_loader(kind, bounds=None, config=None):
+    bounds = BOUNDS if bounds is None else bounds
     dataset, variables, stride, _ = DATASETS[kind]
+    base_url = ERDDAP
+    if config:
+        dataset, variables, stride = config["dataset"], config["variables"], config["stride"]
+        base_url = config["base_url"]
     def load(client):
-        metadata_url = f"{ERDDAP}/info/{dataset}/index.json"
+        metadata_url = f"{base_url}/info/{dataset}/index.json"
         meta = parsers.erddap_metadata(client.get(metadata_url, True))
-        query = parsers.erddap_query(meta, variables, BOUNDS, stride)
-        url = f"{ERDDAP}/griddap/{dataset}.json?" + quote(query, safe=",:()")
+        query = parsers.erddap_query(meta, variables, bounds, stride)
+        url = f"{base_url}/griddap/{dataset}.json?" + quote(query, safe=",:()")
         grid = parsers.erddap_grid(client.get(url, True), meta, variables, kind)
-        grid.update(dataset=dataset, metadata_url=metadata_url, query_url=url, requested_bounds=BOUNDS, stride=stride)
+        grid.update(dataset=dataset, metadata_url=metadata_url, query_url=url, requested_bounds=bounds, stride=stride)
         return grid
     return load
 
 
-def model_loader(model):
+def model_loader(model, points=None):
+    points = POINTS if points is None else points
     wave = model in ("ecmwf_wam025", "ncep_gfswave025")
     variables = ([f"{p}_{q}" for p in ("wave", "wind_wave", "swell_wave", "secondary_swell_wave")
                   for q in ("height", "period", "direction")] if wave else
                  ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "visibility", "precipitation", "temperature_2m", "weather_code"])
-    params = {"latitude": ",".join(str(p[1]) for p in POINTS), "longitude": ",".join(str(p[2]) for p in POINTS),
+    params = {"latitude": ",".join(str(p[1]) for p in points), "longitude": ",".join(str(p[2]) for p in points),
               "hourly": ",".join(variables), "models": model, "forecast_days": 8, "timezone": "UTC",
               "timeformat": "unixtime", "cell_selection": "sea"}
     if wave:
@@ -157,7 +168,7 @@ def model_loader(model):
         if not isinstance(initialized, (float, int)):
             raise ValueError("Model initialization timestamp absent")
         data = client.get(url, True)
-        if not isinstance(data, list) or len(data) != len(POINTS):
+        if not isinstance(data, list) or len(data) != len(points):
             raise ValueError("Forecast point count changed")
         for p in data:
             units, hourly = p.get("hourly_units", {}), p.get("hourly", {})
@@ -170,39 +181,57 @@ def model_loader(model):
             if any(units.get(k) != v for k, v in expected.items()):
                 raise ValueError("Forecast units changed")
         return {"model": model, "sample_at": stamp(datetime.fromtimestamp(initialized, timezone.utc)),
-                "meta": meta, "requested_points": [{"name": p[0], "latitude": p[1], "longitude": p[2]} for p in POINTS],
+                "meta": meta, "requested_points": [{"name": p[0], "latitude": p[1], "longitude": p[2]} for p in points],
                 "points": data, "note": "Daily model archive for evidence research; browser weather refreshes independently."}
     return url, load
 
 
-def collect(now, previous=None, days=30):
-    previous = previous if previous and previous.get("schema_version") == 1 else {}
+def collect(now, previous=None, days=30, region_id="morro-bay"):
+    config = settings(region_id)
+    region = config["region"]
+    previous = previous_for_region(previous, region_id)
+    stations = region["stations"]
+    west, south, east, north = region["bounds"]
+    bounds = {"latitude": [south, north], "longitude": [west, east]}
+    points = [(p["name"], p["latitude"], p["longitude"]) for p in region["forecast_points"]]
     old_sources = previous.get("sources", {})
     sources = {}
-    local_day = now.astimezone(ZoneInfo("America/Los_Angeles")).date()
+    local_day = now.astimezone(ZoneInfo(region["timezone"])).date()
     jobs = []
-    for kind, (dataset, _, _, max_age) in DATASETS.items():
-        jobs.append((kind, {"sst": "NASA JPL MUR sea temperature", "chlorophyll": "NASA Aqua MODIS chlorophyll", "currents": "NOAA IOOS HF radar currents"}[kind],
-                     "grid", f"{ERDDAP}/info/{dataset}/index.html", max_age, grid_loader(kind)))
-    for ident, station, spectral in [("buoy-46215", "46215", False), ("buoy-46215-swell", "46215", True), ("buoy-46028", "46028", False)]:
+    for kind, request in config["grids"].items():
+        jobs.append((kind, request["name"], "grid", f"{request['base_url']}/info/{request['dataset']}/index.html",
+                     request["max_age_hours"], grid_loader(kind, bounds, request)))
+    for ident, station, spectral in [("buoy-"+stations["nearshore_buoy"], stations["nearshore_buoy"], False), ("buoy-"+stations["nearshore_buoy"]+"-swell", stations["nearshore_buoy"], True), ("buoy-"+stations["offshore_buoy"], stations["offshore_buoy"], False)]:
         url = f"https://www.ndbc.noaa.gov/data/realtime2/{station}.{'spec' if spectral else 'txt'}"
         jobs.append((ident, f"NOAA NDBC {station}" + (" swell components" if spectral else " observations"), "observation", url, 6,
                      lambda c, u=url, s=station, sp=spectral: parsers.ndbc(c.get(u), s, sp)))
-    tide_params = {"product": "predictions", "application": "SkipperCast", "station": "9412110", "datum": "MLLW",
+    tide_params = {"product": "predictions", "application": "SkipperCast", "station": stations["tide"], "datum": "MLLW",
                    "begin_date": now.strftime("%Y%m%d"), "end_date": (now + timedelta(days=8)).strftime("%Y%m%d"),
                    "time_zone": "gmt", "units": "english", "interval": "hilo", "format": "json"}
     url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?" + urlencode(tide_params)
-    jobs.append(("tides", "NOAA Port San Luis tide predictions", "prediction", url, 36, lambda c, u=url: parsers.tides(c.get(u, True))))
-    for zone in ("PZZ645", "PZZ670"):
+    jobs.append(("tides", "NOAA " + stations["tide_name"] + " reference tide predictions", "prediction", url, 36, lambda c, u=url: parsers.tides(c.get(u, True))))
+    for zone in dict.fromkeys(region["marine_zones"].values()):
         url = f"https://api.weather.gov/alerts/active/zone/{zone}"
         jobs.append(("alerts-" + zone, "NWS " + zone + " advisories", "advisory", url, 36, lambda c, u=url: parsers.alerts(c.get(u, True))))
-    for ident, (name, url, keywords) in WATCHES.items():
+    mpa_url = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?" + urlencode({
+        "where":"1=1", "geometry":",".join(str(v) for v in region["mpa"]["bounds"]),
+        "geometryType":"esriGeometryEnvelope", "inSR":"4326", "spatialRel":"esriSpatialRelIntersects",
+        "outFields":"NAME,FULLNAME,Type,CCR", "returnGeometry":"true", "outSR":"4326", "f":"geojson"})
+    def mpa_read(client):
+        data = client.get(mpa_url, True)
+        if data.get("type") != "FeatureCollection" or data.get("exceededTransferLimit") or len(data.get("features", [])) < region["mpa"]["minimum_features"]:
+            raise ValueError("Incomplete protected-area boundary response")
+        if any(f.get("geometry", {}).get("type") not in ("Polygon", "MultiPolygon") or not isinstance(f.get("properties", {}).get("NAME"), str) for f in data["features"]):
+            raise ValueError("Malformed protected-area geometry")
+        return {"geojson": data, "checked_at": stamp(), "boundary_issue_time": None}
+    jobs.append(("mpa-boundaries", "CDFW DS582 protected-area geometry", "boundaries", mpa_url, 36, mpa_read))
+    for ident, (name, url, keywords) in config["watches"].items():
         jobs.append((ident, name, "page-watch", url, 36, lambda c, u=url, k=keywords: parsers.page_watch(c.get(u), k)))
-    url = "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985"
+    url = config["jurisdiction"]["booklet_url"]
     jobs.append(("rules-book", "CDFW 2026 ocean regulations booklet", "page-watch", url, 36,
                  lambda c, u=url: c.get(u, as_pdf=True)))
-    for model in MODEL_META:
-        url, loader = model_loader(model)
+    for model in config["model_ids"]:
+        url, loader = model_loader(model, points)
         jobs.append(("model-" + model, model + " via Open-Meteo", "forecast", url, 36, loader))
     def run(job):
         return source(*job, now=now, previous=old_sources.get(job[0]))
@@ -213,7 +242,7 @@ def collect(now, previous=None, days=30):
     # Refetch the latest seven completed local dates for late corrections. Older
     # successful day facts are reused with their original retrieval timestamps.
     report_jobs = []
-    for offset in range(1, days + 1):
+    for offset in range(1, days + 1) if region["landing_names"] else []:
         day = (local_day - timedelta(days=offset)).isoformat()
         ident = "catches-" + day
         old = old_sources.get(ident)
@@ -230,19 +259,20 @@ def collect(now, previous=None, days=30):
                for r in s["data"]["reports"]]
     snapshot = {"schema_version": 1, "generated_at": stamp(now), "completed_at": stamp(),
                 "schedule": {"cron": "17 4 * * *", "timezone": "America/Los_Angeles", "max_delay_hours": 36},
-                "scope": "Morro Bay and Avila landing reports; Avila–Point Estero ocean samples plus offshore search water",
+                "region_id": region_id, "scope": region["name"], "bounds": region["bounds"],
+                "landing_names": region["landing_names"],
                 "report_window": {"start": (local_day - timedelta(days=days)).isoformat(),
                                   "end": (local_day - timedelta(days=1)).isoformat(), "days": days},
                 "sources": sources, "reports": sorted(reports, key=lambda r: (r["date"], r["id"]), reverse=True),
                 "catch_probability": None, "bite_score": None,
-                "regulations": regulatory_snapshot(sources, now),
+                "regulations": regulatory_snapshot(sources, now, config["regulations"]),
                 "limitations": ["Landing port is not a catch position; named grounds are broad reports, not GPS fixes.",
                                 "Reports are a selected sample, with unknown effort and missing unsuccessful trips.",
                                 "Satellite temperature and HF radar measure surface context, not bottom conditions.",
                                 "Daily observations are not a seven-day bite forecast or live entrance clearance."]}
     last_seven = [sources.get("catches-" + (local_day - timedelta(days=i)).isoformat(), {}) for i in range(1, 8)]
     coverage = sum(s.get("status") == "ok" for s in last_seven)
-    critical = coverage >= 5 and any(sources[k]["status"] == "ok" for k in ("buoy-46215", "buoy-46028"))
+    critical = (coverage >= 5 if region["landing_names"] else True) and any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
     issues = [s["id"] for s in sources.values() if s["status"] != "ok"]
     snapshot["health"] = {"status": "ok" if not issues else "degraded" if critical else "failed",
                           "critical_available": critical, "recent_report_days_ok": coverage,

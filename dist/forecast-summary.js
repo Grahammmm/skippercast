@@ -1,6 +1,6 @@
-import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=6.0";
-import { esc, num, from, local, weatherName } from "./marine-charts.js?v=6.0";
-import { rateHour } from "./morning-outlook.js?v=6.0";
+import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=7.0";
+import { esc, num, from, local, weatherName } from "./marine-charts.js?v=7.0";
+import { rateHour } from "./morning-outlook.js?v=7.0";
 export function forecastSummaryHTML(bundle,point,species,time,family,dayRating,now=Date.now()) {
   const c=readConditions(bundle,point,time,family), parts=readConditions(bundle,point,time,"gfs");
   const other=readConditions(bundle,point,time,family==="gfs"?"ecmwf":"gfs");

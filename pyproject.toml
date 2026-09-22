@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skippercast"
-version = "0.1.0"
-description = "A personal boat-fishing research toolkit: habitat atlases and forecast evidence."
+version = "0.2.0"
+description = "A regional boat-fishing platform with surveyed habitat, ocean forecasts and explicit data provenance."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

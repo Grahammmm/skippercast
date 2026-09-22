@@ -20,7 +20,7 @@ class LiveObservationsTests(TestCase):
         self.assertIn('46028', data['sources']['offshore']['station_url'])
 
     def test_retained_source_is_degraded_not_relabelled_current(self):
-        previous = {'sources': {'diablo': {'status': 'ok', 'data': {'sample_at': 'old'}}}}
+        previous = {'schema_version': 1, 'sources': {'diablo': {'status': 'ok', 'data': {'sample_at': 'old'}}}}
         def fake_source(ident, name, kind, url, max_age, loader, collected, old):
             if ident == 'diablo':
                 self.assertEqual(old, previous['sources']['diablo'])

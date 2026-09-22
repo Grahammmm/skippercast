@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkipperCast regional source candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "region_ids",
+    "need_ids",
+    "documentation_url",
+    "access_url",
+    "access_status",
+    "rights",
+    "spatial",
+    "temporal",
+    "evidence",
+    "limitations",
+    "producer",
+    "variables",
+    "units",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "region_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "need_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "documentation_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "access_url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "access_status": {
+      "enum": [
+        "not-tested",
+        "accessible",
+        "partial",
+        "blocked",
+        "unavailable"
+      ]
+    },
+    "rights": {
+      "type": "object",
+      "required": [
+        "license",
+        "terms_url",
+        "redistribution_reviewed"
+      ],
+      "properties": {
+        "license": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "terms_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "redistribution_reviewed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "spatial": {
+      "type": "object",
+      "required": [
+        "bounds",
+        "resolution_m",
+        "horizontal_crs",
+        "vertical_datum"
+      ],
+      "properties": {
+        "bounds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "number"
+          }
+        },
+        "resolution_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "horizontal_crs": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vertical_datum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "footprint_kind": {
+          "enum": [
+            "catalog-envelope",
+            "survey-track-envelope",
+            "valid-data-mask",
+            "measured-geometry",
+            "unknown"
+          ]
+        },
+        "footprint_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolution_basis": {
+          "enum": [
+            "advertised",
+            "inspected",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "temporal": {
+      "type": "object",
+      "required": [
+        "source_time",
+        "checked_at",
+        "update_cadence"
+      ],
+      "properties": {
+        "source_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checked_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "update_cadence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_start": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "ISO calendar date or timezone-qualified instant; preserve published precision."
+        },
+        "coverage_end": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "ISO calendar date or timezone-qualified instant; preserve published precision."
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "supports"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "supports": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "producer": {
+      "type": "object",
+      "required": [
+        "name",
+        "url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "units": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "access_service",
+        "raw_sha256",
+        "transformations"
+      ],
+      "properties": {
+        "access_service": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "transformations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

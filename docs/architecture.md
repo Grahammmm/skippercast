@@ -1,5 +1,7 @@
 # Architecture
 
+The implemented regional platform is documented in [A reusable coastal fishing system](platform.md). It separates data needs, reviewed providers, jurisdictions and regional packages, with scheduled feeds and measured bottom views. The monitor workflow below remains a separate, private operational path.
+
 For a visual introduction to the intended app, see [the system overview: data flow, chart layers, and software stack](system-overview.md).
 
 SkipperCast has a static web app and two independent Python research paths. The atlas can be used without running the monitor; the collector can be used without importing any waypoints. The [web app](web-app.md) reads the public atlas directly and requests forecast evidence from providers in the browser. It does not run the Python collector or alert delivery.

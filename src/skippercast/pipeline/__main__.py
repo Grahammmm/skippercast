@@ -10,13 +10,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--previous", type=Path)
+    parser.add_argument("--region", default="morro-bay")
     args = parser.parse_args()
     previous = None
     if args.previous and args.previous.exists():
         previous = json.loads(args.previous.read_text())
         validate(previous)
     now = datetime.now(timezone.utc)
-    snapshot = collect(now, previous)
+    snapshot = collect(now, previous, region_id=args.region)
     args.output.mkdir(parents=True, exist_ok=True)
     # Atomic files, then one atomic branch update in the publishing job.
     encoded = json.dumps(snapshot, separators=(",", ":"), allow_nan=False) + "\n"

@@ -1,15 +1,16 @@
-import { esc } from "./marine-charts.js?v=5.4";
+import { getRegion, assetURL } from "./region.js?v=7.0";
+import { esc } from "./marine-charts.js?v=7.0";
 import { loadDailyEvidence } from "./bite-evidence.js?v=5.8";
 
 const HOUR = 3600000;
 const IDS = ["lingcod", "rockfish", "halibut", "salmon", "albacore", "bluefin", "dungeness"];
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+  timeZone: getRegion().timezone, year: "numeric", month: "2-digit", day: "2-digit",
 });
 const dateOnly = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && Number.isFinite(Date.parse(s));
 const age = (s, now) => (now - Date.parse(s)) / HOUR;
 const time = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleString("en-US", {
-  timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
+  timeZone: getRegion().timezone, month: "short", day: "numeric", year: "numeric",
   hour: "numeric", minute: "2-digit",
 }) + " PT" : "Unavailable";
 export function officialURL(value) {
@@ -75,7 +76,7 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
     const seasonsMatch = data.species.lingcod.season === data.species.rockfish.season;
     return summary + `<div class="reg-body" tabindex="0" aria-label="Lingcod and rockfish regulation details">
       <div class="reg-context">Today · ${esc(state.today)} · Pacific time</div>
-      <h2>Lingcod &amp; rockfish</h2><p class="reg-area">Avila–Cambria · recreational boat fishing</p>
+      <h2>Lingcod &amp; rockfish</h2><p class="reg-area">${esc(getRegion().name)} · recreational boat fishing</p>
       <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
       ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
       ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(data.species[id].name)}</h3><p>${esc(data.species[id].bag)}</p><p>${esc(data.species[id].size)}</p></section>`).join("")}
@@ -105,7 +106,7 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
 export function initRegulations(card, select) {
   let registry = null, fallback = true, species = select.value, lastRefresh = 0;
   function render(open = false) {
-    const html = regulationsHTML(registry, species, Date.now(), fallback);
+    const html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback);
     if (card.innerHTML !== html) {
       const expanded = [...card.querySelectorAll("[data-reg-section][open]")].map((x) => x.dataset.regSection);
       card.innerHTML = html;
@@ -135,7 +136,7 @@ export function initRegulations(card, select) {
   render();
   (async () => {
     try {
-      const response = await fetch("data/regulations.json", { cache: "no-cache", signal: AbortSignal.timeout(10000) });
+      const response = await fetch(assetURL("regulations"), { cache: "no-cache", signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw Error("Rules unavailable");
       const candidate = await response.json();
       if (validRegulations(candidate)) registry = candidate;
