@@ -1,5 +1,5 @@
-import defaultRegion from "./region-default.js?v=8.8";
-import {loadCoasts,coastForPackage,coastURL} from './coasts.js?v=8.8';
+import defaultRegion from "./region-default.js?v=8.9";
+import {loadCoasts,coastForPackage,coastURL} from './coasts.js?v=8.9';
 let active = defaultRegion;
 let directory = [];
 export const getRegion = () => active;
@@ -54,6 +54,8 @@ export async function initRegion() {
   const note=document.getElementById("region-note");
   note.hidden=active.status!=="preview";note.textContent=active.name+" · "+(active.preview_label || "geological context; surveyed fishing spots pending");
   const panel=document.getElementById("region-coverage");
+  // The map does not depend on this explanatory coverage table.
+  void (async()=>{
   let coverage;
   try {
     const response=await fetch(`regions/${active.id}/coverage.json`,{signal:AbortSignal.timeout(10000)});
@@ -71,6 +73,7 @@ export async function initRegion() {
   for(const need of coverage.needs){const row=body.insertRow();for(const value of [need.name,need.status,need.reason])row.insertCell().textContent=value;}
   panel.append(table);
   const link=document.createElement("a");link.href="https://github.com/Grahammmm/skippercast/blob/main/docs/regions.md";link.textContent="Regional setup and data contracts ↗";link.target="_blank";link.rel="noopener";panel.append(link);
+  })();
 }
 
 // Geographic observation/advisory bindings are data, shared by any large region.

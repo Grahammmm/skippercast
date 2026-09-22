@@ -1,6 +1,6 @@
-import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js?v=8.8';
-import { positions } from './geo-screen.js?v=8.8';
-import {coastAt,coastURL} from './coasts.js?v=8.8';
+import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js?v=8.9';
+import { positions } from './geo-screen.js?v=8.9';
+import {coastAt,coastURL} from './coasts.js?v=8.9';
 
 // Discovery extents select a reviewed package. They are not legal boundaries.
 export const contains = (b, p) => !!b && Number.isFinite(p?.longitude) && Number.isFinite(p?.latitude) && p.longitude >= b[0] && p.longitude <= b[2] && p.latitude >= b[1] && p.latitude <= b[3];

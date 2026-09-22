@@ -1,8 +1,9 @@
-import {initChart} from './chart-map.js?v=8.8';
-import {initNavigation} from './navigation.js?v=8.8';
-import {esc} from './marine-charts.js?v=8.8';
-import {viewFromURL} from './location-context.js?v=8.8';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.8';
+import {initChart} from './chart-map.js?v=8.9';
+import {initNavigation} from './navigation.js?v=8.9';
+import {esc} from './marine-charts.js?v=8.9';
+import {viewFromURL} from './location-context.js?v=8.9';
+import {mappedPackageAt} from './map-response.js?v=8.9';
+import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.9';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
@@ -39,21 +40,22 @@ export async function initCoastalDiscovery(catalog,coast) {
   const body=options.querySelector('.options-body');body.replaceChildren(chartLabel);
   const detail=document.createElement('div');detail.innerHTML=`<p class="small">Clean chart: depths, coastal features and navigation aids. MPAs stay visible. Full NOAA restores all chart symbols.</p><h3>${esc(coast.name)} · ${esc(coast.limits)}</h3>${links||'<p>Detailed fishing maps are pending for this coast.</p>'}`;body.append(detail);
   document.getElementById('open-map-options').addEventListener('click',()=>options.showModal());document.getElementById('close-map-options').addEventListener('click',()=>options.close());
-  const note=document.getElementById('region-note');note.hidden=false;note.textContent='Coastal guide · select a mapped area in Options for fishing spots';
-  document.getElementById('map-empty').hidden=true;
-  let boundaries=null,boundaryTime=null,mpaStatus='Checking MPA boundaries…',navigating=false;
+  const note=document.getElementById('region-note');note.hidden=true;
+  const empty=document.getElementById('map-empty');empty.hidden=false;empty.classList.add('coverage-message');
+  empty.innerHTML=`<strong>${packages.length?'Choose a mapped fishing area':'Fishing spots not mapped here yet'}</strong><p>${packages.length?'Zoom into a mapped area to load its fishing grounds, or open one below.':'Species guidance and MPAs are available. Selecting a species cannot display fishing spots until regional survey data is added.'}</p>${links}`;
+  let boundaries=null,boundaryTime=null,mpaStatus='Checking MPA boundaries…',navigating=false,mpaShapes=[];
   const mpaLayer=L.layerGroup().addTo(map);map.createPane('coastalMPAs').style.zIndex=440;
   function drawMPAs() {
-    mpaLayer.clearLayers();
-    for(const f of boundaries?.features||[]) {
-      const shape=L.geoJSON(f,{pane:'coastalMPAs',style:{color:'#bd3869',weight:2,fillOpacity:.08}});
-      if(!shape.getBounds().intersects(map.getBounds()))continue;
-      shape.bindTooltip(esc(f.properties.NAME)).bindPopup(`<strong>${esc(f.properties.FULLNAME||f.properties.NAME)}</strong><p>Marine protected area. Species-specific restrictions apply.</p><p>${esc(mpaStatus)}</p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">Official boundaries & rules ↗</a>`).addTo(mpaLayer);
+    for(const {shape,bounds} of mpaShapes) {
+      if(bounds.intersects(map.getBounds())) {if(!mpaLayer.hasLayer(shape))mpaLayer.addLayer(shape);}
+      else if(mpaLayer.hasLayer(shape))mpaLayer.removeLayer(shape);
     }
     const status=document.getElementById('coastal-mpa-status');if(status)status.textContent=mpaStatus;
   }
   function move() {
     const p=map.getCenter(),point={latitude:p.lat,longitude:p.lng},next=coastAt(point,catalog);
+    const mapped=mappedPackageAt(point,packages,map.getZoom());
+    if(mapped&&!navigating){navigating=true;caption.textContent=`Loading ${mapped.name} fishing grounds…`;location.replace(coastURL(location.href,coast,{packageId:mapped.id,point,zoom:map.getZoom(),target:select.value}));return;}
     if(next && next.id!==coast.id && !navigating) {navigating=true;location.replace(coastURL(location.href,next,{point,zoom:map.getZoom(),target:select.value}));return;}
     caption.textContent=next?`${coast.name} · ${coast.limits}`:'Outside California coastal browse coverage';
     select.disabled=!next;rules.hidden=!next;
@@ -79,5 +81,10 @@ export async function initCoastalDiscovery(catalog,coast) {
     }catch{/* Do not retimestamp saved boundaries. */}
   }
   if(!boundaries)mpaStatus='MPA boundaries unavailable · consult CDFW before planning';
+  mpaShapes=(boundaries?.features||[]).map(f=>{
+    const shape=L.geoJSON(f,{pane:'coastalMPAs',style:{color:'#bd3869',weight:2,fillOpacity:.08}})
+      .bindTooltip(esc(f.properties.NAME)).bindPopup(`<strong>${esc(f.properties.FULLNAME||f.properties.NAME)}</strong><p>${esc(mpaStatus)}</p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">Official boundaries & rules ↗</a>`);
+    return {shape,bounds:shape.getBounds()};
+  });
   drawMPAs();
 }

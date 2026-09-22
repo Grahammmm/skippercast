@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { acceptsFeed, setRegion, getRegion, assetURL } from "../dist/region.js?v=8.8";
+import { acceptsFeed, setRegion, getRegion, assetURL } from "../dist/region.js?v=8.9";
 import { decodeBottom } from "../dist/bottom-view.js";
 import { geometryIntersects } from "../dist/geo-screen.js";
 const read=p=>JSON.parse(fs.readFileSync(new URL(p,import.meta.url),"utf8"));

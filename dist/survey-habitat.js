@@ -1,6 +1,8 @@
 // Evidence geometry stays separate from depth-qualified/exportable fishing targets.
-import {assetURL,getRegion} from './region.js?v=8.8';
-import {esc} from './marine-charts.js?v=8.8';
+import {assetURL,getRegion} from './region.js?v=8.9';
+import {esc} from './marine-charts.js?v=8.9';
+import {habitatGroups} from './map-response.js?v=8.9';
+import {positions} from './geo-screen.js?v=8.9';
 
 export function habitatMatches(feature, species, region=getRegion()) {
   const p=feature.properties, target=region.target_options?.find(t=>t.id===species);
@@ -54,7 +56,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
   let screened=[],screenRevision=null,checking=false,checkError=false,request=0,worker,deadline;
   const fail=()=>{checkError=true;checking=false;screened=[];clearTimeout(deadline);worker?.terminate();draw();};
   try{
-    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.8',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.9',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',geometries:data.features.map(f=>f.geometry)});
     worker.addEventListener('message',({data:result})=>{
       if(checkError || result.request!==request || result.revision!==screen.revision() || !screen.ready())return;
@@ -80,10 +82,26 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
     const key=legend.getContainer();
     key.textContent=checkError?'Habitat geometry check unavailable':checking?'Checking habitat boundaries…':!screen.ready()?'Habitat withheld · closure check unavailable':!toggle.checked?'Habitat preview overlay off · pink: closures':eligible.length?'Habitat preview · teal: rock · sand: sediment · green: dated kelp · pink: closures':target?.kind==='offshore'?'Offshore search references · fish unverified':gap;
     key.setAttribute('role','status');
-    if(eligible.length && map.getZoom()<10)key.textContent='Zoom in for habitat outlines · pink: protected areas';
-    if(map.getZoom()<10 || !toggle.checked || !document.getElementById('layer-areas').checked || checkError || checking || !screen.ready() || screenRevision!==screen.revision())return;
+    if(!toggle.checked || !document.getElementById('layer-areas').checked || checkError || checking || !screen.ready() || screenRevision!==screen.revision())return;
     const zoom=map.getZoom(),minimum=zoom<9?.04:zoom<11?.004:0;
     const shown=eligible.filter(e=>e.bounds.intersects(map.getBounds()) && e.feature.properties.area_km2>=minimum);
+    if(eligible.length && !shown.length){
+      key.textContent='No matching habitat in this view. ';
+      const button=document.createElement('button');button.type='button';button.textContent='Show mapped habitat';
+      button.onclick=()=>map.fitBounds(eligible.reduce((b,e)=>b.extend(e.bounds),L.latLngBounds([])),{padding:[60,110],maxZoom:11});key.append(button);
+    }
+    if(zoom<10){
+      if(shown.length)key.textContent='Mapped habitat groups · tap to see outlines';
+      for(const group of habitatGroups(shown,p=>map.project(p,zoom))){
+        const bounds=group.reduce((b,e)=>b.extend(e.bounds),L.latLngBounds([]));
+        // An overview badge counts source polygons; it is not a fishing waypoint.
+        let center=bounds.getCenter();
+        if(!screen.pointAllowed({latitude:center.lat,longitude:center.lng})){const [lng,lat]=positions(group[0].feature.geometry)[0];center=L.latLng(lat,lng);}
+        L.marker(center,{icon:L.divIcon({className:'habitat-cluster',html:`<span>${group.length}</span>`,iconSize:[44,44]}),title:`${group.length} mapped habitat outlines · tap to zoom`})
+          .on('click',()=>map.fitBounds(bounds,{padding:[60,110],maxZoom:12})).addTo(layer);
+      }
+      return;
+    }
     for(const {feature:f} of shown){
       const p=f.properties,color={rock:'#157f85',mixed:'#647d8b',sediment:'#ac7b45',kelp:'#487d2a'}[p.habitat_kind]||'#647d8b';
       const shape=L.geoJSON(f,{style:{color,weight:zoom>=12?1.4:1,fillColor:color,fillOpacity:zoom>=11?.12:.07},onEachFeature:(_,s)=>s.on('add',()=>{const el=s.getElement();if(el){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',p.name+' · '+p.habitat_kind+' survey habitat');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();s.fire('click',{},true);}});}})});

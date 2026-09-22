@@ -1,25 +1,25 @@
-import {initTripAlerts} from './trip-alerts.js?v=8.8';
-import {initExport} from './export-ui.js?v=8.8';
-import {mountSpotEvidence} from './spot-evidence.js?v=8.8';
-import {initIntelligence} from './intelligence.js?v=8.8';
-import {initHabitatDynamics} from './habitat-map.js?v=8.8';
-import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js?v=8.8';
+import {initTripAlerts} from './trip-alerts.js?v=8.9';
+import {initExport} from './export-ui.js?v=8.9';
+import {mountSpotEvidence} from './spot-evidence.js?v=8.9';
+import {initIntelligence} from './intelligence.js?v=8.9';
+import {initHabitatDynamics} from './habitat-map.js?v=8.9';
+import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js?v=8.9';
 let tripExport;
-import { getRegion, assetURL } from "./region.js?v=8.8";
-import { mountBottom } from "./bottom-view.js?v=8.8";
-import { initSurveyHabitat } from "./survey-habitat.js?v=8.8";
-import { initRegionalContext } from "./regional-context.js?v=8.8";
-import { initGeology } from "./geology.js?v=8.8";
-import { initWeather } from "./weather-ui.js?v=8.8";
-import { initNavigation } from "./navigation.js?v=8.8";
-import { initChart } from "./chart-map.js?v=8.8";
-import { initSpecies, matchesSpecies } from "./species.js?v=8.8";
-import { initRegulations } from "./regulations.js?v=8.8";
-import { initLocationContext, viewFromURL } from './location-context.js?v=8.8';
-import { initCharterGrounds } from "./charter-grounds.js?v=8.8";
-import { initProtectedAreas } from "./protected-areas.js?v=8.8";
-import { initDriftGuides } from "./drift-guides.js?v=8.8";
-import { initCommercialAIS } from "./commercial-ais.js?v=8.8";
+import { getRegion, assetURL } from "./region.js?v=8.9";
+import { mountBottom } from "./bottom-view.js?v=8.9";
+import { initSurveyHabitat } from "./survey-habitat.js?v=8.9";
+import { initRegionalContext } from "./regional-context.js?v=8.9";
+import { initGeology } from "./geology.js?v=8.9";
+import { initWeather } from "./weather-ui.js?v=8.9";
+import { initNavigation } from "./navigation.js?v=8.9";
+import { initChart } from "./chart-map.js?v=8.9";
+import { initSpecies, matchesSpecies } from "./species.js?v=8.9";
+import { initRegulations } from "./regulations.js?v=8.9";
+import { initLocationContext, viewFromURL } from './location-context.js?v=8.9';
+import { initCharterGrounds } from "./charter-grounds.js?v=8.9";
+import { initProtectedAreas } from "./protected-areas.js?v=8.9";
+import { initDriftGuides } from "./drift-guides.js?v=8.9";
+import { initCommercialAIS } from "./commercial-ais.js?v=8.9";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -57,6 +57,7 @@ let atlas,
   initialViewShown = false,
   visible = [];
 let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI, locationUI;
+let boundaryRefreshDone=false;
 const layers = {},
   markers = new Map();
 const navigation = initNavigation({
@@ -78,6 +79,9 @@ function initMap() {
     .scale({ imperial: true, metric: false, position: "bottomleft" })
     .addTo(map);
   initChart(map, toast);
+  const coverage=document.createElement('div');coverage.id='reef-coverage';coverage.className='reef-coverage';coverage.hidden=true;
+  document.querySelector('.map-wrap').append(coverage);
+  map.on('moveend',updateReefCoverage);
   for (const name of ["targets", "areas", "drifts", "forecast", "charters"]) {
     layers[name] = L.layerGroup();
     if ($(`layer-${name}`).checked) layers[name].addTo(map);
@@ -87,6 +91,19 @@ function initMap() {
         : map.removeLayer(layers[name]),
     );
   }
+}
+
+function updateReefCoverage() {
+  const box=$('reef-coverage');if(!box||!atlas||!protectedAreas)return;
+  const reef=['reef','rockfish','lingcod'].includes($('species-select').value);
+  box.hidden=!reef;box.replaceChildren();if(!reef)return;
+  if(!protectedAreas.ready()){box.textContent=boundaryRefreshDone?'Protected-area check unavailable · fishing spots withheld':'Checking protected areas before showing fishing spots…';return;}
+  if(!visible.length){box.hidden=true;return;}
+  if($('layer-targets').checked&&visible.some(t=>map.getBounds().contains([t.latitude,t.longitude]))){box.hidden=true;return;}
+  const label=document.createElement('span');label.textContent=$('layer-targets').checked?`${visible.length} reef areas outside this view`:'Reef markers are turned off';
+  const button=document.createElement('button');button.type='button';button.textContent='Show reef areas';
+  button.onclick=()=>{if(!$('layer-targets').checked){$('layer-targets').checked=true;$('layer-targets').dispatchEvent(new Event('change'));}map.fitBounds(visible.map(t=>[t.latitude,t.longitude]),{padding:[65,120],maxZoom:12});updateReefCoverage();};
+  box.append(label,button);
 }
 
 function pin(target) {
@@ -150,6 +167,7 @@ function filterTargets() {
   driftGuides?.draw();
   commercialUI?.draw();
   updateExports();
+  updateReefCoverage();
 }
 
 function updateExports() {
@@ -518,6 +536,7 @@ try {
   protectedAreas = await initProtectedAreas(map, () => filterTargets());
   tripExport=initExport({atlas,screen:protectedAreas,map,getVisible:()=>visible,navigation});
   filterTargets();
+  void protectedAreas.refresh().finally(()=>{boundaryRefreshDone=true;updateReefCoverage();});
   fitTargets();
   driftGuides=initDriftGuides(map,{targets:()=>visible,selected:()=>selected,protectedAreas,selectTarget});
   weather=initWeather(map,layers.forecast,()=>navigation.showView("forecast"),driftGuides.update);
@@ -531,10 +550,10 @@ try {
   initTripAlerts(intelligence);
   registerTools();
   const optional=async(name,work)=>{try{return await work();}catch{toast(`${name} could not load. The map and other layers remain available.`);return undefined;}};
-  await optional('Ocean habitat',()=>initHabitatDynamics(map,protectedAreas,area=>{locationUI?.select(area);weather.selectLocation(area);}));
-  await optional("Survey habitat",()=>initSurveyHabitat(map, protectedAreas, (html, area) => showAreaDetails(html, area, "survey-weather"), area=>weather.selectLocation(area)));
-  await optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
-  await optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
+  void optional('Ocean habitat',()=>initHabitatDynamics(map,protectedAreas,area=>{locationUI?.select(area);weather.selectLocation(area);}));
+  void optional("Survey habitat",()=>initSurveyHabitat(map, protectedAreas, (html, area) => showAreaDetails(html, area, "survey-weather"), area=>weather.selectLocation(area)));
+  void optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
+  void optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
   speciesUI = await optional("Species habitat",()=>initSpecies(map, layers, {
     protectedAreas,
     onChange: () => {
@@ -569,7 +588,6 @@ try {
   }));
   filterTargets();
   commercialUI=await optional("Commercial AIS",()=>initCommercialAIS(map,{protectedAreas,onSelect:(html,area)=>showAreaDetails(html,area,"commercial-weather"),showMap:()=>navigation.showView("map")}));
-  protectedAreas.refresh();
   map.on("zoomend", () => {
     if (atlas) {
       drawHabitat();

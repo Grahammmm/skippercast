@@ -31,6 +31,9 @@ function inRing(p, ring) {
   return inside ? 1 : 0;
 }
 export function pointInGeometry(p, g) {
+  if(!g)return false;
+  const b=bbox(g);
+  if(p[0]<b[0]-1e-10||p[0]>b[2]+1e-10||p[1]<b[1]-1e-10||p[1]>b[3]+1e-10)return false;
   const polygons = g?.type === "Polygon" ? [g.coordinates] : g?.type === "MultiPolygon" ? g.coordinates : [];
   return polygons.some(rings => {
     const outer = inRing(p,rings[0]);

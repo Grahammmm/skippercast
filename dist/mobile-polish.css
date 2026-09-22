@@ -1,4 +1,10 @@
 /* Load after the feature styles. Keep native controls and table semantics. */
+.reef-coverage{position:absolute;z-index:460;left:12px;bottom:115px;max-width:calc(100% - 75px);background:#fff;border:1px solid #b8d0d3;border-radius:12px;padding:8px 12px;box-shadow:0 3px 16px #10374618;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reef-coverage[hidden]{display:none}
+.reef-coverage button,.survey-habitat-key button{min-height:44px;padding:8px;color:#007f77;background:#eef7f6;border:0;border-radius:8px;font-weight:700}
+.habitat-cluster{background:#fff;border:2px dashed #157f85;border-radius:50%;display:grid;place-items:center;color:#07555a;font-size:15px;font-weight:800;box-shadow:0 2px 7px #173f4c25}
+.atlas-app .map-empty.coverage-message{top:auto;bottom:80px;left:12px;transform:none;text-align:left;width:min(360px,calc(100% - 74px));padding:12px;max-height:40%;overflow:auto}
+.coverage-message p{font-size:14px;margin:6px 0}.coverage-message .coastal-package{padding:8px;margin:5px 0;font-size:14px}
 .coast-control{margin:0;flex:0 1 210px;min-width:0}
 .coast-control select{width:100%;min-height:44px;font-size:1rem;background:#173f4c;color:#fff;border:1px solid #507580;border-radius:10px;padding:8px 26px 8px 10px}
 .coast-control option{background:#fff;color:#143b46}

@@ -153,7 +153,8 @@
         "yellowfin",
         "dorado"
       ],
-      "note": "Reefs and sediment grounds support the regular coastal targets. Offshore warm-water visitors need recent local evidence; an ENSO phase does not locate fish."
+      "note": "Reefs and sediment grounds support the regular coastal targets. Offshore warm-water visitors need recent local evidence; an ENSO phase does not locate fish.",
+      "default_package": "morro-bay"
     },
     {
       "id": "southern",

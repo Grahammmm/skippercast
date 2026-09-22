@@ -6,7 +6,7 @@ The masthead's **Region** selector covers the California outer coast using CDFW'
 
 ## Browsing versus detailed coverage
 
-The statewide directory does not create fishing spots. Northern, Mendocino and San Francisco initially open the shared coastal guide, with potential targets, source links and CDFW MPAs. Central opens the coastal overview with links to the Morro Bay–Avila and Cambria–San Simeon data packages. Southern opens its existing detailed package. **Options → Mapped area** lets a visitor move between a coastal overview and detailed maps.
+The statewide directory does not create fishing spots. Northern, Mendocino and San Francisco initially open the shared coastal guide, with potential targets, source links and CDFW MPAs. Central opens the Morro Bay–Avila fishing map. Its full-coast overview remains available in Options, with links to the Morro Bay–Avila and Cambria–San Simeon data packages. Zooming into a mapped area at level 9 or closer loads that package automatically. Southern opens its existing detailed package. **Options → Mapped area** lets a visitor move between a coastal overview and detailed maps.
 
 Changing coast clears the previous spot, focus and incompatible target. Panning beyond a detailed package opens the appropriate coastal guide when its browsing extent covers the point. Crossing a coastal boundary updates the guide and species. Uncovered coasts never inherit Morro Bay forecasts, ratings, tide stations, legal-open badges or exported waypoints. Survey-qualified targets remain governed by the regional contracts and MPA geometry screen.
 
@@ -45,3 +45,5 @@ The fishing basemap uses NOAA groups 0, 1, 2 and 6: chart display, coastal featu
 On September 22, 2026, all seven source jobs completed successfully; the MPA service returned 155 features. NOAA's advisory was dated September 10. CDFW summary dates ranged from August 10 to September 11. These dates are source receipts, not universal legal or fishing clearance.
 
 Tests cover boundary membership, target overrides, geographic isolation, old URL cleanup, source aging, publisher/date/location evidence requirements and chart-layer selection. Browser-based mobile visual review was unavailable because the browser tool could not verify its administrator-enforced policy. No alternate browser automation was used to bypass that restriction.
+
+Panning performance: MPA shapes are reused, point screening rejects nonoverlapping bounds before scanning vertices, and full-geometry results are cached only for the current closure revision. Protected-area refresh starts before optional habitat downloads. Overview habitat badges count screened source polygons and zoom to their outlines; they are not fishing waypoints. A reef coverage prompt links to matching grounds outside the current viewport.
