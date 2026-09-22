@@ -1,6 +1,6 @@
 // Evidence geometry stays separate from depth-qualified/exportable fishing targets.
-import {assetURL,getRegion} from './region.js?v=8.7';
-import {esc} from './marine-charts.js?v=8.7';
+import {assetURL,getRegion} from './region.js?v=8.8';
+import {esc} from './marine-charts.js?v=8.8';
 
 export function habitatMatches(feature, species, region=getRegion()) {
   const p=feature.properties, target=region.target_options?.find(t=>t.id===species);
@@ -54,7 +54,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
   let screened=[],screenRevision=null,checking=false,checkError=false,request=0,worker,deadline;
   const fail=()=>{checkError=true;checking=false;screened=[];clearTimeout(deadline);worker?.terminate();draw();};
   try{
-    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.7',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.8',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',geometries:data.features.map(f=>f.geometry)});
     worker.addEventListener('message',({data:result})=>{
       if(checkError || result.request!==request || result.revision!==screen.revision() || !screen.ready())return;
@@ -80,12 +80,13 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
     const key=legend.getContainer();
     key.textContent=checkError?'Habitat geometry check unavailable':checking?'Checking habitat boundaries…':!screen.ready()?'Habitat withheld · closure check unavailable':!toggle.checked?'Habitat preview overlay off · pink: closures':eligible.length?'Habitat preview · teal: rock · sand: sediment · green: dated kelp · pink: closures':target?.kind==='offshore'?'Offshore search references · fish unverified':gap;
     key.setAttribute('role','status');
-    if(!toggle.checked || checkError || checking || !screen.ready() || screenRevision!==screen.revision())return;
+    if(eligible.length && map.getZoom()<10)key.textContent='Zoom in for habitat outlines · pink: protected areas';
+    if(map.getZoom()<10 || !toggle.checked || !document.getElementById('layer-areas').checked || checkError || checking || !screen.ready() || screenRevision!==screen.revision())return;
     const zoom=map.getZoom(),minimum=zoom<9?.04:zoom<11?.004:0;
     const shown=eligible.filter(e=>e.bounds.intersects(map.getBounds()) && e.feature.properties.area_km2>=minimum);
     for(const {feature:f} of shown){
       const p=f.properties,color={rock:'#157f85',mixed:'#647d8b',sediment:'#ac7b45',kelp:'#487d2a'}[p.habitat_kind]||'#647d8b';
-      const shape=L.geoJSON(f,{style:{color,weight:zoom>=12?1.6:1,fillColor:color,fillOpacity:zoom>=11?.3:.18},onEachFeature:(_,s)=>s.on('add',()=>{const el=s.getElement();if(el){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',p.name+' · '+p.habitat_kind+' survey habitat');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();s.fire('click',{},true);}});}})});
+      const shape=L.geoJSON(f,{style:{color,weight:zoom>=12?1.4:1,fillColor:color,fillOpacity:zoom>=11?.12:.07},onEachFeature:(_,s)=>s.on('add',()=>{const el=s.getElement();if(el){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',p.name+' · '+p.habitat_kind+' survey habitat');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();s.fire('click',{},true);}});}})});
       shape.bindTooltip(esc(p.name)+' · '+esc(p.habitat_kind)+' habitat')
         .on('click',()=>onSelect(habitatDetails(f,region),{...p,geometry:f.geometry})).addTo(layer);
     }
@@ -94,6 +95,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
   let scheduled=false;
   const schedule=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;legal();draw();});};
   toggle.addEventListener('change',schedule);
+  document.getElementById('layer-areas').addEventListener('change',schedule);
   document.getElementById('species-select').addEventListener('change',schedule);
   document.addEventListener('skippercast:boundaries',schedule);
   map.on('moveend',schedule);legal();draw();

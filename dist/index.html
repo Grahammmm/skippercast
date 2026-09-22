@@ -37,21 +37,21 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
-    <link rel="stylesheet" href="styles.css?v=8.7" />
-    <link rel="stylesheet" href="marine.css?v=8.7" />
-    <link rel="stylesheet" href="map-first.css?v=8.7" />
-    <link rel="stylesheet" href="bite-evidence.css?v=8.7" />
-    <link rel="stylesheet" href="regulations.css?v=8.7" />
-    <link rel="stylesheet" href="live-conditions.css?v=8.7" />
-    <link rel="stylesheet" href="calm-layout.css?v=8.7" />
-    <link rel="stylesheet" href="planning.css?v=8.7" />
-    <link rel="stylesheet" href="platform.css?v=8.7" />
+    <link rel="stylesheet" href="styles.css?v=8.8" />
+    <link rel="stylesheet" href="marine.css?v=8.8" />
+    <link rel="stylesheet" href="map-first.css?v=8.8" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.8" />
+    <link rel="stylesheet" href="regulations.css?v=8.8" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.8" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.8" />
+    <link rel="stylesheet" href="planning.css?v=8.8" />
+    <link rel="stylesheet" href="platform.css?v=8.8" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="boot.js?v=8.7"></script>
-  <link rel="stylesheet" href="insights.css?v=8.7"/>
-  <link rel="stylesheet" href="export.css?v=8.7"/>
-  <link rel="stylesheet" href="mobile-polish.css?v=8.7"/>
+    <script type="module" src="boot.js?v=8.8"></script>
+  <link rel="stylesheet" href="insights.css?v=8.8"/>
+  <link rel="stylesheet" href="export.css?v=8.8"/>
+  <link rel="stylesheet" href="mobile-polish.css?v=8.8"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#007f77"/>
 </head>
@@ -59,8 +59,9 @@
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
     <header class="masthead">
       <a class="brand" href="#map" aria-label="SkipperCast home"
-        ><span class="brand-mark" aria-hidden="true">⌁</span> SkipperCast</a
+        ><span class="brand-mark" aria-hidden="true">⌁</span><span class="brand-name">SkipperCast</span></a
       >
+      <label class="coast-control"><span class="sr-only">California coastal region</span><select id="coast-select" aria-label="California coastal region" disabled><option>Region…</option></select></label>
       <button
         id="best-day-banner"
         class="best-day-banner"
@@ -144,6 +145,7 @@
           <h1>Field guide</h1>
           <p>Choose what you want to explore.</p>
         </div>
+        <details id="coastal-seasonal" class="guide-topic"><summary>Regional species & seasonal watch</summary></details>
         <details class="guide-topic"><summary>Regional data coverage</summary><div id="region-coverage"></div></details>
         <details class="guide-topic"><summary>Fishing your target species</summary>
         <section
@@ -324,7 +326,7 @@
         <button id="close-map-options" aria-label="Close map options">×</button>
       </div>
       <div class="options-body">
-        <label class="region-control" for="region-select">Fishing region<select id="region-select"></select></label>
+        <label class="region-control" for="region-select">Mapped area<select id="region-select"></select></label>
         <label
           >Chart detail<select id="base-map">
             <option value="fishing">Fishing chart · detail as you zoom</option>
@@ -333,9 +335,9 @@
           </select></label
         >
         <p class="small">
-          Fishing chart keeps depths and coastal features; the seabed-symbol
-          layer, including cables and obstructions, is hidden. Use Full NOAA
-          chart for those details.
+          Fishing chart keeps depths, coastal features and navigation aids.
+          Cable, traffic-route and additional chart-area symbols are hidden.
+          MPAs stay visible. Full NOAA restores the complete chart display.
         </p>
         <div id="weather-map-options"></div>
         <p class="small">
@@ -360,7 +362,7 @@
               outlines</label
             >
             <label
-              ><input id="layer-drifts" type="checkbox" checked /> Structure / drift
+              ><input id="layer-drifts" type="checkbox" /> Structure / drift
               alignments</label
             >
             <label

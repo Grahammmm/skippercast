@@ -17,6 +17,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 
 | Part | What it does | Start here |
 | --- | --- | --- |
+| Coastal regions | Five CDFW ocean planning regions, locally ordered species, a daily NOAA seasonal watch and statewide MPAs. Detailed fishing packages remain separate from coastal browse coverage. | [Coastal directory and update process](docs/coastal-directory.md) |
 | Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, regional species selectors (16 for Southern California), 132 Central Coast reef candidates, 11 survey-qualified island reef areas, 12 connected soft-bottom habitat outlines, source-dated Channel Islands habitat and terrain views, two named Central Coast charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
 | Dynamic ocean layers | Dated satellite temperature, temperature gradients and chlorophyll; NOAA surface temperature and current forecasts at native resolution, following the selected time within actual forecast coverage. | [Methods and limitations](docs/dynamic-species-method.md) |
 | Forecast verification | Prospective forecasts matched to nearby buoy observations, with distinct-hour coverage, measurement differences and fair model comparisons. More independent outcomes are needed before calibration. | [Verification method](docs/forecast-verification-quality.md) |

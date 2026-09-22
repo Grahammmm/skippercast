@@ -1,5 +1,6 @@
-import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js?v=8.7';
-import { positions } from './geo-screen.js?v=8.7';
+import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js?v=8.8';
+import { positions } from './geo-screen.js?v=8.8';
+import {coastAt,coastURL} from './coasts.js?v=8.8';
 
 // Discovery extents select a reviewed package. They are not legal boundaries.
 export const contains = (b, p) => !!b && Number.isFinite(p?.longitude) && Number.isFinite(p?.latitude) && p.longitude >= b[0] && p.longitude <= b[2] && p.latitude >= b[1] && p.latitude <= b[3];
@@ -47,6 +48,7 @@ export function viewFromURL(url) {
 }
 export function locationURL(url,regionId,point,zoom,target) {
   const next=new URL(url);next.searchParams.set('region',regionId);
+  next.searchParams.delete('coast');
   next.searchParams.set('view',`${point.latitude.toFixed(5)},${point.longitude.toFixed(5)},${zoom}`);
   if(target)next.searchParams.set('target',target);
   next.searchParams.delete('focus');next.searchParams.delete('spot');next.hash='map';return next;
@@ -64,6 +66,11 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
     let next=resolveLocation(point,directory,region.id);
     next=enrichLocation(next,region,protectedAreas);
     next.source=selected?'Selected spot':'Map center';
+    const coastal=coastAt(point);
+    if(!selected && next.coverage==='outside' && coastal && !navigating) {
+      navigating=true;caption.textContent=`Opening ${coastal.name} coastal guide…`;
+      location.replace(coastURL(location.href,coastal,{point,zoom:map.getZoom(),target:desired,overview:true}));return;
+    }
     if(next.regionId!==region.id && ['covered','discovery'].includes(next.coverage)) {
       if(navigating)return; navigating=true;
       next.coverage='loading';context=next;

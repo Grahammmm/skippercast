@@ -1,13 +1,13 @@
-import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.7";
-import { fetchJSON } from "./forecast.js?v=8.7";
-import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.7";
-import { esc } from "./marine-charts.js?v=8.7";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.8";
+import { fetchJSON } from "./forecast.js?v=8.8";
+import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.8";
+import { esc } from "./marine-charts.js?v=8.8";
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
 export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:getRegion().mpa.bounds.join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
 export function validMPAs(data) {
   return data?.type === "FeatureCollection" && !data.exceededTransferLimit && data.features?.length >= getRegion().mpa.minimum_features && data.features.every(f=>typeof f.properties?.NAME === "string" && ["Polygon","MultiPolygon"].includes(f.geometry?.type));
 }
-const sourceFor = (name) => !["Buchon","Morro","Piedras","Cambria"].some(x=>name.includes(x)) ? "https://wildlife.ca.gov/Conservation/Marine/MPAs/Network/Southern-California" : "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
+const sourceFor = (name) => !["Buchon","Morro","Piedras","Cambria"].some(x=>name.includes(x)) ? "https://wildlife.ca.gov/Conservation/Marine/MPAs" : "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
 export async function initProtectedAreas(map, onChange) {
   const layer=L.layerGroup().addTo(map);
   const status=document.getElementById("mpa-status");
@@ -20,7 +20,7 @@ export async function initProtectedAreas(map, onChange) {
     for (const f of [...(data?.features || []),...(extra?.features||[])]) {
       const p=f.properties;
       L.geoJSON(f,{pane:"protectedAreas",style:{color:"#bd3869",weight:2.5,fillColor:"#bd3869",fillOpacity:0.13,dashArray:p.Type==="SMR"?null:"7 4"}})
-        .bindTooltip(esc(p.NAME),{permanent:map.getZoom()>=11,className:"mpa-label",direction:"center"})
+        .bindTooltip(esc(p.NAME),{permanent:map.getZoom()>=13,className:"mpa-label",direction:"center"})
         .bindPopup(`<strong>${esc(p.FULLNAME||p.NAME)}</strong><p>${p.Type==="GEA"?"NOAA groundfish closure. SkipperCast excludes all target species here as a conservative planning rule. Federal regulations control over this supplemental map.":"Fishing targets are excluded from every MPA, including conservation areas with species exceptions."}</p><p>${esc(p.CCR)} · ${p.Type==="GEA"?"NOAA coordinate check":live?"Boundary checked this session":"Saved boundary snapshot"} ${esc((p.Type==="GEA"?extraChecked:checked)?.slice(0,10)||"unavailable")}</p><a href="${p.Type==="GEA"?"https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas":sourceFor(p.NAME)}" target="_blank" rel="noopener">Official boundary & rules ↗</a>`).addTo(layer);
     }
     status.textContent = data ? `MPAs${extra?" + groundfish exclusions":""} shown · targets excluded · ${live?"checked now":"snapshot "+checked?.slice(0,10)}` : "MPA boundaries unavailable · fishing targets withheld";

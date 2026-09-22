@@ -1,6 +1,6 @@
-import { getRegion, acceptsFeed, localContext, assetURL } from "./region.js?v=8.7";
-import { fetchJSON, compass } from "./forecast.js?v=8.7";
-import { esc, num, local, from } from "./marine-charts.js?v=8.7";
+import { getRegion, acceptsFeed, localContext, assetURL } from "./region.js?v=8.8";
+import { fetchJSON, compass } from "./forecast.js?v=8.8";
+import { esc, num, local, from } from "./marine-charts.js?v=8.8";
 
 export const OBSERVATION_REFRESH = 5 * 60 * 1000;
 export const FORECAST_REFRESH = 30 * 60 * 1000;

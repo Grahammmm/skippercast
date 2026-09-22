@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {memberSummary,currentFrame,nearestCurrent,spectrumSVG,uncertaintyHTML} from '../dist/intelligence.js';
-import {getRegion} from '../dist/region.js?v=8.7';
+import {getRegion} from '../dist/region.js?v=8.8';
 import {tripGPX} from '../dist/gpx.js';
 import {exportSelection} from '../dist/inavx.js';
 import {bottomSection} from '../dist/bottom-view.js';

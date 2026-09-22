@@ -1,5 +1,7 @@
 # Add a coastline
 
+For statewide navigation and baseline species, start with the [five-region coastal directory](coastal-directory.md). A coastal browse entry does not satisfy the source requirements of a detailed fishing package. Bind a qualified package to `catalog/coasts.json` when its regional contracts pass. Regional `target_labels` can change display wording without changing biological IDs or legal rules.
+
 A regional package is configuration and evidence, not a fork of the app. The [Southern California rollout](southern-california.md) validates multiple local observation/advisory contexts and a separate jurisdiction in one regional package. Morro Bay–Avila is the working reference; Cambria–San Simeon validates the same map, forecast, jurisdiction and pipeline with a different footprint and geological source.
 
 1. Define a stable region ID and explicit WGS84 extent, timezone, departure harbor, boat/depth preferences, target species and jurisdiction. Offshore tuna samples may extend beyond the bottom-fishing extent. Do not inherit a neighboring port's travel assumptions silently.

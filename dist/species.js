@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.7";
-import { getRegion, assetURL } from "./region.js?v=8.7";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.7";
-import { circleGeometry } from "./geo-screen.js?v=8.7";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.8";
+import { getRegion, assetURL } from "./region.js?v=8.8";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.8";
+import { circleGeometry } from "./geo-screen.js?v=8.8";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -249,7 +249,7 @@ export async function initSpecies(
     const links=local?.source_links || (local?.sources || []).flatMap(s=>s.claims.map(c=>({title:s.name+" · source",url:c.source_url})));
     const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
     $("species-guide").innerHTML =
-      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(p.name)}</h2><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
+      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(getRegion().target_options.find(t=>t.id===id())?.name || p.name)}</h2><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
         ["Habitat", p.habitat],
         ["What to look for", p.approach],
         ["Conditions that help", p.conditions],

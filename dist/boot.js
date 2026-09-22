@@ -1,7 +1,18 @@
-import { initRegion } from "./region.js?v=8.7";
+import { initRegion } from "./region.js?v=8.8";
+import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.8';
 try {
-  await initRegion();
-  await import("./app.js?v=8.7");
+  const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
+  if(requested) {
+    const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
+    const {initCoastalDiscovery}=await import('./coastal-discovery.js?v=8.8');
+    await initCoastalDiscovery(catalog,coast);
+  } else {
+    await initRegion();
+    const coast=coastForPackage(url.searchParams.get('region')||'morro-bay',catalog);
+    initCoastSelector(catalog,coast);
+    void initCoastalContext(catalog,coast);
+    await import("./app.js?v=8.8");
+  }
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;
   panel.replaceChildren();const title=document.createElement("strong");title.textContent="This region could not load";

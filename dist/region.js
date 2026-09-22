@@ -1,10 +1,11 @@
-import defaultRegion from "./region-default.js?v=8.7";
+import defaultRegion from "./region-default.js?v=8.8";
+import {loadCoasts,coastForPackage,coastURL} from './coasts.js?v=8.8';
 let active = defaultRegion;
 let directory = [];
 export const getRegion = () => active;
 export const getRegionDirectory = () => directory;
 export function renderTargetOptions(select, options, value) {
-  if([...select.options].map(o=>o.value).join('|')!==options.map(o=>o.id).join('|')) {
+  if([...select.options].map(o=>o.value+':'+o.textContent).join('|')!==options.map(o=>o.id+':'+o.name).join('|')) {
     select.replaceChildren();
     const groups=new Map();
     for(const target of options) {
@@ -43,9 +44,11 @@ export async function initRegion() {
   const target=new URL(location.href).searchParams.get('target');
   species.value=active.species.includes(target)?target:active.species[0];
   const chooser=document.getElementById("region-select");
-  for(const region of index.regions){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
+  const catalog=await loadCoasts(),coast=coastForPackage(active.id,catalog);
+  chooser.append(new Option(`Entire ${coast.name} coast · overview`,'coastal-overview'));
+  for(const region of index.regions.filter(r=>coast.packages.includes(r.id))){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
   chooser.value=active.id;
-  chooser.addEventListener("change",()=>{const url=new URL(location.href);url.searchParams.set("region",chooser.value);url.searchParams.set('target',species.value);for(const key of ['view','focus','spot'])url.searchParams.delete(key);url.hash="map";location.assign(url);});
+  chooser.addEventListener("change",()=>location.assign(coastURL(location.href,coast,{packageId:chooser.value==='coastal-overview'?null:chooser.value,overview:chooser.value==='coastal-overview',target:species.value})));
   const area=document.getElementById("area");area.replaceChildren(new Option("All areas","all"));
   for(const [id,name] of Object.entries(active.source_names))area.add(new Option(name,id));
   const note=document.getElementById("region-note");

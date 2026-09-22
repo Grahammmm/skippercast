@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-22",
+  "scope": "California outer coast. These five CDFW ocean/groundfish planning regions are not the jurisdiction boundaries for every species. San Francisco Bay requires its own rules.",
+  "boundary_source": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+  "enso_url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml",
+  "seasonal_source": "https://www.fisheries.noaa.gov/feature-story/ocean-indicators-were-tracking-el-ninos-arrival-west-coast",
+  "feed_url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/coastal/latest.json",
+  "policy": {
+    "report_max_age_days": 14,
+    "minimum_independent_sources": 2,
+    "minimum_report_dates": 2,
+    "source_check_max_age_hours": 36,
+    "enso_max_age_days": 45,
+    "promotion": "Two independent, dated, geographically located observations within 14 days support a regional report flag. Port totals without fishing coordinates do not. ENSO alone never promotes a target, assigns catch probability or opens a season. New target definitions require biological and regulatory review."
+  },
+  "regions": [
+    {
+      "id": "northern",
+      "name": "Northern",
+      "limits": "Oregon border \u2192 near Cape Mendocino",
+      "latitude": [
+        40.166666666666664,
+        42
+      ],
+      "bounds": [
+        -125.4,
+        40.166666666666664,
+        -123.7,
+        42
+      ],
+      "view": [
+        41.1,
+        -124.35,
+        8
+      ],
+      "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
+      "packages": [],
+      "targets": [
+        "reef",
+        "pacific-halibut",
+        "salmon",
+        "dungeness",
+        "albacore",
+        "halibut"
+      ],
+      "watch": [
+        "bluefin"
+      ],
+      "note": "Cold-water reef and shelf fisheries; Pacific halibut is distinct from California halibut. Salmon and crab remain subject to local seasons and closures."
+    },
+    {
+      "id": "mendocino",
+      "name": "Mendocino",
+      "limits": "Cape Mendocino line \u2192 Point Arena",
+      "latitude": [
+        38.958333333333336,
+        40.166666666666664
+      ],
+      "bounds": [
+        -125,
+        38.958333333333336,
+        -123.25,
+        40.166666666666664
+      ],
+      "view": [
+        39.55,
+        -123.95,
+        8
+      ],
+      "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
+      "packages": [],
+      "targets": [
+        "reef",
+        "salmon",
+        "dungeness",
+        "pacific-halibut",
+        "albacore",
+        "halibut"
+      ],
+      "watch": [
+        "bluefin"
+      ],
+      "note": "Exposed rocky coast and offshore shelf. Pacific halibut rules change at Point Arena; offshore albacore opportunity depends on the actual water mass and forage."
+    },
+    {
+      "id": "san-francisco",
+      "name": "San Francisco",
+      "limits": "Point Arena \u2192 Pigeon Point",
+      "latitude": [
+        37.18333333333333,
+        38.958333333333336
+      ],
+      "bounds": [
+        -124.25,
+        37.18333333333333,
+        -121.7,
+        38.958333333333336
+      ],
+      "view": [
+        38.05,
+        -123.05,
+        8
+      ],
+      "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
+      "packages": [],
+      "targets": [
+        "reef",
+        "halibut",
+        "salmon",
+        "dungeness",
+        "albacore"
+      ],
+      "watch": [
+        "bluefin"
+      ],
+      "note": "Outer-coast planning, including Bodega and Half Moon Bay. Bay-specific habitat and legal rules are not represented by this ocean region."
+    },
+    {
+      "id": "central",
+      "name": "Central",
+      "limits": "Pigeon Point \u2192 Point Conception",
+      "latitude": [
+        34.45,
+        37.18333333333333
+      ],
+      "bounds": [
+        -123.5,
+        34.45,
+        -119.8,
+        37.18333333333333
+      ],
+      "view": [
+        35.95,
+        -121.5,
+        7
+      ],
+      "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "packages": [
+        "morro-bay",
+        "cambria-san-simeon"
+      ],
+      "targets": [
+        "reef",
+        "halibut",
+        "salmon",
+        "dungeness",
+        "albacore",
+        "bluefin"
+      ],
+      "watch": [
+        "yellowtail",
+        "yellowfin",
+        "dorado"
+      ],
+      "note": "Reefs and sediment grounds support the regular coastal targets. Offshore warm-water visitors need recent local evidence; an ENSO phase does not locate fish."
+    },
+    {
+      "id": "southern",
+      "name": "Southern",
+      "limits": "Point Conception \u2192 Mexico border",
+      "latitude": [
+        32.5343,
+        34.45
+      ],
+      "bounds": [
+        -121.25,
+        32.5343,
+        -116.95,
+        34.45
+      ],
+      "view": [
+        33.55,
+        -119.05,
+        8
+      ],
+      "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "packages": [
+        "southern-california"
+      ],
+      "default_package": "southern-california",
+      "targets": [
+        "kelp-bass",
+        "yellowtail",
+        "halibut",
+        "white-seabass",
+        "sand-bass",
+        "spotted-bass",
+        "bluefin",
+        "yellowfin",
+        "dorado",
+        "bonito",
+        "barracuda",
+        "sheephead",
+        "whitefish",
+        "lobster",
+        "reef",
+        "albacore"
+      ],
+      "target_labels": {
+        "reef": "Rockfish"
+      },
+      "watch": [
+        "yellowfin",
+        "dorado",
+        "yellowtail"
+      ],
+      "note": "Kelp bass, yellowtail, seabass, tuna and spiny lobster lead the southern selection. Lingcod occur here, but the reef selector is called Rockfish; separate species limits still apply."
+    }
+  ],
+  "extra_targets": {
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "group": "Shelf & sand",
+      "kind": "soft",
+      "source_species": [
+        "pacific-halibut"
+      ],
+      "note": "A northern shelf flatfish, distinct from California halibut. Look for sediment habitat and shelf relief; this directory has no depth-qualified grounds for it.",
+      "source_url": "https://www.fisheries.noaa.gov/species/pacific-halibut"
+    }
+  },
+  "source_bindings": {
+    "seasonal-climate": "noaa-cpc-enso",
+    "regulations": "cdfw-rules",
+    "protected-areas": "cdfw-mpas"
+  }
+}

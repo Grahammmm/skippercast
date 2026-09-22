@@ -1436,6 +1436,36 @@
       ],
       "qualified_resolution_limit_m": 4,
       "vertical_datum": "MLLW"
+    },
+    {
+      "id": "noaa-cpc-enso",
+      "name": "NOAA CPC ENSO Diagnostic Discussion",
+      "provider": "NOAA Climate Prediction Center",
+      "needs": [
+        "seasonal-climate"
+      ],
+      "documentation_url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml",
+      "adapter": "page-watch",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA Climate Prediction Center",
+        "terms_url": "https://www.weather.gov/disclaimer"
+      },
+      "authenticity": {
+        "basis": "Primary NOAA publisher; issued advisory date and status parsed from the document",
+        "transport": "HTTPS; exact provider host"
+      },
+      "coverage_note": "Equatorial Pacific climate context. California fish presence requires independent local evidence.",
+      "limitations": [
+        "Monthly advisory date differs from daily retrieval time.",
+        "Never promotes a species or fishing location on its own."
+      ],
+      "allowed_hosts": [
+        "www.cpc.ncep.noaa.gov"
+      ],
+      "max_age_hours": 1080
     }
   ]
 }

@@ -56,12 +56,18 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m skippercast.platform.source_audit --output var/daily/source-access.json
+      - name: Refresh statewide regional and seasonal source checks
+        env:
+          PYTHONPATH: src
+        run: python -m skippercast.pipeline.coastal_watch --output var/daily --previous-root var/published --report-root var/daily
       - name: Publish an atomic data snapshot
         run: |
           if [ -d var/published ]; then
             cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
+            mkdir -p var/published/coastal
+            cp -R var/daily/coastal/. var/published/coastal/
             rm -rf var/published/history
             cp -R var/daily/history var/published/history
           else
@@ -74,7 +80,7 @@ jobs:
           cp docs/data-feed-readme.md var/published/README.md
           git -C var/published config user.name 'github-actions[bot]'
           git -C var/published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/published add latest.json health.json source-access.json history regions README.md
+          git -C var/published add latest.json health.json source-access.json history regions coastal README.md
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -101,6 +107,21 @@ jobs:
               raise SystemExit('A regional daily feed has failed core coverage; explicit failure state published.')
           if not h['critical_available']:
               raise SystemExit('Core report/observation coverage failed; failure state published for the app.')
+          PY
+      - name: Report coastal watch health
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('var/daily/coastal/status.json')
+          if not p.exists(): raise SystemExit('Coastal source watch did not produce a snapshot')
+          d=json.loads(p.read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('\n## Coastal source watch\n'+d['completed_at']+' · '+d['health']['status']+'\n')
+              for key,s in d['sources'].items():
+                  f.write(f"- {key}: {s['status']} · published {s.get('data',{}).get('published_date','not applicable')}\n")
+          if d['health']['issues']: raise SystemExit('Coastal source issues: '+', '.join(d['health']['issues']))
           PY
       - name: Report regulation coverage in every region
         if: always()

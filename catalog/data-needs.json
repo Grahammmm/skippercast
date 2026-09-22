@@ -516,6 +516,22 @@
       "cadence": "Shared 30-minute cloud collection; original source times retained.",
       "gates": [],
       "must_not_infer": "Do not reconstruct past forecasts, leak future observations or automatically apply an unvalidated correction."
+    },
+    {
+      "id": "seasonal-climate",
+      "name": "Seasonal climate context",
+      "question": "Which current climate advisory may affect species distributions?",
+      "fields": [
+        "status",
+        "published_date",
+        "retrieved_at",
+        "source_url",
+        "content_sha256"
+      ],
+      "units": {},
+      "cadence": "Daily source check; monthly issued NOAA advisory.",
+      "gates": [],
+      "must_not_infer": "ENSO does not locate fish, measure local temperature or authorize fishing."
     }
   ]
 }

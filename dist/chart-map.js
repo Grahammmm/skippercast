@@ -1,3 +1,4 @@
+export const chartLayers = mode => mode === 'nautical' ? '0,1,2,3,4,5,6,7' : '0,1,2,6';
 export function initChart(map, notify) {
   const street = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -7,7 +8,7 @@ export function initChart(map, notify) {
   const chart = L.tileLayer.wms(
     "https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer",
     {
-      layers: "0,1,2,4,5,6,7",
+      layers: chartLayers(document.getElementById('base-map').value),
       format: "image/png",
       transparent: false,
       version: "1.3.0",
@@ -34,8 +35,7 @@ export function initChart(map, notify) {
     if (e.target.value === "street") map.removeLayer(chart);
     else {
       chart.setParams({
-        layers:
-          e.target.value === "nautical" ? "0,1,2,3,4,5,6,7" : "0,1,2,4,5,6,7",
+        layers: chartLayers(e.target.value),
       });
       sync();
     }

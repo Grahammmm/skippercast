@@ -1,5 +1,5 @@
 // A scientific view of measured elevations. Blank survey cells stay blank.
-import { getRegion, assetURL } from "./region.js?v=8.7";
+import { getRegion, assetURL } from "./region.js?v=8.8";
 let indexPromise;
 
 export function decodeBottom(data) {

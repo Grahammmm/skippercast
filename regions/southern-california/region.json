@@ -569,22 +569,22 @@
     "minimum_features": 50
   },
   "species": [
-    "reef",
-    "sheephead",
-    "whitefish",
     "kelp-bass",
-    "sand-bass",
-    "spotted-bass",
+    "yellowtail",
     "halibut",
     "white-seabass",
-    "yellowtail",
-    "bonito",
-    "barracuda",
+    "sand-bass",
+    "spotted-bass",
     "bluefin",
     "yellowfin",
     "dorado",
-    "albacore",
-    "lobster"
+    "bonito",
+    "barracuda",
+    "sheephead",
+    "whitefish",
+    "lobster",
+    "reef",
+    "albacore"
   ],
   "source_names": {
     "historical-reefs": "CDFW historical artificial reefs",
@@ -1095,5 +1095,8 @@
     ],
     "note": "Historical substrate and canopy outlines are ecological search context; measured depth qualification is separate. No invented catch hotspots."
   },
-  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/habitat-dynamics.json"
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/habitat-dynamics.json",
+  "target_labels": {
+    "reef": "Rockfish"
+  }
 }
