@@ -28,7 +28,17 @@
 .regulations-card[open] .reg-chevron { transform: rotate(180deg); }
 .reg-badge { padding: 4px 7px; border-radius: 6px; font-size: .75rem; line-height: 1.25; }
 .reg-open { color: #155743; background: #e5f4ea; }
-.reg-closed { color: #883924; background: #fff0e8; }
+.reg-closed, .reg-excluded { color: #883924; background: #fff0e8; }
+.reg-local { padding: 8px 0; margin: 0; font-size: .8rem; color: #345861; }
+.outside-location-note { display: none; }
+body[data-location-coverage]:not([data-location-coverage="covered"]):not([data-location-coverage="discovery"]) .outside-location-note { display: block; }
+body[data-location-coverage]:not([data-location-coverage="covered"]):not([data-location-coverage="discovery"]) :is(#forecast-content,#morning-outlook,#bite-evidence,#forecast-status,#map-time-dock,#best-day-banner) { display: none; }
+.spot-rules { margin: 16px 0; padding: 12px; border: 1px solid #b7cccc; border-radius: 12px; }
+.spot-rules > summary { display: flex; gap: 8px; align-items: center; cursor: pointer; min-height: 44px; }
+.spot-rules .reg-body { max-height: none; overflow: visible; }
+.location-caption { position: absolute; z-index: 500; top: 68px; left: 14px; max-width: calc(100% - 86px); padding: 3px 7px; border-radius: 5px; background: #fffffff2; color: #28515b; font-size: .7rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.atlas-app .regulations-card { top: 96px; }
+.atlas-app .regulations-card ~ .charter-map-chip { top: 152px; }
 .reg-unknown, .reg-scheduled { color: #765216; background: #fff5da; }
 .reg-body {
   padding: 2px 14px 14px;

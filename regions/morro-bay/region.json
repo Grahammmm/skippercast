@@ -4,7 +4,7 @@
   "name": "Morro Bay & Avila",
   "status": "active",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
+  "jurisdiction": "California · Central Groundfish Management Area",
   "bounds": [
     -121.95,
     34.95,
@@ -22,7 +22,80 @@
       35.34,
       -120.965
     ],
-    "zoom": 11
+    "zoom": 11,
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [],
+    "unavailable_targets": {
+      "lobster": "Spiny lobster is not in this region’s researched target list. This is target coverage, not a legal prohibition."
+    },
+    "local_areas": [
+      {
+        "id": "san-simeon",
+        "name": "Cambria–San Simeon",
+        "bounds": [
+          -121.5,
+          35.49,
+          -120.92,
+          35.75
+        ],
+        "notice_ids": [
+          "san-simeon"
+        ]
+      },
+      {
+        "id": "avila",
+        "name": "Avila / Port San Luis",
+        "bounds": [
+          -120.85,
+          35.05,
+          -120.67,
+          35.21
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "buchon",
+        "name": "Point Buchon / Montaña de Oro",
+        "bounds": [
+          -121.02,
+          35.21,
+          -120.78,
+          35.32
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "estero-bay",
+        "name": "Estero Bay",
+        "bounds": [
+          -121.05,
+          35.32,
+          -120.78,
+          35.47
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "cayucos",
+        "name": "Cayucos / Point Estero",
+        "bounds": [
+          -121.18,
+          35.43,
+          -120.87,
+          35.53
+        ],
+        "notice_ids": []
+      }
+    ],
+    "discovery_bounds": [
+      -121.95,
+      34.95,
+      -120.55,
+      35.85
+    ],
+    "unavailable_target_sources": {
+      "lobster": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central"
+    }
   },
   "harbor": {
     "name": "Morro Bay",
@@ -67,63 +140,63 @@
     },
     {
       "id": "offshore-0-0",
-      "name": "Offshore south \u00b7 inner",
+      "name": "Offshore south · inner",
       "latitude": 35.05,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-0-1",
-      "name": "Offshore south \u00b7 middle",
+      "name": "Offshore south · middle",
       "latitude": 35.05,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-0-2",
-      "name": "Offshore south \u00b7 outer",
+      "name": "Offshore south · outer",
       "latitude": 35.05,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-1-0",
-      "name": "Offshore central \u00b7 inner",
+      "name": "Offshore central · inner",
       "latitude": 35.3,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-1-1",
-      "name": "Offshore central \u00b7 middle",
+      "name": "Offshore central · middle",
       "latitude": 35.3,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-1-2",
-      "name": "Offshore central \u00b7 outer",
+      "name": "Offshore central · outer",
       "latitude": 35.3,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-2-0",
-      "name": "Offshore north \u00b7 inner",
+      "name": "Offshore north · inner",
       "latitude": 35.55,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-2-1",
-      "name": "Offshore north \u00b7 middle",
+      "name": "Offshore north · middle",
       "latitude": 35.55,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-2-2",
-      "name": "Offshore north \u00b7 outer",
+      "name": "Offshore north · outer",
       "latitude": 35.55,
       "longitude": -121.75,
       "offshore": true

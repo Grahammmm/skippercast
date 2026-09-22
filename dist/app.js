@@ -1,23 +1,24 @@
-import {initTripAlerts} from './trip-alerts.js?v=8.3';
-import {initINavX} from './inavx.js?v=8.3';
-import {mountSpotEvidence} from './spot-evidence.js?v=8.3';
-import {initIntelligence} from './intelligence.js?v=8.3';
+import {initTripAlerts} from './trip-alerts.js?v=8.4';
+import {initINavX} from './inavx.js?v=8.4';
+import {mountSpotEvidence} from './spot-evidence.js?v=8.4';
+import {initIntelligence} from './intelligence.js?v=8.4';
 let inavx;
-import { getRegion, assetURL } from "./region.js?v=8.3";
-import { mountBottom } from "./bottom-view.js?v=8.3";
-import { initSurveyHabitat } from "./survey-habitat.js?v=8.3";
-import { initRegionalContext } from "./regional-context.js?v=8.3";
-import { initGeology } from "./geology.js?v=8.3";
-import { initWeather } from "./weather-ui.js?v=8.3";
-import { initNavigation } from "./navigation.js?v=8.3";
-import { initChart } from "./chart-map.js?v=8.3";
-import { initSpecies, matchesSpecies } from "./species.js?v=8.3";
-import { initRegulations } from "./regulations.js?v=8.3";
-import { initCharterGrounds } from "./charter-grounds.js?v=8.3";
-import { initProtectedAreas } from "./protected-areas.js?v=8.3";
-import { initDriftGuides } from "./drift-guides.js?v=8.3";
-import { initCommercialAIS } from "./commercial-ais.js?v=8.3";
-import { atlasExportAllowed } from "./export-screen.js?v=8.3";
+import { getRegion, assetURL } from "./region.js?v=8.4";
+import { mountBottom } from "./bottom-view.js?v=8.4";
+import { initSurveyHabitat } from "./survey-habitat.js?v=8.4";
+import { initRegionalContext } from "./regional-context.js?v=8.4";
+import { initGeology } from "./geology.js?v=8.4";
+import { initWeather } from "./weather-ui.js?v=8.4";
+import { initNavigation } from "./navigation.js?v=8.4";
+import { initChart } from "./chart-map.js?v=8.4";
+import { initSpecies, matchesSpecies } from "./species.js?v=8.4";
+import { initRegulations } from "./regulations.js?v=8.4";
+import { initLocationContext, viewFromURL } from './location-context.js?v=8.4';
+import { initCharterGrounds } from "./charter-grounds.js?v=8.4";
+import { initProtectedAreas } from "./protected-areas.js?v=8.4";
+import { initDriftGuides } from "./drift-guides.js?v=8.4";
+import { initCommercialAIS } from "./commercial-ais.js?v=8.4";
+import { atlasExportAllowed } from "./export-screen.js?v=8.4";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -54,7 +55,7 @@ let atlas,
   initialFitPending = true,
   initialViewShown = false,
   visible = [];
-let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI;
+let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI, locationUI;
 const layers = {},
   markers = new Map();
 const navigation = initNavigation({
@@ -66,9 +67,10 @@ const navigation = initNavigation({
 });
 
 function initMap() {
+  const view=viewFromURL(location.href);
   map = L.map("map", { zoomControl: false, minZoom: 7, maxZoom: 18 }).setView(
-    getRegion().map.center,
-    getRegion().map.zoom,
+    view?[view.latitude,view.longitude]:getRegion().map.center,
+    view?.zoom||getRegion().map.zoom,
   );
   L.control.zoom({ position: "topright" }).addTo(map);
   L.control
@@ -251,6 +253,7 @@ function selectTarget(id, pan = true) {
   const target = atlas.targets.find((t) => t.id === id);
   if (!target || !protectedAreas?.pointAllowed(target)) return;
   selected = target;
+  locationUI?.select(target);
   drawHabitat();
   driftGuides?.draw();
   $("export-selected").hidden = false;
@@ -350,6 +353,7 @@ function selectTarget(id, pan = true) {
   $("detail").insertBefore(conditions, extra);
   mountBottom($("detail"), t);
   mountSpotEvidence($("detail"),t,$('species-select').value);
+  rulesUI.mountSpot($("detail"),locationUI?.get(),$('species-select').value);
   inavx?.mount($("detail"),t);
 }
 
@@ -451,7 +455,8 @@ function fitTargets() {
     return;
   }
   if (!initialViewShown) {
-    map.setView(getRegion().map.center, getRegion().map.zoom);
+    const view=viewFromURL(location.href);
+    map.setView(view?[view.latitude,view.longitude]:getRegion().map.center, view?.zoom||getRegion().map.zoom);
     initialViewShown = true;
     initialFitPending = false;
     return;
@@ -484,12 +489,14 @@ function toast(message) {
 
 function showAreaDetails(html, area, conditionsButton) {
   selected = undefined;
+  locationUI?.select(area);
   drawHabitat();
   speciesUI?.draw();
   weather?.selectLocation(area);
   $("detail").innerHTML = html;
   mountBottom($("detail"), area);
   mountSpotEvidence($("detail"),area,$('species-select').value);
+  rulesUI.mountSpot($("detail"),locationUI?.get(),$('species-select').value);
   $("export-selected").hidden = true;
   $(conditionsButton).addEventListener("click", () =>
     navigation.showView("forecast"),
@@ -539,7 +546,7 @@ $("charter-status").addEventListener("click", () => {
   location.hash = "charter-evidence";
 });
 initAISContext();
-initRegulations($("species-regulations"), $("species-select"));
+const rulesUI=initRegulations($("species-regulations"), $("species-select"),{resolveLocation:context=>locationUI?.resolve(context)||context});
 updateExports();
 
 try {
@@ -554,6 +561,12 @@ try {
   fitTargets();
   driftGuides=initDriftGuides(map,{targets:()=>visible,selected:()=>selected,protectedAreas,selectTarget});
   weather=initWeather(map,layers.forecast,()=>navigation.showView("forecast"),driftGuides.update);
+  locationUI=initLocationContext(map,{
+    select:$("species-select"),protectedAreas,
+    onLocation:point=>weather?.selectLocation({...point,label:point.label||'Map location'}),
+    onSpeciesChange:()=>$("species-select").dispatchEvent(new CustomEvent('change',{detail:{location:true}})),
+  });
+  $("spot-dialog").addEventListener('close',()=>{if(document.body.dataset.view==='map')locationUI.clear();});
   const intelligence=initIntelligence(map);
   initTripAlerts(intelligence);
   registerTools();
@@ -565,7 +578,6 @@ try {
     protectedAreas,
     onChange: () => {
       filterTargets();
-      fitTargets();
       weather?.setSpecies($("species-select").value);
     },
     onConditions: (p) => {
@@ -604,7 +616,7 @@ try {
       charterUI?.draw();
     }
   });
-  fitTargets();
+  locationUI.refresh();
   if (selected) weather.selectLocation(selected);
 } catch (error) {
   $("map-empty").hidden = false;

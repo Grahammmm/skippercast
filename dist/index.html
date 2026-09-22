@@ -37,19 +37,19 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
-    <link rel="stylesheet" href="styles.css?v=8.3" />
-    <link rel="stylesheet" href="marine.css?v=8.3" />
-    <link rel="stylesheet" href="map-first.css?v=8.3" />
-    <link rel="stylesheet" href="bite-evidence.css?v=8.3" />
-    <link rel="stylesheet" href="regulations.css?v=8.3.1" />
-    <link rel="stylesheet" href="live-conditions.css?v=8.3" />
-    <link rel="stylesheet" href="calm-layout.css?v=8.3" />
-    <link rel="stylesheet" href="planning.css?v=8.3" />
-    <link rel="stylesheet" href="platform.css?v=8.3" />
+    <link rel="stylesheet" href="styles.css?v=8.4" />
+    <link rel="stylesheet" href="marine.css?v=8.4" />
+    <link rel="stylesheet" href="map-first.css?v=8.4" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.4" />
+    <link rel="stylesheet" href="regulations.css?v=8.4" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.4" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.4" />
+    <link rel="stylesheet" href="planning.css?v=8.4" />
+    <link rel="stylesheet" href="platform.css?v=8.4" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="boot.js?v=8.3"></script>
-  <link rel="stylesheet" href="insights.css?v=8.3"/>
+    <script type="module" src="boot.js?v=8.4"></script>
+  <link rel="stylesheet" href="insights.css?v=8.4"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#007f77"/>
 </head>
@@ -87,6 +87,7 @@
               Options
             </button>
           </div>
+          <div id="location-caption" class="location-caption" aria-live="polite">Locating regional targets…</div>
           <details id="species-regulations" class="regulations-card" aria-label="Local fishing regulations">
             <summary>Regulations · checking sources…</summary>
           </details>
@@ -122,6 +123,7 @@
           </div>
           <button id="load-forecast" class="primary">Refresh</button>
         </div>
+        <p class="outside-location-note">The map location is outside this region’s reviewed coverage. Move the map into a supported region to load its conditions and rules.</p>
         <p id="forecast-status" role="status">
           Loading wind, waves, temperature, and NOAA tides…
         </p>

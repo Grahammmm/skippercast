@@ -1,6 +1,6 @@
-import { getRegion, assetURL } from "./region.js?v=8.3";
-import { esc } from "./marine-charts.js?v=8.3";
-import { loadDailyEvidence } from "./bite-evidence.js?v=8.3";
+import { getRegion, assetURL } from "./region.js?v=8.4";
+import { esc } from "./marine-charts.js?v=8.4";
+import { loadDailyEvidence } from "./bite-evidence.js?v=8.4";
 
 const HOUR = 3600000;
 export const requiredRuleIDs = (region=getRegion()) => [...new Set(region.species.flatMap(id=>id==='reef'?['lingcod','rockfish']:[id]))];
@@ -35,14 +35,17 @@ export function sourceIssues(data, ids, now = Date.now()) {
       !Number.isFinite(age(s.data_retrieved_at, now)) || age(s.data_retrieved_at, now) < -1 || age(s.data_retrieved_at, now) > 36;
   });
 }
-export function areaNoticesHTML(data, now = Date.now()) {
-  const notices = data.area_notices || [];
-  if (!notices.length) return '';
-  return `<details data-reg-section="local-access"><summary>Area rules &amp; island access</summary><p>A season-open badge does not clear a particular fishing location. Check the exact boundary and your method. Habitat outlines are not a live closure map.</p>${notices.map(n => {
+export function areaNoticesHTML(data, now = Date.now(), location = null) {
+  const all = data.area_notices || [];
+  const notices = location ? all.filter(n=>location.noticeIds?.includes(n.id)) : all;
+  const other=location?all.filter(n=>!location.noticeIds?.includes(n.id)):[];
+  const more=other.length?`<details data-reg-section="other-access"><summary>Other regional access notices (${other.length})</summary>${areaNoticesHTML({...data,area_notices:other},now)}</details>`:'';
+  if (!notices.length) return more;
+  return `<details data-reg-section="local-access"><summary>${location?'Nearby rules &amp; access':'Area rules &amp; island access'}</summary><p>These notices apply in or near ${esc(location?.name||'this region')}. Their exact legal boundaries, dates and methods control; the browsing area is not a closure boundary.</p>${notices.map(n => {
     const issues = sourceIssues(data, n.source_ids, now);
     if (data.rules_review_status !== 'reviewed') issues.push('rule-content');
     return `<section class="reg-area-notice"><h3>${esc(n.name)}</h3><p>${esc(n.note)}</p><p>${issues.length ? 'Rule-source check incomplete or changed: verify the official notices.' : 'Rule sources match the reviewed versions.'}${n.live_clearance_required ? ' Current operational clearance has not been verified; check before entry.' : ''}</p><div class="reg-links">${n.source_ids.map(id => `<a href="${esc(officialURL(data.sources[id].url))}" target="_blank" rel="noopener">${esc(data.sources[id].name)} ↗</a>`).join('')}</div></section>`;
-  }).join('')}</details>`;
+  }).join('')}</details>${more}`;
 }
 export function validRegulations(data) {
   return data?.schema_version === 1 && Number.isFinite(Date.parse(data.reviewed_at)) &&
@@ -60,10 +63,19 @@ export function validRegulations(data) {
     });
 }
 
-export function regulationState(data, species, now = Date.now(), tripDate = null, method = null, tripInstant = null) {
+export function localizeRuleState(state, location) {
+  if(!location)return state;
+  const protection=location.protection;
+  if(location.coverage==='discovery')return {...state,status:'unknown',label:'Offshore rules: verify',reason:'Regional forecast and offshore search context are available here. The exact location or full search area is outside the reviewed fishing footprint, so nearby seasonal limits cannot authorize fishing here.'};
+  if(location.coverage!=='covered' || location.regionId!==getRegion().id)return {...state,status:'unknown',label:'Location not covered',reason:location.coverage==='mixed'?'This area crosses the reviewed regional footprint. Check the rules for every part of the area.':'This location is outside the loaded region’s reviewed coverage. Local targets and season clearance are unavailable.'};
+  if(protection?.status==='excluded')return {...state,status:'excluded',label:'Protected area',reason:`${protection.names.join('; ')}. SkipperCast withholds fishing targets in all mapped protected areas, including conservation areas that allow some activities. Consult the exact official rules.${protection.fresh?'':' The boundary check also needs refreshing.'}`};
+  if(protection?.status!=='clear')return {...state,status:'unknown',label:'Check local boundaries',reason:'The protected-area check is unavailable or stale. Saved seasonal limits do not clear this location.'};
+  return state;
+}
+export function regulationState(data, species, now = Date.now(), tripDate = null, method = null, tripInstant = null, location = null) {
   if (species === "reef") {
-    const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now, tripDate, method, tripInstant));
-    const status = ["unknown", "closed", "scheduled", "restricted", "open"].find((s) => members.some((m) => m.status === s));
+    const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now, tripDate, method, tripInstant,location));
+    const status = ["excluded", "unknown", "closed", "scheduled", "restricted", "open"].find((s) => members.some((m) => m.status === s));
     return { ...members.find((m) => m.status === status), members,
       issues: [...new Set(members.flatMap((m) => m.issues))],
       label: status === "closed" && members.some((m) => m.status !== "closed") ? "Check both seasons" : members.find((m) => m.status === status).label };
@@ -103,24 +115,26 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
   const methodProfile=p.methods?.[method];
   const methodReason=methodProfile?.note || null;
   if (methodProfile?.requires_clearance && status==='open') {status='scheduled';reason='Season and permission for this gear are separate. Check the current gear clearance before setting it.';}
-  return { method, methodReason, timingNote, status, label: timedRestriction && status==='restricted' ? 'Opening time applies' : { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
+  return localizeRuleState({ method, methodReason, timingNote, status, label: timedRestriction && status==='restricted' ? 'Opening time applies' : { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p },location);
 }
 
-export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null, tripInstant = null, includeAreas = true) {
-  const state = regulationState(data, species, now, tripDate, method, tripInstant);
+export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null, tripInstant = null, includeAreas = true, location = null) {
+  const state = regulationState(data, species, now, tripDate, method, tripInstant, location);
   const summary = `<summary><span>Rules</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
+  const localNote=location?`<p class="reg-local"><strong>${esc(location.source)} · ${esc(location.name)}</strong><br>${location.point.latitude.toFixed(5)}, ${location.point.longitude.toFixed(5)}${location.targetNote?`<br>${esc(location.targetNote)}${location.targetSource?` <a href="${esc(officialURL(location.targetSource))}" target="_blank" rel="noopener">Official source ↗</a>`:''}`:''}</p>`:'';
+  if(location && (location.coverage!=='covered'||location.regionId!==getRegion().id))return summary+`<div class="reg-body">${localNote}<p>${esc(state.reason)}</p><p>${location.coverage==='discovery'?'Offshore targets are search references, with fish presence unverified. Check U.S. versus Mexican waters, federal rules and trip-wide possession limits before fishing.':'Pan back into a mapped region or choose one in Options. Neighboring rules are not transferred to this location.'}</p><a class="reg-official" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map" target="_blank" rel="noopener">Official CDFW regional rules ↗</a></div>`;
   if (species === "reef" && validRegulations(data)) {
     const ids = ["lingcod", "rockfish"];
     const seasonsMatch = data.species.lingcod.season === data.species.rockfish.season;
     return summary + `<div class="reg-body" tabindex="0" aria-label="Lingcod and rockfish regulation details">
-      <div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
+      ${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
       <h2>Lingcod &amp; rockfish</h2><p class="reg-area">${esc(getRegion().name)} · recreational boat fishing</p>
       <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
       ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
       ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(data.species[id].name)}</h3><p>${esc(data.species[id].bag)}</p><p>${esc(data.species[id].size)}</p></section>`).join("")}
       <p class="reg-separate">Keep the limits separate. Rockfish identification and species sublimits matter.</p>
-      ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback, tripDate, method, tripInstant, false).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
-      ${areaNoticesHTML(data, now)}
+      ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback, tripDate, method, tripInstant, false,location).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
+      ${areaNoticesHTML(data, now,location)}
       <a class="reg-official" href="${esc(officialURL(data.sources["rules-groundfish"].url))}" target="_blank" rel="noopener">Official groundfish rules ↗</a>
     </div>`;
   }
@@ -130,23 +144,26 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
   const checked = timestamps.length === p.source_ids.length ? timestamps.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
   const links = p.source_ids.map((id) => `<a href="${esc(officialURL(data.sources[id].url))}" target="_blank" rel="noopener">${esc(data.sources[id].name)} ↗</a>`).join("");
   return summary + `<div class="reg-body" tabindex="0" aria-label="${esc(p.name)} regulation details">
-    <div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
+    ${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
     <h2>${esc(p.name)}</h2><p class="reg-area">${esc(data.area)}</p>
     <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
     ${state.timingNote ? `<p>${esc(state.timingNote)}</p>` : ''}
     ${state.methodReason ? `<p class="reg-notice">${esc(state.methodReason)}</p>` : ""}<dl class="reg-limits"><dt>Season</dt><dd>${esc(p.season)}</dd><dt>Daily / possession limit</dt><dd>${esc(p.bag)}</dd><dt>Minimum size</dt><dd>${esc(p.size)}</dd></dl>
     <details data-reg-section="gear"><summary>Gear, identification & other limits</summary><ul>${p.details.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></details>
     <details data-reg-section="area"><summary>Where these rules apply</summary><p>${esc(data.scope)}</p><ul>${data.common_notes.filter((s) => !["dungeness","lobster"].includes(species) || !s.startsWith("For finfish,")).map((s) => `<li>${esc(s)}</li>`).join("")}</ul><a href="${esc(officialURL(data.official_map_url))}" target="_blank" rel="noopener">CDFW map: check exact position & MPAs ↗</a></details>
-    ${includeAreas ? areaNoticesHTML(data, now) : ''}
+    ${includeAreas ? areaNoticesHTML(data, now,location) : ''}
     <div class="reg-freshness"><p>Rules reviewed: ${esc(time(data.reviewed_at))}<br>Oldest required source check: ${esc(time(checked))}${fallback ? " · saved snapshot" : ""}</p><p>Official sources are checked daily. Changes need review; a successful download does not approve new rules. Recheck before each trip.</p></div>
     <a class="reg-official" href="${esc(officialURL(data.sources[p.primary_source_id || p.source_ids[0]].url))}" target="_blank" rel="noopener">Read current official rules ↗</a>
     <details data-reg-section="sources"><summary>All official sources & check status</summary><div class="reg-links">${links}</div>${state.issues.length ? `<p>Needs review / fresh check: ${state.issues.map((id) => esc(data.sources[id].name)).join("; ")}.</p>` : "<p>Required sources match the reviewed versions.</p>"}</details>
   </div>`;
 }
 
-export function initRegulations(card, select) {
+export function initRegulations(card, select, {resolveLocation=(v)=>v}={}) {
   let registry = null, fallback = true, species = select.value, lastRefresh = 0;
+  let spotViews=[];
   let tripDate = null, tripInstant = null, method = null, followForecast = true;
+  let locationContext=null;
+  document.addEventListener('skippercast:location',event=>{locationContext=event.detail;species=select.value;render();});
   card.addEventListener('change',event=>{
     if(event.target.id==='rules-trip-date'){tripDate=event.target.value;tripInstant=null;followForecast=false;render();}
     if(event.target.id==='rules-method'){method=event.target.value;render();}
@@ -160,9 +177,16 @@ export function initRegulations(card, select) {
     if(followForecast && tripInstant!==lastForecastInstant){tripDate=lastForecastDate;tripInstant=lastForecastInstant;render();}
   });
   function render(open = false) {
+    locationContext=resolveLocation(locationContext);
+    spotViews=spotViews.filter(v=>v.card.isConnected);
+    for(const v of spotViews){
+      v.location=resolveLocation(v.location);
+      const content=regulationsHTML(registry,v.species,Date.now(),fallback,tripDate,method,tripInstant,true,v.location);
+      if(v.card.innerHTML!==content){const expanded=[...v.card.querySelectorAll('[data-reg-section][open]')].map(s=>s.dataset.regSection);v.card.innerHTML=content;for(const section of v.card.querySelectorAll('[data-reg-section]'))section.open=expanded.includes(section.dataset.regSection);}
+    }
     const options=ruleMethods(registry,species);
     method=options.some(o=>o[0]===method)?method:options[0][0];
-    let html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback, tripDate, method, tripInstant);
+    let html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback, tripDate, method, tripInstant,true,locationContext);
     const controls=`<div class="rule-controls"><label>Fishing date<input id="rules-trip-date" type="date" value="${tripDate||dateFormat.format(new Date())}"></label><label>Method<select id="rules-method">${options.map(([id,name])=>`<option value="${id}" ${method===id?"selected":""}>${name}</option>`).join("")}</select></label>${followForecast?"":'<button id="rules-follow-forecast">Use forecast date</button>'}</div>`;
     html=html.replace("</summary>","</summary>"+controls);
     if (card.innerHTML !== html) {
@@ -211,4 +235,9 @@ export function initRegulations(card, select) {
   // Leaflet must not pan or zoom when interacting with or scrolling the card.
   for (const type of ["pointerdown", "mousedown", "dblclick", "wheel", "touchstart", "touchmove"])
     card.addEventListener(type, (event) => event.stopPropagation(), { passive: true });
+  return {mountSpot(container,location,selectedSpecies){
+    const spot=document.createElement('details');spot.className='spot-rules';
+    spot.innerHTML=regulationsHTML(registry,selectedSpecies,Date.now(),fallback,tripDate,method,tripInstant,true,location);
+    container.append(spot);spotViews.push({card:spot,location,species:selectedSpecies});
+  }};
 }

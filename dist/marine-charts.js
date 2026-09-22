@@ -1,6 +1,6 @@
-import { getRegion } from "./region.js?v=8.3";
-import { directionTo, HOUR } from "./marine-data.js?v=8.3";
-import { compass } from "./forecast.js?v=8.3";
+import { getRegion } from "./region.js?v=8.4";
+import { directionTo, HOUR } from "./marine-data.js?v=8.4";
+import { compass } from "./forecast.js?v=8.4";
 export const esc = (v) =>
   String(v ?? "").replace(
     /[&<>"']/g,

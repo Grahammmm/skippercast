@@ -34,3 +34,5 @@ python scripts/build_bottom_views.py --region morro-bay --manifest /local/survey
 Use `$skippercast-discover-data`, `$skippercast-ingest-data`, and `$skippercast-add-region` for future work. Their maintained sources live under `skills/`; `python scripts/install_research_skills.py` installs them into the current user's Codex skills folder. Run the system skill validator on the installed copies when available.
 
 Roll back a region by republishing the previous coherent app/package version; mark a problematic new package draft to remove it from discovery. Retain prior feed source times. Do not relabel retained data as a new observation. Existing regions can keep working while one preview is withheld.
+
+Location-aware target menus and nearby rules use the shared [map context contract](local-map-context.md). Configure discovery extents and notice bindings for each new region; do not substitute browsing rectangles for legal boundaries.

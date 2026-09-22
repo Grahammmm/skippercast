@@ -1,7 +1,7 @@
-import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.3";
-import { fetchJSON } from "./forecast.js?v=8.3";
-import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.3";
-import { esc } from "./marine-charts.js?v=8.3";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.4";
+import { fetchJSON } from "./forecast.js?v=8.4";
+import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.4";
+import { esc } from "./marine-charts.js?v=8.4";
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
 export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:getRegion().mpa.bounds.join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
 export function validMPAs(data) {
@@ -43,6 +43,10 @@ export async function initProtectedAreas(map, onChange) {
   const screen={
     ready:()=>freshEnough(),
     revision:()=>`${checked}|${extraChecked}|${freshEnough()}`,
+    inspect(p){
+      const matches=[...(data?.features||[]),...(extra?.features||[])].filter(f=>p.geometry?geometryIntersects(p.geometry,f.geometry):pointInGeometry([p.longitude,p.latitude],f.geometry));
+      return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME)};
+    },
     snapshot:()=>freshEnough()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
     pointAllowed:p=>freshEnough() && ![...data.features,...(extra?.features||[])].some(f=>pointInGeometry([p.longitude,p.latitude],f.geometry)),
     geometryAllowed:g=>freshEnough() && ![...data.features,...(extra?.features||[])].some(f=>geometryIntersects(g,f.geometry)),

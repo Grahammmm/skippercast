@@ -123,7 +123,267 @@
         ],
         "forecast_point": "newport"
       }
-    ]
+    ],
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [
+      "health"
+    ],
+    "unavailable_targets": {
+      "dungeness": "Dungeness is not a promoted Southern California target. Crab traps and snares are prohibited south of Point Arguello; this is not a blanket prohibition on every method of crab collection. See official CDFW invertebrate rules.",
+      "salmon": "Salmon is not in this region’s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
+    },
+    "local_areas": [
+      {
+        "id": "north-islands",
+        "name": "Northern Channel Islands",
+        "bounds": [
+          -120.57,
+          33.84,
+          -119.29,
+          34.15
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "anacapa",
+        "name": "Anacapa",
+        "bounds": [
+          -119.49,
+          33.94,
+          -119.31,
+          34.06
+        ],
+        "notice_ids": [
+          "anacapa",
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "santa-cruz",
+        "name": "Santa Cruz",
+        "bounds": [
+          -119.96,
+          33.89,
+          -119.51,
+          34.11
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "santa-rosa",
+        "name": "Santa Rosa",
+        "bounds": [
+          -120.28,
+          33.85,
+          -119.98,
+          34.07
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "san-miguel",
+        "name": "San Miguel",
+        "bounds": [
+          -120.51,
+          33.97,
+          -120.28,
+          34.1
+        ],
+        "notice_ids": [
+          "san-miguel",
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "santa-barbara-island",
+        "name": "Santa Barbara Island",
+        "bounds": [
+          -119.11,
+          33.43,
+          -118.97,
+          33.53
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "catalina",
+        "name": "Santa Catalina",
+        "bounds": [
+          -118.68,
+          33.26,
+          -118.23,
+          33.52
+        ],
+        "notice_ids": [
+          "catalina"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "san-diego",
+        "name": "San Diego coast",
+        "bounds": [
+          -117.42,
+          32.54,
+          -117.09,
+          33.12
+        ],
+        "notice_ids": [
+          "san-diego-naval"
+        ]
+      },
+      {
+        "id": "orange-county",
+        "name": "Orange County coast",
+        "bounds": [
+          -118.15,
+          33.36,
+          -117.62,
+          33.75
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "san-clemente",
+        "name": "San Clemente Island",
+        "bounds": [
+          -118.75,
+          32.65,
+          -118.2,
+          33.13
+        ],
+        "notice_ids": [
+          "san-clemente"
+        ]
+      },
+      {
+        "id": "san-nicolas",
+        "name": "San Nicolas Island",
+        "bounds": [
+          -119.65,
+          33.13,
+          -119.25,
+          33.42
+        ],
+        "notice_ids": [
+          "san-nicolas"
+        ]
+      },
+      {
+        "id": "point-mugu",
+        "name": "Point Mugu coast",
+        "bounds": [
+          -119.35,
+          34.03,
+          -118.88,
+          34.25
+        ],
+        "notice_ids": [
+          "point-mugu"
+        ]
+      },
+      {
+        "id": "pendleton",
+        "name": "Camp Pendleton coast",
+        "bounds": [
+          -117.85,
+          33.1,
+          -117.3,
+          33.45
+        ],
+        "notice_ids": [
+          "pendleton-fallbrook"
+        ]
+      },
+      {
+        "id": "santa-barbara-coast",
+        "name": "Santa Barbara coast",
+        "bounds": [
+          -120.5,
+          34.23,
+          -119.35,
+          34.45
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "los-angeles-coast",
+        "name": "Los Angeles coast",
+        "bounds": [
+          -118.82,
+          33.65,
+          -118.05,
+          34.08
+        ],
+        "notice_ids": []
+      }
+    ],
+    "discovery_bounds": [
+      -121,
+      32.5343,
+      -117.05,
+      34.45
+    ],
+    "unavailable_target_sources": {
+      "dungeness": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "salmon": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+    }
   },
   "harbor": {
     "name": "San Diego (reference harbor)",

@@ -81,7 +81,7 @@ def build(root=REPO):
         atomic_json(output / "coverage.json", report)
         atomic_json(output / "region.json", region)
         receipt = atomic_json(output / "manifest.json", {"schema_version": 1, "region_id": region["id"], "assets": assets})
-        entries.append({"id": region["id"], "name": region["name"], "status": region["status"], "config": f"regions/{region['id']}/region.json", "manifest": receipt["sha256"]})
+        entries.append({"id": region["id"], "name": region["name"], "status": region["status"], "fishing_bounds": region['fishing_bounds'], "discovery_bounds": region.get('map',{}).get('discovery_bounds',region['fishing_bounds']), "config": f"regions/{region['id']}/region.json", "manifest": receipt["sha256"]})
     atomic_json(root / "dist/regions/index.json", {"schema_version": 1, "default_region": "morro-bay", "regions": entries})
     default = load_region("morro-bay", root)
     validate_regional_rules(default, root)

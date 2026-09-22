@@ -1,7 +1,7 @@
-import { initRegion } from "./region.js?v=8.3";
+import { initRegion } from "./region.js?v=8.4";
 try {
   await initRegion();
-  await import("./app.js?v=8.3");
+  await import("./app.js?v=8.4");
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;
   panel.replaceChildren();const title=document.createElement("strong");title.textContent="This region could not load";

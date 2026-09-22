@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "id": "cambria-san-simeon",
-  "name": "Cambria\u2013San Simeon",
+  "name": "Cambria–San Simeon",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
+  "jurisdiction": "California · Central Groundfish Management Area",
   "bounds": [
     -121.95,
     35.45,
@@ -22,7 +22,36 @@
       35.612,
       -121.17
     ],
-    "zoom": 12
+    "zoom": 12,
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [],
+    "unavailable_targets": {
+      "lobster": "Spiny lobster is not in this region’s researched target list. This is target coverage, not a legal prohibition."
+    },
+    "local_areas": [
+      {
+        "id": "san-simeon",
+        "name": "Cambria–San Simeon",
+        "bounds": [
+          -121.5,
+          35.49,
+          -120.92,
+          35.75
+        ],
+        "notice_ids": [
+          "san-simeon"
+        ]
+      }
+    ],
+    "discovery_bounds": [
+      -121.95,
+      35.45,
+      -120.95,
+      35.66
+    ],
+    "unavailable_target_sources": {
+      "lobster": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central"
+    }
   },
   "harbor": {
     "name": "Morro Bay",
@@ -61,28 +90,28 @@
     },
     {
       "id": "offshore-0-0",
-      "name": "Offshore south \u00b7 inner",
+      "name": "Offshore south · inner",
       "latitude": 35.55,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-0-1",
-      "name": "Offshore south \u00b7 outer",
+      "name": "Offshore south · outer",
       "latitude": 35.55,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-1-0",
-      "name": "Offshore north \u00b7 inner",
+      "name": "Offshore north · inner",
       "latitude": 35.65,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-1-1",
-      "name": "Offshore north \u00b7 outer",
+      "name": "Offshore north · outer",
       "latitude": 35.65,
       "longitude": -121.75,
       "offshore": true
@@ -333,7 +362,7 @@
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/latest.json",
   "landing_names": [],
   "coverage_note": "Expansion preview through San Simeon: reviewed geological context and regional conditions. Native-depth-qualified targets remain withheld until appropriate survey coverage and rights are resolved.",
-  "landing_note": "Morro Bay totals do not locate catches in Cambria\u2013San Simeon; no local report publisher is bound.",
+  "landing_note": "Morro Bay totals do not locate catches in Cambria–San Simeon; no local report publisher is bound.",
   "jurisdiction_id": "california-central",
   "pipeline_sources": {
     "sst": "mur-sst",

@@ -149,6 +149,27 @@ def validate_region(region, needs, sources, root=REPO):
         if not ID.fullmatch(area.get('id','')) or not area.get('name'):raise ValueError('Invalid regional map focus')
         if area.get('forecast_point') and area['forecast_point'] not in {p['id'] for p in region['forecast_points']}:
             raise ValueError('Map focus has no matching regional forecast sample')
+    local_map=region.get('map',{})
+    if local_map.get('discovery_bounds'):
+        discovery=bbox(local_map['discovery_bounds'])
+        if not (bounds[0]<=discovery[0]<discovery[2]<=bounds[2] and bounds[1]<=discovery[1]<discovery[3]<=bounds[3]):
+            raise ValueError('Discovery extent exceeds the reviewed regional data coverage')
+    for url in local_map.get('unavailable_target_sources',{}).values():public_url(url)
+    registry=read_json(within(Path(root)/'dist',region['assets']['regulations']))
+    notice_ids={n['id'] for n in registry.get('area_notices',[])}
+    assigned=set(local_map.get('region_notice_ids',[]))
+    local_ids=set()
+    for area in local_map.get('local_areas',[]):
+        bbox(area['bounds'])
+        if not ID.fullmatch(area.get('id','')) or area['id'] in local_ids or not area.get('name'):
+            raise ValueError('Local discovery areas need unique IDs and names')
+        local_ids.add(area['id']);assigned.update(area.get('notice_ids',[]))
+        for hidden in area.get('hidden_targets',[]):
+            if hidden['id'] not in region['species'] or not hidden.get('reason'):
+                raise ValueError('Hidden local targets need a regional ID and evidence-based reason')
+            public_url(hidden['source_url'])
+    if local_map.get('local_areas') and assigned != notice_ids:
+        raise ValueError('Every local notice must have a discovery area or region-wide binding')
     seen = set()
     for point in region["forecast_points"]:
         if point["id"] in seen:

@@ -1,5 +1,5 @@
-import {getRegion,assetURL} from './region.js?v=8.3';
-import {esc} from './marine-charts.js?v=8.3';
+import {getRegion,assetURL} from './region.js?v=8.4';
+import {esc} from './marine-charts.js?v=8.4';
 const cache=new Map();
 export function spotEvidence(target,species,profile,region){
   const measured=[],inferred=[],unknown=[];

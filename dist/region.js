@@ -1,6 +1,19 @@
-import defaultRegion from "./region-default.js?v=8.3";
+import defaultRegion from "./region-default.js?v=8.4";
 let active = defaultRegion;
+let directory = [];
 export const getRegion = () => active;
+export const getRegionDirectory = () => directory;
+export function renderTargetOptions(select, options, value) {
+  if([...select.options].map(o=>o.value).join('|')!==options.map(o=>o.id).join('|')) {
+    select.replaceChildren();
+    const groups=new Map();
+    for(const target of options) {
+      if(!groups.has(target.group)){const group=document.createElement('optgroup');group.label=target.group;groups.set(target.group,group);select.append(group);}
+      groups.get(target.group).append(new Option(target.name,target.id));
+    }
+  }
+  select.value=value;
+}
 export const assetURL = (key) => active.assets[key] || null;
 export function setRegion(region) {
   if (region?.schema_version !== 1 || !/^[a-z][a-z0-9-]{1,63}$/.test(region.id) || !region.forecast_points?.length) throw new Error("Invalid regional configuration");
@@ -13,6 +26,7 @@ export async function initRegion() {
   const response = await fetch("regions/index.json",{cache:"no-cache"});
   if (!response.ok) throw new Error("Region directory unavailable");
   const index = await response.json();
+  directory=index.regions;
   const requested = new URL(location.href).searchParams.get("region") || index.default_region;
   const entry = index.regions.find(r=>r.id===requested);
   if (!entry) throw new Error("Unknown region. Open the region menu to choose an available coast.");
@@ -26,11 +40,12 @@ export async function initRegion() {
     groups.get(target.group).append(new Option(target.name,target.id));
   }
   if(!species.options.length) throw Error('Regional species definitions unavailable');
-  species.value=active.species[0];
+  const target=new URL(location.href).searchParams.get('target');
+  species.value=active.species.includes(target)?target:active.species[0];
   const chooser=document.getElementById("region-select");
   for(const region of index.regions){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
   chooser.value=active.id;
-  chooser.addEventListener("change",()=>{const url=new URL(location.href);url.searchParams.set("region",chooser.value);url.hash="map";location.assign(url);});
+  chooser.addEventListener("change",()=>{const url=new URL(location.href);url.searchParams.set("region",chooser.value);url.searchParams.set('target',species.value);for(const key of ['view','focus','spot'])url.searchParams.delete(key);url.hash="map";location.assign(url);});
   const area=document.getElementById("area");area.replaceChildren(new Option("All areas","all"));
   for(const [id,name] of Object.entries(active.source_names))area.add(new Option(name,id));
   const note=document.getElementById("region-note");

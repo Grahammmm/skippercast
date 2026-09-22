@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.3";
-import { getRegion, assetURL } from "./region.js?v=8.3";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.3";
-import { circleGeometry } from "./geo-screen.js?v=8.3";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.4";
+import { getRegion, assetURL } from "./region.js?v=8.4";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.4";
+import { circleGeometry } from "./geo-screen.js?v=8.4";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -312,7 +312,7 @@ export async function initSpecies(
       <p>Use the selected species’ Regulations card on the map for current season-check status and limits.</p>
       <p>Reference position ${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}. ${a.depth_ft ? "Survey depth datum MLLW · 2008. Verify present depths with sonar." : ""}</p>
       ${(a.source_urls || []).map((url) => `<a href="${url}" target="_blank" rel="noopener">USGS survey record ↗</a>`).join(" · ")}</details>`;
-    onSelect(html, a);
+    onSelect(html, {...a,geometry:a.geometry||circleGeometry(a.latitude,a.longitude,a.radius_m)});
   }
   function draw() {
     const p = PROFILES[id()];

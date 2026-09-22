@@ -1,6 +1,6 @@
 // Evidence geometry stays separate from depth-qualified/exportable fishing targets.
-import {assetURL,getRegion} from './region.js?v=8.3';
-import {esc} from './marine-charts.js?v=8.3';
+import {assetURL,getRegion} from './region.js?v=8.4';
+import {esc} from './marine-charts.js?v=8.4';
 
 export function habitatMatches(feature, species, region=getRegion()) {
   const p=feature.properties, target=region.target_options?.find(t=>t.id===species);
@@ -54,7 +54,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
   let screened=[],screenRevision=null,checking=false,checkError=false,request=0,worker,deadline;
   const fail=()=>{checkError=true;checking=false;screened=[];clearTimeout(deadline);worker?.terminate();draw();};
   try{
-    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.3',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./habitat-screen-worker.js?v=8.4',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',geometries:data.features.map(f=>f.geometry)});
     worker.addEventListener('message',({data:result})=>{
       if(checkError || result.request!==request || result.revision!==screen.revision() || !screen.ready())return;
@@ -87,7 +87,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
       const p=f.properties,color={rock:'#157f85',mixed:'#647d8b',sediment:'#ac7b45',kelp:'#487d2a'}[p.habitat_kind]||'#647d8b';
       const shape=L.geoJSON(f,{style:{color,weight:zoom>=12?1.6:1,fillColor:color,fillOpacity:zoom>=11?.3:.18},onEachFeature:(_,s)=>s.on('add',()=>{const el=s.getElement();if(el){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label',p.name+' · '+p.habitat_kind+' survey habitat');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();s.fire('click',{},true);}});}})});
       shape.bindTooltip(esc(p.name)+' · '+esc(p.habitat_kind)+' habitat')
-        .on('click',()=>onSelect(habitatDetails(f,region),p)).addTo(layer);
+        .on('click',()=>onSelect(habitatDetails(f,region),{...p,geometry:f.geometry})).addTo(layer);
     }
     if(eligible.length && minimum)status.textContent+=' · zoom in for finer patches';
   };
