@@ -120,7 +120,7 @@ jobs:
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
               f.write('\n## Coastal source watch\n'+d['completed_at']+' · '+d['health']['status']+'\n')
               for key,s in d['sources'].items():
-                  f.write(f"- {key}: {s['status']} · published {s.get('data',{}).get('published_date','not applicable')}\n")
+                  f.write(f"- {key}: {s['status']} · published {(s.get('data') or {}).get('published_date','not applicable')}\n")
           if d['health']['issues']: raise SystemExit('Coastal source issues: '+', '.join(d['health']['issues']))
           PY
       - name: Report regulation coverage in every region
