@@ -23,12 +23,15 @@ async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=aw
 async function readFeed(url){
   let stage='cache';
   try{
-    const key=new Request(url);const cache=globalThis.caches?.default;
-    const cached=await cache?.match(key);if(cached)return cached.json();
+    const key=new Request(url);let cache,cached;
+    // Sites isolates named caches. Its shared default cache is intentionally
+    // unavailable; an optional cache failure must never disable public feeds.
+    try{cache=await globalThis.caches?.open('skippercast-public-feeds-v1');cached=await cache?.match(key);}catch{cache=null;}
+    if(cached)return cached.json();
     // Workers supports manual redirects; response.ok rejects every 3xx below.
     stage='fetch';const response=await fetch(url,{signal:AbortSignal.timeout(18000),redirect:'manual'});
     if(!response.ok)throw Error('feed HTTP '+response.status);stage='decode';const text=await response.text();if(text.length>15000000)throw Error('feed too large');const value=JSON.parse(text);
-    stage='cache-write';if(cache)await cache.put(key,new Response(text,{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=300'}}));return value;
+    stage='cache-write';if(cache)try{await cache.put(key,new Response(text,{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=300'}}));}catch{console.warn('Public feed cache write unavailable');}return value;
   }catch(error){
     // Only reviewed, public feed URLs reach here. Never include request headers.
     console.error('Regional feed unavailable',{stage,host:new URL(url).host,reason:String(error.message).slice(0,200)});throw error;
