@@ -1,17 +1,17 @@
-import { initRegion } from "./region.js?v=8.9";
-import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.9';
+import { initRegion } from "./region.js?v=8.10";
+import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.10';
 try {
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {
     const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
-    const {initCoastalDiscovery}=await import('./coastal-discovery.js?v=8.9');
+    const {initCoastalDiscovery}=await import('./coastal-discovery.js?v=8.10');
     await initCoastalDiscovery(catalog,coast);
   } else {
     await initRegion();
     const coast=coastForPackage(url.searchParams.get('region')||'morro-bay',catalog);
     initCoastSelector(catalog,coast);
     void initCoastalContext(catalog,coast);
-    await import("./app.js?v=8.9");
+    await import("./app.js?v=8.10");
   }
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;

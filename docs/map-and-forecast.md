@@ -41,3 +41,6 @@ The link-preview image now uses a period-informed Parker 2320 Sport Cabin illust
 ## Validation
 
 Offline checks cover malformed/missing weather, single/both inconsistent gusts, day-window completeness, MPA boundary and crossing cases, upstream/downstream drift geometry and unchanged atlas/export consistency. The published rocky targets, footprints, structure lines and commercial cells were checked against the fresh CDFW polygons. Browser review covers the phone forecast, zoomed map, species filtering and commercial layer controls.
+
+
+The forecast opens with a plain-language day summary: the selected morning’s rougher model wind/seas, swell spacing, and practical boat-motion/gear-handling implications. This is a conditions heuristic, not catch probability or entrance clearance. Date cards label quality separately from confidence; absent scores say “No rating.” Hourly measurements remain available in disclosures. Model download failures get one retry and may retain an identically located forecast for at most three hours, preserving its own retrieval timestamp. Expired retained models prevent ratings; refresh failure reduces confidence. Provider coverage gaps remain explicit and are not filled with invented values.

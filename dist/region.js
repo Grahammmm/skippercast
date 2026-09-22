@@ -1,5 +1,5 @@
-import defaultRegion from "./region-default.js?v=8.9";
-import {loadCoasts,coastForPackage,coastURL} from './coasts.js?v=8.9';
+import defaultRegion from "./region-default.js?v=8.10";
+import {loadCoasts,coastForPackage,coastURL} from './coasts.js?v=8.10';
 let active = defaultRegion;
 let directory = [];
 export const getRegion = () => active;

@@ -1,13 +1,13 @@
-import {getRegion} from "./region.js?v=8.9";
-import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.9";
+import {getRegion} from "./region.js?v=8.10";
+import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.10";
 import {
   readConditions,
   comfort,
   angleBetween,
   HOUR,
   POINTS,
-} from "./marine-data.js?v=8.9";
-import { esc, local, num } from "./marine-charts.js?v=8.9";
+} from "./marine-data.js?v=8.10";
+import { esc, local, num } from "./marine-charts.js?v=8.10";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",
@@ -59,6 +59,7 @@ export function hourScores(c, other, species, checkedGust = Math.max(c.gust, oth
 export function rateHour(bundle, point, species, time, now=Date.now()) {
   const empty={conditions:null,comfort:null,control:null,bite:null,overall:null,confidence:"Low",reasons:[]};
   if (!bundle || now-bundle.retrieved>3*3600000) return {...empty,reasons:["Fresh forecasts unavailable"]};
+  if (MODELS.some(id=>Number.isFinite(bundle.models[id]?.retrieved)&&now-bundle.models[id].retrieved>3*3600000)) return {...empty,reasons:["A required forecast has expired; refresh pending"]};
   if (MODELS.some(id=>!Number.isFinite(bundle.models[id]?.meta?.last_run_initialisation_time) || now/1000-bundle.models[id].meta.last_run_initialisation_time>36*HOUR)) return {...empty,reasons:["Model-run freshness cannot be verified"]};
   const c=readConditions(bundle,point,time,"gfs"), other=readConditions(bundle,point,time,"ecmwf");
   const alerts=bundle.alerts?.[POINTS[point].offshore?"offshore":"coastal"];
@@ -72,6 +73,7 @@ export function rateHour(bundle, point, species, time, now=Date.now()) {
   if (!gusts.length) return {...empty,reasons:["Both gust forecasts are inconsistent; no valid gust comparison"]};
   const result=hourScores(c,other,species,Math.max(...gusts));
   if (gusts.length<2) reasons.push("Inconsistent gust omitted; the other model supplies the gust estimate");
+  if(MODELS.some(id=>bundle.models[id]?.refreshError)) reasons.push("A source refresh failed; using its recent saved forecast");
   const uncertain=reasons.length>0;
   if (uncertain) result.conditions=Math.min(7.9,result.conditions);
   return {...result,confidence:uncertain?"Low":"Moderate",reasons,wind:Math.max(c.wind,other.wind),sea:Math.max(c.sea.height,other.sea.height)};

@@ -148,3 +148,19 @@ test("connected habitat regions retain holes and species depth ceilings", () => 
     }
   }
 });
+
+
+test("a retained individual model cannot be made fresh by another successful refresh",()=>{
+ const b=bundle();b.models.gfs_global.retrieved=now-4*3600000;
+ assert.equal(rateHour(b,0,'reef',times[0],now).conditions,null);
+});
+test("day narrative explains rough conditions and incomplete coverage without inventing a score",async()=>{
+ const {boatDayHTML,ratingLabel}=await import('../dist/forecast-summary.js');
+ const b=bundle(),r=rankMornings(b,0,'reef',now)[0];
+ let html=boatDayHTML(b,0,'reef',times[0],r,now);
+ assert.match(html,/on the boat/);assert.match(html,/kt/);assert.match(html,/seconds apart/);
+ assert.equal(ratingLabel(0),'Very rough');assert.equal(ratingLabel(null),'Data incomplete');
+ b.models.ncep_gfswave025.data[0].hourly.wave_height.fill(null);
+ const missing=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],missing,now);
+ assert.match(html,/Data incomplete/);assert.match(html,/day rating is unavailable/);assert.doesNotMatch(html,/0.0\/10/);
+});

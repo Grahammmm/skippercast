@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.9';
-import {matrixHTML} from './forecast-matrix.js?v=8.9';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.9";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.10';
+import {matrixHTML} from './forecast-matrix.js?v=8.10';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.10";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.9";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.9";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.9";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=8.9";
-import { localDate } from "./forecast.js?v=8.9";
-import { detailHTML } from "./marine-detail.js?v=8.9";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.9";
+} from "./marine-data.js?v=8.10";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.10";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.10";
+import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.10";
+import { localDate } from "./forecast.js?v=8.10";
+import { detailHTML } from "./marine-detail.js?v=8.10";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.10";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -70,10 +70,11 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   const methodNote=document.createElement('p');methodNote.className='small';methodNote.id='forecast-method-note';
   const noteForMethod=()=>{methodNote.hidden=lastSpecies!=='lobster';methodNote.textContent='Lobster: daily ratings summarize 7 a.m.–1 p.m. comfort, not a night hoop-net outing. Select every hour of your actual fishing and return window; daylight scores do not rate diving safety.';};
   $('forecast-content').prepend(methodNote);noteForMethod();
+  const dayStory=document.createElement("section");dayStory.id="boat-day-summary";dayStory.className="boat-day-summary";dayStory.setAttribute("aria-label","Your day on the boat");$("forecast-content").prepend(dayStory);
   const summary=document.createElement("div");
   summary.id="forecast-hour-summary";
   $("forecast-time-tools").append(summary);
-  const matrix=document.createElement("div"); matrix.id="forecast-matrix"; $("forecast-time-tools").append(matrix);
+  const matrixDetails=document.createElement("details");matrixDetails.className="hour-details";matrixDetails.innerHTML="<summary>Compare hourly measurements</summary>";const matrix=document.createElement("div"); matrix.id="forecast-matrix";matrixDetails.append(matrix); $("forecast-time-tools").append(matrixDetails);
   matrix.addEventListener("click",e=>{const b=e.target.closest("[data-forecast-epoch]");if(b)setHour(Math.round((Number(b.dataset.forecastEpoch)-hours[0])/HOUR));});
   $("best-day-banner").addEventListener("click", () => {
     const epoch = Number($("best-day-banner").dataset.hour);
@@ -420,10 +421,11 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
         ([d, i], n) =>
           {
             const r=dayRatings.find(r=>r.date===d), at=r?Math.max(0,Math.round((r.time-hours[0])/HOUR)):i;
-            return `<button data-hour="${at}" aria-pressed="${d === isoDay(t)}" class="${r?.conditions>=8?'good':''}" title="${esc(r?.window||'Forecast loading')} · ${esc(r?.confidence||'')} confidence">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small><b>${Number.isFinite(r?.conditions)?num(r.conditions)+"/10":"—/10"}</b><small>${r?.confidence==='Low'?'Low':r?'Moderate':'Loading'}${r?.provisional?' · outlook':''}</small></button>`;
+            return `<button data-hour="${at}" aria-pressed="${d === isoDay(t)}" class="${r?.conditions>=8?'good':''}" title="${esc(r?.window||'Forecast loading')} · ${esc(r?.confidence||'')} confidence">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small><b>${Number.isFinite(r?.conditions)?num(r.conditions)+"/10":"No rating"}</b><small>${r?ratingLabel(r.conditions):'Loading'}${r?.provisional?' · outlook':''}</small></button>`;
           },
       )
       .join("");
+    $("boat-day-summary").innerHTML=boatDayHTML(selectedBundle,point,lastSpecies,t,dayRatings.find(r=>r.date===isoDay(t)));
     draw();
     const observation = index === 0 ? observedDock(observations, !!POINTS[point].offshore) : null;
     if (!bundle) {
@@ -510,7 +512,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       bundle =
         !force && cached?.models && cached.pointSignature===POINT_SIGNATURE && Date.now() - cached.retrieved < FORECAST_REFRESH
           ? cached
-          : await loadMarine();
+          : await loadMarine(bundle || cached);
       try {
         sessionStorage.setItem("skippercast-marine-v4:"+getRegion().id, JSON.stringify(bundle));
       } catch {

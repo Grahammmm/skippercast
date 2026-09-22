@@ -1,6 +1,6 @@
-import { getRegion, localContext } from "./region.js?v=8.9";
+import { getRegion, localContext } from "./region.js?v=8.10";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.9";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.10";
 
 export const HOUR = 3600;
 export const POINTS = getRegion().forecast_points;
@@ -313,7 +313,7 @@ async function attempt(url) {
     return { error: e.name === "AbortError" ? "Request timed out" : e.message };
   }
 }
-export async function loadMarine() {
+export async function loadMarine(previous = null) {
   // Cache complete/partial responses only in this tab. No private location or account data.
   const models = {};
   let shared=null;
@@ -324,17 +324,26 @@ export async function loadMarine() {
   await Promise.allSettled(
     MODELS.map(async (m) => {
       const cached=shared?.models?.[m.id];
-      if(cached&&!cached.error&&cached.meta&&cached.data?.length===POINTS.length){models[m.id]=cached;return;}
+      if(cached&&!cached.error&&cached.meta&&cached.data?.length===POINTS.length){models[m.id]={...cached,retrieved:cached.retrieved||shared.retrieved};return;}
       const [forecast, metadata] = await Promise.all([
         attempt(modelURL(m)),
         attempt(m.meta),
       ]);
+      // Retry transient failures once; never retry or fabricate a missing forecast hour.
+      if(forecast.error) Object.assign(forecast,await attempt(modelURL(m)));
+      if(metadata.error) Object.assign(metadata,await attempt(m.meta));
+      const prior=previous?.pointSignature===POINT_SIGNATURE?previous.models?.[m.id]:null;
+      const priorAt=prior?.retrieved||previous?.retrieved;
+      if((!forecast.value || !metadata.value) && prior?.data?.length===POINTS.length && Date.now()-priorAt<3*3600000){
+        models[m.id]={...prior,retrieved:priorAt,refreshError:forecast.error||metadata.error};return;
+      }
       const data = forecast.value;
       models[m.id] = {
         data: Array.isArray(data) ? data : data ? [data] : [],
         meta: metadata.value,
-        error: forecast.error,
-        metaError: metadata.error,
+        retrieved: Date.now(),
+        error: forecast.value?undefined:forecast.error,
+        metaError: metadata.value?undefined:metadata.error,
       };
     }),
   );
