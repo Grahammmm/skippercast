@@ -169,8 +169,9 @@
       "noaa-tides"
     ],
     "surface-currents": [
-      "ioos-hfr",
-      "regional-roms"
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
     ],
     "subsurface-ocean": [
       "regional-roms",
@@ -202,6 +203,19 @@
     "harbor-access": [
       "nws-weather",
       "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
     ]
   },
   "coverage": {
@@ -255,7 +269,7 @@
     },
     "surface-currents": {
       "status": "partial",
-      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+      "reason": "Operational HFR observations and WCOFS surface forecasts; local reception holes remain blank and horizon is at most 72 hours."
     },
     "subsurface-ocean": {
       "status": "research",
@@ -288,6 +302,18 @@
     "harbor-access": {
       "status": "partial",
       "reason": "Official notices are context, not automated departure or return entrance clearance."
+    },
+    "wind-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "wave-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "forecast-verification": {
+      "status": "partial",
+      "reason": "Prospective forecast archive collecting observations; reports remain early samples until 30 matches across 7 days."
     }
   },
   "assets": {
@@ -300,7 +326,8 @@
     "commercial_ais": null,
     "daily_evidence": null,
     "bottom_index": "regions/cambria-san-simeon/bottom/index.json",
-    "geology": "regions/cambria-san-simeon/geology.geojson"
+    "geology": "regions/cambria-san-simeon/geology.geojson",
+    "ecology": "regions/cambria-san-simeon/ecology.json"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/cambria-san-simeon/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/latest.json",
@@ -312,5 +339,52 @@
     "sst": "mur-sst",
     "chlorophyll": "modis-chlorophyll",
     "currents": "ioos-hfr"
-  }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      1,
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46215",
+        "latitude": 35.204,
+        "longitude": -120.859,
+        "name": "Diablo Canyon",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46215"
+      },
+      {
+        "id": "46028",
+        "latitude": 35.763,
+        "longitude": -121.9,
+        "name": "Cape San Martin offshore",
+        "variables": [
+          "wave_height",
+          "wind_speed_10m"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46028",
+        "anemometer_height_m": 4.1
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-central",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/intelligence.json"
 }

@@ -1,4 +1,4 @@
-import defaultRegion from "./region-default.js?v=7.0";
+import defaultRegion from "./region-default.js?v=8.0";
 let active = defaultRegion;
 export const getRegion = () => active;
 export const assetURL = (key) => active.assets[key] || null;
@@ -26,8 +26,17 @@ export async function initRegion() {
   for(const [id,name] of Object.entries(active.source_names))area.add(new Option(name,id));
   const note=document.getElementById("region-note");
   note.hidden=active.status!=="preview";note.textContent=active.name+" preview · geological context; surveyed fishing spots pending";
-  const coverage=await fetch(`regions/${active.id}/coverage.json`).then(r=>r.json());
   const panel=document.getElementById("region-coverage");
+  let coverage;
+  try {
+    const response=await fetch(`regions/${active.id}/coverage.json`,{signal:AbortSignal.timeout(10000)});
+    if(!response.ok) throw new Error('Coverage unavailable');
+    coverage=await response.json();
+    if(coverage.region_id!==active.id||!Array.isArray(coverage.needs)) throw new Error('Coverage mismatch');
+  } catch {
+    panel.textContent='The data coverage summary could not load. The map can still open; each layer retains its own source and legal checks.';
+    return;
+  }
   const p=document.createElement("p");p.textContent=`${active.name}: ${coverage.published_targets} surveyed targets, ${coverage.published_bottom_views} bottom views. ${active.coverage_note}`;panel.append(p);
   const table=document.createElement("table");table.className="coverage-table";
   const head=table.createTHead().insertRow();for(const value of ["Data need","Coverage","What it supports"]){const th=document.createElement("th");th.textContent=value;head.append(th);}

@@ -330,7 +330,8 @@
       "name": "NOAA GFS atmospheric forecast through Open-Meteo",
       "provider": "NOAA; Open-Meteo access service",
       "needs": [
-        "wind-forecast"
+        "wind-forecast",
+        "forecast-verification"
       ],
       "documentation_url": "https://open-meteo.com/en/docs/gfs-api",
       "adapter": "open-meteo",
@@ -364,7 +365,8 @@
       "name": "ECMWF IFS atmospheric forecast through Open-Meteo",
       "provider": "ECMWF; Open-Meteo access service",
       "needs": [
-        "wind-forecast"
+        "wind-forecast",
+        "forecast-verification"
       ],
       "documentation_url": "https://open-meteo.com/en/docs/ecmwf-api",
       "adapter": "open-meteo",
@@ -398,7 +400,8 @@
       "name": "NOAA GFS Wave through Open-Meteo",
       "provider": "NOAA; Open-Meteo access service",
       "needs": [
-        "wave-forecast"
+        "wave-forecast",
+        "forecast-verification"
       ],
       "documentation_url": "https://open-meteo.com/en/docs/marine-weather-api",
       "adapter": "open-meteo",
@@ -431,7 +434,8 @@
       "name": "ECMWF WAM through Open-Meteo",
       "provider": "ECMWF; Open-Meteo access service",
       "needs": [
-        "wave-forecast"
+        "wave-forecast",
+        "forecast-verification"
       ],
       "documentation_url": "https://open-meteo.com/en/docs/marine-weather-api",
       "adapter": "open-meteo",
@@ -465,7 +469,8 @@
       "provider": "NOAA National Data Buoy Center",
       "needs": [
         "wave-observations",
-        "weather-observations"
+        "weather-observations",
+        "forecast-verification"
       ],
       "documentation_url": "https://www.ndbc.noaa.gov/",
       "adapter": "ndbc",
@@ -1045,6 +1050,122 @@
       ],
       "allowed_hosts": [
         "filelib.wildlife.ca.gov"
+      ]
+    },
+    {
+      "id": "noaa-hfr-thredds",
+      "name": "NOAA / IOOS HF radar 1 km and 6 km",
+      "provider": "NOAA / IOOS HF radar 1 km and 6 km",
+      "needs": [
+        "surface-currents"
+      ],
+      "documentation_url": "https://dods.ndbc.noaa.gov/thredds/catalog/hfradar.html",
+      "adapter": "ndbc-dap2",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA / IOOS HF radar 1 km and 6 km",
+        "terms_url": "https://dods.ndbc.noaa.gov/thredds/catalog/hfradar.html"
+      },
+      "authenticity": {
+        "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
+        "transport": "HTTPS to fixed provider endpoints"
+      },
+      "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
+      "limitations": [
+        "Surface observations only; absent cells and poor geometry are rejected.",
+        "Six-hour freshness limit; WCOFS assimilates radar and is not independent."
+      ],
+      "allowed_hosts": [
+        "dods.ndbc.noaa.gov"
+      ]
+    },
+    {
+      "id": "noaa-wcofs",
+      "name": "NOAA West Coast Operational Forecast System",
+      "provider": "NOAA West Coast Operational Forecast System",
+      "needs": [
+        "surface-currents"
+      ],
+      "documentation_url": "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html",
+      "adapter": "wcofs-dap2",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA West Coast Operational Forecast System",
+        "terms_url": "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html"
+      },
+      "authenticity": {
+        "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
+        "transport": "HTTPS to fixed provider endpoints"
+      },
+      "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
+      "limitations": [
+        "Approximately 4 km regular grid; NAD83; surface layer only.",
+        "Published 72-hour horizon, sampled every three hours; not a bottom-current or bar-current prediction."
+      ],
+      "allowed_hosts": [
+        "opendap.co-ops.nos.noaa.gov"
+      ]
+    },
+    {
+      "id": "noaa-gefs-members",
+      "name": "NOAA GEFS wind ensemble via Open-Meteo",
+      "provider": "NOAA GEFS wind ensemble via Open-Meteo",
+      "needs": [
+        "wind-ensemble"
+      ],
+      "documentation_url": "https://open-meteo.com/en/docs/ensemble-api",
+      "adapter": "open-meteo-ensemble",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "CC-BY-4.0",
+        "attribution": "NOAA GEFS wind ensemble via Open-Meteo",
+        "terms_url": "https://open-meteo.com/en/docs/ensemble-api"
+      },
+      "authenticity": {
+        "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
+        "transport": "HTTPS to fixed provider endpoints"
+      },
+      "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
+      "limitations": [
+        "31 members; provider interpolates native three-hour output to hourly.",
+        "Fractions are uncalibrated and not independent hourly probabilities. Free noncommercial access has usage limits."
+      ],
+      "allowed_hosts": [
+        "ensemble-api.open-meteo.com"
+      ]
+    },
+    {
+      "id": "noaa-gefs-wave-prob",
+      "name": "NOAA GEFS Wave exceedance probabilities",
+      "provider": "NOAA GEFS Wave exceedance probabilities",
+      "needs": [
+        "wave-ensemble"
+      ],
+      "documentation_url": "https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml",
+      "adapter": "gefs-grib2",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA GEFS Wave exceedance probabilities",
+        "terms_url": "https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml"
+      },
+      "authenticity": {
+        "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
+        "transport": "HTTPS to fixed provider endpoints"
+      },
+      "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
+      "limitations": [
+        "NOAA publishes 1 m (3.28 ft), not 3 ft; no threshold interpolation.",
+        "Nearest populated sea cell within 30 km, actual three-hour snapshots; no individual-reef precision."
+      ],
+      "allowed_hosts": [
+        "nomads.ncep.noaa.gov"
       ]
     }
   ]

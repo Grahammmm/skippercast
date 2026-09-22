@@ -29,6 +29,8 @@ def main():
     vendor_hashes = json.loads(manifest.read_text()) if manifest.exists() else {}
     for path in sorted(ROOT.rglob("*")):
         relative = path.relative_to(ROOT)
+        if relative.parts[:2] in {("dist","client"),("dist","server"),("dist",".openai")}:
+            continue
         if not path.is_file() or set(relative.parts) & IGNORED or any(p.endswith(".egg-info") for p in relative.parts):
             continue
         if path.name in {"state.json", "config.json"} or path.suffix in {".pem", ".key"}:

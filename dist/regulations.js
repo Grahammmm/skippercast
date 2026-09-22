@@ -1,13 +1,13 @@
-import { getRegion, assetURL } from "./region.js?v=7.0";
-import { esc } from "./marine-charts.js?v=7.0";
-import { loadDailyEvidence } from "./bite-evidence.js?v=5.8";
+import { getRegion, assetURL } from "./region.js?v=8.0";
+import { esc } from "./marine-charts.js?v=8.0";
+import { loadDailyEvidence } from "./bite-evidence.js?v=8.0";
 
 const HOUR = 3600000;
 const IDS = ["lingcod", "rockfish", "halibut", "salmon", "albacore", "bluefin", "dungeness"];
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: getRegion().timezone, year: "numeric", month: "2-digit", day: "2-digit",
 });
-const dateOnly = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && Number.isFinite(Date.parse(s));
+const dateOnly = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s;
 const age = (s, now) => (now - Date.parse(s)) / HOUR;
 const time = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleString("en-US", {
   timeZone: getRegion().timezone, month: "short", day: "numeric", year: "numeric",
@@ -32,15 +32,15 @@ export function validRegulations(data) {
     });
 }
 
-export function regulationState(data, species, now = Date.now()) {
+export function regulationState(data, species, now = Date.now(), tripDate = null, method = null) {
   if (species === "reef") {
-    const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now));
+    const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now, tripDate, method));
     const status = ["unknown", "closed", "scheduled", "open"].find((s) => members.some((m) => m.status === s));
     return { ...members.find((m) => m.status === status), members,
       issues: [...new Set(members.flatMap((m) => m.issues))],
       label: status === "closed" && members.some((m) => m.status !== "closed") ? "Check both seasons" : members.find((m) => m.status === status).label };
   }
-  const today = dateFormat.format(new Date(now));
+  const today = dateOnly(tripDate) ? tripDate : dateFormat.format(new Date(now));
   if (!validRegulations(data) || !IDS.includes(species))
     return { status: "unknown", label: "Check rules", today, reason: "Regulations unavailable. Open the official CDFW rules before fishing.", issues: [] };
   const p = data.species[species];
@@ -65,23 +65,26 @@ export function regulationState(data, species, now = Date.now()) {
       "An official source changed after review. The saved limits below may have changed; check CDFW." :
       "The daily source check is incomplete or over 36 hours old. Check CDFW; saved rules are shown below.";
   }
-  return { status, label: { open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
+  const methodProfile=p.methods?.[method];
+  const methodReason=methodProfile?.note || null;
+  if (methodProfile?.requires_clearance && status==='open') {status='scheduled';reason='Season and permission for this gear are separate. Check the current gear clearance before setting it.';}
+  return { method, methodReason, status, label: { open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
 }
 
-export function regulationsHTML(data, species, now = Date.now(), fallback = false) {
-  const state = regulationState(data, species, now);
+export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null) {
+  const state = regulationState(data, species, now, tripDate, method);
   const summary = `<summary><span>Rules</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
   if (species === "reef" && validRegulations(data)) {
     const ids = ["lingcod", "rockfish"];
     const seasonsMatch = data.species.lingcod.season === data.species.rockfish.season;
     return summary + `<div class="reg-body" tabindex="0" aria-label="Lingcod and rockfish regulation details">
-      <div class="reg-context">Today · ${esc(state.today)} · Pacific time</div>
+      <div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
       <h2>Lingcod &amp; rockfish</h2><p class="reg-area">${esc(getRegion().name)} · recreational boat fishing</p>
       <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
       ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
       ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(data.species[id].name)}</h3><p>${esc(data.species[id].bag)}</p><p>${esc(data.species[id].size)}</p></section>`).join("")}
       <p class="reg-separate">Keep the limits separate. Rockfish identification and species sublimits matter.</p>
-      ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
+      ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback, tripDate, method).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
       <a class="reg-official" href="${esc(officialURL(data.sources["rules-groundfish"].url))}" target="_blank" rel="noopener">Official groundfish rules ↗</a>
     </div>`;
   }
@@ -91,10 +94,10 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
   const checked = timestamps.length === p.source_ids.length ? timestamps.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
   const links = p.source_ids.map((id) => `<a href="${esc(officialURL(data.sources[id].url))}" target="_blank" rel="noopener">${esc(data.sources[id].name)} ↗</a>`).join("");
   return summary + `<div class="reg-body" tabindex="0" aria-label="${esc(p.name)} regulation details">
-    <div class="reg-context">Today · ${esc(state.today)} · Pacific time</div>
+    <div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
     <h2>${esc(p.name)}</h2><p class="reg-area">${esc(data.area)}</p>
     <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
-    <dl class="reg-limits"><dt>Season</dt><dd>${esc(p.season)}</dd><dt>Daily / possession limit</dt><dd>${esc(p.bag)}</dd><dt>Minimum size</dt><dd>${esc(p.size)}</dd></dl>
+    ${state.methodReason ? `<p class="reg-notice">${esc(state.methodReason)}</p>` : ""}<dl class="reg-limits"><dt>Season</dt><dd>${esc(p.season)}</dd><dt>Daily / possession limit</dt><dd>${esc(p.bag)}</dd><dt>Minimum size</dt><dd>${esc(p.size)}</dd></dl>
     <details data-reg-section="gear"><summary>Gear, identification & other limits</summary><ul>${p.details.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></details>
     <details data-reg-section="area"><summary>Where these rules apply</summary><p>${esc(data.scope)}</p><ul>${data.common_notes.filter((s) => species !== "dungeness" || !s.startsWith("For finfish,")).map((s) => `<li>${esc(s)}</li>`).join("")}</ul><a href="${esc(officialURL(data.official_map_url))}" target="_blank" rel="noopener">CDFW map: check exact position & MPAs ↗</a></details>
     <div class="reg-freshness"><p>Rules reviewed: ${esc(time(data.reviewed_at))}<br>Oldest required source check: ${esc(time(checked))}${fallback ? " · saved snapshot" : ""}</p><p>Official sources are checked daily. Changes need review; a successful download does not approve new rules. Recheck before each trip.</p></div>
@@ -105,8 +108,24 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
 
 export function initRegulations(card, select) {
   let registry = null, fallback = true, species = select.value, lastRefresh = 0;
+  let tripDate = null, method = null, followForecast = true;
+  card.addEventListener('change',event=>{
+    if(event.target.id==='rules-trip-date'){tripDate=event.target.value;followForecast=false;render();}
+    if(event.target.id==='rules-method'){method=event.target.value;render();}
+  });
+  card.addEventListener('click',event=>{if(event.target.id==='rules-follow-forecast'){followForecast=true;tripDate=lastForecastDate;render();}});
+  let lastForecastDate=null;
+  document.addEventListener('skippercast:time',event=>{
+    if(event.detail.regionId!==getRegion().id)return;
+    lastForecastDate=dateFormat.format(new Date(event.detail.epoch*1000));
+    if(followForecast && tripDate!==lastForecastDate){tripDate=lastForecastDate;render();}
+  });
   function render(open = false) {
-    const html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback);
+    const options=species==="dungeness"?[["trap","Crab trap"],["hoop","Hoop net"],["snare","Snare"]]:[["rod","Rod and reel"]];
+    method=options.some(o=>o[0]===method)?method:options[0][0];
+    let html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback, tripDate, method);
+    const controls=`<div class="rule-controls"><label>Fishing date<input id="rules-trip-date" type="date" value="${tripDate||dateFormat.format(new Date())}"></label><label>Method<select id="rules-method">${options.map(([id,name])=>`<option value="${id}" ${method===id?"selected":""}>${name}</option>`).join("")}</select></label>${followForecast?"":'<button id="rules-follow-forecast">Use forecast date</button>'}</div>`;
+    html=html.replace("</summary>","</summary>"+controls);
     if (card.innerHTML !== html) {
       const expanded = [...card.querySelectorAll("[data-reg-section][open]")].map((x) => x.dataset.regSection);
       card.innerHTML = html;

@@ -1,4 +1,6 @@
-import { initBiteEvidence } from "./bite-evidence.js?v=7.0";
+import {getRegion} from './region.js?v=8.0';
+import {matrixHTML} from './forecast-matrix.js?v=8.0';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.0";
 import {
   POINTS,
   MODELS,
@@ -10,13 +12,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=7.0";
-import { esc, num, local, full, day } from "./marine-charts.js?v=7.0";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=7.0";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=7.0";
-import { localDate } from "./forecast.js?v=7.0";
-import { detailHTML } from "./marine-detail.js?v=7.0";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=7.0";
+} from "./marine-data.js?v=8.0";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.0";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.0";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=8.0";
+import { localDate } from "./forecast.js?v=8.0";
+import { detailHTML } from "./marine-detail.js?v=8.0";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.0";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -65,6 +67,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   const summary=document.createElement("div");
   summary.id="forecast-hour-summary";
   $("forecast-time-tools").append(summary);
+  const matrix=document.createElement("div"); matrix.id="forecast-matrix"; $("forecast-time-tools").append(matrix);
+  matrix.addEventListener("click",e=>{const b=e.target.closest("[data-forecast-epoch]");if(b)setHour(Math.round((Number(b.dataset.forecastEpoch)-hours[0])/HOUR));});
   $("best-day-banner").addEventListener("click", () => {
     const epoch = Number($("best-day-banner").dataset.hour);
     if (epoch) setHour(Math.round((epoch - hours[0]) / HOUR));
@@ -84,6 +88,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     document.querySelector(".forecast-settings").hidden = live;
     $("forecast-time-tools").hidden = false;
     $("forecast-hour-summary").hidden = live;
+    $("forecast-matrix").hidden = live;
     const failed = bundle ? MODELS.filter((m) => bundle.models[m.id]?.error).map((m) => m.name) : [];
     $("forecast-status").textContent = live
       ? "Auto refresh · observations every 5 min"
@@ -115,9 +120,9 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   });
   document.querySelector(".condition-tabs").addEventListener("keydown", (e) => {
     const tabs = [...document.querySelectorAll("[data-condition-tab]")];
-    const index = tabs.indexOf(e.target);
+    const tabIndex = tabs.indexOf(e.target);
     if (
-      index < 0 ||
+      tabIndex < 0 ||
       !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
     )
       return;
@@ -127,7 +132,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
         ? 0
         : e.key === "End"
           ? tabs.length - 1
-          : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+          : (tabIndex + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
             tabs.length;
     detailTab = tabs[next].dataset.conditionTab;
     if (detailTab === "live") {
@@ -369,6 +374,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     evidence.select(lastSpecies, requested || POINTS[point]);
     const t = hours[index],
       provisional = index >= 72;
+    document.dispatchEvent(new CustomEvent("skippercast:time",{detail:{epoch:t,regionId:getRegion().id}}));
     $("map-time-label").textContent =
       (index === 0 ? "Now · " : "") +
       local(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -427,7 +433,9 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       observation || `<strong>${index === 0 ? "Now forecast" : local(t, { weekday: "short", hour: "numeric" })}${provisional ? " · outlook" : ""} · ${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt</span>`;
     $("map-weather-summary").title = observation ? "Latest measured buoy seas · open current observations" : p.name + " · " + status.label;
     $("forecast-hour-summary").innerHTML=forecastSummaryHTML(bundle,point,lastSpecies,t,family,dayRatings.find(r=>r.date===isoDay(t)));
+    $("forecast-matrix").innerHTML=matrixHTML({bundle,point,species:lastSpecies,time:t,family});
     onForecast({bundle,time:t,family,point,species:lastSpecies});
+    document.dispatchEvent(new CustomEvent("skippercast:forecast",{detail:{bundle,time:t,family,point,species:lastSpecies}}));
     const body = $("marine-detail-body"),
       sourcesOpen = body.querySelector("#marine-sources")?.open;
     const expanded = [...body.querySelectorAll("[data-disclosure][open]")].map((d) => d.dataset.disclosure);
@@ -485,7 +493,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     try {
       let cached;
       try {
-        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v2"));
+        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v3:"+getRegion().id));
       } catch {
         /* Storage is optional. */
       }
@@ -494,7 +502,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
           ? cached
           : await loadMarine();
       try {
-        sessionStorage.setItem("skippercast-marine-v2", JSON.stringify(bundle));
+        sessionStorage.setItem("skippercast-marine-v3:"+getRegion().id, JSON.stringify(bundle));
       } catch {
         /* No cache is needed to browse. */
       }

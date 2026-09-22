@@ -1,0 +1,11 @@
+{
+  "public_origin": "https://skippercast.com",
+  "allowed_origins": ["https://skippercast.com", "https://skippercast.email-me-here-2016.chatgpt.site"],
+  "scheduler": {
+    "repository": "Grahammmm/skippercast",
+    "repository_id": "1379043348",
+    "owner_id": "13221608",
+    "ref": "refs/heads/main",
+    "workflow": ".github/workflows/live-conditions.yml"
+  }
+}

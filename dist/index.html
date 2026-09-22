@@ -38,18 +38,21 @@
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="marine.css?v=7.0" />
-    <link rel="stylesheet" href="map-first.css?v=7.0" />
-    <link rel="stylesheet" href="bite-evidence.css?v=7.0" />
-    <link rel="stylesheet" href="regulations.css?v=7.0" />
-    <link rel="stylesheet" href="live-conditions.css?v=7.0" />
-    <link rel="stylesheet" href="calm-layout.css?v=7.0" />
-    <link rel="stylesheet" href="planning.css?v=7.0" />
-    <link rel="stylesheet" href="platform.css?v=7.0" />
+    <link rel="stylesheet" href="marine.css?v=8.0" />
+    <link rel="stylesheet" href="map-first.css?v=8.0" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.0" />
+    <link rel="stylesheet" href="regulations.css?v=8.0" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.0" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.0" />
+    <link rel="stylesheet" href="planning.css?v=8.0" />
+    <link rel="stylesheet" href="platform.css?v=8.0" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="boot.js?v=7.0"></script>
-  </head>
+    <script type="module" src="boot.js?v=8.0"></script>
+  <link rel="stylesheet" href="insights.css?v=8.0"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="theme-color" content="#007f77"/>
+</head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
     <header class="masthead">
@@ -481,9 +484,7 @@
         Cambria survey derivatives and the older DS1091 charter annotations are
         excluded while source reuse terms are unresolved. The separate purple
         charter layer uses dated public trip reports, with approximate search
-        outlines and no exact fishing positions. Protected-area boundaries and
-        the Diablo Canyon security zone are
-        <strong>not displayed as a live layer</strong>. A marker does not
+        outlines and no exact fishing positions. Protected-area boundaries and the Diablo Canyon security zone are shown separately. Targets and exports are gated by the current boundary screen. A marker does not
         establish current legal access.
       </p>
       <div class="source-links">
@@ -507,9 +508,7 @@
         ><a href="sources.html">Sources, methods &amp; license ↗</a>
       </div>
       <p class="small">
-        No sign-in, tracking, or personal trip records are collected by this
-        app. The map and forecast providers receive network requests when their
-        services are used.
+        The map is public. Optional sign-in enables private trip alerts and comfort feedback, with export and deletion controls. No analytics tracking is added. Map and forecast providers receive normal network requests.
       </p>
     </dialog>
     <div id="toast" class="toast" role="status" hidden></div>

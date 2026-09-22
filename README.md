@@ -9,7 +9,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 
 **[Open the app](https://skippercast.com)** · [Hosting address](https://skippercast.email-me-here-2016.chatgpt.site) · [Web app guide](docs/web-app.md)
 
-**Status:** mobile web app and research release. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
+**Status:** mobile web app with shared regional ocean feeds, private saved-trip alerts and research layers. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
 
 **See how it fits together:** [data flow, chart layers, and software stack](docs/system-overview.md).
 
@@ -22,7 +22,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 | Forecast collector | Saves public forecast responses, model metadata, buoy observations, advisories, and access failures for a Morro Bay example profile. Compares numerical ranges and flags missing or inconsistent evidence. | [Run the collector](docs/quickstart.md#collect-live-evidence) |
 | Alert lifecycle | Given an already reviewed assessment and prior delivery state, decides whether an initial alert, update, retraction, or day-before assessment is due. | [Offline demo](#try-it-offline) · [Assessment workflow](docs/forecast-workflow.md) |
 
-The collector **does not decide a trip is safe, assign fishing scores, or predict catches**. Reviewing sources, checking the complete trip and current rules, scoring an opportunity, scheduling checks, and delivering alerts require a person, an agent, or a separately implemented integration. The [architecture](docs/architecture.md) shows that boundary.
+The public conditions rating is a disclosed comfort/gear-control heuristic. Optional private saved-trip alerts compare your chosen weather window and reviewed rules, with updates and a final previous-evening assessment. They do not certify a route or entrance and do not predict catches. See [regional intelligence](docs/regional-intelligence.md) and [production operations](docs/production-operations.md).
 
 ## Try it offline
 
@@ -51,7 +51,11 @@ Use current official charts, rules, protected-area boundaries, and local entranc
 
 ```text
 src/skippercast/       Portable Python code: collector, alert rules, atlas exporter
-dist/                 Authored static web app, public data, downloads, vendored map library
+dist/                 Authored browser app and data; generated client/server folders ignored
+server/               Cached public API, private access, trip outbox and OIDC job policy
+db/ and drizzle/       D1 schema and reviewed migrations
+regions/ and catalog/  Regional bindings, data needs and scoped species evidence
+deployments/          Public origin and immutable scheduled-workflow identity policy
 configs/              Public example configuration; no delivery credentials
 atlas/                Dated, attributed public data and ready-to-import exports
 docs/                 Quickstart, workflow, scoring, methods, and source rights
@@ -75,6 +79,8 @@ size and bag limits, gear rules and official CDFW links. The daily job checks
 the official sources against reviewed versions. Changed, failed or stale checks
 withhold the open-season badge until reviewed. See [how regulation updates work](docs/regulations.md).
 
-The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. The Live tab shows dated NOAA buoy readings, local airport weather and measured water level. A separate cloud job refreshes buoy observations every 30 minutes; the app checks current observations and advisories every five minutes while open. [Live conditions and sources](docs/live-conditions.md). Weather forecasts refresh separately. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).
+The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. The Live tab shows dated NOAA buoy readings, local airport weather and measured water level. A separate cloud job refreshes buoy observations every 30 minutes; the app checks current observations and advisories every five minutes while open. [Live conditions and sources](docs/live-conditions.md). The live job also collects regional forecasts, ensembles, radar, WCOFS currents and prospective verification. A cached Worker feed supplies the app, with direct-provider recovery. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).
 
 Recent additions: [map protection, drift guides and forecast ratings](docs/map-and-forecast.md), [historical commercial AIS](docs/commercial-ais-research.md), and [feature research across 13 products](docs/product-research.md).
+
+Selected release features: [hourly comparison, scoped regulations, spot evidence, currents and ensembles, bottom exploration, iNavX sets and private alerts](docs/implementation-2026-09.md).

@@ -35,7 +35,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
       - name: Forecast handling and GPX checks
-        run: node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs tests/test_evidence.mjs tests/test_regulations.mjs tests/test_live_conditions.mjs tests/test_planning.mjs tests/test_regions.mjs
+        run: node --test tests/test_*.mjs
       - name: Website assets and data consistency
         run: python scripts/check_web.py
+      - name: Build Worker and public assets
+        run: pnpm build

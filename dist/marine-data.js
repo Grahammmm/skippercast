@@ -1,6 +1,6 @@
-import { getRegion } from "./region.js?v=7.0";
+import { getRegion } from "./region.js?v=8.0";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=7.0";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.0";
 
 export const HOUR = 3600;
 export const POINTS = getRegion().forecast_points;
@@ -313,8 +313,15 @@ async function attempt(url) {
 export async function loadMarine() {
   // Cache complete/partial responses only in this tab. No private location or account data.
   const models = {};
+  let shared=null;
+  try {
+    const response=await fetch(`/api/forecast?region=${encodeURIComponent(getRegion().id)}`,{signal:AbortSignal.timeout(5000)});
+    if(response.ok){const candidate=await response.json();if(candidate.region_id===getRegion().id&&Number.isFinite(candidate.retrieved)&&Date.now()-candidate.retrieved<3*3600000)shared=candidate;}
+  }catch{ /* Direct providers remain a fallback when the shared feed is unavailable. */ }
   await Promise.allSettled(
     MODELS.map(async (m) => {
+      const cached=shared?.models?.[m.id];
+      if(cached&&!cached.error&&cached.meta&&cached.data?.length===POINTS.length){models[m.id]=cached;return;}
       const [forecast, metadata] = await Promise.all([
         attempt(modelURL(m)),
         attempt(m.meta),
@@ -357,5 +364,6 @@ export async function loadMarine() {
     water: water.value?.data?.[0],
     waterError: water.error,
     retrieved: Date.now(),
+    sharedForecastAt: shared?.retrieved||null,
   };
 }

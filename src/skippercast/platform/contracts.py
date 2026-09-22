@@ -152,9 +152,21 @@ def validate_region(region, needs, sources, root=REPO):
     for asset in region["assets"].values():
         if asset is not None:
             within(Path(root) / "dist", asset)
-    for name in ("daily_feed", "conditions_feed"):
+    for name in ("daily_feed", "conditions_feed", "intelligence_feed"):
         if region.get(name):
             public_url(region[name])
+    intelligence=region.get('intelligence')
+    if intelligence:
+        if intelligence.get('regional_current_model')!='wcofs' or intelligence.get('wind_ensemble_model')!='gfs025' or intelligence.get('wave_ensemble_provider')!='noaa-gefs':
+            raise ValueError('A new ocean/ensemble provider needs a reviewed adapter')
+        for role,need in [('hfr','surface-currents'),('regional_current','surface-currents'),('wind_ensemble','wind-ensemble'),('wave_ensemble','wave-ensemble'),('spectra','wave-observations')]:
+            source_id=intelligence.get('providers',{}).get(role)
+            if source_id not in region['source_bindings'].get(need,[]) or sources[source_id]['review_status']!='approved':
+                raise ValueError('Intelligence provider must have an approved regional source binding: '+role)
+        if not intelligence.get('verification_stations'):raise ValueError('Verification requires reviewed station metadata')
+        for station in intelligence['verification_stations']:
+            if not re.fullmatch(r'[A-Za-z0-9]{5}',station['id']) or not (-90<=station['latitude']<=90 and -180<=station['longitude']<=180):raise ValueError('Invalid verification station')
+            public_url(station['source_url'])
     return region
 
 

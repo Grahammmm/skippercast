@@ -1,0 +1,4 @@
+# Optional scheduled ocean collectors; the core application remains dependency-free.
+numpy==2.4.3
+netCDF4==1.7.4
+eccodes==2.46.0

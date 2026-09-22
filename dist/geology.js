@@ -1,10 +1,10 @@
-import { assetURL } from "./region.js?v=7.0";
-import { esc } from "./marine-charts.js?v=7.0";
+import { assetURL } from "./region.js?v=8.0";
+import { esc } from "./marine-charts.js?v=8.0";
 export async function initGeology(map, protectedAreas, onSelect) {
   if(!assetURL("geology")) return;
   const layer=L.layerGroup().addTo(map);
   try {
-    const response=await fetch(assetURL("geology"));if(!response.ok) throw new Error("Geology unavailable");
+    const response=await fetch(assetURL("geology"),{signal:AbortSignal.timeout(10000)});if(!response.ok) throw new Error("Geology unavailable");
     const data=await response.json();
     const draw=()=>{
       layer.clearLayers();const species=document.getElementById("species-select").value;

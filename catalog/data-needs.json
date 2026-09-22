@@ -460,6 +460,62 @@
       "cadence": "Daily notices and direct recheck before departure.",
       "gates": [],
       "must_not_infer": "A general harbor webpage is not live entrance clearance."
+    },
+    {
+      "id": "wind-ensemble",
+      "name": "Wind forecast ensemble",
+      "question": "Wind forecast ensemble available for this region?",
+      "fields": [
+        "model",
+        "cycle",
+        "member_id",
+        "valid_time",
+        "wind",
+        "gust",
+        "grid",
+        "units"
+      ],
+      "units": {},
+      "cadence": "Shared 30-minute cloud collection; original source times retained.",
+      "gates": [],
+      "must_not_infer": "Member agreement is not calibration or independent-hour probability."
+    },
+    {
+      "id": "wave-ensemble",
+      "name": "Wave exceedance ensemble",
+      "question": "Wave exceedance ensemble available for this region?",
+      "fields": [
+        "model",
+        "cycle",
+        "valid_time",
+        "threshold",
+        "probability",
+        "grid",
+        "units"
+      ],
+      "units": {},
+      "cadence": "Shared 30-minute cloud collection; original source times retained.",
+      "gates": [],
+      "must_not_infer": "Published thresholds must not be relabeled as the boat preference."
+    },
+    {
+      "id": "forecast-verification",
+      "name": "Prospective local forecast verification",
+      "question": "Prospective local forecast verification available for this region?",
+      "fields": [
+        "model",
+        "cycle",
+        "acquired_at",
+        "valid_time",
+        "station",
+        "observation_time",
+        "error",
+        "sample_days"
+      ],
+      "units": {},
+      "cadence": "Shared 30-minute cloud collection; original source times retained.",
+      "gates": [],
+      "must_not_infer": "Do not reconstruct past forecasts, leak future observations or automatically apply an unvalidated correction."
     }
   ]
 }

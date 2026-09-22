@@ -16,3 +16,5 @@ Run `PYTHONPATH=src python -m skippercast.platform validate --region <id>` and t
 Check the mobile map and a selected target/area. Show one bottom view only when supporting data exist; source gaps must be visible. Avoid new sidebar lists or dense landing content. Keep code changes in shared components and data differences in the regional package.
 
 Use the existing publishing and update workflows within the task's authorization. Document rollout readiness, withheld capabilities, data refresh ownership and rollback. Do not call a region fully covered because the shared software can load it.
+
+For ocean intelligence and private alerts, follow `docs/regional-intelligence.md` and `docs/production-operations.md`. Bind each intelligence role to an approved provider; check actual HFR/current coverage and horizon. Add an adapter when the provider differs. Verify station coordinates, sensor height, ecology scope and the deployment’s immutable GitHub identity policy. Preview conditions do not qualify new fishing targets.

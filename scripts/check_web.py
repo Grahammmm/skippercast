@@ -30,6 +30,7 @@ def main():
     for name, digest in json.loads((ROOT / "scripts/web-vendor-sha256.json").read_text()).items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
     for path in WEB.rglob("*.html"):
+        if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         parser = AssetParser()
         parser.feed(path.read_text())
         for ref in parser.refs:
@@ -39,6 +40,7 @@ def main():
             target = (path.parent / unquote(url.path)).resolve()
             assert target.is_relative_to(WEB) and target.exists(), (path, ref)
     for path in WEB.rglob("*.css"):
+        if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         for ref in re.findall(r"url\(['\"]?([^)'\"]+)", path.read_text()):
             url = urlsplit(ref)
             if not url.scheme and url.path:

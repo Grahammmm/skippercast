@@ -18,3 +18,5 @@ Publish immutable or hashed artifacts followed by one atomic manifest update. Pr
 For bottom views, run the survey compiler described in `docs/seabed-views.md`. Generate scientific terrain views from reviewed numeric measurements, preserve gaps and scale, and disclose rendering resolution. Do not generate photorealistic rocks or assign boulder dimensions absent direct supporting data.
 
 Finish with the imported coverage, source dates, quality changes, remaining gaps, validation result and publication status. A data refresh cannot independently certify a safe trip, current catches or legal permission.
+
+Use `scripts/refresh_regions.py intelligence` for the existing 30-minute process. Preserve the prospective archive and acquisition times; never reconstruct old predictions after observations arrive. Check actual GEFS members, NOAA thresholds, spectral units, HFR masks and WCOFS times. Distinguish missing cells from access failures. Follow `docs/regional-intelligence.md` for new adapters.

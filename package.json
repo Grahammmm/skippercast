@@ -1,0 +1,19 @@
+{
+  "name": "skippercast",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-worker.mjs",
+    "test": "node --test tests/test_*.mjs",
+    "db:generate": "drizzle-kit generate --dialect sqlite --schema db/schema.ts --out drizzle"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
+    "drizzle-orm": "0.45.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.10",
+    "esbuild": "0.28.2"
+  }
+}

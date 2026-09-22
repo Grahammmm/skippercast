@@ -21,6 +21,12 @@ flowchart TD
   G --> D
   S[Species dossiers: life stage, habitat, evidence and missing measurements] --> M
   S --> W
+  Q --> API[Cached public Worker API]
+  API --> W
+  J --> OIDC[Verified GitHub workflow identity]
+  OIDC --> AL[Private trip assessment and outbox]
+  AUTH[Platform sign-in and device opt-in] --> DB[(Private D1 records)]
+  DB --> AL
 ```
 
 The same need can use different sources on different coastlines. For example, Morro Bay's measured bottom views use USGS 2 m grids. The San Simeon preview uses a different USGS geological release for broad context while native-depth target qualification remains incomplete. Both use the same contracts and UI; they do not imply equivalent precision.
@@ -28,3 +34,5 @@ The same need can use different sources on different coastlines. For example, Mo
 Start with [data contracts](data-contracts.md), [regional rollout](regions.md), [surveyed bottom views](seabed-views.md), and [production operations](production-operations.md). Source-backed ecological notes are maintained in `catalog/species.json`; the longer research discussion is in [species research](species-research.md).
 
 The installed skills make discovery, ingestion and rollout repeatable. They produce reviewable candidates and receipts, not automatic trust. Current catch probabilities and verified charter hotspots remain unsupported where the required effort, identity and visit evidence are missing. A smoother sea-state score cannot supply that missing biological evidence.
+
+The [regional intelligence process](regional-intelligence.md) adds actual ensembles, observed/model currents, prospective verification, scoped ecological methods, selected-set exports and private trip alerts. Private records live in D1, never in public feeds.

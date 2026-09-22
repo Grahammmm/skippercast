@@ -5,7 +5,7 @@
   "valid_from": "2026-09-21",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
-  "area": "Avila–Cambria · California recreational boat fishing",
+  "area": "Avila\u2013Cambria \u00b7 California recreational boat fishing",
   "scope": "Area-wide season rules for this coast and adjacent U.S. waters. Not a location-specific clearance.",
   "check_interval_hours": 24,
   "max_age_hours": 36,
@@ -83,7 +83,7 @@
       "reviewed_at": "2026-09-21T17:32:58Z"
     },
     "rules-book": {
-      "name": "CDFW 2026 ocean regulations booklet · §28.38 tuna",
+      "name": "CDFW 2026 ocean regulations booklet \u00b7 \u00a728.38 tuna",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
       "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
       "reviewed_at": "2026-09-21T17:32:58Z"
@@ -92,7 +92,7 @@
   "species": {
     "lingcod": {
       "name": "Lingcod",
-      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Central Management Area.",
+      "season": "Apr 1\u2013Dec 31, 2026 \u00b7 boat fishing at all depths in the Central Management Area.",
       "windows": [
         {
           "start": "2026-04-01",
@@ -113,11 +113,16 @@
         "mpa-buchon",
         "mpa-cambria",
         "rules-groundfish"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "rockfish": {
       "name": "Rockfish / rock cod",
-      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Central Management Area.",
+      "season": "Apr 1\u2013Dec 31, 2026 \u00b7 boat fishing at all depths in the Central Management Area.",
       "windows": [
         {
           "start": "2026-04-01",
@@ -139,7 +144,12 @@
         "mpa-buchon",
         "mpa-cambria",
         "rules-groundfish"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "halibut": {
       "name": "California halibut",
@@ -155,7 +165,7 @@
       "details": [
         "California halibut only; Pacific halibut has a different season and rules.",
         "General ocean hook-and-line rules apply. With rockfish or lingcod aboard, use one line and no more than two hooks; salmon aboard triggers salmon gear rules.",
-        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish."
+        "Fillets aboard: at least 16\u00be in with all skin attached. Do not gaff an undersized fish."
       ],
       "source_ids": [
         "rules-central",
@@ -163,11 +173,16 @@
         "rules-gear",
         "mpa-buchon",
         "mpa-cambria"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "salmon": {
       "name": "Chinook salmon",
-      "season": "2026 fall season: Sep 1–30, Pigeon Point to the U.S.–Mexico border, unless closed early.",
+      "season": "2026 fall season: Sep 1\u201330, Pigeon Point to the U.S.\u2013Mexico border, unless closed early.",
       "windows": [
         {
           "start": "2026-09-01",
@@ -189,7 +204,12 @@
         "mpa-buchon",
         "mpa-cambria",
         "rules-salmon"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "albacore": {
       "name": "Albacore tuna",
@@ -203,9 +223,9 @@
       "bag": "25 per person daily and in possession, in addition to the general 20-finfish limit.",
       "size": "No minimum size in these recreational rules.",
       "details": [
-        "The albacore limit drops to 10 south of Point Conception (34°27′ N). This card does not cover Mexico.",
+        "The albacore limit drops to 10 south of Point Conception (34\u00b027\u2032 N). This card does not cover Mexico.",
         "General ocean hook-and-line rules apply; fish already aboard can impose stricter rod and hook limits.",
-        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. This card covers day trips; multi-day possession rules differ."
+        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in \u00a727.65. This card covers day trips; multi-day possession rules differ."
       ],
       "source_ids": [
         "rules-central",
@@ -215,7 +235,12 @@
         "mpa-cambria",
         "rules-ocean",
         "rules-book"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "bluefin": {
       "name": "Pacific bluefin tuna",
@@ -231,7 +256,7 @@
       "details": [
         "The bluefin possession limit applies regardless of where fish were taken. This card does not cover Mexico or Atlantic bluefin.",
         "General ocean hook-and-line rules apply; fish already aboard can impose stricter rod and hook limits.",
-        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. Check special rules before any multi-day trip."
+        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in \u00a727.65. Check special rules before any multi-day trip."
       ],
       "source_ids": [
         "rules-central",
@@ -241,11 +266,16 @@
         "mpa-cambria",
         "rules-ocean",
         "rules-book"
-      ]
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
     },
     "dungeness": {
       "name": "Dungeness crab",
-      "season": "Closed locally Jul 1–Nov 6, 2026. Next scheduled opener: Nov 7, 2026, subject to health and gear restrictions.",
+      "season": "Closed locally Jul 1\u2013Nov 6, 2026. Next scheduled opener: Nov 7, 2026, subject to health and gear restrictions.",
       "windows": [
         {
           "start": "2026-11-07",
@@ -254,12 +284,12 @@
         }
       ],
       "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
-      "size": "5¾ in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
+      "size": "5\u00be in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
       "details": [
         "Season opening and trap permission are separate. November trap clearance has not been confirmed; check CDFW whale-safe and health notices.",
         "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
         "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
-        "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear."
+        "Check the current 2026 hoop-net marking rules and all gear details in \u00a729.80 before setting gear."
       ],
       "source_ids": [
         "rules-central",
@@ -272,13 +302,25 @@
         "mpa-cambria",
         "rules-ocean",
         "rules-book"
-      ]
+      ],
+      "methods": {
+        "trap": {
+          "note": "Trap permission is checked separately from the Dungeness season and health closures. Confirm the current recreational trap declaration, validation, marking and tending rules before setting.",
+          "requires_clearance": true
+        },
+        "hoop": {
+          "note": "A hoop net is a different gear category from a crab trap. Follow the current hoop-net construction, attendance and deployment rules; season and health closures still apply."
+        },
+        "snare": {
+          "note": "Use the current snare definition and gear limits. A trap restriction does not by itself establish permission to take Dungeness; the season and health checks also apply."
+        }
+      }
     }
   },
   "common_notes": [
     "Limits are per angler; select the actual species and keep it identifiable. California fishing license required for anglers age 16 and older.",
-    "MPAs, local closures and the Diablo Canyon security zone override an area-wide open season. Check the exact fishing position in CDFW’s official map.",
-    "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited."
+    "MPAs, local closures and the Diablo Canyon security zone override an area-wide open season. Check the exact fishing position in CDFW\u2019s official map.",
+    "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1\u00bd in inside are prohibited."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
   "checks": {

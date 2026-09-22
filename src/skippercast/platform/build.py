@@ -17,6 +17,19 @@ def build(root=REPO):
             continue
         output = root / "dist/regions" / region["id"]
         output.mkdir(parents=True, exist_ok=True)
+        ecology_id=region.get('intelligence',{}).get('ecology_profile')
+        if ecology_id:
+            ecology=read_json(within(root/'catalog/ecology',ecology_id+'.json'))
+            if region['jurisdiction_id'] not in ecology['jurisdictions'] or not set(region['species'])<=ecology['profiles'].keys():
+                raise ValueError('Ecology dossier does not cover this jurisdiction and species set')
+            eb=ecology['bounds'];rb=region['fishing_bounds']
+            if not (eb[0]<=rb[0]<rb[2]<=eb[2] and eb[1]<=rb[1]<rb[3]<=eb[3]):
+                raise ValueError('Ecology evidence cannot silently transfer outside its reviewed geography')
+            dossier=read_json(root/'catalog/species.json')
+            for profile in ecology['profiles'].values():
+                profile['sources']=[p for p in dossier['species'] if p['id'] in profile['source_species']]
+                if len(profile['sources'])!=len(profile['source_species']):raise ValueError('Missing species evidence source')
+            atomic_json(within(root/'dist',region['assets']['ecology']),{**ecology,'region_id':region['id']})
         # A new region may publish context with explicit empty target collections.
         for key, empty in (("atlas", {"schema_version": 1, "targets": [], "areas": [], "drifts": [], "sources": []}),
                            ("habitats", {"schema_version": 1, "areas": []}),

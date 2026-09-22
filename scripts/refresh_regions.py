@@ -21,6 +21,11 @@ def refresh(kind, output, previous_root=None):
         prior_path=previous_root/"regions"/ident/"latest.json" if previous_root else None
         if prior_path and not prior_path.exists() and ident=="morro-bay": prior_path=previous_root/"latest.json"
         prior=read_json(prior_path) if prior_path and prior_path.is_file() else None
+        if kind=='intelligence':
+            from skippercast.pipeline.intelligence import run
+            data=run(ident,output,previous_root,now)
+            summaries.append({'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues']})
+            continue
         data=(daily(now,prior,region_id=ident) if kind=="daily" else live(now,prior,region_id=ident))
         target=output/"regions"/ident
         atomic_json(target/"latest.json",data)
@@ -32,6 +37,9 @@ def refresh(kind, output, previous_root=None):
             for old in history.glob("*.json"):
                 if old.stem<(now-timedelta(days=90)).strftime("%Y-%m-%d"):old.unlink()
         summaries.append({"region_id":ident,"status":data["health"]["status"],"completed_at":data["completed_at"],"issues":data["health"]["issues"]})
+    if kind=='intelligence':
+        atomic_json(output/'intelligence-health.json',{'schema_version':1,'regions':summaries})
+        return summaries
     # Compatibility alias only; identities inside the files remain explicit.
     for name in ("latest.json","health.json"):
         shutil.copyfile(output/"regions/morro-bay"/name,output/name)
@@ -42,7 +50,7 @@ def refresh(kind, output, previous_root=None):
 
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("kind",choices=["daily","live"])
+    p.add_argument("kind",choices=["daily","live","intelligence"])
     p.add_argument("--output",type=Path,required=True)
     p.add_argument("--previous-root",type=Path)
     a=p.parse_args();print(json.dumps(refresh(a.kind,a.output,a.previous_root),indent=2))

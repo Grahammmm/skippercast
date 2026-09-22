@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "id": "california-central",
+  "reviewed_at": "2026-09-22",
+  "bounds": [
+    -125,
+    32.5,
+    -117,
+    38.5
+  ],
+  "jurisdictions": [
+    "california-central"
+  ],
+  "interpretation": "Operational suggestions are transparent hypotheses derived from agency habitat evidence and boat-control constraints, not a calibrated catch model.",
+  "profiles": {
+    "reef": {
+      "name": "Lingcod & rockfish",
+      "life_stage": "Adult lingcod and recreationally targeted rockfish; rockfish species occupy different niches.",
+      "habitat": "Rock relief, connected rough ground and sand\u2013reef edges are search leads. A high terrain score measures structure, not abundance.",
+      "method": "Sounder first, then a controlled bottom drift with your double-drop rig. For lingcod, investigate ledges and edges; for rockfish, also inspect suspended marks above the reef. Reset when bottom contact or boat control deteriorates.",
+      "timing": "Seasonal nesting and species movements can change use of the reef. Do not turn a spawning season into an assumed bite window.",
+      "condition_response": "Wind, chop and opposing seas reduce rig control. Surface radar/model currents help plan a test drift; the boat\u2019s observed track and line angle determine the actual setup.",
+      "evidence_needed": [
+        "Identified species, depth and fish marks on the day",
+        "Measured drift, rig weight and bottom-contact time",
+        "Comparable successful and empty drifts; survey method and effort"
+      ],
+      "source_species": [
+        "lingcod",
+        "rockfish"
+      ]
+    },
+    "halibut": {
+      "name": "California halibut",
+      "life_stage": "Coastal fish targeted by recreational anglers; nursery and trawl samples are distinct evidence.",
+      "habitat": "Work connected sediment habitat and its edges. The current map\u2019s shallow sediment areas are research candidates, not confirmed concentrations.",
+      "method": "Search an area with a controlled drift and a presentation near the seabed. Use the sounder to check the edge and bait; move between comparable depth bands when an area produces no evidence.",
+      "timing": "CDFW describes shallow spawning movements, but the calendar cannot locate fish. Local prey, visibility and present conditions remain important.",
+      "condition_response": "Enough movement to cover ground can help searching, but excessive drift makes near-bottom presentation difficult. No universal current-speed optimum is assigned.",
+      "evidence_needed": [
+        "Sand/gravel and edge confirmation",
+        "Actual bait and fish observations at depth",
+        "Catch per fishing hour, including zero-catch attempts"
+      ],
+      "source_species": [
+        "halibut"
+      ]
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "life_stage": "Adult-sized crabs; juvenile nursery habitat cannot be treated as a harvest hotspot.",
+      "habitat": "Broad, depth-qualified sediment areas are starting hypotheses. Crab distribution, predation, molt, bait and gear all affect results.",
+      "method": "When the season and chosen gear are permitted, compare a small number of sediment locations with consistent bait, gear and soak effort. Record empty sets as well as catches. Check bottom type and retrieval conditions before setting.",
+      "timing": "Season permission, health restrictions and trap permission are checked separately. Molt and local movement may change availability.",
+      "condition_response": "Longer/deeper sets increase handling, buoy-line and retrieval demands. The user\u2019s 200-ft ceiling stays in force. A deeper comparison requires new depth-qualified habitat, lawful gear and a suitable retrieval plan.",
+      "evidence_needed": [
+        "Catch per trap-hour or hoop set by depth",
+        "Bait, soak time, size, sex and empty sets",
+        "Direct evidence of local predation; a poor catch alone cannot identify sea otters as the cause"
+      ],
+      "source_species": [
+        "dungeness"
+      ]
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "life_stage": "Ocean-feeding fish; species and stock identification affect legal access.",
+      "habitat": "Mobile forage and water-column habitat matter more than a fixed reef pin. Coastal search sectors are geographic references.",
+      "method": "Check the current local season, then use lawful gear to search observed bait and fish marks at their actual depth. Separate trolling presentation depth from seabed depth.",
+      "timing": "Run timing and prey vary among years. Old landing reports or a moon phase do not establish today\u2019s school position.",
+      "condition_response": "Evaluate the outbound and return sea directions, trolling control and fog. Temperature or chlorophyll can guide a search only when recent, quality-screened and supported by forage evidence.",
+      "evidence_needed": [
+        "Fresh forage and species observations",
+        "Stock/season context and fishing method",
+        "Search effort and zero-catch hours"
+      ],
+      "source_species": [
+        "salmon"
+      ]
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "life_stage": "Surface-oriented fish encountered by West Coast troll fisheries; size and behavior vary.",
+      "habitat": "Recent fronts and water masses can narrow an offshore search. Clouds, coarse pixels and stale imagery weaken the inference.",
+      "method": "Compare recent SST, chlorophyll and current context, then look for actual bait, birds or fish. Start a search sector only after a fuel, range and return-weather plan; a colored front is not a catch location.",
+      "timing": "Migrations change through the season and among years. Do not keep a fixed offshore hotspot alive after its supporting observation ages out.",
+      "condition_response": "Longer exposure and a deteriorating return matter for the Parker. The comfort view and ensemble uncertainty apply to the complete travel window, not just the troll.",
+      "evidence_needed": [
+        "Dated, cloud-screened fronts with native pixel size",
+        "Independent bait/fish sightings and catch effort",
+        "Fuel and range plan for the observed sea state"
+      ],
+      "source_species": [
+        "albacore"
+      ]
+    },
+    "bluefin": {
+      "name": "Pacific bluefin tuna",
+      "life_stage": "Mobile fish with size-dependent behavior and depth use.",
+      "habitat": "Schools can move quickly and occupy different depths. A single SST band is not a universal optimum.",
+      "method": "Treat offshore sectors as search references; use fresh school and bait evidence, appropriate equipment and lawful technique. Actual sonar marks should guide presentation depth.",
+      "timing": "Dated sightings can lose value rapidly. A past fleet track or landing count does not establish a current school.",
+      "condition_response": "Use the full trip exposure and return forecast. Surface-current products cannot predict a school\u2019s movement or a deep jig\u2019s drift.",
+      "evidence_needed": [
+        "Recent identified school locations and observation method",
+        "Depth, prey and fish size",
+        "Search effort and outcomes, not only successful reports"
+      ],
+      "source_species": [
+        "bluefin"
+      ]
+    }
+  }
+}

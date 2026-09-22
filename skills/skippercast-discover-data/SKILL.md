@@ -16,3 +16,5 @@ Record new leads as candidate records outside published app data until reviewed.
 Return a need-by-need gap report, recommended source binding order, rejected alternatives with reasons, and the smallest useful next import. When two services distribute one underlying model or survey, count one independent source. Do not fill a critical gap by averaging unrelated evidence.
 
 Preserve the current task's publishing authorization. Source discovery alone does not authorize a purchase, a provider-account signup, contacting operators, or publishing private catch histories. A missing license is a dataset issue to resolve, not an automatic request for user approval of routine research.
+
+For ensembles, currents and species, record native resolution, horizon, member semantics, assimilation dependencies and life stage/method/geographic limits. Match `catalog/data-needs.json`; consult `docs/regional-intelligence.md` for adapter roles. A new footprint needs a regional review rather than an alias to a familiar source.

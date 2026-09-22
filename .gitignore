@@ -36,3 +36,8 @@ node_modules/
 .coverage
 .pytest_cache/
 .DS_Store
+
+# Generated Worker and asset copy (dist root remains authored source)
+dist/client/
+dist/server/
+dist/.openai/

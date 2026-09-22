@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=7.0";
-import { getRegion, assetURL } from "./region.js?v=7.0";
-import { POINTS, distanceNm } from "./marine-data.js?v=7.0";
-import { circleGeometry } from "./geo-screen.js?v=7.0";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.0";
+import { getRegion, assetURL } from "./region.js?v=8.0";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.0";
+import { circleGeometry } from "./geo-screen.js?v=8.0";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -224,7 +224,7 @@ export async function initSpecies(
     error = false,
     current = [];
   try {
-    const r = await fetch(assetURL("habitats"));
+    const r = await fetch(assetURL("habitats"),{signal:AbortSignal.timeout(10000)});
     if (!r.ok) throw Error();
     habitats = (await r.json()).areas;
   } catch {

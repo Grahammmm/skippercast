@@ -66,7 +66,7 @@ class Client:
         self.now = now
         self.requests = []
 
-    def get(self, url, as_json=False, as_pdf=False):
+    def get(self, url, as_json=False, as_pdf=False, as_binary=False):
         public_url(url)
         for attempt in range(2):
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
@@ -82,7 +82,9 @@ class Client:
                     raise ValueError("Response exceeds bounded collection size")
                 if not body.strip():
                     raise ValueError("Empty response")
-                if as_pdf:
+                if as_binary:
+                    result = body
+                elif as_pdf:
                     if not body.startswith(b"%PDF-"):
                         raise ValueError("Expected an official PDF; received another content type")
                     result = {"content_sha256": hashlib.sha256(body).hexdigest(),
@@ -153,7 +155,7 @@ def model_loader(model, points=None):
     wave = model in ("ecmwf_wam025", "ncep_gfswave025")
     variables = ([f"{p}_{q}" for p in ("wave", "wind_wave", "swell_wave", "secondary_swell_wave")
                   for q in ("height", "period", "direction")] if wave else
-                 ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "visibility", "precipitation", "temperature_2m", "weather_code"])
+                 ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "visibility", "precipitation", "temperature_2m", "cloud_cover", "weather_code"])
     params = {"latitude": ",".join(str(p[1]) for p in points), "longitude": ",".join(str(p[2]) for p in points),
               "hourly": ",".join(variables), "models": model, "forecast_days": 8, "timezone": "UTC",
               "timeformat": "unixtime", "cell_selection": "sea"}
@@ -182,7 +184,7 @@ def model_loader(model, points=None):
                 raise ValueError("Forecast units changed")
         return {"model": model, "sample_at": stamp(datetime.fromtimestamp(initialized, timezone.utc)),
                 "meta": meta, "requested_points": [{"name": p[0], "latitude": p[1], "longitude": p[2]} for p in points],
-                "points": data, "note": "Daily model archive for evidence research; browser weather refreshes independently."}
+                "points": data, "note": "Regional model archive; shared with public weather views when fresh. Browser retains direct-provider recovery."}
     return url, load
 
 
