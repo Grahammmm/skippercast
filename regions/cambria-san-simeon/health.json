@@ -1,1 +1,1 @@
-{"region_id":"cambria-san-simeon","generated_at":"2026-09-22T16:07:51Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":32,"sources_total":33,"issues":["chlorophyll"]}
+{"region_id":"cambria-san-simeon","generated_at":"2026-09-22T16:29:35Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":30,"sources_total":33,"issues":["sst","chlorophyll","currents"]}
