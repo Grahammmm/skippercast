@@ -1,7 +1,7 @@
-import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.10";
-import { esc } from "./marine-charts.js?v=8.10";
-import { distanceNm } from "./marine-data.js?v=8.10";
-import { matchesTargetSpecies } from "./target-groups.js?v=8.10";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.11";
+import { esc } from "./marine-charts.js?v=8.11";
+import { distanceNm } from "./marine-data.js?v=8.11";
+import { matchesTargetSpecies } from "./target-groups.js?v=8.11";
 
 export const FEED_URL =
   getRegion().daily_feed;

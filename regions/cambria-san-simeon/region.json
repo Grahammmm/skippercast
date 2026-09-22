@@ -357,7 +357,8 @@
     "daily_evidence": null,
     "bottom_index": "regions/cambria-san-simeon/bottom/index.json",
     "geology": "regions/cambria-san-simeon/geology.geojson",
-    "ecology": "regions/cambria-san-simeon/ecology.json"
+    "ecology": "regions/cambria-san-simeon/ecology.json",
+    "search_plans": "regions/cambria-san-simeon/search-plans.json"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/cambria-san-simeon/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/latest.json",

@@ -1,6 +1,6 @@
-import {getRegion} from './region.js?v=8.10';
-import {esc,num} from './marine-charts.js?v=8.10';
-import {readConditions} from './marine-data.js?v=8.10';
+import {getRegion} from './region.js?v=8.11';
+import {esc,num} from './marine-charts.js?v=8.11';
+import {readConditions} from './marine-data.js?v=8.11';
 const api=async(path,options={})=>{const r=await fetch('/api/'+path,{signal:AbortSignal.timeout(20000),...options,headers:{'Content-Type':'application/json',...options.headers}});let data;try{data=await r.json();}catch{throw Error('Personal services are available on the published site.');}if(!r.ok)throw Error(data.error||'Could not complete this request.');return data;};
 const b64=s=>Uint8Array.from(atob(s.replaceAll('-','+').replaceAll('_','/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
 export async function initTripAlerts(intelligence){

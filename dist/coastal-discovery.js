@@ -1,9 +1,9 @@
-import {initChart} from './chart-map.js?v=8.10';
-import {initNavigation} from './navigation.js?v=8.10';
-import {esc} from './marine-charts.js?v=8.10';
-import {viewFromURL} from './location-context.js?v=8.10';
-import {mappedPackageAt} from './map-response.js?v=8.10';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.10';
+import {initChart} from './chart-map.js?v=8.11';
+import {initNavigation} from './navigation.js?v=8.11';
+import {esc} from './marine-charts.js?v=8.11';
+import {viewFromURL} from './location-context.js?v=8.11';
+import {mappedPackageAt} from './map-response.js?v=8.11';
+import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.11';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');

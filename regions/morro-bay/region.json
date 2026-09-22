@@ -447,7 +447,8 @@
     "daily_evidence": "data/daily-evidence.json",
     "bottom_index": "regions/morro-bay/bottom/index.json",
     "geology": null,
-    "ecology": "regions/morro-bay/ecology.json"
+    "ecology": "regions/morro-bay/ecology.json",
+    "search_plans": "regions/morro-bay/search-plans.json"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/latest.json",

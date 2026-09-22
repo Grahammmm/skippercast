@@ -1,6 +1,6 @@
-import { assetURL } from "./region.js?v=8.10";
-import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=8.10";
-import { matchesTargetSpecies } from "./target-groups.js?v=8.10";
+import { assetURL } from "./region.js?v=8.11";
+import { loadDailyEvidence, reportEvidence } from "./bite-evidence.js?v=8.11";
+import { matchesTargetSpecies } from "./target-groups.js?v=8.11";
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s ?? "").replace(

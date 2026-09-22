@@ -1,6 +1,6 @@
-import {getRegion} from './region.js?v=8.10';
-import {esc,local,num} from './marine-charts.js?v=8.10';
-import {habitatFrame,habitatTileURL,decodeHabitatTile,habitatTileMatchesLayer,tileOverlaps,habitatColor,thermalReference,validHabitatManifest} from './habitat-data.js?v=8.10';
+import {getRegion} from './region.js?v=8.11';
+import {esc,local,num} from './marine-charts.js?v=8.11';
+import {habitatFrame,habitatTileURL,decodeHabitatTile,habitatTileMatchesLayer,tileOverlaps,habitatColor,thermalReference,validHabitatManifest} from './habitat-data.js?v=8.11';
 
 const names={'sst-analysis':'Satellite temperature analysis','chlorophyll-observation':'Satellite chlorophyll','wcofs-surface-forecast':'NOAA temperature & surface flow'};
 const roundTime=t=>local(t,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
@@ -21,10 +21,10 @@ export function initHabitatDynamics(map,protectedAreas,onSelect) {
     }
     if(current?.id==='wcofs-surface-forecast') {const u=fields.indexOf('u_mps'),v=fields.indexOf('v_mps');ctx.globalAlpha=.85;ctx.strokeStyle='#103746';ctx.lineWidth=1.4;const seen=new Set();for(const row of rows){if(!Number.isFinite(row[u])||!Number.isFinite(row[v]))continue;const p=map.latLngToContainerPoint(row.slice(0,2)),bucket=`${Math.floor(p.x/45)},${Math.floor(p.y/45)}`;if(seen.has(bucket))continue;seen.add(bucket);const speed=Math.hypot(row[u],row[v]);if(speed<.015)continue;const dx=row[u]/speed*9,dy=-row[v]/speed*9;ctx.beginPath();ctx.moveTo(p.x-dx,p.y-dy);ctx.lineTo(p.x+dx,p.y+dy);ctx.lineTo(p.x+dx-dx*.5+dy*.4,p.y+dy-dy*.5-dx*.4);ctx.moveTo(p.x+dx,p.y+dy);ctx.lineTo(p.x+dx-dx*.5-dy*.4,p.y+dy-dy*.5+dx*.4);ctx.stroke();}}
   }});const canvas=new Canvas().addTo(map);
-  function activeId(){const species=state?.species||document.getElementById('species-select').value;const target=region.target_options.find(t=>t.id===species);if(mode==='off'||mode==='auto'&&!['offshore','pelagic'].includes(target?.kind))return null;return mode==='chlorophyll'?'chlorophyll-observation':['temperature','fronts'].includes(mode)?'sst-analysis':'wcofs-surface-forecast';}
+  function activeId(){const species=document.getElementById('species-select').value;const target=region.target_options.find(t=>t.id===species);if(mode==='off'||mode==='auto'&&!['offshore','pelagic'].includes(target?.kind))return null;return mode==='chlorophyll'?'chlorophyll-observation':['temperature','fronts'].includes(mode)?'sst-analysis':'wcofs-surface-forecast';}
   function message(title,body){const expanded=statusBox.querySelector('details')?.open||false;statusBox.hidden=false;statusBox.innerHTML=`<details${expanded?' open':''}><summary>${esc(title)}</summary><span>${esc(body)}</span></details>`;}
   async function render(){
-    const run=++generation;controller?.abort();controller=new AbortController();rows=[];canvas.draw();const id=activeId();if(!id){statusBox.hidden=true;return;}
+    const run=++generation;document.dispatchEvent(new CustomEvent('skippercast:ocean-cells',{detail:null}));controller?.abort();controller=new AbortController();rows=[];canvas.draw();const id=activeId();if(!id){statusBox.hidden=true;return;}
     const layer=product?.layers?.[id],clock=habitatFrame(layer,state?.time??Date.now()/1000);current=layer;
     if(!clock.frame){message(names[id],clock.reason+(id==='wcofs-surface-forecast'?' · Choose an earlier time or dated satellite context in Map options.':''));return;}
     const view=map.getBounds(),bounds=[view.getWest(),view.getSouth(),view.getEast(),view.getNorth()],tiles=layer.tiles.filter(t=>tileOverlaps(t.bounds,bounds));
@@ -37,6 +37,7 @@ export function initHabitatDynamics(map,protectedAreas,onSelect) {
     if(!rows.length&&failures){message(names[id],'Ocean tile downloads failed. Refresh to retry; no conditions are inferred for missing tiles.');return;}
     if(!rows.length){message(names[id],`${roundTime(clock.frame.time)} · No usable ${mode==='fronts'?'temperature gradients':'cells'} in this view at this time. Missing coverage remains blank.`);canvas.draw();return;}
     if(rows.length>30000){rows=[];message(names[id],'Zoom closer to inspect the full native grid; no lower-resolution fish hotspots are inferred.');canvas.draw();return;}
+    document.dispatchEvent(new CustomEvent('skippercast:ocean-cells',{detail:{regionId:region.id,layerId:id,time:clock.frame.time,selectedTime:state?.time??Date.now()/1000,rows,fields,step,sourceURL:layer.source_url,issuedAt:layer.issued_at}}));
     const resolution=step.map(d=>Number(d.toFixed(4))).join('° × ')+'°',age=Math.max(0,(Date.now()/1000-clock.frame.time)/3600),dated=clock.mode==='observed-context';
     const legend=mode==='chlorophyll'?'0.01–10 mg/m³ · blue → green':mode==='fronts'?'0–0.5+ °C/km · blue → orange; analysis uncertainty applies':'50–81°F · blue → red';
     message(`${names[id]} · ${roundTime(clock.frame.time)}`,`${dated?`Dated context · ${Math.round(age)} h old`:'Selected forecast frame'} · ${resolution} native coordinate grid · ${legend}${failures?` · ${failures} tile(s) unavailable`:''}${layer.status==='retained'?' · refresh failed; retained source':''}. Tap water for details.`);canvas.draw();

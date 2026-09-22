@@ -1,5 +1,5 @@
-import { assetURL } from "./region.js?v=8.10";
-import { esc } from "./marine-charts.js?v=8.10";
+import { assetURL } from "./region.js?v=8.11";
+import { esc } from "./marine-charts.js?v=8.11";
 export async function initGeology(map, protectedAreas, onSelect) {
   if(!assetURL("geology")) return;
   const layer=L.layerGroup().addTo(map);

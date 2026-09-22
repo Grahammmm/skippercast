@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.10';
-import {matrixHTML} from './forecast-matrix.js?v=8.10';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.10";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.11';
+import {matrixHTML} from './forecast-matrix.js?v=8.11';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.11";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.10";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.10";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.10";
-import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.10";
-import { localDate } from "./forecast.js?v=8.10";
-import { detailHTML } from "./marine-detail.js?v=8.10";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.10";
+} from "./marine-data.js?v=8.11";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.11";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.11";
+import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.11";
+import { localDate } from "./forecast.js?v=8.11";
+import { detailHTML } from "./marine-detail.js?v=8.11";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.11";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {

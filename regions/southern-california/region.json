@@ -805,7 +805,8 @@
     "closures": "regions/southern-california/groundfish-exclusions.geojson",
     "observations": "regions/southern-california/observations.json",
     "survey_habitat": "regions/southern-california/survey-habitat.geojson",
-    "target_qualification": "regions/southern-california/qualified-bottom/manifest.json"
+    "target_qualification": "regions/southern-california/qualified-bottom/manifest.json",
+    "search_plans": "regions/southern-california/search-plans.json"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/southern-california/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/latest.json",
