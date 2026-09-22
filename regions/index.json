@@ -1,0 +1,1 @@
+{"schema_version":1,"completed_at":"2026-09-22T00:16:50.571451+00:00","regions":[{"region_id":"cambria-san-simeon","status":"degraded","completed_at":"2026-09-22T00:16:33Z","issues":["sst","chlorophyll","currents"]},{"region_id":"morro-bay","status":"degraded","completed_at":"2026-09-22T00:16:50Z","issues":["sst","chlorophyll","currents"]}]}
