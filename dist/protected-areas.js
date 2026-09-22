@@ -1,7 +1,7 @@
-import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.2";
-import { fetchJSON } from "./forecast.js?v=8.2";
-import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.2";
-import { esc } from "./marine-charts.js?v=8.2";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.3";
+import { fetchJSON } from "./forecast.js?v=8.3";
+import { pointInGeometry, geometryIntersects } from "./geo-screen.js?v=8.3";
+import { esc } from "./marine-charts.js?v=8.3";
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
 export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:getRegion().mpa.bounds.join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
 export function validMPAs(data) {

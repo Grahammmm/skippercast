@@ -40,10 +40,11 @@ def stamp(now=None):
     return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def atomic_json(path, value):
+def atomic_json(path, value, *, indent=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = (json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":")) + "\n").encode()
+    encoded = (json.dumps(value, ensure_ascii=False, allow_nan=False, indent=indent,
+                          separators=(",", ":") if indent is None else None) + "\n").encode()
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_bytes(encoded)
     tmp.replace(path)

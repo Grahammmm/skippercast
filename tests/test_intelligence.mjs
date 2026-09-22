@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {memberSummary,currentFrame,nearestCurrent,spectrumSVG,uncertaintyHTML} from '../dist/intelligence.js';
-import {getRegion} from '../dist/region.js?v=8.2';
+import {getRegion} from '../dist/region.js?v=8.3';
 import {tripGPX} from '../dist/gpx.js';
 import {exportSelection} from '../dist/inavx.js';
 import {bottomSection} from '../dist/bottom-view.js';
@@ -64,7 +64,7 @@ test('native bottom cross-sections retain nodata and meter-to-foot scale at card
 });
 test('trip-date rules use the selected season while source freshness stays tied to now',()=>{
   const r=read('../dist/data/regulations.json');r.reviewed_at=new Date(now-3600000).toISOString();
-  for(const id of Object.keys(r.sources)){r.sources[id].approved_content_sha256='a'.repeat(64);r.checks[id]={status:'unchanged',source_status:'ok',content_sha256:'a'.repeat(64),data_retrieved_at:new Date(now-3600000).toISOString()};}
+  for(const id of Object.keys(r.sources)){r.sources[id].approved_content_sha256='a'.repeat(64);r.checks[id]={url:r.sources[id].url,normalization:r.sources[id].normalization,status:'unchanged',source_status:'ok',content_sha256:'a'.repeat(64),data_retrieved_at:new Date(now-3600000).toISOString()};}
   r.species.dungeness.windows=[{start:'2026-10-01',end:'2026-11-30'}];
   assert.equal(regulationState(r,'dungeness',now,'2026-10-15','hoop').status,'open');
   assert.equal(regulationState(r,'dungeness',now,'2026-10-15','trap').status,'scheduled');

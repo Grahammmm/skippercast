@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.2';
+import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.3';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {buildContext} from '../scripts/build_reef_context.mjs';
 import {regulationState} from '../dist/regulations.js';
@@ -32,7 +32,7 @@ test('historical complex envelopes exclude full MPA/GEA geometry and cannot beco
 });
 test('Southern fall windows never become an unrestricted reef opening even with fresh matching checks',()=>{
  const d=read('dist/'+r.assets.regulations),now=Date.parse('2026-09-22T18:00:00Z');
- for(const [id,s] of Object.entries(d.sources)){s.approved_content_sha256='a'.repeat(64);d.checks[id]={status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
+ for(const [id,s] of Object.entries(d.sources)){s.approved_content_sha256='a'.repeat(64);d.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
  for(const id of ['lingcod','rockfish','reef']){const state=regulationState(d,id,now,'2026-10-10');assert.equal(state.status,'restricted');assert.match(state.reason,/seaward/);}
  assert.equal(regulationState(d,'halibut',now,'2026-10-10').status,'open');
  d.checks['rules-southern'].status='changed';assert.equal(regulationState(d,'reef',now,'2026-10-10').status,'unknown');

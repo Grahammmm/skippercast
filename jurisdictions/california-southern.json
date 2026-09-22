@@ -117,7 +117,192 @@
         "marine",
         "protected"
       ]
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing booklet",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "format": "pdf"
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "keywords": [
+        "2026",
+        "Sport Fishing"
+      ]
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules \u00b7 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "keywords": [
+        "660.721",
+        "albacore",
+        "bluefin"
+      ],
+      "format": "ecfr",
+      "title": 50,
+      "section": "660.721"
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer \u00b7 August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "format": "pdf"
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW Southern groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185058&inline=",
+      "format": "pdf"
+    },
+    "rules-park": {
+      "name": "Channel Islands National Park laws and policies",
+      "url": "https://www.nps.gov/chis/learn/management/lawsandpolicies.htm",
+      "keywords": [
+        "Channel Islands",
+        "Local Regulations"
+      ]
+    },
+    "rules-park-compendium": {
+      "name": "Channel Islands National Park compendium \u00b7 December 18, 2025",
+      "url": "https://www.nps.gov/chis/learn/management/upload/CHIS-Superintendent-s-Compendium-12-18-2025.pdf",
+      "format": "pdf"
+    },
+    "rules-san-miguel": {
+      "name": "CDFW San Miguel Island special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Judith-Rock-San-Miguel-Island",
+      "keywords": [
+        "San Miguel",
+        "300"
+      ]
+    },
+    "rules-catalina-blue": {
+      "name": "CDFW Catalina Blue Cavern MPAs",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Blue-Cavern",
+      "keywords": [
+        "Cavern",
+        "anchoring"
+      ]
+    },
+    "rules-catalina-arrow": {
+      "name": "CDFW Catalina Arrow Point to Lion Head Point SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Arrow-Point-to-Lion-Head-Point",
+      "keywords": [
+        "Arrow",
+        "finfish"
+      ]
+    },
+    "rules-navy-sci": {
+      "name": "San Clemente Island safety zone \u00b7 33 CFR 165.1141",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-P/part-165/subpart-F/section-165.1141",
+      "keywords": [
+        "165.1141",
+        "Clemente"
+      ],
+      "format": "ecfr",
+      "title": 33,
+      "section": "165.1141"
+    },
+    "rules-navy-sci-base": {
+      "name": "San Clemente safety zone \u00b7 2025 CFR text (read with amendment)",
+      "url": "https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol2/pdf/CFR-2025-title33-vol2-sec165-1141.pdf",
+      "format": "pdf"
+    },
+    "rules-navy-sci-amendment": {
+      "name": "San Clemente safety-zone amendment \u00b7 effective November 24, 2025",
+      "url": "https://www.govinfo.gov/content/pkg/FR-2025-11-24/pdf/2025-20727.pdf",
+      "format": "pdf"
+    },
+    "rules-navy-sni": {
+      "name": "San Nicolas Island restricted area \u00b7 33 CFR 334.980",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.980",
+      "keywords": [
+        "334.980",
+        "Nicolas"
+      ],
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.980"
+    },
+    "rules-point-mugu": {
+      "name": "Point Mugu restricted area \u00b7 33 CFR 334.1126",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1126",
+      "keywords": [
+        "334.1126",
+        "Mugu"
+      ],
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.1126"
+    },
+    "rules-san-diego-naval": {
+      "name": "San Diego Naval Amphibious Base restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.860",
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.860",
+      "keywords": [
+        "334.860",
+        "San Diego"
+      ]
+    },
+    "rules-pendleton": {
+      "name": "Camp Pendleton boat basin restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.900",
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.900",
+      "keywords": [
+        "334.900",
+        "Pendleton"
+      ]
+    },
+    "rules-fallbrook": {
+      "name": "Fallbrook replenishment anchorage",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.905",
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.905",
+      "keywords": [
+        "334.905",
+        "Fallbrook"
+      ]
+    },
+    "rules-sci-east": {
+      "name": "San Clemente Island east-coast restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.920",
+      "format": "ecfr",
+      "title": 33,
+      "section": "334.920",
+      "keywords": [
+        "334.920",
+        "Clemente"
+      ]
+    },
+    "rules-sni-anchorage": {
+      "name": "San Nicolas Island restricted anchorage",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-I/part-110/subpart-B/section-110.220",
+      "format": "ecfr",
+      "title": 33,
+      "section": "110.220",
+      "keywords": [
+        "110.220",
+        "Nicolas"
+      ]
     }
   },
-  "booklet_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985"
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "required_source_ids": [
+    "rules-inseason",
+    "rules-health",
+    "rules-book",
+    "rules-proposals",
+    "rules-mpa"
+  ]
 }

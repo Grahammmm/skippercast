@@ -17,6 +17,7 @@ on:
       - "jurisdictions/**"
       - "src/skippercast/platform/**"
       - "scripts/refresh_regions.py"
+      - "scripts/report_regulations.py"
 
 permissions:
   contents: write
@@ -89,10 +90,6 @@ jobs:
           for ident in h['issues']:
               s = d['sources'][ident]
               summary.append(f"- {s['name']}: {s['status']} — {s.get('issue', 'See source record')}")
-          review = d.get('regulations', {}).get('review_required', [])
-          if review:
-              summary.append('\nRegulations require review: ' + ', '.join(review))
-              print('::warning::Official regulation sources changed or could not be checked. Season-open badges are withheld for affected species until review.')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('\n'.join(summary))
           if h['issues']:
@@ -105,3 +102,6 @@ jobs:
           if not h['critical_available']:
               raise SystemExit('Core report/observation coverage failed; failure state published for the app.')
           PY
+      - name: Report regulation coverage in every region
+        if: always()
+        run: python scripts/report_regulations.py --root var/daily

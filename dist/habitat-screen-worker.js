@@ -1,5 +1,5 @@
 // Full-geometry legal checks run off the UI thread; no centroid shortcuts.
-import {geometryIntersects} from './geo-screen.js?v=8.2';
+import {geometryIntersects} from './geo-screen.js?v=8.3';
 let geometries=[];
 self.addEventListener('message',({data})=>{
   if(data.type==='init'){geometries=data.geometries;return;}

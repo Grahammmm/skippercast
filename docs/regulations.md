@@ -1,60 +1,57 @@
-# Local species regulations
+# Regional regulations
 
-Selecting a species opens a compact map card with today's Pacific-time season
-status, dates, daily/possession limits, minimum size, gear details and official
-CDFW links. It covers recreational boat fishing between Avila and Cambria and
-adjacent offshore U.S. waters north of Point Conception. California halibut and
-Pacific bluefin are explicitly distinguished from other fisheries. It is an
-area-wide summary, not clearance for the selected GPS position: MPAs and the
-Diablo Canyon security zone still apply. The weather timeline does not change
-the card's clearly labeled **Today** date.
+The compact Rules card follows the selected forecast date and time, or a date chosen in the card. It shows season status, daily and possession limits, size, method, sublimits and direct official links. Lingcod and rockfish share a selector but retain separate legal limits. An opening with a start time is never treated as an all-day opening.
 
-The reviewed rules are in [the registry](../dist/data/regulations.json), researched
-September 21, 2026 from the official sources linked in every profile. The review
-covers the remainder of 2026. It expires at Pacific midnight after December 31;
-the app does not extrapolate these rules into 2027. The November 7 crab opener
-is scheduled, not confirmation that traps will be allowed. That opening needs
-a new review before the card can display open.
+Each region binds one jurisdiction in `jurisdictions/<id>.json`. Morro Bay–Avila and Cambria–San Simeon share California Central; Southern California uses its own management area and species records. The September 22, 2026 review covers the remainder of 2026. The registry expires after December 31 even where a described season extends into 2027. Future openers requiring review remain unconfirmed.
 
-## Daily checks and publication
+Season, gear and local access are separate. The Southern card includes Channel Islands park rules, Anacapa and San Miguel special closures, Catalina exceptions, military island access and mainland naval restrictions. Official legal text is checked; live Navy clearance is not. The map conservatively excludes mapped MPAs and groundfish exclusion areas. It does not dynamically apply every date-dependent RCA boundary or operational closure. Habitat outlines are not clearance to fish there. Consult the exact official boundaries before choosing a position.
 
-The existing `Daily fishing evidence` GitHub Actions workflow runs at 04:17
-America/Los_Angeles, independently of the desktop. It fetches the regional rules,
-groundfish, salmon, crab, gear, health, whale restrictions, local MPA pages,
-in-season notices, official regulation index and the 2026 booklet. The PDF is
-checked as a bounded PDF download; HTML is normalized to text before hashing.
-The resulting rules packet is published atomically with `data/latest.json`.
-The app loads that public feed, with a bundled dated fallback, and refreshes it
-hourly while in use. Daily schedule delays remain visible through timestamps.
+## One process for every coast
 
-Every official source has a **reviewed content fingerprint**. A fresh successful
-fetch must match that baseline. Changes remain flagged across daily runs until
-reviewed; comparing only against yesterday would wrongly clear an unreviewed
-change the next day. Missing, failed, retained, future-dated or >36-hour-old
-checks withhold the green season-open badge for affected species. A successful
-HTTP response alone cannot establish permission to fish. Whole-page changes can
-cause conservative false alarms, which is preferable to silently accepting new
-rules. Linked documents changing independently are not exhaustively monitored;
-the user should still follow the official links before departure.
+```mermaid
+flowchart LR
+    R[Region: species and jurisdiction] --> J[Jurisdiction: authorities and exact sources]
+    J --> C[Bounded HTML, PDF and eCFR collectors]
+    C --> P[Raw review packet and receipts]
+    P --> D[Read source; record approve or hold decision]
+    D --> B[Reviewed rules and source fingerprints]
+    B --> V[Compile: geography, species and identity checks]
+    C --> M[Daily comparison against reviewed fingerprints]
+    M --> H[Per-region species and area health]
+    H --> U[Rules card: current, changed or unavailable]
+    V --> U
+```
 
-The workflow summary lists sources requiring review and emits an Actions warning.
-This is a source-change monitor, **not automatic legal interpretation**. It does
-not automatically change bag limits or send personal Telegram messages.
+The existing `Daily fishing evidence` workflow discovers every non-draft region at 04:17 America/Los_Angeles. A source request records its URL, final URL, retrieval time, HTTP result and raw hash. The shared normalizers use visible text **and linked document URLs** for HTML, bytes for PDF, and exact section text for the supported eCFR API. The API's title current-through date is recorded separately from retrieval time and section amendment history. Compression is bounded; eCFR calls are paced and share metadata within a run.
 
-## Reviewing an update
+A fresh download must match its exact reviewed URL, normalizer and fingerprint. Changed, missing, failed, retained, future-dated or over-36-hour-old checks withhold season-open status for dependent species. The approved rule-content hash also covers seasons, limits, methods, dependencies, authority hosts and area notices: editing those requires another review. A successful request never approves a legal change. Pending proposals are monitored but do not become effective rules without their effective-date evidence.
 
-1. Read the changed official source, its linked current regulations and relevant
-   in-season notices. Distinguish recreational from commercial rules and verify
-   geography, dates and gear. Review HTML/PDF changes even if limits appear unchanged.
-2. Edit the affected profiles, season windows and review validity in the registry.
-   Set `reviewed_at` to the actual review time and increment its revision.
-3. Copy the reviewed source's `content_sha256` from a successful daily source
-   record into `approved_content_sha256`. Never automatically approve a new hash.
-4. Run the regulation tests and push the registry. This triggers another collection;
-   the updated packet reaches the existing app without a website redeploy. For a
-   website release also bundle its checked packet so the fallback is current.
+The data branch publishes `regions/<id>/latest.json` and `regions/<id>/regulations-health.json`, plus source-health reports and history. The legacy root feed is only an alias for Morro Bay. All regions appear in the Actions summary, including affected species and area notices. The app checks the regional feed hourly and retains a dated bundled fallback. Schedule delays remain visible. No per-region cron, app fork, or personal notification route is added.
 
-Python tests cover persistent changes and failure handling. Browser module tests
-cover species limits, Pacific date transitions, closed seasons, unconfirmed crab
-opening, year expiry, stale checks, dependency isolation and safe links. Mobile
-interaction is checked in the local preview before publication.
+## Review or add a jurisdiction
+
+1. Define jurisdiction identity, approved authority hosts, exact source URLs, adapter format and shared dependencies. Add every active regional species, its gear, effective dates and source dependencies. Bind local MPA, health, in-season and access notices. A nearby region's rules are not a default for a new coast.
+2. Collect a new immutable local evidence directory. Read the official text and linked current documents, resolve differences by jurisdiction and effective date, and edit the registry. Raw files stay under ignored `var/`; public decision records contain conclusions and fingerprints.
+
+   ```bash
+   PYTHONPATH=src python -m skippercast.pipeline.regulation_review collect \
+     --jurisdiction california-southern --output var/rules/new-review
+   PYTHONPATH=src python -m skippercast.pipeline.regulation_review fingerprint \
+     --jurisdiction california-southern
+   ```
+
+3. Write a decision JSON using `jurisdictions/reviews/` as examples. It records the actual review time, revision, jurisdiction, exact legal-content hash, explicitly reviewed species, and each inspected source hash with an `approve` or `hold` conclusion. Failed sources can be held; they cannot be approved. Holds stay visible and affect their own dependencies. Do not copy all new hashes into an approval automatically.
+4. Apply the decision and compile. The gate rejects wrong jurisdictions, changed legal content, incomplete decisions, missing or stale evidence, wrong URLs, wrong normalizers, and reviews predating source retrieval.
+
+   ```bash
+   PYTHONPATH=src python -m skippercast.pipeline.regulation_review apply \
+     --jurisdiction california-southern --packet var/rules/new-review/packet.json \
+     --decision jurisdictions/reviews/REVIEW.json
+   PYTHONPATH=src python -m skippercast.platform.build
+   PYTHONPATH=src python -m unittest discover -s tests -p 'test_pipeline*.py'
+   node --test tests/test_regulations.mjs tests/test_southern_species.mjs
+   ```
+
+5. Publish through the existing code and data workflows; verify the first regional receipt. Inspect `regulations-health.json` and `python scripts/report_regulations.py --root var/daily`. A website release bundles the reviewed snapshot; daily source checks continue independently. Changes awaiting interpretation require another evidence review, not a baseline reset.
+
+Whole-document changes can cause conservative false alarms. The selected monitored links do not exhaust every legal authority or last-minute notice. Live entrance clearance, operational military restrictions, toxin advisories and exact position still require a trip-time check.

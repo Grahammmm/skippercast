@@ -99,7 +99,65 @@
         "Cambria",
         "conservation"
       ]
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing booklet",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "format": "pdf"
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "keywords": [
+        "2026",
+        "Sport Fishing"
+      ]
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules \u00b7 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "keywords": [
+        "660.721",
+        "albacore",
+        "bluefin"
+      ],
+      "format": "ecfr",
+      "title": 50,
+      "section": "660.721"
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer \u00b7 August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "format": "pdf"
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW Central groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
+      "format": "pdf"
+    },
+    "mpa-piedras": {
+      "name": "CDFW Piedras Blancas MPAs \u00b7 San Simeon",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
+      "keywords": [
+        "Piedras",
+        "632"
+      ]
     }
   },
-  "booklet_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985"
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "required_source_ids": [
+    "rules-inseason",
+    "rules-health",
+    "rules-book",
+    "rules-proposals",
+    "mpa-piedras"
+  ]
 }

@@ -9,6 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"src"))
 from skippercast.platform.contracts import REPO, atomic_json, load_region, read_json
 from skippercast.pipeline.collect import collect as daily
 from skippercast.pipeline.live import collect as live
+from skippercast.pipeline.regulation_review import coverage
 
 
 def refresh(kind, output, previous_root=None):
@@ -31,6 +32,11 @@ def refresh(kind, output, previous_root=None):
         atomic_json(target/"latest.json",data)
         atomic_json(target/"health.json",{"region_id":ident,"generated_at":data["generated_at"],**data["health"]})
         if kind=="daily":
+            rules_health = coverage(data['regulations'], data['sources'], now)
+            rules_health['region_id'] = ident
+            active = {s for target in region['species'] for s in (['lingcod', 'rockfish'] if target == 'reef' else [target])}
+            rules_health['species'] = {k: v for k, v in rules_health['species'].items() if k in active}
+            atomic_json(target/'regulations-health.json', rules_health)
             history=target/"history"
             if prior_path and (prior_path.parent/"history").is_dir(): shutil.copytree(prior_path.parent/"history",history,dirs_exist_ok=True)
             atomic_json(history/(now.strftime("%Y-%m-%d")+".json"),data)

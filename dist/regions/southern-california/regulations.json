@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-22.south.2",
-  "reviewed_at": "2026-09-22T14:57:38Z",
+  "revision": "2026-09-22-california-southern-review-2",
+  "reviewed_at": "2026-09-22T15:58:13Z",
   "valid_from": "2026-09-22",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
@@ -17,8 +17,10 @@
         "28.65",
         "27.60"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "948c244f8a76622f1521bd3c7ffad8e02ace7bd633fcf25c5f100b9a4c6a7a41",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed general finfish aggregation, landing-net, line/hook and nearshore metallic/wire line or leader limits. Species possession can impose tighter groundfish gear limits when switching targets."
     },
     "rules-invertebrates": {
       "name": "CDFW invertebrate gear rules",
@@ -27,8 +29,10 @@
         "29.80",
         "trap"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "79513f102e7496d9ae95cc0e21fc5402a6c923d479dcb221efff9e7994ca1e35",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed current visible gear text and the booklet. Obsolete lobster language in an HTML comment is excluded by text-and-links-v3. Keep trap, hoop, snare and hand methods distinct; no future trap clearance inferred."
     },
     "rules-whales": {
       "name": "CDFW whale-safe crab restrictions",
@@ -37,8 +41,10 @@
         "recreational",
         "crab"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "42c85a11e8bdad44462e82df71f53a229d79bd6ffdab45e85e46d7600d2a4ee8",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Recreational fishery is presently closed. No declaration in this inspected notice authorizes the November 2026 recreational trap opener; retain the opening-review and gear-clearance gates."
     },
     "rules-health": {
       "name": "CDFW fishery health closures",
@@ -47,8 +53,10 @@
         "health",
         "advisories"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "285539cb6aa62d4edf3425481ff18f3cf73ceca274cf31d2d91d5b139d033701",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed current CDFW fishery notices. No current Dungeness or spiny-lobster biotoxin closure was listed; this does not open their seasons. Northern-island bivalve and rock-crab-organ eating advice is distinct. Direct CDPH pages were unavailable and are not claimed checked."
     },
     "rules-ocean": {
       "name": "CDFW official regulation index",
@@ -57,8 +65,10 @@
         "2026",
         "Tunas"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "40566385bbabf6326bdde3aaef3f708f9465e88a202a7e97f0e7682a9c30ef6b",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed official regulation index and its linked current-year resources. Used for detecting replacement booklets and updates; an index or successful retrieval is not itself fishing permission."
     },
     "rules-groundfish": {
       "name": "CDFW groundfish",
@@ -67,8 +77,10 @@
         "groundfish",
         "regulations"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "3bb1068dfc661dc6da6db3c7afa12729150ccf73694f30a6c65b2249440f2145",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed 2026 RCG sublimits, prohibited species and management-area links against the jurisdiction-specific season tables. RCA access follows legal coordinates, not a sounder reading."
     },
     "rules-inseason": {
       "name": "CDFW in-season changes",
@@ -77,8 +89,10 @@
         "in-season",
         "ocean"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "a232edadbb81d20d8fe27caae09abcedfa51e4fb68dee68195188a66e5f452e8",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed current in-season notices through the listed September 11 update. Monterey anchovy human-consumption restriction is outside these fishing footprints; no subsequent September salmon closure appears in the inspected notices."
     },
     "rules-salmon": {
       "name": "CDFW salmon",
@@ -87,8 +101,10 @@
         "salmon",
         "season"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "8a3041f1799001a577c0c34ba7e18de7d68a5e43f48f39a6af9b5407ef42aab5",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed the 2026 recreational salmon page against the August update flyer, including dates, two-fish daily limit, fall 20-inch total length and quota-related notice monitoring."
     },
     "rules-crab": {
       "name": "CDFW crab",
@@ -97,8 +113,10 @@
         "Dungeness",
         "recreational"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "b1691c70506b55a9ee878678a5c572f62a9cd2aee7e5083667f526f80cc3201d",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed recreational crab FAQ, method distinctions and opening dependencies. Crab-trap restrictions do not alone close legal hoops, loops or hand take; species season and health rules still apply."
     },
     "rules-southern": {
       "name": "CDFW Southern Region rules",
@@ -108,8 +126,10 @@
         "halibut",
         "2026"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "fe1ea859a679f51c3ac2ff1096094d609fb82e80c56dc9661327f9be659f8d9b",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed Southern summary updated September 1, 2026 for Point Conception to U.S.–Mexico boundary. All 16 active selectors were checked independently. Use 28-inch white-seabass total length; do not use the conflicting alternate-length summary."
     },
     "rules-gea": {
       "name": "NOAA groundfish exclusion areas",
@@ -118,8 +138,10 @@
         "Groundfish",
         "Exclusion"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "0ef98ad7456dcaa85c192f2c734bb404d3022fdaa249fc40785f96269d7676ec",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed NOAA closed-area page updated September 8 and its June 23 GEA and August 2026 RCA coordinate links. The RCA update referenced Cordell Bank outside Southern California; mapped GEAs and seasonal RCA restrictions remain separate."
     },
     "rules-lobster": {
       "name": "CDFW recreational spiny lobster rules and notices",
@@ -129,8 +151,10 @@
         "2026",
         "report card"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "b2ddee6be090ff33982a7775f277ddcaaf5a61f59a643975a08823f90133decd",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed current 2026–27 opening at October 2, 2026 18:00 Pacific through March 17, 2027; seven daily/possession including home, 3.25-inch carapace, report card, hand/hoop methods and opener deployment restrictions. Do not convert a scheduled opener into current permission."
     },
     "rules-anacapa": {
       "name": "CDFW Anacapa MPA and special closures",
@@ -140,8 +164,10 @@
         "20",
         "January"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "c3f0c6cacb53fbdb9a681eae5d2263b6f179f4051146805e639233b13cc1d471",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed island-wide prohibition on nets and traps shallower than 20 feet plus separate January 1–October 31 West Anacapa pelican special closure. This is more than the mapped no-take reserve alone."
     },
     "rules-mpa": {
       "name": "CDFW MPA overview and official regulations access",
@@ -150,14 +176,170 @@
         "marine",
         "protected"
       ],
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "0512ee5996c87446d003c1cf47b08bc5b53749a71811280323d232634c9a620e",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "text-and-links-v3",
+      "review_note": "Reviewed state MPA overview and official law links, including method/species exceptions and transit/anchoring qualifications. App exclusion of all mapped MPAs is conservative and does not assert that every SMCA is legally no-take."
     },
     "rules-book": {
-      "name": "CDFW 2026 ocean sport fishing regulations, updated July 17, 2026",
+      "name": "CDFW 2026 ocean sport fishing booklet",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
-      "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T14:57:38Z"
+      "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "normalization": "pdf-bytes-v1",
+      "review_note": "Read the 2026 ocean booklet and relevant sections on aggregation, possession, boat limits, fillets, species limits, RCG sublimits, gear, crab and lobster. Independent review checked active Southern selectors and Central salmon, crab and tuna. Use agreed 28-inch white-seabass total length where alternate-length summaries conflict."
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "approved_content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Reviewed effective versus proposed changes. Measurement amendments adopted August 13 and filed with OAL September 17 remain pending, with no effective date listed. Proposed tuna harpoon changes and MPA petitions are not applied as law."
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "approved_content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 50 CFR 660.721 via the supported eCFR API. Albacore ten-fish onboard restriction applies if any part of a trip is in U.S. EEZ south of Conception; north allowance is 25. Bluefin two. Daily/24-hour and southern six-piece processing conditions are retained. Current-through and retrieval dates remain distinct."
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer · August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "approved_content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Inspected the August 19, 2026 recreational ocean salmon flyer. Fall September 1–30, minimum 20-inch total length and two daily fish apply to the reviewed Monterey-area coast. Future closure notices remain a required dependency."
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW Southern groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185058&inline=",
+      "approved_content_sha256": "c21b251f1d5119938de99e0ec30314060faa8b31e302c3f9221bd2034f400942",
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Inspected January 1, 2026 Southern groundfish table: July–September shoreward of legal 50-fathom RCA line; October–December nearshore rockfish closed, shelf/slope rockfish and lingcod seaward only. Two lingcod at 22 inches and RCG sublimits remain."
+    },
+    "rules-park": {
+      "name": "Channel Islands National Park laws and policies",
+      "url": "https://www.nps.gov/chis/learn/management/lawsandpolicies.htm",
+      "approved_content_sha256": "a840f834947b9f12c3d2b05ad2c0ed06d6c184509d00f76b55e2a76f183ac19e",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Reviewed Channel Islands National Park laws page, last updated March 23, 2026, and its current compendium link. State fishing law applies alongside park access and special closures."
+    },
+    "rules-park-compendium": {
+      "name": "Channel Islands National Park compendium · December 18, 2025",
+      "url": "https://www.nps.gov/chis/learn/management/upload/CHIS-Superintendent-s-Compendium-12-18-2025.pdf",
+      "approved_content_sha256": "3cd2f084dc1d0be866029c5a2511e6c6fcd115d9f9c71617988b042412771acf",
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read December 18, 2025 compendium provisions relevant to boating, Point Bennett waters and island land access. San Miguel Cuyler and Santa Barbara Island Landing Cove land-access limits do not convert every surrounding water into a blanket closure."
+    },
+    "rules-san-miguel": {
+      "name": "CDFW San Miguel Island special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Judith-Rock-San-Miguel-Island",
+      "approved_content_sha256": "82a8535a08ed46189f29147d71d7c2b7e95443bcb2fe6f6ba0d8df8cc60f1dea",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Reviewed western San Miguel special closure: 300 yards ordinarily, reduced to 100 yards March 15–April 30 and October 1–December 15, with additional boat/noise/anchoring conditions. App continues its conservative mapped exclusion."
+    },
+    "rules-catalina-blue": {
+      "name": "CDFW Catalina Blue Cavern MPAs",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Blue-Cavern",
+      "approved_content_sha256": "ccc1aeab1b49c860e8ac2dd26f6a1b9b1e3cba170902f884ffad952bf47c9034",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Reviewed Blue Cavern onshore no-take and former-refuge anchoring restriction; offshore area has specified exceptions, including white seabass by spearfishing. Do not apply those exceptions to ordinary rod-and-reel white-seabass fishing."
+    },
+    "rules-catalina-arrow": {
+      "name": "CDFW Catalina Arrow Point to Lion Head Point SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Arrow-Point-to-Lion-Head-Point",
+      "approved_content_sha256": "431f06e9fda24e41fb522863f86958645d2ff45da8534f4aaa847717905c8bc2",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Reviewed Arrow Point–Lion Head Point: recreational finfish and marine plants exception, with recreational invertebrates prohibited. Lobster cannot inherit the finfish exception; app excludes the mapped area."
+    },
+    "rules-navy-sci": {
+      "name": "San Clemente Island safety zone · 33 CFR 165.1141",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-P/part-165/subpart-F/section-165.1141",
+      "approved_content_sha256": "64084771d461542275d3a271bbe3974585880abaf0c904238fa3c90975a9b3f1",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 165.1141: San Clemente three-nautical-mile safety sections, G/Wilson Cove always enforced and A–F only suspended by official notice. Updated STARBURST procedure is in the current text. Live range clearance has not been checked."
+    },
+    "rules-navy-sci-base": {
+      "name": "San Clemente safety zone · 2025 CFR text (read with amendment)",
+      "url": "https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol2/pdf/CFR-2025-title33-vol2-sec165-1141.pdf",
+      "approved_content_sha256": "07a32d176bedc6eb6e8459e271ad1b13638f008a966331e9aecf17ea7f1fe3ff",
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read the 2025 annual CFR base text only with the November 24, 2025 amendment and current eCFR section. Historical annual text is not used alone as current access permission."
+    },
+    "rules-navy-sci-amendment": {
+      "name": "San Clemente safety-zone amendment · effective November 24, 2025",
+      "url": "https://www.govinfo.gov/content/pkg/FR-2025-11-24/pdf/2025-20727.pdf",
+      "approved_content_sha256": "473d6ce760a640e943ab60b9d8392df278cef32659ff137d6f5c86e47b1e1488",
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read the final amendment effective November 24, 2025 updating San Clemente range transit procedures. Retained with base and current section; it is not a current range suspension or entry clearance."
+    },
+    "rules-navy-sni": {
+      "name": "San Nicolas Island restricted area · 33 CFR 334.980",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.980",
+      "approved_content_sha256": "97d1eca415d68fa73cb0eb011ccd58950835dfaeab142b19b84a16bd82f630be",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.980: minimum 300-yard shore stand-off and ALPHA/BRAVO/CHARLIE closure rules. A fresh statutory text is not live closure status; military-island grounds remain withheld."
+    },
+    "rules-point-mugu": {
+      "name": "Point Mugu restricted area · 33 CFR 334.1126",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1126",
+      "approved_content_sha256": "2973977825969c17bf1977e7a5f95bb217621343b5fc49e69fd3b1647552a458",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.1126: defined nearshore restricted polygon requires advance Naval Base Ventura County permission. The restriction does not describe the entire offshore firing range as permanently closed."
+    },
+    "rules-san-diego-naval": {
+      "name": "San Diego Naval Amphibious Base restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.860",
+      "approved_content_sha256": "5feefa0a33e3313a39692b868f2ec4eef2eef767e3720fb7a9eefff32a314ffc",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.860: no fishing or anchoring within the defined Naval Amphibious Base area, with more restrictive near-pier zone and direct passage provisions. Passage is not fishing permission."
+    },
+    "rules-pendleton": {
+      "name": "Camp Pendleton boat basin restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.900",
+      "approved_content_sha256": "617fe1fe9ade3a89f97b87adca7a26ae327e23d5795635beba0eda890e574bc3",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.900: no anchoring and prohibited fishing/bottom-contact operations in the defined boat-basin polygon; direct passage provisions remain distinct."
+    },
+    "rules-fallbrook": {
+      "name": "Fallbrook replenishment anchorage",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.905",
+      "approved_content_sha256": "f4037d89810acd5397d53ccbb38c30f85a88907b0a36e4bd9155f444527d34e2",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.905: 9000-foot-radius replenishment area centered at 33 degrees 18.6 minutes N, 117 degrees 32.0 minutes W. No lying-to/anchoring at any time; replenishment-period fishing restrictions and operations need a current check."
+    },
+    "rules-sci-east": {
+      "name": "San Clemente Island east-coast restricted area",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.920",
+      "approved_content_sha256": "d9b8de754c6ac9a0acfa18eae33ec4d9a1aa4bbc5de866c519ec91f3108317a3",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 334.920: no anchoring, dredging or fishing operations, and no entry except Navy units or clearances in the defined east-coast naval polygon. Use alongside, not instead of, the San Clemente safety zone."
+    },
+    "rules-sni-anchorage": {
+      "name": "San Nicolas Island restricted anchorage",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-I/part-110/subpart-B/section-110.220",
+      "approved_content_sha256": "ed34fa57abc9a8a8a69e228a620fde69355c21fc805301ee786c988825ee0707",
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": "2026-09-22T15:58:13Z",
+      "review_note": "Read current 33 CFR 110.220: specified eastern island shoreline/structure quarter-nautical-mile area requires permission for entry or anchoring except emergencies. This is additional to the island naval restricted area."
     }
   },
   "species": {
@@ -197,7 +379,10 @@
         "rules-inseason",
         "rules-gea",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals",
+        "rules-groundfish-pdf"
       ],
       "methods": {
         "rod": {
@@ -242,7 +427,10 @@
         "rules-inseason",
         "rules-gea",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals",
+        "rules-groundfish-pdf"
       ],
       "methods": {
         "rod": {
@@ -264,14 +452,17 @@
       "details": [
         "California halibut only; Pacific halibut has a different season and rules.",
         "General ocean hook-and-line rules apply. With rockfish or lingcod aboard, use one line and no more than two hooks; salmon aboard triggers salmon gear rules.",
-        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish."
+        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish.",
+        "Do not halve halibut fillets. A lengthwise midline split is allowed only if the pieces remain joined for at least two inches at one end; retain all skin and the minimum fillet length."
       ],
       "source_ids": [
         "rules-southern",
         "rules-inseason",
         "rules-gear",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -302,7 +493,10 @@
         "rules-gear",
         "rules-salmon",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals",
+        "rules-salmon-pdf"
       ],
       "methods": {
         "rod": {
@@ -324,7 +518,10 @@
       "details": [
         "The 25-albacore allowance north of Point Conception does not apply here.",
         "Tuna schools and sea temperature fronts are mobile; a search area is not a catch site.",
-        "This package covers U.S. waters only; Mexican permits, limits and return rules are separate."
+        "This package covers U.S. waters only; Mexican permits, limits and return rules are separate.",
+        "If any part of an albacore trip enters U.S. EEZ waters south of 34°27′ N, no more than 10 albacore per person may be onboard for that trip; the rule is not determined only by where a fish was caught.",
+        "Federal tuna limits apply per 24-hour period at sea and never authorize more than one daily bag per calendar day. Multi-day possession needs separate review.",
+        "Tuna processed aboard: use the six-piece arrangement required by §27.65, keep all skin attached, and place each fish in a separate bag labeled with its species."
       ],
       "source_ids": [
         "rules-southern",
@@ -332,7 +529,10 @@
         "rules-gear",
         "rules-ocean",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals",
+        "rules-tuna-federal"
       ],
       "methods": {
         "rod": {
@@ -354,7 +554,8 @@
       "details": [
         "The bluefin possession limit applies regardless of where fish were taken. This card does not cover Mexico or Atlantic bluefin.",
         "General ocean hook-and-line rules apply; fish already aboard can impose stricter rod and hook limits.",
-        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. Check special rules before any multi-day trip."
+        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. Check special rules before any multi-day trip.",
+        "Federal limits apply per 24-hour period at sea and never authorize more than one daily bag per calendar day. Commercial Pacific bluefin quotas and Atlantic tuna alerts are different fisheries."
       ],
       "source_ids": [
         "rules-southern",
@@ -362,7 +563,10 @@
         "rules-gear",
         "rules-ocean",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals",
+        "rules-tuna-federal"
       ],
       "methods": {
         "rod": {
@@ -396,7 +600,8 @@
         "rules-invertebrates",
         "rules-ocean",
         "rules-book",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-proposals"
       ],
       "methods": {
         "hoop": {
@@ -432,7 +637,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -462,7 +669,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -492,7 +701,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -522,7 +733,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -552,7 +765,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -583,7 +798,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -613,7 +830,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -642,7 +861,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -671,7 +892,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -700,7 +923,9 @@
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -722,14 +947,17 @@
       "size": "No minimum size in these recreational rules.",
       "details": [
         "Use the general 20-finfish aggregate alongside other non-exempt fish; a yellowtail, dorado and yellowfin mixed catch does not allow ten of each.",
-        "Keep species identifiable; follow §27.65 if filleting aboard. Mexican rules and entry/return requirements are separate."
+        "Keep species identifiable; follow §27.65 if filleting aboard. Mexican rules and entry/return requirements are separate.",
+        "If filleted aboard, each fillet must retain an intact skin patch at least one inch square (§27.65)."
       ],
       "source_ids": [
         "rules-southern",
         "rules-book",
         "rules-gear",
         "rules-inseason",
-        "rules-mpa"
+        "rules-mpa",
+        "rules-health",
+        "rules-proposals"
       ],
       "methods": {
         "rod": {
@@ -750,8 +978,8 @@
           "restriction": "Not before 6 p.m. Pacific on October 2; verify opening notices, health, MPA and local method restrictions."
         }
       ],
-      "bag": "7 per person daily AND in possession, including retained lobsters at home. This is not a new seven-fish allowance on top of a retained limit.",
-      "size": "3¼ in minimum carapace length, from the rear edge of the eye socket to the rear edge of the body shell; carry and use a lobster gauge.",
+      "bag": "7 per person daily AND in possession, including retained lobsters at home. This is not a new seven-lobster allowance on top of a retained limit.",
+      "size": "3¼ in minimum carapace length, measured in a straight line along the midline of the back from the rear edge of the eye socket to the rear edge of the body shell; carry and use a lobster gauge.",
       "details": [
         "Lawful recreational methods are hands or legal hoop nets only. No traps, snares, rod-and-reel, spears or tickle sticks to take lobster.",
         "All participants need a lobster report card, including children and people assisting with nets. Age 16+ generally need a fishing license and applicable ocean enhancement validation.",
@@ -770,7 +998,8 @@
         "rules-health",
         "rules-inseason",
         "rules-mpa",
-        "rules-anacapa"
+        "rules-anacapa",
+        "rules-proposals"
       ],
       "methods": {
         "hoop": {
@@ -791,33 +1020,443 @@
     "RCG, lingcod, sheephead, ocean whitefish, halibut, bass, yellowtail, bonito, barracuda, white seabass, yellowfin and dorado all count toward that general 20. Bluefin and the regional albacore allowance are express additional-limit exceptions.",
     "A California fishing license is normally required at age 16+. Applicable ocean enhancement validation, species report cards, landing-net and identification requirements also apply; lobster report cards are required regardless of age.",
     "With rockfish, lingcod or other covered groundfish aboard, their one-line/two-hook and closed-area possession restrictions continue when switching targets. Do not apply unlimited general lines to a mixed groundfish trip.",
-    "For finfish, have a landing net at least 18 in in diameter available. Within 1,000 yd of the mainland/island shoreline south of Pigeon Point, metallic/wire leaders and hooks wider than 1½ in inside are prohibited.",
+    "For finfish, have a landing net at least 18 in in diameter available. Within 1,000 yd of the mainland/island shoreline south of Pigeon Point, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited.",
     "Seasonal groundfish access follows the legal 50-fathom RCA coordinate line, not a 300-ft reading on the sounder. Groundfish Exclusion Areas and species-specific possession restrictions remain in effect.",
     "SkipperCast withholds target geometries in all mapped MPAs, including some conservation areas with lawful method/species exceptions. This conservative display policy is not a statement that every MPA is legally no-take. State/federal MPA and special-closure boundaries must all be checked.",
     "Anacapa has additional net/trap and seasonal pelican-area restrictions. Island military operations, harbor/anchorage restrictions and the international maritime boundary require separate access checks.",
     "The selected bottom-depth limit remains in force. A center sounding or broad species depth range does not qualify an entire search area.",
-    "These are reviewed summaries, not automatic legal clearance. Source changes, missing checks, health notices and exact position/method can change access; use the linked official rules before fishing."
+    "These are reviewed summaries, not automatic legal clearance. Source changes, missing checks, health notices and exact position/method can change access; use the linked official rules before fishing.",
+    "Proposals and staff recommendations are not current rules. Pending 2026 measurement amendments and MPA petitions do not change these limits until legally effective and reviewed."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
-  "checks": {},
-  "checked_at": "2026-09-21T17:30:53Z",
-  "review_required": [
-    "rules-gear",
-    "rules-invertebrates",
-    "rules-whales",
-    "rules-health",
-    "rules-ocean",
-    "rules-groundfish",
-    "rules-inseason",
-    "rules-salmon",
-    "rules-crab",
-    "rules-southern",
-    "rules-gea",
-    "rules-lobster",
-    "rules-anacapa",
-    "rules-mpa",
-    "rules-book"
-  ],
+  "checks": {
+    "rules-gear": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "948c244f8a76622f1521bd3c7ffad8e02ace7bd633fcf25c5f100b9a4c6a7a41",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-invertebrates": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "79513f102e7496d9ae95cc0e21fc5402a6c923d479dcb221efff9e7994ca1e35",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-whales": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "42c85a11e8bdad44462e82df71f53a229d79bd6ffdab45e85e46d7600d2a4ee8",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-health": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "285539cb6aa62d4edf3425481ff18f3cf73ceca274cf31d2d91d5b139d033701",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-ocean": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "40566385bbabf6326bdde3aaef3f708f9465e88a202a7e97f0e7682a9c30ef6b",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-groundfish": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "3bb1068dfc661dc6da6db3c7afa12729150ccf73694f30a6c65b2249440f2145",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-inseason": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "a232edadbb81d20d8fe27caae09abcedfa51e4fb68dee68195188a66e5f452e8",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-salmon": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:01Z",
+      "content_sha256": "8a3041f1799001a577c0c34ba7e18de7d68a5e43f48f39a6af9b5407ef42aab5",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-crab": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "b1691c70506b55a9ee878678a5c572f62a9cd2aee7e5083667f526f80cc3201d",
+      "url": "https://wildlife.ca.gov/Crab",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-southern": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "fe1ea859a679f51c3ac2ff1096094d609fb82e80c56dc9661327f9be659f8d9b",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-gea": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "0ef98ad7456dcaa85c192f2c734bb404d3022fdaa249fc40785f96269d7676ec",
+      "url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-lobster": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "b2ddee6be090ff33982a7775f277ddcaaf5a61f59a643975a08823f90133decd",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Lobster",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-anacapa": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "c3f0c6cacb53fbdb9a681eae5d2263b6f179f4051146805e639233b13cc1d471",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Anacapa-Island",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-mpa": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:03Z",
+      "content_sha256": "0512ee5996c87446d003c1cf47b08bc5b53749a71811280323d232634c9a620e",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-book": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:06Z",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-proposals": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:02Z",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-tuna-federal": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:03Z",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-salmon-pdf": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:03Z",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-groundfish-pdf": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:03Z",
+      "content_sha256": "c21b251f1d5119938de99e0ec30314060faa8b31e302c3f9221bd2034f400942",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185058&inline=",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-park": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:03Z",
+      "content_sha256": "a840f834947b9f12c3d2b05ad2c0ed06d6c184509d00f76b55e2a76f183ac19e",
+      "url": "https://www.nps.gov/chis/learn/management/lawsandpolicies.htm",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-park-compendium": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:04Z",
+      "content_sha256": "3cd2f084dc1d0be866029c5a2511e6c6fcd115d9f9c71617988b042412771acf",
+      "url": "https://www.nps.gov/chis/learn/management/upload/CHIS-Superintendent-s-Compendium-12-18-2025.pdf",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-san-miguel": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:04Z",
+      "content_sha256": "82a8535a08ed46189f29147d71d7c2b7e95443bcb2fe6f6ba0d8df8cc60f1dea",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Judith-Rock-San-Miguel-Island",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-catalina-blue": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:04Z",
+      "content_sha256": "ccc1aeab1b49c860e8ac2dd26f6a1b9b1e3cba170902f884ffad952bf47c9034",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Blue-Cavern",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-catalina-arrow": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:05Z",
+      "content_sha256": "431f06e9fda24e41fb522863f86958645d2ff45da8534f4aaa847717905c8bc2",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Arrow-Point-to-Lion-Head-Point",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-navy-sci": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:06Z",
+      "content_sha256": "64084771d461542275d3a271bbe3974585880abaf0c904238fa3c90975a9b3f1",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-P/part-165/subpart-F/section-165.1141",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-navy-sci-base": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:05Z",
+      "content_sha256": "07a32d176bedc6eb6e8459e271ad1b13638f008a966331e9aecf17ea7f1fe3ff",
+      "url": "https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol2/pdf/CFR-2025-title33-vol2-sec165-1141.pdf",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-navy-sci-amendment": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:05Z",
+      "content_sha256": "473d6ce760a640e943ab60b9d8392df278cef32659ff137d6f5c86e47b1e1488",
+      "url": "https://www.govinfo.gov/content/pkg/FR-2025-11-24/pdf/2025-20727.pdf",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-navy-sni": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:10Z",
+      "content_sha256": "97d1eca415d68fa73cb0eb011ccd58950835dfaeab142b19b84a16bd82f630be",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.980",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-point-mugu": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:13Z",
+      "content_sha256": "2973977825969c17bf1977e7a5f95bb217621343b5fc49e69fd3b1647552a458",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1126",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-san-diego-naval": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:16Z",
+      "content_sha256": "5feefa0a33e3313a39692b868f2ec4eef2eef767e3720fb7a9eefff32a314ffc",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.860",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-pendleton": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:20Z",
+      "content_sha256": "617fe1fe9ade3a89f97b87adca7a26ae327e23d5795635beba0eda890e574bc3",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.900",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-fallbrook": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:23Z",
+      "content_sha256": "f4037d89810acd5397d53ccbb38c30f85a88907b0a36e4bd9155f444527d34e2",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.905",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-sci-east": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:26Z",
+      "content_sha256": "d9b8de754c6ac9a0acfa18eae33ec4d9a1aa4bbc5de866c519ec91f3108317a3",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.920",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-sni-anchorage": {
+      "status": "unchanged",
+      "checked_at": "2026-09-22T15:55:00Z",
+      "data_retrieved_at": "2026-09-22T15:55:30Z",
+      "content_sha256": "ed34fa57abc9a8a8a69e228a620fde69355c21fc805301ee786c988825ee0707",
+      "url": "https://www.ecfr.gov/current/title-33/chapter-I/subchapter-I/part-110/subpart-B/section-110.220",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    }
+  },
+  "checked_at": "2026-09-22T15:58:13Z",
+  "review_required": [],
   "region_id": "southern-california",
-  "primary_source_id": "rules-southern"
+  "primary_source_id": "rules-southern",
+  "jurisdiction_id": "california-southern",
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "area_notices": [
+    {
+      "id": "anacapa",
+      "name": "Anacapa Island",
+      "note": "Nets and traps are prohibited in water shallower than 20 ft around Anacapa. The designated north West Anacapa pelican area has a separate January 1–October 31 no-entry closure. The app excludes all mapped MPAs and special closures.",
+      "source_ids": [
+        "rules-anacapa"
+      ]
+    },
+    {
+      "id": "northern-islands",
+      "name": "Northern Channel Islands and Santa Barbara Island",
+      "note": "National Park landing and shoreline restrictions apply separately from fishing seasons. San Miguel landing is limited to Cuyler Harbor; Santa Barbara Island landing is limited to Landing Cove. Point Bennett has a water closure. Check the current compendium and park notices.",
+      "source_ids": [
+        "rules-park",
+        "rules-park-compendium"
+      ]
+    },
+    {
+      "id": "san-miguel",
+      "name": "San Miguel special closure",
+      "note": "Western shoreline pinniped special closure normally extends 300 yards; specified March 15–April 30 and October 1–December 15 periods reduce it to 100 yards, with other access/anchoring/noise restrictions. This app retains the full mapped exclusion.",
+      "source_ids": [
+        "rules-san-miguel"
+      ]
+    },
+    {
+      "id": "catalina",
+      "name": "Catalina: MPAs, anchoring and methods",
+      "note": "Blue Cavern Onshore is no-take and has an anchoring restriction in the former refuge. Offshore exceptions are species- and method-specific. Arrow Point–Lion Head Point permits finfish but not recreational lobster or other invertebrates. This app excludes all MPAs regardless of exceptions.",
+      "source_ids": [
+        "rules-catalina-blue",
+        "rules-catalina-arrow"
+      ]
+    },
+    {
+      "id": "san-clemente",
+      "name": "San Clemente: live access unverified",
+      "note": "The 3-nm safety zone has permanently enforced G/Wilson Cove areas; A–F remain enforced unless the Coast Guard suspends enforcement. The 2025 amendment gives STARBURST 619-313-2293 / VHF 82A. Obtain current clearance and check the Navy schedule before approaching; this app has no live clearance.",
+      "source_ids": [
+        "rules-navy-sci",
+        "rules-navy-sci-base",
+        "rules-navy-sci-amendment",
+        "rules-sci-east"
+      ],
+      "live_clearance_required": true
+    },
+    {
+      "id": "san-nicolas",
+      "name": "San Nicolas: live access unverified",
+      "note": "A 300-yard shoreline standoff applies at all times; ALPHA/BRAVO/CHARLIE sectors may close. Current sector clearance and anchorage rules require a separate check. Detailed fishing habitat is withheld.",
+      "source_ids": [
+        "rules-navy-sni",
+        "rules-sni-anchorage"
+      ],
+      "live_clearance_required": true
+    },
+    {
+      "id": "point-mugu",
+      "name": "Point Mugu restricted waters",
+      "note": "The defined nearshore military polygon requires advance permission to enter. An open species season or location outside an MPA does not authorize entry. This is not an exhaustive mainland harbor/military access list.",
+      "source_ids": [
+        "rules-point-mugu"
+      ],
+      "live_clearance_required": true
+    },
+    {
+      "id": "health",
+      "name": "Health advice is species- and area-specific",
+      "note": "At this review CDFW reported no lobster marine-toxin closure; lobster still remains outside its season until the scheduled opener. Northern Channel Islands bivalve and rock-crab consumption advice is separate. Recheck current health notices.",
+      "source_ids": [
+        "rules-health"
+      ]
+    },
+    {
+      "id": "san-diego-naval",
+      "name": "San Diego naval waters",
+      "note": "The defined Naval Amphibious Base restricted area prohibits fishing and anchoring; its passage provisions do not authorize fishing. Consult the exact federal boundary.",
+      "source_ids": [
+        "rules-san-diego-naval"
+      ],
+      "live_clearance_required": true
+    },
+    {
+      "id": "pendleton-fallbrook",
+      "name": "Camp Pendleton / Fallbrook",
+      "note": "Fishing and anchoring are prohibited in the defined boat-basin restricted polygon. The separate Fallbrook replenishment anchorage prohibits lying-to and anchoring at all times, with additional fishing restrictions during replenishment. Check the exact areas and active operations.",
+      "source_ids": [
+        "rules-pendleton",
+        "rules-fallbrook"
+      ],
+      "live_clearance_required": true
+    }
+  ],
+  "reviewed_regions": [
+    {
+      "id": "southern-california",
+      "fishing_bounds": [
+        -120.6,
+        32.5343,
+        -117.05,
+        34.45
+      ]
+    }
+  ],
+  "review_record": "jurisdictions/reviews/2026-09-22-california-southern.json",
+  "approved_rules_content_sha256": "5247a417f6e5609e929d7afc7bf35c9c878799e52fba2e040c6bffd3b4d8f14a",
+  "rules_review_status": "reviewed"
 }

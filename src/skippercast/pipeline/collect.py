@@ -3,6 +3,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import hashlib
+import gzip
+from io import BytesIO
 import json
 import time
 from urllib.error import HTTPError
@@ -11,7 +13,7 @@ from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
 
 from . import parsers
-from .regulations import regulatory_snapshot
+from .regulations import regulatory_snapshot, watch_jobs
 from .settings import settings, previous_for_region
 from ..platform.contracts import public_url
 from ..platform.source_audit import PublicRedirect, check_public_address
@@ -23,21 +25,6 @@ DATASETS = {
     "sst": ("jplMURSST41", ["analysed_sst", "analysis_error", "mask"], 5, 72),
     "chlorophyll": ("erdMH1chla1day_R2022NRT", ["chlorophyll"], 1, 96),
     "currents": ("ucsdHfrW6", ["water_u", "water_v", "number_of_sites", "hdop"], 1, 12),
-}
-WATCHES = {
-    "rules-central": ("CDFW Central Region rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central", ["Dungeness", "halibut", "Conception"]),
-    "rules-gear": ("CDFW finfish gear and general rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs", ["28.65", "27.60"]),
-    "rules-invertebrates": ("CDFW invertebrate gear rules", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs", ["29.80", "trap"]),
-    "rules-whales": ("CDFW whale-safe crab restrictions", "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries", ["recreational", "crab"]),
-    "rules-health": ("CDFW fishery health closures", "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories", ["Dungeness", "health"]),
-    "rules-ocean": ("CDFW official regulation index", "https://wildlife.ca.gov/Fishing/Ocean", ["2026", "Tunas"]),
-    "rules-groundfish": ("CDFW groundfish", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary", ["groundfish", "regulations"]),
-    "rules-inseason": ("CDFW in-season changes", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason", ["in-season", "ocean"]),
-    "rules-salmon": ("CDFW salmon", "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon", ["salmon", "season"]),
-    "rules-crab": ("CDFW crab", "https://wildlife.ca.gov/Crab", ["Dungeness", "recreational"]),
-    "mpa-buchon": ("CDFW Point Buchon MPAs", "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon", ["Buchon", "conservation"]),
-    "mpa-cambria": ("CDFW Cambria MPAs", "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock", ["Cambria", "conservation"]),
-    "harbor": ("Morro Bay harbor information", "https://www.morrobayca.gov/144/Harbor", ["harbor", "Morro"]),
 }
 MODEL_META = {
     "gfs_global": "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
@@ -72,10 +59,20 @@ class Client:
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
             try:
                 check_public_address(url)
-                with build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*"}), timeout=25) as response:
+                with build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"}), timeout=25) as response:
                     limit = 35_000_000 if as_pdf else 5_000_000
                     body = response.read(limit + 1)
+                    if len(body) > limit:
+                        raise ValueError("Response exceeds bounded collection size")
+                    encoding = response.headers.get('Content-Encoding', 'identity').lower()
+                    if encoding == 'gzip':
+                        record['compressed_bytes'] = len(body)
+                        with gzip.GzipFile(fileobj=BytesIO(body)) as compressed:
+                            body = compressed.read(limit + 1)
+                    elif encoding != 'identity':
+                        raise ValueError('Unsupported response compression')
                     record.update(http_status=response.status, http_date=response.headers.get("Date"),
+                                  final_url=response.url, content_type=response.headers.get('Content-Type'),
                                   last_modified=response.headers.get("Last-Modified"), bytes=len(body),
                                   sha256=hashlib.sha256(body).hexdigest())
                 if len(body) > limit:
@@ -88,6 +85,7 @@ class Client:
                     if not body.startswith(b"%PDF-"):
                         raise ValueError("Expected an official PDF; received another content type")
                     result = {"content_sha256": hashlib.sha256(body).hexdigest(),
+                              "normalization": "pdf-bytes-v1",
                               "interpretation": "manual review required", "permission_to_fish": None}
                 else:
                     text = body.decode("utf-8")
@@ -106,8 +104,8 @@ class Client:
                 time.sleep(1)
 
 
-def source(ident, name, kind, url, max_age, loader, now, previous=None):
-    client = Client(now)
+def source(ident, name, kind, url, max_age, loader, now, previous=None, client_factory=Client):
+    client = client_factory(now)
     result = {"id": ident, "name": name, "kind": kind, "url": url, "checked_at": stamp(now),
               "max_age_hours": max_age, "status": "failed", "data": None}
     try:
@@ -235,11 +233,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
             if 'id_point' not in text or 'lat_dd' not in text: raise ValueError('Unexpected closure coordinate format')
             return {'sha256':sha256(text.encode('utf-8')).hexdigest(),'issue_time':None}
         jobs.append(('additional-closures','Reviewed NOAA closure coordinate file','boundaries',closure_url,36,closure_check))
-    for ident, (name, url, keywords) in config["watches"].items():
-        jobs.append((ident, name, "page-watch", url, 36, lambda c, u=url, k=keywords: parsers.page_watch(c.get(u), k)))
-    url = config["jurisdiction"]["booklet_url"]
-    jobs.append(("rules-book", "CDFW 2026 ocean regulations booklet", "page-watch", url, 36,
-                 lambda c, u=url: c.get(u, as_pdf=True)))
+    jobs.extend(watch_jobs(config['watches']))
     for model in config["model_ids"]:
         url, loader = model_loader(model, points)
         jobs.append(("model-" + model, model + " via Open-Meteo", "forecast", url, 36, loader))

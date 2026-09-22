@@ -1,6 +1,6 @@
-import { getRegion, localContext } from "./region.js?v=8.2";
+import { getRegion, localContext } from "./region.js?v=8.3";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.2";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.3";
 
 export const HOUR = 3600;
 export const POINTS = getRegion().forecast_points;

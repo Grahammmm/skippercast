@@ -2,7 +2,7 @@ from copy import deepcopy
 from datetime import datetime, timezone, timedelta
 import json
 import unittest
-from skippercast.pipeline.regulations import REGISTRY, regulatory_snapshot
+from skippercast.pipeline.regulations import REGISTRY, regulatory_snapshot, content_hash
 
 
 class RegulationChecks(unittest.TestCase):
@@ -12,9 +12,10 @@ class RegulationChecks(unittest.TestCase):
         self.sources = {}
         for ident, definition in self.registry['sources'].items():
             definition['approved_content_sha256'] = 'a' * 64
-            self.sources[ident] = {'status': 'ok', 'checked_at': self.now.isoformat(),
+            self.sources[ident] = {'status': 'ok', 'url': definition['url'], 'checked_at': self.now.isoformat(),
                                    'data_retrieved_at': self.now.isoformat(),
-                                   'data': {'content_sha256': 'a' * 64}}
+                                   'data': {'content_sha256': 'a' * 64, 'normalization': definition['normalization']}}
+        self.registry['approved_rules_content_sha256'] = content_hash(self.registry)
 
     def test_changes_stay_flagged_until_review_not_next_fetch(self):
         key = 'rules-salmon'

@@ -1,4 +1,4 @@
-import defaultRegion from "./region-default.js?v=8.2";
+import defaultRegion from "./region-default.js?v=8.3";
 let active = defaultRegion;
 export const getRegion = () => active;
 export const assetURL = (key) => active.assets[key] || null;

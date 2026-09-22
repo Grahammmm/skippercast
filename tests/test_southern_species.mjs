@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {getRegion,setRegion} from '../dist/region.js?v=8.2';
+import {getRegion,setRegion} from '../dist/region.js?v=8.3';
 import {validRegulations,regulationState,ruleMethods} from '../dist/regulations.js';
 import {habitatMatches,habitatDetails} from '../dist/survey-habitat.js';
 import {hourScores} from '../dist/morning-outlook.js';
@@ -46,7 +46,7 @@ test('lobster opening cannot auto-authorize a morning set or unreviewed gear',()
  const old=getRegion();setRegion(region);
  try{
   const data=read('dist/'+source.assets.regulations),now=Date.parse('2026-09-22T18:00:00Z');
-  for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
+  for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
   assert.equal(regulationState(data,'lobster',now,'2026-09-22','hoop').status,'closed');
   assert.notEqual(regulationState(data,'lobster',now,'2026-10-02','hoop').status,'open');
  }finally{setRegion(old);}
@@ -55,7 +55,7 @@ test('a reviewed timed season honors the opening instant and does not treat a da
  const old=getRegion();setRegion(region);
  try{
   const data=read('dist/'+source.assets.regulations),before=Date.parse('2026-10-02T17:59:00-07:00'),opening=Date.parse('2026-10-02T18:00:00-07:00');
-  for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(before).toISOString()};}
+  for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(before).toISOString()};}
   // Exercise the future reviewed state too; today the opening-review gate remains in place.
   for(const w of data.species.lobster.windows){delete w.requires_opening_review;delete w.restriction;}
   delete data.species.lobster.methods.hand.requires_clearance;
@@ -71,7 +71,7 @@ test('saved-trip assessment also rejects fishing hours before a reviewed timed o
  const now=Date.parse('2026-10-02T16:00:00-07:00'),rules=read('dist/'+source.assets.regulations);
  const trip={point:'border',species:'lobster',date:'2026-10-02',start_hour:17,end_hour:18};
  const hours=['2026-10-02T17:00:00-07:00','2026-10-02T18:00:00-07:00'].map(x=>Date.parse(x)/1000);
- for(const [id,s] of Object.entries(rules.sources)){s.approved_content_sha256='a'.repeat(64);rules.checks[id]={status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
+ for(const [id,s] of Object.entries(rules.sources)){s.approved_content_sha256='a'.repeat(64);rules.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
  for(const w of rules.species.lobster.windows){delete w.requires_opening_review;delete w.restriction;}
  const intelligence={region_id:region.id,completed_at:new Date(now).toISOString(),forecast:{requested_points:region.forecast_points.map(p=>[p.id,p.latitude,p.longitude]),models:{gfs_global:{data:[{hourly:{time:hours}}]}}}};
  const before=assessTrip(trip,region,intelligence,rules,[],now);

@@ -231,8 +231,17 @@ def erddap_grid(data, meta, variables, kind):
 
 def page_watch(body, keywords):
     """Detect a reviewed page changing, without pretending to interpret law."""
-    if not all(re.search(word, plain(body), re.I) for word in keywords):
+    text = watch_content(body)
+    if not all(re.search(word, text, re.I) for word in keywords):
         raise ValueError("Expected source content absent; possible error/challenge page")
-    text = plain(re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I))
     return {"content_sha256": hashlib.sha256(text.encode()).hexdigest(), "interpretation": "manual review required",
-            "permission_to_fish": None}
+            "normalization": "text-and-links-v3", "permission_to_fish": None}
+
+
+def watch_content(body):
+    """Track document links too: a replacement PDF can keep the same link label."""
+    body = re.sub(r"<!--.*?(?:-->|$)", "", body, flags=re.S)
+    cleaned = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
+    links = sorted({html.unescape(value) for _, value in re.findall(r'''\bhref\s*=\s*(["'])(.*?)\1''', cleaned, re.I | re.S)
+                    if value and not value.startswith(('#', 'javascript:', 'mailto:', 'tel:'))})
+    return plain(cleaned) + '\nDOCUMENT LINKS\n' + '\n'.join(links)
