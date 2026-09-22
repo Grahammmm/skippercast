@@ -37,6 +37,17 @@ test('push subscriptions cannot turn the sender into an arbitrary URL fetcher',(
   assert.ok(validateSubscription({endpoint:'https://web.push.apple.com/test-endpoint',keys}));
   for(const endpoint of ['http://fcm.googleapis.com/path','https://127.0.0.1/','https://fcm.googleapis.com.attacker.test/','https://web.push.apple.com:444/','https://user:password@web.push.apple.com/'])assert.throws(()=>validateSubscription({endpoint,keys}));
 });
+test('public feed requests use edge-compatible redirect handling and reject redirected data',async()=>{
+  const originalFetch=globalThis.fetch;let calls=0;
+  try{
+    globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return Response.json({region_id:'morro-bay',sources:{},forecast:{points:{north:{}}}});};
+    const result=await worker.fetch(request('forecast?region=morro-bay'),{});
+    assert.equal(result.status,200);assert.deepEqual(await result.json(),{points:{north:{}}});
+    globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://untrusted.example/feed'}});};
+    assert.equal((await worker.fetch(request('intelligence?region=morro-bay'),{})).status,503);
+    assert.equal(calls,2,'a redirect must not cause another fetch');
+  }finally{globalThis.fetch=originalFetch;}
+});
 test('outbox produces one in-app event for repeated checks and does not silently skip a missed final',async()=>{
   const {sql,adapter}=database(),env={DB:adapter};const originalFetch=globalThis.fetch;
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles'}).format(new Date(Date.now()+2*86400000));

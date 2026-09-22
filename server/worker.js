@@ -21,11 +21,18 @@ async function body(request){
 function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!origins.has(origin))throw Error('origin rejected');}
 async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>30)throw Error('rate limited');}
 async function readFeed(url){
-  const key=new Request(url);const cache=globalThis.caches?.default;
-  const cached=await cache?.match(key);if(cached)return cached.json();
-  const response=await fetch(url,{signal:AbortSignal.timeout(18000),redirect:'error'});
-  if(!response.ok)throw Error('feed unavailable');const text=await response.text();if(text.length>15000000)throw Error('feed too large');const value=JSON.parse(text);
-  if(cache)await cache.put(key,new Response(text,{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=300'}}));return value;
+  let stage='cache';
+  try{
+    const key=new Request(url);const cache=globalThis.caches?.default;
+    const cached=await cache?.match(key);if(cached)return cached.json();
+    // Workers supports manual redirects; response.ok rejects every 3xx below.
+    stage='fetch';const response=await fetch(url,{signal:AbortSignal.timeout(18000),redirect:'manual'});
+    if(!response.ok)throw Error('feed HTTP '+response.status);stage='decode';const text=await response.text();if(text.length>15000000)throw Error('feed too large');const value=JSON.parse(text);
+    stage='cache-write';if(cache)await cache.put(key,new Response(text,{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=300'}}));return value;
+  }catch(error){
+    // Only reviewed, public feed URLs reach here. Never include request headers.
+    console.error('Regional feed unavailable',{stage,host:new URL(url).host,reason:String(error.message).slice(0,200)});throw error;
+  }
 }
 export function validateSubscription(s){
   if(!s?.endpoint||!s.keys)throw Error('subscription missing');const u=new URL(s.endpoint);
@@ -53,7 +60,7 @@ async function deliver(env,event){
     try{
       const payload=await buildPushPayload({data:JSON.stringify({title:'SkipperCast trip update',body:event.message.slice(0,1600),eventId:event.id,url:'/#forecast'}),options:{ttl:3600}},
         {endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},{subject:deployment.public_origin,publicKey:env.VAPID_PUBLIC_KEY,privateKey:env.VAPID_PRIVATE_KEY});
-      const response=await fetch(s.endpoint,{...payload,redirect:'error',signal:AbortSignal.timeout(12000)});httpStatus=response.status;
+      const response=await fetch(s.endpoint,{...payload,redirect:'manual',signal:AbortSignal.timeout(12000)});httpStatus=response.status;
       status=response.ok?'accepted':response.status===404||response.status===410?'expired':'failed';
       if(status==='expired')await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();
     }catch{status='uncertain';}

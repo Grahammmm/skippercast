@@ -15,8 +15,11 @@ test('job token requires a valid RS256 signature from the fixed GitHub JWKS endp
   const b64=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
   const body=b64({alg:'RS256',typ:'JWT',kid:'test'})+'.'+b64(claims);
   const signature=Buffer.from(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,new TextEncoder().encode(body))).toString('base64url');
-  const fetcher=async url=>{assert.equal(url,'https://token.actions.githubusercontent.com/.well-known/jwks');return Response.json({keys:[jwk]});};
+  const fetcher=async (url,options)=>{assert.equal(url,'https://token.actions.githubusercontent.com/.well-known/jwks');assert.equal(options.redirect,'manual');return Response.json({keys:[jwk]});};
   assert.ok(await verifyJobToken(body+'.'+signature,policy,fetcher,now));
+  let requests=0;
+  assert.equal(await verifyJobToken(body+'.'+signature,policy,async(url,options)=>{requests++;assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://untrusted.example/keys'}});},now),false);
+  assert.equal(requests,1,'key discovery must not follow a redirect');
   const changed=b64({alg:'RS256',typ:'JWT',kid:'test'})+'.'+b64({...claims,jti:'changed'});
   assert.equal(await verifyJobToken(changed+'.'+signature,policy,fetcher,now),false);
   assert.equal(await verifyJobToken('bad.token.signature',policy,fetcher,now),false);
