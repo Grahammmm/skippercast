@@ -1,6 +1,6 @@
-import { getRegion, assetURL } from "./region.js?v=8.0";
-import { esc } from "./marine-charts.js?v=8.0";
-import { loadDailyEvidence } from "./bite-evidence.js?v=8.0";
+import { getRegion, assetURL } from "./region.js?v=8.1";
+import { esc } from "./marine-charts.js?v=8.1";
+import { loadDailyEvidence } from "./bite-evidence.js?v=8.1";
 
 const HOUR = 3600000;
 const IDS = ["lingcod", "rockfish", "halibut", "salmon", "albacore", "bluefin", "dungeness"];
@@ -16,7 +16,7 @@ const time = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleString(
 export function officialURL(value) {
   try {
     const u = new URL(value);
-    return u.protocol === "https:" && ["wildlife.ca.gov", "nrm.dfg.ca.gov"].includes(u.hostname) ? u.href : "https://wildlife.ca.gov/Fishing/Ocean";
+    return u.protocol === "https:" && ["wildlife.ca.gov", "nrm.dfg.ca.gov", "www.fisheries.noaa.gov", "www.ecfr.gov"].includes(u.hostname) ? u.href : "https://wildlife.ca.gov/Fishing/Ocean";
   } catch { return "https://wildlife.ca.gov/Fishing/Ocean"; }
 }
 export function validRegulations(data) {
@@ -35,7 +35,7 @@ export function validRegulations(data) {
 export function regulationState(data, species, now = Date.now(), tripDate = null, method = null) {
   if (species === "reef") {
     const members = ["lingcod", "rockfish"].map((id) => regulationState(data, id, now, tripDate, method));
-    const status = ["unknown", "closed", "scheduled", "open"].find((s) => members.some((m) => m.status === s));
+    const status = ["unknown", "closed", "scheduled", "restricted", "open"].find((s) => members.some((m) => m.status === s));
     return { ...members.find((m) => m.status === status), members,
       issues: [...new Set(members.flatMap((m) => m.issues))],
       label: status === "closed" && members.some((m) => m.status !== "closed") ? "Check both seasons" : members.find((m) => m.status === status).label };
@@ -52,10 +52,11 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
   });
   const reviewed = today >= data.valid_from && today <= data.valid_through && age(data.reviewed_at, now) >= -1;
   const window = p.windows.find((w) => today >= w.start && today <= w.end);
-  let status = !window ? "closed" : window.requires_opening_review ? "scheduled" : "open";
+  let status = !window ? "closed" : window.requires_opening_review ? "scheduled" : window.restriction ? "restricted" : "open";
   let reason = status === "closed" ? "Outside the reviewed local season." : status === "scheduled" ?
     "Scheduled opening only. A new review of season, health and trap restrictions is required before showing open." :
     "Local closures, MPAs and gear restrictions still apply.";
+  if(window?.restriction) reason=window.restriction;
   if (!reviewed) {
     status = "unknown";
     reason = "This date is outside the reviewed rule period. Current-year rules need review.";
@@ -68,7 +69,7 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
   const methodProfile=p.methods?.[method];
   const methodReason=methodProfile?.note || null;
   if (methodProfile?.requires_clearance && status==='open') {status='scheduled';reason='Season and permission for this gear are separate. Check the current gear clearance before setting it.';}
-  return { method, methodReason, status, label: { open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
+  return { method, methodReason, status, label: { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
 }
 
 export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null) {
@@ -101,7 +102,7 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
     <details data-reg-section="gear"><summary>Gear, identification & other limits</summary><ul>${p.details.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></details>
     <details data-reg-section="area"><summary>Where these rules apply</summary><p>${esc(data.scope)}</p><ul>${data.common_notes.filter((s) => species !== "dungeness" || !s.startsWith("For finfish,")).map((s) => `<li>${esc(s)}</li>`).join("")}</ul><a href="${esc(officialURL(data.official_map_url))}" target="_blank" rel="noopener">CDFW map: check exact position & MPAs ↗</a></details>
     <div class="reg-freshness"><p>Rules reviewed: ${esc(time(data.reviewed_at))}<br>Oldest required source check: ${esc(time(checked))}${fallback ? " · saved snapshot" : ""}</p><p>Official sources are checked daily. Changes need review; a successful download does not approve new rules. Recheck before each trip.</p></div>
-    <a class="reg-official" href="${esc(officialURL(data.sources[species === "salmon" ? "rules-salmon" : species === "dungeness" ? "rules-crab" : "rules-central"].url))}" target="_blank" rel="noopener">Read current official rules ↗</a>
+    <a class="reg-official" href="${esc(officialURL(data.sources[species === "salmon" ? "rules-salmon" : species === "dungeness" ? "rules-crab" : (data.primary_source_id || "rules-central")].url))}" target="_blank" rel="noopener">Read current official rules ↗</a>
     <details data-reg-section="sources"><summary>All official sources & check status</summary><div class="reg-links">${links}</div>${state.issues.length ? `<p>Needs review / fresh check: ${state.issues.map((id) => esc(data.sources[id].name)).join("; ")}.</p>` : "<p>Required sources match the reviewed versions.</p>"}</details>
   </div>`;
 }

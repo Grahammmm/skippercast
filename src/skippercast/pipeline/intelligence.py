@@ -100,7 +100,7 @@ def run(region_id,output,previous_root=None,now=None):
                 if isinstance(value,(int,float)) and math.isfinite(value) and value>=0:
                     oid=f'{ident}:{epoch}:{variable}';observed[oid]={'id':oid,'station':ident,'time':epoch,'variable':variable,'unit':unit,'value':value*factor}
     verification=verify(records,list(observed.values()),now.timestamp())
-    forecast={'region_id':region_id,'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
+    forecast={'region_id':region_id,'requested_points':[[p['id'],p['latitude'],p['longitude']] for p in region['forecast_points']],'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
         'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},'retrieved':int(now.timestamp()*1000)}
     data={'schema_version':1,'region_id':region_id,'generated_at':stamp(now),'completed_at':stamp(),'ocean_collected_at':ocean_at,
           'sources':sources,'verification':verification,'forecast':forecast,

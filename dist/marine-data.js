@@ -1,9 +1,10 @@
-import { getRegion } from "./region.js?v=8.0";
+import { getRegion, localContext } from "./region.js?v=8.1";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.0";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.1";
 
 export const HOUR = 3600;
 export const POINTS = getRegion().forecast_points;
+export const POINT_SIGNATURE=JSON.stringify(POINTS.map(p=>[p.id,p.latitude,p.longitude]));
 export const MODELS = [
   ...WIND_MODELS.map((m) => ({
     ...m,
@@ -129,6 +130,8 @@ export function readConditions(bundle, point, epoch, family = "gfs") {
     period: at(waveId, `${k}_period`, "s"),
     from: at(waveId, `${k}_direction`, "°"),
   });
+  const combined=component('wave');
+  if(combined.period!==null && combined.period<=0){combined.height=null;combined.period=null;combined.from=null;}
   return {
     wind: at(windId, "wind_speed_10m", "kn"),
     gust: at(windId, "wind_gusts_10m", "kn"),
@@ -137,7 +140,7 @@ export function readConditions(bundle, point, epoch, family = "gfs") {
     rain: at(windId, "precipitation", "mm"),
     air: at(windId, "temperature_2m", "°F"),
     weatherCode: at(windId, "weather_code", "wmo code"),
-    sea: component("wave"),
+    sea: combined,
     chop: component("wind_wave"),
     swell: component("swell_wave"),
     secondary: component("secondary_swell_wave"),
@@ -260,7 +263,7 @@ export function comfort(c, other, advisories = null) {
     ],
   };
 }
-export function tideURL(now = Date.now(), interval = "6") {
+export function tideURL(now = Date.now(), interval = "6", station = getRegion().stations.tide) {
   const date = (n) =>
     new Date(n).toISOString().slice(0, 10).replaceAll("-", "");
   return (
@@ -268,7 +271,7 @@ export function tideURL(now = Date.now(), interval = "6") {
     new URLSearchParams({
       product: "predictions",
       application: "SkipperCast",
-      station: getRegion().stations.tide,
+      station,
       begin_date: date(now - 86400000),
       end_date: date(now + 8 * 86400000),
       datum: "MLLW",
@@ -316,7 +319,7 @@ export async function loadMarine() {
   let shared=null;
   try {
     const response=await fetch(`/api/forecast?region=${encodeURIComponent(getRegion().id)}`,{signal:AbortSignal.timeout(5000)});
-    if(response.ok){const candidate=await response.json();if(candidate.region_id===getRegion().id&&Number.isFinite(candidate.retrieved)&&Date.now()-candidate.retrieved<3*3600000)shared=candidate;}
+    if(response.ok){const candidate=await response.json();if(candidate.region_id===getRegion().id&&JSON.stringify(candidate.requested_points)===POINT_SIGNATURE&&Number.isFinite(candidate.retrieved)&&Date.now()-candidate.retrieved<3*3600000)shared=candidate;}
   }catch{ /* Direct providers remain a fallback when the shared feed is unavailable. */ }
   await Promise.allSettled(
     MODELS.map(async (m) => {
@@ -335,35 +338,19 @@ export async function loadMarine() {
       };
     }),
   );
-  const [tides, extremes, alerts, outerAlerts, water] = await Promise.all([
-    attempt(tideURL()),
-    attempt(tideURL(Date.now(), "hilo")),
-    attempt(`https://api.weather.gov/alerts/active?zone=${getRegion().marine_zones.coastal}`),
-    attempt(`https://api.weather.gov/alerts/active?zone=${getRegion().marine_zones.offshore}`),
-    attempt(
-      `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=${getRegion().stations.tide}&date=latest&datum=MLLW&time_zone=gmt&units=english&format=json`,
-    ),
-  ]);
-  const parseAlerts = (r) =>
-    r.value?.features?.map((f) => ({
-      title: f.properties.headline || f.properties.event,
-      starts: Date.parse(f.properties.onset || f.properties.effective) / 1000,
-      ends: Date.parse(f.properties.ends || f.properties.expires) / 1000,
-      url: f.id,
-    }));
-  return {
-    models,
-    tides: tidePoints(tides.value),
-    extremes: tidePoints(extremes.value),
-    tideError: tides.error,
-    alerts: {
-      coastal: parseAlerts(alerts),
-      offshore: parseAlerts(outerAlerts),
-    },
-    alertError: alerts.error || outerAlerts.error,
-    water: water.value?.data?.[0],
-    waterError: water.error,
-    retrieved: Date.now(),
-    sharedForecastAt: shared?.retrieved||null,
-  };
+  const contexts = {}, requests = new Map();
+  const once=url=>{if(!requests.has(url))requests.set(url,attempt(url));return requests.get(url);};
+  const bindings=getRegion().contexts ? Object.entries(getRegion().contexts) : [['default',localContext()]];
+  await Promise.all(bindings.map(async([id,ctx])=>{
+    const [tides,extremes,alerts,outerAlerts,water]=await Promise.all([
+      once(tideURL(Date.now(),'6',ctx.stations.tide)),once(tideURL(Date.now(),'hilo',ctx.stations.tide)),
+      once(`https://api.weather.gov/alerts/active?zone=${ctx.marine_zones.coastal}`),
+      once(`https://api.weather.gov/alerts/active?zone=${ctx.marine_zones.offshore}`),
+      once(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=${ctx.stations.tide}&date=latest&datum=MLLW&time_zone=gmt&units=english&format=json`),
+    ]);
+    const parse=r=>r.value?.type==='FeatureCollection' && Array.isArray(r.value.features) ? r.value.features.map(f=>({title:f.properties.headline||f.properties.event,starts:Date.parse(f.properties.onset||f.properties.effective)/1000,ends:Date.parse(f.properties.ends||f.properties.expires)/1000,url:f.id})) : null;
+    contexts[id]={tides:tidePoints(tides.value),extremes:tidePoints(extremes.value),tideError:tides.error,alerts:{coastal:parse(alerts),offshore:parse(outerAlerts)},alertError:alerts.error||outerAlerts.error,water:water.value?.data?.[0],waterError:water.error,stations:ctx.stations};
+  }));
+  const primary=contexts[localContext(getRegion().default_forecast_point).id] || Object.values(contexts)[0];
+  return {models,...primary,contexts,pointSignature:POINT_SIGNATURE,retrieved:Date.now(),sharedForecastAt:shared?.retrieved||null};
 }

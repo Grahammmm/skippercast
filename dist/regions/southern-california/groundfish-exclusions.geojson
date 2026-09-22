@@ -1,0 +1,314 @@
+{
+  "type": "FeatureCollection",
+  "region_id": "southern-california",
+  "checked_at": "2026-09-22T13:49:07.951046+00:00",
+  "source_url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
+  "source_sha256": "5ee1dd67b937ac29108aa00a13256489fac359af6ec28db3f1223c2700239260",
+  "note": "NOAA supplemental coordinates. Federal regulations control; names retained from the first row of each numbered polygon. Not all navigation, military or seasonal restrictions.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "Hidden Reef",
+        "FULLNAME": "Hidden Reef Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.174167,
+              33.769
+            ],
+            [
+              -119.099333,
+              33.769
+            ],
+            [
+              -119.099333,
+              33.69
+            ],
+            [
+              -119.174167,
+              33.69
+            ],
+            [
+              -119.174167,
+              33.769
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "West of Santa Barbara",
+        "FULLNAME": "West of Santa Barbara Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.309,
+              33.560667
+            ],
+            [
+              -119.126167,
+              33.560667
+            ],
+            [
+              -119.126167,
+              33.465
+            ],
+            [
+              -119.309,
+              33.465
+            ],
+            [
+              -119.309,
+              33.560667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "Potato Bank",
+        "FULLNAME": "Potato Bank Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.88333,
+              33.35
+            ],
+            [
+              -119.76117,
+              33.35
+            ],
+            [
+              -119.76117,
+              33.18333
+            ],
+            [
+              -119.88333,
+              33.18333
+            ],
+            [
+              -119.88333,
+              33.35
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "108/117 Bank",
+        "FULLNAME": "108/117 Bank Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.68817,
+              33.09183
+            ],
+            [
+              -119.61183,
+              33.144
+            ],
+            [
+              -119.52817,
+              33.05833
+            ],
+            [
+              -119.6045,
+              33.006
+            ],
+            [
+              -119.68817,
+              33.09183
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "Cherry Bank",
+        "FULLNAME": "Cherry Bank Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.49,
+              32.84767
+            ],
+            [
+              -119.33033,
+              32.94933
+            ],
+            [
+              -119.29633,
+              32.9115
+            ],
+            [
+              -119.45583,
+              32.80983
+            ],
+            [
+              -119.49,
+              32.84767
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "Seamount 109",
+        "FULLNAME": "Seamount 109 Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.61667,
+              32.72917
+            ],
+            [
+              -119.5715,
+              32.72917
+            ],
+            [
+              -119.449,
+              32.5325
+            ],
+            [
+              -119.49517,
+              32.50783
+            ],
+            [
+              -119.61667,
+              32.659
+            ],
+            [
+              -119.61667,
+              32.72917
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "43-Fathom Spot",
+        "FULLNAME": "43-Fathom Spot Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -118.00083,
+              32.7
+            ],
+            [
+              -117.83333,
+              32.7
+            ],
+            [
+              -117.83333,
+              32.61167
+            ],
+            [
+              -117.83783,
+              32.603
+            ],
+            [
+              -118.00083,
+              32.603
+            ],
+            [
+              -118.00083,
+              32.7
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME": "Northeast Bank",
+        "FULLNAME": "Northeast Bank Groundfish Exclusion Area",
+        "Type": "GEA",
+        "CCR": "NOAA groundfish closure; see controlling federal regulations",
+        "source_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -119.61667,
+              32.4565
+            ],
+            [
+              -119.52667,
+              32.4565
+            ],
+            [
+              -119.52667,
+              32.33333
+            ],
+            [
+              -119.61667,
+              32.33333
+            ],
+            [
+              -119.61667,
+              32.4565
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -20,10 +20,22 @@ BUOYS = (
 def collect(now=None, previous=None, region_id="morro-bay"):
     now = now or datetime.now(timezone.utc)
     previous = previous_for_region(previous, region_id)
-    station = settings(region_id)["region"]["stations"]
+    region = settings(region_id)["region"]
+    station = region["stations"]
     buoys = (("diablo", station["nearshore_buoy"], station["nearshore_buoy_name"], False),
              ("diablo-spectrum", station["nearshore_buoy"], station["nearshore_buoy_name"] + " swell and wind waves", True),
              ("offshore", station["offshore_buoy"], station["offshore_buoy_name"], False))
+
+    aliases = {key: f"buoy-{ident}{'-spectrum' if spectral else ''}" for key, ident, _, spectral in buoys}
+    unique = {}
+    for stations in [station, *[c['stations'] for c in region.get('contexts',{}).values()]]:
+        for kind, spectral in [('nearshore',False),('nearshore',True),('offshore',False)]:
+            ident=stations[kind+'_buoy']; key=f"buoy-{ident}{'-spectrum' if spectral else ''}"
+            unique[key]=(key,ident,stations[kind+'_buoy_name'],spectral)
+    if region.get("contexts"):
+        buoys=tuple(unique.values())
+    else:
+        aliases={}
 
     def one(item):
         ident, station, name, spectral = item
@@ -42,6 +54,8 @@ def collect(now=None, previous=None, region_id="morro-bay"):
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         sources = dict(pool.map(one, buoys))
+    issues=[key for key,s in sources.items() if s["status"]!="ok"]
+    for alias, key in aliases.items(): sources[alias]={**sources[key],"id":alias}
     return {
         "schema_version": 1,
         "region_id": region_id,
@@ -51,7 +65,7 @@ def collect(now=None, previous=None, region_id="morro-bay"):
         "sources": sources,
         "health": {
             "status": "ok" if all(s["status"] == "ok" for s in sources.values()) else "degraded",
-            "issues": [key for key, s in sources.items() if s["status"] != "ok"],
+            "issues": issues,
         },
     }
 

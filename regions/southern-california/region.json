@@ -1,0 +1,611 @@
+{
+  "schema_version": 1,
+  "id": "southern-california",
+  "name": "Southern California",
+  "status": "preview",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
+  "bounds": [
+    -121,
+    32.5,
+    -117.05,
+    34.45
+  ],
+  "fishing_bounds": [
+    -120.6,
+    32.5343,
+    -117.05,
+    34.45
+  ],
+  "map": {
+    "center": [
+      33.52,
+      -118.65
+    ],
+    "zoom": 8
+  },
+  "harbor": {
+    "name": "San Diego (reference harbor)",
+    "latitude": 32.72,
+    "longitude": -117.22,
+    "entrance_note": "Choose your actual departure harbor; San Diego is a regional reference, not a relocated Morro Bay slip. No route or entrance clearance is implied.",
+    "information_url": "https://www.portofsandiego.org/waterfront-recreation/boating",
+    "watch_keywords": [
+      "San Diego",
+      "boating"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "border",
+      "name": "Imperial Beach \u00b7 U.S. side",
+      "latitude": 32.6,
+      "longitude": -117.25,
+      "context": "san-diego"
+    },
+    {
+      "id": "la-jolla",
+      "name": "La Jolla / Point Loma",
+      "latitude": 32.84,
+      "longitude": -117.45,
+      "context": "san-diego"
+    },
+    {
+      "id": "oceanside",
+      "name": "Oceanside / Carlsbad",
+      "latitude": 33.16,
+      "longitude": -117.45,
+      "context": "san-diego"
+    },
+    {
+      "id": "dana-point",
+      "name": "Dana Point",
+      "latitude": 33.43,
+      "longitude": -117.9,
+      "context": "orange-county"
+    },
+    {
+      "id": "newport",
+      "name": "Newport / Huntington",
+      "latitude": 33.59,
+      "longitude": -118.02,
+      "context": "orange-county"
+    },
+    {
+      "id": "palos-verdes",
+      "name": "Palos Verdes / San Pedro",
+      "latitude": 33.67,
+      "longitude": -118.43,
+      "context": "los-angeles"
+    },
+    {
+      "id": "santa-monica",
+      "name": "Santa Monica / Malibu",
+      "latitude": 34.0,
+      "longitude": -118.65,
+      "context": "los-angeles"
+    },
+    {
+      "id": "ventura",
+      "name": "Ventura / Oxnard",
+      "latitude": 34.2,
+      "longitude": -119.5,
+      "context": "ventura"
+    },
+    {
+      "id": "santa-barbara",
+      "name": "Santa Barbara / Goleta",
+      "latitude": 34.33,
+      "longitude": -119.82,
+      "context": "santa-barbara"
+    },
+    {
+      "id": "conception",
+      "name": "Point Conception \u00b7 south side",
+      "latitude": 34.42,
+      "longitude": -120.5,
+      "context": "santa-barbara"
+    },
+    {
+      "id": "catalina",
+      "name": "Santa Catalina Island",
+      "latitude": 33.36,
+      "longitude": -118.42,
+      "context": "los-angeles"
+    },
+    {
+      "id": "channel-islands",
+      "name": "Northern Channel Islands",
+      "latitude": 34.05,
+      "longitude": -119.72,
+      "context": "ventura"
+    },
+    {
+      "id": "offshore-south",
+      "name": "San Diego offshore \u00b7 U.S. waters",
+      "latitude": 32.8,
+      "longitude": -117.85,
+      "context": "san-diego",
+      "offshore": true
+    },
+    {
+      "id": "offshore-central",
+      "name": "Catalina / San Clemente channel",
+      "latitude": 33.1,
+      "longitude": -119.0,
+      "context": "los-angeles",
+      "offshore": true
+    },
+    {
+      "id": "offshore-north",
+      "name": "Santa Barbara Channel west",
+      "latitude": 34.2,
+      "longitude": -120.1,
+      "context": "santa-barbara",
+      "offshore": true
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ740",
+    "offshore": "PZZ745",
+    "santa-barbara": "PZZ650",
+    "los-angeles": "PZZ655",
+    "islands-north": "PZZ673",
+    "islands-south": "PZZ676"
+  },
+  "stations": {
+    "tide": "9410170",
+    "tide_name": "San Diego",
+    "tide_note": "San Diego is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+    "airport": "KSAN",
+    "airport_name": "San Diego airport",
+    "nearshore_buoy": "46258",
+    "nearshore_buoy_name": "Mission Bay / San Diego",
+    "offshore_buoy": "46086",
+    "offshore_buoy_name": "San Clemente Basin",
+    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+  },
+  "mpa": {
+    "bounds": [
+      -121,
+      32.48,
+      -117,
+      34.46
+    ],
+    "minimum_features": 50
+  },
+  "species": [
+    "reef",
+    "halibut",
+    "salmon",
+    "albacore",
+    "bluefin",
+    "dungeness"
+  ],
+  "source_names": {
+    "historical-reefs": "CDFW historical artificial reefs"
+  },
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "cdfw-artificial-reefs",
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas",
+      "noaa-socal-gea"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "noaa-socal-gea",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "mur-sst"
+    ],
+    "chlorophyll": [
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin",
+      "landing-reports"
+    ],
+    "charter-identity": [
+      "operator-identities"
+    ],
+    "ais-history": [
+      "noaa-ais",
+      "gfw-effort"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "NOAA survey discovery pending; no native grid has qualified a new target."
+    },
+    "substrate": {
+      "status": "partial",
+      "reason": "CDFW historical constructed reefs give material and reported depths; no native-depth current terrain classification."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "protected-areas": {
+      "status": "ready",
+      "reason": "Complete regional CDFW MPA snapshot plus NOAA\u2019s eight Groundfish Exclusion Areas. Context areas also excluded from closures."
+    },
+    "regulations": {
+      "status": "ready",
+      "reason": "Southern jurisdiction: seasonal 50-fathom legal line, species sublimits and daily official-source checks."
+    },
+    "dynamic-closures": {
+      "status": "partial",
+      "reason": "CDFW in-season, health and gear watches plus NOAA exclusion areas. Navy/security access around islands requires direct local clearance."
+    },
+    "wind-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS and ECMWF IFS at regional sea-grid samples."
+    },
+    "wave-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS Wave and ECMWF WAM at regional sea-grid samples."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "Multiple local NDBC/CDIP references from San Diego through Santa Barbara; not continuous nearshore observations."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "tides": {
+      "status": "ready",
+      "reason": "San Diego, Los Angeles and Santa Barbara NOAA reference stations; selection follows forecast area."
+    },
+    "surface-currents": {
+      "status": "partial",
+      "reason": "Operational HFR observations and WCOFS surface forecasts; local reception holes remain blank and horizon is at most 72 hours."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Promising primary sources identified; regional records, precision and rights still need review."
+    },
+    "sea-temperature": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "chlorophyll": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "charter-identity": {
+      "status": "research",
+      "reason": "Local operator identity and MMSI review pending."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "No verified local vessel histories or dwell clusters imported."
+    },
+    "harbor-access": {
+      "status": "partial",
+      "reason": "Regional reference harbor only. Actual departure harbor, route and entrance clearance remain trip-specific."
+    },
+    "wind-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "wave-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "forecast-verification": {
+      "status": "partial",
+      "reason": "New prospective archive begins with deployment; no backfilled skill or calibrated catch probability."
+    }
+  },
+  "assets": {
+    "atlas": "regions/southern-california/atlas.json",
+    "habitats": "regions/southern-california/habitats.json",
+    "protected_areas": "regions/southern-california/protected-areas.geojson",
+    "regulations": "regions/southern-california/regulations.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/southern-california/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/southern-california/ecology.json",
+    "regional_context": "regions/southern-california/reef-context.geojson",
+    "closures": "regions/southern-california/groundfish-exclusions.geojson",
+    "observations": "regions/southern-california/observations.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/southern-california/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/latest.json",
+  "landing_names": [],
+  "coverage_note": "Mexico border to Point Conception, including the Channel Islands. Historical CDFW reef areas are search context, not surveyed current fishing targets. Local forecasts, tides and closures use this coast\u2019s sources. Exact charter stops and measured bottom images are not yet qualified.",
+  "landing_note": "No Southern California catch-position dataset has been imported; landing totals are not fishing coordinates.",
+  "jurisdiction_id": "california-southern",
+  "pipeline_sources": {
+    "sst": "mur-sst",
+    "chlorophyll": "modis-chlorophyll",
+    "currents": "ioos-hfr"
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      1,
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46258",
+        "latitude": 32.749,
+        "longitude": -117.502,
+        "name": "Mission Bay West, CA (220)",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46258"
+      },
+      {
+        "id": "46222",
+        "latitude": 33.614,
+        "longitude": -118.314,
+        "name": "San Pedro, CA (092)",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46222"
+      },
+      {
+        "id": "46221",
+        "latitude": 33.86,
+        "longitude": -118.641,
+        "name": "Santa Monica Bay, CA (028)",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46221"
+      },
+      {
+        "id": "46053",
+        "latitude": 34.246,
+        "longitude": -119.842,
+        "name": "EAST SANTA BARBARA  - 12NM Southwest of Santa Barbara, CA",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46053"
+      },
+      {
+        "id": "46054",
+        "latitude": 34.274,
+        "longitude": -120.468,
+        "name": "WEST SANTA BARBARA  38 NM West of Santa Barbara, CA",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46054"
+      },
+      {
+        "id": "46025",
+        "latitude": 33.765,
+        "longitude": -119.077,
+        "name": "Santa Monica Basin - 33NM WSW of Santa Monica, CA",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46025"
+      },
+      {
+        "id": "46086",
+        "latitude": 32.504,
+        "longitude": -118.029,
+        "name": "SAN CLEMENTE BASIN - 27NM SE Of San Clemente Is, CA",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46086"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-southern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/intelligence.json",
+  "default_forecast_point": "la-jolla",
+  "preview_label": "Historical reef areas \u00b7 regional conditions",
+  "contexts": {
+    "san-diego": {
+      "name": "San Diego coast",
+      "stations": {
+        "tide": "9410170",
+        "tide_name": "San Diego",
+        "tide_note": "San Diego is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KSAN",
+        "airport_name": "San Diego airport",
+        "nearshore_buoy": "46258",
+        "nearshore_buoy_name": "Mission Bay / San Diego",
+        "offshore_buoy": "46086",
+        "offshore_buoy_name": "San Clemente Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ740",
+        "offshore": "PZZ745"
+      }
+    },
+    "orange-county": {
+      "name": "Orange County",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KSNA",
+        "airport_name": "John Wayne airport",
+        "nearshore_buoy": "46222",
+        "nearshore_buoy_name": "San Pedro",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ745"
+      }
+    },
+    "los-angeles": {
+      "name": "Los Angeles / Catalina",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KLAX",
+        "airport_name": "Los Angeles airport",
+        "nearshore_buoy": "46221",
+        "nearshore_buoy_name": "Santa Monica Bay",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ676"
+      }
+    },
+    "ventura": {
+      "name": "Ventura / Channel Islands",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KOXR",
+        "airport_name": "Oxnard airport",
+        "nearshore_buoy": "46053",
+        "nearshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy": "46054",
+        "offshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ650",
+        "offshore": "PZZ673"
+      }
+    },
+    "santa-barbara": {
+      "name": "Santa Barbara / Conception",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KSBA",
+        "airport_name": "Santa Barbara airport",
+        "nearshore_buoy": "46054",
+        "nearshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy": "46053",
+        "offshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ650",
+        "offshore": "PZZ673"
+      }
+    }
+  },
+  "closure_check": {
+    "url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
+    "source_id": "noaa-socal-gea"
+  },
+  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+}

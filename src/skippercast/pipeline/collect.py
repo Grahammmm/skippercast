@@ -227,6 +227,14 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
             raise ValueError("Malformed protected-area geometry")
         return {"geojson": data, "checked_at": stamp(), "boundary_issue_time": None}
     jobs.append(("mpa-boundaries", "CDFW DS582 protected-area geometry", "boundaries", mpa_url, 36, mpa_read))
+    if region.get('closure_check'):
+        from hashlib import sha256
+        closure_url=region['closure_check']['url']
+        def closure_check(client):
+            text=client.get(closure_url)
+            if 'id_point' not in text or 'lat_dd' not in text: raise ValueError('Unexpected closure coordinate format')
+            return {'sha256':sha256(text.encode('utf-8')).hexdigest(),'issue_time':None}
+        jobs.append(('additional-closures','Reviewed NOAA closure coordinate file','boundaries',closure_url,36,closure_check))
     for ident, (name, url, keywords) in config["watches"].items():
         jobs.append((ident, name, "page-watch", url, 36, lambda c, u=url, k=keywords: parsers.page_watch(c.get(u), k)))
     url = config["jurisdiction"]["booklet_url"]

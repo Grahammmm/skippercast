@@ -1167,6 +1167,76 @@
       "allowed_hosts": [
         "nomads.ncep.noaa.gov"
       ]
+    },
+    {
+      "id": "cdfw-artificial-reefs",
+      "name": "CDFW Southern California artificial reef guide (2001)",
+      "provider": "CDFW",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://wildlife.ca.gov/Conservation/Marine/Artificial-Reefs/Guide",
+      "adapter": "historical-reef-context",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "CDFW Southern California artificial reef guide (2001)",
+        "terms_url": "https://wildlife.ca.gov/Conservation/Marine/Artificial-Reefs/Guide"
+      },
+      "authenticity": {
+        "basis": "Primary agency publication",
+        "transport": "HTTPS"
+      },
+      "bounds": [
+        -121,
+        32.5,
+        -117,
+        34.45
+      ],
+      "coverage_note": "Southern California only; source geometry and dates retained.",
+      "limitations": [
+        "Historical reported reefs are context only; datum and present condition unverified."
+      ],
+      "allowed_hosts": [
+        "wildlife.ca.gov",
+        "nrm.dfg.ca.gov"
+      ]
+    },
+    {
+      "id": "noaa-socal-gea",
+      "name": "NOAA Southern California Groundfish Exclusion Areas",
+      "provider": "NOAA Fisheries",
+      "needs": [
+        "protected-areas",
+        "dynamic-closures"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas",
+      "adapter": "noaa-gea-csv",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA Southern California Groundfish Exclusion Areas",
+        "terms_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+      },
+      "authenticity": {
+        "basis": "Primary agency publication",
+        "transport": "HTTPS"
+      },
+      "bounds": [
+        -121,
+        32.5,
+        -117,
+        34.45
+      ],
+      "coverage_note": "Southern California only; source geometry and dates retained.",
+      "limitations": [
+        "Federal regulatory coordinates control in case of a discrepancy."
+      ],
+      "allowed_hosts": [
+        "www.fisheries.noaa.gov"
+      ]
     }
   ]
 }

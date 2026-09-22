@@ -1,6 +1,6 @@
 # Add a coastline
 
-A regional package is configuration and evidence, not a fork of the app. Morro Bay–Avila is the working reference; Cambria–San Simeon validates the same map, forecast, jurisdiction and pipeline with a different footprint and geological source.
+A regional package is configuration and evidence, not a fork of the app. The [Southern California rollout](southern-california.md) validates multiple local observation/advisory contexts and a separate jurisdiction in one regional package. Morro Bay–Avila is the working reference; Cambria–San Simeon validates the same map, forecast, jurisdiction and pipeline with a different footprint and geological source.
 
 1. Define a stable region ID and explicit WGS84 extent, timezone, departure harbor, boat/depth preferences, target species and jurisdiction. Offshore tuna samples may extend beyond the bottom-fishing extent. Do not inherit a neighboring port's travel assumptions silently.
 2. Run the needs report. Use the discovery skill to identify primary regional providers. Record original dataset footprint, variables, native precision, time coverage, rights and actual access. A station outside the region can be an explicitly labeled reference, not a local measurement.

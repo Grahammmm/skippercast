@@ -18,7 +18,9 @@ export function initChart(map, notify) {
     },
   );
   street.addTo(map);
-  chart.addTo(map);
+  const choice=document.getElementById('base-map');
+  const sync=()=>{if(choice.value==='nautical'||choice.value==='fishing'&&map.getZoom()>=10)chart.addTo(map);else map.removeLayer(chart);};
+  map.on('zoomend',sync);sync();
   let failed = false;
   chart.on("tileerror", () => {
     if (!failed) {
@@ -35,7 +37,7 @@ export function initChart(map, notify) {
         layers:
           e.target.value === "nautical" ? "0,1,2,3,4,5,6,7" : "0,1,2,4,5,6,7",
       });
-      chart.addTo(map);
+      sync();
     }
   });
 }

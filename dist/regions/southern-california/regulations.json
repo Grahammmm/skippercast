@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "revision": "2026-09-22.south.1",
+  "reviewed_at": "2026-09-22T13:49:07.951046+00:00",
+  "valid_from": "2026-09-22",
+  "valid_through": "2026-12-31",
+  "timezone": "America/Los_Angeles",
+  "area": "Mexico border–Point Conception · recreational boat fishing",
+  "scope": "U.S. waters south of 34°27′ N (Point Conception) to the international maritime boundary. This package provides no Mexican permits or rules.",
+  "check_interval_hours": 24,
+  "max_age_hours": 36,
+  "sources": {
+    "rules-gear": {
+      "name": "CDFW finfish gear and general rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "keywords": [
+        "28.65",
+        "27.60"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-invertebrates": {
+      "name": "CDFW invertebrate gear rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "keywords": [
+        "29.80",
+        "trap"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-whales": {
+      "name": "CDFW whale-safe crab restrictions",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "keywords": [
+        "recreational",
+        "crab"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-health": {
+      "name": "CDFW fishery health closures",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "keywords": [
+        "Dungeness",
+        "health"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-ocean": {
+      "name": "CDFW official regulation index",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "keywords": [
+        "2026",
+        "Tunas"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-groundfish": {
+      "name": "CDFW groundfish",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "keywords": [
+        "groundfish",
+        "regulations"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-inseason": {
+      "name": "CDFW in-season changes",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "keywords": [
+        "in-season",
+        "ocean"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-salmon": {
+      "name": "CDFW salmon",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "keywords": [
+        "salmon",
+        "season"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-crab": {
+      "name": "CDFW crab",
+      "url": "https://wildlife.ca.gov/Crab",
+      "keywords": [
+        "Dungeness",
+        "recreational"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-southern": {
+      "name": "CDFW Southern Region rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "keywords": [
+        "Conception",
+        "halibut",
+        "2026"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    },
+    "rules-gea": {
+      "name": "NOAA groundfish exclusion areas",
+      "url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas",
+      "keywords": [
+        "Groundfish",
+        "Exclusion"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+    }
+  },
+  "species": {
+    "lingcod": {
+      "name": "Lingcod",
+      "season": "2026 boat season: Jan–Mar closed; Apr–Jun all depths; Jul–Sep shoreward of the legal 50-fathom RCA line; Oct–Dec offshore-only for lingcod and shelf/slope rockfish. Nearshore rockfish closed Oct–Dec.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        {
+          "start": "2026-07-01",
+          "end": "2026-09-30",
+          "restriction": "Only shoreward of the legal 50-fathom RCA line; exact position must be checked.",
+          "access": "shoreward-50fm"
+        },
+        {
+          "start": "2026-10-01",
+          "end": "2026-12-31",
+          "restriction": "Only seaward of the legal 50-fathom RCA line for lingcod and shelf/slope rockfish. Nearshore rockfish closed. The 200-ft preset is not an access clearance.",
+          "access": "seaward-50fm"
+        }
+      ],
+      "bag": "2 per person daily; 2 in possession. Separate from the 10-fish RCG limit.",
+      "size": "22 in minimum total length.",
+      "details": [
+        "Use one line with no more than two hooks when targeting lingcod, or when lingcod are aboard. Your double-drop rig fits that limit.",
+        "Carry a descending device ready for immediate use.",
+        "Fillets aboard: at least 14 in, with all skin attached.",
+        "Groundfish Exclusion Areas remain closed to recreational groundfish. Use official coordinates to check seasonal RCA access."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-groundfish",
+        "rules-gear",
+        "rules-inseason",
+        "rules-gea"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "rockfish": {
+      "name": "Rockfish / rock cod",
+      "season": "2026 boat season: Jan–Mar closed; Apr–Jun all depths; Jul–Sep shoreward of the legal 50-fathom RCA line; Oct–Dec offshore-only for lingcod and shelf/slope rockfish. Nearshore rockfish closed Oct–Dec.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        {
+          "start": "2026-07-01",
+          "end": "2026-09-30",
+          "restriction": "Only shoreward of the legal 50-fathom RCA line; exact position must be checked.",
+          "access": "shoreward-50fm"
+        },
+        {
+          "start": "2026-10-01",
+          "end": "2026-12-31",
+          "restriction": "Only seaward of the legal 50-fathom RCA line for lingcod and shelf/slope rockfish. Nearshore rockfish closed. The 200-ft preset is not an access clearance.",
+          "access": "seaward-50fm"
+        }
+      ],
+      "bag": "10 fish in the combined rockfish, cabezon and greenling daily bag/possession limit. Rockfish sublimits: 1 copper, 2 vermilion/sunset combined, 2 canary.",
+      "size": "No minimum length for retained rockfish. Species must be identified.",
+      "details": [
+        "Within the 10: at most 1 copper, 2 canary, and 2 vermilion/sunset rockfish combined.",
+        "No retention of yelloweye, quillback, cowcod or bronzespotted rockfish.",
+        "Use one line with no more than two hooks when targeting rockfish, or when rockfish are aboard. Carry a descending device ready for use.",
+        "Retained rockfish fillets must have all skin attached.",
+        "Groundfish Exclusion Areas remain closed to recreational groundfish. Use official coordinates to check seasonal RCA access."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-groundfish",
+        "rules-gear",
+        "rules-inseason",
+        "rules-gea"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "halibut": {
+      "name": "California halibut",
+      "season": "Year-round in the reviewed 2026 rules. This card covers waters south of Point Sur.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "5 fish daily and in possession south of Point Sur.",
+      "size": "22 in minimum total length.",
+      "details": [
+        "California halibut only; Pacific halibut has a different season and rules.",
+        "General ocean hook-and-line rules apply. With rockfish or lingcod aboard, use one line and no more than two hooks; salmon aboard triggers salmon gear rules.",
+        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-inseason",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "season": "2026 fall season: Sep 1–30, Pigeon Point to the U.S.–Mexico border, unless closed early.",
+      "windows": [
+        {
+          "start": "2026-09-01",
+          "end": "2026-09-30"
+        }
+      ],
+      "bag": "2 salmon per person daily; one daily limit aboard. No coho or steelhead retention.",
+      "size": "20 in minimum total length during this fall season.",
+      "details": [
+        "The fall fishery has a 20,000-Chinook harvest guideline and can close before Sep 30. Check CDFW immediately before the trip.",
+        "Do not fillet salmon aboard before landing ashore.",
+        "Gear rules depend on exact location and method; read the current official salmon regulations.",
+        "September season can close early on the harvest guideline. Coho may not be retained."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-inseason",
+        "rules-gear",
+        "rules-salmon"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "season": "Year-round in the reviewed 2026 rules. U.S. waters south of Point Conception.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 albacore south of Point Conception, in addition to the general 20-finfish daily aggregate. Special multi-day possession rules require separate review.",
+      "size": "No minimum size in these recreational rules.",
+      "details": [
+        "The 25-albacore allowance north of Point Conception does not apply here.",
+        "Tuna schools and sea temperature fronts are mobile; a search area is not a catch site.",
+        "This package covers U.S. waters only; Mexican permits, limits and return rules are separate."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-inseason",
+        "rules-gear",
+        "rules-ocean"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "bluefin": {
+      "name": "Pacific bluefin tuna",
+      "season": "Year-round in the reviewed 2026 rules. Offshore U.S. waters off this part of California.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 per person daily and in possession on a day trip, in addition to the general 20-finfish limit.",
+      "size": "No minimum size in these recreational rules.",
+      "details": [
+        "The bluefin possession limit applies regardless of where fish were taken. This card does not cover Mexico or Atlantic bluefin.",
+        "General ocean hook-and-line rules apply; fish already aboard can impose stricter rod and hook limits.",
+        "If processing tuna aboard, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. Check special rules before any multi-day trip."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-inseason",
+        "rules-gear",
+        "rules-ocean"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "season": "Closed locally Jul 1–Nov 6, 2026. Next scheduled opener: Nov 7, 2026, subject to health and gear restrictions.",
+      "windows": [
+        {
+          "start": "2026-11-07",
+          "end": "2026-12-31",
+          "requires_opening_review": true
+        }
+      ],
+      "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
+      "size": "5¾ in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
+      "details": [
+        "Season opening and trap permission are separate. November trap clearance has not been confirmed; check CDFW whale-safe and health notices.",
+        "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
+        "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
+        "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear.",
+        "CDFW describes the principal range as Alaska to Point Conception. This Southern California package has no qualified Dungeness grounds; rock crab and spiny lobster are different fisheries."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-inseason",
+        "rules-crab",
+        "rules-whales",
+        "rules-health",
+        "rules-invertebrates",
+        "rules-ocean"
+      ],
+      "methods": {
+        "trap": {
+          "note": "Trap permission is checked separately from the Dungeness season and health closures. Confirm the current recreational trap declaration, validation, marking and tending rules before setting.",
+          "requires_clearance": true
+        },
+        "hoop": {
+          "note": "A hoop net is a different gear category from a crab trap. Follow the current hoop-net construction, attendance and deployment rules; season and health closures still apply."
+        },
+        "snare": {
+          "note": "Use the current snare definition and gear limits. A trap restriction does not by itself establish permission to take Dungeness; the season and health checks also apply."
+        }
+      }
+    }
+  },
+  "common_notes": [
+    "Limits are per angler; select the actual species and keep it identifiable. California fishing license required for anglers age 16 and older.",
+    "MPAs, local closures and the Diablo Canyon security zone override an area-wide open season. Check the exact fishing position in CDFW’s official map.",
+    "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited.",
+    "Seasonal groundfish access follows the legal 50-fathom RCA coordinate line, not a 300-foot reading on your sounder.",
+    "All mapped MPAs and Groundfish Exclusion Areas are excluded from SkipperCast targets. Island military areas, harbor restrictions and international boundaries require separate checks.",
+    "This region retains a 200-foot bottom-fishing limit. A historical reported depth does not qualify the whole outlined area."
+  ],
+  "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
+  "checks": {},
+  "checked_at": "2026-09-21T17:30:53Z",
+  "review_required": [
+    "rules-gear",
+    "rules-invertebrates",
+    "rules-whales",
+    "rules-health",
+    "rules-ocean",
+    "rules-groundfish",
+    "rules-inseason",
+    "rules-salmon",
+    "rules-crab",
+    "rules-southern",
+    "rules-gea"
+  ],
+  "region_id": "southern-california",
+  "primary_source_id": "rules-southern"
+}

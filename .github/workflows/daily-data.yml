@@ -11,6 +11,7 @@ on:
       - "src/skippercast/pipeline/**"
       - ".github/workflows/daily-data.yml"
       - "dist/data/regulations.json"
+      - "dist/regions/**/regulations.json"
       - "regions/**"
       - "catalog/**"
       - "jurisdictions/**"

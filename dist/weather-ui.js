@@ -1,8 +1,9 @@
-import {getRegion} from './region.js?v=8.0';
-import {matrixHTML} from './forecast-matrix.js?v=8.0';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.0";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.1';
+import {matrixHTML} from './forecast-matrix.js?v=8.1';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.1";
 import {
   POINTS,
+  POINT_SIGNATURE,
   MODELS,
   HOUR,
   timeline,
@@ -12,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.0";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.0";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.0";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=8.0";
-import { localDate } from "./forecast.js?v=8.0";
-import { detailHTML } from "./marine-detail.js?v=8.0";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.0";
+} from "./marine-data.js?v=8.1";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.1";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.1";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=8.1";
+import { localDate } from "./forecast.js?v=8.1";
+import { detailHTML } from "./marine-detail.js?v=8.1";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.1";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -35,7 +36,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     liveLoading = false,
     hours = timeline(),
     index = 0,
-    point = 1,
+    point = Math.max(0,POINTS.findIndex(p=>p.id===(getRegion().default_forecast_point || POINTS[Math.min(1,POINTS.length-1)].id))),
     family = "gfs",
     overlay = "none",
     play = null,
@@ -47,6 +48,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     forecastError = null,
     outlookKey = "",
     dayRatings = [];
+  const observationCache=new Map();
   const evidence = initBiteEvidence($("bite-evidence"));
   const dock = $("map-time-dock");
   dock.innerHTML = `<div class="compact-time-row"><button id="map-weather-summary" aria-label="Open detailed weather and tide chart">Loading conditions…</button><button id="toggle-map-timeline" aria-expanded="false" aria-controls="map-timeline-controls">Timeline</button></div><div id="map-timeline-controls" hidden><div class="timeline-actions"><button id="time-play" aria-label="Play hourly forecast">▶</button><span>Now to 7 days</span><button id="ocean-now" aria-label="Jump to current forecast hour">Now</button></div><div class="scrub-row"><label class="sr-only" for="map-time">Forecast hour, now to seven days</label><input id="map-time" type="range" min="0" max="168" step="1" value="0"/><span>+7d</span></div><div class="compact-time-caption"><span id="map-time-label"></span><span id="map-time-range"></span></div></div>`;
@@ -85,7 +87,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     const live = detailTab === "live";
     $("live-conditions").hidden = !live;
     $("marine-detail-body").hidden = live;
-    document.querySelector(".forecast-settings").hidden = live;
+    document.querySelector(".forecast-settings").hidden = live && !getRegion().contexts;
     $("forecast-time-tools").hidden = false;
     $("forecast-hour-summary").hidden = live;
     $("forecast-matrix").hidden = live;
@@ -223,7 +225,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   $("previous-hour").addEventListener("click", () => setHour(index - 1));
   $("next-hour").addEventListener("click", () => setHour(index + 1));
   function alertsFor(i, t) {
-    const items = bundle?.alerts?.[POINTS[i].offshore ? "offshore" : "coastal"];
+    const items = pointBundle(bundle,i)?.alerts?.[POINTS[i].offshore ? "offshore" : "coastal"];
     return Array.isArray(items)
       ? items
           .filter(
@@ -367,6 +369,10 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     });
   }
   function render() {
+    const ctx=localContext(point);
+    observations=observationCache.get(ctx.id)||null;
+    if(!liveLoading && (!observations || Date.now()-observations.retrieved>=OBSERVATION_REFRESH)) void loadLive();
+    const selectedBundle=pointBundle(bundle,point);
     const expandedLive = [...$("live-conditions").querySelectorAll("[data-live-disclosure][open]")].map((d) => d.dataset.liveDisclosure);
     $("live-conditions").innerHTML = observationsHTML(observations, !!POINTS[point].offshore);
     for (const d of $("live-conditions").querySelectorAll("[data-live-disclosure]")) d.open = expandedLive.includes(d.dataset.liveDisclosure);
@@ -396,8 +402,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     $("forecast-context").textContent = POINTS[point].name + " · " + (family === "gfs" ? "NOAA GFS" : "ECMWF");
     const nextKey = `${bundle?.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
     if (nextKey !== outlookKey && bundle) {
-      dayRatings=rankTimelineDays(bundle,point,lastSpecies,hours);
-      renderOutlook(rankMornings(bundle,point,lastSpecies,Date.now(),hours.at(-1)),point);
+      dayRatings=rankTimelineDays(selectedBundle,point,lastSpecies,hours);
+      renderOutlook(rankMornings(selectedBundle,point,lastSpecies,Date.now(),hours.at(-1)),point);
       outlookKey=nextKey;
     }
     const dates = new Map();
@@ -432,15 +438,15 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     $("map-weather-summary").innerHTML =
       observation || `<strong>${index === 0 ? "Now forecast" : local(t, { weekday: "short", hour: "numeric" })}${provisional ? " · outlook" : ""} · ${num(c.sea.height)} ft <span>@ ${num(c.sea.period)} s</span></strong><span>Wind ${num(c.wind, 0)} · gust ${num(c.gust, 0)} kt</span>`;
     $("map-weather-summary").title = observation ? "Latest measured buoy seas · open current observations" : p.name + " · " + status.label;
-    $("forecast-hour-summary").innerHTML=forecastSummaryHTML(bundle,point,lastSpecies,t,family,dayRatings.find(r=>r.date===isoDay(t)));
-    $("forecast-matrix").innerHTML=matrixHTML({bundle,point,species:lastSpecies,time:t,family});
+    $("forecast-hour-summary").innerHTML=forecastSummaryHTML(selectedBundle,point,lastSpecies,t,family,dayRatings.find(r=>r.date===isoDay(t)));
+    $("forecast-matrix").innerHTML=matrixHTML({bundle:selectedBundle,point,species:lastSpecies,time:t,family});
     onForecast({bundle,time:t,family,point,species:lastSpecies});
     document.dispatchEvent(new CustomEvent("skippercast:forecast",{detail:{bundle,time:t,family,point,species:lastSpecies}}));
     const body = $("marine-detail-body"),
       sourcesOpen = body.querySelector("#marine-sources")?.open;
     const expanded = [...body.querySelectorAll("[data-disclosure][open]")].map((d) => d.dataset.disclosure);
     body.innerHTML = detailHTML({
-      bundle,
+      bundle:selectedBundle,
       hours,
       index,
       point,
@@ -471,16 +477,16 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     if (liveLoading) return;
     liveLoading = true;
     try {
-      observations = await loadObservations();
+      const context=localContext(point);
+      observations = await loadObservations(undefined,Date.now(),context);
+      observationCache.set(context.id,observations);
       if (bundle) {
-        bundle.alerts = observations.alerts;
-        bundle.alertError = observations.alertError;
-        bundle.water = observations.water;
-        bundle.waterError = observations.waterError;
+        const target=bundle.contexts?.[observations.context_id] || (!getRegion().contexts ? bundle : null);
+        if(target) Object.assign(target,{alerts:observations.alerts,alertError:observations.alertError,water:observations.water,waterError:observations.waterError});
         outlookKey = "";
       }
       render();
-    } finally { liveLoading = false; }
+    } finally { liveLoading = false; if(!observationCache.has(localContext(point).id)) void loadLive(); }
   }
   async function load(force = false) {
     if (loading) return;
@@ -493,16 +499,16 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     try {
       let cached;
       try {
-        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v3:"+getRegion().id));
+        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v4:"+getRegion().id));
       } catch {
         /* Storage is optional. */
       }
       bundle =
-        !force && cached?.models && Date.now() - cached.retrieved < FORECAST_REFRESH
+        !force && cached?.models && cached.pointSignature===POINT_SIGNATURE && Date.now() - cached.retrieved < FORECAST_REFRESH
           ? cached
           : await loadMarine();
       try {
-        sessionStorage.setItem("skippercast-marine-v3:"+getRegion().id, JSON.stringify(bundle));
+        sessionStorage.setItem("skippercast-marine-v4:"+getRegion().id, JSON.stringify(bundle));
       } catch {
         /* No cache is needed to browse. */
       }
@@ -510,10 +516,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       hours = timeline();
       index = wasNow ? 0 : Math.max(0, Math.min(168, Math.round((selected - hours[0]) / HOUR)));
       if (observations && Date.now() - observations.retrieved <= 10 * 60000) {
-        bundle.alerts = observations.alerts;
-        bundle.alertError = observations.alertError;
-        bundle.water = observations.water;
-        bundle.waterError = observations.waterError;
+        const target=bundle.contexts?.[observations.context_id] || (!getRegion().contexts ? bundle : null);
+        if(target) Object.assign(target,{alerts:observations.alerts,alertError:observations.alertError,water:observations.water,waterError:observations.waterError});
       }
       const failed = MODELS.filter((m) => bundle.models[m.id]?.error).map(
         (m) => m.name,
@@ -557,7 +561,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       ) {
         overlay = "sst";
         $("ocean-layer").value = "sst";
-        point = 8;
+        point = Math.max(0,POINTS.findIndex(p=>p.offshore));
         requested = null;
       } else if (
         !["albacore", "bluefin"].includes(id) &&
@@ -565,7 +569,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       ) {
         overlay = "none";
         $("ocean-layer").value = "none";
-        point = 1;
+        point = Math.max(0,POINTS.findIndex(p=>p.id===(getRegion().default_forecast_point || POINTS[Math.min(1,POINTS.length-1)].id)));
         requested = null;
       }
       lastSpecies = id;

@@ -1,15 +1,15 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.0";
-import { getRegion, assetURL } from "./region.js?v=8.0";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.0";
-import { circleGeometry } from "./geo-screen.js?v=8.0";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.1";
+import { getRegion, assetURL } from "./region.js?v=8.1";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.1";
+import { circleGeometry } from "./geo-screen.js?v=8.1";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
   url: "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish",
 };
 const rules = {
-  title: "CDFW · current Central Coast regulations",
-  url: "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+  title: "CDFW · current regional regulations",
+  url: getRegion().regulations_url || "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
 };
 export const PROFILES = {
   reef: {
@@ -230,10 +230,13 @@ export async function initSpecies(
   } catch {
     error = true;
   }
+  let ecology=null;
+  if(assetURL('ecology'))try{const r=await fetch(assetURL('ecology'),{signal:AbortSignal.timeout(10000)});if(r.ok){const d=await r.json();if(d.region_id===getRegion().id)ecology=d;}}catch{}
   const port = getRegion().harbor;
   const id = () => $("species-select").value;
   function guide() {
-    const p = PROFILES[id()];
+    const base=PROFILES[id()], local=ecology?.profiles?.[id()];
+    const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
     $("species-guide").innerHTML =
       `<div class="eyebrow">SPECIES FIELD NOTES · RESEARCHED SEP 21, 2026</div><h2>${p.name}</h2><p class="guide-lead">${p.short}</p><div class="field-note-grid">${[
         ["Habitat", p.habitat],

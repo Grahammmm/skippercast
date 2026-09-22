@@ -1,21 +1,22 @@
-import {initTripAlerts} from './trip-alerts.js?v=8.0';
-import {initINavX} from './inavx.js?v=8.0';
-import {mountSpotEvidence} from './spot-evidence.js?v=8.0';
-import {initIntelligence} from './intelligence.js?v=8.0';
+import {initTripAlerts} from './trip-alerts.js?v=8.1';
+import {initINavX} from './inavx.js?v=8.1';
+import {mountSpotEvidence} from './spot-evidence.js?v=8.1';
+import {initIntelligence} from './intelligence.js?v=8.1';
 let inavx;
-import { getRegion, assetURL } from "./region.js?v=8.0";
-import { mountBottom } from "./bottom-view.js?v=8.0";
-import { initGeology } from "./geology.js?v=8.0";
-import { initWeather } from "./weather-ui.js?v=8.0";
-import { initNavigation } from "./navigation.js?v=8.0";
-import { initChart } from "./chart-map.js?v=8.0";
-import { initSpecies, matchesSpecies } from "./species.js?v=8.0";
-import { initRegulations } from "./regulations.js?v=8.0";
-import { initCharterGrounds } from "./charter-grounds.js?v=8.0";
-import { initProtectedAreas } from "./protected-areas.js?v=8.0";
-import { initDriftGuides } from "./drift-guides.js?v=8.0";
-import { initCommercialAIS } from "./commercial-ais.js?v=8.0";
-import { atlasExportAllowed } from "./export-screen.js?v=8.0";
+import { getRegion, assetURL } from "./region.js?v=8.1";
+import { mountBottom } from "./bottom-view.js?v=8.1";
+import { initRegionalContext } from "./regional-context.js?v=8.1";
+import { initGeology } from "./geology.js?v=8.1";
+import { initWeather } from "./weather-ui.js?v=8.1";
+import { initNavigation } from "./navigation.js?v=8.1";
+import { initChart } from "./chart-map.js?v=8.1";
+import { initSpecies, matchesSpecies } from "./species.js?v=8.1";
+import { initRegulations } from "./regulations.js?v=8.1";
+import { initCharterGrounds } from "./charter-grounds.js?v=8.1";
+import { initProtectedAreas } from "./protected-areas.js?v=8.1";
+import { initDriftGuides } from "./drift-guides.js?v=8.1";
+import { initCommercialAIS } from "./commercial-ais.js?v=8.1";
+import { atlasExportAllowed } from "./export-screen.js?v=8.1";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -133,7 +134,7 @@ function filterTargets() {
   ]
     .filter(Boolean)
     .join(" · ");
-  $("map-empty").hidden = visible.length > 0 || !!assetURL("geology");
+  $("map-empty").hidden = visible.length > 0 || !!assetURL("geology") || !!assetURL("regional_context");
   $("map-empty").querySelector("strong").textContent =
     "No targets in these filters";
   $("map-empty").querySelector("p").textContent =
@@ -553,6 +554,7 @@ try {
   initTripAlerts(intelligence);
   registerTools();
   const optional=async(name,work)=>{try{return await work();}catch{toast(`${name} could not load. The map and other layers remain available.`);return undefined;}};
+  await optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
   await optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
   speciesUI = await optional("Species habitat",()=>initSpecies(map, layers, {
     protectedAreas,

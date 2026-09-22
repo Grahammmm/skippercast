@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "id": "california-southern",
+  "regulations_asset": "regions/southern-california/regulations.json",
+  "watches": {
+    "rules-gear": {
+      "name": "CDFW finfish gear and general rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "keywords": [
+        "28.65",
+        "27.60"
+      ]
+    },
+    "rules-invertebrates": {
+      "name": "CDFW invertebrate gear rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "keywords": [
+        "29.80",
+        "trap"
+      ]
+    },
+    "rules-whales": {
+      "name": "CDFW whale-safe crab restrictions",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "keywords": [
+        "recreational",
+        "crab"
+      ]
+    },
+    "rules-health": {
+      "name": "CDFW fishery health closures",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "keywords": [
+        "Dungeness",
+        "health"
+      ]
+    },
+    "rules-ocean": {
+      "name": "CDFW official regulation index",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "keywords": [
+        "2026",
+        "Tunas"
+      ]
+    },
+    "rules-groundfish": {
+      "name": "CDFW groundfish",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "keywords": [
+        "groundfish",
+        "regulations"
+      ]
+    },
+    "rules-inseason": {
+      "name": "CDFW in-season changes",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "keywords": [
+        "in-season",
+        "ocean"
+      ]
+    },
+    "rules-salmon": {
+      "name": "CDFW salmon",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "keywords": [
+        "salmon",
+        "season"
+      ]
+    },
+    "rules-crab": {
+      "name": "CDFW crab",
+      "url": "https://wildlife.ca.gov/Crab",
+      "keywords": [
+        "Dungeness",
+        "recreational"
+      ]
+    },
+    "rules-southern": {
+      "name": "CDFW Southern Region rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "keywords": [
+        "Conception",
+        "halibut",
+        "2026"
+      ]
+    },
+    "rules-gea": {
+      "name": "NOAA groundfish exclusion areas",
+      "url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas",
+      "keywords": [
+        "Groundfish",
+        "Exclusion"
+      ]
+    }
+  },
+  "booklet_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985"
+}

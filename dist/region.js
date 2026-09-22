@@ -1,4 +1,4 @@
-import defaultRegion from "./region-default.js?v=8.0";
+import defaultRegion from "./region-default.js?v=8.1";
 let active = defaultRegion;
 export const getRegion = () => active;
 export const assetURL = (key) => active.assets[key] || null;
@@ -10,13 +10,13 @@ export function acceptsFeed(data, region=active) {
   return data?.region_id === region.id || (!data?.region_id && region.id === "morro-bay");
 }
 export async function initRegion() {
-  const response = await fetch("regions/index.json");
+  const response = await fetch("regions/index.json",{cache:"no-cache"});
   if (!response.ok) throw new Error("Region directory unavailable");
   const index = await response.json();
   const requested = new URL(location.href).searchParams.get("region") || index.default_region;
   const entry = index.regions.find(r=>r.id===requested);
-  if (!entry) throw new Error("Unknown region. Choose Morro Bay or Cambria–San Simeon.");
-  const r = await fetch(entry.config);if(!r.ok) throw new Error("Region package unavailable");
+  if (!entry) throw new Error("Unknown region. Open the region menu to choose an available coast.");
+  const r = await fetch(entry.config,{cache:"no-cache"});if(!r.ok) throw new Error("Region package unavailable");
   setRegion(await r.json());
   const chooser=document.getElementById("region-select");
   for(const region of index.regions){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
@@ -25,7 +25,7 @@ export async function initRegion() {
   const area=document.getElementById("area");area.replaceChildren(new Option("All areas","all"));
   for(const [id,name] of Object.entries(active.source_names))area.add(new Option(name,id));
   const note=document.getElementById("region-note");
-  note.hidden=active.status!=="preview";note.textContent=active.name+" preview · geological context; surveyed fishing spots pending";
+  note.hidden=active.status!=="preview";note.textContent=active.name+" · "+(active.preview_label || "geological context; surveyed fishing spots pending");
   const panel=document.getElementById("region-coverage");
   let coverage;
   try {
@@ -44,4 +44,17 @@ export async function initRegion() {
   for(const need of coverage.needs){const row=body.insertRow();for(const value of [need.name,need.status,need.reason])row.insertCell().textContent=value;}
   panel.append(table);
   const link=document.createElement("a");link.href="https://github.com/Grahammmm/skippercast/blob/main/docs/regions.md";link.textContent="Regional setup and data contracts ↗";link.target="_blank";link.rel="noopener";panel.append(link);
+}
+
+// Geographic observation/advisory bindings are data, shared by any large region.
+export function localContext(point, region=active) {
+  const p=typeof point === 'number' ? region.forecast_points[point] : typeof point === 'string' ? region.forecast_points.find(p=>p.id===point) : point;
+  const id=p?.context;
+  return id && region.contexts?.[id] ? {id,...region.contexts[id]} : {id:'default',name:region.name,stations:region.stations,marine_zones:region.marine_zones};
+}
+export function pointBundle(bundle, point) {
+  if(!bundle) return bundle;
+  const context=localContext(point), data=bundle.contexts?.[context.id];
+  // A missing local request stays missing, never inherited from another coast.
+  return bundle.contexts ? {...bundle,...(data||{tides:[],extremes:[],alerts:{},water:null}),stations:context.stations,marine_zones:context.marine_zones} : bundle;
 }

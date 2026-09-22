@@ -141,6 +141,20 @@ def validate_region(region, needs, sources, root=REPO):
         seen.add(point["id"])
         if not bounds[0] <= point["longitude"] <= bounds[2] or not bounds[1] <= point["latitude"] <= bounds[3]:
             raise ValueError("Forecast sample lies outside its region bounds")
+    contexts=region.get('contexts',{})
+    for ident, context in contexts.items():
+        if not ID.fullmatch(ident) or not context.get('name'):raise ValueError('Invalid local context')
+        for key in ('coastal','offshore'):
+            if not re.fullmatch(r'[A-Z]{3}\d{3}',context['marine_zones'].get(key,'')) or context['marine_zones'][key] not in region['marine_zones'].values():raise ValueError('Local marine zone must be in the scheduled zone set')
+        stations=context['stations']
+        if not re.fullmatch(r'\d{7}',stations.get('tide','')) or not re.fullmatch(r'[A-Z0-9]{4}',stations.get('airport','')):raise ValueError('Invalid local station identity')
+        for key in ('nearshore_buoy','offshore_buoy'):
+            if not re.fullmatch(r'[A-Za-z0-9]{5}',stations.get(key,'')):raise ValueError('Invalid local buoy identity')
+    if any(p.get('context') and p['context'] not in contexts for p in region['forecast_points']):raise ValueError('Forecast sample has no local context')
+    if region.get('default_forecast_point') and region['default_forecast_point'] not in seen:raise ValueError('Unknown default forecast point')
+    if region.get('closure_check'):
+        public_url(region['closure_check']['url'])
+        if region['closure_check']['source_id'] not in region['source_bindings'].get('protected-areas',[]):raise ValueError('Closure check needs a reviewed boundary source binding')
     for need, bindings in region["source_bindings"].items():
         if need not in needs:
             raise ValueError(f"Unknown regional data need: {need}")

@@ -31,3 +31,17 @@ class LiveObservationsTests(TestCase):
         self.assertEqual(data['health']['status'], 'degraded')
         self.assertEqual(len(data['health']['issues']), 3)
         self.assertEqual(data['sources']['diablo']['data']['sample_at'], 'old')
+
+
+class SouthernObservationTests(TestCase):
+    def test_contexts_share_station_requests_without_relabelling(self):
+        seen=[]
+        def fake_source(ident,name,kind,url,max_age,loader,collected,previous):
+            seen.append(url)
+            return {'id':ident,'status':'ok','url':url,'data':{'sample_at':'2026-09-22T12:00:00Z'}}
+        with patch('skippercast.pipeline.live.source',side_effect=fake_source):
+            data=collect(region_id='southern-california')
+        self.assertEqual(len(seen),len(set(seen)))
+        self.assertIn('46258',data['sources']['diablo']['station_url'])
+        self.assertIn('46054',data['sources']['buoy-46054']['station_url'])
+        self.assertEqual(data['health']['issues'],[])

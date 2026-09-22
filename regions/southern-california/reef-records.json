@@ -1,0 +1,2556 @@
+{
+  "schema_version": 1,
+  "region_id": "southern-california",
+  "source_id": "cdfw-artificial-reefs",
+  "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=30217&inline=",
+  "source_date": "2001-06",
+  "reviewed_at": "2026-09-22T13:49:07.951046+00:00",
+  "horizontal_datum": "Unspecified in source table; WGS84 assumed only for a broad context envelope.",
+  "envelope_padding_m": 500,
+  "records": [
+    {
+      "id": "sca-pitas-point",
+      "name": "Pitas Point",
+      "reported_depth_ft": [
+        28,
+        28
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            34.0,
+            18.0,
+            8.0
+          ],
+          "longitude_west_dms": [
+            119.0,
+            22.0,
+            6.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-malibu",
+      "name": "Malibu",
+      "reported_depth_ft": [
+        60,
+        60
+      ],
+      "historical_material": "quarry rock and concrete shelters",
+      "positions": [
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            48.65
+          ],
+          "longitude_west_dms": [
+            118.0,
+            39.0,
+            1.91
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            49.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            39.0,
+            5.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            49.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            39.0,
+            2.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-topanga",
+      "name": "Topanga",
+      "reported_depth_ft": [
+        28,
+        28
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            38.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            31.0,
+            57.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-santa-monica-bay",
+      "name": "Santa Monica Bay",
+      "reported_depth_ft": [
+        42,
+        72
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            51.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            3.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            2.06
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            9.78
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            5.75
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            17.68
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            10.56
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            25.56
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            19.4
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            41.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            22.61
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            48.92
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            1.0,
+            16.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            52.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            29.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            4.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            36.05
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            2.18
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            41.47
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            10.1
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            42.77
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            17.98
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            47.08
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            26.34
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            50.47
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            37.8
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            50.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            54.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            57.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            33.0,
+            3.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            9.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            14.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            17.84
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            13.3
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            17.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            26.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            21.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            37.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            27.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            48.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            32.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            38.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            33.0,
+            5.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            39.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            33.0,
+            15.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            47.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            32.0,
+            33.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-santa-monica",
+      "name": "Santa Monica",
+      "reported_depth_ft": [
+        60,
+        60
+      ],
+      "historical_material": "quarry rock, concrete shelters and pier pilings",
+      "positions": [
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            34.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            31.0,
+            49.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            33.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            31.0,
+            48.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            33.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            31.0,
+            50.44
+          ]
+        },
+        {
+          "latitude_dms": [
+            34.0,
+            0.0,
+            34.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            31.0,
+            47.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-marina-del-rey",
+      "name": "Marina Del Rey",
+      "reported_depth_ft": [
+        65,
+        65
+      ],
+      "historical_material": "quarry rock and concrete",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            0.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            0.16
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            11.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            0.5
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            1.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            13.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            0.5
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            9.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            1.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            1.5
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            2.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            13.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            5.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            7.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            6.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            11.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            7.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            14.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            7.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            16.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            8.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            7.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            8.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            9.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            9.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            15.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            58.0,
+            6.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            11.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            57.0,
+            56.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            13.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            57.0,
+            57.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            57.0,
+            54.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            57.0,
+            52.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            57.0,
+            54.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            29.0,
+            10.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-hermosa-beach",
+      "name": "Hermosa Beach",
+      "reported_depth_ft": [
+        60,
+        60
+      ],
+      "historical_material": "quarry rock and concrete shelters",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            51.0,
+            15.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            50.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            51.0,
+            16.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            47.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            51.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            49.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            51.0,
+            11.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            46.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            51.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            48.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-redondo-beach",
+      "name": "Redondo Beach",
+      "reported_depth_ft": [
+        72,
+        72
+      ],
+      "historical_material": "quarry rock, barge and concrete",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            18.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            34.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            18.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            33.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            17.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            31.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            16.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            33.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            15.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            31.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            14.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            34.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            14.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            32.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            14.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            30.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            33.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            12.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            34.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            11.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            31.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            50.0,
+            14.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            32.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-palawan",
+      "name": "Palawan",
+      "reported_depth_ft": [
+        120,
+        120
+      ],
+      "historical_material": "sunken ship and concrete rubble",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            49.0,
+            25.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            24.0,
+            53.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-bolsa-chica",
+      "name": "Bolsa Chica",
+      "reported_depth_ft": [
+        85,
+        100
+      ],
+      "historical_material": "concrete rubble, pier pilings and poles",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            32.86
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            2.87
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            17.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            7.7
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            15.65
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            58.13
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            1.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            10.1
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            58.7
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            6.3
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            48.7
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            20.6
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            42.8
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            6.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            18.95
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            56.36
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            19.64
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            3.68
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            4.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            58.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            17.5
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            14.5
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            54.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            21.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            8.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            18.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            11.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            15.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            10.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            10.3
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            59.5
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            32.4
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            55.5
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            29.7
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            48.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            29.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            57.1
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            26.8
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            49.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            26.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            58.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            24.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            50.6
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            6.7
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            54.8
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            4.1
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            55.9
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            39.0,
+            2.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            56.9
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            59.2
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            57.5
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            56.7
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            58.7
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            54.4
+          ],
+          "longitude_west_dms": [
+            118.0,
+            5.0,
+            59.6
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            52.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            1.1
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            48.9
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            1.5
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            38.0,
+            46.4
+          ],
+          "longitude_west_dms": [
+            118.0,
+            6.0,
+            2.9
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-huntington-beach",
+      "name": "Huntington Beach",
+      "reported_depth_ft": [
+        60,
+        60
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            55.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            58.0,
+            51.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            52.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            58.0,
+            49.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            50.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            58.0,
+            48.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            49.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            58.0,
+            47.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            10.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            18.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            9.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            17.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            7.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            16.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            18.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            52.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            17.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            51.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            15.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            50.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            29.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            0.0,
+            5.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            28.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            0.0,
+            4.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            26.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            0.0,
+            3.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            24.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            0.0,
+            2.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            52.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            58.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            17.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            51.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            9.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            59.0,
+            17.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            37.0,
+            28.0
+          ],
+          "longitude_west_dms": [
+            118.0,
+            0.0,
+            4.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-newport-beach",
+      "name": "Newport Beach",
+      "reported_depth_ft": [
+        72,
+        72
+      ],
+      "historical_material": "concrete rubble, pilings and blocks",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            8.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            57.0,
+            52.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            57.0,
+            50.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            16.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            57.0,
+            44.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            7.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            57.0,
+            53.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            36.0,
+            13.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            57.0,
+            49.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-pendleton",
+      "name": "Pendleton",
+      "reported_depth_ft": [
+        43,
+        43
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            29.28
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            40.04
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            25.61
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            36.59
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            29.64
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            38.76
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            30.67
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            38.66
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            29.87
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            36.88
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            19.0,
+            30.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            31.0,
+            42.0
+          ]
+        }
+      ],
+      "withheld_reason": "Military access requires a separate reviewed boundary/clearance source."
+    },
+    {
+      "id": "sca-oceanside-2",
+      "name": "Oceanside 2",
+      "reported_depth_ft": [
+        42,
+        72
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            15.18
+          ],
+          "longitude_west_dms": [
+            117.0,
+            26.0,
+            5.32
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            20.75
+          ],
+          "longitude_west_dms": [
+            117.0,
+            26.0,
+            4.12
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            24.49
+          ],
+          "longitude_west_dms": [
+            117.0,
+            26.0,
+            10.56
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            31.59
+          ],
+          "longitude_west_dms": [
+            117.0,
+            26.0,
+            14.46
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            24.45
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            39.48
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            31.41
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            46.33
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            37.26
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            52.79
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            44.29
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            56.58
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            43.2
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            9.77
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            47.75
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            13.57
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            54.63
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            18.37
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            13.0,
+            2.96
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            24.07
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            12.0,
+            40.17
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            43.82
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-oceanside-1",
+      "name": "Oceanside 1",
+      "reported_depth_ft": [
+        45,
+        100
+      ],
+      "historical_material": "quarry rock and concrete dock floats",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            59.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            1.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            11.0,
+            0.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            24.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            58.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            1.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            59.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            24.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            57.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            2.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            57.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            24.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            54.8
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            5.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            54.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            24.0,
+            59.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            10.0,
+            57.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            25.0,
+            0.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-carlsbad",
+      "name": "Carlsbad",
+      "reported_depth_ft": [
+        37,
+        60
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            19.49
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            13.12
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            14.05
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            11.04
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            9.76
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            9.24
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            3.52
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            7.25
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            16.8
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            14.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            11.4
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            13.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            5.4
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            11.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            0.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            9.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            15.6
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            25.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            10.8
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            22.8
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            5.0,
+            4.8
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            20.4
+          ]
+        },
+        {
+          "latitude_dms": [
+            33.0,
+            4.0,
+            58.2
+          ],
+          "longitude_west_dms": [
+            117.0,
+            19.0,
+            19.2
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-torrey-pines",
+      "name": "Torrey Pines",
+      "reported_depth_ft": [
+        44,
+        67
+      ],
+      "historical_material": "quarry rock and dock floats",
+      "positions": [
+        {
+          "latitude_dms": [
+            32.0,
+            53.0,
+            35.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            15.0,
+            35.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            53.0,
+            12.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            15.0,
+            50.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-pacific-beach",
+      "name": "Pacific Beach",
+      "reported_depth_ft": [
+        42,
+        72
+      ],
+      "historical_material": "quarry rock",
+      "positions": [
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            20.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            42.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            25.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            45.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            35.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            50.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            40.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            55.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            24.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            30.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            30.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            30.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            38.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            34.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            46.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            35.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            30.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            36.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            12.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            44.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            14.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            50.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            18.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            47.0,
+            35.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            35.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-mission-bay-park",
+      "name": "Mission Bay Park",
+      "reported_depth_ft": [
+        60,
+        90
+      ],
+      "historical_material": "shipwrecks, concrete rubble and steel structure",
+      "positions": [
+        {
+          "latitude_dms": [
+            32.0,
+            45.0,
+            51.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            38.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            46.0,
+            12.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            4.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            46.0,
+            22.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            3.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            45.0,
+            51.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            16.0,
+            31.0
+          ]
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "id": "sca-international-reef",
+      "name": "International Reef",
+      "reported_depth_ft": [
+        165,
+        165
+      ],
+      "historical_material": "quarry rock and concrete rubble",
+      "positions": [
+        {
+          "latitude_dms": [
+            32.0,
+            32.0,
+            40.3
+          ],
+          "longitude_west_dms": [
+            117.0,
+            14.0,
+            53.1
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            32.0,
+            39.7
+          ],
+          "longitude_west_dms": [
+            117.0,
+            14.0,
+            54.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            32.0,
+            37.5
+          ],
+          "longitude_west_dms": [
+            117.0,
+            14.0,
+            50.0
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            32.0,
+            38.8
+          ],
+          "longitude_west_dms": [
+            117.0,
+            14.0,
+            48.2
+          ]
+        },
+        {
+          "latitude_dms": [
+            32.0,
+            32.0,
+            41.0
+          ],
+          "longitude_west_dms": [
+            117.0,
+            14.0,
+            50.5
+          ]
+        }
+      ],
+      "withheld_reason": "Close to international boundary; historic datum and current position unresolved."
+    }
+  ]
+}

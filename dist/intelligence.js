@@ -1,6 +1,6 @@
-import {getRegion} from './region.js?v=8.0';
-import {esc,num,from,local} from './marine-charts.js?v=8.0';
-import {readConditions,angleBetween,distanceNm} from './marine-data.js?v=8.0';
+import {getRegion,localContext} from './region.js?v=8.1';
+import {esc,num,from,local} from './marine-charts.js?v=8.1';
+import {readConditions,angleBetween,distanceNm} from './marine-data.js?v=8.1';
 
 export function freshSource(source,now=Date.now()) {
   if(!source?.data || source.status!=='ok')return false;
@@ -35,7 +35,7 @@ export function nearestCurrent(source,time,point,now=Date.now()) {
   return {...best,time:frame.time,kind:source.data.kind};
 }
 const sourceLink=s=>{let url;try{url=new URL(s?.data?.source_url||s?.url);if(url.protocol!=='https:')return '';}catch{return '';}return `<a href="${esc(url.href)}" target="_blank" rel="noopener">Source & documentation ↗</a>`;};
-function statusText(s){return s?`${s.status}${s.data?.sample_at?' · observed '+new Date(s.data.sample_at).toLocaleString('en-US',{timeZone:getRegion().timezone}):s.data?.issued_at?' · run '+new Date(s.data.issued_at).toLocaleString('en-US',{timeZone:getRegion().timezone}):''}`:'Not configured for this region';}
+function statusText(s){return s?`${s.status}${s.data?.sample_at?' · observed '+new Date(s.data.sample_at).toLocaleString('en-US',{timeZone:getRegion().timezone}):s.data?.issued_at?' · run '+new Date(s.data.issued_at).toLocaleString('en-US',{timeZone:getRegion().timezone}):''}`:'Awaiting a current regional feed';}
 
 export function spectrumSVG(frame) {
   const bins=frame?.bins?.filter(b=>b.every(Number.isFinite)&&b[0]>0&&b[1]>=0&&b[2]>=0&&b[2]<=360)||[];
@@ -71,7 +71,7 @@ export function initIntelligence(map) {
     if(!state)return;const c=readConditions(state.bundle,state.point,state.time,'gfs');
     const parts=[['Primary swell',c.swell],['Secondary swell',c.secondary],['Chop',c.chop]];
     container.querySelector('#encounter-content').innerHTML=`<div class="insight-grid">${parts.map(([name,p])=>{const a=angleBetween(heading,p.from);return `<div><small>${name}</small><strong>${num(p.height)} ft · ${num(p.period)} s</strong><small>${a===null||heading<0||heading>359?'Heading/direction unavailable':`${a<45?'From ahead':a>135?'From astern':'Across the beam'} · ${num(a,0)}° off bow`}</small></div>`;}).join('')}</div><p class="small">${esc(getRegion().boat.name)} · wave exposure, not a validated roll or slamming simulation. Short chop and crossing swells can change comfort.</p>`;
-    const station=getRegion().stations[getRegion().forecast_points[state.point]?.offshore?'offshore_buoy':'nearshore_buoy'];
+    const station=localContext(state.point).stations[getRegion().forecast_points[state.point]?.offshore?'offshore_buoy':'nearshore_buoy'];
     const source=data?.sources?.['spectra-'+station],frame=freshSource(source)?source.data.frames.at(-1):null;
     container.querySelector('#spectral-content').innerHTML=`<p><strong>Observed energy · buoy ${esc(station)}</strong><br>${esc(statusText(source))}</p>${frame?spectrumSVG(frame):'<p>No fresh spectrum available.</p>'}<p class="small">Each dot is a measured frequency band with its mean incoming direction. This observation stays at its measured time as you browse future forecasts. ${sourceLink(source)}</p>`;
   }
