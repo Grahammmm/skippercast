@@ -1,5 +1,5 @@
 // Bundled GPX must pass the same current boundary screen as its map geometry.
-import {tripFeatures} from './gpx.js?v=8.5';
+import {tripFeatures} from './gpx.js?v=8.6';
 export function atlasExportAllowed(atlas, screen, targetId=null) {
   if(!atlas || !screen?.ready()) return false;
   const targets=targetId ? atlas.targets.filter(t=>t.id===targetId) : atlas.targets;

@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.5';
-import {matrixHTML} from './forecast-matrix.js?v=8.5';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.5";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.6';
+import {matrixHTML} from './forecast-matrix.js?v=8.6';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.6";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.5";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.5";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.5";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=8.5";
-import { localDate } from "./forecast.js?v=8.5";
-import { detailHTML } from "./marine-detail.js?v=8.5";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.5";
+} from "./marine-data.js?v=8.6";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.6";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.6";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=8.6";
+import { localDate } from "./forecast.js?v=8.6";
+import { detailHTML } from "./marine-detail.js?v=8.6";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.6";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -564,8 +564,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
         !(getRegion().target_options?.find(p=>p.id===lastSpecies)?.kind === "offshore")
       ) {
         coastalSelection={point,requested};
-        overlay = "sst";
-        $("ocean-layer").value = "sst";
+        overlay = "none";
+        $("ocean-layer").value = "none";
         point = Math.max(0,POINTS.findIndex(p=>p.offshore));
         requested = null;
       } else if (

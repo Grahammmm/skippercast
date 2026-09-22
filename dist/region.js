@@ -1,4 +1,4 @@
-import defaultRegion from "./region-default.js?v=8.5";
+import defaultRegion from "./region-default.js?v=8.6";
 let active = defaultRegion;
 let directory = [];
 export const getRegion = () => active;

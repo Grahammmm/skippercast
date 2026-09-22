@@ -144,3 +144,21 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Source-resolution water stays a canvas layer; controls live in Map options. */
+.habitat-map-options{border-top:1px solid #d5e2e6;margin-top:16px;padding-top:16px}
+.habitat-map-options label{display:grid;gap:8px;font-weight:700}
+.habitat-map-options select{width:100%;min-height:44px;font-size:16px}
+.habitat-map-key{max-width:min(410px,calc(100vw - 92px));background:rgba(255,255,255,.95);color:#143642;border:1px solid #c8dce0;border-radius:9px;padding:8px 10px;box-shadow:0 2px 9px #102f4020;font:12px/1.4 system-ui}
+.habitat-map-key strong,.habitat-map-key span{display:block}
+.habitat-map-key strong{font-size:13px}
+.habitat-map-key[hidden]{display:none}
+.ocean-cell-detail dl{display:grid;grid-template-columns:1fr auto;gap:7px}
+.ocean-cell-detail dd{margin:0;font-weight:700}
+.ocean-cell-detail button{display:block;min-height:44px;margin-top:12px;width:100%}
+.leaflet-bottom .habitat-map-key{margin-bottom:110px;font-size:14px}
+.habitat-map-key summary{cursor:pointer;font-weight:700;min-height:32px;display:list-item}
+.habitat-map-key span{margin-top:6px;max-height:8em;overflow:auto}
+#map-panel:has(#map-timeline-controls:not([hidden])) .habitat-map-key{margin-bottom:185px}
+#map-panel:has(.regulations-card[open]) .habitat-map-key{visibility:hidden}
+.terrain-components{display:grid;grid-template-columns:1fr auto;gap:8px}.terrain-components dd{margin:0;font-weight:700}
+@media(max-width:600px){.habitat-map-key{max-width:calc(100vw - 92px)}}

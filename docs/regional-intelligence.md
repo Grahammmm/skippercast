@@ -54,7 +54,7 @@ python scripts/check_repository.py
 pnpm build
 ```
 
-The existing live workflow publishes updates. Preserve `verification-state.json` from the previous conditions branch or the prospective archive restarts. Environmental products contain no personal records. A new deployment changes its origin, GitHub identity policy, Sites runtime keys and D1 binding; it does not copy Telegram credentials.
+The existing live workflow publishes updates. Preserve `verification-state.json`, `verification-state.previous.json` and the referenced `verification-archive/` shards from the previous conditions branch. Missing or corrupt referenced shards fail collection; they never silently restart the archive. Legacy unsharded state is migrated without thinning. See [verification quality and storage](forecast-verification-quality.md). Environmental products contain no personal records. A new deployment changes its origin, GitHub identity policy, Sites runtime keys and D1 binding; it does not copy Telegram credentials.
 
 ## On the map and in iNavX
 

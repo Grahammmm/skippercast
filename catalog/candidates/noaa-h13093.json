@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h13093",
+  "name": "NOAA H13093: Vicinity of Anacapa Island",
+  "region_ids": [
+    "southern-california"
+  ],
+  "need_ids": [
+    "bathymetry"
+  ],
+  "documentation_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/BAG/H13093_MB_VR_MLLW.bag",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC0-1.0",
+    "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+    "redistribution_reviewed": true,
+    "attribution": "NOAA Ship Rainier; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+  },
+  "spatial": {
+    "bounds": [
+      -119.538822,
+      33.916787,
+      -119.290859,
+      34.133228
+    ],
+    "resolution_m": null,
+    "resolution_range_m": [
+      1,
+      16
+    ],
+    "resolution_basis": "inspected",
+    "horizontal_crs": "EPSG:26911",
+    "vertical_datum": "MLLW",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/BAG/H13093_MB_VR_MLLW.bag",
+    "note": "Envelope includes extensive nodata. Native masks, not this envelope, determine qualified footprint. Compiler uses only 1\u20134 m native cells."
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-22T17:16:44.990983+00:00",
+    "update_cadence": "Historical survey; monthly source-catalog watch, hash-bound re-review if changed",
+    "coverage_start": "2017-10-19",
+    "coverage_end": "2017-11-06",
+    "source_time_basis": "Survey dates retained in coverage_start/coverage_end; no timezone-qualified acquisition instant is asserted"
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+      "supports": "Official catalog identifies survey, variable-resolution BAG, explicit CC0 waiver, acquisition dates and MLLW/UTM11 reference."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/DR/H13093_DR.pdf",
+      "supports": "Survey methods, coverage gaps, quality limits and horizontal/vertical control."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/BAG/H13093_MB_VR_MLLW.bag",
+      "supports": "Downloaded and hash-pinned native elevation + product uncertainty. Embedded XML and 1/2/4 m native affine/arrays checked against GDAL supergrid reader."
+    }
+  ],
+  "limitations": [
+    "Historical 2017 survey, not live bathymetry. Variable 1\u201316 m cells, with only 1\u20134 m cells eligible here. The survey report identifies dynamic swirling ridges southwest of West Anacapa; terrain relief does not establish bedrock, individual boulders or current catch abundance. The older substrate interpretation is not ground truth. Source product uncertainty is retained without assigning an unsupported confidence interval.",
+    "Resolution is variable; grid size is not positional accuracy or a boulder dimension. Not a navigation product."
+  ],
+  "producer": {
+    "name": "NOAA/NOS Office of Coast Survey; NCEI archive",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "variables": [
+    "seafloor_elevation",
+    "seafloor_product_uncertainty"
+  ],
+  "units": {
+    "seafloor_elevation": "m MLLW, signed elevation",
+    "seafloor_product_uncertainty": "m"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original-file archive",
+    "raw_sha256": "1e79a9aa61fdede984930e66a9da17a80dd2b552eecdee2281a96cead59d3b23",
+    "transformations": [
+      "Native VR supergrid extraction; no low-resolution overview or interpolated ImageServer raster",
+      "Per-native-cell depth+product uncertainty+explicit 2 m planning allowance <=200 ft",
+      "4 m inward margin; historical mapped hard substrate; 75 m MPA/GEA geometry buffer",
+      "4 m display bins average actual native nodes; blanks stay blank; not used for depth qualification"
+    ]
+  }
+}

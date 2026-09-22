@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h13323",
+  "name": "NOAA H13323: Cavern Point to Smugglers Cove",
+  "region_ids": [
+    "southern-california"
+  ],
+  "need_ids": [
+    "bathymetry"
+  ],
+  "documentation_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC0-1.0",
+    "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+    "redistribution_reviewed": true,
+    "attribution": "NOAA Ship Fairweather; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+  },
+  "spatial": {
+    "bounds": [
+      -119.833524,
+      33.838541,
+      -119.315762,
+      34.291702
+    ],
+    "resolution_m": null,
+    "resolution_range_m": [
+      1,
+      16
+    ],
+    "resolution_basis": "inspected",
+    "horizontal_crs": "EPSG:26911",
+    "vertical_datum": "MLLW",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag",
+    "note": "Envelope includes extensive nodata. Native masks, not this envelope, determine qualified footprint. Compiler uses only 1\u20134 m native cells."
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-22T17:08:11.376607+00:00",
+    "update_cadence": "Historical survey; monthly source-catalog watch, hash-bound re-review if changed",
+    "coverage_start": "2019-10-04",
+    "coverage_end": "2019-10-21",
+    "source_time_basis": "Survey dates retained in coverage_start/coverage_end; no timezone-qualified acquisition instant is asserted"
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+      "supports": "Official catalog identifies survey, variable-resolution BAG, explicit CC0 waiver, acquisition dates and MLLW/UTM11 reference."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/DR/H13323_DR.pdf",
+      "supports": "Survey methods, coverage gaps, quality limits and horizontal/vertical control."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag",
+      "supports": "Downloaded and hash-pinned native elevation + product uncertainty. Embedded XML and 1/2/4 m native affine/arrays checked against GDAL supergrid reader."
+    }
+  ],
+  "limitations": [
+    "Historical 2019 survey covering part of eastern Santa Cruz Island, not the entire island. Only native 1\u20134 m cells with finite product uncertainty qualify. Historical substrate interpretation remains uncertain; no individual boulder dimensions, current fish presence or catches are established.",
+    "Resolution is variable; grid size is not positional accuracy or a boulder dimension. Not a navigation product."
+  ],
+  "producer": {
+    "name": "NOAA/NOS Office of Coast Survey; NCEI archive",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "variables": [
+    "seafloor_elevation",
+    "seafloor_product_uncertainty"
+  ],
+  "units": {
+    "seafloor_elevation": "m MLLW, signed elevation",
+    "seafloor_product_uncertainty": "m"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original-file archive",
+    "raw_sha256": "a7a10f65bed5ad18d06711ec30f935d373a3ec7c8a0d09f24e177721d36ba96c",
+    "transformations": [
+      "Native VR supergrid extraction; no low-resolution overview or interpolated ImageServer raster",
+      "Per-native-cell depth+product uncertainty+explicit 2 m planning allowance <=200 ft",
+      "4 m inward margin; historical mapped hard substrate; 75 m MPA/GEA geometry buffer",
+      "4 m display bins average actual native nodes; blanks stay blank; not used for depth qualification"
+    ]
+  }
+}

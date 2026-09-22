@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.5";
-import { getRegion, assetURL } from "./region.js?v=8.5";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.5";
-import { circleGeometry } from "./geo-screen.js?v=8.5";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.6";
+import { getRegion, assetURL } from "./region.js?v=8.6";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.6";
+import { circleGeometry } from "./geo-screen.js?v=8.6";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -19,7 +19,7 @@ export const PROFILES = {
     habitat: "Search rough rock and reef edges for lingcod. For rockfish, also watch for schools above the reef and along changes in bottom type.",
     approach: "Sound the high points and surrounding water. Start a short controlled drift, keep the rig near marks or bottom, and reset when line angle makes contact difficult.",
     conditions: "Light wind and manageable chop help you hold bottom. Measure the drift at the reef; the surface-current forecast cannot determine bottom current or sinker weight.",
-    map: "All 132 rocky habitat candidates, with charter-reported grounds. A/B/C ranks surveyed terrain, not catches. Individual fish presence remains unverified.",
+    map: "Published regional rocky habitat candidates, with separately documented charter grounds where available. A/B/C ranks surveyed terrain, not catches. Individual fish presence remains unverified.",
     unknown: "Bottom current, bait and fish presence are not measured. Lingcod and each rockfish species keep separate size, bag and identification rules.",
     sources: [fishSource, rules],
   },
@@ -50,7 +50,7 @@ export const PROFILES = {
       "Watch the sounder through the water column as well as near bottom. Work a short controlled pass over relief, then adjust to marks. Identify each fish: similar-looking species have different limits.",
     conditions:
       "Comfort and control matter more than a universal temperature or tide recipe. Short-period chop and a fast drift make precise presentations harder; test the drift at the actual reef.",
-    map: "All 132 published rocky targets. A/B/C describes mapped terrain only. The larger reef does not automatically hold more fish.",
+    map: "Published regional rocky targets. A/B/C describes mapped terrain only. The larger reef does not automatically hold more fish.",
     season:
       "Check current species sublimits, prohibited species, depth rules, and descending-device requirements.",
     unknown:
@@ -131,7 +131,7 @@ export const PROFILES = {
     season:
       "Check current tuna regulations. Availability off Morro Bay varies with the ocean; the calendar does not guarantee accessible fish.",
     unknown:
-      "The daily evidence panel checks satellite SST, chlorophyll and surface radar currents with dates and coverage. The map SST remains a modeled forecast at about 8 km. No verified tuna catch positions or bait observations are available.",
+      "The daily evidence panel checks satellite SST, chlorophyll and surface radar currents with dates and coverage. Ocean habitat layers offer dated 0.01° temperature analysis and approximately 4 km NOAA surface forecasts for populated times; gaps and source ages remain visible. No verified tuna catch positions or bait observations are available.",
     sources: [
       {
         title: "NOAA · Pacific albacore ecology",

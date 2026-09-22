@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "region_id": "southern-california",
+  "target_prefix": "SCI-Q",
+  "reviewed_at": "2026-09-22",
+  "status": "reviewed",
+  "depth_limit_ft": 200,
+  "minimum_depth_ft": 25,
+  "planning_margin_m": 2,
+  "maximum_product_uncertainty_m": 1,
+  "maximum_native_cell_m": 4,
+  "closure_clearance_m": 75,
+  "native_footprint_erosion_m": 4,
+  "minimum_area_m2": 2500,
+  "candidate_spacing_m": 450,
+  "target_spacing_m": 650,
+  "maximum_targets_per_island": 8,
+  "habitat_path": "dist/regions/southern-california/survey-habitat.geojson",
+  "habitat_sha256": "8ad992965114f418b7999e893263aca003b108a443ae25b8a76b8be1d75ac204",
+  "habitat_note": "Only the historical mapped-hard-substrate footprint is used. Its older merged-bathymetry depth mask limits coverage but does not qualify depths; original BAG native cells independently qualify every retained footprint. No pixel or roughness is relabeled as a boulder.",
+  "closure_inputs": [
+    {
+      "path": "dist/regions/southern-california/protected-areas.geojson",
+      "minimum_features": 50
+    },
+    {
+      "path": "dist/regions/southern-california/groundfish-exclusions.geojson",
+      "minimum_features": 8
+    }
+  ],
+  "sources": [
+    {
+      "id": "NOAA-H13093",
+      "survey_id": "H13093",
+      "island": "anacapa",
+      "island_name": "Anacapa Island",
+      "name": "NOAA H13093: Vicinity of Anacapa Island",
+      "provider": "NOAA/NOS Office of Coast Survey; NCEI archive",
+      "filename": "H13093_MB_VR_MLLW.bag",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/BAG/H13093_MB_VR_MLLW.bag",
+      "sha256": "1e79a9aa61fdede984930e66a9da17a80dd2b552eecdee2281a96cead59d3b23",
+      "bytes": 96915638,
+      "metadata_sha256": "1d48889ae87b586d293a53ec80a72dd0cc12481b30fda1843344f88c870a5b3f",
+      "documentation_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/DR/H13093_DR.pdf",
+      "documentation_sha256": "726287eb041eed8963d9f9b38f0c3271075ffba63cb187872917d161f2857917",
+      "survey_start": "2017-10-19",
+      "survey_end": "2017-11-06",
+      "horizontal_crs": "EPSG:26911",
+      "vertical_datum": "MLLW",
+      "tidal_epoch": "1983\u20132001 per final Tide Note in the descriptive report",
+      "native_resolution_range_m": [
+        1,
+        16
+      ],
+      "qualification_resolution_limit_m": 4,
+      "uncertainty_type": "productUncert",
+      "rights": "CC0-1.0, explicit dataset-specific NOAA waiver; not a standalone navigational product",
+      "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+      "credit": "NOAA Ship Rainier; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI",
+      "limitations": "Historical 2017 survey, not live bathymetry. Variable 1\u201316 m cells, with only 1\u20134 m cells eligible here. The survey report identifies dynamic swirling ridges southwest of West Anacapa; terrain relief does not establish bedrock, individual boulders or current catch abundance. The older substrate interpretation is not ground truth. Source product uncertainty is retained without assigning an unsupported confidence interval."
+    },
+    {
+      "id": "NOAA-H13323",
+      "survey_id": "H13323",
+      "island": "santa-cruz",
+      "island_name": "Santa Cruz Island",
+      "name": "NOAA H13323: Cavern Point to Smugglers Cove",
+      "provider": "NOAA/NOS Office of Coast Survey; NCEI archive",
+      "filename": "H13323_MB_VR_MLLW.bag",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag",
+      "sha256": "a7a10f65bed5ad18d06711ec30f935d373a3ec7c8a0d09f24e177721d36ba96c",
+      "bytes": 31537503,
+      "metadata_sha256": "07deb3cc5f1cba00ac8a4ae15e8ae7aecdd5a838271aa9dbc4722aebd9b7134c",
+      "documentation_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/DR/H13323_DR.pdf",
+      "documentation_sha256": "f1ec959a28b42fbc783ffaa526712de964b19197efc99f54ea3b7ab73111fd4a",
+      "survey_start": "2019-10-04",
+      "survey_end": "2019-10-21",
+      "horizontal_crs": "EPSG:26911",
+      "vertical_datum": "MLLW",
+      "native_resolution_range_m": [
+        1,
+        16
+      ],
+      "qualification_resolution_limit_m": 4,
+      "uncertainty_type": "productUncert",
+      "rights": "CC0-1.0, explicit dataset-specific NOAA waiver; not a standalone navigational product",
+      "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+      "credit": "NOAA Ship Fairweather; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI",
+      "limitations": "Historical 2019 survey covering part of eastern Santa Cruz Island, not the entire island. Only native 1\u20134 m cells with finite product uncertainty qualify. Historical substrate interpretation remains uncertain; no individual boulder dimensions, current fish presence or catches are established."
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "viirs-merged-dynamic-candidate",
+  "name": "Merged VIIRS chlorophyll OCI daily",
+  "region_ids": [
+    "southern-california"
+  ],
+  "need_ids": [
+    "chlorophyll"
+  ],
+  "documentation_url": "https://coastwatch.noaa.gov/erddap/info/noaacwNPPN20VIIRSchlociDaily/index.html",
+  "access_url": "https://coastwatch.noaa.gov/erddap/griddap/noaacwNPPN20VIIRSchlociDaily.json?chl_oci%5B(2021-09-02T12:00:00Z)%5D%5B0%5D%5B(34.45):1:(32.5)%5D%5B(-121):1:(-117.05)%5D",
+  "access_status": "partial",
+  "producer": {
+    "name": "NOAA NESDIS CoastWatch",
+    "url": "https://coastwatch.noaa.gov/"
+  },
+  "variables": [
+    "chl_oci"
+  ],
+  "units": {
+    "chl_oci": "mg m^-3"
+  },
+  "rights": {
+    "license": "The data may be used and redistributed for free but is not intended\nfor legal use, since it may contain inaccuracies. Neither the data\nContributor, ERD, NOAA, nor the United States Government, nor any\nof their employees or contractors, makes any warranty, express or\nimplied, including warranties of merchantability and fitness for a\nparticular purpose, or assumes any legal liability for the accuracy,\ncompleteness, or usefulness, of this information.",
+    "terms_url": "https://coastwatch.noaa.gov/erddap/info/noaacwNPPN20VIIRSchlociDaily/index.html",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [
+      -121,
+      32.5,
+      -117.05,
+      34.45
+    ],
+    "resolution_m": null,
+    "horizontal_crs": "Geographic latitude/longitude; exact CRS not stated in inspected metadata",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://coastwatch.noaa.gov/erddap/griddap/noaacwNPPN20VIIRSchlociDaily.json?chl_oci%5B(2021-09-02T12:00:00Z)%5D%5B0%5D%5B(34.45):1:(32.5)%5D%5B(-121):1:(-117.05)%5D",
+    "resolution_basis": "unknown"
+  },
+  "temporal": {
+    "source_time": "2021-09-02T12:00:00Z",
+    "checked_at": "2026-09-22T17:13:01Z",
+    "update_cadence": "Nominal daily; latest source stale",
+    "coverage_start": "2018-08-09T12:00:00Z",
+    "coverage_end": "2021-09-02T12:00:00Z"
+  },
+  "evidence": [
+    {
+      "url": "https://coastwatch.noaa.gov/erddap/info/noaacwNPPN20VIIRSchlociDaily/index.html",
+      "supports": "Original-publisher metadata supplies units, resolution, license and actual final source time."
+    },
+    {
+      "url": "https://coastwatch.noaa.gov/erddap/griddap/noaacwNPPN20VIIRSchlociDaily.json?chl_oci%5B(2021-09-02T12:00:00Z)%5D%5B0%5D%5B(34.45):1:(32.5)%5D%5B(-121):1:(-117.05)%5D",
+      "supports": "Successful bounded Southern California grid subset; cannot use stale measurements as current context."
+    }
+  ],
+  "limitations": [
+    "Not admitted to current habitat feed because last source time is outside operational freshness windows.",
+    "Source retrieval success and filled grid do not imply current fish or current ocean conditions.",
+    "Cloud masks/gaps and surface-only pigment interpretation must be preserved."
+  ],
+  "provenance": {
+    "access_service": "https://coastwatch.noaa.gov/erddap",
+    "raw_sha256": "36b27cd720092c004855ab3d6428085eb7c4670309c9940947b218706d883762",
+    "transformations": [
+      "Read metadata and one regional subset; no interpolation, species scoring or publication."
+    ]
+  }
+}

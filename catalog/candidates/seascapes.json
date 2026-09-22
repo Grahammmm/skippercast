@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "seascapes-dynamic-candidate",
+  "name": "NOAA MBON 8-day pelagic seascapes",
+  "region_ids": [
+    "southern-california"
+  ],
+  "need_ids": [
+    "sea-temperature",
+    "chlorophyll"
+  ],
+  "documentation_url": "https://cwcgom.aoml.noaa.gov/erddap/info/noaa_aoml_seascapes_8day/index.html",
+  "access_url": "https://cwcgom.aoml.noaa.gov/erddap/griddap/noaa_aoml_seascapes_8day.json?CLASS%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D,P%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D",
+  "access_status": "partial",
+  "producer": {
+    "name": "NOAA CoastWatch, OSU, USF, NASA, UAF, IOOS, NMS",
+    "url": "https://coastwatch.noaa.gov/"
+  },
+  "variables": [
+    "CLASS",
+    "P"
+  ],
+  "units": {
+    "CLASS": "None",
+    "P": "Punits"
+  },
+  "rights": {
+    "license": "The data may be used and redistributed for free but is not intended\nfor legal use, since it may contain inaccuracies. Neither the data\nContributor, ERD, NOAA, nor the United States Government, nor any\nof their employees or contractors, makes any warranty, express or\nimplied, including warranties of merchantability and fitness for a\nparticular purpose, or assumes any legal liability for the accuracy,\ncompleteness, or usefulness, of this information.",
+    "terms_url": "https://cwcgom.aoml.noaa.gov/erddap/info/noaa_aoml_seascapes_8day/index.html",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [
+      -121,
+      32.5,
+      -117.05,
+      34.45
+    ],
+    "resolution_m": 5559.749999999999,
+    "horizontal_crs": "Geographic latitude/longitude; exact CRS not stated in inspected metadata",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://cwcgom.aoml.noaa.gov/erddap/griddap/noaa_aoml_seascapes_8day.json?CLASS%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D,P%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": "2026-06-26T12:00:00Z",
+    "checked_at": "2026-09-22T17:13:01Z",
+    "update_cadence": "8-day composite, but latest source is stale",
+    "coverage_start": "2002-08-29T12:00:00Z",
+    "coverage_end": "2026-06-26T12:00:00Z"
+  },
+  "evidence": [
+    {
+      "url": "https://cwcgom.aoml.noaa.gov/erddap/info/noaa_aoml_seascapes_8day/index.html",
+      "supports": "Original-publisher metadata supplies units, resolution, license and actual final source time."
+    },
+    {
+      "url": "https://cwcgom.aoml.noaa.gov/erddap/griddap/noaa_aoml_seascapes_8day.json?CLASS%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D,P%5B(2026-06-26T12:00:00Z)%5D%5B(32.5):1:(34.45)%5D%5B(-121):1:(-117.05)%5D",
+      "supports": "Successful bounded Southern California grid subset; cannot use stale measurements as current context."
+    }
+  ],
+  "limitations": [
+    "Not admitted to current habitat feed because last source time is outside operational freshness windows.",
+    "Source retrieval success and filled grid do not imply current fish or current ocean conditions.",
+    "Classification probability is class assignment, not fish probability."
+  ],
+  "provenance": {
+    "access_service": "https://cwcgom.aoml.noaa.gov/erddap",
+    "raw_sha256": "b2f2c7ec5d59b4f90dbab5de541a42804243b5cab87422ff2d4c3c2eba6ab5cf",
+    "transformations": [
+      "Read metadata and one regional subset; no interpolation, species scoring or publication."
+    ]
+  }
+}

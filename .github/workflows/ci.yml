@@ -8,6 +8,21 @@ permissions:
   contents: read
 
 jobs:
+  survey-science:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-survey.txt
+      - name: Install pinned native survey tools
+        run: python -m pip install -r requirements-survey.txt
+      - name: Native depth, uncertainty and closure fixtures
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -p test_bottom_targets.py -v
   check:
     runs-on: ubuntu-latest
     strategy:

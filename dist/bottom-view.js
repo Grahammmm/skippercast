@@ -1,5 +1,5 @@
 // A scientific view of measured elevations. Blank survey cells stay blank.
-import { getRegion, assetURL } from "./region.js?v=8.5";
+import { getRegion, assetURL } from "./region.js?v=8.6";
 let indexPromise;
 
 export function decodeBottom(data) {
@@ -98,12 +98,12 @@ export async function mountBottom(container, target) {
     if(data.region_id!==getRegion().id || data.target_id!==target.id) throw new Error("Survey identity mismatch");
     if(!figure.isConnected) return;
     const canvas=document.createElement("canvas");canvas.setAttribute("role","img");
-    canvas.setAttribute("aria-label",`Surveyed seabed relief around ${target.id}; ${data.depth_range_ft.join(" to ")} feet deep, ${data.native_cell_m} metre survey cells.`);
+    canvas.setAttribute("aria-label",`Surveyed seabed relief around ${target.id}; ${data.depth_range_ft.join(" to ")} feet deep, ${data.native_resolution_range_m?.join('–')||data.native_cell_m} metre source cells; ${data.cell_m} metre display cells.`);
     const controls=document.createElement("div");controls.className="bottom-controls";
     const caption=document.createElement("figcaption");
     const sourceNotes=document.createElement('details'),sourceSummary=document.createElement('summary'),sourceText=document.createElement('p');
     sourceSummary.textContent='Survey source & limits';
-    sourceText.className='small';sourceText.textContent=`This image window may extend beyond the screened footprint and the selected depth band. No individual boulder or fish inference. ${data.limitations || 'Historical survey; present sediment and vegetation can differ.'}`;
+    sourceText.className='small';sourceText.textContent=`This image window may extend beyond the screened footprint and the selected depth band. No individual boulder or fish inference. ${data.source_interpolation||''} ${data.limitations || 'Historical survey; present sediment and vegetation can differ.'}`;
     sourceNotes.append(sourceSummary,sourceText);
     if(String(data.source_url||'').startsWith('https://')){const link=document.createElement('a');link.href=data.source_url;link.target='_blank';link.rel='noopener';link.textContent='Original survey source ↗';sourceNotes.append(link);}
     let mode='relief',azimuth=0,section=90,band=false;
@@ -114,7 +114,7 @@ export async function mountBottom(container, target) {
     const read=key=>Number(fields.querySelector(`[data-bottom="${key}"]`).value);
     const draw=()=>{
       const limits=[read('min'),read('max')];renderBottom(canvas,data,mode,{azimuth,section,band:band&&limits[0]<=limits[1]?limits:null});
-      caption.textContent=`${data.producer || 'USGS'} ${data.survey_year} · ${data.native_cell_m} m native cells · ${Math.round(data.coverage_fraction*100)}% source-grid coverage. ${mode==='relief'?`Relief: 2× vertical scale; ${data.cell_m*2} m drawing mesh.`:`Grid-north-up depth: ${data.cell_m} m drawing cells; orange section line.`} White ring: sample center. ${data.vertical_datum}.`;
+      caption.textContent=`${data.producer || 'USGS'} ${data.survey_year} · ${data.native_resolution_range_m?.join('–')||data.native_cell_m} m source cells · ${Math.round(data.coverage_fraction*100)}% source-grid coverage. ${mode==='relief'?`Relief: 2× vertical scale; ${data.cell_m*2} m drawing mesh.`:`Grid-north-up depth: ${data.cell_m} m drawing cells; orange section line.`} White ring: sample center. ${data.vertical_datum}.`;
       const series=bottomSection(data,section),valid=series.filter(p=>p.depth_ft!==null),lo=Math.min(...valid.map(p=>p.depth_ft)),hi=Math.max(...valid.map(p=>p.depth_ft));
       profile.width=720;profile.height=200;const c=profile.getContext('2d');c.fillStyle='#083546';c.fillRect(0,0,720,200);c.strokeStyle='#e4b661';c.lineWidth=2;let connected=false;
       if(!valid.length){c.fillStyle='#e5f3f4';c.font='16px sans-serif';c.fillText('No source cells on this section.',30,100);profile.setAttribute('aria-label','No source cells on this section.');return;}
@@ -123,7 +123,7 @@ export async function mountBottom(container, target) {
       profile.setAttribute('aria-label',`${section} degree grid section, ${Math.round(series.at(-1).distance_ft)} feet long, depths ${lo.toFixed(1)} to ${hi.toFixed(1)} feet, ${data.vertical_datum}. Independent depth axis scale.`);
     };
     fields.addEventListener('input',()=>{azimuth=read('azimuth');section=read('section');band=fields.querySelector('[data-bottom="band"]').checked;draw();});
-    tools.append(fields,profile);const note=document.createElement('p');note.className='small';note.textContent='Bearings follow grid north in the source projection, not true or magnetic north. The section uses nearest native survey cells. Its depth axis is scaled independently for readability; slopes in this graph are not to scale.';tools.append(note);
+    tools.append(fields,profile);const note=document.createElement('p');note.className='small';note.textContent='Bearings follow grid north in the source projection, not true or magnetic north. The section samples the displayed grid. Its depth axis is scaled independently for readability; slopes in this graph are not to scale.';tools.append(note);
     for(const [m,label] of [['relief','Relief'],['plan','From above']]){const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-pressed',String(m==='relief'));b.onclick=()=>{mode=m;for(const s of controls.children)s.setAttribute('aria-pressed',String(s===b));draw();};controls.append(b);}
     status.remove();figure.append(controls,canvas,caption,sourceNotes,tools);draw();
   } catch(e) { status.textContent=e.message; }

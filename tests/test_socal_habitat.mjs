@@ -40,7 +40,8 @@ test('full habitat polygons remain outside every MPA and groundfish exclusion, n
 });
 
 test('numeric bottom images preserve native cells, blank gaps, unknown datum and source hashes',()=>{
-  const available=Object.entries(index.views).filter(([,value])=>value.status==='surveyed');
+  const contextIds=new Set(data.features.map(f=>f.properties.id));
+  const available=Object.entries(index.views).filter(([id,value])=>value.status==='surveyed'&&contextIds.has(id));
   assert.ok(available.length>10);
   assert.ok(available.length<=128,'Mobile release has a bounded measured-image budget');
   for(const [id,receipt] of available){

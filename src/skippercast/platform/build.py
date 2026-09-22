@@ -7,6 +7,7 @@ import shutil
 from .contracts import REPO, atomic_json, load_catalogs, load_region, read_json, requirement_report, within
 from ..pipeline.regulations import validate_bindings, validate_region_binding, regulatory_snapshot
 from datetime import datetime, timezone
+from .qualified_scope import validate_qualified_scope, qualified_subset_satisfies
 
 
 def validate_regional_rules(region, root):
@@ -65,7 +66,10 @@ def build(root=REPO):
             assets[key] = {"path": value, "sha256": hashlib.sha256(asset.read_bytes()).hexdigest(), "bytes": asset.stat().st_size}
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
-        if atlas["targets"] and not report["capabilities"]["surveyed-bottom-targets"]["ready"]:
+        qualified=validate_qualified_scope(region,atlas,root)
+        if qualified:report['qualified_subset']=qualified
+        if (atlas["targets"] and not report["capabilities"]["surveyed-bottom-targets"]["ready"]
+                and not qualified_subset_satisfies(report, qualified)):
             raise ValueError("Fishing targets cannot be published before their source requirements are met")
         west, south, east, north = region["fishing_bounds"]
         ids=set()
@@ -77,6 +81,7 @@ def build(root=REPO):
             if target["neighborhood_depth_ft"][1] > region["boat"]["bottom_depth_limit_ft"]:
                 raise ValueError("Target exceeds the configured fishing depth limit")
         report["published_targets"] = len(atlas["targets"])
+        report['qualified_bottom_views']=len(atlas['targets'])
         report["published_bottom_views"] = sum(v["status"] == "surveyed" for v in read_json(within(root / "dist", region["assets"]["bottom_index"]))["views"].values())
         atomic_json(output / "coverage.json", report)
         atomic_json(output / "region.json", region)

@@ -49,6 +49,16 @@ test('public feed requests use edge-compatible redirect handling and reject redi
     assert.equal(calls,2,'a redirect must not cause another fetch');
   }finally{globalThis.fetch=originalFetch;globalThis.caches=originalCaches;}
 });
+test('public habitat endpoint is region-pinned and rejects a cross-region product',async()=>{
+  const original=globalThis.fetch;let calls=0;
+  try{
+    globalThis.fetch=async url=>{calls++;assert.equal(url,REGIONS['morro-bay'].habitat_feed);return Response.json({schema_version:1,region_id:'morro-bay',layers:{}});};
+    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{})).status,200);
+    assert.equal((await worker.fetch(request('habitat?region=https://attacker.test'),{})).status,404);assert.equal(calls,1);
+    globalThis.fetch=async()=>Response.json({schema_version:1,region_id:'southern-california',layers:{}});
+    assert.equal((await worker.fetch(request('habitat?region=morro-bay'),{})).status,503);
+  }finally{globalThis.fetch=original;}
+});
 test('outbox produces one in-app event for repeated checks and does not silently skip a missed final',async()=>{
   const {sql,adapter}=database(),env={DB:adapter};const originalFetch=globalThis.fetch;
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles'}).format(new Date(Date.now()+2*86400000));

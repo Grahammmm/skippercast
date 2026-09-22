@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "id": "cambria-san-simeon",
-  "name": "Cambria–San Simeon",
+  "name": "Cambria\u2013San Simeon",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · Central Groundfish Management Area",
+  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
   "bounds": [
     -121.95,
     35.45,
@@ -26,12 +26,12 @@
     "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
     "region_notice_ids": [],
     "unavailable_targets": {
-      "lobster": "Spiny lobster is not in this region’s researched target list. This is target coverage, not a legal prohibition."
+      "lobster": "Spiny lobster is not in this region\u2019s researched target list. This is target coverage, not a legal prohibition."
     },
     "local_areas": [
       {
         "id": "san-simeon",
-        "name": "Cambria–San Simeon",
+        "name": "Cambria\u2013San Simeon",
         "bounds": [
           -121.5,
           35.49,
@@ -90,28 +90,28 @@
     },
     {
       "id": "offshore-0-0",
-      "name": "Offshore south · inner",
+      "name": "Offshore south \u00b7 inner",
       "latitude": 35.55,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-0-1",
-      "name": "Offshore south · outer",
+      "name": "Offshore south \u00b7 outer",
       "latitude": 35.55,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-1-0",
-      "name": "Offshore north · inner",
+      "name": "Offshore north \u00b7 inner",
       "latitude": 35.65,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-1-1",
-      "name": "Offshore north · outer",
+      "name": "Offshore north \u00b7 outer",
       "latitude": 35.65,
       "longitude": -121.75,
       "offshore": true
@@ -207,7 +207,8 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
-      "mur-sst"
+      "mur-sst",
+      "noaa-wcofs"
     ],
     "chlorophyll": [
       "modis-chlorophyll"
@@ -306,7 +307,7 @@
     },
     "sea-temperature": {
       "status": "partial",
-      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
     },
     "chlorophyll": {
       "status": "partial",
@@ -362,7 +363,7 @@
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/latest.json",
   "landing_names": [],
   "coverage_note": "Expansion preview through San Simeon: reviewed geological context and regional conditions. Native-depth-qualified targets remain withheld until appropriate survey coverage and rights are resolved.",
-  "landing_note": "Morro Bay totals do not locate catches in Cambria–San Simeon; no local report publisher is bound.",
+  "landing_note": "Morro Bay totals do not locate catches in Cambria\u2013San Simeon; no local report publisher is bound.",
   "jurisdiction_id": "california-central",
   "pipeline_sources": {
     "sst": "mur-sst",
@@ -398,7 +399,8 @@
           "wind_speed_10m"
         ],
         "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46028",
-        "anemometer_height_m": 4.1
+        "anemometer_height_m": 4.1,
+        "wind_verification": "ndbc-derived-10m"
       }
     ],
     "comfort_defaults": {
@@ -415,5 +417,6 @@
       "spectra": "ndbc-buoys"
     }
   },
-  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/intelligence.json"
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/cambria-san-simeon/habitat-dynamics.json"
 }

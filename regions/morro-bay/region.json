@@ -4,7 +4,7 @@
   "name": "Morro Bay & Avila",
   "status": "active",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · Central Groundfish Management Area",
+  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
   "bounds": [
     -121.95,
     34.95,
@@ -26,12 +26,12 @@
     "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
     "region_notice_ids": [],
     "unavailable_targets": {
-      "lobster": "Spiny lobster is not in this region’s researched target list. This is target coverage, not a legal prohibition."
+      "lobster": "Spiny lobster is not in this region\u2019s researched target list. This is target coverage, not a legal prohibition."
     },
     "local_areas": [
       {
         "id": "san-simeon",
-        "name": "Cambria–San Simeon",
+        "name": "Cambria\u2013San Simeon",
         "bounds": [
           -121.5,
           35.49,
@@ -55,7 +55,7 @@
       },
       {
         "id": "buchon",
-        "name": "Point Buchon / Montaña de Oro",
+        "name": "Point Buchon / Monta\u00f1a de Oro",
         "bounds": [
           -121.02,
           35.21,
@@ -140,63 +140,63 @@
     },
     {
       "id": "offshore-0-0",
-      "name": "Offshore south · inner",
+      "name": "Offshore south \u00b7 inner",
       "latitude": 35.05,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-0-1",
-      "name": "Offshore south · middle",
+      "name": "Offshore south \u00b7 middle",
       "latitude": 35.05,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-0-2",
-      "name": "Offshore south · outer",
+      "name": "Offshore south \u00b7 outer",
       "latitude": 35.05,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-1-0",
-      "name": "Offshore central · inner",
+      "name": "Offshore central \u00b7 inner",
       "latitude": 35.3,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-1-1",
-      "name": "Offshore central · middle",
+      "name": "Offshore central \u00b7 middle",
       "latitude": 35.3,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-1-2",
-      "name": "Offshore central · outer",
+      "name": "Offshore central \u00b7 outer",
       "latitude": 35.3,
       "longitude": -121.75,
       "offshore": true
     },
     {
       "id": "offshore-2-0",
-      "name": "Offshore north · inner",
+      "name": "Offshore north \u00b7 inner",
       "latitude": 35.55,
       "longitude": -121.25,
       "offshore": true
     },
     {
       "id": "offshore-2-1",
-      "name": "Offshore north · middle",
+      "name": "Offshore north \u00b7 middle",
       "latitude": 35.55,
       "longitude": -121.5,
       "offshore": true
     },
     {
       "id": "offshore-2-2",
-      "name": "Offshore north · outer",
+      "name": "Offshore north \u00b7 outer",
       "latitude": 35.55,
       "longitude": -121.75,
       "offshore": true
@@ -297,7 +297,8 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
-      "mur-sst"
+      "mur-sst",
+      "noaa-wcofs"
     ],
     "chlorophyll": [
       "modis-chlorophyll"
@@ -396,7 +397,7 @@
     },
     "sea-temperature": {
       "status": "partial",
-      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
     },
     "chlorophyll": {
       "status": "partial",
@@ -492,7 +493,8 @@
           "wind_speed_10m"
         ],
         "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46028",
-        "anemometer_height_m": 4.1
+        "anemometer_height_m": 4.1,
+        "wind_verification": "ndbc-derived-10m"
       }
     ],
     "comfort_defaults": {
@@ -509,5 +511,6 @@
       "spectra": "ndbc-buoys"
     }
   },
-  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json"
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/habitat-dynamics.json"
 }

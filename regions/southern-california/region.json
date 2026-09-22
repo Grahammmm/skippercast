@@ -4,7 +4,7 @@
   "name": "Southern California",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · Southern Groundfish Management Area",
+  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
   "bounds": [
     -121,
     32.5,
@@ -130,7 +130,7 @@
     ],
     "unavailable_targets": {
       "dungeness": "Dungeness is not a promoted Southern California target. Crab traps and snares are prohibited south of Point Arguello; this is not a blanket prohibition on every method of crab collection. See official CDFW invertebrate rules.",
-      "salmon": "Salmon is not in this region’s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
+      "salmon": "Salmon is not in this region\u2019s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
     },
     "local_areas": [
       {
@@ -404,7 +404,7 @@
   "forecast_points": [
     {
       "id": "border",
-      "name": "Imperial Beach · U.S. side",
+      "name": "Imperial Beach \u00b7 U.S. side",
       "latitude": 32.6,
       "longitude": -117.25,
       "context": "san-diego"
@@ -467,7 +467,7 @@
     },
     {
       "id": "conception",
-      "name": "Point Conception · south side",
+      "name": "Point Conception \u00b7 south side",
       "latitude": 34.42,
       "longitude": -120.5,
       "context": "santa-barbara"
@@ -488,7 +488,7 @@
     },
     {
       "id": "offshore-south",
-      "name": "San Diego offshore · U.S. waters",
+      "name": "San Diego offshore \u00b7 U.S. waters",
       "latitude": 32.8,
       "longitude": -117.85,
       "context": "san-diego",
@@ -587,10 +587,14 @@
     "lobster"
   ],
   "source_names": {
-    "historical-reefs": "CDFW historical artificial reefs"
+    "historical-reefs": "CDFW historical artificial reefs",
+    "NOAA-H13093": "NOAA H13093: Vicinity of Anacapa Island",
+    "NOAA-H13323": "NOAA H13323: Cavern Point to Smugglers Cove"
   },
   "source_bindings": {
     "bathymetry": [
+      "noaa-h13093",
+      "noaa-h13323",
       "noaa-cinms-bathymetry-2025",
       "noaa-bag"
     ],
@@ -647,7 +651,8 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
-      "mur-sst"
+      "mur-sst",
+      "noaa-wcofs"
     ],
     "chlorophyll": [
       "modis-chlorophyll"
@@ -689,7 +694,7 @@
   "coverage": {
     "bathymetry": {
       "status": "partial",
-      "reason": "NOAA NCCOS/NCEI native 2 m and 4 m grids imported for five Channel Islands, with numeric terrain views. Unspecified common vertical datum and absent per-cell uncertainty prevent exact target qualification."
+      "reason": "Eleven original NOAA BAG footprints near Anacapa and eastern Santa Cruz have native 1\u20134 m MLLW depth, product uncertainty and a conservative <=200 ft screen. Other island terrain views remain context; complete coastal coverage is not claimed."
     },
     "substrate": {
       "status": "partial",
@@ -697,7 +702,7 @@
     },
     "groundtruth": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
     },
     "kelp": {
       "status": "partial",
@@ -705,7 +710,7 @@
     },
     "protected-areas": {
       "status": "ready",
-      "reason": "Complete regional CDFW MPA snapshot plus NOAA’s eight Groundfish Exclusion Areas. Context areas also excluded from closures."
+      "reason": "Complete regional CDFW MPA snapshot plus NOAA\u2019s eight Groundfish Exclusion Areas. Context areas also excluded from closures."
     },
     "regulations": {
       "status": "ready",
@@ -745,7 +750,7 @@
     },
     "sea-temperature": {
       "status": "partial",
-      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
     },
     "chlorophyll": {
       "status": "partial",
@@ -753,11 +758,11 @@
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
     },
     "charter-identity": {
       "status": "research",
@@ -799,12 +804,13 @@
     "regional_context": "regions/southern-california/reef-context.geojson",
     "closures": "regions/southern-california/groundfish-exclusions.geojson",
     "observations": "regions/southern-california/observations.json",
-    "survey_habitat": "regions/southern-california/survey-habitat.geojson"
+    "survey_habitat": "regions/southern-california/survey-habitat.geojson",
+    "target_qualification": "regions/southern-california/qualified-bottom/manifest.json"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/southern-california/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/latest.json",
   "landing_names": [],
-  "coverage_note": "Mexico border to Point Conception. Sixteen regional targets with detailed island rock, sediment and historical kelp context. Native survey terrain views cover selected Channel Islands patches; datum and coverage gaps remain. Habitat is not verified fish presence or charter AIS.",
+  "coverage_note": "Eleven source-qualified reef patches near Anacapa and eastern Santa Cruz supplement historical habitat context. Unmapped areas and unverified fish presence remain unknown.",
   "landing_note": "No Southern California catch-position dataset has been imported; landing totals are not fishing coordinates.",
   "jurisdiction_id": "california-southern",
   "pipeline_sources": {
@@ -857,9 +863,12 @@
         "longitude": -119.842,
         "name": "EAST SANTA BARBARA  - 12NM Southwest of Santa Barbara, CA",
         "variables": [
-          "wave_height"
+          "wave_height",
+          "wind_speed_10m"
         ],
-        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46053"
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46053",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 4.1
       },
       {
         "id": "46054",
@@ -867,9 +876,12 @@
         "longitude": -120.468,
         "name": "WEST SANTA BARBARA  38 NM West of Santa Barbara, CA",
         "variables": [
-          "wave_height"
+          "wave_height",
+          "wind_speed_10m"
         ],
-        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46054"
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46054",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.8
       },
       {
         "id": "46025",
@@ -877,9 +889,12 @@
         "longitude": -119.077,
         "name": "Santa Monica Basin - 33NM WSW of Santa Monica, CA",
         "variables": [
-          "wave_height"
+          "wave_height",
+          "wind_speed_10m"
         ],
-        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46025"
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46025",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.8
       },
       {
         "id": "46086",
@@ -887,9 +902,12 @@
         "longitude": -118.029,
         "name": "SAN CLEMENTE BASIN - 27NM SE Of San Clemente Is, CA",
         "variables": [
-          "wave_height"
+          "wave_height",
+          "wind_speed_10m"
         ],
-        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46086"
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46086",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.2
       }
     ],
     "comfort_defaults": {
@@ -908,7 +926,7 @@
   },
   "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/intelligence.json",
   "default_forecast_point": "la-jolla",
-  "preview_label": "Island survey habitat · 16 Southern targets",
+  "preview_label": "11 qualified island reef areas; remaining coast is habitat context",
   "contexts": {
     "san-diego": {
       "name": "San Diego coast",
@@ -1076,5 +1094,6 @@
       "San Nicolas"
     ],
     "note": "Historical substrate and canopy outlines are ecological search context; measured depth qualification is separate. No invented catch hotspots."
-  }
+  },
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/habitat-dynamics.json"
 }

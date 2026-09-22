@@ -125,6 +125,11 @@ export default {async fetch(request,env){
       await budget(env,'job:'+claims.jti);
       return json(await checkTrips(env,cursor));
     }
+    if(request.method==='GET'&&path==='/api/habitat'){
+      const region=regions[url.searchParams.get('region')];if(!region?.habitat_feed)return json({error:'Unknown region'},404);
+      const feed=await readFeed(region.habitat_feed);if(feed.region_id!==region.id||feed.schema_version!==1)throw Error('region mismatch');
+      const response=json(feed);response.headers.set('Cache-Control','public,max-age=300');return response;
+    }
     if(request.method==='GET'&&['/api/intelligence','/api/forecast'].includes(path)){
       const region=regions[url.searchParams.get('region')];if(!region)return json({error:'Unknown region'},404);
       const feed=await readFeed(region.intelligence_feed);if(feed.region_id!==region.id)throw Error('region mismatch');

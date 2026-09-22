@@ -128,7 +128,7 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "San Simeon map sheet, 35.483889–35.701805 N; product-specific footprints apply.",
+      "coverage_note": "San Simeon map sheet, 35.483889\u201335.701805 N; product-specific footprints apply.",
       "limitations": [
         "2015 interpretation from multiple older surveys.",
         "Nearshore depth contours are spaced 10 m after smoothing; not a native high-resolution depth grid.",
@@ -1086,7 +1086,8 @@
       "name": "NOAA West Coast Operational Forecast System",
       "provider": "NOAA West Coast Operational Forecast System",
       "needs": [
-        "surface-currents"
+        "surface-currents",
+        "sea-temperature"
       ],
       "documentation_url": "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html",
       "adapter": "wcofs-dap2",
@@ -1101,10 +1102,12 @@
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
         "transport": "HTTPS to fixed provider endpoints"
       },
-      "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
+      "coverage_note": "NOAA native regional surface temperature and velocity, sampled on the published 0.04-degree regular grid. Actual issue time, populated forecast times, masks and coordinates are retained.",
       "limitations": [
         "Approximately 4 km regular grid; NAD83; surface layer only.",
-        "Published 72-hour horizon, sampled every three hours; not a bottom-current or bar-current prediction."
+        "Published 72-hour horizon, sampled every three hours; not a bottom-current or bar-current prediction.",
+        "Surface temperature is a model field, not measured fish-depth temperature.",
+        "Assimilates satellite SST, HF radar and altimetry; these inputs are not independent confirmation."
       ],
       "allowed_hosts": [
         "opendap.co-ops.nos.noaa.gov"
@@ -1343,6 +1346,96 @@
       ],
       "update_policy": "Daily source-document access audit; source versions stay pinned until reviewed replacement passes the habitat compiler and closure tests.",
       "native_resolution_m": 2
+    },
+    {
+      "id": "noaa-h13093",
+      "name": "NOAA H13093: Vicinity of Anacapa Island",
+      "provider": "NOAA/NOS Office of Coast Survey; NCEI archive",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+      "adapter": "noaa-native-vr-bag",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "CC0-1.0",
+        "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
+        "redistribution_reviewed": true,
+        "attribution": "NOAA Ship Rainier; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+      },
+      "authenticity": {
+        "basis": "Original NOAA/NOS survey file, embedded metadata and descriptive report reviewed. Native arrays and transforms independently compared with GDAL.",
+        "transport": "HTTPS to official NOAA archive; immutable raw file and metadata hashes."
+      },
+      "bounds": [
+        -119.538822,
+        33.916787,
+        -119.290859,
+        34.133228
+      ],
+      "coverage_note": "Envelope includes extensive nodata. Native masks, not this envelope, determine qualified footprint. Compiler uses only 1\u20134 m native cells.",
+      "limitations": [
+        "Historical 2017 survey, not live bathymetry. Variable 1\u201316 m cells, with only 1\u20134 m cells eligible here. The survey report identifies dynamic swirling ridges southwest of West Anacapa; terrain relief does not establish bedrock, individual boulders or current catch abundance. The older substrate interpretation is not ground truth. Source product uncertainty is retained without assigning an unsupported confidence interval.",
+        "Resolution is variable; grid size is not positional accuracy or a boulder dimension. Not a navigation product."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ngdc.noaa.gov"
+      ],
+      "pinned_sha256": "1e79a9aa61fdede984930e66a9da17a80dd2b552eecdee2281a96cead59d3b23",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13093/BAG/H13093_MB_VR_MLLW.bag",
+      "native_resolution_range_m": [
+        1,
+        16
+      ],
+      "qualified_resolution_limit_m": 4,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "id": "noaa-h13323",
+      "name": "NOAA H13323: Cavern Point to Smugglers Cove",
+      "provider": "NOAA/NOS Office of Coast Survey; NCEI archive",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+      "adapter": "noaa-native-vr-bag",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "CC0-1.0",
+        "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
+        "redistribution_reviewed": true,
+        "attribution": "NOAA Ship Fairweather; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+      },
+      "authenticity": {
+        "basis": "Original NOAA/NOS survey file, embedded metadata and descriptive report reviewed. Native arrays and transforms independently compared with GDAL.",
+        "transport": "HTTPS to official NOAA archive; immutable raw file and metadata hashes."
+      },
+      "bounds": [
+        -119.833524,
+        33.838541,
+        -119.315762,
+        34.291702
+      ],
+      "coverage_note": "Envelope includes extensive nodata. Native masks, not this envelope, determine qualified footprint. Compiler uses only 1\u20134 m native cells.",
+      "limitations": [
+        "Historical 2019 survey covering part of eastern Santa Cruz Island, not the entire island. Only native 1\u20134 m cells with finite product uncertainty qualify. Historical substrate interpretation remains uncertain; no individual boulder dimensions, current fish presence or catches are established.",
+        "Resolution is variable; grid size is not positional accuracy or a boulder dimension. Not a navigation product."
+      ],
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov",
+        "www.ngdc.noaa.gov"
+      ],
+      "pinned_sha256": "a7a10f65bed5ad18d06711ec30f935d373a3ec7c8a0d09f24e177721d36ba96c",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag",
+      "native_resolution_range_m": [
+        1,
+        16
+      ],
+      "qualified_resolution_limit_m": 4,
+      "vertical_datum": "MLLW"
     }
   ]
 }

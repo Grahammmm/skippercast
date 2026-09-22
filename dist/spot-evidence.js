@@ -1,11 +1,15 @@
-import {getRegion,assetURL} from './region.js?v=8.5';
-import {esc} from './marine-charts.js?v=8.5';
+import {getRegion,assetURL} from './region.js?v=8.6';
+import {esc} from './marine-charts.js?v=8.6';
+import {terrainSource} from './terrain-evidence.js?v=8.6';
 const cache=new Map();
 export function spotEvidence(target,species,profile,region){
   const measured=[],inferred=[],unknown=[];
-  if(Number.isFinite(target.center_depth_ft))measured.push(`Center ${target.center_depth_ft} ft MLLW; survey ${target.survey_year}.`);
+  const source=terrainSource(target);
+  if(Number.isFinite(target.center_depth_ft))measured.push(`Center ${target.center_depth_ft} ft ${source.datum}; ${source.producer} survey ${target.survey_year}. ${source.grid}.`);
   if(target.metrics){
-    measured.push(`${Math.round(target.metrics.rugose_or_bedrock_fraction_210m*100)}% mapped rock/rough cover in the analysis neighborhood; ${(target.metrics.relief_210m_m*3.28084).toFixed(0)} ft local relief.`);
+    if(Number.isFinite(target.metrics.rugose_or_bedrock_fraction_210m))measured.push(`${Math.round(target.metrics.rugose_or_bedrock_fraction_210m*100)}% mapped rock/rough cover in the analysis neighborhood.`);
+    if(Number.isFinite(target.metrics.relief_210m_m))measured.push(`${(target.metrics.relief_210m_m*3.28084).toFixed(0)} ft local relief${target.rating?' across the central 90% of analysis depths':''}.`);
+    else if(Number.isFinite(target.rating?.relief_90_percent_m))measured.push(`${(target.rating.relief_90_percent_m*3.28084).toFixed(0)} ft central 90% depth range in the 250 m analysis neighborhood.`);
     inferred.push(`Terrain grade ${target.habitat_grade} (${target.habitat_score}/100) summarizes physical structure. It is not a species or catch score.`);
   }else if(target.recorded_validation){const v=target.recorded_validation;measured.push(`Recorded geometry depth: ${v.minimum_ft}–${v.maximum_ft} ft.`);}
   if(profile)inferred.push(profile.habitat);

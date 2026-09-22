@@ -1,48 +1,46 @@
 # Architecture
 
-The implemented regional platform is documented in [A reusable coastal fishing system](platform.md). It separates data needs, reviewed providers, jurisdictions and regional packages, with scheduled feeds and measured bottom views. The monitor workflow below remains a separate, private operational path.
-
-For a visual introduction to the intended app, see [the system overview: data flow, chart layers, and software stack](system-overview.md).
-
-SkipperCast has a static web app and two independent Python research paths. The atlas can be used without running the monitor; the collector can be used without importing any waypoints. The [web app](web-app.md) reads the public atlas directly and requests forecast evidence from providers in the browser. It does not run the Python collector or alert delivery.
+SkipperCast separates regional configuration from provider adapters, evidence products and the shared mobile app. Start with [the platform](platform.md), [the data-quality rollout](data-quality-rollout.md) and [production operations](production-operations.md).
 
 ```mermaid
 flowchart TD
-    A[Public marine sources] --> B[Collector: raw responses and metadata]
-    B --> C[Numerical screen and evidence gaps]
-    C --> D[Person or agent reviews whole trip]
-    D --> E[Reviewed assessment]
-    E --> F[Alert lifecycle decision]
-    F --> G[External delivery integration]
-    G --> H[Confirmed receipt and persistent state]
-    H --> F
-    I[Dated public atlas data] --> J[Atlas validator and exporter]
-    J --> K[GPX / GeoJSON / offline notes]
+    A[Region, jurisdiction and species contracts] --> B[Reviewed source bindings]
+    B --> C[Scheduled provider adapters]
+    B --> D[Reviewed survey compiler]
+    C --> E[Normalized evidence, source clocks and health]
+    D --> F[Qualified footprints and measured terrain]
+    E --> G[Versioned public feeds and immutable tiles]
+    F --> H[Validated regional app package]
+    G --> I[Cached Worker API]
+    I --> J[Shared mobile map and conditions]
+    H --> J
+    J --> K[Selected GPX day plan]
+    J --> L[Optional private trip records]
+    L --> M[Durable alert outbox and confirmed receipts]
 ```
 
-The repository implements the collector, numerical screen, alert-decision functions, and atlas exports. The review step, delivery integration, persistent delivery-state manager, and scheduler are external responsibilities. The diagram shows the complete intended workflow, not a claim that all boxes are automated.
+| Component | Responsibility |
+| --- | --- |
+| `regions/`, `catalog/`, `jurisdictions/` | Bind provider-independent data needs to reviewed geographic sources, species evidence and rules. |
+| `src/skippercast/pipeline/` | Collect dated public evidence, retain missing/stale states, produce ocean tiles, and compare prospective forecasts with observations. |
+| `src/skippercast/platform/` | Validate regional contracts and scoped survey qualifications; compile shared browser packages. |
+| `dist/` | Authored mobile map, conditions, evidence cards, measured bottom views and selected chartplotter exports. Generated `client/` and `server/` subdirectories are ignored. |
+| `server/`, `db/`, `drizzle/` | Cached public feeds, authenticated private records, migrations, saved-trip checks and durable delivery state. |
+| `.github/workflows/` | Offline tests, native scientific tests, half-hourly public conditions and daily source/rule checks. |
+| `src/skippercast/monitor/` | Separate collector and pure alert-lifecycle utilities for the private Morro Bay monitoring workflow. |
 
-| Module / artifact | Responsibility | Does not do |
-| --- | --- | --- |
-| `dist/` | Interactive map, selected-target GPX, live browser forecast comparisons and source metadata | Predict catches, qualify trips, display live legal closures, save personal records, send alerts |
-| `monitor/collector.py` | Fetch public sources, preserve access results, create a numerical screen and data-gap flags | Assign trip scores, resolve every source conflict, determine safety, send alerts |
-| `monitor/lifecycle.py` | Apply qualification and notification rules to caller-supplied reviewed assessments and delivered state | Evaluate weather, verify a statement is true, store state, ensure delivery |
-| `atlas/scoring.py` | Reproduce the fixed terrain-priority formula from measured metrics | Infer species presence, catch rate, fish size, or current drift |
-| `atlas/export.py` | Validate internal references/recorded checks; export included data | Rebuild native GIS surveys or prove present legal/navigation clearance |
-| `configs/morro-bay.example.json` | Document the regional example's boat, limits, and sample points | Supply credentials or generalize source selection automatically |
+## Evidence boundaries
 
-## Evidence and decision boundaries
+Every regional product retains source identity, acquisition and valid times, native resolution, masks, uncertainty where available, rights and recorded failures. A partial region can publish a hash-validated survey subset without claiming the entire region is surveyed. Current protected-area checks remain independent of an older compilation receipt.
 
-Forecast raw bodies and per-source metadata are saved before review. A source can be accessible but incomplete, stale, internally inconsistent, or spatially inappropriate. The numerical screen records those concerns where implemented; a person or agent must inspect remaining source limitations.
+Bottom scores rank mapped physical habitat, not catch probability. Satellite measurements describe surface water; modeled surface flow is not bottom current or measured boat drift. Forecast fields stop at populated provider hours. [Prospective verification](forecast-verification-quality.md) requires distinct weather outcomes, geographic matching and adequate coverage before making model-performance claims.
 
-The hourly screen uses a broad 06:00–13:00 local window as a starting point. An actual assessment needs the charted departure-to-return route, harbor time, daylight, and at least four real fishing hours. A passed screen is not proof that a workable trip exists.
+The browser receives cached public feeds, with source-specific recovery paths. Private records require authentication and are isolated from public feeds. Scheduled private checks use the configured workflow identity; delivered state requires a successful adapter receipt. Credentials and personal delivery records are not source data. See [production operations](production-operations.md) for deployment and security details.
 
-An alert decision is a pure function. The caller must supply state representing **successfully delivered** alerts, not attempted sends. A production integration needs durable locking, stable event IDs, receipts, failure reporting, and reconciliation of ambiguous attempts. Those operational features are intentionally not claimed by this initial package.
+## Independent monitor workflow
 
-## Geographic scope
+The Morro Bay example collector saves raw evidence and flags gaps. A person or agent still reviews the complete routed trip, departure and return entrance conditions, daylight and actual fishing time. Its pure lifecycle function operates on already reviewed assessments and successfully delivered state. The external personal-monitor integration is separate from the public website's optional saved-trip alert system; neither certifies a safe passage or predicts catches.
 
-The monitor profile uses Morro Bay as the departure harbor and examines Cambria–Diablo Canyon. The published atlas covers only the three USGS survey areas with verified reuse terms. It contains no complete navigation network, live MPA service, bar-current model, or worldwide fishing-location database.
+## Extension process
 
-## Runtime and side effects
-
-Core modules use Python's standard library. Importing modules does not fetch data or write outputs. `demo` and tests are offline. `collect` performs explicit network reads and creates a new run directory. `atlas export` writes a new output directory. No command contacts a Telegram bot, creates a schedule, or configures a hosting provider.
+Add a regional contract and reviewed sources, run real imports, validate coverage and species relevance, then pass tests and an observed scheduled publication. [Region setup](regions.md) and the [quality gates](data-quality-rollout.md) define that process. Keep new areas partial until the evidence supports more precise claims.

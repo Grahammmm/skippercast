@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.5';
+import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.6';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {buildContext} from '../scripts/build_reef_context.mjs';
 import {regulationState} from '../dist/regulations.js';
@@ -28,7 +28,10 @@ test('historical complex envelopes exclude full MPA/GEA geometry and cannot beco
  assert.equal(mpa.features.length,61);assert.equal(gea.features.length,8);assert.equal(data.features.length,16);
  assert.ok(data.withheld.some(x=>x.id==='sca-pacific-beach'));
  for(const f of data.features){assert.equal(f.properties.rank,null);assert.equal(f.properties.exportable,false);assert.equal(f.properties.depth_verified,false);assert.ok(!exclusions.features.some(x=>geometryIntersects(f.geometry,x.geometry)));}
- assert.equal(read('dist/'+r.assets.atlas).targets.length,0);
+ const atlas=read('dist/'+r.assets.atlas);
+ assert.ok(atlas.targets.length>0);
+ assert.ok(atlas.targets.every(t=>t.qualification?.full_geometry_screened&&t.rating?.catch_probability===null));
+ for(const area of atlas.areas)assert.ok(!exclusions.features.some(x=>geometryIntersects(area.geometry,x.geometry)));
 });
 test('Southern fall windows never become an unrestricted reef opening even with fresh matching checks',()=>{
  const d=read('dist/'+r.assets.regulations),now=Date.parse('2026-09-22T18:00:00Z');

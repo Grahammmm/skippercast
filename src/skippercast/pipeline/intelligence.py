@@ -9,7 +9,8 @@ from urllib.parse import urlencode
 from .collect import Client, source, stamp, model_loader, MODEL_META
 from .ocean import collect_ocean
 from .parsers import ndbc
-from .verification import forecast_records, merge_records, verify
+from .verification import forecast_records, merge_records, observation_records, merge_observations, derived_wind_data, derived_wind_records, verify
+from .verification_archive import load_archive, write_archive
 from ..platform.contracts import load_region, atomic_json, read_json
 
 
@@ -75,9 +76,9 @@ def run(region_id,output,previous_root=None,now=None):
     if previous_root:
         path=previous_root/'regions'/region_id/'intelligence.json'
         if path.is_file():prior=read_json(path)
-        path=previous_root/'regions'/region_id/'verification-state.json'
-        if path.is_file():state=read_json(path)
+        state=load_archive(previous_root/'regions'/region_id,region_id,required=bool(prior))
     if prior and prior.get('region_id')!=region_id:raise ValueError('Prior intelligence belongs to another region')
+    if state and state.get('region_id')!=region_id:raise ValueError('Prior verification archive belongs to another region')
     previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave025','ecmwf_wam025']
     def one(model):return 'model-'+model,model_source(model,region,now,previous.get('model-'+model))
     with ThreadPoolExecutor(max_workers=4) as pool:sources=dict(pool.map(one,models))
@@ -93,28 +94,42 @@ def run(region_id,output,previous_root=None,now=None):
     new=[];npoints=len(region['forecast_points']);stations=region['intelligence']['verification_stations']
     for model in models:
         s=sources['model-'+model]
-        if s['status']=='ok':new+=forecast_records(model,{**s['data'],'points':s['data']['points'][npoints:]},datetime.fromisoformat(s['data_retrieved_at'].replace('Z','+00:00')).timestamp(),stations)
-    records=merge_records(state.get('forecasts',[]),new,now.timestamp());observed={o['id']:o for o in state.get('observations',[]) if o['time']>=now.timestamp()-30*86400}
+        if s['status']=='ok':
+            try:new+=forecast_records(model,{**s['data'],'points':s['data']['points'][npoints:]},datetime.fromisoformat(s['data_retrieved_at'].replace('Z','+00:00')).timestamp(),stations)
+            except ValueError as error:s['verification_issue']=str(error)
+    records=merge_records(state.get('forecasts',[]),new,now.timestamp());new_observations=[]
     for station in stations:
         ident=station['id'];url=f'https://www.ndbc.noaa.gov/data/realtime2/{ident}.txt'
         s=source('verify-'+ident,'NDBC verification observations','observation',url,3,lambda c:ndbc(c.get(url),ident,False),now,previous.get('verify-'+ident));sources['verify-'+ident]=s
-        for row in (s.get('data') or {}).get('observations',[]):
-            epoch=datetime.fromisoformat(row['time'].replace('Z','+00:00')).timestamp()
-            for variable,key,unit,factor in [('wave_height','WVHT','ft',3.28084),('wind_speed_10m','WSPD','kn',1.94384449)]:
-                value=row.get(key)
-                if isinstance(value,(int,float)) and math.isfinite(value) and value>=0:
-                    oid=f'{ident}:{epoch}:{variable}';observed[oid]={'id':oid,'station':ident,'time':epoch,'variable':variable,'unit':unit,'value':value*factor}
-    verification=verify(records,list(observed.values()),now.timestamp())
+        if s.get('data_retrieved_at'):
+            received=datetime.fromisoformat(s['data_retrieved_at'].replace('Z','+00:00')).timestamp()
+            new_observations+=observation_records(station,(s.get('data') or {}).get('observations',[]),received,url)
+        wind_provider=station.get('wind_verification')
+        if wind_provider and wind_provider!='ndbc-derived-10m':raise ValueError('Unreviewed wind verification provider')
+        if wind_provider=='ndbc-derived-10m' and 'wind_speed_10m' in station['variables']:
+            wind_url=f'https://www.ndbc.noaa.gov/data/derived2/{ident}.dmv'
+            w=source('verify-wind-'+ident,'NDBC derived 10 m verification wind','observation',wind_url,3,
+                     lambda c:derived_wind_data(c.get(wind_url),ident),now,previous.get('verify-wind-'+ident))
+            sources['verify-wind-'+ident]=w
+            if w.get('data_retrieved_at') and w.get('data'):
+                received=datetime.fromisoformat(w['data_retrieved_at'].replace('Z','+00:00')).timestamp()
+                new_observations+=derived_wind_records(station,w['data'],received,wind_url)
+    evaluated_at=max(now.timestamp(),datetime.now(timezone.utc).timestamp())
+    observed=merge_observations(state.get('observations',[]),new_observations,evaluated_at)
+    verification=verify(records,observed,evaluated_at,stations)
+    verification['collection_issues']={k:s.get('verification_issue') or s.get('issue') for k,s in sources.items()
+                                       if k.startswith(('model-','verify-')) and (s.get('verification_issue') or s['status']!='ok')}
     forecast={'region_id':region_id,'requested_points':[[p['id'],p['latitude'],p['longitude']] for p in region['forecast_points']],'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
         'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},'retrieved':int(now.timestamp()*1000)}
     data={'schema_version':1,'region_id':region_id,'generated_at':stamp(now),'completed_at':stamp(),'ocean_collected_at':ocean_at,
           'sources':sources,'verification':verification,'forecast':forecast,
-          'health':{'status':'ok' if all(s['status']=='ok' for s in sources.values()) else 'degraded',
-                    'issues':[k for k,s in sources.items() if s['status']!='ok' and not (k.startswith('hfr-') and s['status']=='missing')],
+          'health':{'status':'ok' if all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
+                    'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue')) and not (k.startswith('hfr-') and s['status']=='missing')],
                     'coverage_gaps':[k for k,s in sources.items() if k.startswith('hfr-') and s['status']=='missing']}}
     target=output/'regions'/region_id
+    write_archive(target,region_id,records,observed,evaluated_at,
+                  previous_root/'regions'/region_id if previous_root else None)
     atomic_json(target/'intelligence.json',data)
-    atomic_json(target/'verification-state.json',{'schema_version':1,'region_id':region_id,'forecasts':records,'observations':list(observed.values())})
     return data
 
 

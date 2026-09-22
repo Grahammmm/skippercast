@@ -17,9 +17,12 @@ on:
       - "src/skippercast/pipeline/settings.py"
       - "src/skippercast/platform/**"
       - "scripts/refresh_regions.py"
+      - "scripts/prune_habitat_tiles.py"
       - "src/skippercast/pipeline/intelligence.py"
       - "src/skippercast/pipeline/ocean.py"
       - "src/skippercast/pipeline/verification.py"
+      - "src/skippercast/pipeline/verification_archive.py"
+      - "src/skippercast/pipeline/habitat_dynamics.py"
       - "src/skippercast/pipeline/wave_ensemble.py"
       - "scripts/check_saved_trips.py"
       - "requirements-ocean.txt"
@@ -49,7 +52,7 @@ jobs:
       - name: Test observation parsing
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests -p 'test_pipeline*.py' -v
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Load previous buoy feed
         run: |
           mkdir -p var/live
@@ -66,7 +69,12 @@ jobs:
         env:
           PYTHONPATH: src
         run: python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published
+      - name: Refresh dated habitat grids with six-hour provider caches
+        env:
+          PYTHONPATH: src
+        run: python scripts/refresh_regions.py habitat --output var/live --previous-root var/live-published
       - name: Publish the conditions feed
+        id: publish
         run: |
           if [ ! -d var/live-published ]; then
             mkdir -p var/live-published
@@ -76,35 +84,61 @@ jobs:
           fi
           cp var/live/latest.json var/live-published/
           cp var/live/intelligence-health.json var/live-published/
+          cp var/live/habitat-health.json var/live-published/
           mkdir -p var/live-published/regions
+          python scripts/prune_habitat_tiles.py var/live-published var/live
           cp -R var/live/regions/. var/live-published/regions/
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          from skippercast.pipeline.verification_archive import prune_archive
+          for region in Path('var/live-published/regions').iterdir():
+              if region.is_dir() and (region/'verification-state.json').exists():
+                  prune_archive(region)
+          PY
           cp docs/live-conditions.md var/live-published/README.md
           git -C var/live-published config user.name 'github-actions[bot]'
           git -C var/live-published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/live-published add latest.json intelligence-health.json regions README.md
+          git -C var/live-published add latest.json intelligence-health.json habitat-health.json regions README.md
           git -C var/live-published diff --cached --quiet || git -C var/live-published commit -m 'Refresh regional ocean evidence and forecast archive'
           git -C var/live-published push origin HEAD:refs/heads/conditions
       - name: Check private saved trips with workflow identity
         run: python scripts/check_saved_trips.py
-      - name: Report source failures after publishing their status
+      - name: Report source access and publication outcome
         if: always()
+        env:
+          PUBLICATION_OUTCOME: ${{ steps.publish.outcome }}
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
-          data = json.loads(Path('var/live/latest.json').read_text())
-          lines = ['## Buoy observations', 'Collected ' + data['completed_at']]
-          for source in data['sources'].values():
-              sample = (source.get('data') or {}).get('sample_at', 'unavailable')
-              lines.append(f"- {source['name']}: {source['status']}; observed {sample}")
+          outcome = os.environ.get('PUBLICATION_OUTCOME', 'unknown')
+          lines, failures = ['## Regional evidence publication', 'Publication: ' + outcome], []
+          if outcome != 'success':
+              lines.append('This run did not confirm a new publication. The existing public feed remains the last confirmed generation.')
+              failures.append('Publication was not confirmed')
+          for name in ('latest.json', 'regions/index.json', 'intelligence-health.json', 'habitat-health.json'):
+              path = Path('var/live') / name
+              if not path.is_file():
+                  failures.append(name + ' was not produced')
+                  continue
+              data = json.loads(path.read_text())
+              if name == 'latest.json':
+                  lines.append('Buoy feed collected ' + data['completed_at'])
+                  for source in data['sources'].values():
+                      sample = (source.get('data') or {}).get('sample_at', 'unavailable')
+                      lines.append(f"- {source['name']}: {source['status']}; observed {sample}")
+                  failures.extend(data['health']['issues'])
+              else:
+                  lines.append('\n### ' + name)
+                  for region in data['regions']:
+                      lines.append('- ' + region['region_id'] + ': ' + region['status'])
+                      lines.extend('  - Source issue: ' + str(issue) for issue in region['issues'])
+                      lines.extend('  - Coverage gap: ' + str(gap) for gap in region.get('coverage_gaps', []))
+                      failures.extend(region['issues'])
+          if failures:
+              lines.append('\nUnavailable or degraded sources require attention; inspect the publication step before assuming status was published.')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('\n'.join(lines))
-          regional = json.loads(Path('var/live/regions/index.json').read_text())
-          if any(row['issues'] for row in regional['regions']):
-              raise SystemExit('One or more regional buoy feeds are degraded; source states were published.')
-          if data['health']['issues']:
-              raise SystemExit('Buoy feed degraded: ' + ', '.join(data['health']['issues']))
-          intelligence=json.loads(Path('var/live/intelligence-health.json').read_text())
-          if any(r['issues'] for r in intelligence['regions']):
-              raise SystemExit('Regional intelligence is degraded; original source times and failure states were published.')
+          if failures:
+              raise SystemExit('Regional source failures or missing products: ' + '; '.join(map(str, failures)))
           PY

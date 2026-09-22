@@ -37,7 +37,7 @@ The owner linked the stylesheet last. Esbuild parsed it for Safari 15.4 and Chro
 7. In Morro Bay, open SC26-004. Check the seabed controls, rules, export actions and card footer. Use a disposable test plan to add it to the day plan, review it in Export, then clear the test selection. Confirm zero selected spots afterward.
 8. Restore the browser viewport and close temporary audit tabs.
 
-The new Export tab was added after the original audit and still needs browser verification: exercise individual spot checkboxes, Current map / Filtered spots / Whole region selection, each included layer, saved plan name/date/selection/coverage after reload, a small GPX download and offline notes. In Southern California verify the no-qualified-waypoints message and a protected-area-only export. Inspect downloaded file contents before claiming export success. Its source CSS uses stacked fields/actions below 380px, wrapping labels and 48px primary controls; this static review is not a completed UI test.
+The new Export tab was added after the original audit and still needs browser verification: exercise individual spot checkboxes, Current map / Filtered spots / Whole region selection, each included layer, saved plan name/date/selection/coverage after reload, a small GPX download and offline notes. In Southern California verify that only the 11 qualified island targets can become fishing waypoints, and test a protected-area-only export. Inspect downloaded file contents before claiming export success. Its source CSS uses stacked fields/actions below 380px, wrapping labels and 48px primary controls; this static review is not a completed UI test.
 
 ## Limitations
 
@@ -45,3 +45,9 @@ The new Export tab was added after the original audit and still needs browser ve
 - The available browser API supports viewport changes but no temporary text-only scale. **200% text was not runtime tested**; repeat the checklist with a browser's text enlargement on a test profile. Fixed map overlays and long native-select text deserve particular attention.
 - Native selects remain single-line controls; very long chart/location options may require opening the native picker to read their complete labels.
 - No automated screenshot assertions or accessibility conformance certification are implied. Data accuracy, regulation interpretation, GPX geometry and forecast calibration are outside this readability check.
+
+## Ocean-layer and survey update
+
+The September 22 data-quality update adds a collapsible ocean-layer key, native-resolution cells, source-specific terrain notes and forecast-verification disclosures. The key is hidden while the rules card is open and moves above the expanded timeline. Logic and responsive CSS were checked, but this release has **not** received a new visual browser pass: computer-use access was denied because the enforced administrator policy could not be verified. No alternate browser route was used.
+
+When browser access is restored, repeat the two-width checklist, select an offshore species, change the ocean layer and date, inspect a source cell, and verify that its key, source time, rules panel and timeline remain readable. Confirm that satellite observations keep their dates and ocean forecasts show unavailable coverage after their actual last frame. Also open a qualified island bottom view and verify its survey, native resolution, display-grid explanation and export action.

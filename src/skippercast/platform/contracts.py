@@ -202,7 +202,7 @@ def validate_region(region, needs, sources, root=REPO):
     for asset in region["assets"].values():
         if asset is not None:
             within(Path(root) / "dist", asset)
-    for name in ("daily_feed", "conditions_feed", "intelligence_feed"):
+    for name in ("daily_feed", "conditions_feed", "intelligence_feed", "habitat_feed"):
         if region.get(name):
             public_url(region[name])
     intelligence=region.get('intelligence')
