@@ -57,6 +57,11 @@ def ensemble(client,region):
 def model_source(model,region,now,previous):
     points=[(p['name'],p['latitude'],p['longitude']) for p in region['forecast_points']]
     points += [(p['name'],p['latitude'],p['longitude']) for p in region['intelligence']['verification_stations']]
+    expected=[{'name':name,'latitude':lat,'longitude':lon} for name,lat,lon in points]
+    if ((previous or {}).get('data') or {}).get('requested_points') != expected:
+        # Adding/reordering regional samples must never relabel old verification
+        # station rows as new fishing locations after a failed download.
+        previous=None
     url,loader=model_loader(model,points)
     def coherent(client):
         result=loader(client);after=client.get(MODEL_META[model],True)

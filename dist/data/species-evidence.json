@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-09-21",
+  "reviewed_at": "2026-09-22",
   "method": "Source-backed ecological dossiers. Operational suggestions are author interpretations; no universal perfect-condition or catch model is asserted.",
   "species": [
     {
@@ -97,7 +97,7 @@
       "reviewed_at": "2026-09-21",
       "claims": [
         {
-          "claim": "Migratory ocean fish follow changing prey and ocean conditions. NOAA reports anchovies dominating Central Coast ocean-caught Chinook diets in 2020\u20132021; that dated finding does not locate a current school.",
+          "claim": "Migratory ocean fish follow changing prey and ocean conditions. NOAA reports anchovies dominating Central Coast ocean-caught Chinook diets in 2020–2021; that dated finding does not locate a current school.",
           "source_url": "https://www.fisheries.noaa.gov/feature-story/era-surprises-studying-climate-change-and-salmon-nate-mantua",
           "evidence_type": "primary agency synthesis",
           "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
@@ -183,7 +183,7 @@
       "reviewed_at": "2026-09-21",
       "claims": [
         {
-          "claim": "CDFW quality sampling uses depth strings at 90, 150\u2013180 and 210\u2013240 feet. Those are sampling strata, not proof that the deepest stratum maximizes recreational catch.",
+          "claim": "CDFW quality sampling uses depth strings at 90, 150–180 and 210–240 feet. Those are sampling strata, not proof that the deepest stratum maximizes recreational catch.",
           "source_url": "https://marinespecies.wildlife.ca.gov/dungeness-crab/monitoring/",
           "evidence_type": "primary agency synthesis",
           "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
@@ -191,7 +191,7 @@
         }
       ],
       "map_policy": "Show connected soft-bottom areas and separate gear/season/whale-risk permission. The reported unsuccessful shallow trip and otter explanation are a local hypothesis to test, not a fitted depth rule.",
-      "depth_strategy": "A legal, comparable 210\u2013240-foot trial would be a more evidence-linked future experiment than assuming 300 feet is best. Keep published fishing targets within 200 feet until expansion is authorized and gear/depth/closure screens are complete.",
+      "depth_strategy": "A legal, comparable 210–240-foot trial would be a more evidence-linked future experiment than assuming 300 feet is best. Keep published fishing targets within 200 feet until expansion is authorized and gear/depth/closure screens are complete.",
       "conditions_use": "Comfort and gear control are scored separately. Tide height does not supply bottom-current speed. Missing wave, wind or current evidence is not a favorable condition.",
       "next_measurements": [
         "Bottom substrate and true depth",
@@ -199,6 +199,342 @@
         "Legal size, sex and zero-catch counts",
         "Paired shallow/deeper sets and dates",
         "Observed otter activity, not assumed predator absence"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "sheephead",
+      "name": "California sheephead",
+      "scientific_name": "Bodianus pulcher",
+      "life_stage": "Adults; juvenile color and habitat use differ.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "Rocky reef and kelp habitat support sheephead. Their female-to-male life history makes size and sex structure ecologically important.",
+          "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Keep reef/kelp candidates separate from open sediment. Survey observations support presence at the observation scale, not a legal-sized catch rate.",
+      "depth_strategy": "The agency life-history table describes a broad 0–180 ft primary depth range. This is habitat context, not a depth optimum or a current legal-depth clearance.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Rock/kelp survey date and native scale",
+        "Legal-size observations, sex/size structure and identification",
+        "Benthic prey and bottom contact",
+        "Catch per angler-hour including empty trips"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "whitefish",
+      "name": "Ocean whitefish",
+      "scientific_name": "Caulolatilus princeps",
+      "life_stage": "Recreationally targeted fish; individuals may feed above bottom.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "Ocean whitefish use the water above rocky and mixed-bottom habitat. A historical Channel Islands synthesis describes islands and banks as important habitat.",
+          "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=151024",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Associate with surveyed reef margins and mixed bottoms; do not require every observation to be directly on exposed rock. A point is a search reference, not a feeding school.",
+      "depth_strategy": "The CDFW life-history table lists a broad 0–300 ft primary range; retain the selected bottom-depth limit rather than extending every area to this range.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Mixed-bottom geometry and vertical sonar marks",
+        "Observed depth of fish rather than seabed alone",
+        "Size/identification and release handling",
+        "Catch and unsuccessful drift effort"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "kelp-bass",
+      "name": "Kelp bass / calico bass",
+      "scientific_name": "Paralabrax clathratus",
+      "life_stage": "Adult recreational targets; juveniles use different prey and shelter.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "CDFW describes adult kelp bass in nearshore reef and kelp habitat and the recreational fishery mainly on shallow reefs and kelp beds to about 70 ft.",
+          "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=174760",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Use dated reef and kelp layers together. Persistent reef can remain useful after canopy loss; a canopy polygon is not a measured bottom outline.",
+      "depth_strategy": "About 70 ft is a reported common fishing context, not a hard biological limit. Keep source depth, survey uncertainty and the user ceiling separate.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Current kelp canopy and persistent reef beneath it",
+        "Local bait, fish size and observed strikes",
+        "Water clarity and control near kelp",
+        "Catch and effort including releases and blanks"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "sand-bass",
+      "name": "Barred sand bass",
+      "scientific_name": "Paralabrax nebulifer",
+      "life_stage": "Adults; juvenile eelgrass habitat is not an adult offshore hotspot.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "Adults use sand or mud near structure and can aggregate over soft bottom seasonally. Southern California telemetry supports the importance of sand–reef interfaces.",
+          "source_url": "https://www.csulb.edu/shark-lab/fish-movements-and-marine-protected-areas",
+          "evidence_type": "primary university field-research summary",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Prefer connected mainland sediment edges with nearby structure; retain area geometry. Do not treat every isolated island rock as a sand-bass ground.",
+      "depth_strategy": "CDFW lists a broad 0–120 ft primary depth range. The local telemetry study does not establish a universal distance-to-rock or drift-speed optimum.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Sediment/reef edge classification",
+        "Seasonal school observations with date and method",
+        "Comparison effort in similar depth bands",
+        "Identified barred versus spotted and kelp bass"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "spotted-bass",
+      "name": "Spotted sand bass / bay bass",
+      "scientific_name": "Paralabrax maculatofasciatus",
+      "life_stage": "Bay and estuary fish; nursery and adult observations remain distinct.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "CDFW describes spotted sand bass as strongly associated with bays and estuaries, with limited exchange among many local populations.",
+          "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Use verified bay/estuary habitat; do not copy offshore island reefs into this selector. Enforce local channel, marina and habitat restrictions.",
+      "depth_strategy": "Bay depth, eelgrass and structure are more useful than a broad offshore depth band. A map needs local bathymetry before suggesting a drift across channels.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Bay-specific depth, eelgrass and access",
+        "Species identification and local population context",
+        "Measured boat movement, not ocean tide-height inference",
+        "Effort and released/retained catch"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "white-seabass",
+      "name": "White seabass",
+      "scientific_name": "Atractoscion nobilis",
+      "life_stage": "Adults targeted at sea; juvenile nursery evidence is not interchangeable.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "CDFW describes adults along kelp margins, rocky headlands and offshore waters around Southern California and the islands. Their movement prevents a fixed habitat patch from guaranteeing presence.",
+          "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34121",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Combine reef/kelp edges with dated bait or identified fish observations. Historical island fisheries are regional context, not present exact schools.",
+      "depth_strategy": "Fish can leave shallow kelp and use deeper or open water. Use the actual fish and forage depth; no universal 200-ft seabed rule describes this pelagic behavior.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Dated identified schools and depth",
+        "Forage observations, including squid when present",
+        "Search hours and zero-catch trips",
+        "Acoustic survey or catch observation precision"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "yellowtail",
+      "name": "California yellowtail",
+      "scientific_name": "Seriola dorsalis",
+      "life_stage": "Mobile juvenile and adult fish; older literature may call this Seriola lalandi.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "NOAA describes yellowtail as mobile predators of small schooling fish and squid; movements into California vary with seasonal ocean conditions.",
+          "source_url": "https://www.fisheries.noaa.gov/west-coast/science-data/yellowtail-research-southwest",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Use island edges/banks and offshore sectors as search references. Require fresh prey or fish observations before promoting a sector; floating kelp is mobile evidence.",
+      "depth_strategy": "Match presentation to observed fish depth. A bank’s bottom depth does not describe yellowtail depth or qualify a precise catch site.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Identified schools, depth and fish size",
+        "Recent anchovy, sardine, mackerel or squid evidence",
+        "Dated kelp-paddy position when relevant",
+        "Search effort and water-column conditions"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "bonito",
+      "name": "Pacific bonito",
+      "scientific_name": "Sarda chiliensis",
+      "life_stage": "Northern eastern-Pacific form; schooling juveniles and adults differ in size.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "CDFW describes Pacific bonito as mobile upper-water schools found in coastal, island and offshore habitat; historical catch patterns vary with ocean conditions.",
+          "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34441",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Display dated search areas and schools rather than permanent bottom piles. Distinguish forage observations from fleet movement.",
+      "depth_strategy": "Water-column prey and school depth matter more than seabed depth. Do not turn historical temperature associations into a fixed local bite threshold.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Current bait schools and identified bonito",
+        "Date, water temperature and school depth",
+        "Search hours and size distribution",
+        "Retained and released catch"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "barracuda",
+      "name": "California barracuda",
+      "scientific_name": "Sphyraena argentea",
+      "life_stage": "Pacific/California barracuda; not the tropical great barracuda.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "CDFW describes California barracuda schooling near the surface and feeding on small fish; Southern California recreational encounters are seasonally variable.",
+          "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34231",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Use coastal/island forage search references and recent schools. Avoid treating a historical seasonal catch area as a stationary bottom feature.",
+      "depth_strategy": "Surface and midwater observations guide presentation. Published historical temperature/catch correlations are not a verified local optimum.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Identified school date and depth",
+        "Fresh small-fish forage",
+        "Gear, fishing hours and unsuccessful searches",
+        "Local wire-leader and retained-fish restrictions"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "yellowfin",
+      "name": "Yellowfin tuna",
+      "scientific_name": "Thunnus albacares",
+      "life_stage": "Mobile fish; younger and larger fish can occupy different depths.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "NOAA describes yellowfin as tropical/subtropical migratory fish that also occur off Southern California; distribution and depth use change with conditions and life stage.",
+          "source_url": "https://www.fisheries.noaa.gov/species/pacific-yellowfin-tuna",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Offshore sectors require dated oceanographic and fish evidence. Bank contours and fronts organize a search but do not prove yellowfin occupancy.",
+      "depth_strategy": "The bottom-fishing ceiling does not define an offshore tuna presentation. Retain vessel range, fuel reserve, sea-state and actual school-depth limits.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Dated quality-screened SST and ocean fronts",
+        "Identified schools and forage, not only successful dock totals",
+        "Matched unsuccessful search effort",
+        "Trip range and whole-return weather"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "dorado",
+      "name": "Dorado / mahi-mahi",
+      "scientific_name": "Coryphaena hippurus",
+      "life_stage": "Pacific pelagic fish; behavior and fish size vary.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "Pacific dorado use warm upper-ocean habitat and can associate with floating material. These moving features cannot support permanent catch coordinates.",
+          "source_url": "https://www.fisheries.noaa.gov/s3/2024-10/Amend8-HMS-FMP-AppendixF-June28-Att-2.pdf",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Show recent offshore search sectors and explicitly dated floating-object observations. Do not place fixed dots on empty water or infer a paddy from old AIS tracks.",
+      "depth_strategy": "This is a water-column search, not a seabed-depth target. A visible paddy and favorable SST alone do not establish fish beneath it.",
+      "conditions_use": "Use the whole-trip comfort forecast and method-specific boat control. Tide height is not bottom-current speed; SST is not a calibrated bite model.",
+      "next_measurements": [
+        "Timestamped floating-kelp or debris observations",
+        "Identified fish and nearby forage",
+        "Cloud/quality-screened SST and current context",
+        "Search miles/hours including unproductive paddies"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
+      "id": "lobster",
+      "name": "California spiny lobster",
+      "scientific_name": "Panulirus interruptus",
+      "life_stage": "Adult-sized animals; shallow nursery observations do not establish legal-size catch.",
+      "region_scope": "Southern California and Channel Islands; local and source-specific transfer limits apply.",
+      "reviewed_at": "2026-09-22",
+      "claims": [
+        {
+          "claim": "Channel Islands spiny lobster use rocky shelter and kelp habitat. Reef cavities provide habitat context but a coarse bathymetric grid cannot resolve individual dens.",
+          "source_url": "https://www.nps.gov/chis/learn/nature/california-spiny-lobster.htm",
+          "evidence_type": "primary agency synthesis",
+          "confidence": "Moderate for general habitat; current local occupancy and catch rate unvalidated.",
+          "geographic_transfer": "Apply only to the named species, life stage and study geography. Historical reports supply ecology, not present abundance or current regulations."
+        }
+      ],
+      "map_policy": "Use legally accessible reef/kelp edges as hoop-search areas. Separate hoop deployment from hand collection; no rod, trap or snare method is inferred.",
+      "depth_strategy": "Keep gear handling and local depth restrictions explicit. A general 200-ft ceiling does not qualify a site for hooping, diving or safe retrieval.",
+      "conditions_use": "Rate boat comfort only. Hoop handling, diving safety and lobster catch probability are unscored. Inspect conditions at the actual fishing hour; a daytime summary does not describe a night session. Tide height is not bottom-current speed.",
+      "next_measurements": [
+        "Legal-sized catch per hoop lift and soak duration",
+        "Bottom/kelp edge, snag risk and retrieval access",
+        "Individual size, bait and empty lifts",
+        "Current, drift, darkness and return-weather observations"
       ],
       "local_catch_model_validated": false,
       "catch_probability": null

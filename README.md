@@ -17,7 +17,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 
 | Part | What it does | Start here |
 | --- | --- | --- |
-| Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, seven species profiles, 132 reef candidates, 12 connected soft-bottom habitat outlines, two named charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
+| Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, regional species selectors (16 for Southern California), 132 reef candidates, 12 connected soft-bottom habitat outlines, source-dated Channel Islands habitat and terrain views, two named Central Coast charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
 | Fishing atlas | 132 noted habitat candidates, 107 partial reef outlines, and 31 optional drift alignments from Avila / Point Buchon to Point Estero. GPX for chartplotters, GeoJSON, and searchable offline notes. | [Atlas and downloads](atlas/avila-point-estero-2026-09-20/README.md) |
 | Forecast collector | Saves public forecast responses, model metadata, buoy observations, advisories, and access failures for a Morro Bay example profile. Compares numerical ranges and flags missing or inconsistent evidence. | [Run the collector](docs/quickstart.md#collect-live-evidence) |
 | Alert lifecycle | Given an already reviewed assessment and prior delivery state, decides whether an initial alert, update, retraction, or day-before assessment is due. | [Offline demo](#try-it-offline) · [Assessment workflow](docs/forecast-workflow.md) |
@@ -41,7 +41,7 @@ To use the existing atlas without Python, download [complete.gpx](atlas/avila-po
 
 - A grade ranks **mapped habitat search priority**, not catch probability, boulder size, or a verified fishing hotspot. Purple boat labels mark [two named charter vicinities](docs/charter-grounds.md), backed by 31 published trips. Their outlines are approximate search water, not exact boat positions. There are **no AIS-confirmed charter hotspots** in this release.
 - Outlines are selected portions of surveyed habitat. Drift lines are optional alignments over structure, **not safe approach or passage routes**.
-- Depths are referenced to the survey's MLLW datum. Actual sounder depth changes with water level; the example fishing limit is 200 feet.
+- Qualified Central Coast target depths use the survey's MLLW datum. Channel Islands terrain uses an unspecified merged source reference and remains context. Actual sounder depth changes with water level; the example fishing limit is 200 feet.
 - This public atlas excludes 11 Cambria targets and the older DS1091 charter-ground annotations whose source reuse terms are unresolved. The [source register](docs/data-sources.md) explains the smaller public edition.
 - The monitor example covers **Cambria–Diablo Canyon**; the included public atlas covers **Avila / Point Buchon–Point Estero**. They have different extents.
 

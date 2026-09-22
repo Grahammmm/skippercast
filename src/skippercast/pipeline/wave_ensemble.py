@@ -30,6 +30,7 @@ def decode_probabilities(body, points):
                 probabilities=codes_get_array(gid,'values')
                 populated=np.isfinite(probabilities)&(probabilities>=0)&(probabilities<=1)
                 for point in points:
+                    identity={'point_id':point['id'],'requested':[point['latitude'],point['longitude']]}
                     # The regional subset is tiny. Array distance avoids ecCodes' floating-point
                     # boundary rejection (e.g. 238.25 versus a grid origin of 238.25001).
                     phi=np.radians(latitudes);p=math.radians(point['latitude'])
@@ -37,9 +38,9 @@ def decode_probabilities(body, points):
                     distances=6371*2*np.arcsin(np.sqrt(np.clip(a,0,1)))
                     candidates=np.where(populated&(distances<=30))[0]
                     if not len(candidates):
-                        values.append({'point_id':point['id'],'grid':None,'distance_km':None,'percent':None});continue
+                        values.append({**identity,'grid':None,'distance_km':None,'percent':None});continue
                     index=candidates[np.argmin(distances[candidates])]
-                    values.append({'point_id':point['id'],'grid':[round(float(latitudes[index]),5),round(float(longitudes[index]),5)],
+                    values.append({**identity,'grid':[round(float(latitudes[index]),5),round(float(longitudes[index]),5)],
                                    'distance_km':round(float(distances[index]),2),'percent':round(float(probabilities[index])*100,2)})
                 records.append({'time':int(valid.timestamp()),'cycle':int(cycle.timestamp()),'threshold_m':threshold,'threshold_ft':round(threshold*3.28084,3),'points':values})
             finally:codes_release(gid)

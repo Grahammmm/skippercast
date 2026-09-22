@@ -10,6 +10,8 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
   const point=region.forecast_points.findIndex(p=>p.id===trip.point);
   const issues=[],values={wind:null,gust:null,sea:null,chop:null};
   if(point<0||intelligence?.region_id!==region.id)return {status:'unverified',legal:'unverified',issues:['Regional forecast unavailable'],values,checked_at:new Date(now).toISOString(),runs:{}};
+  const expectedPoints=region.forecast_points.map(p=>[p.id,p.latitude,p.longitude]);
+  if(JSON.stringify(intelligence.forecast?.requested_points)!==JSON.stringify(expectedPoints))return {status:'unverified',legal:'unverified',issues:['Forecast locations do not match this regional release'],values,checked_at:new Date(now).toISOString(),runs:{}};
   if(!finite(Date.parse(intelligence.completed_at))||now-Date.parse(intelligence.completed_at)>3*3600000||Date.parse(intelligence.completed_at)>now+3600000)issues.push('Forecast feed time is missing, stale or invalid');
   const models=intelligence.forecast?.models||{};
   const base=models.gfs_global?.data?.[point];
@@ -41,6 +43,11 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
     if(!window){legal='closed';issues.push('Outside the reviewed species season');}
     else if(window.restriction){legal='restricted';issues.push(window.restriction);}
     else if(window.requires_opening_review){legal='unverified';issues.push('Scheduled opening needs review');}
+    if(window?.start_at){
+      const opening=Date.parse(window.start_at);
+      if(!/T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(window.start_at)||!finite(opening)||dateInZone(opening,region.timezone)!==window.start){legal='unverified';issues.push('Season opening time is invalid or unavailable');}
+      else if(times.some(t=>t*1000<opening)){legal='closed';issues.push('The saved fishing window starts before the legal season opening time');}
+    }
     if(p.source_ids.some(s=>{const c=rules.checks?.[s];return c?.status!=='unchanged'||c.source_status!=='ok'||c.content_sha256!==rules.sources?.[s]?.approved_content_sha256||!finite(Date.parse(c.data_retrieved_at))||now-Date.parse(c.data_retrieved_at)>36*3600000;})){
       legal='unverified';issues.push('Rules changed or need a fresh source check');
     }

@@ -13,7 +13,7 @@ export function positions(g) {
 function bbox(g) {
   if (!boxes.has(g)) {
     const p = positions(g);
-    boxes.set(g, [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]);
+    boxes.set(g, p.reduce((b,p)=>[Math.min(b[0],p[0]),Math.min(b[1],p[1]),Math.max(b[2],p[0]),Math.max(b[3],p[1])],[Infinity,Infinity,-Infinity,-Infinity]));
   }
   return boxes.get(g);
 }

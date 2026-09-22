@@ -1,22 +1,23 @@
-import {initTripAlerts} from './trip-alerts.js?v=8.1';
-import {initINavX} from './inavx.js?v=8.1';
-import {mountSpotEvidence} from './spot-evidence.js?v=8.1';
-import {initIntelligence} from './intelligence.js?v=8.1';
+import {initTripAlerts} from './trip-alerts.js?v=8.2';
+import {initINavX} from './inavx.js?v=8.2';
+import {mountSpotEvidence} from './spot-evidence.js?v=8.2';
+import {initIntelligence} from './intelligence.js?v=8.2';
 let inavx;
-import { getRegion, assetURL } from "./region.js?v=8.1";
-import { mountBottom } from "./bottom-view.js?v=8.1";
-import { initRegionalContext } from "./regional-context.js?v=8.1";
-import { initGeology } from "./geology.js?v=8.1";
-import { initWeather } from "./weather-ui.js?v=8.1";
-import { initNavigation } from "./navigation.js?v=8.1";
-import { initChart } from "./chart-map.js?v=8.1";
-import { initSpecies, matchesSpecies } from "./species.js?v=8.1";
-import { initRegulations } from "./regulations.js?v=8.1";
-import { initCharterGrounds } from "./charter-grounds.js?v=8.1";
-import { initProtectedAreas } from "./protected-areas.js?v=8.1";
-import { initDriftGuides } from "./drift-guides.js?v=8.1";
-import { initCommercialAIS } from "./commercial-ais.js?v=8.1";
-import { atlasExportAllowed } from "./export-screen.js?v=8.1";
+import { getRegion, assetURL } from "./region.js?v=8.2";
+import { mountBottom } from "./bottom-view.js?v=8.2";
+import { initSurveyHabitat } from "./survey-habitat.js?v=8.2";
+import { initRegionalContext } from "./regional-context.js?v=8.2";
+import { initGeology } from "./geology.js?v=8.2";
+import { initWeather } from "./weather-ui.js?v=8.2";
+import { initNavigation } from "./navigation.js?v=8.2";
+import { initChart } from "./chart-map.js?v=8.2";
+import { initSpecies, matchesSpecies } from "./species.js?v=8.2";
+import { initRegulations } from "./regulations.js?v=8.2";
+import { initCharterGrounds } from "./charter-grounds.js?v=8.2";
+import { initProtectedAreas } from "./protected-areas.js?v=8.2";
+import { initDriftGuides } from "./drift-guides.js?v=8.2";
+import { initCommercialAIS } from "./commercial-ais.js?v=8.2";
+import { atlasExportAllowed } from "./export-screen.js?v=8.2";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -134,7 +135,7 @@ function filterTargets() {
   ]
     .filter(Boolean)
     .join(" · ");
-  $("map-empty").hidden = visible.length > 0 || !!assetURL("geology") || !!assetURL("regional_context");
+  $("map-empty").hidden = visible.length > 0 || !!assetURL("geology") || !!assetURL("regional_context") || !!assetURL("survey_habitat");
   $("map-empty").querySelector("strong").textContent =
     "No targets in these filters";
   $("map-empty").querySelector("p").textContent =
@@ -152,7 +153,10 @@ function updateExports() {
   const completeAllowed=atlasExportAllowed(atlas,protectedAreas);
   const selectedAllowed=selected && atlasExportAllowed(atlas,protectedAreas,selected.id);
   const complete=[...document.querySelectorAll('a[href="downloads/complete.gpx"],a[data-complete-export]')];
-  for(const link of complete) link.dataset.completeExport="true";
+  for(const link of complete) {link.dataset.completeExport="true";link.hidden=!atlas?.targets.length;}
+  const intro=document.querySelector('.guide-downloads > p');
+  if(intro && atlas)intro.textContent=atlas.targets.length?`${getRegion().name}: ${atlas.targets.length} qualified habitat candidates with their linked outlines and structure alignments. Download GPX and share it to iNavX. Habitat context and offshore references remain map-only.`:`${getRegion().name} currently publishes habitat context. No depth-qualified fishing targets are available for GPX export in this region.`;
+  for(const notes of document.querySelectorAll('a[href="downloads/spot-notes.html"]'))notes.hidden=getRegion().id!=='morro-bay';
   for(const link of [...complete,$("export-selected"),$("download-target")].filter(Boolean)) {
     const allowed=link.dataset.completeExport ? completeAllowed : selectedAllowed;
     if(allowed) {link.href=link.dataset.completeExport?"downloads/complete.gpx":`downloads/targets/${selected.id}.gpx`;link.removeAttribute("aria-disabled");link.removeAttribute("title");}
@@ -554,6 +558,7 @@ try {
   initTripAlerts(intelligence);
   registerTools();
   const optional=async(name,work)=>{try{return await work();}catch{toast(`${name} could not load. The map and other layers remain available.`);return undefined;}};
+  await optional("Survey habitat",()=>initSurveyHabitat(map, protectedAreas, (html, area) => showAreaDetails(html, area, "survey-weather"), area=>weather.selectLocation(area)));
   await optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
   await optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
   speciesUI = await optional("Species habitat",()=>initSpecies(map, layers, {

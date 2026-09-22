@@ -4,7 +4,7 @@
   "name": "Southern California",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
+  "jurisdiction": "California · Southern Groundfish Management Area",
   "bounds": [
     -121,
     32.5,
@@ -22,7 +22,108 @@
       33.52,
       -118.65
     ],
-    "zoom": 8
+    "zoom": 8,
+    "focus_areas": [
+      {
+        "id": "north-islands",
+        "name": "Northern Channel Islands",
+        "bounds": [
+          -120.57,
+          33.84,
+          -119.29,
+          34.15
+        ],
+        "forecast_point": "channel-islands"
+      },
+      {
+        "id": "anacapa",
+        "name": "Anacapa",
+        "bounds": [
+          -119.49,
+          33.94,
+          -119.31,
+          34.06
+        ],
+        "forecast_point": "anacapa"
+      },
+      {
+        "id": "santa-cruz",
+        "name": "Santa Cruz",
+        "bounds": [
+          -119.96,
+          33.89,
+          -119.51,
+          34.11
+        ],
+        "forecast_point": "channel-islands"
+      },
+      {
+        "id": "santa-rosa",
+        "name": "Santa Rosa",
+        "bounds": [
+          -120.28,
+          33.85,
+          -119.98,
+          34.07
+        ],
+        "forecast_point": "santa-rosa"
+      },
+      {
+        "id": "san-miguel",
+        "name": "San Miguel",
+        "bounds": [
+          -120.51,
+          33.97,
+          -120.28,
+          34.1
+        ],
+        "forecast_point": "san-miguel"
+      },
+      {
+        "id": "santa-barbara-island",
+        "name": "Santa Barbara Island",
+        "bounds": [
+          -119.11,
+          33.43,
+          -118.97,
+          33.53
+        ],
+        "forecast_point": "santa-barbara-island"
+      },
+      {
+        "id": "catalina",
+        "name": "Santa Catalina",
+        "bounds": [
+          -118.68,
+          33.26,
+          -118.23,
+          33.52
+        ],
+        "forecast_point": "catalina"
+      },
+      {
+        "id": "san-diego",
+        "name": "San Diego coast",
+        "bounds": [
+          -117.42,
+          32.54,
+          -117.09,
+          33.12
+        ],
+        "forecast_point": "la-jolla"
+      },
+      {
+        "id": "orange-county",
+        "name": "Orange County coast",
+        "bounds": [
+          -118.15,
+          33.36,
+          -117.62,
+          33.75
+        ],
+        "forecast_point": "newport"
+      }
+    ]
   },
   "harbor": {
     "name": "San Diego (reference harbor)",
@@ -43,7 +144,7 @@
   "forecast_points": [
     {
       "id": "border",
-      "name": "Imperial Beach \u00b7 U.S. side",
+      "name": "Imperial Beach · U.S. side",
       "latitude": 32.6,
       "longitude": -117.25,
       "context": "san-diego"
@@ -106,7 +207,7 @@
     },
     {
       "id": "conception",
-      "name": "Point Conception \u00b7 south side",
+      "name": "Point Conception · south side",
       "latitude": 34.42,
       "longitude": -120.5,
       "context": "santa-barbara"
@@ -127,7 +228,7 @@
     },
     {
       "id": "offshore-south",
-      "name": "San Diego offshore \u00b7 U.S. waters",
+      "name": "San Diego offshore · U.S. waters",
       "latitude": 32.8,
       "longitude": -117.85,
       "context": "san-diego",
@@ -148,6 +249,34 @@
       "longitude": -120.1,
       "context": "santa-barbara",
       "offshore": true
+    },
+    {
+      "id": "anacapa",
+      "name": "Anacapa Island",
+      "latitude": 33.99,
+      "longitude": -119.4,
+      "context": "anacapa"
+    },
+    {
+      "id": "santa-rosa",
+      "name": "Santa Rosa Island",
+      "latitude": 34.04,
+      "longitude": -120.12,
+      "context": "western-islands"
+    },
+    {
+      "id": "san-miguel",
+      "name": "San Miguel Island",
+      "latitude": 34.1,
+      "longitude": -120.43,
+      "context": "western-islands"
+    },
+    {
+      "id": "santa-barbara-island",
+      "name": "Santa Barbara Island",
+      "latitude": 33.48,
+      "longitude": -119.08,
+      "context": "outer-islands"
     }
   ],
   "marine_zones": {
@@ -181,20 +310,32 @@
   },
   "species": [
     "reef",
+    "sheephead",
+    "whitefish",
+    "kelp-bass",
+    "sand-bass",
+    "spotted-bass",
     "halibut",
-    "salmon",
-    "albacore",
+    "white-seabass",
+    "yellowtail",
+    "bonito",
+    "barracuda",
     "bluefin",
-    "dungeness"
+    "yellowfin",
+    "dorado",
+    "albacore",
+    "lobster"
   ],
   "source_names": {
     "historical-reefs": "CDFW historical artificial reefs"
   },
   "source_bindings": {
     "bathymetry": [
+      "noaa-cinms-bathymetry-2025",
       "noaa-bag"
     ],
     "substrate": [
+      "noaa-cinms-substrate-2006",
       "cdfw-artificial-reefs",
       "noaa-west-coast-substrate"
     ],
@@ -202,6 +343,7 @@
       "usgs-camera-samples"
     ],
     "kelp": [
+      "cdfw-kelp-2016",
       "kelpwatch"
     ],
     "protected-areas": [
@@ -286,24 +428,24 @@
   },
   "coverage": {
     "bathymetry": {
-      "status": "research",
-      "reason": "NOAA survey discovery pending; no native grid has qualified a new target."
+      "status": "partial",
+      "reason": "NOAA NCCOS/NCEI native 2 m and 4 m grids imported for five Channel Islands, with numeric terrain views. Unspecified common vertical datum and absent per-cell uncertainty prevent exact target qualification."
     },
     "substrate": {
       "status": "partial",
-      "reason": "CDFW historical constructed reefs give material and reported depths; no native-depth current terrain classification."
+      "reason": "Actual NOAA historical hard/soft island footprints clipped to native source-depth masks and closures, plus CDFW historical constructed reefs. Variable source accuracy; not a boulder inventory."
     },
     "groundtruth": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
     },
     "kelp": {
-      "status": "research",
-      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+      "status": "partial",
+      "reason": "Actual CDFW canopy and subsurface detections from September 2016, including Catalina. Historical context only; no live kelp claim."
     },
     "protected-areas": {
       "status": "ready",
-      "reason": "Complete regional CDFW MPA snapshot plus NOAA\u2019s eight Groundfish Exclusion Areas. Context areas also excluded from closures."
+      "reason": "Complete regional CDFW MPA snapshot plus NOAA’s eight Groundfish Exclusion Areas. Context areas also excluded from closures."
     },
     "regulations": {
       "status": "ready",
@@ -351,11 +493,11 @@
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+      "reason": "Regional data not imported. No neighboring region’s evidence is reused."
     },
     "charter-identity": {
       "status": "research",
@@ -396,12 +538,13 @@
     "ecology": "regions/southern-california/ecology.json",
     "regional_context": "regions/southern-california/reef-context.geojson",
     "closures": "regions/southern-california/groundfish-exclusions.geojson",
-    "observations": "regions/southern-california/observations.json"
+    "observations": "regions/southern-california/observations.json",
+    "survey_habitat": "regions/southern-california/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/southern-california/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/latest.json",
   "landing_names": [],
-  "coverage_note": "Mexico border to Point Conception, including the Channel Islands. Historical CDFW reef areas are search context, not surveyed current fishing targets. Local forecasts, tides and closures use this coast\u2019s sources. Exact charter stops and measured bottom images are not yet qualified.",
+  "coverage_note": "Mexico border to Point Conception. Sixteen regional targets with detailed island rock, sediment and historical kelp context. Native survey terrain views cover selected Channel Islands patches; datum and coverage gaps remain. Habitat is not verified fish presence or charter AIS.",
   "landing_note": "No Southern California catch-position dataset has been imported; landing totals are not fishing coordinates.",
   "jurisdiction_id": "california-southern",
   "pipeline_sources": {
@@ -505,7 +648,7 @@
   },
   "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/southern-california/intelligence.json",
   "default_forecast_point": "la-jolla",
-  "preview_label": "Historical reef areas \u00b7 regional conditions",
+  "preview_label": "Island survey habitat · 16 Southern targets",
   "contexts": {
     "san-diego": {
       "name": "San Diego coast",
@@ -601,11 +744,77 @@
         "coastal": "PZZ650",
         "offshore": "PZZ673"
       }
+    },
+    "western-islands": {
+      "name": "San Miguel / Santa Rosa",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents. This distant mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KSBA",
+        "airport_name": "Santa Barbara airport",
+        "nearshore_buoy": "46054",
+        "nearshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy": "46053",
+        "offshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ673",
+        "offshore": "PZZ673"
+      }
+    },
+    "outer-islands": {
+      "name": "Santa Barbara Island / outer waters",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents. This distant mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KLAX",
+        "airport_name": "Los Angeles airport",
+        "nearshore_buoy": "46221",
+        "nearshore_buoy_name": "Santa Monica Bay",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ676",
+        "offshore": "PZZ676"
+      }
+    },
+    "anacapa": {
+      "name": "Anacapa Island",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents. This mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KOXR",
+        "airport_name": "Oxnard airport",
+        "nearshore_buoy": "46053",
+        "nearshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy": "46054",
+        "offshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ655"
+      }
     }
   },
   "closure_check": {
     "url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
     "source_id": "noaa-socal-gea"
   },
-  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+  "habitat_policy": {
+    "coastal_forecast_circles": false,
+    "unknown_depth_context": true,
+    "military_islands_withheld": [
+      "San Clemente",
+      "San Nicolas"
+    ],
+    "note": "Historical substrate and canopy outlines are ecological search context; measured depth qualification is separate. No invented catch hotspots."
+  }
 }

@@ -11,9 +11,29 @@ from pathlib import Path
 REGISTRY = Path(__file__).resolve().parents[3] / "dist/data/regulations.json"
 
 
+def valid_window(window):
+    try:
+        start, end = (datetime.strptime(window[key], '%Y-%m-%d').date() for key in ('start', 'end'))
+        if start > end or start.isoformat() != window['start'] or end.isoformat() != window['end']:
+            return False
+        if 'start_at' in window:
+            opening = datetime.fromisoformat(window['start_at'].replace('Z', '+00:00'))
+            if opening.tzinfo is None or opening.date() != start:
+                return False
+        return True
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return False
+
+
 def regulatory_snapshot(sources, now, registry=None):
     data = deepcopy(registry if registry is not None else json.loads(REGISTRY.read_text()))
-    if data.get("schema_version") != 1 or len(data.get("species", {})) != 7:
+    species = data.get('species', {})
+    if data.get("schema_version") != 1 or not species or not all(
+        isinstance(p, dict) and all(isinstance(p.get(key), str) for key in ('name', 'season', 'bag', 'size'))
+        and isinstance(p.get('windows'), list) and all(valid_window(w) for w in p['windows']) and p.get('source_ids')
+        and all(ident in data.get('sources', {}) for ident in p['source_ids'])
+        for p in species.values()
+    ):
         raise ValueError("Regulations registry is incomplete")
     checks = {}
     for ident, expected in data["sources"].items():

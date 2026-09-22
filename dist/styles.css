@@ -1414,3 +1414,9 @@ th {
     scroll-behavior: auto !important;
   }
 }
+
+/* One unobtrusive key; details stay on the map card. */
+.leaflet-bottom .survey-habitat-key { background:rgba(255,255,255,.94); color:#254a53; padding:5px 8px; border-radius:7px; font-size:11px; max-width:240px; margin-bottom:110px; }
+.survey-region .region-note { display:none; }
+#regional-explore select { width:100%; min-height:44px; border:1px solid #cbdade; border-radius:10px; padding:8px; background:#fff; color:#123945; }
+#regional-explore p { margin:8px 0; }

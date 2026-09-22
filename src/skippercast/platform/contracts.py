@@ -134,6 +134,20 @@ def validate_region(region, needs, sources, root=REPO):
         raise ValueError("Invalid regional depth limit")
     if isinstance(region["boat"]["cruise_knots"], bool) or not 0 < region["boat"]["cruise_knots"] <= 100:
         raise ValueError("Invalid cruise speed")
+    targets = read_json(Path(root) / 'catalog/targets.json')['targets']
+    if not region.get('species') or len(region['species']) != len(set(region['species'])) or not set(region['species']) <= targets.keys():
+        raise ValueError('Regional species selectors must be distinct reviewed target IDs')
+    for ident in region['species']:
+        target=targets[ident]
+        if target.get('kind') not in {'reef','soft','habitat','pelagic','offshore'} or target.get('control_mode') not in {'bottom','water-column','boat-comfort'}:
+            raise ValueError('Target habitat and control method must be explicit')
+        if not target.get('source_species') or not target.get('name') or not isinstance(target.get('habitat_kinds'),list):
+            raise ValueError('Target has no biological evidence grouping')
+    for area in region.get('map',{}).get('focus_areas',[]):
+        bbox(area['bounds'])
+        if not ID.fullmatch(area.get('id','')) or not area.get('name'):raise ValueError('Invalid regional map focus')
+        if area.get('forecast_point') and area['forecast_point'] not in {p['id'] for p in region['forecast_points']}:
+            raise ValueError('Map focus has no matching regional forecast sample')
     seen = set()
     for point in region["forecast_points"]:
         if point["id"] in seen:

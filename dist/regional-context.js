@@ -1,5 +1,5 @@
-import {assetURL,getRegion} from './region.js?v=8.1';
-import {esc} from './marine-charts.js?v=8.1';
+import {assetURL,getRegion} from './region.js?v=8.2';
+import {esc} from './marine-charts.js?v=8.2';
 export async function initRegionalContext(map,screen,onSelect) {
   if(!assetURL('regional_context'))return;
   const response=await fetch(assetURL('regional_context'),{signal:AbortSignal.timeout(10000)});

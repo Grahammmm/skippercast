@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.1';
-import {matrixHTML} from './forecast-matrix.js?v=8.1';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.1";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.2';
+import {matrixHTML} from './forecast-matrix.js?v=8.2';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.2";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.1";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.1";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.1";
-import { forecastSummaryHTML } from "./forecast-summary.js?v=8.1";
-import { localDate } from "./forecast.js?v=8.1";
-import { detailHTML } from "./marine-detail.js?v=8.1";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.1";
+} from "./marine-data.js?v=8.2";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.2";
+import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.2";
+import { forecastSummaryHTML } from "./forecast-summary.js?v=8.2";
+import { localDate } from "./forecast.js?v=8.2";
+import { detailHTML } from "./marine-detail.js?v=8.2";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.2";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -42,6 +42,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     play = null,
     loading = false,
     requested = null,
+    coastalSelection = null,
     lastSpecies = $("species-select").value,
     heading = 0,
     detailTab = "live",
@@ -66,6 +67,9 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
   }
+  const methodNote=document.createElement('p');methodNote.className='small';methodNote.id='forecast-method-note';
+  const noteForMethod=()=>{methodNote.hidden=lastSpecies!=='lobster';methodNote.textContent='Lobster: daily ratings summarize 7 a.m.–1 p.m. comfort, not a night hoop-net outing. Select every hour of your actual fishing and return window; daylight scores do not rate diving safety.';};
+  $('forecast-content').prepend(methodNote);noteForMethod();
   const summary=document.createElement("div");
   summary.id="forecast-hour-summary";
   $("forecast-time-tools").append(summary);
@@ -556,23 +560,25 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     },
     setSpecies(id) {
       if (
-        ["albacore", "bluefin"].includes(id) &&
-        !["albacore", "bluefin"].includes(lastSpecies)
+        (getRegion().target_options?.find(p=>p.id===id)?.kind === "offshore") &&
+        !(getRegion().target_options?.find(p=>p.id===lastSpecies)?.kind === "offshore")
       ) {
+        coastalSelection={point,requested};
         overlay = "sst";
         $("ocean-layer").value = "sst";
         point = Math.max(0,POINTS.findIndex(p=>p.offshore));
         requested = null;
       } else if (
-        !["albacore", "bluefin"].includes(id) &&
-        ["albacore", "bluefin"].includes(lastSpecies)
+        !(getRegion().target_options?.find(p=>p.id===id)?.kind === "offshore") &&
+        (getRegion().target_options?.find(p=>p.id===lastSpecies)?.kind === "offshore")
       ) {
         overlay = "none";
         $("ocean-layer").value = "none";
-        point = Math.max(0,POINTS.findIndex(p=>p.id===(getRegion().default_forecast_point || POINTS[Math.min(1,POINTS.length-1)].id)));
-        requested = null;
+        point = coastalSelection?.point ?? Math.max(0,POINTS.findIndex(p=>p.id===(getRegion().default_forecast_point || POINTS[Math.min(1,POINTS.length-1)].id)));
+        requested = coastalSelection?.requested || null;
       }
       lastSpecies = id;
+      noteForMethod();
       outlookKey = "";
       render();
     },

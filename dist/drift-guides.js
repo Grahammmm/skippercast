@@ -1,5 +1,6 @@
-import { POINTS, readConditions, distanceNm, directionTo } from "./marine-data.js?v=8.1";
-import { esc, num, full, from } from "./marine-charts.js?v=8.1";
+import {assetURL} from "./region.js?v=8.2";
+import { POINTS, readConditions, distanceNm, directionTo } from "./marine-data.js?v=8.2";
+import { esc, num, full, from } from "./marine-charts.js?v=8.2";
 export function offsetPosition(p, direction, metres) {
   const a=direction*Math.PI/180;
   return [p.longitude+Math.sin(a)*metres/(111320*Math.cos(p.latitude*Math.PI/180)),p.latitude+Math.cos(a)*metres/111320];
@@ -15,14 +16,15 @@ export function initDriftGuides(map,{targets,selected,protectedAreas,selectTarge
   host.innerHTML=`<strong>Drift setup guides</strong><label>Direction source<select id="drift-mode"><option value="model">Modeled surface current</option><option value="measured">My measured boat drift</option><option value="off">Structure lines only</option></select></label><div class="drift-inputs" id="measured-drift" hidden><label>Speed (kt)<input id="drift-speed" type="number" min="0.1" max="5" step="0.1" inputmode="decimal" placeholder="0.5"></label><label>Course toward (° true)<input id="drift-course" type="number" min="0" max="359" step="1" inputmode="numeric" placeholder="180"></label></div><p id="drift-status" class="small">Zoom in for blue current-guided setup lines.</p><p class="small">Blue: 6-minute surface-current projection through a target, with a trial start 3 minutes upstream. Wind arrow shown separately. Surface flow includes modeled wave/tidal effects; local windage, bottom current and depth along the line are unverified. Make a test drift before dropping gear. Brown: fixed structure alignment.</p>`;
   const key=L.control({position:"bottomright"});
   key.onAdd=()=>{const el=L.DomUtil.create("div","drift-map-key");el.textContent="Pink: MPAs · brown: structure";L.DomEvent.disableClickPropagation(el);return el;};
-  key.addTo(map);
+  if(!assetURL("survey_habitat"))key.addTo(map);
   let context=null, measuredAt=null, measuredTargetId=null;
   const mode=()=>document.getElementById("drift-mode").value;
   function draw() {
     layer.clearLayers();
     const status=document.getElementById("drift-status");
     const enabled=document.getElementById("layer-drifts").checked&&mode()!=="off";
-    key.getContainer().textContent="Pink: MPAs · brown: structure";
+    if(key.getContainer())key.getContainer().textContent="Pink: MPAs · brown: structure";
+    if(!targets().length){status.textContent="No depth-qualified drift targets in this region. Habitat context does not authorize an automatic drift line.";return;}
     if(!enabled) {status.textContent="Current-guided overlay off.";return;}
     const t=context?.time;
     if(!context?.bundle) {status.textContent="Loading current forecast…";return;}
@@ -55,7 +57,7 @@ export function initDriftGuides(map,{targets,selected,protectedAreas,selectTarge
       count++;
     }
     status.textContent=count?`${count} setup guide${count===1?"":"s"} · ${full(t)} · ${mode()==="model"?"coarse surface-current model, not boat drift":"your measured boat drift"}`:map.getZoom()<13?"Zoom in to show setup guides. Tap a reef to inspect one at any zoom.":"No valid guides in this view/hour. Missing current, near-zero flow or MPA crossings are withheld.";
-    if(count) key.getContainer().textContent=`Blue: ${mode()==="model"?"current-only trial drift":"measured drift"} · pink: MPAs`;
+    if(count && key.getContainer()) key.getContainer().textContent=`Blue: ${mode()==="model"?"current-only trial drift":"measured drift"} · pink: MPAs`;
   }
   for(const id of ["drift-mode","drift-speed","drift-course","layer-drifts"]) document.getElementById(id).addEventListener("change",()=>{
     document.getElementById("measured-drift").hidden=mode()!=="measured";

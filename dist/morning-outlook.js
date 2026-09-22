@@ -1,12 +1,13 @@
-import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.1";
+import {getRegion} from "./region.js?v=8.2";
+import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.2";
 import {
   readConditions,
   comfort,
   angleBetween,
   HOUR,
   POINTS,
-} from "./marine-data.js?v=8.1";
-import { esc, local, num } from "./marine-charts.js?v=8.1";
+} from "./marine-data.js?v=8.2";
+import { esc, local, num } from "./marine-charts.js?v=8.2";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",
@@ -33,9 +34,8 @@ export function hourScores(c, other, species, checkedGust = Math.max(c.gust, oth
       crossing -
       short,
   );
-  const bottom = ["reef", "lingcod", "rockfish", "halibut", "dungeness"].includes(
-    species,
-  );
+  const mode=getRegion().target_options?.find(t=>t.id===species)?.control_mode || (["reef","lingcod","rockfish","halibut","dungeness"].includes(species)?'bottom':'water-column');
+  const bottom=mode==='bottom';
   const controlScore = clamp(
     10 -
       Math.max(0, wind - 4) * (bottom ? 0.32 : 0.22) -
@@ -47,8 +47,9 @@ export function hourScores(c, other, species, checkedGust = Math.max(c.gust, oth
   );
   return {
     comfort: comfortScore,
-    control: controlScore,
-    conditions: Math.min(comfortScore, controlScore),
+    control: mode==='boat-comfort'?null:controlScore,
+    conditions: mode==='boat-comfort'?comfortScore:Math.min(comfortScore, controlScore),
+    score_scope: mode==='boat-comfort'?'boat-comfort':'comfort-and-control',
     bite: null,
     overall: null,
   };
@@ -79,7 +80,8 @@ function summarizeHours(bundle,point,species,times,now) {
   const rows=times.map(t=>rateHour(bundle,point,species,t,now));
   const result={conditions:null,comfort:null,control:null,bite:null,overall:null,confidence:"Low",reasons:[...new Set(rows.flatMap(r=>r.reasons))],sampleCount:rows.length};
   if (!rows.length || rows.some(r=>!Number.isFinite(r.conditions))) return result;
-  for(const k of ["conditions","comfort","control"]) result[k]=Math.min(...rows.map(r=>r[k]));
+  for(const k of ["conditions","comfort","control"]) result[k]=rows.every(r=>Number.isFinite(r[k]))?Math.min(...rows.map(r=>r[k])):null;
+  result.score_scope=rows[0].score_scope;
   result.wind=Math.max(...rows.map(r=>r.wind)); result.sea=Math.max(...rows.map(r=>r.sea));
   result.confidence=rows.some(r=>r.confidence==="Low")?"Low":"Moderate";
   return result;
@@ -150,16 +152,17 @@ export function renderOutlook(rows, point) {
   const valid = rows
     .filter((r) => Number.isFinite(r.conditions))
     .sort((a, b) => b.conditions - a.conditions);
+  const comfortOnly=rows.some(r=>r.score_scope==='boat-comfort');
   const best = valid[0],
     qualifying = valid.filter((r) => r.conditions >= 8);
   const banner = document.getElementById("best-day-banner");
   banner.classList.toggle("qualifying", !!qualifying.length);
   banner.innerHTML = best
-    ? `<span>${best.confidence === "Low" ? "Tentative conditions" : best.provisional ? "Provisional best" : "Best conditions"}</span><strong>${local(best.time, { weekday: "short" })} · ${num(best.conditions)}/10</strong>`
+    ? `<span>${comfortOnly?"Daytime boat comfort":best.confidence === "Low" ? "Tentative conditions" : best.provisional ? "Provisional best" : "Best conditions"}</span><strong>${local(best.time, { weekday: "short" })} · ${num(best.conditions)}/10</strong>`
     : "<span>7-day outlook</span><strong>Check conditions</strong>";
   banner.setAttribute("aria-label", best ? `Open seven-day outlook. ${best.confidence === "Low" ? "Tentative best" : "Best conditions"}: ${local(best.time, { weekday: "long" })}, ${num(best.conditions)} out of 10, ${best.confidence} confidence. Bite potential unscored.` : "Open seven-day outlook. Not enough data to rate conditions.");
   banner.dataset.hour = best?.time || "";
   const host = document.getElementById("morning-outlook");
-  host.innerHTML = `<details class="morning-summary"><summary>${best ? `${best.confidence === "Low" ? "Tentative best" : "Best"}: ${local(best.time, { weekday: "long" })} · ${num(best.conditions)}/10 conditions` : "Seven-day outlook · ratings unavailable"}<span>${qualifying.length ? `${qualifying.length} morning${qualifying.length === 1 ? "" : "s"} at 8+` : "No verified 8+ conditions yet"}</span></summary><p class="small">${esc(POINTS[point].name)} · 7 a.m.–1 p.m. Pacific. This ranks modeled comfort and gear control across the entire window. Bite potential and an overall bite-plus-comfort rating are unavailable. It is not a routed trip or entrance clearance.</p><div class="morning-days">${rows.map((r) => `<button class="morning-day ${r.conditions >= 8 ? "good" : ""}" data-morning="${r.time}"><strong>${local(r.time, { weekday: "short", month: "numeric", day: "numeric" })}</strong><b>${r.conditions === null ? "Unrated" : num(r.conditions) + "/10"}</b><span>${r.confidence}${r.provisional ? " · provisional" : ""} · ${r.conditions === null ? esc(r.reasons[0]) : "comfort " + num(r.comfort) + " / control " + num(r.control)}</span></button>`).join("")}</div><details><summary>How the rating works</summary><p class="small">A disclosed planning heuristic: take the lower of comfort and gear-control scores, then the lowest hourly result from 7 a.m. through 1 p.m. Use the rougher model’s wind, gusts and combined seas, plus GFS chop and crossing swells. Missing critical inputs, stale runs, fog, storms or active marine alerts prevent a rating. If only one model has an inconsistent gust below its sustained wind, that gust is omitted, the other model supplies the gust estimate, and the displayed score is capped at 7.9 with Low confidence. Both sustained-wind forecasts still contribute. With material model disagreement, use the rougher forecast, label Low confidence and cap the conditions rating at 7.9. Surface current does not estimate bottom drift. Recent charter reports and ocean observations appear in the fishing-evidence panel. Exact fish presence, forage and pressure remain unknown; the evidence is not converted into a bite-probability score.</p><a href="species-research.html#morning-ratings">Full score formula ↗</a></details></details>`;
+  host.innerHTML = `<details class="morning-summary"><summary>${best ? `${best.confidence === "Low" ? "Tentative best" : "Best"}: ${local(best.time, { weekday: "long" })} · ${num(best.conditions)}/10 conditions` : "Seven-day outlook · ratings unavailable"}<span>${qualifying.length ? `${qualifying.length} morning${qualifying.length === 1 ? "" : "s"} at 8+` : "No verified 8+ conditions yet"}</span></summary><p class="small">${esc(POINTS[point].name)} · 7 a.m.–1 p.m. Pacific. ${comfortOnly?"This ranks modeled boat comfort only; lobster gear handling and diving are unscored. Inspect the actual night fishing and return hours separately.":"This ranks modeled comfort and gear control across the entire window."} Bite potential and an overall bite-plus-comfort rating are unavailable. It is not a routed trip or entrance clearance.</p><div class="morning-days">${rows.map((r) => `<button class="morning-day ${r.conditions >= 8 ? "good" : ""}" data-morning="${r.time}"><strong>${local(r.time, { weekday: "short", month: "numeric", day: "numeric" })}</strong><b>${r.conditions === null ? "Unrated" : num(r.conditions) + "/10"}</b><span>${r.confidence}${r.provisional ? " · provisional" : ""} · ${r.conditions === null ? esc(r.reasons[0]) : "comfort " + num(r.comfort) + (comfortOnly?" · gear unscored":" / control " + num(r.control))}</span></button>`).join("")}</div><details><summary>How the rating works</summary><p class="small">${comfortOnly?"Lobster shows the lowest modeled boat-comfort result from 7 a.m. through 1 p.m.; hoop handling, night operations and diving safety are unscored.":"A disclosed planning heuristic: take the lower of comfort and gear-control scores, then the lowest hourly result from 7 a.m. through 1 p.m."} Use the rougher model’s wind, gusts and combined seas, plus GFS chop and crossing swells. Missing critical inputs, stale runs, fog, storms or active marine alerts prevent a rating. If only one model has an inconsistent gust below its sustained wind, that gust is omitted, the other model supplies the gust estimate, and the displayed score is capped at 7.9 with Low confidence. Both sustained-wind forecasts still contribute. With material model disagreement, use the rougher forecast, label Low confidence and cap the conditions rating at 7.9. Surface current does not estimate bottom drift. Recent charter reports and ocean observations appear in the fishing-evidence panel. Exact fish presence, forage and pressure remain unknown; the evidence is not converted into a bite-probability score.</p><a href="species-research.html#morning-ratings">Full score formula ↗</a></details></details>`;
   return best;
 }

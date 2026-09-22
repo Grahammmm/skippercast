@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "region_id": "southern-california",
+  "reviewed_at": "2026-09-22",
+  "depth_limit_ft": 200,
+  "closure_clearance_m": 75,
+  "display_cell_m": 8,
+  "minimum_substrate_area_m2": 10000,
+  "minimum_kelp_area_m2": 2500,
+  "maximum_bottom_views_per_island": 24,
+  "islands": [
+    {"id":"san-miguel","name":"San Miguel Island","bounds":[-120.61,33.92,-120.26,34.20],"bathymetry":"Northern"},
+    {"id":"santa-rosa","name":"Santa Rosa Island","bounds":[-120.26,33.77,-119.94,34.15],"bathymetry":"Northern"},
+    {"id":"santa-cruz","name":"Santa Cruz Island","bounds":[-119.94,33.80,-119.50,34.15],"bathymetry":"Northern"},
+    {"id":"anacapa","name":"Anacapa Island","bounds":[-119.50,33.90,-119.25,34.12],"bathymetry":"Northern"},
+    {"id":"santa-barbara-island","name":"Santa Barbara Island","bounds":[-119.10,33.36,-118.95,33.60],"bathymetry":"SBI"},
+    {"id":"catalina","name":"Santa Catalina Island","bounds":[-118.70,33.26,-118.20,33.55],"bathymetry":null},
+    {"id":"san-clemente","name":"San Clemente Island","bounds":[-118.70,32.75,-118.25,33.12],"bathymetry":null,"withheld":true,"reason":"Active Navy range-access geometry and status are not verified. No habitat recommendations are published around this island."}
+  ],
+  "sources": {
+    "substrate": {
+      "id":"noaa-cinms-substrate-2006",
+      "name":"NOAA/NCCOS California benthic substrate compilation",
+      "documentation_url":"https://www.fisheries.noaa.gov/inport/item/39578",
+      "url":"https://cdn.coastalscience.noaa.gov/datasets/e33_cinms/data/Chap_2_Data/Substrate.zip",
+      "filename":"Substrate.zip",
+      "sha256":"57f783999ee56230379af45ee046d50f20de21f51ff93f92028f934ae32d2e15",
+      "maximum_bytes":20000000,
+      "publication_date":"2006-01",
+      "survey_date":null,
+      "native_resolution_m":null,
+      "horizontal_crs":"NAD27 California Teale Albers; source .prj preserved",
+      "rights":"Public NOAA data; attribution required by source use constraints",
+      "attribution":"NOAA/NOS/NCCOS/CCMA/Biogeography Branch; Moss Landing Marine Laboratory, MMS and UCSB",
+      "limitations":"Historical hard/soft interpretation of variable source resolution, not field validated. Fine-scale errors exist. No boulder dimensions, relief, kelp presence or current fish abundance are established by these polygons."
+    },
+    "bathymetry": {
+      "id":"noaa-cinms-bathymetry-2025",
+      "name":"NCCOS Channel Islands merged multibeam bathymetry",
+      "documentation_url":"https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.nodc%3A0304093/html",
+      "doi":"https://doi.org/10.25921/2ees-dq97",
+      "url":"https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/CINMS_bathy_merge_2024.zip",
+      "iso_url":"https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/4CLCAE-ISO-19115-2.xml",
+      "iso_sha256":"9e3ddbd8f93c6c8a62273b36d5d7f3e4aec99c41b7923bcbed02f367ef1d5471",
+      "documentation_pdf_url":"https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/DataDocumenation.pdf",
+      "documentation_pdf_sha256":"2cc04f630cbd9e5ce8e7b9947ba444a1f0438984b5d91243b5c6244f3d1e74e0",
+      "publication_date":"2025-05-30",
+      "survey_date":"1998 to 2022-11-05",
+      "compilation_date":"2024-01-31",
+      "vertical_datum":"Unspecified merged hydrographic reference",
+      "rights":"CC0-1.0; expressly dedicated in the archive ISO metadata",
+      "attribution":"Sweeney, E.; Costa, B.; Caldow, C. (2025), NOAA NCEI accession 0304093; NOAA, USGS, MBARI, CSUMB and OET surveys",
+      "limitations":"Merged acoustic measurements with linear depth shifts to overlapping NOAA hydrographic surveys and some IDW interpolation in the published source. The archive does not explicitly name a common vertical datum or supply per-cell uncertainty. Native output cell size is not original sensor resolution or boulder-measurement accuracy. Not for navigation. Individual cell acquisition years are not supplied.",
+      "files":[
+        {"filename":"CINMS_Northern_2mXY_0_40mWD.tif","group":"Northern","cell_m":2,"documented_crs":"EPSG:26910","sha256":"5e1a90da2063143da0a0dfe99228f9c989d8a575fa965649385ca7a3f4e869ce","maximum_bytes":490000000},
+        {"filename":"CINMS_Northern_4mXY_36_80mWD.tif","group":"Northern","cell_m":4,"documented_crs":"EPSG:26910","sha256":"92eed668e79ca658e46868604ce135d7c6d05561b5abb2414b81c8b632597828","maximum_bytes":190000000},
+        {"filename":"CINMS_SBI_2mXY_0_40mWD.tif","group":"SBI","cell_m":2,"documented_crs":"EPSG:26911","sha256":"5382f5e69e4eecd194cacb43b439399f1155ff303659a3fbecab88774b892708","maximum_bytes":16000000},
+        {"filename":"CINMS_SBI_4mXY_36_80mWD.tif","group":"SBI","cell_m":4,"documented_crs":"EPSG:26911","sha256":"d24627db689cf3479395de2137d55716e96cb16fec0b1659eb2bb9d92c1523c8","maximum_bytes":10000000}
+      ]
+    },
+    "kelp": {
+      "id":"cdfw-kelp-2016",
+      "name":"CDFW 2016 aerial kelp canopy and subsurface classification",
+      "documentation_url":"https://filelib.wildlife.ca.gov/Public/R7_MR/BIOLOGICAL/Kelp/",
+      "url":"https://filelib.wildlife.ca.gov/Public/R7_MR/BIOLOGICAL/Kelp/BIO_CA_Kelp2016.zip",
+      "filename":"BIO_CA_Kelp2016.zip",
+      "sha256":"ae2e1e3bcd18af80d19c92cc1da676968bd7505fc9bf10ee5b3c8a4baddbf7e1",
+      "maximum_bytes":32000000,
+      "publication_date":"2017-05-10",
+      "survey_date":"2016-09-03 to 2016-09-25",
+      "native_resolution_m":2,
+      "original_imagery_resolution_m":0.3,
+      "horizontal_crs":"NAD83 California Teale Albers",
+      "rights":"Public CDFW distribution with CDFW attribution; bundled use constraints retained in the downloaded source archive",
+      "attribution":"California Department of Fish and Wildlife; imagery and processing by Sandoval & Associates LLC",
+      "limitations":"Dated 2016 surface-canopy and subsurface detections, not live kelp. Survey timing, ocean state, photo quality and missing imagery affect detection. No detection does not prove absence. Kelp boundaries are not bottom depth or rock boundaries."
+    }
+  },
+  "access_references":[
+    {"name":"San Clemente Island Navy access schedule","url":"https://www.scisland.org/","status":"Unavailable during review; active access not verified"},
+    {"name":"33 CFR 165.1131 San Clemente Island safety zone","url":"https://www.ecfr.gov/current/title-33/chapter-I/subchapter-P/part-165/subpart-F/section-165.1131","status":"Check current rule and Navy clearance; static legal geometry cannot establish an active range is open"}
+  ]
+}

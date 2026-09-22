@@ -37,19 +37,19 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="marine.css?v=8.1" />
-    <link rel="stylesheet" href="map-first.css?v=8.1" />
-    <link rel="stylesheet" href="bite-evidence.css?v=8.1" />
-    <link rel="stylesheet" href="regulations.css?v=8.1" />
-    <link rel="stylesheet" href="live-conditions.css?v=8.1" />
-    <link rel="stylesheet" href="calm-layout.css?v=8.1" />
-    <link rel="stylesheet" href="planning.css?v=8.1" />
-    <link rel="stylesheet" href="platform.css?v=8.1" />
+    <link rel="stylesheet" href="styles.css?v=8.2" />
+    <link rel="stylesheet" href="marine.css?v=8.2" />
+    <link rel="stylesheet" href="map-first.css?v=8.2" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.2" />
+    <link rel="stylesheet" href="regulations.css?v=8.2" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.2" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.2" />
+    <link rel="stylesheet" href="planning.css?v=8.2" />
+    <link rel="stylesheet" href="platform.css?v=8.2" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="boot.js?v=8.1"></script>
-  <link rel="stylesheet" href="insights.css?v=8.1"/>
+    <script type="module" src="boot.js?v=8.2"></script>
+  <link rel="stylesheet" href="insights.css?v=8.2"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#007f77"/>
 </head>
@@ -78,14 +78,7 @@
           <div id="map" aria-label="Interactive fishing habitat map"></div><div id="region-note" class="region-note" hidden></div>
           <div class="species-bar">
             <label for="species-select">Target species</label>
-            <select id="species-select">
-              <option value="reef">Lingcod &amp; rockfish</option>
-              <option value="halibut">California halibut</option>
-              <option value="salmon">Chinook salmon</option>
-              <option value="albacore">Albacore tuna · offshore</option>
-              <option value="bluefin">Bluefin tuna · offshore</option>
-              <option value="dungeness">Dungeness crab</option>
-            </select>
+            <select id="species-select"><option value="reef">Loading regional species…</option></select>
             <button
               id="open-map-options"
               class="map-options-button"
@@ -377,6 +370,13 @@
           <strong>Charter reports &amp; evidence</strong
           ><span>Loading reported grounds…</span>
         </button>
+        <div id="regional-explore" class="search-field" hidden>
+          <label for="map-focus">Explore a coast or island</label>
+          <select id="map-focus"><option value="all">Whole region</option></select>
+          <p class="small" id="habitat-layer-status" role="status"></p>
+          <label><input type="checkbox" id="survey-habitat-toggle" checked> Surveyed habitat context</label>
+          <p class="small">Outlines follow surveyed substrate or dated kelp. Habitat context can extend beyond 200 ft where native depth is unknown; it is not a qualified fishing waypoint.</p>
+        </div>
         <div class="search-field">
           <label for="search">Find a spot</label
           ><input

@@ -1,7 +1,7 @@
-import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.1";
-import { esc } from "./marine-charts.js?v=8.1";
-import { distanceNm } from "./marine-data.js?v=8.1";
-import { matchesTargetSpecies } from "./target-groups.js?v=8.1";
+import { getRegion, assetURL, acceptsFeed } from "./region.js?v=8.2";
+import { esc } from "./marine-charts.js?v=8.2";
+import { distanceNm } from "./marine-data.js?v=8.2";
+import { matchesTargetSpecies } from "./target-groups.js?v=8.2";
 
 export const FEED_URL =
   getRegion().daily_feed;
@@ -16,6 +16,7 @@ const names = {
   bluefin: "Bluefin",
   dungeness: "Dungeness crab",
 };
+Object.assign(names,Object.fromEntries((getRegion().target_options || []).map(t=>[t.id,t.name])));
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: getRegion().timezone,
   year: "numeric",

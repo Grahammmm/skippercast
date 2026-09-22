@@ -51,3 +51,21 @@ class RegulationChecks(unittest.TestCase):
         self.assertEqual(self.registry, original)
         for profile in result['species'].values():
             self.assertTrue(set(profile['source_ids']).issubset(result['sources']))
+
+    def test_new_region_accepts_more_species_without_silently_dropping_them(self):
+        from skippercast.platform.contracts import REPO
+        registry=json.loads((REPO/'dist/regions/southern-california/regulations.json').read_text())
+        self.assertGreater(len(registry['species']),7)
+        result=regulatory_snapshot({},self.now,registry)
+        self.assertIn('lobster',result['species'])
+        self.assertEqual(result['checks']['rules-southern']['status'],'unavailable')
+        registry['species']['lobster']['source_ids']=['unknown-source']
+        with self.assertRaises(ValueError):regulatory_snapshot({},self.now,registry)
+
+    def test_timed_opening_requires_an_offset_and_matching_start_date(self):
+        profile = self.registry['species']['lingcod']
+        profile['windows'] = [{'start': '2026-10-02', 'end': '2026-12-31', 'start_at': '2026-10-02T18:00:00-07:00'}]
+        regulatory_snapshot(self.sources, self.now, self.registry)
+        for value in ('2026-10-02T18:00:00', '2026-10-03T18:00:00-07:00', 'invalid'):
+            profile['windows'][0]['start_at'] = value
+            with self.assertRaises(ValueError):regulatory_snapshot(self.sources,self.now,self.registry)

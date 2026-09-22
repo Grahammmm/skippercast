@@ -1,6 +1,7 @@
-import {readConditions, tideAt, HOUR} from './marine-data.js?v=8.1';
-import {esc, num, local, from} from './marine-charts.js?v=8.1';
-import {rateHour} from './morning-outlook.js?v=8.1';
+import {getRegion} from "./region.js?v=8.2";
+import {readConditions, tideAt, HOUR} from './marine-data.js?v=8.2';
+import {esc, num, local, from} from './marine-charts.js?v=8.2';
+import {rateHour} from './morning-outlook.js?v=8.2';
 
 // One UTC clock drives every column; an absent sample is never interpolated.
 export function matrixHTML({bundle, point, species, time, family, now=Date.now()}) {
@@ -9,7 +10,7 @@ export function matrixHTML({bundle, point, species, time, family, now=Date.now()
   const columns=times.map(t=>({t,c:readConditions(bundle,point,t,family),n:readConditions(bundle,point,t,'gfs'),r:rateHour(bundle,point,species,t,now)}));
   const wave=p=>`${num(p.height)} ft · ${num(p.period)} s · ${from(p.from)}`;
   const rows=[
-    ['Conditions',x=>`${num(x.r.conditions)}/10 · ${x.r.confidence}`],
+    [getRegion().target_options?.find(t=>t.id===species)?.control_mode==='boat-comfort'?'Boat comfort':'Conditions',x=>`${num(x.r.conditions)}/10 · ${x.r.confidence}`],
     ['Wind / gust · kt',x=>`${num(x.c.wind)} / ${num(x.c.gust)} · ${from(x.c.windFrom)}`],
     ['Combined seas',x=>wave(x.c.sea)],
     ['Primary swell · NOAA',x=>wave(x.n.swell)],

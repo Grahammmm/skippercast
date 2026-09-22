@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {memberSummary,currentFrame,nearestCurrent,spectrumSVG} from '../dist/intelligence.js';
+import {memberSummary,currentFrame,nearestCurrent,spectrumSVG,uncertaintyHTML} from '../dist/intelligence.js';
+import {getRegion} from '../dist/region.js?v=8.2';
 import {tripGPX} from '../dist/gpx.js';
 import {exportSelection} from '../dist/inavx.js';
 import {bottomSection} from '../dist/bottom-view.js';
@@ -9,6 +10,22 @@ import {regulationState} from '../dist/regulations.js';
 import {spotEvidence} from '../dist/spot-evidence.js';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 const now=Date.parse('2026-09-22T04:00:00Z');
+
+test('uncertainty requires both stable point ID and requested coordinates after a region edit',()=>{
+  const point=getRegion().forecast_points[0],time=Math.floor(Date.now()/1000);
+  const identity={point_id:point.id,requested:[point.latitude,point.longitude]};
+  const row={...identity,frames:[{time,members:Array.from({length:31},(_,i)=>[i,6,8])}]};
+  const waveRow={...identity,percent:75,grid:[point.latitude,point.longitude],distance_km:0};
+  const fresh=data=>({status:'ok',max_age_hours:36,data:{issued_at:new Date().toISOString(),...data}});
+  const data={sources:{ensemble:fresh({points:[row]}),'wave-ensemble':fresh({frames:[{time,threshold_m:1,points:[waveRow]}]})}};
+  assert.match(uncertaintyHTML(data,{point:0,time}),/6\.0–6\.0 kt/);
+  assert.match(uncertaintyHTML(data,{point:0,time}),/75%/);
+  row.requested=[point.latitude+.1,point.longitude];waveRow.requested=row.requested;
+  const moved=uncertaintyHTML(data,{point:0,time});
+  assert.match(moved,/Unavailable/);assert.doesNotMatch(moved,/6\.0–6\.0 kt|75%/);
+  delete row.requested;delete waveRow.requested;
+  assert.doesNotMatch(uncertaintyHTML(data,{point:0,time}),/6\.0–6\.0 kt|75%/);
+});
 
 test('ensemble counts exclude missing and inconsistent gusts without claiming confidence from few members',()=>{
   const members=Array.from({length:31},(_,i)=>[i,i===0?0:10,i===0?0:14]);

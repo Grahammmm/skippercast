@@ -128,7 +128,7 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "San Simeon map sheet, 35.483889\u201335.701805 N; product-specific footprints apply.",
+      "coverage_note": "San Simeon map sheet, 35.483889–35.701805 N; product-specific footprints apply.",
       "limitations": [
         "2015 interpretation from multiple older surveys.",
         "Nearshore depth contours are spaced 10 m after smoothing; not a native high-resolution depth grid.",
@@ -1237,6 +1237,112 @@
       "allowed_hosts": [
         "www.fisheries.noaa.gov"
       ]
+    },
+    {
+      "id": "noaa-cinms-substrate-2006",
+      "name": "NOAA/NCCOS California benthic substrate compilation",
+      "provider": "NOAA NCCOS / CCMA Biogeography Branch",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://www.fisheries.noaa.gov/inport/item/39578",
+      "adapter": "vector",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA/NOS/NCCOS/CCMA/Biogeography Branch; Moss Landing Marine Laboratory, MMS and UCSB",
+        "terms_url": "https://www.fisheries.noaa.gov/inport/item/39578",
+        "scope": "Public NOAA data; attribution required by source use constraints"
+      },
+      "authenticity": {
+        "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
+        "transport": "HTTPS; provider-host downloads; bounded sizes and pinned SHA-256"
+      },
+      "coverage_note": "Partial Channel Islands coverage. Context geometry and source-grid terrain views only; no qualified fishing targets or catch inference. Catalina has historical kelp only. Military islands withheld.",
+      "limitations": [
+        "Historical hard/soft interpretation of variable source resolution, not field validated. Fine-scale errors exist. No boulder dimensions, relief, kelp presence or current fish abundance are established by these polygons."
+      ],
+      "publication_date": "2006-01",
+      "survey_date": null,
+      "allowed_hosts": [
+        "www.fisheries.noaa.gov",
+        "cdn.coastalscience.noaa.gov"
+      ],
+      "update_policy": "Daily source-document access audit; source versions stay pinned until reviewed replacement passes the habitat compiler and closure tests.",
+      "native_resolution_m": null
+    },
+    {
+      "id": "noaa-cinms-bathymetry-2025",
+      "name": "NCCOS Channel Islands merged multibeam bathymetry",
+      "provider": "NOAA NCCOS / NCEI",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.nodc%3A0304093/html",
+      "adapter": "geotiff",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "CC0-1.0",
+        "attribution": "Sweeney, E.; Costa, B.; Caldow, C. (2025), NOAA NCEI accession 0304093; NOAA, USGS, MBARI, CSUMB and OET surveys",
+        "terms_url": "https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/4CLCAE-ISO-19115-2.xml",
+        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata"
+      },
+      "authenticity": {
+        "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
+        "transport": "HTTPS; provider-host downloads; bounded sizes and pinned SHA-256"
+      },
+      "coverage_note": "Partial Channel Islands coverage. Context geometry and source-grid terrain views only; no qualified fishing targets or catch inference. Catalina has historical kelp only. Military islands withheld.",
+      "limitations": [
+        "Merged acoustic measurements with linear depth shifts to overlapping NOAA hydrographic surveys and some IDW interpolation in the published source. The archive does not explicitly name a common vertical datum or supply per-cell uncertainty. Native output cell size is not original sensor resolution or boulder-measurement accuracy. Not for navigation. Individual cell acquisition years are not supplied."
+      ],
+      "publication_date": "2025-05-30",
+      "survey_date": "1998 to 2022-11-05",
+      "allowed_hosts": [
+        "www.ncei.noaa.gov",
+        "doi.org"
+      ],
+      "update_policy": "Daily source-document access audit; source versions stay pinned until reviewed replacement passes the habitat compiler and closure tests.",
+      "native_resolutions_m": [
+        2,
+        4
+      ],
+      "vertical_datum": "Unspecified merged hydrographic reference"
+    },
+    {
+      "id": "cdfw-kelp-2016",
+      "name": "CDFW 2016 aerial kelp canopy and subsurface classification",
+      "provider": "California Department of Fish and Wildlife",
+      "needs": [
+        "kelp"
+      ],
+      "documentation_url": "https://filelib.wildlife.ca.gov/Public/R7_MR/BIOLOGICAL/Kelp/",
+      "adapter": "vector",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "California Department of Fish and Wildlife; imagery and processing by Sandoval & Associates LLC",
+        "terms_url": "https://filelib.wildlife.ca.gov/Public/R7_MR/BIOLOGICAL/Kelp/",
+        "scope": "Public CDFW distribution with CDFW attribution; source bundled use constraints retained in raw receipt"
+      },
+      "authenticity": {
+        "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
+        "transport": "HTTPS; provider-host downloads; bounded sizes and pinned SHA-256"
+      },
+      "coverage_note": "Partial Channel Islands coverage. Context geometry and source-grid terrain views only; no qualified fishing targets or catch inference. Catalina has historical kelp only. Military islands withheld.",
+      "limitations": [
+        "Dated 2016 surface-canopy and subsurface detections, not live kelp. Survey timing, ocean state, photo quality and missing imagery affect detection. No detection does not prove absence. Kelp boundaries are not bottom depth or rock boundaries."
+      ],
+      "publication_date": "2017-05-10",
+      "survey_date": "2016-09-03 to 2016-09-25",
+      "allowed_hosts": [
+        "filelib.wildlife.ca.gov",
+        "wildlife.ca.gov"
+      ],
+      "update_policy": "Daily source-document access audit; source versions stay pinned until reviewed replacement passes the habitat compiler and closure tests.",
+      "native_resolution_m": 2
     }
   ]
 }

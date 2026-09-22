@@ -3,12 +3,30 @@ import importlib.util
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+from datetime import datetime,timezone
 from skippercast.pipeline.verification import forecast_records,merge_records,verify
 from skippercast.pipeline.ocean import dap_arrays,vector,bounds_indices
 ROOT=Path(__file__).resolve().parents[1]
 
 
 class IntelligenceTests(unittest.TestCase):
+    def test_new_regional_points_never_inherit_old_verification_station_rows(self):
+        from skippercast.pipeline.intelligence import model_source
+        region={'forecast_points':[{'name':'New island','latitude':34,'longitude':-120}],
+                'intelligence':{'verification_stations':[{'name':'Buoy','latitude':35,'longitude':-121}]}}
+        expected=[{'name':'New island','latitude':34,'longitude':-120},{'name':'Buoy','latitude':35,'longitude':-121}]
+        now=datetime.now(timezone.utc)
+        with patch('skippercast.pipeline.intelligence.source') as capture:
+            old={'data':{'requested_points':expected[1:]}}
+            model_source('gfs_global',region,now,old)
+            self.assertIsNone(capture.call_args.args[-1])
+            model_source('gfs_global',region,now,{'data':None,'status':'failed'})
+            self.assertIsNone(capture.call_args.args[-1])
+            compatible={'data':{'requested_points':expected}}
+            model_source('gfs_global',region,now,compatible)
+            self.assertIs(capture.call_args.args[-1],compatible)
+
     def test_forecasts_are_prospective_immutable_and_not_counted_twice(self):
         station={'id':'46215','variables':['wave_height']}
         data={'meta':{'last_run_initialisation_time':1000,'data_end_time':9000},'points':[{'latitude':35.2,'longitude':-120.85,'hourly_units':{'wave_height':'ft'},'hourly':{'time':[2000,5000,10000],'wave_height':[8,3,4]}}]}
@@ -36,5 +54,6 @@ class IntelligenceTests(unittest.TestCase):
         self.assertEqual(len(rows),8)
         one=next(r for r in rows if r['threshold_m']==1)
         self.assertEqual(one['threshold_ft'],3.281);self.assertEqual(one['points'][0]['percent'],100)
+        self.assertEqual(one['points'][0]['requested'],[35.3,-121.75])
         self.assertIsNone(one['points'][1]['percent'])
         self.assertLess(one['points'][0]['distance_km'],30)

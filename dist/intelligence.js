@@ -1,6 +1,6 @@
-import {getRegion,localContext} from './region.js?v=8.1';
-import {esc,num,from,local} from './marine-charts.js?v=8.1';
-import {readConditions,angleBetween,distanceNm} from './marine-data.js?v=8.1';
+import {getRegion,localContext} from './region.js?v=8.2';
+import {esc,num,from,local} from './marine-charts.js?v=8.2';
+import {readConditions,angleBetween,distanceNm} from './marine-data.js?v=8.2';
 
 export function freshSource(source,now=Date.now()) {
   if(!source?.data || source.status!=='ok')return false;
@@ -45,12 +45,14 @@ export function spectrumSVG(frame) {
 }
 
 export function uncertaintyHTML(data,state,limits={wind:8,gust:12}) {
-  const source=data?.sources?.ensemble,p=source?.data?.points?.find(p=>p.point_id===getRegion().forecast_points[state.point]?.id);
+  const point=getRegion().forecast_points[state.point];
+  const matches=p=>point&&p.point_id===point.id&&p.requested?.[0]===point.latitude&&p.requested?.[1]===point.longitude;
+  const source=data?.sources?.ensemble,p=source?.data?.points?.find(matches);
   const frame=freshSource(source)?p?.frames.find(f=>f.time===state.time):null;
   const s=frame?memberSummary(frame.members,limits.wind,limits.gust):null;
   const wave=data?.sources?.['wave-ensemble'];const rows=freshSource(wave)?wave.data.frames.filter(f=>Math.abs(f.time-state.time)<=5400&&f.threshold_m===1):[];
   const match=rows.sort((a,b)=>Math.abs(a.time-state.time)-Math.abs(b.time-state.time))[0];
-  const wp=match?.points.find(p=>p.point_id===getRegion().forecast_points[state.point]?.id);
+  const wp=match?.points.find(matches);
   return `<div class="insight-grid"><div><small>Wind, 10th–90th member range</small><strong>${s?`${num(s.p10)}–${num(s.p90)} kt`:'Unavailable'}</strong><small>${s?`${s.n}/31 members · median ${num(s.p50)} kt`:esc(statusText(source))}</small></div><div><small>Members above ${limits.wind} kt wind</small><strong>${num(s?.windPercent,0)}%</strong><small>Above ${limits.gust} kt gust: ${num(s?.gustPercent,0)}% (${s?.gustN||0} valid members)</small></div><div><small>Seas above 1 m (3.28 ft)</small><strong>${num(wp?.percent,0)}%</strong><small>${match?'NOAA snapshot '+local(match.time,{weekday:'short',hour:'numeric'}):'No nearby populated ensemble hour'}${wp?.grid?` · sea grid ${wp.grid.map(n=>num(n,3)).join(', ')} · ${num(wp.distance_km/1.852)} nm away`:''}</small></div></div><p class="small">Raw ensemble fractions, not calibrated odds or catch probability. NOAA's sea threshold is <b>3.28 ft</b>, not your 3 ft comfort limit. Missing members are excluded; fewer than 20 withholds a wind percentage.</p><p class="insight-status">Wind ${esc(statusText(source))} · ${sourceLink(source)}<br>Waves ${esc(statusText(wave))} · ${sourceLink(wave)}</p>`;
 }
 

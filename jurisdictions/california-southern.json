@@ -31,8 +31,8 @@
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "keywords": [
-        "Dungeness",
-        "health"
+        "health",
+        "advisories"
       ]
     },
     "rules-ocean": {
@@ -90,6 +90,32 @@
       "keywords": [
         "Groundfish",
         "Exclusion"
+      ]
+    },
+    "rules-lobster": {
+      "name": "CDFW recreational spiny lobster rules and notices",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Lobster",
+      "keywords": [
+        "lobster",
+        "2026",
+        "report card"
+      ]
+    },
+    "rules-anacapa": {
+      "name": "CDFW Anacapa MPA and special closures",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Anacapa-Island",
+      "keywords": [
+        "Anacapa",
+        "20",
+        "January"
+      ]
+    },
+    "rules-mpa": {
+      "name": "CDFW MPA overview and official regulations access",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs",
+      "keywords": [
+        "marine",
+        "protected"
       ]
     }
   },

@@ -1,4 +1,4 @@
-import { getRegion } from "./region.js?v=8.1";
+import { getRegion } from "./region.js?v=8.2";
 // Pure data handling shared by the browser and offline checks. Missing is never calm.
 export const STATIONS = [
   {

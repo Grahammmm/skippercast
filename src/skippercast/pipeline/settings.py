@@ -30,6 +30,8 @@ def settings(region_id="morro-bay", root=REPO):
             if source["adapter"]=="open-meteo" and source["review_status"]=="approved":
                 model_ids.append(source["model"])
     regulations=read_json(within(root/"dist",jurisdiction["regulations_asset"]))
+    required={species for target in region['species'] for species in (['lingcod','rockfish'] if target=='reef' else [target])}
+    if not required <= regulations.get('species',{}).keys():raise ValueError('Regional target species need matching reviewed regulation records')
     regulations["area"]=region["name"]+" · "+region["jurisdiction"]
     return {"region":region,"grids":grids,"watches":watches,"jurisdiction":jurisdiction,
             "regulations":regulations,"model_ids":model_ids}

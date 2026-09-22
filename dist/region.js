@@ -1,4 +1,4 @@
-import defaultRegion from "./region-default.js?v=8.1";
+import defaultRegion from "./region-default.js?v=8.2";
 let active = defaultRegion;
 export const getRegion = () => active;
 export const assetURL = (key) => active.assets[key] || null;
@@ -18,6 +18,15 @@ export async function initRegion() {
   if (!entry) throw new Error("Unknown region. Open the region menu to choose an available coast.");
   const r = await fetch(entry.config,{cache:"no-cache"});if(!r.ok) throw new Error("Region package unavailable");
   setRegion(await r.json());
+  const species=document.getElementById('species-select');
+  species.replaceChildren();
+  const groups=new Map();
+  for(const target of active.target_options || []) {
+    if(!groups.has(target.group)) {const group=document.createElement('optgroup');group.label=target.group;groups.set(target.group,group);species.append(group);}
+    groups.get(target.group).append(new Option(target.name,target.id));
+  }
+  if(!species.options.length) throw Error('Regional species definitions unavailable');
+  species.value=active.species[0];
   const chooser=document.getElementById("region-select");
   for(const region of index.regions){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
   chooser.value=active.id;

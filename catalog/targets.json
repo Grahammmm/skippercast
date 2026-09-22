@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "method": "Selector groups and explicit broad habitat associations; none assigns fish presence, catch rank or a depth-qualified target. Regions choose their own ordered IDs.",
+  "targets": {
+    "reef": {
+      "name": "Lingcod & rockfish",
+      "group": "Reef & kelp",
+      "kind": "reef",
+      "source_species": [
+        "lingcod",
+        "rockfish"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "mixed"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "sheephead": {
+      "name": "California sheephead",
+      "group": "Reef & kelp",
+      "kind": "habitat",
+      "source_species": [
+        "sheephead"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "mixed",
+        "kelp"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "whitefish": {
+      "name": "Ocean whitefish",
+      "group": "Reef & kelp",
+      "kind": "habitat",
+      "source_species": [
+        "whitefish"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "mixed",
+        "sediment"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "kelp-bass": {
+      "name": "Kelp bass \u00b7 calico",
+      "group": "Reef & kelp",
+      "kind": "habitat",
+      "source_species": [
+        "kelp-bass"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "mixed",
+        "kelp"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "sand-bass": {
+      "name": "Barred sand bass",
+      "group": "Sand & bays",
+      "kind": "habitat",
+      "source_species": [
+        "sand-bass"
+      ],
+      "habitat_kinds": [
+        "mixed",
+        "sediment"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "spotted-bass": {
+      "name": "Spotted sand bass",
+      "group": "Sand & bays",
+      "kind": "habitat",
+      "source_species": [
+        "spotted-bass"
+      ],
+      "habitat_kinds": [
+        "bay-sediment",
+        "eelgrass"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom",
+      "empty_map_note": "Bay / estuary habitat not mapped here yet. Island reefs are not spotted sand bass grounds."
+    },
+    "halibut": {
+      "name": "California halibut",
+      "group": "Sand & bays",
+      "kind": "soft",
+      "source_species": [
+        "halibut"
+      ],
+      "habitat_kinds": [
+        "sediment"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom"
+    },
+    "white-seabass": {
+      "name": "White seabass",
+      "group": "Coastal schools",
+      "kind": "pelagic",
+      "source_species": [
+        "white-seabass"
+      ],
+      "habitat_kinds": [
+        "kelp",
+        "sediment"
+      ],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "yellowtail": {
+      "name": "California yellowtail",
+      "group": "Coastal schools",
+      "kind": "pelagic",
+      "source_species": [
+        "yellowtail"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "kelp"
+      ],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "bonito": {
+      "name": "Pacific bonito",
+      "group": "Coastal schools",
+      "kind": "pelagic",
+      "source_species": [
+        "bonito"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column",
+      "empty_map_note": "Mobile coastal schools: no current fish sightings or fixed grounds mapped."
+    },
+    "barracuda": {
+      "name": "California barracuda",
+      "group": "Coastal schools",
+      "kind": "pelagic",
+      "source_species": [
+        "barracuda"
+      ],
+      "habitat_kinds": [
+        "kelp"
+      ],
+      "category": "finfish",
+      "control_mode": "water-column",
+      "empty_map_note": "Mobile coastal schools: dated kelp is context only; no current fish sightings mapped."
+    },
+    "bluefin": {
+      "name": "Pacific bluefin tuna",
+      "group": "Offshore",
+      "kind": "offshore",
+      "source_species": [
+        "bluefin"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "yellowfin": {
+      "name": "Yellowfin tuna",
+      "group": "Offshore",
+      "kind": "offshore",
+      "source_species": [
+        "yellowfin"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "dorado": {
+      "name": "Dorado \u00b7 dolphinfish",
+      "group": "Offshore",
+      "kind": "offshore",
+      "source_species": [
+        "dorado"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "group": "Offshore",
+      "kind": "offshore",
+      "source_species": [
+        "albacore"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "lobster": {
+      "name": "California spiny lobster",
+      "group": "Shellfish",
+      "kind": "habitat",
+      "source_species": [
+        "lobster"
+      ],
+      "habitat_kinds": [
+        "rock",
+        "mixed"
+      ],
+      "category": "invertebrate",
+      "control_mode": "boat-comfort"
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "group": "Coastal schools",
+      "kind": "pelagic",
+      "source_species": [
+        "salmon"
+      ],
+      "habitat_kinds": [],
+      "category": "finfish",
+      "control_mode": "water-column"
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "group": "Shellfish",
+      "kind": "soft",
+      "source_species": [
+        "dungeness"
+      ],
+      "habitat_kinds": [
+        "sediment"
+      ],
+      "category": "invertebrate",
+      "control_mode": "bottom"
+    }
+  }
+}

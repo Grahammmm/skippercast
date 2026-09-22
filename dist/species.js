@@ -1,7 +1,7 @@
-import { appendSpeciesEvidence } from "./species-evidence.js?v=8.1";
-import { getRegion, assetURL } from "./region.js?v=8.1";
-import { POINTS, distanceNm } from "./marine-data.js?v=8.1";
-import { circleGeometry } from "./geo-screen.js?v=8.1";
+import { appendSpeciesEvidence } from "./species-evidence.js?v=8.2";
+import { getRegion, assetURL } from "./region.js?v=8.2";
+import { POINTS, distanceNm } from "./marine-data.js?v=8.2";
+import { circleGeometry } from "./geo-screen.js?v=8.2";
 const $ = (id) => document.getElementById(id);
 const fishSource = {
   title: "CDFW · California fish habitat",
@@ -199,6 +199,16 @@ export const PROFILES = {
     ],
   },
 };
+// New coastlines supply selector metadata and local field notes as data.
+for (const target of getRegion().target_options || []) {
+  PROFILES[target.id] = {...(PROFILES[target.id] || {
+    short: target.group, habitat: "Open the regional field notes for habitat evidence.",
+    approach: "Confirm habitat, legal access and fish presence locally.",
+    conditions: "Inspect the complete fishing and return window.",
+    map: "Source-backed habitat context; fish presence and current depth require verification.",
+    unknown: "Catch success and individual rock dimensions are unverified.", sources: [rules]
+  }), ...target};
+}
 export function matchesSpecies(target, id) {
   if (id === "reef" || id === "rockfish") return true;
   return (
@@ -236,20 +246,24 @@ export async function initSpecies(
   const id = () => $("species-select").value;
   function guide() {
     const base=PROFILES[id()], local=ecology?.profiles?.[id()];
-    const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
+    const links=local?.source_links || (local?.sources || []).flatMap(s=>s.claims.map(c=>({title:s.name+" · source",url:c.source_url})));
+    const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
     $("species-guide").innerHTML =
-      `<div class="eyebrow">SPECIES FIELD NOTES · RESEARCHED SEP 21, 2026</div><h2>${p.name}</h2><p class="guide-lead">${p.short}</p><div class="field-note-grid">${[
+      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(p.name)}</h2><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
         ["Habitat", p.habitat],
         ["What to look for", p.approach],
         ["Conditions that help", p.conditions],
+        ...(local?.depth_guidance ? [["Depth & presentation",local.depth_guidance]] : []),
+        ...(local?.regional_notes ? [["Local differences",local.regional_notes]] : []),
+        ...(local?.timing ? [["Seasonal behavior",local.timing]] : []),
         ["What changes on the map", p.map],
         ["Season & access", "Select this species on the map and open Regulations for local season dates, limits, gear rules and current source-check status."],
         ["What we still cannot see", p.unknown],
       ]
-        .map(([h, t]) => `<details class="field-note"><summary>${h}</summary><p>${t}</p></details>`)
+        .map(([h, t]) => `<details class="field-note"><summary>${escapeHTML(h)}</summary><p>${escapeHTML(t)}</p></details>`)
         .join(
           "",
-        )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${p.sources.map((s) => `<a href="${s.url}" target="_blank" rel="noopener">${s.title} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
+        )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${[...new Map(p.sources.filter(s=>String(s.url).startsWith("https://")).map(s=>[s.url,s])).values()].map((s) => `<a href="${escapeHTML(s.url)}" target="_blank" rel="noopener">${escapeHTML(s.title)} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
     $("species-guide").dataset.speciesEvidence=id();
     appendSpeciesEvidence($("species-guide"),id());
     $("filter-options").hidden = !["reef", "soft"].includes(p.kind);
@@ -276,8 +290,8 @@ export async function initSpecies(
         radius_m: 5500,
         kind: "search",
       }));
-    if (p.kind === "pelagic")
-      return POINTS.slice(0, 3).map((p) => ({
+    if (p.kind === "pelagic" && getRegion().habitat_policy?.coastal_forecast_circles !== false)
+      return POINTS.filter(p=>!p.offshore).map((p) => ({
         ...p,
         label: p.name + " forage search",
         radius_m: 1800,
@@ -304,7 +318,7 @@ export async function initSpecies(
     const p = PROFILES[id()];
     if (p.kind === "reef") return;
     current = chooseAreas().filter(a => protectedAreas.pointAllowed(a) && protectedAreas.geometryAllowed(a.geometry || circleGeometry(a.latitude,a.longitude,a.radius_m)));
-    $("map-empty").hidden = current.length > 0 || !!assetURL("geology");
+    $("map-empty").hidden = current.length > 0 || !!assetURL("geology") || !!assetURL("survey_habitat") || !!assetURL("regional_context");
     if (!current.length) {
       $("map-empty").querySelector("strong").textContent = error
         ? "Habitat data unavailable"

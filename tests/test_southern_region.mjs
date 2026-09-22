@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {setRegion,localContext,pointBundle} from '../dist/region.js';
+import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.2';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {buildContext} from '../scripts/build_reef_context.mjs';
 import {regulationState} from '../dist/regulations.js';
@@ -13,6 +13,11 @@ test('southern contexts isolate San Diego and Santa Barbara tides, buoy and new 
  setRegion(r);assert.equal(localContext('la-jolla').marine_zones.coastal,'PZZ740');
  assert.equal(localContext('santa-barbara').stations.tide,'9411340');
  assert.equal(localContext('la-jolla').stations.tide,'9410170');
+ assert.equal(localContext('anacapa').marine_zones.coastal,'PZZ655');
+ assert.equal(localContext('san-miguel').marine_zones.coastal,'PZZ673');
+ assert.equal(localContext('santa-rosa').marine_zones.offshore,'PZZ673');
+ assert.equal(localContext('santa-barbara-island').marine_zones.coastal,'PZZ676');
+ for(const focus of r.map.focus_areas)assert.ok(r.forecast_points.some(p=>p.id===focus.forecast_point));
  const b={models:{},contexts:{'san-diego':{tides:[1],alerts:{coastal:['SD alert']}}}};
  assert.deepEqual(pointBundle(b,'santa-barbara').tides,[]);
  assert.deepEqual(pointBundle(b,'santa-barbara').alerts,{});

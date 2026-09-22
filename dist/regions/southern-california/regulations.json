@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-22.south.1",
-  "reviewed_at": "2026-09-22T13:49:07.951046+00:00",
+  "revision": "2026-09-22.south.2",
+  "reviewed_at": "2026-09-22T14:57:38Z",
   "valid_from": "2026-09-22",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
   "area": "Mexico border–Point Conception · recreational boat fishing",
-  "scope": "U.S. waters south of 34°27′ N (Point Conception) to the international maritime boundary. This package provides no Mexican permits or rules.",
+  "scope": "U.S. waters south of 34°27′ N (Point Conception) to the international maritime boundary, including qualifying Channel Islands waters. Recreational private-boat/day-trip summary; no Mexican permits, multi-day possession clearance or local harbor/military access permission.",
   "check_interval_hours": 24,
   "max_age_hours": 36,
   "sources": {
@@ -18,7 +18,7 @@
         "27.60"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-invertebrates": {
       "name": "CDFW invertebrate gear rules",
@@ -28,7 +28,7 @@
         "trap"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-whales": {
       "name": "CDFW whale-safe crab restrictions",
@@ -38,17 +38,17 @@
         "crab"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-health": {
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "keywords": [
-        "Dungeness",
-        "health"
+        "health",
+        "advisories"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-ocean": {
       "name": "CDFW official regulation index",
@@ -58,7 +58,7 @@
         "Tunas"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-groundfish": {
       "name": "CDFW groundfish",
@@ -68,7 +68,7 @@
         "regulations"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-inseason": {
       "name": "CDFW in-season changes",
@@ -78,7 +78,7 @@
         "ocean"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-salmon": {
       "name": "CDFW salmon",
@@ -88,7 +88,7 @@
         "season"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-crab": {
       "name": "CDFW crab",
@@ -98,7 +98,7 @@
         "recreational"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-southern": {
       "name": "CDFW Southern Region rules",
@@ -109,7 +109,7 @@
         "2026"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
     },
     "rules-gea": {
       "name": "NOAA groundfish exclusion areas",
@@ -119,7 +119,45 @@
         "Exclusion"
       ],
       "approved_content_sha256": null,
-      "reviewed_at": "2026-09-22T13:49:07.951046+00:00"
+      "reviewed_at": "2026-09-22T14:57:38Z"
+    },
+    "rules-lobster": {
+      "name": "CDFW recreational spiny lobster rules and notices",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Lobster",
+      "keywords": [
+        "lobster",
+        "2026",
+        "report card"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T14:57:38Z"
+    },
+    "rules-anacapa": {
+      "name": "CDFW Anacapa MPA and special closures",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Anacapa-Island",
+      "keywords": [
+        "Anacapa",
+        "20",
+        "January"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T14:57:38Z"
+    },
+    "rules-mpa": {
+      "name": "CDFW MPA overview and official regulations access",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs",
+      "keywords": [
+        "marine",
+        "protected"
+      ],
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T14:57:38Z"
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing regulations, updated July 17, 2026",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "approved_content_sha256": null,
+      "reviewed_at": "2026-09-22T14:57:38Z"
     }
   },
   "species": {
@@ -144,7 +182,7 @@
           "access": "seaward-50fm"
         }
       ],
-      "bag": "2 per person daily; 2 in possession. Separate from the 10-fish RCG limit.",
+      "bag": "2 per person daily/in possession; separate from the 10-fish RCG group but included in the general 20-finfish aggregate.",
       "size": "22 in minimum total length.",
       "details": [
         "Use one line with no more than two hooks when targeting lingcod, or when lingcod are aboard. Your double-drop rig fits that limit.",
@@ -157,7 +195,9 @@
         "rules-groundfish",
         "rules-gear",
         "rules-inseason",
-        "rules-gea"
+        "rules-gea",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -186,7 +226,7 @@
           "access": "seaward-50fm"
         }
       ],
-      "bag": "10 fish in the combined rockfish, cabezon and greenling daily bag/possession limit. Rockfish sublimits: 1 copper, 2 vermilion/sunset combined, 2 canary.",
+      "bag": "10 combined rockfish/cabezon/greenlings daily/in possession, within the general 20-finfish aggregate. Within those ten: at most 1 copper, 2 canary, and 2 vermilion/sunset combined.",
       "size": "No minimum length for retained rockfish. Species must be identified.",
       "details": [
         "Within the 10: at most 1 copper, 2 canary, and 2 vermilion/sunset rockfish combined.",
@@ -200,7 +240,9 @@
         "rules-groundfish",
         "rules-gear",
         "rules-inseason",
-        "rules-gea"
+        "rules-gea",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -227,7 +269,9 @@
       "source_ids": [
         "rules-southern",
         "rules-inseason",
-        "rules-gear"
+        "rules-gear",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -256,7 +300,9 @@
         "rules-southern",
         "rules-inseason",
         "rules-gear",
-        "rules-salmon"
+        "rules-salmon",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -284,7 +330,9 @@
         "rules-southern",
         "rules-inseason",
         "rules-gear",
-        "rules-ocean"
+        "rules-ocean",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -312,7 +360,9 @@
         "rules-southern",
         "rules-inseason",
         "rules-gear",
-        "rules-ocean"
+        "rules-ocean",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
         "rod": {
@@ -322,7 +372,7 @@
     },
     "dungeness": {
       "name": "Dungeness crab",
-      "season": "Closed locally Jul 1–Nov 6, 2026. Next scheduled opener: Nov 7, 2026, subject to health and gear restrictions.",
+      "season": "Not a promoted Southern California target. General scheduled recreational season opens November 7, 2026, subject to current restrictions; no regional grounds are qualified.",
       "windows": [
         {
           "start": "2026-11-07",
@@ -333,11 +383,9 @@
       "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
       "size": "5¾ in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
       "details": [
-        "Season opening and trap permission are separate. November trap clearance has not been confirmed; check CDFW whale-safe and health notices.",
-        "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
-        "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
-        "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear.",
-        "CDFW describes the principal range as Alaska to Point Conception. This Southern California package has no qualified Dungeness grounds; rock crab and spiny lobster are different fisheries."
+        "The principal Dungeness fishery/range is north of Point Conception; this Southern package promotes California spiny lobster instead.",
+        "Crab traps, including loop traps/snares, are only authorized north of Point Arguello. Do not use the Central Coast trap/snare instructions here.",
+        "Any hoop or hand collection must satisfy current species, size, season, health, MPA and local access requirements. No local catch claim is made."
       ],
       "source_ids": [
         "rules-southern",
@@ -346,29 +394,409 @@
         "rules-whales",
         "rules-health",
         "rules-invertebrates",
-        "rules-ocean"
+        "rules-ocean",
+        "rules-book",
+        "rules-mpa"
       ],
       "methods": {
-        "trap": {
-          "note": "Trap permission is checked separately from the Dungeness season and health closures. Confirm the current recreational trap declaration, validation, marking and tending rules before setting.",
+        "hoop": {
+          "label": "Hoop nets",
+          "note": "Reference only: no local grounds qualified. Current hoop-net rules, season and local access must be checked.",
           "requires_clearance": true
         },
+        "hand": {
+          "label": "Hand collection",
+          "note": "Reference only: verify local species, season, access and method rules.",
+          "requires_clearance": true
+        }
+      }
+    },
+    "sheephead": {
+      "name": "California sheephead",
+      "season": "Boat rod-and-reel season March 1–December 31, 2026; closed January–February. Diver/shore exceptions are separate.",
+      "windows": [
+        {
+          "start": "2026-03-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 per person daily and in possession; these count toward the general 20-finfish aggregate, not the RCG group.",
+      "size": "12 in minimum total length.",
+      "details": [
+        "Year-round diver/shore permission does not apply to rod fishing from the Parker.",
+        "The seasonal limit is separate from the rockfish/cabezon/greenling group; a mixed catch must still fit the general finfish limit.",
+        "If filleted aboard, minimum 6¾ in with all skin attached; keeping fish whole simplifies identification."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "whitefish": {
+      "name": "Ocean whitefish",
+      "season": "Open all year and all depths in the reviewed 2026 rules, subject to place-specific closures.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily and in possession, within the general 20-finfish aggregate; separate from the 10-fish RCG group.",
+      "size": "No minimum whole-fish size.",
+      "details": [
+        "Ten RCG fish plus ten ocean whitefish already fill the general 20-finfish total; do not add lingcod or sheephead on top.",
+        "Rockfish/lingcod aboard impose their gear and closed-area possession rules even when targeting whitefish.",
+        "If filleted aboard, minimum 6½ in with all skin attached."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "kelp-bass": {
+      "name": "Kelp bass / calico bass",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "5 total kelp, barred sand and spotted sand bass combined, with no more than 4 barred sand bass. Included in the general 20-finfish aggregate.",
+      "size": "14 in minimum total length (or the regulation’s defined 10 in alternate length).",
+      "details": [
+        "The five-fish limit is shared among all three bass species, not five of each. The current barred-sand-bass sublimit is four.",
+        "Identify the bass species. Bay/harbor access restrictions and MPAs apply independently.",
+        "If filleted aboard: at least 7½ in, with a one-inch-square skin patch."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "sand-bass": {
+      "name": "Barred sand bass",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "5 total kelp, barred sand and spotted sand bass combined, with no more than 4 barred sand bass. Included in the general 20-finfish aggregate.",
+      "size": "14 in minimum total length (or the regulation’s defined 10 in alternate length).",
+      "details": [
+        "The five-fish limit is shared among all three bass species, not five of each. The current barred-sand-bass sublimit is four.",
+        "Identify the bass species. Bay/harbor access restrictions and MPAs apply independently.",
+        "If filleted aboard: at least 7½ in, with a one-inch-square skin patch."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "spotted-bass": {
+      "name": "Spotted sand bass / bay bass",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "5 total kelp, barred sand and spotted sand bass combined, with no more than 4 barred sand bass. Included in the general 20-finfish aggregate.",
+      "size": "14 in minimum total length (or the regulation’s defined 10 in alternate length).",
+      "details": [
+        "The five-fish limit is shared among all three bass species, not five of each. The current barred-sand-bass sublimit is four.",
+        "Identify the bass species. Bay/harbor access restrictions and MPAs apply independently.",
+        "If filleted aboard: at least 7½ in, with a one-inch-square skin patch."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "white-seabass": {
+      "name": "White seabass",
+      "season": "Open all year; reduced bag March 15–June 15 south of Point Conception.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "3 per person daily/in possession, except 1 from March 15 through June 15; included in the general 20-finfish aggregate.",
+      "size": "28 in minimum total length. Use this agreed measurement; see the official full text for alternate-length rules.",
+      "details": [
+        "Identify white seabass: giant/black seabass is protected and may not be retained in this U.S. fishery.",
+        "The reviewed CDFW summary and booklet disagree on alternate length; this card uses the 28-in total length that agrees in both sources.",
+        "If filleted aboard, minimum 19 in with a one-inch-square silver-skin patch.",
+        "An MPA exception for defined pelagic finfish does not automatically authorize white seabass or every fishing method."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "yellowtail": {
+      "name": "California yellowtail",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily/in possession, within the general 20-finfish aggregate.",
+      "size": "24 in minimum fork length, except up to 5 fish under 24 in fork length may be taken/possessed.",
+      "details": [
+        "The five undersized fish are part of the ten-fish total. Measure fork length, not total length.",
+        "If filleted aboard: minimum 17 in, except up to ten shorter fillets; each requires a one-inch-square skin patch.",
+        "Offshore searches remain in U.S. waters unless a separate Mexican rules/permit plan is made."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "bonito": {
+      "name": "Pacific bonito",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily/in possession, within the general 20-finfish aggregate.",
+      "size": "24 in fork length or 5 lb, with an allowance of up to 5 smaller fish; read §28.32 for the exact size/weight tolerance.",
+      "details": [
+        "The undersized allowance is included in the ten-fish bag, not additional.",
+        "At most ten bonito fillets may be possessed; all count toward the five-fish undersized tolerance and require a one-inch-square skin patch. Keeping fish whole avoids ambiguity."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "barracuda": {
+      "name": "California barracuda",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily/in possession under the general rule, within the 20-finfish aggregate.",
+      "size": "28 in minimum total length (or the regulation’s defined 17 in alternate length).",
+      "details": [
+        "South of Pigeon Point, within 1,000 yd of the mainland or island mean-high-tide shoreline, metallic/wire leaders are prohibited; check §28.65 before choosing tackle.",
+        "If filleted aboard: minimum 17 in with a one-inch-square silver-skin patch."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "yellowfin": {
+      "name": "Yellowfin tuna",
+      "season": "Open all year in the reviewed 2026 rules; this card covers U.S. waters.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily, included in the general 20-finfish aggregate. The bluefin/albacore extra-limit exception does not apply to yellowfin.",
+      "size": "No minimum size in these recreational rules.",
+      "details": [
+        "This is a day-trip summary; review special multi-day and Mexican-water rules separately.",
+        "If processed aboard, each tuna must remain in its own marked bag with the required six pieces and attached skin under §27.65; keeping fish whole simplifies compliance."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "dorado": {
+      "name": "Dorado / mahi-mahi",
+      "season": "Open all year in the reviewed 2026 rules.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 per person daily/in possession under the general rule, within the 20-finfish aggregate.",
+      "size": "No minimum size in these recreational rules.",
+      "details": [
+        "Use the general 20-finfish aggregate alongside other non-exempt fish; a yellowtail, dorado and yellowfin mixed catch does not allow ten of each.",
+        "Keep species identifiable; follow §27.65 if filleting aboard. Mexican rules and entry/return requirements are separate."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-gear",
+        "rules-inseason",
+        "rules-mpa"
+      ],
+      "methods": {
+        "rod": {
+          "label": "Rod & reel",
+          "note": "Recreational fishing from a boat. Fish already aboard may impose stricter gear or area rules; this is not a spearfishing or shore-access card."
+        }
+      }
+    },
+    "lobster": {
+      "name": "California spiny lobster",
+      "season": "Next scheduled season: October 2, 2026 at 6 p.m. Pacific through March 17, 2027; check current notices before fishing.",
+      "windows": [
+        {
+          "start": "2026-10-02",
+          "end": "2026-12-31",
+          "start_at": "2026-10-02T18:00:00-07:00",
+          "requires_opening_review": true,
+          "restriction": "Not before 6 p.m. Pacific on October 2; verify opening notices, health, MPA and local method restrictions."
+        }
+      ],
+      "bag": "7 per person daily AND in possession, including retained lobsters at home. This is not a new seven-fish allowance on top of a retained limit.",
+      "size": "3¼ in minimum carapace length, from the rear edge of the eye socket to the rear edge of the body shell; carry and use a lobster gauge.",
+      "details": [
+        "Lawful recreational methods are hands or legal hoop nets only. No traps, snares, rod-and-reel, spears or tickle sticks to take lobster.",
+        "All participants need a lobster report card, including children and people assisting with nets. Age 16+ generally need a fishing license and applicable ocean enhancement validation.",
+        "Record date, location and gear before starting; record catch when changing locations or finishing; report the card by April 30 even if no lobster was taken.",
+        "Measure immediately on retrieval; divers must measure underwater. Return undersized animals immediately. Keep lobsters whole and measurable until prepared for immediate consumption.",
+        "South of Point Arguello: maximum five hoop nets for one hoop operator; maximum ten per vessel with two or more operators. Follow construction/marking rules and raise/inspect every deployed hoop at least every two hours.",
+        "Hoop nets may not be deployed/used south of Point Arguello during the 24 hours before the lobster opener.",
+        "Off Anacapa, nets and traps are prohibited in water shallower than 20 ft; West Anacapa has a separate January–October access closure. All mapped MPAs are excluded from this app’s target areas.",
+        "The 2027 part of the scheduled season is context only; this reviewed registry expires December 31, 2026 and must be renewed."
+      ],
+      "source_ids": [
+        "rules-southern",
+        "rules-book",
+        "rules-lobster",
+        "rules-invertebrates",
+        "rules-health",
+        "rules-inseason",
+        "rules-mpa",
+        "rules-anacapa"
+      ],
+      "methods": {
         "hoop": {
-          "note": "A hoop net is a different gear category from a crab trap. Follow the current hoop-net construction, attendance and deployment rules; season and health closures still apply."
+          "label": "Hoop nets",
+          "note": "Use legal hoop nets with the required surface buoy/GO ID, counts, attendance and retrieval checks. No deployment during the 24 hours before the opener. Verify site and current notices.",
+          "requires_clearance": true
         },
-        "snare": {
-          "note": "Use the current snare definition and gear limits. A trap restriction does not by itself establish permission to take Dungeness; the season and health checks also apply."
+        "hand": {
+          "label": "Hand collection",
+          "note": "Divers collect by hand only, with report card and gauge; measure underwater. Check diving conditions and access separately. No tools may help capture a lobster.",
+          "requires_clearance": true
         }
       }
     }
   },
   "common_notes": [
-    "Limits are per angler; select the actual species and keep it identifiable. California fishing license required for anglers age 16 and older.",
-    "MPAs, local closures and the Diablo Canyon security zone override an area-wide open season. Check the exact fishing position in CDFW’s official map.",
-    "For finfish, carry a landing net with an opening of at least 18 in. South of Pigeon Point, within 1,000 yd of shore, metallic/wire lines or leaders and hooks wider than 1½ in inside are prohibited.",
-    "Seasonal groundfish access follows the legal 50-fathom RCA coordinate line, not a 300-foot reading on your sounder.",
-    "All mapped MPAs and Groundfish Exclusion Areas are excluded from SkipperCast targets. Island military areas, harbor restrictions and international boundaries require separate checks.",
-    "This region retains a 200-foot bottom-fishing limit. A historical reported depth does not qualify the whole outlined area."
+    "Limits are per angler on a day trip. Unless a species has an express exception, the general limit is 20 finfish total with no more than ten of one species and any lower species/group limit still applies.",
+    "RCG, lingcod, sheephead, ocean whitefish, halibut, bass, yellowtail, bonito, barracuda, white seabass, yellowfin and dorado all count toward that general 20. Bluefin and the regional albacore allowance are express additional-limit exceptions.",
+    "A California fishing license is normally required at age 16+. Applicable ocean enhancement validation, species report cards, landing-net and identification requirements also apply; lobster report cards are required regardless of age.",
+    "With rockfish, lingcod or other covered groundfish aboard, their one-line/two-hook and closed-area possession restrictions continue when switching targets. Do not apply unlimited general lines to a mixed groundfish trip.",
+    "For finfish, have a landing net at least 18 in in diameter available. Within 1,000 yd of the mainland/island shoreline south of Pigeon Point, metallic/wire leaders and hooks wider than 1½ in inside are prohibited.",
+    "Seasonal groundfish access follows the legal 50-fathom RCA coordinate line, not a 300-ft reading on the sounder. Groundfish Exclusion Areas and species-specific possession restrictions remain in effect.",
+    "SkipperCast withholds target geometries in all mapped MPAs, including some conservation areas with lawful method/species exceptions. This conservative display policy is not a statement that every MPA is legally no-take. State/federal MPA and special-closure boundaries must all be checked.",
+    "Anacapa has additional net/trap and seasonal pelican-area restrictions. Island military operations, harbor/anchorage restrictions and the international maritime boundary require separate access checks.",
+    "The selected bottom-depth limit remains in force. A center sounding or broad species depth range does not qualify an entire search area.",
+    "These are reviewed summaries, not automatic legal clearance. Source changes, missing checks, health notices and exact position/method can change access; use the linked official rules before fishing."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map",
   "checks": {},
@@ -384,7 +812,11 @@
     "rules-salmon",
     "rules-crab",
     "rules-southern",
-    "rules-gea"
+    "rules-gea",
+    "rules-lobster",
+    "rules-anacapa",
+    "rules-mpa",
+    "rules-book"
   ],
   "region_id": "southern-california",
   "primary_source_id": "rules-southern"
