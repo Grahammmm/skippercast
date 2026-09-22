@@ -1,4 +1,4 @@
-const VIEW_NAMES = new Set(["map", "forecast", "guide"]);
+const VIEW_NAMES = new Set(["map", "forecast", "guide", "export"]);
 export function viewFromHash(hash) {
   const key = hash.replace(/^#/, "");
   if (key === "grade-guide" || key === "charter-evidence") return "guide";
@@ -10,9 +10,11 @@ export function initNavigation({ onMapVisible }) {
   let hasSelection = false;
   if (location.hash === "#spot" || location.hash === "#spots")
     history.replaceState(null, "", "#map");
-  function applyView() {
+  function applyView(forceClose=false) {
     const view = viewFromHash(location.hash);
+    const changing=document.body.dataset.view!==view;
     document.body.dataset.view = view;
+    if(changing||forceClose===true)for(const open of document.querySelectorAll('dialog[open]'))open.close();
     for (const panel of document.querySelectorAll("[data-panel]"))
       panel.hidden = panel.dataset.panel !== view;
     for (const link of document.querySelectorAll("[data-nav]")) {
@@ -39,9 +41,8 @@ export function initNavigation({ onMapVisible }) {
   }
   function showView(view) {
     if (!VIEW_NAMES.has(view)) return;
-    for (const d of document.querySelectorAll("dialog[open]")) d.close();
     location.hash = view;
-    applyView();
+    applyView(true);
   }
   function closeDetails() {
     history.replaceState(null, "", "#map");

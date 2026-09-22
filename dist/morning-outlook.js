@@ -1,13 +1,13 @@
-import {getRegion} from "./region.js?v=8.4";
-import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.4";
+import {getRegion} from "./region.js?v=8.5";
+import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.5";
 import {
   readConditions,
   comfort,
   angleBetween,
   HOUR,
   POINTS,
-} from "./marine-data.js?v=8.4";
-import { esc, local, num } from "./marine-charts.js?v=8.4";
+} from "./marine-data.js?v=8.5";
+import { esc, local, num } from "./marine-charts.js?v=8.5";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",

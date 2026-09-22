@@ -1,0 +1,146 @@
+/* Load after the feature styles. Keep native controls and table semantics. */
+.coverage-table {
+  table-layout: fixed;
+}
+.coverage-table th,
+.coverage-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.coverage-table th:first-child {
+  width: 29%;
+}
+.coverage-table th:nth-child(2) {
+  width: 23%;
+}
+.coverage-table td:nth-child(2) {
+  white-space: normal;
+}
+
+#map-weather-summary > span,
+#map-weather-summary strong {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.compact-time-row #map-weather-summary {
+  min-width: 0;
+}
+.compact-time-row #toggle-map-timeline {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .atlas-app input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  .atlas-app select,
+  .atlas-app textarea {
+    font-size: max(1rem, 16px);
+    min-height: 44px;
+  }
+
+  #region-coverage > p,
+  #region-coverage > a {
+    display: block;
+    margin: 12px;
+    overflow-wrap: anywhere;
+  }
+  .coverage-table {
+    font-size: .875rem;
+    line-height: 1.5;
+  }
+  .coverage-table th,
+  .coverage-table td {
+    padding: 10px 5px;
+  }
+
+  /* An open rules card owns the available map height; its summary stays closeable. */
+  .atlas-app .regulations-card[open] {
+    width: min(360px, calc(100% - 24px));
+    max-width: none;
+    left: 12px;
+    top: 96px;
+    max-height: calc(100% - 108px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .regulations-card[open] > summary {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    border-bottom: 1px solid #dbe5e6;
+  }
+  .regulations-card[open] > .reg-body {
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+  #map-panel:has(.regulations-card[open]) #map-time-dock {
+    display: none;
+  }
+  .rule-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rule-controls label,
+  .rule-controls input,
+  .rule-controls select {
+    min-width: 0;
+    width: 100%;
+  }
+  .rule-controls > button {
+    grid-column: 1 / -1;
+  }
+  #rules-trip-date,
+  #rules-method {
+    font-size: max(1rem, 16px);
+  }
+}
+
+@media (max-width: 360px) {
+  /* Give the selected species the full row instead of cutting off its name. */
+  .atlas-app .species-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+    padding: 4px 5px;
+  }
+  .species-bar > label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    padding-left: 8px;
+    font-size: .875rem;
+    font-weight: 650;
+  }
+  .species-bar .map-options-button {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 44px;
+  }
+  .species-bar #species-select {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    font-size: max(1rem, 16px);
+  }
+  .location-caption {
+    top: 118px;
+  }
+  .atlas-app .regulations-card {
+    top: 146px;
+  }
+  .atlas-app .regulations-card[open] {
+    top: 146px;
+    max-height: calc(100% - 158px);
+  }
+  .leaflet-top.leaflet-right {
+    top: 180px;
+  }
+  .rule-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

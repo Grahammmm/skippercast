@@ -108,16 +108,19 @@ test("selected GPX keeps polygon holes as separate segments and rejects unknown 
       [
         [1, 2],
         [3, 4],
+        [2, 4],
         [1, 2],
       ],
       [
         [1.1, 2.1],
         [1.2, 2.2],
+        [1.1, 2.2],
         [1.1, 2.1],
       ],
     ],
   };
   clone.drifts = [];
+  clone.targets.find(x=>x.id===t.id).drift_id=null;
   const output = targetGPX(clone, t.id);
   assert.equal((output.match(/<trkseg>/g) || []).length, 2);
 });

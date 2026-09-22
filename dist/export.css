@@ -1,0 +1,30 @@
+.app-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.export-panel{padding:24px 18px 32px;overflow-y:auto;min-width:0;background:#f4f8f8}
+.export-panel>div,.export-panel>.view-heading{max-width:740px;margin-left:auto;margin-right:auto}
+.export-card{padding:18px;margin:0 0 14px;background:#fff;border:1px solid #d4e1e3;border-radius:16px}
+details.export-card{padding:0}
+.export-card>summary{min-height:60px;padding:16px;display:flex;gap:10px;align-items:center;justify-content:space-between;cursor:pointer;font-weight:650}
+.export-card>summary strong{font-size:.875rem;color:#087c70;text-align:right}
+.export-card>summary:after{content:'+';font-size:1.25rem}
+.export-card[open]>summary:after{content:'−'}
+.export-card-body{padding:0 16px 16px}
+.export-card p{line-height:1.55;margin:10px 0;font-size:1rem;overflow-wrap:anywhere}
+.export-card label{display:block;font-size:.875rem;font-weight:600}
+.export-card input:not([type=checkbox]),.export-card select{display:block;width:100%;max-width:100%;min-width:0;min-height:48px;margin:6px 0 12px;font-size:1rem;border:1px solid #bacdd1;border-radius:9px;background:#fff;padding:10px;color:#173d47}
+.export-fields{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}
+.export-note{font-size:.875rem!important;color:#51686e}
+.export-presets,.export-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.export-card button{min-height:48px;font-size:1rem;padding:10px;border-radius:9px;white-space:normal}
+.export-card button:disabled{cursor:not-allowed;opacity:.55}
+.export-spot-list{max-height:320px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #dbe5e7;border-radius:10px;margin:12px 0}
+.export-card .export-check{display:flex;align-items:flex-start;gap:12px;min-height:58px;padding:14px 8px;margin:0;border-bottom:1px solid #e2e9ea;cursor:pointer}
+.export-check input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;margin:2px 0;accent-color:#008477}
+.export-check span{min-width:0}.export-check strong{display:block;font-size:1rem;line-height:1.4}.export-check small{display:block;font-size:.875rem;font-weight:400;line-height:1.5;color:#526c73;margin-top:3px}
+.export-empty{padding:16px;background:#eef5f4;border-radius:10px;margin:14px 0}
+.export-transfer h2{font-size:1.2rem;margin:0 0 14px}
+.export-counts{display:flex;gap:24px;flex-wrap:wrap;font-size:1rem}
+.export-counts strong{font-size:1.65rem;line-height:1.25}.export-counts span{display:block;font-size:.875rem;color:#526c73;font-weight:500}
+#export-validation{font-size:.875rem}.export-actions #export-download{grid-column:1/-1}
+.export-help{border-top:1px solid #dbe5e7;margin-top:16px}.export-help>summary{min-height:52px;padding:16px 0;cursor:pointer;font-size:1rem;font-weight:600}.export-help li{margin:10px 0}.export-help ol{padding-left:24px}
+.export-panel :focus-visible{outline:3px solid #00786f;outline-offset:3px}
+@media(max-width:380px){.export-fields,.export-actions{grid-template-columns:1fr}.export-panel{padding:20px 12px}.export-card{padding:14px}details.export-card{padding:0}.export-presets{gap:6px}.export-card>summary{padding:14px}.export-card-body{padding:0 14px 14px}}

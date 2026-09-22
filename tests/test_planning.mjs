@@ -38,7 +38,7 @@ test("official local MPA snapshot is complete and published reef targets stay ou
   for(const g of [...atlas.areas,...atlas.drifts]) assert.ok(!data.features.some(f=>geometryIntersects(g.geometry,f.geometry)),g.id);
 });
 test("GPX is withheld when any included point or footprint fails the current MPA screen",()=>{
-  const atlas={targets:[{id:"a"},{id:"b"}],areas:[{target_ids:["a"],geometry:{blocked:true}}],drifts:[]};
+  const atlas={targets:[{id:"a",area_ids:['area']},{id:"b",area_ids:[]}],areas:[{id:'area',target_ids:["a"],geometry:{blocked:true}}],drifts:[]};
   const screen={ready:()=>true,pointAllowed:()=>true,geometryAllowed:g=>!g.blocked};
   assert.equal(atlasExportAllowed(atlas,screen),false);
   assert.equal(atlasExportAllowed(atlas,screen,"a"),false);

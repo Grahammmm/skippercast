@@ -37,19 +37,21 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="vendor/leaflet.css" />
-    <link rel="stylesheet" href="styles.css?v=8.4" />
-    <link rel="stylesheet" href="marine.css?v=8.4" />
-    <link rel="stylesheet" href="map-first.css?v=8.4" />
-    <link rel="stylesheet" href="bite-evidence.css?v=8.4" />
-    <link rel="stylesheet" href="regulations.css?v=8.4" />
-    <link rel="stylesheet" href="live-conditions.css?v=8.4" />
-    <link rel="stylesheet" href="calm-layout.css?v=8.4" />
-    <link rel="stylesheet" href="planning.css?v=8.4" />
-    <link rel="stylesheet" href="platform.css?v=8.4" />
+    <link rel="stylesheet" href="styles.css?v=8.5" />
+    <link rel="stylesheet" href="marine.css?v=8.5" />
+    <link rel="stylesheet" href="map-first.css?v=8.5" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.5" />
+    <link rel="stylesheet" href="regulations.css?v=8.5" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.5" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.5" />
+    <link rel="stylesheet" href="planning.css?v=8.5" />
+    <link rel="stylesheet" href="platform.css?v=8.5" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" defer></script>
-    <script type="module" src="boot.js?v=8.4"></script>
-  <link rel="stylesheet" href="insights.css?v=8.4"/>
+    <script type="module" src="boot.js?v=8.5"></script>
+  <link rel="stylesheet" href="insights.css?v=8.5"/>
+  <link rel="stylesheet" href="export.css?v=8.5"/>
+  <link rel="stylesheet" href="mobile-polish.css?v=8.5"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#007f77"/>
 </head>
@@ -243,7 +245,7 @@
           </p>
         </section>
         </details>
-        <details class="guide-topic"><summary>Download to iNavX &amp; sources</summary>
+        <details class="guide-topic"><summary>Chartplotter export &amp; sources</summary>
         <section class="map-guide guide-downloads">
           <h2>Take the atlas with you</h2>
           <p>
@@ -254,9 +256,9 @@
           </p>
           <a
             class="download"
-            href="downloads/complete.gpx"
-            download="SkipperCast-complete.gpx"
-            >↓ Export rocky atlas to iNavX</a
+            href="#export"
+
+            >Build a chartplotter day plan</a
           >
           <div class="source-links">
             <a href="downloads/spot-notes.html" target="_blank" rel="noopener"
@@ -268,6 +270,10 @@
           </button>
         </section>
         </details>
+      </section>
+      <section id="export-panel" class="export-panel app-panel" data-panel="export" aria-labelledby="export-heading" hidden>
+        <div class="view-heading"><h1 id="export-heading">Your day on the water</h1><p>A small fishing plan, ready for your chartplotter.</p></div>
+        <div id="export-content"><p role="status">Loading regional export data…</p></div>
       </section>
     </main>
     <nav class="app-nav" aria-label="Main navigation">
@@ -282,7 +288,7 @@
             d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5a3 3 0 1 1-3 3"
           /></svg
         ><span>Conditions</span></a
-      ><a href="#guide" data-nav="guide" aria-label="Guide"
+      ><a href="#export" data-nav="export" aria-label="Export"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg><span>Export</span></a><a href="#guide" data-nav="guide" aria-label="Guide"
         ><svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
           <path d="M12 11v6m0-10h.01" /></svg
@@ -445,9 +451,9 @@
         <button id="species-info">Species field notes</button>
         <a
           class="download"
-          href="downloads/complete.gpx"
-          download="SkipperCast-complete.gpx"
-          >Export 132 rocky targets · GPX</a
+          href="#export"
+
+          >Choose a set to export</a
         >
         <button id="about-button">About the atlas</button>
       </div>
@@ -517,7 +523,7 @@
     <noscript
       ><p class="error">
         Enable JavaScript to use the map and forecasts.
-        <a href="downloads/complete.gpx">Download the atlas GPX</a> or read the
+        <a href="#export">Open the export planner</a> or read the
         <a href="downloads/spot-notes.html">offline notes</a>.
       </p></noscript
     >

@@ -5,7 +5,7 @@
 
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**
 
-SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and download a GPX for your chartplotter. Select a species, scrub seven days of ocean conditions, and inspect a tide chart and wave components. Map, Conditions, and Guide views keep habitat, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
+SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and build a small GPX day plan for your chartplotter. Select a species, scrub seven days of ocean conditions, and inspect a tide chart and wave components. Map, Conditions, Export, and Guide views keep habitat, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
 
 **[Open the app](https://skippercast.com)** · [Hosting address](https://skippercast.email-me-here-2016.chatgpt.site) · [Web app guide](docs/web-app.md)
 
@@ -19,6 +19,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 | --- | --- | --- |
 | Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, regional species selectors (16 for Southern California), 132 reef candidates, 12 connected soft-bottom habitat outlines, source-dated Channel Islands habitat and terrain views, two named Central Coast charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
 | Fishing atlas | 132 noted habitat candidates, 107 partial reef outlines, and 31 optional drift alignments from Avila / Point Buchon to Point Estero. GPX for chartplotters, GeoJSON, and searchable offline notes. | [Atlas and downloads](atlas/avila-point-estero-2026-09-20/README.md) |
+| Chartplotter day plan | Choose individual spots, the current map, filtered spots or one region; include waypoints, linked outlines, fixed alignment tracks and protected-area reference tracks. Save a local draft, share GPX and download offline notes. | [Export and device guide](docs/chartplotter-export.md) · [Mobile review](docs/mobile-review.md) |
 | Forecast collector | Saves public forecast responses, model metadata, buoy observations, advisories, and access failures for a Morro Bay example profile. Compares numerical ranges and flags missing or inconsistent evidence. | [Run the collector](docs/quickstart.md#collect-live-evidence) |
 | Alert lifecycle | Given an already reviewed assessment and prior delivery state, decides whether an initial alert, update, retraction, or day-before assessment is due. | [Offline demo](#try-it-offline) · [Assessment workflow](docs/forecast-workflow.md) |
 
