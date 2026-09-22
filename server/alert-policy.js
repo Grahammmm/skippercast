@@ -29,7 +29,7 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
         const visibility=samplePoint(d,'visibility',t,'m'),code=samplePoint(d,'weather_code',t,'wmo code');
         if(visibility===null||code===null)issues.push('Visibility or weather hazard check missing');
         if(visibility!==null&&visibility<1609.344||code!==null&&code>=95)issues.push('Fog or thunderstorm signal');
-      }else{max('sea',samplePoint(d,'wave_height',t,'ft'));if(model==='ncep_gfswave025')max('chop',samplePoint(d,'wind_wave_height',t,'ft'));}
+      }else{const period=samplePoint(d,'wave_period',t,'s');if(period===null||period<=0)issues.push('Combined wave period unavailable or invalid');max('sea',samplePoint(d,'wave_height',t,'ft'));if(model==='ncep_gfswave025')max('chop',samplePoint(d,'wind_wave_height',t,'ft'));}
     }
   }
   const species=trip.species==='reef'?['lingcod','rockfish']:[trip.species];
@@ -39,6 +39,7 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
     if(!p||trip.date<rules.valid_from||trip.date>rules.valid_through){issues.push('Trip-date rules unavailable');legal='unverified';continue;}
     const window=p.windows.find(w=>trip.date>=w.start&&trip.date<=w.end);
     if(!window){legal='closed';issues.push('Outside the reviewed species season');}
+    else if(window.restriction){legal='restricted';issues.push(window.restriction);}
     else if(window.requires_opening_review){legal='unverified';issues.push('Scheduled opening needs review');}
     if(p.source_ids.some(s=>{const c=rules.checks?.[s];return c?.status!=='unchanged'||c.source_status!=='ok'||c.content_sha256!==rules.sources?.[s]?.approved_content_sha256||!finite(Date.parse(c.data_retrieved_at))||now-Date.parse(c.data_retrieved_at)>36*3600000;})){
       legal='unverified';issues.push('Rules changed or need a fresh source check');
@@ -65,5 +66,5 @@ export function alertDecision(previous,current,{final=false,missed=false}={}){
 export function alertMessage(trip,region,assessment,kind){
   const value=(v,u)=>finite(v)?v.toFixed(1)+' '+u:'unavailable';
   const name=region.forecast_points.find(p=>p.id===trip.point)?.name||trip.point;
-  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${region.marine_zones[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}`;
+  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${(region.contexts?.[region.forecast_points.find(p=>p.id===trip.point)?.context]?.marine_zones||region.marine_zones)[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}`;
 }

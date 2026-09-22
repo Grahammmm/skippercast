@@ -82,11 +82,13 @@ export async function checkTrips(env,cursor=''){
     const today=dateInZone(now,region.timezone),tomorrow=dateInZone(now+86400000,region.timezone);
     const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
     let intel,rules,alerts;
-    if(!feeds.has(trip.region)){
-      const loaded=await Promise.allSettled([readFeed(region.intelligence_feed),readFeed(region.daily_feed),...['coastal','offshore'].map(k=>readFeed('https://api.weather.gov/alerts/active?zone='+region.marine_zones[k]))]);
-      feeds.set(trip.region,loaded.map(x=>x.status==='fulfilled'?x.value:null));
+    const pointConfig=region.forecast_points.find(p=>p.id===trip.point), zones=region.contexts?.[pointConfig?.context]?.marine_zones||region.marine_zones;
+    const feedKey=trip.region+':'+(pointConfig?.context||'default');
+    if(!feeds.has(feedKey)){
+      const loaded=await Promise.allSettled([readFeed(region.intelligence_feed),readFeed(region.daily_feed),...['coastal','offshore'].map(k=>readFeed('https://api.weather.gov/alerts/active?zone='+zones[k]))]);
+      feeds.set(feedKey,loaded.map(x=>x.status==='fulfilled'?x.value:null));
     }
-    const inputs=feeds.get(trip.region);intel=inputs[0];rules=inputs[1]?.regulations;
+    const inputs=feeds.get(feedKey);intel=inputs[0];rules=inputs[1]?.regulations;
     const offshore=region.forecast_points.find(p=>p.id===trip.point)?.offshore;alerts=inputs[offshore?3:2]?.features?.map(f=>f.properties);
     const assessment=assessTrip(trip,region,intel,rules,alerts,now);let previous=null;try{previous=JSON.parse(trip.last_assessment);}catch{}
     const final=trip.date===tomorrow&&hour>=18,missed=trip.date<=today&&!trip.final_delivered_at;
