@@ -52,7 +52,7 @@ jobs:
       - name: Test observation parsing
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        run: python scripts/run_core_tests.py
       - name: Load previous buoy feed
         run: |
           mkdir -p var/live

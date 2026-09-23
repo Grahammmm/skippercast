@@ -40,7 +40,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     note.innerHTML='Off Cape Mendocino, an optional <a href="https://doi.org/10.5066/P9U0SUGL" target="_blank" rel="noopener">USGS hard-seabed context layer ↗</a> is available in Map Options. Historical substrate is not a verified fish location or legal-depth clearance.';
     panel.append(note);
   }
-  let selectedSector=null,surveyData=null,productData=null;
+  let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null;
   const sourceSelector=document.createElement('select');
   sourceSelector.id='survey-sector-select';
   sourceSelector.setAttribute('aria-label','Choose a coastal sector for original survey sources');
@@ -52,10 +52,14 @@ export async function initCoastalDiscovery(catalog,coast) {
     const row=surveyData?.sectors.find(x=>x.sector_id===selectedSector.id);
     if(!row){list.textContent=`${selectedSector.name}: NOAA survey catalog unavailable. No seabed coverage inferred.`;return;}
     const products=new Map((productData?.surveys||[]).map(item=>[item.id,item]));
+    const native=nativeDepthData?.sectors.find(item=>item.sector_id===selectedSector.id);
+    const nativeSummary=nativeDepthData&&!native?'<p class="small">Original variable-grid screen has no record for this sector.</p>'
+      :native?.source_files_with_eligible_cells?`<p class="small">Original fine-grid review: ${native.source_files_with_eligible_cells} NOAA file(s) contain depth- and uncertainty-eligible cells in this browse sector. This does not verify rock, legal access, fish presence or continuous coverage; surveys may overlap. <a href="data/noaa-vr-native-depth-review.json" target="_blank" rel="noopener">Method and source hashes ↗</a></p>`
+      :native?'<p class="small">No depth- and uncertainty-eligible cells were found in the audited fine-resolution variable grids here. Other surveys and data types remain unreviewed.</p>':'';
     const sorted=[...row.surveys].sort((a,b)=>(b.year||0)-(a.year||0)||a.id.localeCompare(b.id));
     const entry=lead=>{const p=products.get(lead.id),bag=p?.products?.bag?.[0],report=p?.products?.report?.[0];
       return `<li><strong>${esc(lead.id)}</strong> · ${esc(lead.year||'date unknown')} · ${esc(lead.locality||'locality not recorded')}<br><a href="${esc(lead.catalog_url)}" target="_blank" rel="noopener">NOAA catalog ↗</a>${bag?` · <a href="${esc(bag)}" target="_blank" rel="noopener">BAG grid ↗</a>`:''}${report?` · <a href="${esc(report)}" target="_blank" rel="noopener">Survey report ↗</a>`:''}${p?.status==='retained'?' · product links retained from an earlier check':''}</li>`;};
-    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
+    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${nativeSummary}${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
   }
   sourceSelector.addEventListener('change',()=>{selectedSector=sectors.find(s=>s.id===sourceSelector.value)||null;showSurveySources();});
   panel.addEventListener('click',event=>{const button=event.target.closest('[data-sector]');if(!button)return;const sector=sectors.find(s=>s.id===button.dataset.sector);if(!sector)return;selectedSector=sector;sourceSelector.value=sector.id;panel.querySelector('#sector-survey-details').open=true;showSurveySources();navigation.showView('map');requestAnimationFrame(()=>{map.invalidateSize();map.fitBounds([[sector.bounds[1],sector.bounds[0]],[sector.bounds[3],sector.bounds[2]]],{padding:[20,20],maxZoom:10});});});
@@ -70,6 +74,13 @@ export async function initCoastalDiscovery(catalog,coast) {
     }
   });
   void loadSurveyProducts(sectorPacket).then(data=>{productData=data;showSurveySources();});
+  void fetch('data/noaa-vr-native-depth-review.json',{signal:AbortSignal.timeout(10000)}).then(async response=>{
+    if(!response.ok)throw Error('Native-grid review unavailable');
+    const data=await response.json();
+    if(data.scope!=='california-original-vr-native-depth-review'||data.status!=='ok'||data.survey_file_count!==data.files?.length
+      ||data.sectors?.length!==sectorPacket.sectors.length||data.files.some(file=>file.status!=='ok'))throw Error('Incomplete native-grid review');
+    nativeDepthData=data;showSurveySources();
+  }).catch(()=>{/* Keep original survey catalog usable if the optional native review is unavailable. */});
   const forecastPanel=document.getElementById('forecast-panel');
   document.getElementById('export-panel').innerHTML=`<h1>Fishing-plan export</h1><p>Only reviewed, surveyed fishing areas can be exported. Choose a detailed mapped area; discovery sectors and survey catalog footprints are not waypoints.</p>${links||'<p>This coast’s detailed fishing package is pending.</p>'}<a href="#map">Back to map</a>`;
   const banner=document.getElementById('best-day-banner');banner.innerHTML='<span>Coastal guide</span><strong>Species & sources</strong>';banner.addEventListener('click',()=>navigation.showView('guide'));
