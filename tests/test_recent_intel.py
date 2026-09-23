@@ -49,6 +49,18 @@ class RecentIntelTests(unittest.TestCase):
         self.assertEqual(result["candidates"][0]["published_at"], previous["candidates"][0]["published_at"])
         self.assertTrue(result["candidates"][0]["retained"])
 
+    def test_regional_forum_is_broad_context_without_position(self):
+        raw = {"schema_version": "1.3", "source_status": {"reddit": "ok"}, "results": [
+            {"title": "Local yellowtail", "summary": "Recent fishing discussion", "url": "https://www.reddit.com/r/SoCalFishing/comments/abc/report/",
+             "published_at": "2026-09-21", "source": "reddit", "relevance_score": 0},
+            {"title": "Local yellowtail", "summary": "Recent fishing discussion", "url": "https://www.reddit.com/r/other/comments/xyz/report/",
+             "published_at": "2026-09-21", "source": "reddit", "relevance_score": 1},
+        ]}
+        found = module.normalize(raw, "southern-california", "islands", NOW, 30)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["location_basis"], "regional forum only")
+        self.assertIsNone(found[0]["geometry"])
+
 
 if __name__ == "__main__":
     unittest.main()

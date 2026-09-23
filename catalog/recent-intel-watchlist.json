@@ -25,8 +25,8 @@
     {
       "id": "southern-california",
       "queries": [
-        {"id": "islands", "text": "Channel Islands Anacapa Santa Cruz Santa Rosa California yellowtail white seabass rockfish fishing report recent"},
-        {"id": "mainland", "text": "Southern California San Diego Los Angeles Catalina halibut yellowtail tuna fishing report recent"}
+        {"id": "islands", "text": "Channel Islands yellowtail white seabass rockfish fishing report", "dedicated_subreddits": ["SoCalFishing"]},
+        {"id": "mainland", "text": "San Diego Catalina halibut yellowtail tuna fishing report", "dedicated_subreddits": ["SoCalFishing", "SanDiegoFishing"]}
       ]
     }
   ]

@@ -65,14 +65,18 @@ def normalize(raw, region, query, now, lookback):
         if not title or not summary:
             continue
         text = (title + " " + summary).lower()
-        # Real keyless runs can return popular unrelated posts with relevance 0.
-        if float(r.get("relevance_score") or 0) < 0.3 or not any(p in text for p in PLACE_TERMS[region]) or not any(f in text for f in FISH_TERMS):
+        # The upstream relevance score was zero even for local posts in a live
+        # test. Require explicit local place and fishing terms instead.
+        subreddit = urlsplit(url).path.lower().split("/")[2:3]
+        regional_forum = region == "southern-california" and urlsplit(url).hostname in ("reddit.com", "www.reddit.com") and subreddit and subreddit[0] in ("socalfishing", "sandiegofishing")
+        if not (any(p in text for p in PLACE_TERMS[region]) or regional_forum) or not any(f in text for f in FISH_TERMS):
             continue
         source = str(r.get("source") or "unknown")[:40]
         ident = hashlib.sha256(url.encode()).hexdigest()[:20]
         items.append({"id": ident, "region_id": region, "query_id": query,
                       "source": source, "url": url, "published_at": published.isoformat(),
                       "title": title, "summary": summary,
+                      "location_basis": "regional forum only" if regional_forum and not any(p in text for p in PLACE_TERMS[region]) else "text mentions region",
                       "review_status": "candidate", "reported_catch": None,
                       "species": [], "fishing_date": None, "geometry": None,
                       "note": "Search lead only; no catch, species, trip date, or fishing position verified."})
@@ -114,6 +118,11 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
                "--days=" + str(config["lookback_days"]), "--search=" + ",".join(config["source_set"]),
                "--web-backend=keyless", "--no-browser-cookies", "--emit=json", "--json-profile=agent",
                "--output=" + str(path), "--save-dir=" + str(raw_dir)]
+        if query.get("dedicated_subreddits"):
+            names = query["dedicated_subreddits"]
+            if not isinstance(names, list) or not all(isinstance(s, str) and s.isalnum() for s in names):
+                raise ValueError("Invalid subreddit list")
+            cmd.append("--dedicated-subreddits=" + ",".join(names))
         try:
             completed = runner(cmd, env=env, capture_output=True, text=True, timeout=180)
             if completed.returncode:
