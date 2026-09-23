@@ -4,6 +4,41 @@
   "reviewed_at": "2026-09-23",
   "surveys": [
     {
+      "survey_id": "H12111",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
+      "report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",
+      "report_section": "Final HCell revision 23 and Danger to Navigation report, PDF pages 24–29",
+      "interpretation": "The field narrative says no DTON, but the final Pacific Hydrographic Branch review records two submerged rocks and says both were applied to the chart. These historical observations are review holds, not current chart or fishing clearances.",
+      "hazards": [
+        {
+          "id": "H12111-final-hcell-rock-2m",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.8815555556,
+          "longitude": -122.698,
+          "reported_depth_ft": 6.55,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H12111-final-hcell-rock-3m22",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.8660555556,
+          "longitude": -122.5968888889,
+          "reported_depth_ft": 10.55,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H12109",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
+      "report_sha256": "b0f4610042d6931d713b9c9747f022610d73e00935300b60b5938c9383c31fd2",
+      "report_section": "Features, AWOIS investigations and final HCell revisions, PDF pages 17 and 20–22",
+      "interpretation": "The final review records no DTON. Two assigned historical AWOIS objects were not found under full multibeam coverage; neither is evidence of a fishable wreck or reef. Current ENC and routes still require independent screening.",
+      "hazards": []
+    },
+    {
       "survey_id": "H11738",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
       "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",

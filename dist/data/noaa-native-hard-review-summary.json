@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "native-noaa-usgs-review-summary",
-  "generated_at": "2026-09-23T23:04:53.225146+00:00",
+  "generated_at": "2026-09-23T23:16:29.558242+00:00",
   "surveys": [
     {
       "survey_id": "H11732",
@@ -300,6 +300,133 @@
         "retained_components": 12
       },
       "retained_component_area_m2": 332448,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H12109",
+      "survey_dates": [
+        "2009-06-14T14:35:01",
+        "2009-07-02T14:35:13"
+      ],
+      "compiled_at": "2026-09-23T23:16:11.101117+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_1m_MLLW_1of2.bag",
+      "noaa_bag_sha256": "cedf02a8b350e59201a66a4d4ca2395da05d2c966bb1f2b2a91d69813a46a416",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
+      "survey_report_sha256": "b0f4610042d6931d713b9c9747f022610d73e00935300b60b5938c9383c31fd2",
+      "usgs_sources": [
+        {
+          "block_id": "OffshoreBolinas",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/SeafloorCharacter_OffshoreBolinas.zip",
+          "archive_sha256": "f9a9ee60f4997311b8b16e5051a33f9e7977f9b7131c64554b9d078e7b0250a3",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/SeafloorCharacter_OffshoreBolinas_metadata.xml",
+          "metadata_sha256": "5716cecc1fd9cf2ab5b0242c7946ec16690ce4ebeef9d43e5fa7b98d4177970d",
+          "original_resolution_m": [
+            2.0000000000000133,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshorePacifica",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/SeafloorCharacter_OffshorePacifica.zip",
+          "archive_sha256": "7376c8167816c7e0ac2567265dcfce95842c2e7c4fc58d41249b7c550cfa3873",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/SeafloorCharacter_OffshorePacifica_metadata.xml",
+          "metadata_sha256": "d97306d56c9627d4a68572ff77cc4e06c69e3a0ac84de382732d2fde58cf32d9",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreSanFrancisco",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/SeafloorCharacter_OffshoreSanFrancisco.zip",
+          "archive_sha256": "a826cca8611ff4b5445ae398f1ad419813435876db2aa5810e76a73c83225c3b",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/SeafloorCharacter_OffshoreSanFrancisco_metadata.xml",
+          "metadata_sha256": "6297a142a5666a008a9a1b26682cf145e4c35f1f819541a768a0d3cb9eac13dd",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
+      "native_resolution_m": [
+        1.0,
+        1.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 0,
+        "depth_values_changed_in_current_grid": 0,
+        "maximum_depth_revision_m": 0
+      },
+      "counts": {
+        "hard_cells_after_inset": 543608,
+        "depth_uncertainty_qualified_cells": 9741674,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 13840,
+        "retained_components": 0
+      },
+      "retained_component_area_m2": 0,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H12111",
+      "survey_dates": [
+        "2009-06-14T00:00:00",
+        "2009-08-04T00:00:00"
+      ],
+      "compiled_at": "2026-09-23T23:14:48.299065+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/BAG/H12111_MB_2m_MLLW_2of2.bag",
+      "noaa_bag_sha256": "11ca233d232f66a88ddf7b80d38ede7dc61bae136e2c1dffa57519b5a88d7058",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
+      "survey_report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",
+      "usgs_sources": [
+        {
+          "block_id": "OffshoreBolinas",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/SeafloorCharacter_OffshoreBolinas.zip",
+          "archive_sha256": "f9a9ee60f4997311b8b16e5051a33f9e7977f9b7131c64554b9d078e7b0250a3",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/SeafloorCharacter_OffshoreBolinas_metadata.xml",
+          "metadata_sha256": "5716cecc1fd9cf2ab5b0242c7946ec16690ce4ebeef9d43e5fa7b98d4177970d",
+          "original_resolution_m": [
+            2.0000000000000133,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreSanFrancisco",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/SeafloorCharacter_OffshoreSanFrancisco.zip",
+          "archive_sha256": "a826cca8611ff4b5445ae398f1ad419813435876db2aa5810e76a73c83225c3b",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/SeafloorCharacter_OffshoreSanFrancisco_metadata.xml",
+          "metadata_sha256": "6297a142a5666a008a9a1b26682cf145e4c35f1f819541a768a0d3cb9eac13dd",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 1,
+        "depth_values_changed_in_current_grid": 1,
+        "maximum_depth_revision_m": 1.901
+      },
+      "counts": {
+        "hard_cells_after_inset": 171658,
+        "depth_uncertainty_qualified_cells": 13799407,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 39738,
+        "retained_components": 8
+      },
+      "retained_component_area_m2": 61720,
       "fishing_target": false,
       "legal_clearance": false,
       "exportable": false
