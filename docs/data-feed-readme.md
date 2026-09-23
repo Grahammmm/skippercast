@@ -7,6 +7,7 @@ This branch contains automatically collected public facts. Application source an
 - `history/YYYY-MM-DD.json`: the latest snapshot for each UTC collection date, retained in the working tree for 90 days. Git history can retain older versions; this is not an erasure policy.
 - `survey-discovery.json`, `survey-products.json`, `bag-head-inventory.json`: NOAA survey leads, original product links, and bounded download-health checks. They are a native-review queue, not approved fishing locations.
 - `usgs-map-blocks.json`, `usgs-map-metadata.json`: original USGS state-waters catalog products, source XML checksums and geographic metadata bounds. Rectangles do not mean every pixel was mapped.
+- `usgs-doi-releases.json`, `usgs-doi-metadata.json`: newer DOI-linked USGS data releases and their original XML records, including Monterey and central coast products omitted by legacy catalog pages.
 
 The [daily workflow](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml) requests a refresh at 4:17 a.m. America/Los_Angeles. GitHub can delay scheduled jobs and disables inactive public-repository schedules after 60 days. No machine needs to stay awake. Workflow failures are visible in Actions and stale data is labeled in the app. A successful job can still have degraded optional sources; inspect health.
 

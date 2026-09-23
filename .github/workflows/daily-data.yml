@@ -24,6 +24,8 @@ on:
       - "scripts/triage_noaa_bag_files.py"
       - "scripts/discover_usgs_map_blocks.py"
       - "scripts/audit_usgs_map_metadata.py"
+      - "scripts/discover_usgs_doi_releases.py"
+      - "scripts/audit_usgs_doi_metadata.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -98,6 +100,12 @@ jobs:
       - name: Verify original USGS map-block XML metadata
         continue-on-error: true
         run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-map-blocks.json --output var/daily/usgs-map-metadata.json --previous var/published/usgs-map-metadata.json --max-age-days 30
+      - name: Discover newer USGS DOI release products
+        continue-on-error: true
+        run: python scripts/discover_usgs_doi_releases.py --output var/daily/usgs-doi-releases.json --previous var/published/usgs-doi-releases.json --max-age-days 30
+      - name: Verify original USGS DOI XML metadata
+        continue-on-error: true
+        run: python scripts/audit_usgs_doi_metadata.py --releases var/daily/usgs-doi-releases.json --output var/daily/usgs-doi-metadata.json --previous var/published/usgs-doi-metadata.json --max-age-days 30
       - name: Publish an atomic data snapshot
         run: |
           if [ -d var/published ]; then
@@ -108,6 +116,8 @@ jobs:
             if [ -f var/daily/bag-head-inventory.json ]; then cp var/daily/bag-head-inventory.json var/published/; fi
             if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
             if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
+            if [ -f var/daily/usgs-doi-releases.json ]; then cp var/daily/usgs-doi-releases.json var/published/; fi
+            if [ -f var/daily/usgs-doi-metadata.json ]; then cp var/daily/usgs-doi-metadata.json var/published/; fi
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
             mkdir -p var/published/coastal
@@ -131,6 +141,8 @@ jobs:
           if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
           if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
           if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
+          if [ -f var/published/usgs-doi-releases.json ]; then git -C var/published add usgs-doi-releases.json; fi
+          if [ -f var/published/usgs-doi-metadata.json ]; then git -C var/published add usgs-doi-metadata.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -226,14 +238,17 @@ jobs:
           import json, os
           from pathlib import Path
           lines=['\n## Native seabed source inventory']
-          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS map blocks'),('usgs-map-metadata.json','USGS original XML records')]:
+          unhealthy=[]
+          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS map blocks'),('usgs-map-metadata.json','USGS original XML records'),('usgs-doi-releases.json','USGS newer DOI releases'),('usgs-doi-metadata.json','USGS newer DOI XML records')]:
               p=Path('var/daily')/name
               if not p.is_file():
                   lines.append(f'- {label}: missing inventory')
+                  unhealthy.append(label)
                   continue
               d=json.loads(p.read_text())
-              lines.append(f"- {label}: {d['health']['status']} · {d.get('accessible_file_count',d.get('block_count',0))} catalog-linked products or blocks; fishing locations remain unapproved")
+              count=next((d[key] for key in ('accessible_file_count','block_count','verified_metadata_count','release_count') if key in d),0)
+              lines.append(f"- {label}: {d['health']['status']} · {count} checked files, blocks, releases or XML records; fishing locations remain unapproved")
+              if d['health']['status']!='ok': unhealthy.append(label)
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(lines)+'\n')
-          if len(lines)<3 or any('missing inventory' in line for line in lines):
-              raise SystemExit('Native seabed discovery source unavailable; explicit failure status published')
+          if unhealthy: raise SystemExit('Native seabed discovery degraded or unavailable: '+', '.join(unhealthy))
           PY

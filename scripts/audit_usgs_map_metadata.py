@@ -38,14 +38,27 @@ def parse_metadata(url, raw, *, now):
     if not (-180<=box['westbc']<box['eastbc']<=180 and -90<=box['southbc']<box['northbc']<=90):
         raise ValueError('Invalid USGS geographic bounds')
     definitions=[]
+    categorical=[]
     for attr in root.findall('.//attr'):
         name=(attr.findtext('attrlabl') or '').strip()
         if name.upper() in {'SUBSTRATE','SUBST_DESC','FULL_DESC'}:
             definitions.append({'field':name,'definition':(attr.findtext('attrdef') or '').strip()[:1800]})
+        if name.upper() in {'VALUE','CLASS','SUBSTRATE'}:
+            for domain in attr.findall('.//edom'):
+                code=(domain.findtext('edomv') or '').strip()
+                label=(domain.findtext('edomvd') or '').strip()
+                if code and label:categorical.append({'field':name,'code':code[:30],'label':label[:250]})
+    projection=(root.findtext('.//mapprojn') or '').strip()
+    horizontal=(root.findtext('.//horizdn') or '').strip()
+    # Explicit metadata-backed fallback for a few USGS TIFFs missing embedded
+    # CRS. No location-derived or filename-derived CRS guess is allowed.
+    projected_crs='EPSG:32611' if projection=='WGS 1984 UTM Zone 11N' and horizontal=='D WGS 1984' else None
     return {'metadata_url':url,'status':'ok','checked_at':now.isoformat(),'xml_sha256':hashlib.sha256(raw).hexdigest(),
             'bounds':box,'title':(root.findtext('.//title') or '').strip()[:200],
             'published_date':(root.findtext('.//pubdate') or '').strip()[:20],
-            'substrate_definitions':definitions,'issue':None}
+            'native_projection_name':projection,'native_horizontal_datum':horizontal,
+            'metadata_projected_crs':projected_crs,
+            'substrate_definitions':definitions,'categorical_classes':categorical,'issue':None}
 
 
 def audit(blocks, previous=None, *, now=None, fetcher=fetch):
