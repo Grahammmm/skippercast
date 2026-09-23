@@ -10,6 +10,10 @@
 .coast-control option{background:#fff;color:#143b46}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .coastal-notes{padding:0 14px 12px;line-height:1.55;overflow-wrap:anywhere}
+.recent-discussion-links{list-style:none;padding:0;margin:0 0 12px}
+.recent-discussion-links li{padding:10px 0;border-top:1px solid #d3e0e1}
+.recent-discussion-links a{font-weight:650;overflow-wrap:anywhere}
+.recent-discussion-links small{display:block;color:#536876;margin-top:4px}
 .coastal-package{display:block;padding:14px;margin:10px 0;border:1px solid #c9dcdc;border-radius:12px;text-decoration:none;min-height:44px}
 .coastal-discovery #guide-panel,.coastal-discovery #forecast-panel,.coastal-discovery #export-panel{max-width:800px;margin:auto;padding:20px;line-height:1.55}
 .coastal-discovery #map-time-dock{display:none}
