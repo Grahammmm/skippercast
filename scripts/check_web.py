@@ -21,6 +21,36 @@ class AssetParser(HTMLParser):
         self.refs.extend(value for key, value in attrs if key in {"src", "href"} and value)
 
 
+def check_native_depth_review(name, scope):
+    """Keep an incomplete native-source pass off the public coastal guide."""
+    data = json.loads((WEB / 'data' / name).read_text())
+    sectors = json.loads((WEB / 'data/coastal-sectors.json').read_text())['sectors']
+    sector_ids = {row['id'] for row in sectors}
+    assert data['scope'] == scope and data['status'] == 'ok' and not data['failed_survey_ids'], name
+    assert data['survey_file_count'] == len(data['files']) and data['survey_file_count'] > 0, name
+    assert {row['sector_id'] for row in data['sectors']} == sector_ids, name
+    assert len(data['sectors']) == len(sector_ids), name
+    assert len({row['bag_url'] for row in data['files']}) == len(data['files']), name
+    expected = {sector_id: {'source_files_with_eligible_cells': 0,
+                            'measured_native_cells': 0,
+                            'depth_uncertainty_eligible_cells': 0}
+                for sector_id in sector_ids}
+    for source in data['files']:
+        assert source['status'] == 'ok' and source['bag_sha256'], name
+        assert set(source['sectors']) <= sector_ids, name
+        counts = source['counts']
+        assert 0 <= counts['depth_uncertainty_eligible_cells'] <= counts['measured_native_cells'], name
+        for sector_id, values in source['sectors'].items():
+            assert 0 <= values['depth_uncertainty_eligible_cells'] <= values['measured_native_cells'], name
+            rollup = expected[sector_id]
+            rollup['source_files_with_eligible_cells'] += values['depth_uncertainty_eligible_cells'] > 0
+            for field in ('measured_native_cells', 'depth_uncertainty_eligible_cells'):
+                rollup[field] += values[field]
+    for row in data['sectors']:
+        for key, value in expected[row['sector_id']].items():
+            assert row[key] == value, (name, row['sector_id'], key)
+
+
 def main():
     assert (WEB / "index.html").is_file()
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
@@ -50,6 +80,10 @@ def main():
     assert len(full.findall("g:wpt", ns)) == 132
     for path in (WEB / "downloads").glob("*.gpx"):
         assert ET.parse(path).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx"
+    check_native_depth_review('noaa-vr-native-depth-review.json',
+                              'california-original-vr-native-depth-review')
+    check_native_depth_review('noaa-regular-native-depth-review.json',
+                              'california-original-regular-native-depth-review')
     print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
 
 
