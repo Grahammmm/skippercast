@@ -145,7 +145,7 @@ export async function initCoastalDiscovery(catalog,coast) {
       predictedShapes=data.features.map(f=>{
         const p=f.properties;
         const shape=L.geoJSON(f,{pane:'predictedSeabed',style:{color:'#785a79',weight:1,fillColor:'#b58eb6',fillOpacity:.23}})
-          .bindPopup(`<strong>CDFW predicted hard substrate</strong><p>Rugosity proxy, generalized to 40 m; shallow gaps may be interpolated. No verified rock edge, fish location, legal depth or navigation accuracy.</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original CDFW metadata ↗</a>`);
+          .bindPopup(`<strong>CDFW predicted hard substrate</strong><p>Rugosity proxy, generalized to 40 m; shallow gaps may be interpolated. No verified rock edge, fish location, legal depth or navigation accuracy.</p><p>California Coastal and Seafloor Mapping Project, California Department of Fish and Wildlife · CC BY 4.0</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original CDFW metadata ↗</a>`);
         return {shape,bounds:shape.getBounds()};
       });
       predictedLoaded=true;predictedContext.addTo(map);drawPredictedContext();

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import threading
 from urllib.request import Request, urlopen
 
 import h5py
@@ -20,6 +21,9 @@ from rasterio.warp import transform_bounds
 from skippercast.platform.bottom_targets import bag_metadata, source_url_allowed
 
 DEFAULT_MAX_BYTES=20_000_000
+# h5py/GDAL native readers can crash when different BAGs are opened in
+# parallel. Downloads stay concurrent; native inspection is serialized.
+NATIVE_READ_LOCK=threading.Lock()
 
 
 def download(url,path,max_bytes):
@@ -49,7 +53,19 @@ def inspect_file(path,survey_id):
             issue=None
         except ValueError as error:
             meta=None;metadata_status='requires-datum-or-uncertainty-review';issue=str(error)[:180]
-        refinements=int(root['varres_refinements'].shape[0]) if 'varres_refinements' in root else 0
+        refinements=int(root['varres_refinements'].shape[-1]) if 'varres_refinements' in root else 0
+        native_grids=native_cells=0
+        native_min=native_max=None
+        if 'varres_metadata' in root:
+            grids=root['varres_metadata'][:]
+            selected=((grids['dimensions_x']>0)&(grids['dimensions_y']>0)&
+                      (grids['resolution_x']>0)&(grids['resolution_y']>0)&
+                      (grids['resolution_x']<=4)&(grids['resolution_y']<=4))
+            native_grids=int(np.count_nonzero(selected))
+            if native_grids:
+                native_cells=int(np.sum(grids['dimensions_x'][selected].astype('int64')*grids['dimensions_y'][selected].astype('int64')))
+                native_min=float(min(grids['resolution_x'][selected].min(),grids['resolution_y'][selected].min()))
+                native_max=float(max(grids['resolution_x'][selected].max(),grids['resolution_y'][selected].max()))
     with rasterio.open(path) as raster:
         if not raster.crs or raster.count<1:raise ValueError('BAG lacks georeferenced overview')
         bounds=transform_bounds(raster.crs,'EPSG:4326',*raster.bounds,densify_pts=21)
@@ -66,6 +82,9 @@ def inspect_file(path,survey_id):
                 'overview_valid_cells':valid,'overview_total_cells':raster.width*raster.height,
                 'overview_min_elevation_m':minimum,'overview_max_elevation_m':maximum,
                 'variable_refinement_records':refinements,
+                'refinement_grids_at_most_4m':native_grids,
+                'refinement_cells_at_most_4m':native_cells,
+                'refinement_resolution_range_m':[native_min,native_max] if native_grids else None,
                 'metadata_status':metadata_status,'metadata_issue':issue,
                 'vertical_datum':meta['vertical_datum'] if meta else None,
                 'uncertainty_type':meta['uncertainty_type'] if meta else None,
@@ -87,11 +106,15 @@ def scan(inventory,products,cache,*,max_bytes=DEFAULT_MAX_BYTES,fetcher=download
         if not local.is_file():fetcher(url,local,max_bytes)
         if local.stat().st_size!=row['bytes']:
             raise ValueError('NOAA BAG size changed since HEAD inventory')
+        with NATIVE_READ_LOCK:
+            native=inspect_file(local,ident)
+        with local.open('rb') as stream:
+            digest=hashlib.file_digest(stream,'sha256').hexdigest()
         return {'survey_id':ident,'url':url,'source_report_url':(surveys[ident]['products']['report'] or [None])[0],
-                'file_sha256':hashlib.sha256(local.read_bytes()).hexdigest(),
+                'file_sha256':digest,
                 'file_bytes':local.stat().st_size,'status':'ok',
                 'inspected_at':datetime.now(timezone.utc).isoformat(),
-                **inspect_file(local,ident)}
+                **native}
     rows=[]
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         pending={pool.submit(one,row):row for row in selected}
@@ -104,7 +127,7 @@ def scan(inventory,products,cache,*,max_bytes=DEFAULT_MAX_BYTES,fetcher=download
     issues=[row['url'] for row in rows if row['status']!='ok']
     return {'schema_version':1,'scope':'noaa-original-bag-native-overview-audit',
             'collected_at':datetime.now(timezone.utc).isoformat(),
-            'method':'Original bounded NOAA BAG downloads; embedded metadata, overview valid cells and WGS84 bounds inspected. Variable-resolution refinements, substrate, legal depth and MPA geometry are not qualified by this audit.',
+            'method':'Original bounded NOAA BAG downloads; embedded metadata, overview valid cells, WGS84 bounds and variable-resolution refinement metadata inspected. Individual refinement depth/uncertainty cells, substrate, legal depth and MPA geometry are not qualified by this audit.',
             'selection':'Original MLLW-named BAG files <= selected max_bytes; omitted files remain in BAG HEAD inventory.',
             'max_bytes':max_bytes,'file_count':len(rows),'inspected_count':len(rows)-len(issues),
             'mllw_metadata_count':sum(r.get('metadata_status')=='mllw-product-uncertainty-reviewed-by-adapter' for r in rows),

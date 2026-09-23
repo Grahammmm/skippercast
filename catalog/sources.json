@@ -231,6 +231,40 @@
       ]
     },
     {
+      "id": "cdfw-ds3091-predicted-substrate",
+      "name": "CDFW Predicted Nearshore Benthic Substrates of California R7",
+      "provider": "California Coastal and Seafloor Mapping Project; California Department of Fish and Wildlife",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/ds3091.html",
+      "adapter": "cdfw-ds3091-lerc-overview",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-23",
+      "rights": {
+        "license": "CC-BY-4.0",
+        "attribution": "California Coastal and Seafloor Mapping Project, California Department of Fish and Wildlife",
+        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/ds3091.html"
+      },
+      "authenticity": {
+        "basis": "Official CDFW BIOS metadata and matching ArcGIS raster attribute table",
+        "transport": "HTTPS; exact CDFW/ArcGIS service hosts"
+      },
+      "coverage_note": "Statewide nearshore predicted hard/soft context. All 2,870 level-7 tiles covering the 19 California browse sectors were decoded on 2026-09-23; valid pixels are sparse and original resolution varies.",
+      "limitations": [
+        "Rugosity is a proxy for substrate, not direct geology or verified fish habitat.",
+        "The 40 m display overview loses original detail and the source includes interpolated shallow gaps.",
+        "Approved for non-exportable context only; native depth, local habitat and legal checks are required for a fishing target."
+      ],
+      "allowed_hosts": [
+        "filelib.wildlife.ca.gov",
+        "tiledimageservices2.arcgis.com"
+      ],
+      "service_url": "https://tiledimageservices2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3091_cru/ImageServer",
+      "display_resolution_m": 40,
+      "context_only": true
+    },
+    {
       "id": "cdfw-mpas",
       "name": "California Marine Protected Areas DS582",
       "provider": "CDFW Marine Region GIS Lab",
