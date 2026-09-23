@@ -5,6 +5,7 @@ import {viewFromURL} from './location-context.js?v=8.11';
 import {mappedPackageAt} from './map-response.js?v=8.11';
 import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.11';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
+import {updateCoastalForecast} from './coastal-forecast.js?v=8.15';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
@@ -68,9 +69,8 @@ export async function initCoastalDiscovery(catalog,coast) {
     }
   });
   void loadSurveyProducts(sectorPacket).then(data=>{productData=data;showSurveySources();});
-  for(const [id,title] of [['forecast-panel','Local forecast coverage'],['export-panel','Fishing-plan export']]) {
-    document.getElementById(id).innerHTML=`<h1>${title}</h1><p>Select a detailed mapped area to use its conditions and fishing-plan export. Other regions’ forecasts and waypoints are never substituted here.</p>${links||'<p>This coast’s detailed data package is pending.</p>'}<a href="#map">Back to map</a>`;
-  }
+  const forecastPanel=document.getElementById('forecast-panel');
+  document.getElementById('export-panel').innerHTML=`<h1>Fishing-plan export</h1><p>Only reviewed, surveyed fishing areas can be exported. Choose a detailed mapped area; discovery sectors and survey catalog footprints are not waypoints.</p>${links||'<p>This coast’s detailed fishing package is pending.</p>'}<a href="#map">Back to map</a>`;
   const banner=document.getElementById('best-day-banner');banner.innerHTML='<span>Coastal guide</span><strong>Species & sources</strong>';banner.addEventListener('click',()=>navigation.showView('guide'));
   const options=document.getElementById('map-options');
   // Keep the existing chart selector, then discard controls for layers this browse mode does not own.
@@ -113,6 +113,14 @@ export async function initCoastalDiscovery(catalog,coast) {
     }
     const status=document.getElementById('coastal-mpa-status');if(status)status.textContent=mpaStatus;
   }
+  let forecastTimer=null,forecastKey='';
+  function refreshForecast(point,sector){
+    if(location.hash!=='#forecast')return;
+    const key=`${point.latitude.toFixed(2)},${point.longitude.toFixed(2)}`;
+    if(key===forecastKey)return;
+    forecastKey=key;clearTimeout(forecastTimer);
+    forecastTimer=setTimeout(()=>void updateCoastalForecast(forecastPanel,point,sector),350);
+  }
   function move() {
     const p=map.getCenter(),point={latitude:p.lat,longitude:p.lng},next=coastAt(point,catalog);
     const mapped=mappedPackageAt(point,packages,map.getZoom());
@@ -123,7 +131,9 @@ export async function initCoastalDiscovery(catalog,coast) {
     select.disabled=!next;rules.hidden=!next;
     const url=coastURL(location.href,coast,{point,zoom:map.getZoom(),target:select.value,overview:true});url.hash=location.hash;history.replaceState(null,'',url);
     drawMPAs();
+    refreshForecast(point,sector);
   }
+  window.addEventListener('hashchange',()=>{if(location.hash==='#forecast'){forecastKey='';const p=map.getCenter();refreshForecast({latitude:p.lat,longitude:p.lng},sectorAt(sectorPacket,coast.id,{latitude:p.lat,longitude:p.lng}));}});
   select.addEventListener('change',()=>{selectionTouched=true;targetInfo();});map.on('moveend',move);targetInfo();move();
   void initCoastalContext(catalog,coast).then(status=>{
     const current=select.value;targetOptions=coastalTargetOptions(coast,status);

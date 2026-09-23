@@ -5,7 +5,7 @@ try {
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {
     const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
-    const {initCoastalDiscovery}=await import('./coastal-discovery.js?v=8.14');
+    const {initCoastalDiscovery}=await import('./coastal-discovery.js?v=8.15');
     await initCoastalDiscovery(catalog,coast);
   } else {
     await initRegion();
