@@ -28,6 +28,7 @@
 .strategy-variants p{margin:0;line-height:1.45}
 @media(max-width:650px){.strategy-grid,.strategy-variants{grid-template-columns:1fr}.primary-strategy{padding:12px}}
 .coastal-package{display:block;padding:14px;margin:10px 0;border:1px solid #c9dcdc;border-radius:12px;text-decoration:none;min-height:44px}
+.sector-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;padding:10px 0}.sector-choice{min-height:52px;border:1px solid #c9dcdc;background:#fff;color:#173846;border-radius:10px;text-align:left;padding:10px 12px;font:inherit}.sector-choice small{display:block;color:#5d6f79;font-size:12px;margin-top:2px}
 .coastal-discovery #guide-panel,.coastal-discovery #forecast-panel,.coastal-discovery #export-panel{max-width:800px;margin:auto;padding:20px;line-height:1.55}
 .coastal-discovery #map-time-dock{display:none}
 .coastal-discovery #region-note{max-width:calc(100% - 100px)}

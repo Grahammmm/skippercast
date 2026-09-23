@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-23",
+  "scope": "Outer-coast discovery sectors. Latitude bands are approximate browsing partitions, not nautical, regulatory, MPA, survey or fishing-ground boundaries. Bays and islands need their own local packages.",
+  "survey_feed_url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/survey-discovery.json",
+  "survey_discovery": [
+    {"name": "USGS California Seafloor Mapping Program", "url": "https://www.usgs.gov/centers/pcmsc/science/california-seafloor-mapping-program"},
+    {"name": "NOAA NCEI Bathymetric Data Viewer", "url": "https://www.ncei.noaa.gov/maps/bathymetry/"}
+  ],
+  "sectors": [
+    {"id": "del-norte", "coast": "northern", "name": "Del Norte coast", "latitude": [41.7, 42.0]},
+    {"id": "crescent-city-humboldt", "coast": "northern", "name": "Crescent City to Humboldt Bay", "latitude": [40.95, 41.7]},
+    {"id": "humboldt-cape", "coast": "northern", "name": "Humboldt Bay to Cape Mendocino", "latitude": [40.166666666666664, 40.95]},
+    {"id": "north-mendocino", "coast": "mendocino", "name": "North Mendocino coast", "latitude": [39.45, 40.166666666666664]},
+    {"id": "fort-bragg-arena", "coast": "mendocino", "name": "Fort Bragg to Point Arena", "latitude": [38.958333333333336, 39.45]},
+    {"id": "arena-bodega", "coast": "san-francisco", "name": "Point Arena to Bodega Bay", "latitude": [38.3, 38.958333333333336]},
+    {"id": "bodega-reyes", "coast": "san-francisco", "name": "Bodega Bay to Point Reyes", "latitude": [37.95, 38.3]},
+    {"id": "reyes-pigeon", "coast": "san-francisco", "name": "Point Reyes to Pigeon Point", "latitude": [37.18333333333333, 37.95]},
+    {"id": "pigeon-monterey", "coast": "central", "name": "Pigeon Point to Monterey Bay", "latitude": [36.6, 37.18333333333333]},
+    {"id": "monterey-sur", "coast": "central", "name": "Monterey Bay to Point Sur", "latitude": [36.3, 36.6]},
+    {"id": "big-sur", "coast": "central", "name": "Big Sur outer coast", "latitude": [35.9, 36.3]},
+    {"id": "sur-san-simeon", "coast": "central", "name": "South Big Sur to San Simeon", "latitude": [35.6, 35.9]},
+    {"id": "cambria-morro", "coast": "central", "name": "Cambria to Morro Bay", "latitude": [35.35, 35.6]},
+    {"id": "morro-conception", "coast": "central", "name": "Morro Bay to Point Conception", "latitude": [34.45, 35.35]},
+    {"id": "conception-ventura", "coast": "southern", "name": "Point Conception to Ventura", "latitude": [34.05, 34.45]},
+    {"id": "ventura-los-angeles", "coast": "southern", "name": "Ventura to Los Angeles", "latitude": [33.75, 34.05]},
+    {"id": "los-angeles-orange", "coast": "southern", "name": "Los Angeles to Orange County", "latitude": [33.45, 33.75]},
+    {"id": "orange-san-diego", "coast": "southern", "name": "Orange County to San Diego", "latitude": [32.8, 33.45]},
+    {"id": "san-diego-border", "coast": "southern", "name": "San Diego to Mexico border", "latitude": [32.5343, 32.8]}
+  ]
+}

@@ -2,6 +2,8 @@
 
 SkipperCast is one shared application with regional configuration and evidence packages. Adding a coast does **not** require a copy of the UI or a new scheduler. A published map feature is a reviewed claim with a geographic footprint, source, date, uncertainty, rights and a permitted use. Missing coverage remains visible.
 
+The [statewide buildout ledger](statewide-buildout.md) partitions California into 19 discovery sectors and records the first NOAA survey-catalog scan. It is a work queue for packages, not a statewide fishing-ground map.
+
 ```mermaid
 flowchart LR
   N[Data needs catalog] --> D[Discover local sources]

@@ -9,6 +9,7 @@ from ..pipeline.regulations import validate_bindings, validate_region_binding, r
 from datetime import datetime, timezone
 from .qualified_scope import validate_qualified_scope, qualified_subset_satisfies
 from .coasts import compile_coasts
+from .sectors import compile_sectors
 
 
 def target_options(region, targets):
@@ -104,6 +105,7 @@ def build(root=REPO):
     if (root / "catalog/species.json").exists():
         shutil.copyfile(root / "catalog/species.json", root / "dist/data/species-evidence.json")
     compile_coasts(root)
+    compile_sectors(root)
     return entries
 
 

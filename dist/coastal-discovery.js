@@ -4,6 +4,7 @@ import {esc} from './marine-charts.js?v=8.11';
 import {viewFromURL} from './location-context.js?v=8.11';
 import {mappedPackageAt} from './map-response.js?v=8.11';
 import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.11';
+import {loadCoastalSectors,loadSurveyDiscovery,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.13';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
@@ -27,9 +28,21 @@ export async function initCoastalDiscovery(catalog,coast) {
     drawMPAs();
   }
   const packages=(await fetch('regions/index.json').then(r=>{if(!r.ok)throw Error('Mapped-area directory unavailable');return r.json();})).regions.filter(r=>coast.packages.includes(r.id));
+  const sectorPacket=await loadCoastalSectors();
+  const sectors=sectorsForCoast(sectorPacket,coast.id).slice().reverse();
   const links=packages.map(r=>`<a class="coastal-package" href="${esc(coastURL(location.href,coast,{packageId:r.id}).pathname+coastURL(location.href,coast,{packageId:r.id}).search+'#map')}">${esc(r.name)} · open detailed map ↗</a>`).join('');
   const panel=document.getElementById('guide-panel');
-  panel.innerHTML=`<h1>${esc(coast.name)} coast</h1><p>${esc(coast.limits)}</p><section id="coastal-target-guide"></section><details id="coastal-seasonal" class="guide-topic" open><summary>Regional species & seasonal watch</summary></details><h2>Detailed mapping</h2><p>${packages.length?'Open a reviewed local data package:':'Source discovery covers regional species and MPAs. Survey-qualified fishing spots, local weather and exports have not been published for this coast.'}</p>${links}<p class="small">${esc(catalog.scope)}</p>`;
+  panel.innerHTML=`<h1>${esc(coast.name)} coast</h1><p>${esc(coast.limits)}</p><section id="coastal-target-guide"></section><details id="coastal-seasonal" class="guide-topic" open><summary>Regional species & seasonal watch</summary></details><details class="guide-topic"><summary>Explore ${sectors.length} local planning sectors</summary><div class="sector-choices">${sectors.map(s=>`<button type="button" class="sector-choice" data-sector="${esc(s.id)}">${esc(s.name)}<small data-survey-summary="${esc(s.id)}">${s.published_candidate_points?`${s.published_candidate_points} published point candidates in partial packages`:'Survey-qualified points not published'}</small></button>`).join('')}</div><p class="small">${esc(sectorPacket.scope)} <a href="${esc(sectorPacket.survey_discovery[0].url)}" target="_blank" rel="noopener">USGS survey catalog ↗</a></p><p class="small" id="survey-discovery-status">Loading NOAA survey catalog leads…</p></details><h2>Detailed mapping</h2><p>${packages.length?'Open a reviewed local data package:':'Source discovery covers regional species and MPAs. Survey-qualified fishing spots, local weather and exports have not been published for this coast.'}</p>${links}<p class="small">${esc(catalog.scope)}</p>`;
+  panel.addEventListener('click',event=>{const button=event.target.closest('[data-sector]');if(!button)return;const sector=sectors.find(s=>s.id===button.dataset.sector);if(!sector)return;navigation.showView('map');requestAnimationFrame(()=>{map.invalidateSize();map.fitBounds([[sector.bounds[1],sector.bounds[0]],[sector.bounds[3],sector.bounds[2]]],{padding:[20,20],maxZoom:10});});});
+  void loadSurveyDiscovery(sectorPacket).then(data=>{
+    const status=panel.querySelector('#survey-discovery-status');
+    if(!data){status.textContent='NOAA survey catalog unavailable; no survey coverage is inferred.';return;}
+    status.textContent=`NOAA BAG catalog checked ${data.collected_at.slice(0,10)} · ${data.health.status==='ok'?'all sectors queried':'some queries failed; old leads retained'}. Survey leads need grid review.`;
+    for(const sector of sectors){const row=data.sectors.find(x=>x.sector_id===sector.id),label=panel.querySelector(`[data-survey-summary="${sector.id}"]`);if(!row||!label)continue;
+      const published=sector.published_candidate_points?`${sector.published_candidate_points} published point candidates · `:'';
+      label.textContent=`${published}${row.surveys.length} NOAA BAG survey leads${row.status==='ok'?'':' · dated/retained'}`;
+    }
+  });
   for(const [id,title] of [['forecast-panel','Local forecast coverage'],['export-panel','Fishing-plan export']]) {
     document.getElementById(id).innerHTML=`<h1>${title}</h1><p>Select a detailed mapped area to use its conditions and fishing-plan export. Other regions’ forecasts and waypoints are never substituted here.</p>${links||'<p>This coast’s detailed data package is pending.</p>'}<a href="#map">Back to map</a>`;
   }
@@ -57,7 +70,8 @@ export async function initCoastalDiscovery(catalog,coast) {
     const mapped=mappedPackageAt(point,packages,map.getZoom());
     if(mapped&&!navigating){navigating=true;caption.textContent=`Loading ${mapped.name} fishing grounds…`;location.replace(coastURL(location.href,coast,{packageId:mapped.id,point,zoom:map.getZoom(),target:select.value}));return;}
     if(next && next.id!==coast.id && !navigating) {navigating=true;location.replace(coastURL(location.href,next,{point,zoom:map.getZoom(),target:select.value}));return;}
-    caption.textContent=next?`${coast.name} · ${coast.limits}`:'Outside California coastal browse coverage';
+    const sector=sectorAt(sectorPacket,coast.id,point);
+    caption.textContent=next?`${coast.name} · ${sector?.name||coast.limits}${sector?' · discovery sector':''}`:'Outside California coastal browse coverage';
     select.disabled=!next;rules.hidden=!next;
     const url=coastURL(location.href,coast,{point,zoom:map.getZoom(),target:select.value,overview:true});url.hash=location.hash;history.replaceState(null,'',url);
     drawMPAs();

@@ -9,6 +9,8 @@ Read `docs/regions.md` and `catalog/data-needs.json` in the user's SkipperCast r
 
 Read `docs/region-pipeline.md` for the complete rollout and model-use policy. Routine collection and validation use deterministic code; a small/fast assistant may prepare candidates and notes, while ambiguous legal, rights or scientific changes require explicit review. Do not make routine refreshes depend on an LLM.
 
+For California, begin with `docs/statewide-buildout.md` and the matching entry in `catalog/coastal-sectors.json`. The dated NOAA survey-discovery feed lists intersecting BAG survey leads, not verified bottom coverage. Inspect exact native BAG cells and the original report before considering any lead for a target. Keep the sector status as discovery even if one partial package has point candidates within it.
+
 Create `regions/<id>/region.json` with explicit WGS84 bounds, timezone, jurisdiction, forecast sample points, marine zones, observation/tide stations, boat preferences, asset paths and ordered source bindings. Region identifiers are stable; model grids, source IDs and habitat IDs retain their own namespaces.
 
 Inspect primary sources for this geography. Populate the coverage ledger by need; a binding without regional coverage is a gap. A new region starts in preview until its fishing geometries pass the required depth, rights and closure checks. Preview can expose researched context and regional conditions while explaining unavailable features; never populate empty maps with invented fishing coordinates.

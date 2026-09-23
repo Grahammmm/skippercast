@@ -2,6 +2,8 @@
 
 The masthead's **Region** selector covers the California outer coast using CDFW's five ocean/groundfish regions: Northern, Mendocino, San Francisco, Central and Southern. These are browsing groups, not the legal boundary system for every species. Bay rules, salmon management zones, groundfish depth lines, state waters and federal waters still need their own evaluation.
 
+The guide also exposes 19 smaller [discovery sectors](statewide-buildout.md). They let a visitor zoom to a local stretch and see dated NOAA survey-catalog leads. They are not precise fishing areas; qualifying an original survey and local rules is a separate step.
+
 `catalog/coasts.json` owns the latitude boundaries, display extent, species order, seasonal candidates and official references. `platform/coasts.py` validates and compiles it to `dist/data/coasts.json`. Shared `dist/coasts.js` owns URLs, selection and source freshness. A regional species label can be overridden without changing the biological species or its legal limits: the Southern reef selector reads **Rockfish**, while lingcod remains a separate regulated species in the underlying evidence.
 
 ## Browsing versus detailed coverage
