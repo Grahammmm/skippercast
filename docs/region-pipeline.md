@@ -1,0 +1,51 @@
+# Region rollout and data flow
+
+SkipperCast is one shared application with regional configuration and evidence packages. Adding a coast does **not** require a copy of the UI or a new scheduler. A published map feature is a reviewed claim with a geographic footprint, source, date, uncertainty, rights and a permitted use. Missing coverage remains visible.
+
+```mermaid
+flowchart LR
+  N[Data needs catalog] --> D[Discover local sources]
+  D --> C[Candidate with footprint, variables, clocks and rights]
+  C --> R{Source and legal review}
+  R -->|approved| B[Region, jurisdiction and species bindings]
+  R -->|missing or unsuitable| G[Coverage gap]
+  B --> S[Survey compiler: depth, substrate and MPA screen]
+  B --> J[Daily and 30-minute provider jobs]
+  S --> Q[Qualified geometry and measured bottom views]
+  J --> P[Normalized snapshots, health and source receipts]
+  Q --> V[Regional validator and hashed assets]
+  P --> F[Data and conditions branches]
+  V --> W[One shared mobile app and Worker]
+  F --> W
+  W --> E[Map, conditions, rules and selected GPX plan]
+  W --> T[Optional private trip assessment and confirmed alert outbox]
+  G --> D
+```
+
+## What is already standardized
+
+| Stage | Contract or implementation | Cadence / gate |
+| --- | --- | --- |
+| Define the need | `catalog/data-needs.json` and `catalog/targets.json` | Reused for every region; no provider selected yet. |
+| Discover | `$skippercast-discover-data`, `catalog/source-candidate.schema.json`, `catalog/sources.json` | Candidate records stay unpublished until footprint, access and rights review. |
+| Bind a region | `regions/<id>/region.json`, `jurisdictions/`, `catalog/ecology/`, `catalog/primary-strategies.json` | Stable ID, bounds, harbor, stations, forecast points, species, sources and coverage. Each offered target needs rules and a starter strategy. |
+| Ingest and qualify | `$skippercast-ingest-data`, `src/skippercast/pipeline/`, `src/skippercast/platform/`, survey compilers | Raw receipt; original clocks, units, datum, native masks, geometry, provenance and failure state. Fishing targets require full-footprint depth and closure checks. |
+| Build | `python -m skippercast.platform.build`, `scripts/build_primary_strategies.py`, `scripts/check_web.py`, `pnpm build` | Compiles region assets and shared Worker; validation fails on missing contracts. |
+| Refresh | `.github/workflows/daily-data.yml` and `live-conditions.yml` through `scripts/refresh_regions.py` | Daily rules/source/report checks and roughly 30-minute live conditions. Both discover every non-draft region; no new region-specific cron job. |
+| Publish and use | Versioned static region assets, `data` and `conditions` Git branches, cached Worker API, shared mobile UI | Site deployment and feed publication are separate. The app shows source age, missing cells and confidence; exports remain subject to MPA screens. |
+| Operate | `docs/production-operations.md`, workflow summaries, `/api/health` | Inspect first successful regional receipts, stale feeds and recovery; roll back a coherent release if necessary. |
+
+The half-hourly job collects the distinct **ECMWF IFS and NOAA GFS** wind forecasts, **ECMWF WAM and NOAA GFS Wave** sea forecasts, NOAA GEFS wind members and wave exceedance products, available buoy/weather observations, NOAA/IOOS surface radar currents, and NOAA WCOFS surface-current forecasts. Open-Meteo is an access service for several products, not another independent forecast model. The daily job checks official rules and notices, source access, dated public reports and recent discussion *leads*. Changed legal text requires hash-bound review; a discussion lead cannot automatically become a hotspot. Dynamic surface-water tiles use dated MUR SST, MODIS chlorophyll where populated, and WCOFS forecast frames. Actual variables, stations, grid positions and horizons are region-specific and retained in receipts. See [regional intelligence](regional-intelligence.md), [dynamic species method](dynamic-species-method.md) and [regulations](regulations.md).
+
+**Forecast models and AI models are different things.** The scheduled collectors, normalizers, scoring rules, validation, MPA screens, manifests and alerts run as code with **no LLM calls**. A small/fast assistant can run the discovery and rollout skills to find candidates, summarize source metadata, prepare regional bindings and write review notes. It must not invent coverage or approve legal changes. Novel provider formats, ambiguous rights, conflicting regulations, scientific method changes and release blockers go to deliberate expert review; a stronger model is optional for that bounded review, not a dependency of the normal refresh. No existing GitHub Action silently invokes Astra or any other LLM.
+
+## Exact rollout sequence
+
+1. Choose a bounded coastline and management jurisdictions. Define target species, fishing methods, depth and harbor assumptions in the region contract. A coast directory entry is only navigation; a detailed package requires its own evidence.
+2. Run `PYTHONPATH=src python -m skippercast.platform needs --region <id>`. Use `$skippercast-discover-data` to find primary sources for each gap, then validate candidate records and rights. Bind only reviewed sources whose actual footprint covers the requested area.
+3. Follow `$skippercast-ingest-data`. Preserve source and retrieval clocks separately, verify native units and masks, and keep unavailable fields null. Surveyed bottom targets need qualified depth, substrate, uncertainty where required, and current full-geometry MPA exclusions. Pelagic layers remain dated physical context, not a fish-location prediction.
+4. Review species ecology and each local regulation card. Add every offered target to `catalog/primary-strategies.json`, run `python scripts/build_primary_strategies.py`, and inspect the resulting `dist/regions/<id>/strategies.json`. A shared target may have regional differences only when its evidence supports them.
+5. Run region validation, scientific fixtures, JavaScript tests, web checks and Worker build. Inspect the map and a selected target on a phone. Test absent, stale and failed feeds as well as a populated one. Keep unsupported capabilities in preview.
+6. Publish the code/package, then observe a real daily and half-hourly receipt for the new region. Confirm region identity, source age, legal gate, current MPA screen, app selector, forecast, rules, bottom views and GPX export before calling the rollout ready.
+
+The installed `$skippercast-add-region` skill is the operational checklist. The [data contracts](data-contracts.md) define the reusable types; [regional setup](regions.md) has commands; [quality gates](data-quality-rollout.md) explain where a partial package must stop. A source registered in the catalog is not proof that it covers a new coast, and a forecast or habitat score is not a measured catch probability.

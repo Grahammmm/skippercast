@@ -1,5 +1,7 @@
 # How SkipperCast will work
 
+This is an earlier design snapshot. For the implemented regional pipeline, scheduled feeds, shared app and remaining review gates, use the [current region pipeline](region-pipeline.md).
+
 SkipperCast brings together **where to investigate, when a trip is workable, and the evidence behind each recommendation**. The first web map, target notes, GPX downloads, forecast comparisons, Python tools, and dated atlas are built. The complete trip planner, shared evidence store, and public-app delivery integration remain planned.
 
 In these diagrams, **dashed boxes are planned application components**. Solid boxes identify available inputs, existing tools, or the current person/agent review step. Arrows describe the intended data flow, not a claim that every connection is already automated.

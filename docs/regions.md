@@ -15,6 +15,7 @@ A regional package is configuration and evidence, not a fork of the app. The [So
 ```bash
 PYTHONPATH=src python -m skippercast.platform validate --region cambria-san-simeon
 PYTHONPATH=src python -m skippercast.platform.build
+python scripts/build_primary_strategies.py
 PYTHONPATH=src python -m skippercast.pipeline --region cambria-san-simeon --output var/north-daily
 PYTHONPATH=src python -m skippercast.pipeline.live --region cambria-san-simeon --output var/north-live.json
 python scripts/check_web.py

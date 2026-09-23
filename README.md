@@ -1,6 +1,6 @@
 # SkipperCast
 
-[How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
+[Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
 
 
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**
@@ -11,7 +11,7 @@ SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the ma
 
 **Status:** mobile web app with shared regional ocean feeds, private saved-trip alerts and research layers. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
 
-**See how it fits together:** [data flow, chart layers, and software stack](docs/system-overview.md).
+**See how it fits together:** [current data flow and region rollout](docs/region-pipeline.md).
 
 ## What you can use today
 
