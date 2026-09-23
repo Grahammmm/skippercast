@@ -26,6 +26,7 @@ on:
       - "scripts/audit_usgs_map_metadata.py"
       - "scripts/discover_usgs_doi_releases.py"
       - "scripts/audit_usgs_doi_metadata.py"
+      - "scripts/collect_noaa_groundfish_areas.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -83,6 +84,9 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m skippercast.pipeline.coastal_watch --output var/daily --previous-root var/published --report-root var/daily
+      - name: Refresh NOAA federal groundfish areas
+        continue-on-error: true
+        run: python scripts/collect_noaa_groundfish_areas.py --output var/daily/noaa-federal-areas.json --previous var/published/noaa-federal-areas.json
       - name: Discover NOAA BAG survey leads for all coastal sectors
         continue-on-error: true
         run: python scripts/discover_noaa_surveys.py --output var/daily/survey-discovery.json --previous var/published/survey-discovery.json --max-age-days 30
@@ -122,6 +126,7 @@ jobs:
             cp -R var/daily/regions/. var/published/regions/
             mkdir -p var/published/coastal
             cp -R var/daily/coastal/. var/published/coastal/
+            if [ -f var/daily/noaa-federal-areas.json ]; then cp var/daily/noaa-federal-areas.json var/published/; fi
             rm -rf var/published/history
             cp -R var/daily/history var/published/history
           else
@@ -143,6 +148,7 @@ jobs:
           if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
           if [ -f var/published/usgs-doi-releases.json ]; then git -C var/published add usgs-doi-releases.json; fi
           if [ -f var/published/usgs-doi-metadata.json ]; then git -C var/published add usgs-doi-metadata.json; fi
+          if [ -f var/published/noaa-federal-areas.json ]; then git -C var/published add noaa-federal-areas.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -184,6 +190,19 @@ jobs:
               for key,s in d['sources'].items():
                   f.write(f"- {key}: {s['status']} · published {(s.get('data') or {}).get('published_date','not applicable')}\n")
           if d['health']['issues']: raise SystemExit('Coastal source issues: '+', '.join(d['health']['issues']))
+          PY
+      - name: Report federal groundfish area health
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('var/daily/noaa-federal-areas.json')
+          if not p.is_file(): raise SystemExit('NOAA federal area refresh produced no snapshot')
+          d=json.loads(p.read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write(f"\n## NOAA federal groundfish areas\n{d['status']} · {d['feature_count']} features from {len(d['source_layers'])} GIS layers · retrieved {d['retrieved_at']}\n")
+          if d['status']!='ok': raise SystemExit('Federal groundfish area refresh retained old geometry')
           PY
       - name: Report recent discussion coverage
         if: always()

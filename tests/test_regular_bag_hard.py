@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,10 +10,32 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-from scripts.qualify_regular_bag_hard import hard_mask_on_bag, excluded_report_hazards
+from scripts.qualify_regular_bag_hard import hard_mask_on_bag, excluded_report_hazards, excluded_federal_gea_cells
 
 
 class OriginalGridScreenTest(unittest.TestCase):
+    def test_federal_gea_exclusion_requires_current_complete_geometry(self):
+        polygon = {'type': 'Polygon', 'coordinates': [[[-123.002, 37.998], [-122.998, 37.998],
+                                                      [-122.998, 38.002], [-123.002, 38.002], [-123.002, 37.998]]]}
+        far = {'type': 'Polygon', 'coordinates': [[[-120, 34], [-119.9, 34],
+                                                  [-119.9, 34.1], [-120, 34.1], [-120, 34]]]}
+        features = [{'geometry': polygon if i == 0 else far,
+                     'properties': {'area_type': 'GEA' if i < 10 else 'YRCA',
+                                    'source_layer': 'GEA_Cordell_Bank_20260623' if i == 0 else str(i)}}
+                    for i in range(25)]
+        snapshot = {'scope': 'noaa-west-coast-groundfish-conservation-areas', 'status': 'ok',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(), 'features': features}
+        from pyproj import Transformer
+        x, y = Transformer.from_crs(4326, 26910, always_xy=True).transform(-123, 38)
+        transform = from_origin(x - 500, y + 500, 5, 5)
+        kwargs = {'shape_': (200, 200), 'transform_': transform, 'crs': 'EPSG:26910',
+                  'geographic_bounds': (-123.01, 37.99, -122.99, 38.01)}
+        mask = excluded_federal_gea_cells(snapshot, **kwargs)
+        self.assertTrue(mask[100, 100])
+        snapshot['retrieved_at'] = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            excluded_federal_gea_cells(snapshot, **kwargs)
+
     def test_original_class_3_is_inset_and_not_confused_with_other_classes(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "native-noaa-usgs-review-summary",
-  "generated_at": "2026-09-23T22:47:32.322251+00:00",
+  "generated_at": "2026-09-23T23:04:53.225146+00:00",
   "surveys": [
     {
       "survey_id": "H11732",
@@ -9,7 +9,7 @@
         "2007-03-07T00:00:00",
         "2007-04-01T00:00:00"
       ],
-      "compiled_at": "2026-09-23T22:46:37.526061+00:00",
+      "compiled_at": "2026-09-23T23:02:23.407611+00:00",
       "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/BAG/H11732_MB_2m_MLLW_2of4.bag",
       "noaa_bag_sha256": "5ab819d0141a0f5e17787c04988d130399d5edf16849fb6fa929c42c897e9a4c",
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
@@ -39,6 +39,7 @@
         }
       ],
       "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
       "native_resolution_m": [
         2.0,
         2.0
@@ -52,7 +53,7 @@
       "counts": {
         "hard_cells_after_inset": 1502396,
         "depth_uncertainty_qualified_cells": 2720279,
-        "hard_depth_cells_after_mpa_historical_hazard_screen": 266877,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 266877,
         "retained_components": 29
       },
       "retained_component_area_m2": 955768,
@@ -66,7 +67,7 @@
         "2007-03-04T13:13:04",
         "2007-04-01T13:49:55"
       ],
-      "compiled_at": "2026-09-23T22:47:02.222868+00:00",
+      "compiled_at": "2026-09-23T23:00:52.755487+00:00",
       "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/BAG/H11733_MB_2m_MLLW_2of4.bag",
       "noaa_bag_sha256": "43745d24261376a8344537e02ffbbfe67ec92f77560b873790ea2443601f3a13",
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
@@ -96,6 +97,7 @@
         }
       ],
       "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
       "native_resolution_m": [
         2.0,
         2.0
@@ -109,7 +111,7 @@
       "counts": {
         "hard_cells_after_inset": 717616,
         "depth_uncertainty_qualified_cells": 6522605,
-        "hard_depth_cells_after_mpa_historical_hazard_screen": 255397,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 255397,
         "retained_components": 38
       },
       "retained_component_area_m2": 847692,
@@ -123,7 +125,7 @@
         "2007-03-03T07:29:29",
         "2007-04-03T19:27:40"
       ],
-      "compiled_at": "2026-09-23T22:45:17.098588+00:00",
+      "compiled_at": "2026-09-23T22:59:15.386495+00:00",
       "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/BAG/H11734_MB_2m_MLLW_2of4.bag",
       "noaa_bag_sha256": "c4a1eaccf4bcd7417f4db913e5bb7006a8c2ceb55ee521252eb8a9828cc487fc",
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
@@ -164,6 +166,7 @@
         }
       ],
       "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
       "native_resolution_m": [
         2.0,
         2.0
@@ -177,7 +180,7 @@
       "counts": {
         "hard_cells_after_inset": 4917712,
         "depth_uncertainty_qualified_cells": 9511523,
-        "hard_depth_cells_after_mpa_historical_hazard_screen": 1131473,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 1131473,
         "retained_components": 42
       },
       "retained_component_area_m2": 4202132,
@@ -191,7 +194,7 @@
         "2007-03-02T23:54:29",
         "2007-04-03T22:56:31"
       ],
-      "compiled_at": "2026-09-23T22:39:31.910885+00:00",
+      "compiled_at": "2026-09-23T22:58:12.433946+00:00",
       "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_2m_MLLW_2of3.bag",
       "noaa_bag_sha256": "42453401241301b4801f56ea8e3c41c6a17e28883c5f6b32f53b085eafe9edc5",
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
@@ -221,6 +224,7 @@
         }
       ],
       "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
       "native_resolution_m": [
         2.0,
         2.0
@@ -234,10 +238,68 @@
       "counts": {
         "hard_cells_after_inset": 2847125,
         "depth_uncertainty_qualified_cells": 6902246,
-        "hard_depth_cells_after_mpa_historical_hazard_screen": 1284369,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 1284369,
         "retained_components": 55
       },
       "retained_component_area_m2": 4651864,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11738",
+      "survey_dates": [
+        "2007-02-17T04:59:56",
+        "2007-04-05T05:00:07"
+      ],
+      "compiled_at": "2026-09-23T23:04:30.832903+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_2m_MLLW_3of4.bag",
+      "noaa_bag_sha256": "5fc1e5c050c3759cc50520f1991bd3bad6112e7670d523702fea26928fd08fbe",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "survey_report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+      "usgs_sources": [
+        {
+          "block_id": "DrakesBay",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/SeafloorCharacter_DrakesBay.zip",
+          "archive_sha256": "6b0ef47d0267afb4d6c14b384fc97aad7ceccfc97c2337f433211f0f1203a8b3",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/SeafloorCharacter_DrakesBay_metadata.xml",
+          "metadata_sha256": "58c11827f21007b7fa538648a969fce56c20b509b68bddcb1383e6d3b6c8ad21",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshorePointReyes",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/SeafloorCharacter_OffshorePointReyes.zip",
+          "archive_sha256": "e5cf72fbb7e10434fdaa15dcc11ac3aab7e0c0c753b7a68fa37847ba92241ed4",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/SeafloorCharacter_OffshorePointReyes_metadata.xml",
+          "metadata_sha256": "a618bc82d995b29847d734a21423974b252a24d1eaa1b113c639b9533c838bec",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 0,
+        "depth_values_changed_in_current_grid": 0,
+        "maximum_depth_revision_m": 0
+      },
+      "counts": {
+        "hard_cells_after_inset": 762920,
+        "depth_uncertainty_qualified_cells": 13477088,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 105839,
+        "retained_components": 12
+      },
+      "retained_component_area_m2": 332448,
       "fishing_target": false,
       "legal_clearance": false,
       "exportable": false

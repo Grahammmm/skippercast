@@ -26,6 +26,7 @@ def summarize(paths):
             'survey_report_sha256': review['survey_report_sha256'],
             'usgs_sources': review['usgs_sources'],
             'cdfw_mpa_retrieved_at': review['cdfw_mpa_retrieved_at'],
+            'noaa_federal_areas_retrieved_at': review['noaa_federal_areas_retrieved_at'],
             'native_resolution_m': review['native_resolution_m'],
             'maximum_planning_depth_ft': review['maximum_planning_depth_ft'],
             'bag_tracking_history': review['bag_tracking_history'],

@@ -16,6 +16,7 @@ class SummaryPrivacyTest(unittest.TestCase):
                 'noaa_bag_url': 'https://example.test/source.bag', 'noaa_bag_sha256': 'a',
                 'survey_report_url': 'https://example.test/report.pdf', 'survey_report_sha256': 'b',
                 'usgs_sources': [], 'cdfw_mpa_retrieved_at': '2026-09-23T00:00:00Z',
+                'noaa_federal_areas_retrieved_at': '2026-09-23T00:00:00Z',
                 'native_resolution_m': [2, 2], 'maximum_planning_depth_ft': 200,
                 'bag_tracking_history': {}, 'counts': {'retained_components': 1},
                 'features': [{'geometry': {'type': 'Point', 'coordinates': [-123.1, 38.1]},

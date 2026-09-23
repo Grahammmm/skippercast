@@ -23,10 +23,11 @@ export async function initCoastalDiscovery(catalog,coast) {
   const rules=document.getElementById('species-regulations');
   function targetInfo() {
     const t=targetOptions.find(t=>t.id===select.value);
-    rules.innerHTML=`<summary>${esc(t.name)} · check local season</summary><div class="reg-body"><p>${esc(t.note)}</p><p>Potential regional target; surveyed spots and date-specific legal evaluation are not yet available here. Seasons, gear, depth and protected areas can restrict fishing.</p><p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} regulations ↗</a></p>${t.sources.map(url=>`<p><a href="${esc(url)}" target="_blank" rel="noopener">Species habitat source ↗</a></p>`).join('')}<p id="coastal-mpa-status" role="status">Checking MPA boundaries…</p></div>`;
+    rules.innerHTML=`<summary>${esc(t.name)} · check local season</summary><div class="reg-body"><p>${esc(t.note)}</p><p>Potential regional target; surveyed spots and date-specific legal evaluation are not yet available here. Seasons, gear, depth and protected areas can restrict fishing.</p><p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} regulations ↗</a></p>${t.sources.map(url=>`<p><a href="${esc(url)}" target="_blank" rel="noopener">Species habitat source ↗</a></p>`).join('')}<p id="coastal-mpa-status" role="status">Checking MPA boundaries…</p><p id="coastal-federal-status" role="status">Checking federal groundfish areas…</p></div>`;
     const url=new URL(location.href);url.searchParams.set('target',select.value);history.replaceState(null,'',url);
     const guide=document.getElementById('coastal-target-guide');guide.innerHTML=`<h2>${esc(t.name)}</h2><p>${esc(t.note)}</p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Check this coast’s rules ↗</a>`;
     drawMPAs();
+    drawFederal();
   }
   const packages=(await fetch('regions/index.json').then(r=>{if(!r.ok)throw Error('Mapped-area directory unavailable');return r.json();})).regions.filter(r=>coast.packages.includes(r.id));
   const sectorPacket=await loadCoastalSectors();
@@ -152,6 +153,48 @@ export async function initCoastalDiscovery(catalog,coast) {
       predictedNote.textContent=`${data.features.length} broad predicted-hard patches on this coast. MPAs remain visible. Use surveyed bottom and current rules before choosing a fishing position.`;
     }catch(error){predictedCheck.checked=false;predictedNote.textContent=error.message+' · consult the original CDFW dataset.';}
   });
+  const federalLayer=L.layerGroup().addTo(map);map.createPane('federalGroundfish').style.zIndex=438;
+  let federalShapes=[],federalStatus='Checking NOAA federal groundfish areas…',federalLoaded=false,federalTouched=false;
+  const federalLabel=document.createElement('label');federalLabel.className='map-layer-option';
+  const federalCheck=document.createElement('input');federalCheck.type='checkbox';federalCheck.checked=select.value==='reef';
+  const federalTitle=document.createElement('span');federalTitle.textContent='NOAA federal groundfish areas';
+  federalLabel.append(federalCheck,federalTitle);body.append(federalLabel);
+  const federalNote=document.createElement('p');federalNote.className='small';
+  federalNote.textContent='GEA, CCA and YRCA boundaries from NOAA. Federal GIS is approximate; click an area for the controlling 50 CFR text. Shown by default for reef fishing.';body.append(federalNote);
+  federalCheck.addEventListener('change',()=>{federalTouched=true;drawFederal();});
+  function drawFederal(){
+    if(!federalTouched)federalCheck.checked=select.value==='reef';
+    const visible=federalCheck.checked&&federalLoaded;
+    for(const {shape,bounds} of federalShapes){
+      if(visible&&bounds.intersects(map.getBounds())){if(!federalLayer.hasLayer(shape))federalLayer.addLayer(shape);}
+      else if(federalLayer.hasLayer(shape))federalLayer.removeLayer(shape);
+    }
+    const status=document.getElementById('coastal-federal-status');if(status)status.textContent=federalStatus;
+  }
+  map.on('moveend',drawFederal);
+  void (async()=>{
+    for(const url of ['https://raw.githubusercontent.com/Grahammmm/skippercast/data/noaa-federal-areas.json','data/noaa-federal-areas.json']){
+      try{
+        const response=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(9000)});if(!response.ok)continue;
+        const data=await response.json();
+        if(data.scope!=='noaa-west-coast-groundfish-conservation-areas'||data.type!=='FeatureCollection'
+          ||data.feature_count!==data.features?.length||data.features.length<25
+          ||!data.features.some(f=>f.properties?.source_layer==='GEA_Cordell_Bank_20260623')
+          ||data.features.some(f=>!['GEA','CCA','YRCA'].includes(f.properties?.area_type)
+            ||!['Polygon','MultiPolygon'].includes(f.geometry?.type)||f.properties?.exportable_as_fishing_spot!==false
+            ||!/^https:\/\/www\.ecfr\.gov\/current\/title-50\//.test(f.properties?.cfr_boundary_url||'')))continue;
+        const age=Date.now()-Date.parse(data.retrieved_at);
+        federalStatus=`Federal areas shown · retrieved ${data.retrieved_at.slice(0,10)}${data.status==='ok'&&Number.isFinite(age)&&age>=0&&age<=36*3600000?'':' · refresh unverified; check NOAA and 50 CFR'}`;
+        federalShapes=data.features.map(f=>{
+          const p=f.properties,shape=L.geoJSON(f,{pane:'federalGroundfish',style:{color:'#945526',weight:2,dashArray:'5 4',fillColor:'#b57635',fillOpacity:.1}})
+            .bindTooltip(esc(p.name)).bindPopup(`<strong>${esc(p.name)}</strong><p>${esc(p.area_type)} · ${esc(federalStatus)}. NOAA GIS is approximate. Fishing rules depend on fishery, gear, date and exact location.</p><a href="${esc(p.cfr_boundary_url)}" target="_blank" rel="noopener">Official 50 CFR boundary ↗</a>`);
+          return {shape,bounds:shape.getBounds()};
+        });
+        federalLoaded=true;drawFederal();return;
+      }catch{/* Try dated bundled snapshot without changing its retrieval time. */}
+    }
+    federalStatus='NOAA federal area geometry unavailable · check NOAA and 50 CFR before groundfish planning';drawFederal();
+  })();
   if(coast.id==='northern'){
     const context=L.layerGroup();map.createPane('historicalSeabed').style.zIndex=425;
     const label=document.createElement('label');label.className='map-layer-option';
@@ -206,6 +249,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     select.disabled=!next;rules.hidden=!next;
     const url=coastURL(location.href,coast,{point,zoom:map.getZoom(),target:select.value,overview:true});url.hash=location.hash;history.replaceState(null,'',url);
     drawMPAs();
+    drawFederal();
     refreshForecast(point,sector);
   }
   window.addEventListener('hashchange',()=>{if(location.hash==='#forecast'){forecastKey='';const p=map.getCenter();refreshForecast({latitude:p.lat,longitude:p.lng},sectorAt(sectorPacket,coast.id,{latitude:p.lat,longitude:p.lng}));}});

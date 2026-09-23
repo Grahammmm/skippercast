@@ -298,6 +298,33 @@
       "max_age_hours": 36
     },
     {
+      "id": "noaa-groundfish-areas",
+      "name": "NOAA West Coast federal groundfish areas",
+      "provider": "NOAA Fisheries West Coast Region",
+      "needs": ["protected-areas", "dynamic-closures"],
+      "documentation_url": "https://www.fisheries.noaa.gov/resource/map/groundfish-conservation-areas-maps-and-gis-data-west-coast-region",
+      "adapter": "noaa-groundfish-gis",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-23",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA Fisheries West Coast Region",
+        "terms_url": "https://www.fisheries.noaa.gov/resource/map/groundfish-conservation-areas-maps-and-gis-data-west-coast-region"
+      },
+      "authenticity": {
+        "basis": "Primary NOAA Fisheries GIS service with per-layer counts and linked 50 CFR text",
+        "transport": "HTTPS; exact provider host and service path only"
+      },
+      "coverage_note": "West Coast federal GEA, CCA and YRCA geometry. California features are selected by their actual polygons, not region-name inference.",
+      "limitations": [
+        "NOAA says its GIS boundaries are approximate and 50 CFR 660 governs exact limits.",
+        "CCA and YRCA restrictions require fishery, gear, date and location review; a polygon alone does not determine legality."
+      ],
+      "allowed_hosts": ["maps.fisheries.noaa.gov", "www.fisheries.noaa.gov", "www.ecfr.gov"],
+      "service_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+      "max_age_hours": 36
+    },
+    {
       "id": "cdfw-rules",
       "name": "CDFW recreational ocean fishing rules",
       "provider": "California Department of Fish and Wildlife",

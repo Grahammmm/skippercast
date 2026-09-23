@@ -4,6 +4,33 @@
   "reviewed_at": "2026-09-23",
   "surveys": [
     {
+      "survey_id": "H11738",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+      "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+      "interpretation": "Two reported dangers: a 4-fathom-4-foot rock and a 4-fathom-5-foot shoal at the edge of multibeam coverage. The report recommends removal of an older charted wreck as disproved; that item is not treated as a measured reef or fishing target.",
+      "hazards": [
+        {
+          "id": "H11738-rock-four-fathoms-four-feet",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.9809277778,
+          "longitude": -122.9615027778,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11738-shoal-four-fathoms-five-feet-at-coverage-edge",
+          "kind": "historical-danger-to-navigation-survey-edge",
+          "latitude": 37.9964166667,
+          "longitude": -123.0265277778,
+          "reported_depth_ft": 29,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Shoalest observed point lies at the multibeam edge; this is a review hold, not a safety distance."
+        }
+      ]
+    },
+    {
       "survey_id": "H11735",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
       "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",

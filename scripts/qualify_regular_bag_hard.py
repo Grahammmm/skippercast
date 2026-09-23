@@ -83,6 +83,32 @@ def excluded_mpa_cells(snapshot, *, shape_, transform_, crs, geographic_bounds, 
                      transform=transform_, dtype='uint8').astype(bool)
 
 
+def excluded_federal_gea_cells(snapshot, *, shape_, transform_, crs, geographic_bounds, clearance_m=100):
+    if (snapshot.get('scope') != 'noaa-west-coast-groundfish-conservation-areas' or
+            snapshot.get('status') != 'ok' or len(snapshot.get('features', [])) < 25):
+        raise ValueError('Complete current NOAA federal area geometry is required')
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(snapshot['retrieved_at'])).total_seconds()
+    except (KeyError, ValueError, TypeError) as error:
+        raise ValueError('NOAA federal area retrieval timestamp is invalid') from error
+    if not 0 <= age <= 36 * 3600:
+        raise ValueError('NOAA federal area geometry is stale')
+    geas = [f for f in snapshot['features'] if f.get('properties', {}).get('area_type') == 'GEA']
+    if len(geas) < 10 or not any('Cordell_Bank_20260623' in f['properties'].get('source_layer', '') for f in geas):
+        raise ValueError('Current Cordell Bank or other federal exclusion geometry is missing')
+    survey = box(*geographic_bounds).buffer(.02)
+    to_native = Transformer.from_crs('EPSG:4326', crs, always_xy=True).transform
+    outlines = []
+    for feature in geas:
+        geom = shape(feature['geometry'])
+        if not geom.is_valid or geom.is_empty:
+            raise ValueError('Invalid NOAA federal exclusion polygon')
+        if geom.intersects(survey):
+            outlines.append((mapping(transform(to_native, geom).buffer(clearance_m)), 1))
+    return (rasterize(outlines, out_shape=shape_, transform=transform_, dtype='uint8').astype(bool)
+            if outlines else np.zeros(shape_, dtype=bool))
+
+
 def excluded_report_hazards(survey_id, registry, report_cache, *, shape_, transform_, crs):
     review = next((x for x in registry.get('surveys', []) if x.get('survey_id') == survey_id), None)
     if registry.get('scope') != 'historical-noaa-survey-hazard-review' or not review:
@@ -112,7 +138,7 @@ def excluded_report_hazards(survey_id, registry, report_cache, *, shape_, transf
     return mask, review
 
 
-def compile_review(bag_row, usgs_rows, usgs_metadata, mpa_snapshot, hazard_registry,
+def compile_review(bag_row, usgs_rows, usgs_metadata, mpa_snapshot, federal_snapshot, hazard_registry,
                    bag_cache, usgs_cache, report_cache,
                    *, minimum_area_m2=2500, limit_ft=200):
     if (bag_row.get('status') != 'ok' or bag_row.get('metadata_status') != 'mllw-product-uncertainty-reviewed-by-adapter'
@@ -155,6 +181,9 @@ def compile_review(bag_row, usgs_rows, usgs_metadata, mpa_snapshot, hazard_regis
         geographic_bounds = transform_bounds(horizontal, 'EPSG:4326', *raster.bounds, densify_pts=21)
         excluded = excluded_mpa_cells(mpa_snapshot, shape_=grid_shape, transform_=raster.transform,
                                       crs=horizontal, geographic_bounds=geographic_bounds)
+        federal = excluded_federal_gea_cells(federal_snapshot, shape_=grid_shape,
+                                              transform_=raster.transform, crs=horizontal,
+                                              geographic_bounds=geographic_bounds)
         hazards, hazard_review = excluded_report_hazards(bag_row['survey_id'], hazard_registry, report_cache,
                                                           shape_=grid_shape, transform_=raster.transform, crs=horizontal)
         elevation = raster.read(1)
@@ -167,7 +196,7 @@ def compile_review(bag_row, usgs_rows, usgs_metadata, mpa_snapshot, hazard_regis
                 raise ValueError('BAG tracking record lies outside the original grid')
             tracked_changes.append(abs(float(elevation[north_row, col]) - float(record['depth'])))
         qualified = cells_qualified(elevation, uncertainty, raster.res[0], limit_ft=limit_ft)
-        support = hard & qualified & ~excluded & ~hazards
+        support = hard & qualified & ~excluded & ~federal & ~hazards
         native_labels, count = label(support)
         sizes = np.bincount(native_labels.ravel())
         minimum_cells = int(np.ceil(minimum_area_m2 / (raster.res[0] * raster.res[1])))
@@ -208,19 +237,20 @@ def compile_review(bag_row, usgs_rows, usgs_metadata, mpa_snapshot, hazard_regis
                 'survey_report_sha256': hazard_review['report_sha256'],
                 'historical_hazards_screened': hazard_review['hazards'],
                 'cdfw_mpa_retrieved_at': mpa_snapshot['sources']['mpas']['data_retrieved_at'],
+                'noaa_federal_areas_retrieved_at': federal_snapshot['retrieved_at'],
                 'native_resolution_m': list(raster.res), 'minimum_area_m2': minimum_area_m2,
                 'maximum_planning_depth_ft': limit_ft, 'mpa_clearance_m': 100,
                 'bag_tracking_history': {'original_values_before_manual_edits': len(tracked),
                                          'depth_values_changed_in_current_grid': sum(delta > 0.001 for delta in tracked_changes),
                                          'maximum_depth_revision_m': round(max(tracked_changes, default=0), 3)},
-                'method': 'Original NOAA MLLW/product-uncertainty cells AND original USGS class-3 cells, with a two-native-cell class edge inset, 100 m CDFW MPA buffer and reviewed historical DTON holds. No interpolation creates a fishable cell.',
+                'method': 'Original NOAA MLLW/product-uncertainty cells AND original USGS class-3 cells, with a two-native-cell class edge inset, 100 m CDFW MPA and NOAA GEA buffers, and reviewed historical DTON holds. No interpolation creates a fishable cell.',
                 'limitations': ['Historical depth and substrate do not confirm present fish or individual boulder size.',
                                 'The BAG tracking list holds pre-edit node values; the current grid includes manual hydrographer edits.',
                                 'Federal and other local closures, current hazards, routes and current legal rules are not cleared.',
                                 'This review geometry is not a navigation chart or a fishing waypoint.'],
                 'counts': {'hard_cells_after_inset': int(np.count_nonzero(hard)),
                            'depth_uncertainty_qualified_cells': int(np.count_nonzero(qualified)),
-                           'hard_depth_cells_after_mpa_historical_hazard_screen': int(np.count_nonzero(support)),
+                           'hard_depth_cells_after_mpa_gea_historical_hazard_screen': int(np.count_nonzero(support)),
                            'retained_components': len(polygons)},
                 'features': polygons}
 
@@ -234,6 +264,7 @@ def main():
     parser.add_argument('--usgs-audit', type=Path, default=Path('var/usgs-native-audit.json'))
     parser.add_argument('--usgs-metadata', type=Path, default=Path('var/usgs-map-metadata.json'))
     parser.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
+    parser.add_argument('--federal-areas', type=Path, default=Path('var/noaa-federal-areas.json'))
     parser.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
     parser.add_argument('--bag-cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--usgs-cache', type=Path, default=Path('var/usgs-native-cache'))
@@ -249,7 +280,8 @@ def main():
     if not bag_row or {x['block_id'] for x in selected} != set(args.usgs_block):
         raise ValueError('Missing exact audited NOAA BAG or original USGS source block')
     result = compile_review(bag_row, selected, json.loads(args.usgs_metadata.read_text()),
-                            json.loads(args.mpas.read_text()), json.loads(args.hazards.read_text()),
+                            json.loads(args.mpas.read_text()), json.loads(args.federal_areas.read_text()),
+                            json.loads(args.hazards.read_text()),
                             args.bag_cache, args.usgs_cache, args.report_cache)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temp = args.output.with_suffix(args.output.suffix + '.tmp')

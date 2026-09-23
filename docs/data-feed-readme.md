@@ -8,6 +8,7 @@ This branch contains automatically collected public facts. Application source an
 - `survey-discovery.json`, `survey-products.json`, `bag-head-inventory.json`: NOAA survey leads, original product links, and bounded download-health checks. They are a native-review queue, not approved fishing locations.
 - `usgs-map-blocks.json`, `usgs-map-metadata.json`: original USGS state-waters catalog products, source XML checksums and geographic metadata bounds. Rectangles do not mean every pixel was mapped.
 - `usgs-doi-releases.json`, `usgs-doi-metadata.json`: newer DOI-linked USGS data releases and their original XML records, including Monterey and central coast products omitted by legacy catalog pages.
+- `noaa-federal-areas.json`: NOAA's dated West Coast groundfish-area GIS geometry and source receipts. It includes Groundfish Exclusion Areas, Cowcod Conservation Areas and individual Yelloweye Rockfish Conservation Areas. The GIS is approximate; the linked 50 CFR text governs exact boundaries and applicability. A retained snapshot preserves its original retrieval time and is not current clearance.
 
 The [daily workflow](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml) requests a refresh at 4:17 a.m. America/Los_Angeles. GitHub can delay scheduled jobs and disables inactive public-repository schedules after 60 days. No machine needs to stay awake. Workflow failures are visible in Actions and stale data is labeled in the app. A successful job can still have degraded optional sources; inspect health.
 
