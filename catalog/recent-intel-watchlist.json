@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "lookback_days": 30,
+  "jobs_per_day": 1,
+  "source_set": ["reddit", "grounding"],
+  "upstream": {
+    "repository": "https://github.com/mvanhorn/last30days-skill",
+    "commit": "349ca444b4fda466e74d471dffa2aff36bb997f1",
+    "json_schema_major": 1
+  },
+  "regions": [
+    {
+      "id": "morro-bay",
+      "queries": [
+        {"id": "reef", "text": "Morro Bay Avila California lingcod rockfish fishing report charter recent"},
+        {"id": "pelagic", "text": "Morro Bay Avila California tuna salmon halibut fishing report recent"}
+      ]
+    },
+    {
+      "id": "cambria-san-simeon",
+      "queries": [
+        {"id": "local", "text": "Cambria San Simeon California rockfish lingcod fishing report recent"}
+      ]
+    },
+    {
+      "id": "southern-california",
+      "queries": [
+        {"id": "islands", "text": "Channel Islands Anacapa Santa Cruz Santa Rosa California yellowtail white seabass rockfish fishing report recent"},
+        {"id": "mainland", "text": "Southern California San Diego Los Angeles Catalina halibut yellowtail tuna fishing report recent"}
+      ]
+    }
+  ]
+}

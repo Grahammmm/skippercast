@@ -18,6 +18,8 @@ on:
       - "src/skippercast/platform/**"
       - "scripts/refresh_regions.py"
       - "scripts/report_regulations.py"
+      - "scripts/collect_recent_intel.py"
+      - "skills/skippercast-recent-intel/**"
 
 permissions:
   contents: write
@@ -29,12 +31,19 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Load pinned last30days research engine
+        uses: actions/checkout@v4
+        with:
+          repository: mvanhorn/last30days-skill
+          ref: 349ca444b4fda466e74d471dffa2aff36bb997f1
+          path: var/last30days-upstream
+          persist-credentials: false
       - name: Test evidence parsing and failure handling
         env:
           PYTHONPATH: src
@@ -52,6 +61,13 @@ jobs:
         env:
           PYTHONPATH: src
         run: python scripts/refresh_regions.py daily --output var/daily --previous-root var/published
+      - name: Discover recent local fishing discussions
+        continue-on-error: true
+        run: >-
+          python scripts/collect_recent_intel.py
+          --engine var/last30days-upstream/skills/last30days/scripts/last30days.py
+          --output var/daily
+          --previous var/published/recent-intel.json
       - name: Audit source-document access
         env:
           PYTHONPATH: src
@@ -64,6 +80,7 @@ jobs:
         run: |
           if [ -d var/published ]; then
             cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
+            if [ -f var/daily/recent-intel.json ]; then cp var/daily/recent-intel.json var/published/; fi
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
             mkdir -p var/published/coastal
@@ -81,6 +98,7 @@ jobs:
           git -C var/published config user.name 'github-actions[bot]'
           git -C var/published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C var/published add latest.json health.json source-access.json history regions coastal README.md
+          if [ -f var/published/recent-intel.json ]; then git -C var/published add recent-intel.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -122,6 +140,23 @@ jobs:
               for key,s in d['sources'].items():
                   f.write(f"- {key}: {s['status']} · published {(s.get('data') or {}).get('published_date','not applicable')}\n")
           if d['health']['issues']: raise SystemExit('Coastal source issues: '+', '.join(d['health']['issues']))
+          PY
+      - name: Report recent discussion coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path('var/daily/recent-intel.json')
+          if not path.is_file():
+              raise SystemExit('Recent discussion research produced no snapshot; prior feed remains dated.')
+          else:
+              data=json.loads(path.read_text())
+              health=data['health']
+              with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+                  f.write(f"\n## Recent discussion leads\n{health['jobs_usable']}/{health['jobs_total']} searches returned usable source status · {health['watchlist_queries']} rotating queries · {len(data['candidates'])} dated candidates · {health['status']}\n")
+              if health['status'] != 'ok': print('::warning::Recent discussion coverage is degraded; inspect source outcomes.')
+              if health['jobs_usable'] == 0: raise SystemExit('No recent discussion source completed; explicit failure status was published.')
           PY
       - name: Report regulation coverage in every region
         if: always()
