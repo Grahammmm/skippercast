@@ -10,6 +10,8 @@ The guide also exposes 19 smaller [discovery sectors](statewide-buildout.md). Th
 
 The statewide directory does not create fishing spots. Northern, Mendocino and San Francisco initially open the shared coastal guide, with potential targets, source links and CDFW MPAs. Central opens the Morro Bay–Avila fishing map. Its full-coast overview remains available in Options, with links to the Morro Bay–Avila and Cambria–San Simeon data packages. Zooming into a mapped area at level 9 or closer loads that package automatically. Southern opens its existing detailed package. **Options → Mapped area** lets a visitor move between a coastal overview and detailed maps.
 
+The guide's 19 planning sectors expose dated NOAA survey catalog and original product links. Northern Map Options also offers one **historical USGS hard-seabed context** layer off Cape Mendocino. Its generalized class polygons are not fishing targets, depth-qualified locations, or exports. See the [statewide buildout ledger](statewide-buildout.md) for original data, processing and remaining gates.
+
 Changing coast clears the previous spot, focus and incompatible target. Panning beyond a detailed package opens the appropriate coastal guide when its browsing extent covers the point. Crossing a coastal boundary updates the guide and species. Uncovered coasts never inherit Morro Bay forecasts, ratings, tide stations, legal-open badges or exported waypoints. Survey-qualified targets remain governed by the regional contracts and MPA geometry screen.
 
 ## Daily source flow

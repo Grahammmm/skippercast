@@ -19,6 +19,8 @@ on:
       - "scripts/refresh_regions.py"
       - "scripts/report_regulations.py"
       - "scripts/collect_recent_intel.py"
+      - "scripts/discover_noaa_surveys.py"
+      - "scripts/audit_noaa_survey_products.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -79,12 +81,16 @@ jobs:
       - name: Discover NOAA BAG survey leads for all coastal sectors
         continue-on-error: true
         run: python scripts/discover_noaa_surveys.py --output var/daily/survey-discovery.json --previous var/published/survey-discovery.json --max-age-days 30
+      - name: Inventory original NOAA survey products
+        continue-on-error: true
+        run: python scripts/audit_noaa_survey_products.py --discovery var/daily/survey-discovery.json --output var/daily/survey-products.json --previous var/published/survey-products.json --max-age-days 30
       - name: Publish an atomic data snapshot
         run: |
           if [ -d var/published ]; then
             cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
             if [ -f var/daily/recent-intel.json ]; then cp var/daily/recent-intel.json var/published/; fi
             if [ -f var/daily/survey-discovery.json ]; then cp var/daily/survey-discovery.json var/published/; fi
+            if [ -f var/daily/survey-products.json ]; then cp var/daily/survey-products.json var/published/; fi
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
             mkdir -p var/published/coastal
@@ -104,6 +110,7 @@ jobs:
           git -C var/published add latest.json health.json source-access.json history regions coastal README.md
           if [ -f var/published/recent-intel.json ]; then git -C var/published add recent-intel.json; fi
           if [ -f var/published/survey-discovery.json ]; then git -C var/published add survey-discovery.json; fi
+          if [ -f var/published/survey-products.json ]; then git -C var/published add survey-products.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -178,4 +185,17 @@ jobs:
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
               f.write(f"\n## NOAA BAG survey discovery\n{d['health']['status']} · {d['distinct_survey_leads']} distinct catalog leads · {d['sector_count']} sectors · last complete {d.get('last_complete_scan_at') or 'none'}\n")
           if d['health']['issues']: raise SystemExit('Survey catalog queries failed: '+', '.join(d['health']['issues']))
+          PY
+      - name: Report NOAA survey product coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('var/daily/survey-products.json')
+          if not p.is_file(): raise SystemExit('NOAA survey product inventory produced no status')
+          d=json.loads(p.read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write(f"\n## NOAA original survey products\n{d['health']['status']} · {d['bag_link_count']}/{d['survey_count']} pages link BAG grids · {d['report_link_count']} link descriptive reports · last complete {d.get('last_complete_scan_at') or 'none'}\n")
+          if d['health']['issues']: raise SystemExit('Survey product pages failed: '+', '.join(d['health']['issues'][:15]))
           PY

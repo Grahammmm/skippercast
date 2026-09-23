@@ -3,6 +3,7 @@
   "reviewed_at": "2026-09-23",
   "scope": "Outer-coast discovery sectors. Latitude bands are approximate browsing partitions, not nautical, regulatory, MPA, survey or fishing-ground boundaries. Bays and islands need their own local packages.",
   "survey_feed_url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/survey-discovery.json",
+  "survey_product_feed_url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/survey-products.json",
   "survey_discovery": [
     {"name": "USGS California Seafloor Mapping Program", "url": "https://www.usgs.gov/centers/pcmsc/science/california-seafloor-mapping-program"},
     {"name": "NOAA NCEI Bathymetric Data Viewer", "url": "https://www.ncei.noaa.gov/maps/bathymetry/"}

@@ -11,6 +11,8 @@ Read `docs/region-pipeline.md` for the complete rollout and model-use policy. Ro
 
 For California, begin with `docs/statewide-buildout.md` and the matching entry in `catalog/coastal-sectors.json`. The dated NOAA survey-discovery feed lists intersecting BAG survey leads, not verified bottom coverage. Inspect exact native BAG cells and the original report before considering any lead for a target. Keep the sector status as discovery even if one partial package has point candidates within it.
 
+The separate NOAA product-link feed identifies which original catalog pages link BAG grids and reports; links alone do not qualify a grid. For USGS classified seafloor, use `catalog/usgs-seafloor-sources.json` and `scripts/import_usgs_seafloor_character.py` only after pinning the original raster digest, reading its metadata and reviewing class semantics. Generalized class polygons remain context until legal depth and complete exclusion geometry are independently reviewed.
+
 Create `regions/<id>/region.json` with explicit WGS84 bounds, timezone, jurisdiction, forecast sample points, marine zones, observation/tide stations, boat preferences, asset paths and ordered source bindings. Region identifiers are stable; model grids, source IDs and habitat IDs retain their own namespaces.
 
 Inspect primary sources for this geography. Populate the coverage ledger by need; a binding without regional coverage is a gap. A new region starts in preview until its fishing geometries pass the required depth, rights and closure checks. Preview can expose researched context and regional conditions while explaining unavailable features; never populate empty maps with invented fishing coordinates.

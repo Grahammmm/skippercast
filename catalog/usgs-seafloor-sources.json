@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "method": "Reviewed original USGS products for generalized habitat context only. Every additional map block needs a separate source record, file digest, metadata review and import.",
+  "sources": [
+    {
+      "id": "cape-mendocino-character-2023",
+      "sector_id": "humboldt-cape",
+      "name": "Offshore Cape Mendocino seafloor character",
+      "publication_url": "https://pubs.usgs.gov/publication/ofr20241047",
+      "data_release_url": "https://doi.org/10.5066/P9U0SUGL",
+      "character_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/a532c27e657d4ffeb6a59f4393e520c8/SeafloorCharacter_OffshoreCapeMendocino.zip",
+      "character_metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/eadc62d03bd34cdca57a2793a290a02a/SeafloorCharacter_OffshoreCapeMendocino_metadata.txt",
+      "bathymetry_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/0912f12a4f674672b52d825ed5421eab/Bathymetry_OffshoreCapeMendocino.zip",
+      "bathymetry_metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/5f247010dd40433989858d886d83c3ff/Bathymetry_OffshoreCapeMendocino_metadata.txt",
+      "character_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+      "bathymetry_sha256": "43a0a57c4a6e94c11c54d728c4c34dd6f1a59dea8076913fce9b7dc2349f34dd",
+      "native_class_resolution_m": 2,
+      "display_resolution_m": 20,
+      "minimum_display_area_m2": 20000,
+      "class": 3,
+      "class_name": "Hard and rugose seabed",
+      "source_year": 2023,
+      "rights": "USGS public-domain data; credit USGS and CSU Monterey Bay Seafloor Mapping Lab. Not for navigation.",
+      "limitations": "Historical video-supervised substrate model; downsampled display polygons omit small patches. Bathymetry's reported vertical reference is instantaneous sea level, so no legal 200-foot depth qualification is inferred. No fish or catch verification."
+    }
+  ]
+}

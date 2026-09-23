@@ -11,6 +11,7 @@ def compile_sectors(root=REPO):
     if source.get('schema_version') != 1 or not source.get('reviewed_at'):
         raise ValueError('Invalid coastal sector catalog')
     public_url(source['survey_feed_url'])
+    public_url(source['survey_product_feed_url'])
     for lead in source['survey_discovery']:
         public_url(lead['url'])
     result, seen = [], set()
@@ -51,6 +52,7 @@ def compile_sectors(root=REPO):
         raise ValueError('Sector references an unknown coast')
     packet = {'schema_version': 1, 'reviewed_at': source['reviewed_at'],
               'scope': source['scope'], 'survey_feed_url': source['survey_feed_url'],
+              'survey_product_feed_url': source['survey_product_feed_url'],
               'survey_discovery': source['survey_discovery'],
               'sectors': result}
     atomic_json(root / 'dist/data/coastal-sectors.json', packet)
