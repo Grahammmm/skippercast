@@ -1,0 +1,47 @@
+name: Monthly statewide substrate review
+
+on:
+  schedule:
+    - cron: "37 10 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load latest public MPA snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: var/published
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned geospatial reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify substrate adapter and class safeguards
+        run: python -m unittest tests.test_cdfw_substrate_pipeline -v
+      - name: Audit every California browse-sector tile
+        run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
+      - name: Build MPA-screened review layers
+        run: >-
+          python scripts/build_cdfw_substrate_context.py
+          --audit var/review/cdfw-ds3091-tile-audit.json
+          --mpas var/published/latest.json
+          --output-dir var/review
+      - name: Upload source audit and unpublished review layers
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdfw-ds3091-review
+          path: var/review/
+          retention-days: 30
+
+# This workflow deliberately does not change public map files. A source class,
+# MPA or geometry change needs a reviewed source commit and site deployment.
