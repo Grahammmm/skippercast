@@ -164,10 +164,21 @@ jobs:
           for ident in h['issues']:
               s = d['sources'][ident]
               summary.append(f"- {s['name']}: {s['status']} — {s.get('issue', 'See source record')}")
+          coast = json.loads(Path('var/daily/coastal/latest.json').read_text())
+          coastal_health = coast['health']
+          summary.extend(['', f"## California coastal source watch: {coastal_health['status']}",
+                          f"Collected {coast['completed_at']}"])
+          rules = [(key, record) for key, record in coast['sources'].items() if key.endswith('-rules')]
+          summary.append(f"CDFW regional rules documents: {sum(record['status'] == 'ok' for _, record in rules)}/{len(rules)} healthy.")
+          for ident in coastal_health['issues']:
+              record = coast['sources'][ident]
+              summary.append(f"- {record['name']}: {record['status']} — {record.get('issue', 'See source record')}")
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('\n'.join(summary))
           if h['issues']:
               print('::warning::Some sources are missing, stale, or failed. The feed preserves those statuses.')
+          if coastal_health['issues']:
+              print('::warning::Some California coastal sources are missing, stale, or failed. See coastal status and do not infer fishing permission.')
           regional = json.loads(Path('var/daily/regions/index.json').read_text())
           for row in regional['regions']:
               print(f"{row['region_id']}: {row['status']} ({len(row['issues'])} source issues)")
