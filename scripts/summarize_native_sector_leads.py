@@ -46,6 +46,9 @@ def build(audit, discovery, sectors, overlap):
         candidates = [f for f in georeferenced if f['metadata_status'] == 'mllw-product-uncertainty-reviewed-by-adapter'
                       and max(f['overview_resolution_m']) <= 4 and f['variable_refinement_records'] == 0]
         overlap_leads = [f for f in candidates if f['url'] in screened]
+        refinement_leads = [f for f in georeferenced
+                            if f['metadata_status'] == 'mllw-product-uncertainty-reviewed-by-adapter'
+                            and f.get('refinement_grids_at_most_4m', 0) > 0]
         rows.append({
             'sector_id': sector['id'], 'name': sector['name'], 'coast': sector['coast'], 'status': 'review-leads',
             'catalog_survey_leads': len(survey_ids), 'audited_bag_files_associated_with_surveys': len(associated),
@@ -53,6 +56,8 @@ def build(audit, discovery, sectors, overlap):
             'regular_4m_or_finer_mllw_product_uncertainty_bboxes': len(candidates),
             'substrate_overlap_screen_bboxes': len(overlap_leads),
             'screen_survey_ids': sorted({f['survey_id'] for f in overlap_leads}),
+            'variable_resolution_4m_refinement_bboxes': len(refinement_leads),
+            'refinement_survey_ids': sorted({f['survey_id'] for f in refinement_leads}),
             'not_in_sector_bbox_count': sum(f['status'] == 'ok' for f in associated) - len(georeferenced),
         })
     return {
@@ -62,7 +67,7 @@ def build(audit, discovery, sectors, overlap):
         'max_audited_file_bytes': audit['max_bytes'],
         'audited_bag_files': audit['file_count'], 'audited_georeferenced_bag_files': audit['inspected_count'],
         'audit_health': audit['health'],
-        'method': 'Intersect each original BAG geographic bounding box with the exact NOAA discovery request envelope for each browse sector, then count strictly reviewed regular-grid and substrate-screen leads. Survey-catalog associations alone do not count as in-sector grids.',
+        'method': 'Intersect each original BAG geographic bounding box with the exact NOAA discovery request envelope for each browse sector, then count strictly reviewed regular-grid, substrate-screen and variable-resolution metadata leads separately. Survey-catalog associations alone do not count as in-sector grids.',
         'limitations': [
             'A geographic bounding box includes unsurveyed water; these counts are not area coverage.',
             'Only MLLW-named BAG files within the selected download size were audited; other NOAA surveys and USGS sources remain outside this count.',
