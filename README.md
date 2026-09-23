@@ -18,3 +18,6 @@ See the [research and methodology](https://github.com/Grahammmm/skippercast/blob
 See [California seabed coverage and promotion gates](https://github.com/Grahammmm/skippercast/blob/main/docs/california-seabed-coverage.md) for what the source inventory can and cannot establish.
 
 Reports are selected observations, not a fleet census or catch-probability model. Missing reports do not mean zero fish. Port names do not locate fish. Surface currents are not bottom drift. Tide predictions are not Morro Bay entrance-current predictions. Daily feeds are not live departure clearance.
+# Production packaging
+
+After source changes, run `python scripts/package_site.py --output /tmp/skippercast-site.tar.gz` and save the Sites version using the pushed source commit and that archive. Packaging the unbuilt `dist/` source directory can leave the previous Worker and frontend live even when publication reports success. Verify the actual live script reference and map option after deployment.
