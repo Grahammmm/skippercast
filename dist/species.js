@@ -1,4 +1,5 @@
 import { appendSpeciesEvidence } from "./species-evidence.js?v=8.11";
+import { fillPrimaryStrategy } from "./primary-strategy.js?v=8.12";
 import { getRegion, assetURL } from "./region.js?v=8.11";
 import { POINTS, distanceNm } from "./marine-data.js?v=8.11";
 import { circleGeometry } from "./geo-screen.js?v=8.11";
@@ -249,7 +250,7 @@ export async function initSpecies(
     const links=local?.source_links || (local?.sources || []).flatMap(s=>s.claims.map(c=>({title:s.name+" · source",url:c.source_url})));
     const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
     $("species-guide").innerHTML =
-      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(getRegion().target_options.find(t=>t.id===id())?.name || p.name)}</h2><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
+      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(getRegion().target_options.find(t=>t.id===id())?.name || p.name)}</h2><div data-primary-strategy><p>Loading primary strategy…</p></div><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
         ["Habitat", p.habitat],
         ["What to look for", p.approach],
         ["Conditions that help", p.conditions],
@@ -265,6 +266,7 @@ export async function initSpecies(
           "",
         )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${[...new Map(p.sources.filter(s=>String(s.url).startsWith("https://")).map(s=>[s.url,s])).values()].map((s) => `<a href="${escapeHTML(s.url)}" target="_blank" rel="noopener">${escapeHTML(s.title)} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
     $("species-guide").dataset.speciesEvidence=id();
+    void fillPrimaryStrategy($("species-guide"),getRegion().id,id());
     appendSpeciesEvidence($("species-guide"),id());
     $("filter-options").hidden = !["reef", "soft"].includes(p.kind);
     for (const control of ["grade", "geometry"])

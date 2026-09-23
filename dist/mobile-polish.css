@@ -14,6 +14,19 @@
 .recent-discussion-links li{padding:10px 0;border-top:1px solid #d3e0e1}
 .recent-discussion-links a{font-weight:650;overflow-wrap:anywhere}
 .recent-discussion-links small{display:block;color:#536876;margin-top:4px}
+.primary-strategy{border:1px solid #bfd9d6;border-radius:14px;background:#f2faf8;padding:16px;margin:14px 0 20px}
+.primary-strategy .strategy-priority{font-size:1.08rem;font-weight:700;line-height:1.4;margin:10px 0 14px}
+.strategy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.strategy-grid>div{background:#fff;border:1px solid #d6e6e3;border-radius:11px;padding:12px;min-width:0}
+.strategy-grid h3{font-size:.95rem;margin:0 0 7px}
+.strategy-grid p,.strategy-grid ul,.strategy-grid ol{margin:0;line-height:1.48;padding-left:0}
+.strategy-grid ul,.strategy-grid ol{padding-left:19px}
+.strategy-grid li+li{margin-top:7px}
+.strategy-variants{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.strategy-variants>div{padding:10px;border-left:3px solid #08786e;background:#fff;border-radius:7px}
+.strategy-variants h3{margin:0 0 5px;font-size:.95rem}
+.strategy-variants p{margin:0;line-height:1.45}
+@media(max-width:650px){.strategy-grid,.strategy-variants{grid-template-columns:1fr}.primary-strategy{padding:12px}}
 .coastal-package{display:block;padding:14px;margin:10px 0;border:1px solid #c9dcdc;border-radius:12px;text-decoration:none;min-height:44px}
 .coastal-discovery #guide-panel,.coastal-discovery #forecast-panel,.coastal-discovery #export-panel{max-width:800px;margin:auto;padding:20px;line-height:1.55}
 .coastal-discovery #map-time-dock{display:none}

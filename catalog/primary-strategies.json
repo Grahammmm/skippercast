@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-23",
+  "scope": "Boat-based recreational starting methods. Regional rules, closed areas, sea state and species identification are checked separately for the selected trip.",
+  "species": {
+    "reef": {
+      "priority": "Sound a measured reef edge, then make short controlled bottom passes rather than drifting blindly across the whole polygon.",
+      "find": ["Rock relief adjoining sand or a ledge; note bait and marks both on and above the bottom.", "Choose a pass with room to set up upwind or up-current and safely clear the reef."],
+      "rig": "Start with one rod and a two-hook dropper-loop rig with bait or soft plastics and enough weight to maintain intermittent bottom contact. A single heavy swimbait or jig is another lingcod option. Carry a ready descending device.",
+      "steps": ["Idle over the feature and mark the high point, edge, and fish depth on the sounder.", "Make a short test drift across the edge; lower to the actual marks and lift clear of snags.", "Repeat productive passes and reset when line angle or bottom contact deteriorates."],
+      "adjust": "If marks are suspended, fish their depth instead of dragging bottom. Identify every rockfish before retention; a reef grade does not identify species.",
+      "variants": [
+        {"name":"Lingcod","focus":"Ledges, rough edges and bottom-adjacent marks.","presentation":"A large single swimbait/jig or bait close to bottom; make controlled passes along relief."},
+        {"name":"Rockfish","focus":"Identify bottom and suspended marks, then fish at the marked depth.","presentation":"A lawful two-hook dropper rig with bait or soft plastics is a starting setup; keep the descending device ready."}
+      ],
+      "method_sources": [{"title":"CDFW groundfish gear and limits","url":"https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary"},{"title":"CDFW descending devices","url":"https://wildlife.ca.gov/Conservation/Marine/Groundfish/Rockfish-Barotrauma-and-Descending-Devices"}]
+    },
+    "sheephead": {
+      "priority": "Work a verified rocky reef or kelp edge where benthic prey and shelter are plausible.",
+      "find": ["Broken rock, kelp edge, and crevices, using the sounder to keep the boat off snag-heavy high spots.", "A legal, manageable drift or anchored position with room to retrieve fish away from cover."],
+      "rig": "Use a single near-bottom baited hook on a compact sinker rig, adjusting weight to hold the bait near the reef without wedging it in rock. Carry a measuring device and confirm current hook rules.",
+      "steps": ["Confirm hard bottom and a safe approach.", "Present bait close to structure, maintaining contact without dragging continuously.", "Try another edge or depth after a short unproductive set; record effort and releases."],
+      "adjust": "Reduce weight or move off the roughest crest when repeatedly snagging. Identify and measure fish before keeping them."
+    },
+    "whitefish": {
+      "priority": "Find fish marks just above mixed reef or bank edges, then hold small baits at that depth.",
+      "find": ["Mixed rock and softer bottom with marks above the bottom, not only the highest rocks.", "A repeatable pass that keeps the rig in the marked layer."],
+      "rig": "A light baited dropper or two-hook rig is a starter option where the selected area's hook rules allow it. Use enough sinker to control line angle, then raise the hooks to suspended marks.",
+      "steps": ["Sound the edge and record where the marks sit above bottom.", "Make a short drift with bait at the marked depth.", "Change depth before changing grounds; note catches and empty passes."],
+      "adjust": "If fish are suspended, stop pinning the sinker to bottom. If the drift accelerates, reset or change weight rather than assuming fish are absent."
+    },
+    "kelp-bass": {
+      "priority": "Cast along a verified kelp or rocky edge and work each pocket without running the boat through the cover.",
+      "find": ["Kelp canopy, reef corners, and bait activity with room to retrieve fish away from strands.", "A safe boat position outside breaking water and closed MPA boundaries."],
+      "rig": "A single bait hook, weedless soft plastic, or casting jig on tackle suited to pulling a fish clear of kelp is a practical start. Match lure weight to casting control, not a fixed depth number.",
+      "steps": ["Approach quietly and identify the edge and open lanes.", "Cast parallel to the edge or into openings, then retrieve through the strike zone.", "Move to the next pocket after several clean, unproductive casts."],
+      "adjust": "If kelp fouls every cast, switch to a weedless presentation or work the outer edge. Do not confuse a kelp polygon with a current fish school."
+    },
+    "sand-bass": {
+      "priority": "Search sand-to-reef transitions and fish near bottom where bait or bass marks appear.",
+      "find": ["Mapped mixed bottom, low relief, and bait marks on the sand edge.", "A drift that crosses the transition instead of remaining over one bottom type."],
+      "rig": "A single swimbait or jighead, or a baited bottom rig where lawful, keeps a controlled presentation near bottom. Start with the least weight that maintains depth control.",
+      "steps": ["Sound across the edge and locate the transition.", "Make a short near-bottom pass through marks.", "Repeat at the productive depth or move to another edge after empty passes."],
+      "adjust": "If fish suspend above the edge, raise the lure to them. Avoid assuming historical spawning aggregations predict today's fish."
+    },
+    "spotted-bass": {
+      "priority": "Fish short, accurate casts along observed bay vegetation, channel margins, or dock structure where access is allowed.",
+      "find": ["Eelgrass or other vegetation edges, channel bends, and bait in protected bay water.", "Water depth and tidal movement observed on site; offshore island reefs are not substitute habitat."],
+      "rig": "Use a single small soft plastic, jighead, or bait hook that can be worked just above vegetation without repeatedly fouling it. Check local harbor, access, and gear restrictions.",
+      "steps": ["Confirm the bay habitat is present and fishing is permitted.", "Cast along the edge and work the lure through the water column near cover.", "Change angle or nearby edge as tide and boat position shift."],
+      "adjust": "When weed contact dominates, lighten or raise the presentation. A blank offshore map means local estuary mapping is missing, not that fish are absent."
+    },
+    "halibut": {
+      "priority": "Test soft-bottom lanes adjoining bait or habitat edges with a slow, controlled near-bottom presentation.",
+      "find": ["Sand, mud, or surfgrass margin with bait and a clear lane for a repeatable drift.", "Depth and bottom changes on the sounder; one sediment polygon is only a broad search window."],
+      "rig": "A live-bait sliding-sinker or leader rig, or a single swimbait/jighead, is a practical start. Keep bait or lure near bottom while avoiding a sinker that plows continuously.",
+      "steps": ["Sound the lane for bait and a change in bottom or depth.", "Make a short drift or controlled slow pass with the presentation just off bottom.", "Repeat or shift lanes only after recording the pass and whether bottom contact and bait were present."],
+      "adjust": "If the rig rides high, change weight or drift angle. If it drags, lighten or raise it. Do not infer fish presence from soft sediment alone."
+    },
+    "white-seabass": {
+      "priority": "Look for fresh bait and fish signs near kelp or coastal structure, then make quiet presentations at the observed depth.",
+      "find": ["Active bait, birds or sonar marks near a legal kelp edge or island lee.", "A safe pass that does not crowd other boats or enter a protected area."],
+      "rig": "A single live-bait hook on a leader or a casting jig is a starting choice; add only the weight needed to reach marked fish. Match tackle to large fish and nearby kelp.",
+      "steps": ["Confirm bait and marks rather than relying on yesterday's report.", "Approach quietly and place bait or jig at the marked depth.", "Make a few repeatable passes, then reassess before moving."],
+      "adjust": "Change depth to the actual marks; do not assume every kelp bed holds seabass. Use current local size, bag and season rules."
+    },
+    "yellowtail": {
+      "priority": "Find active bait or yellowtail marks around a lawful point, reef, or island current edge; match the presentation to school depth.",
+      "find": ["Birds, bait balls, surface activity or distinct fish marks, with tide/current creating an observable edge.", "A safe approach around kelp, reef and other boats; a static habitat outline alone is insufficient."],
+      "rig": "Keep a live-bait rod with a single hook and a separate casting or vertical-jig setup ready. Fish bait or a surface jig when schools are up; use a weighted bait or vertical jig for deeper marks.",
+      "steps": ["Scan the point and its down-current side for bait and fish depth.", "Make one short bait or jig presentation through confirmed marks.", "Track whether the school stays or moves, then reposition without chasing a stale map pin."],
+      "adjust": "If fish drop deeper, change presentation depth; if bait and marks vanish, search another current edge. Water temperature is context, not a fixed yellowtail threshold."
+    },
+    "bonito": {
+      "priority": "Find moving surface schools and present small fast lures or bait ahead of their direction of travel.",
+      "find": ["Birds, bait, surface boils or identified sonar marks along coastal edges.", "Enough open water to cast or make a lawful searching troll without crowding."],
+      "rig": "A single casting metal or small bait hook is a straightforward start; a small trolling lure can help locate schools where allowed. Choose tackle that can clear other boats and quickly release unwanted fish.",
+      "steps": ["Locate active fish rather than committing to a fixed point.", "Cast ahead of the school or troll through adjacent water without crossing boats.", "Recheck bait and school direction after each pass."],
+      "adjust": "If fish sound, use marks to change depth; if activity ends, resume searching. A dated report is not a live school location."
+    },
+    "barracuda": {
+      "priority": "Search coastal kelp edges for identified schools, then cast or present bait at their depth.",
+      "find": ["Bait and suspended school marks near kelp or hard-bottom edges.", "Clear casting lanes and legal access outside restricted areas."],
+      "rig": "A single bait hook or casting jig/metal lure is a practical starter. Use a leader suited to the fish's teeth and release handling, and carry dehooking tools.",
+      "steps": ["Locate bait and distinguish suspended marks from the bottom.", "Make short casts or bait passes through the marked layer.", "Move when marks and bites leave rather than anchoring to a habitat polygon."],
+      "adjust": "Change lure depth or position as the school moves. Use care around teeth and confirm current species limits."
+    },
+    "bluefin": {
+      "priority": "Plan a safe offshore search, then let fresh school and sonar evidence set tackle and presentation depth.",
+      "find": ["Recent identified bluefin sightings, bait, birds, and sonar marks; check report date and precision.", "Current weather, fuel reserve and a return route suitable for the Parker, not just attractive SST."],
+      "rig": "Bring a heavy live-bait outfit plus casting and vertical-jig options sized to the fish class actually encountered. Trolling is a search option where lawful; no single lure or surface temperature is an optimum.",
+      "steps": ["Set a range and return-weather limit before leaving.", "Search fresh water and bait evidence, verifying schools on the boat's own electronics.", "Present bait or a jig at observed fish depth, then reassess as the school moves."],
+      "adjust": "If only warm water is present and no bait or fish are observed, keep searching or return; do not publish that cell as a hotspot."
+    },
+    "yellowfin": {
+      "priority": "Search offshore water transitions for bait and identified yellowfin, then work active schools rather than an old temperature contour.",
+      "find": ["Recent quality-screened front or current edge paired with bait, birds, or verified school reports.", "Vessel range, fuel and full outbound/return sea state."],
+      "rig": "A searching trolling spread or live-bait outfit is a starting method; keep casting lures ready for visible schools. Select terminal tackle for the encountered fish size and current rules.",
+      "steps": ["Check the age and cloud quality of water imagery.", "Troll a deliberate search line or scan bait and birds, recording empty water too.", "Switch to bait or casting lures only when activity is confirmed."],
+      "adjust": "If the front has shifted or forage is absent, do not keep working a stale cell. A color gradient alone is not a catch forecast."
+    },
+    "dorado": {
+      "priority": "Inspect fresh floating structure or a current line for actual fish, then make a controlled pass around it.",
+      "find": ["Drifting kelp paddy or other floating structure with bait and visible or sonar-confirmed fish.", "Its current position and motion; historical coordinates age quickly."],
+      "rig": "Carry a live-bait hook and a casting lure or small trolling lure. Keep the setup manageable for casting around floating structure and releasing unwanted fish.",
+      "steps": ["Approach without running through the paddy or crowding another boat.", "Look for fish and bait before casting or trolling past the structure.", "Record the time and position, then reassess as it drifts."],
+      "adjust": "If the paddy holds no fish, move on; an SST or debris marker alone does not establish dorado."
+    },
+    "albacore": {
+      "priority": "Search current offshore water boundaries with a controlled troll and confirm feeding activity before concentrating effort.",
+      "find": ["Fresh SST/current transition with bait, birds, fish marks or recent dated catch evidence.", "Fuel reserve and a safe return window for the whole offshore route."],
+      "rig": "Use a small trolling-lure spread to cover water; have a bait or casting setup ready if fish are located. Match tackle and lure depth to observed fish and conditions.",
+      "steps": ["Compare both sides of a recent water transition.", "Run repeatable search legs while recording temperature, bait and empty passes.", "When fish are confirmed, work that water mass and reassess after activity stops."],
+      "adjust": "If imagery is clouded, stale or fish signs are absent, lower confidence and expand or end the search; no universal temperature cutoff is used."
+    },
+    "lobster": {
+      "priority": "Hoop a lawful rocky or mixed-bottom edge during an open season, with a safe line-handling and return plan.",
+      "find": ["Rock crevices and mixed-bottom margins verified by chart and sounder, outside MPAs.", "A set location where swell, traffic and current permit safe retrieval and buoy visibility."],
+      "rig": "Use a compliant baited hoop net with marked buoy/line and a lobster gauge; rod-and-reel and traps are not lawful recreational lobster take methods. Check vessel hoop-net limits and report-card rules.",
+      "steps": ["Confirm the season, local MPA, gear marking and report-card requirements.", "Set a small number of nets where retrieval is safe and record depth and soak time.", "Retrieve, measure immediately, release undersized lobster and log each set."],
+      "adjust": "Change bottom edge or soak pattern after empty sets, keeping effort comparable. Never infer safe nighttime access from a daytime marine forecast.",
+      "method_sources": [{"title":"CDFW recreational lobster methods and gear","url":"https://wildlife.ca.gov/conservation/marine/invertebrates/lobster"}]
+    },
+    "salmon": {
+      "priority": "Only during an open fishery, search bait and salmon marks in the water column and troll at the observed depth.",
+      "find": ["Fresh forage and fish marks, not a reef grade or old landing report.", "Legal season and transit route for the chosen area, plus a full return-weather window."],
+      "rig": "Use a lawful trolling presentation with the required barbless single-point hooks and one rod per angler north of Point Conception. Bait-fishing hook rules differ by area and method; verify the current CDFW card before rigging.",
+      "steps": ["Check today's salmon opening, subarea, possession and hook rules.", "Sound for bait and fish depth, then set trolling depth to those marks.", "Make repeatable passes and record empty effort as well as hookups."],
+      "adjust": "If bait is absent or fish depth changes, change water or depth. Never deploy salmon gear while transiting a closed area with salmon aboard.",
+      "method_sources": [{"title":"CDFW ocean salmon regulations and gear","url":"https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon"}]
+    },
+    "dungeness": {
+      "priority": "Test multiple lawful soft-bottom depths with equal bait and soak effort instead of assuming deeper water beats sea-otter predation.",
+      "find": ["Verified sand/mud bottom with safe line length, traffic separation and lawful gear access.", "A depth comparison that records empty sets, bait, soak time and sea-otter interactions."],
+      "rig": "Use a compliant baited hoop net or, only where currently allowed, a crab trap with required validation, escape/biodegradable features and buoy marking. Size line, buoy and retrieval equipment for the actual depth and conditions.",
+      "steps": ["Check the season, current whale-entanglement gear restrictions and local MPAs.", "Set comparable gear in a few depth bands, recording soak time and location precision.", "Retrieve safely, measure crabs, and log both catches and zero sets."],
+      "adjust": "If shallow sets fail, compare a qualified deeper band rather than jumping straight to 300 feet. No universal depth optimum or local otter-effect threshold is established.",
+      "method_sources": [{"title":"CDFW crab methods and restrictions","url":"https://wildlife.ca.gov/conservation/marine/invertebrates/crabs"}]
+    }
+  }
+}
