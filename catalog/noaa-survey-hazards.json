@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "scope": "historical-noaa-survey-hazard-review",
+  "reviewed_at": "2026-09-23",
+  "surveys": [
+    {
+      "survey_id": "H11735",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+      "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+      "interpretation": "The field section says no DTON; final Pacific Hydrographic Branch HCell review identifies one 53-foot DTON. Use the final review. The report does not establish present chart status or a safe standoff distance.",
+      "hazards": [
+        {
+          "id": "H11735-final-hcell-dton-53ft",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.1757097222,
+          "longitude": -122.9748091667,
+          "reported_depth_ft": 53,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Conservative candidate-review hold around a historical sounding; not a navigational safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11734",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+      "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19–21",
+      "interpretation": "The field narrative says no DTON; the final HCell review records one 16.457 m DTON. A charted wreck PA is just outside the surveyed area and is conservatively held where the BAG bbox overlaps it.",
+      "hazards": [
+        {
+          "id": "H11734-final-hcell-dton-16m",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.354025,
+          "longitude": -123.0937333333,
+          "reported_depth_ft": 54,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical feature review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11734-charted-wreck-pa",
+          "kind": "historical-wreck-position-approximate",
+          "latitude": 38.2672305556,
+          "longitude": -123.0163527778,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Uncertain charted position just outside survey coverage; verify current ENC before any navigation or fishing plan."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11733",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+      "report_section": "Dangers to Navigation and final-tide correction, pages 11–12; north-border feature is documented by H11732",
+      "supporting_reports": [
+        {
+          "survey_id": "H11732",
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+          "sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27"
+        }
+      ],
+      "interpretation": "One reported rock was corrected from feet to fathoms after final tides. A second feature on the northern survey border is screened from the neighboring H11732 report.",
+      "hazards": [
+        {
+          "id": "H11733-rock-four-fathoms-or-shoaler",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.4631472222,
+          "longitude": -123.1665388889,
+          "reported_depth_ft": 24,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11732-north-border-rock",
+          "kind": "historical-danger-to-navigation-neighboring-survey",
+          "latitude": 38.5227333333,
+          "longitude": -123.2745638889,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Neighboring survey reports a fully covered rock; this is a review hold, not navigation clearance."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11732",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+      "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11–12",
+      "interpretation": "Three rocks were corrected from feet to fathoms in the final report. One has a survey hole over its top and an unknown least depth; retain a larger review hold. Check current ENC before any passage.",
+      "hazards": [
+        {
+          "id": "H11732-rock-two-fathoms-five-feet-or-shoaler",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.5718944444,
+          "longitude": -123.343925,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The reported sounding is 2 fathoms 5 feet or shoaler; the least depth is unknown because full coverage was not achieved. Historical review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11732-rock-four-fathoms-or-shoaler",
+          "kind": "historical-danger-to-navigation-with-survey-hole",
+          "latitude": 38.5436611111,
+          "longitude": -123.3102833333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Least depth was not determined; candidate-review hold only."
+        },
+        {
+          "id": "H11732-rock-four-fathoms-four-feet",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.5227333333,
+          "longitude": -123.2745638889,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        }
+      ]
+    }
+  ]
+}

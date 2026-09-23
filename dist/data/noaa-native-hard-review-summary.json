@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "scope": "native-noaa-usgs-review-summary",
+  "generated_at": "2026-09-23T22:47:32.322251+00:00",
+  "surveys": [
+    {
+      "survey_id": "H11732",
+      "survey_dates": [
+        "2007-03-07T00:00:00",
+        "2007-04-01T00:00:00"
+      ],
+      "compiled_at": "2026-09-23T22:46:37.526061+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/BAG/H11732_MB_2m_MLLW_2of4.bag",
+      "noaa_bag_sha256": "5ab819d0141a0f5e17787c04988d130399d5edf16849fb6fa929c42c897e9a4c",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "survey_report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+      "usgs_sources": [
+        {
+          "block_id": "OffshoreFortRoss",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/SeafloorCharacter_OffshoreFortRoss.zip",
+          "archive_sha256": "439f8012d7401d55b5f4370b53aa1657159021b2f753e57494b3af05279b6602",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/SeafloorCharacter_OffshoreFortRoss_metadata.xml",
+          "metadata_sha256": "28360b3118b7e3fb2dcb81d80a337d096de8b7ae5c0c326fbeb3cd450c58ca17",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreSaltPoint",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/SeafloorCharacter_OffshoreSaltPoint.zip",
+          "archive_sha256": "b995eff0f3d825ad659ba38f9f72d7568613f7e4cfbe2984f8e8e724995c9fa7",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/SeafloorCharacter_OffshoreSaltPoint_metadata.xml",
+          "metadata_sha256": "1d3c179625f227a83567487fb0f3f962e38afd5a7ea7f663538ea4dfa4a56ee0",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 18,
+        "depth_values_changed_in_current_grid": 18,
+        "maximum_depth_revision_m": 5.303
+      },
+      "counts": {
+        "hard_cells_after_inset": 1502396,
+        "depth_uncertainty_qualified_cells": 2720279,
+        "hard_depth_cells_after_mpa_historical_hazard_screen": 266877,
+        "retained_components": 29
+      },
+      "retained_component_area_m2": 955768,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11733",
+      "survey_dates": [
+        "2007-03-04T13:13:04",
+        "2007-04-01T13:49:55"
+      ],
+      "compiled_at": "2026-09-23T22:47:02.222868+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/BAG/H11733_MB_2m_MLLW_2of4.bag",
+      "noaa_bag_sha256": "43745d24261376a8344537e02ffbbfe67ec92f77560b873790ea2443601f3a13",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "survey_report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+      "usgs_sources": [
+        {
+          "block_id": "OffshoreFortRoss",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/SeafloorCharacter_OffshoreFortRoss.zip",
+          "archive_sha256": "439f8012d7401d55b5f4370b53aa1657159021b2f753e57494b3af05279b6602",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/SeafloorCharacter_OffshoreFortRoss_metadata.xml",
+          "metadata_sha256": "28360b3118b7e3fb2dcb81d80a337d096de8b7ae5c0c326fbeb3cd450c58ca17",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreSaltPoint",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/SeafloorCharacter_OffshoreSaltPoint.zip",
+          "archive_sha256": "b995eff0f3d825ad659ba38f9f72d7568613f7e4cfbe2984f8e8e724995c9fa7",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/SeafloorCharacter_OffshoreSaltPoint_metadata.xml",
+          "metadata_sha256": "1d3c179625f227a83567487fb0f3f962e38afd5a7ea7f663538ea4dfa4a56ee0",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 22,
+        "depth_values_changed_in_current_grid": 22,
+        "maximum_depth_revision_m": 2.893
+      },
+      "counts": {
+        "hard_cells_after_inset": 717616,
+        "depth_uncertainty_qualified_cells": 6522605,
+        "hard_depth_cells_after_mpa_historical_hazard_screen": 255397,
+        "retained_components": 38
+      },
+      "retained_component_area_m2": 847692,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11734",
+      "survey_dates": [
+        "2007-03-03T07:29:29",
+        "2007-04-03T19:27:40"
+      ],
+      "compiled_at": "2026-09-23T22:45:17.098588+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/BAG/H11734_MB_2m_MLLW_2of4.bag",
+      "noaa_bag_sha256": "c4a1eaccf4bcd7417f4db913e5bb7006a8c2ceb55ee521252eb8a9828cc487fc",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "survey_report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+      "usgs_sources": [
+        {
+          "block_id": "OffshoreBodegaHead",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/SeafloorCharacter_OffshoreBodegaHead.zip",
+          "archive_sha256": "eb4868872e954b883d74e39fed53e5baf5dc698324896fc1f314671a3e1116f0",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/SeafloorCharacter_OffshoreBodegaHead_metadata.xml",
+          "metadata_sha256": "296e3885a03d30e9d58ac87c4cc69860ff2468be28bfb570dc7bd48f9ecc3fa3",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreFortRoss",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/SeafloorCharacter_OffshoreFortRoss.zip",
+          "archive_sha256": "439f8012d7401d55b5f4370b53aa1657159021b2f753e57494b3af05279b6602",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/SeafloorCharacter_OffshoreFortRoss_metadata.xml",
+          "metadata_sha256": "28360b3118b7e3fb2dcb81d80a337d096de8b7ae5c0c326fbeb3cd450c58ca17",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreTomalesPoint",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/SeafloorCharacter_OffshoreTomalesPoint.zip",
+          "archive_sha256": "a46c7f5fe9eff6b7c517e600d850ab7d31e6e6bcd48d729a2a2e20389490af96",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/SeafloorCharacter_OffshoreTomalesPoint_metadata.xml",
+          "metadata_sha256": "64ff4d182ca3e95d916f440a4247376ec519fc46c4c8bd0f832616272106e544",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 20,
+        "depth_values_changed_in_current_grid": 20,
+        "maximum_depth_revision_m": 1.95
+      },
+      "counts": {
+        "hard_cells_after_inset": 4917712,
+        "depth_uncertainty_qualified_cells": 9511523,
+        "hard_depth_cells_after_mpa_historical_hazard_screen": 1131473,
+        "retained_components": 42
+      },
+      "retained_component_area_m2": 4202132,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11735",
+      "survey_dates": [
+        "2007-03-02T23:54:29",
+        "2007-04-03T22:56:31"
+      ],
+      "compiled_at": "2026-09-23T22:39:31.910885+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_2m_MLLW_2of3.bag",
+      "noaa_bag_sha256": "42453401241301b4801f56ea8e3c41c6a17e28883c5f6b32f53b085eafe9edc5",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "survey_report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+      "usgs_sources": [
+        {
+          "block_id": "OffshorePointReyes",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/SeafloorCharacter_OffshorePointReyes.zip",
+          "archive_sha256": "e5cf72fbb7e10434fdaa15dcc11ac3aab7e0c0c753b7a68fa37847ba92241ed4",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/SeafloorCharacter_OffshorePointReyes_metadata.xml",
+          "metadata_sha256": "a618bc82d995b29847d734a21423974b252a24d1eaa1b113c639b9533c838bec",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "block_id": "OffshoreTomalesPoint",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/SeafloorCharacter_OffshoreTomalesPoint.zip",
+          "archive_sha256": "a46c7f5fe9eff6b7c517e600d850ab7d31e6e6bcd48d729a2a2e20389490af96",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/SeafloorCharacter_OffshoreTomalesPoint_metadata.xml",
+          "metadata_sha256": "64ff4d182ca3e95d916f440a4247376ec519fc46c4c8bd0f832616272106e544",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 26,
+        "depth_values_changed_in_current_grid": 26,
+        "maximum_depth_revision_m": 2.161
+      },
+      "counts": {
+        "hard_cells_after_inset": 2847125,
+        "depth_uncertainty_qualified_cells": 6902246,
+        "hard_depth_cells_after_mpa_historical_hazard_screen": 1284369,
+        "retained_components": 55
+      },
+      "retained_component_area_m2": 4651864,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    }
+  ],
+  "limitations": [
+    "Historical review components are not fishing waypoints, verified fish habitat, or safe navigation areas.",
+    "Regional and federal closures, current hazards, current local rules, route and trip conditions require separate review.",
+    "Component counts and areas may overlap between surveys and must not be summed as unique coast coverage."
+  ]
+}

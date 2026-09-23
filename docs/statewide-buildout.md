@@ -22,6 +22,12 @@ Of those opened products, **59 contain variable-resolution refinements**. Thirty
 
 The dated, non-target [sector review report](../dist/data/noaa-native-sector-review.json) makes this queue inspectable. The largest regular-grid overlap queues are Arena–Bodega (15 file/sector intersections), Bodega–Reyes (10), Reyes–Pigeon (8), Morro–Point Conception (8), and Point Conception–Ventura (6). A file can appear in adjacent sectors, so these are not additive. This bounded screen found **no regular-grid/substrate overlap lead** for Humboldt–Cape Mendocino, Pigeon Point–Monterey, Monterey–Point Sur, Big Sur, Point Sur–San Simeon or Cambria–Morro. Pigeon Point–Monterey still has one variable-resolution file with some fine refinement cells; those cells have not been depth or substrate screened. A zero means the specific size-bounded NOAA and generalized-substrate intersection failed to produce a lead; it does not mean no rock or fish. The next source pass for those sectors must inspect larger BAGs, variable-resolution refinement cells and local original USGS products before declaring a mapping gap.
 
+### Original-cell Bodega–Point Reyes review
+
+`scripts/qualify_regular_bag_hard.py` now intersects **original** 2 m NOAA MLLW elevation/uncertainty cells with separately pinned original USGS seafloor-character class-3 pixels for H11732–H11735. It excludes cells outside 25–200 ft with a 2 m planning margin, cells with product uncertainty over 1 m, two source cells at class edges, a 100 m buffer around the complete fresh CDFW MPA polygon set, and hazards transcribed from the original NOAA descriptive reports. The NOAA BAG tracking list records pre-edit soundings; the current grid includes hydrographer edits, and the review retains a revision count. The [summary](../dist/data/noaa-native-hard-review-summary.json) publishes source hashes and counts but **no candidate coordinates**. Component counts across adjacent surveys may overlap. This is a reproducible historical substrate/depth screen, not a fishing target or navigation chart.
+
+The hazard report registry is `catalog/noaa-survey-hazards.json`. The H11732 and H11733 final reports correct some earlier *feet* labels to *fathoms*; the former also says two rocks lack full coverage and their least depths are unknown. The H11734 and H11735 final HCell notes identify dangers to navigation despite earlier narrative saying none. A cross-survey H11733 hold must verify the supporting H11732 report digest. These holds are review exclusions, not safe approach distances; current ENC and notices remain necessary. The San Francisco CDFW rules page was manually reviewed from the official website, but the September 23 automated source refresh failed for all five regional rules pages. This review therefore cannot certify current legal fishing access, federal groundfish exclusions, local closures, vessel transit or current fish presence. None of its polygons enters map targets, ranking or export.
+
 ## What is ready and what remains
 
 | Coverage | Current state | Next gate |
@@ -46,6 +52,8 @@ python scripts/import_usgs_seafloor_character.py --source-id cape-mendocino-char
 PYTHONPATH=src python scripts/inspect_noaa_bag_grids.py --inventory var/noaa-bag-head-inventory.json --products dist/data/noaa-survey-products.json --cache var/noaa-native-cache --output var/noaa-native-audit-100mb-refined.json --max-bytes 100000000 --workers 8
 PYTHONPATH=src python scripts/assess_native_depth_overlap.py --audit var/noaa-native-audit-100mb-refined.json --output var/native-depth-overlap-leads-100mb.json
 python scripts/summarize_native_sector_leads.py --audit var/noaa-native-audit-100mb-refined.json --output var/native-sector-review-leads.json
+PYTHONPATH=src python scripts/qualify_regular_bag_hard.py --survey-id H11735 --bag-filename H11735_MB_2m_MLLW_2of3.bag --usgs-block OffshoreTomalesPoint --usgs-block OffshorePointReyes --output var/review-h11735-native-hard.geojson
+python scripts/summarize_native_hard_reviews.py var/review-h1173{2,3,4,5}-native-hard.geojson --output dist/data/noaa-native-hard-review-summary.json
 PYTHONPATH=src python -m skippercast.platform needs --region <new-package-id>
 python scripts/build_primary_strategies.py
 python scripts/check_web.py
