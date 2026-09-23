@@ -157,15 +157,20 @@ export async function initCoastalDiscovery(catalog,coast) {
   let federalShapes=[],federalStatus='Checking NOAA federal groundfish areas…',federalLoaded=false,federalTouched=false;
   const federalLabel=document.createElement('label');federalLabel.className='map-layer-option';
   const federalCheck=document.createElement('input');federalCheck.type='checkbox';federalCheck.checked=select.value==='reef';
-  const federalTitle=document.createElement('span');federalTitle.textContent='NOAA federal groundfish areas';
+  const federalTitle=document.createElement('span');federalTitle.textContent='Groundfish exclusion areas (GEAs)';
   federalLabel.append(federalCheck,federalTitle);body.append(federalLabel);
+  const otherFederalLabel=document.createElement('label');otherFederalLabel.className='map-layer-option';
+  const otherFederalCheck=document.createElement('input');otherFederalCheck.type='checkbox';
+  const otherFederalTitle=document.createElement('span');otherFederalTitle.textContent='Other NOAA groundfish areas (CCA/YRCA)';
+  otherFederalLabel.append(otherFederalCheck,otherFederalTitle);body.append(otherFederalLabel);
   const federalNote=document.createElement('p');federalNote.className='small';
-  federalNote.textContent='GEA, CCA and YRCA boundaries from NOAA. Federal GIS is approximate; click an area for the controlling 50 CFR text. Shown by default for reef fishing.';body.append(federalNote);
+  federalNote.textContent='GEAs prohibit recreational groundfish fishing. CCAs remain for groundfish trawl fisheries and do not restrict recreational groundfish under Amendment 32. YRCA rules depend on method. NOAA GIS is approximate; check 50 CFR.';body.append(federalNote);
   federalCheck.addEventListener('change',()=>{federalTouched=true;drawFederal();});
+  otherFederalCheck.addEventListener('change',drawFederal);
   function drawFederal(){
     if(!federalTouched)federalCheck.checked=select.value==='reef';
-    const visible=federalCheck.checked&&federalLoaded;
-    for(const {shape,bounds} of federalShapes){
+    for(const {shape,bounds,areaType} of federalShapes){
+      const visible=federalLoaded&&(areaType==='GEA'?federalCheck.checked:otherFederalCheck.checked);
       if(visible&&bounds.intersects(map.getBounds())){if(!federalLayer.hasLayer(shape))federalLayer.addLayer(shape);}
       else if(federalLayer.hasLayer(shape))federalLayer.removeLayer(shape);
     }
@@ -184,11 +189,17 @@ export async function initCoastalDiscovery(catalog,coast) {
             ||!['Polygon','MultiPolygon'].includes(f.geometry?.type)||f.properties?.exportable_as_fishing_spot!==false
             ||!/^https:\/\/www\.ecfr\.gov\/current\/title-50\//.test(f.properties?.cfr_boundary_url||'')))continue;
         const age=Date.now()-Date.parse(data.retrieved_at);
-        federalStatus=`Federal areas shown · retrieved ${data.retrieved_at.slice(0,10)}${data.status==='ok'&&Number.isFinite(age)&&age>=0&&age<=36*3600000?'':' · refresh unverified; check NOAA and 50 CFR'}`;
+        federalStatus=`NOAA GEA boundaries loaded · retrieved ${data.retrieved_at.slice(0,10)}${data.status==='ok'&&Number.isFinite(age)&&age>=0&&age<=36*3600000?'':' · refresh unverified; check NOAA and 50 CFR'}`;
         federalShapes=data.features.map(f=>{
-          const p=f.properties,shape=L.geoJSON(f,{pane:'federalGroundfish',style:{color:'#945526',weight:2,dashArray:'5 4',fillColor:'#b57635',fillOpacity:.1}})
-            .bindTooltip(esc(p.name)).bindPopup(`<strong>${esc(p.name)}</strong><p>${esc(p.area_type)} · ${esc(federalStatus)}. NOAA GIS is approximate. Fishing rules depend on fishery, gear, date and exact location.</p><a href="${esc(p.cfr_boundary_url)}" target="_blank" rel="noopener">Official 50 CFR boundary ↗</a>`);
-          return {shape,bounds:shape.getBounds()};
+          const p=f.properties;
+          const rule=p.area_type==='GEA'?'Recreational groundfish fishing is prohibited here. Continuous recreational transit requires no deployed gear.'
+            :p.area_type==='CCA'?'The former recreational CCA restriction was removed by Amendment 32; this CCA remains for groundfish trawl fisheries.'
+            :'YRCA applicability depends on fishery and gear; check the current regulation before fishing.';
+          const style=p.area_type==='GEA'?{color:'#945526',weight:2,dashArray:'5 4',fillColor:'#b57635',fillOpacity:.1}
+            :{color:'#687b85',weight:1,dashArray:'2 5',fillColor:'#aab8bd',fillOpacity:.04};
+          const shape=L.geoJSON(f,{pane:'federalGroundfish',style})
+            .bindTooltip(esc(p.name)).bindPopup(`<strong>${esc(p.name)}</strong><p>${esc(p.area_type)} · ${esc(rule)} NOAA GIS is approximate; fishing rules depend on date and exact location.</p><p>${esc(federalStatus)}</p><a href="${esc(p.cfr_boundary_url)}" target="_blank" rel="noopener">Official 50 CFR boundary ↗</a>${p.area_type==='CCA'?'<p><a href="https://wildlife.ca.gov/Conservation/Marine/Cowcod" target="_blank" rel="noopener">CDFW Amendment 32 explanation ↗</a></p>':''}`);
+          return {shape,bounds:shape.getBounds(),areaType:p.area_type};
         });
         federalLoaded=true;drawFederal();return;
       }catch{/* Try dated bundled snapshot without changing its retrieval time. */}
