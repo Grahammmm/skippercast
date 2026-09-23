@@ -21,6 +21,9 @@ on:
       - "scripts/collect_recent_intel.py"
       - "scripts/discover_noaa_surveys.py"
       - "scripts/audit_noaa_survey_products.py"
+      - "scripts/triage_noaa_bag_files.py"
+      - "scripts/discover_usgs_map_blocks.py"
+      - "scripts/audit_usgs_map_metadata.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -84,6 +87,17 @@ jobs:
       - name: Inventory original NOAA survey products
         continue-on-error: true
         run: python scripts/audit_noaa_survey_products.py --discovery var/daily/survey-discovery.json --output var/daily/survey-products.json --previous var/published/survey-products.json --max-age-days 30
+      - name: Check original NOAA BAG file access
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: python scripts/triage_noaa_bag_files.py --discovery var/daily/survey-discovery.json --products var/daily/survey-products.json --output var/daily/bag-head-inventory.json --previous var/published/bag-head-inventory.json --max-age-days 30
+      - name: Discover USGS state-waters map-block products
+        continue-on-error: true
+        run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
+      - name: Verify original USGS map-block XML metadata
+        continue-on-error: true
+        run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-map-blocks.json --output var/daily/usgs-map-metadata.json --previous var/published/usgs-map-metadata.json --max-age-days 30
       - name: Publish an atomic data snapshot
         run: |
           if [ -d var/published ]; then
@@ -91,6 +105,9 @@ jobs:
             if [ -f var/daily/recent-intel.json ]; then cp var/daily/recent-intel.json var/published/; fi
             if [ -f var/daily/survey-discovery.json ]; then cp var/daily/survey-discovery.json var/published/; fi
             if [ -f var/daily/survey-products.json ]; then cp var/daily/survey-products.json var/published/; fi
+            if [ -f var/daily/bag-head-inventory.json ]; then cp var/daily/bag-head-inventory.json var/published/; fi
+            if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
+            if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
             mkdir -p var/published/coastal
@@ -111,6 +128,9 @@ jobs:
           if [ -f var/published/recent-intel.json ]; then git -C var/published add recent-intel.json; fi
           if [ -f var/published/survey-discovery.json ]; then git -C var/published add survey-discovery.json; fi
           if [ -f var/published/survey-products.json ]; then git -C var/published add survey-products.json; fi
+          if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
+          if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
+          if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
       - name: Report source health
@@ -198,4 +218,22 @@ jobs:
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
               f.write(f"\n## NOAA original survey products\n{d['health']['status']} · {d['bag_link_count']}/{d['survey_count']} pages link BAG grids · {d['report_link_count']} link descriptive reports · last complete {d.get('last_complete_scan_at') or 'none'}\n")
           if d['health']['issues']: raise SystemExit('Survey product pages failed: '+', '.join(d['health']['issues'][:15]))
+          PY
+      - name: Report native-product discovery coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          lines=['\n## Native seabed source inventory']
+          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS map blocks'),('usgs-map-metadata.json','USGS original XML records')]:
+              p=Path('var/daily')/name
+              if not p.is_file():
+                  lines.append(f'- {label}: missing inventory')
+                  continue
+              d=json.loads(p.read_text())
+              lines.append(f"- {label}: {d['health']['status']} · {d.get('accessible_file_count',d.get('block_count',0))} catalog-linked products or blocks; fishing locations remain unapproved")
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(lines)+'\n')
+          if len(lines)<3 or any('missing inventory' in line for line in lines):
+              raise SystemExit('Native seabed discovery source unavailable; explicit failure status published')
           PY
