@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {getRegion,setRegion} from '../dist/region.js?v=8.11';
+import {getRegion,setRegion,localContext,pointBundle} from '../dist/region.js?v=8.11';
 import {regulationState,validRegulations} from '../dist/regulations.js';
 
 const region=JSON.parse(readFileSync(new URL('../regions/bodega-point-reyes/region.json',import.meta.url)));
@@ -9,6 +9,20 @@ const draft=JSON.parse(readFileSync(new URL('../dist/data/regulations-san-franci
 const now=Date.parse('2026-09-24T18:00:00Z');
 const location=(latitude,geometry)=>({coverage:'covered',regionId:region.id,
   point:{latitude,longitude:-123.1,geometry},protection:{status:'clear'}});
+
+test('Point Reyes context uses its own marine zones and tide reference',()=>{
+  const previous=getRegion();
+  try {
+    setRegion(region);
+    assert.equal(localContext('bodega-nearshore').marine_zones.coastal,'PZZ540');
+    assert.equal(localContext('reyes-nearshore').marine_zones.coastal,'PZZ545');
+    assert.equal(localContext('reyes-nearshore').marine_zones.offshore,'PZZ571');
+    assert.equal(localContext('reyes-nearshore').stations.tide,'9415020');
+    const bundle={contexts:{bodega:{tides:[1],alerts:{coastal:['Bodega']}},reyes:{tides:[2],alerts:{coastal:['Reyes']}}}};
+    assert.deepEqual(pointBundle(bundle,'reyes-nearshore').tides,[2]);
+    assert.deepEqual(pointBundle(bundle,'bodega-nearshore').alerts,{coastal:['Bodega']});
+  } finally {setRegion(previous);}
+});
 
 function sourceMatchedFixture() {
   const data=structuredClone(draft);

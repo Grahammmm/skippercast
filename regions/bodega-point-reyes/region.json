@@ -87,7 +87,7 @@
       "name": "Point Reyes outer coast",
       "latitude": 38.03,
       "longitude": -123.08,
-      "context": "bodega"
+      "context": "reyes"
     },
     {
       "id": "bodega-offshore",
@@ -100,7 +100,9 @@
   ],
   "marine_zones": {
     "coastal": "PZZ540",
-    "offshore": "PZZ570"
+    "offshore": "PZZ570",
+    "reyes_coastal": "PZZ545",
+    "reyes_offshore": "PZZ571"
   },
   "stations": {
     "tide": "9415625",
@@ -352,7 +354,7 @@
   "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/bodega-point-reyes/habitat-dynamics.json",
   "contexts": {
     "bodega": {
-      "name": "Bodega Bay–Point Reyes outer coast",
+      "name": "Bodega Bay outer coast north of Point Reyes",
       "stations": {
         "tide": "9415625",
         "tide_name": "Bodega Harbor entrance predictions",
@@ -369,6 +371,26 @@
       "marine_zones": {
         "coastal": "PZZ540",
         "offshore": "PZZ570"
+      }
+    },
+    "reyes": {
+      "name": "Point Reyes outer coast south of the cape",
+      "stations": {
+        "tide": "9415020",
+        "tide_name": "Point Reyes in Drakes Bay predictions",
+        "tide_note": "NOAA Point Reyes tide predictions are a Drakes Bay reference only; they do not predict Bodega Harbor entrance currents, offshore bottom drift or safe passage.",
+        "airport": "KSTS",
+        "airport_name": "Charles M. Schulz–Sonoma County Airport · distant inland reference",
+        "nearshore_buoy": "46013",
+        "nearshore_buoy_name": "Bodega Bay · distant offshore reference",
+        "nearshore_buoy_note": "North of Point Reyes; not a local reef or entrance sensor.",
+        "offshore_buoy": "46026",
+        "offshore_buoy_name": "San Francisco · distant offshore reference",
+        "offshore_buoy_note": "South of Point Reyes; a separate station but not a local reef or entrance sensor."
+      },
+      "marine_zones": {
+        "coastal": "PZZ545",
+        "offshore": "PZZ571"
       }
     }
   }
