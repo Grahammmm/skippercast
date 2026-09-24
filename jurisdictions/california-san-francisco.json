@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "id": "california-san-francisco",
+  "regulations_asset": "data/regulations-san-francisco.json",
+  "watches": {
+    "rules-gear": {
+      "name": "CDFW finfish gear and general rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "keywords": [
+        "28.65",
+        "27.60"
+      ]
+    },
+    "rules-invertebrates": {
+      "name": "CDFW invertebrate gear rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "keywords": [
+        "29.80",
+        "trap"
+      ]
+    },
+    "rules-whales": {
+      "name": "CDFW whale-safe crab restrictions",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "keywords": [
+        "recreational",
+        "crab"
+      ]
+    },
+    "rules-health": {
+      "name": "CDFW fishery health closures",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "keywords": [
+        "Dungeness",
+        "health"
+      ]
+    },
+    "rules-ocean": {
+      "name": "CDFW official regulation index",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "keywords": [
+        "2026",
+        "Tunas"
+      ]
+    },
+    "rules-groundfish": {
+      "name": "CDFW groundfish",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "keywords": [
+        "groundfish",
+        "regulations"
+      ]
+    },
+    "rules-inseason": {
+      "name": "CDFW in-season changes",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "keywords": [
+        "in-season",
+        "ocean"
+      ]
+    },
+    "rules-salmon": {
+      "name": "CDFW salmon",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "keywords": [
+        "salmon",
+        "season"
+      ]
+    },
+    "rules-crab": {
+      "name": "CDFW crab",
+      "url": "https://wildlife.ca.gov/Crab",
+      "keywords": [
+        "Dungeness",
+        "recreational"
+      ]
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing booklet",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "format": "pdf"
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "keywords": [
+        "2026",
+        "Sport Fishing"
+      ]
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "keywords": [
+        "660.721",
+        "albacore",
+        "bluefin"
+      ],
+      "format": "ecfr",
+      "title": 50,
+      "section": "660.721"
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer · August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "format": "pdf"
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW San Francisco groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
+      "format": "pdf"
+    },
+    "rules-pacific-halibut": {
+      "name": "CDFW Pacific halibut season and quota",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
+      "keywords": [
+        "2026",
+        "November 15",
+        "one fish"
+      ]
+    },
+    "rules-san-francisco": {
+      "name": "CDFW San Francisco outer-coast rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
+      "keywords": [
+        "Point Arena",
+        "Pigeon Point",
+        "38°02"
+      ]
+    },
+    "mpa-point-reyes": {
+      "name": "CDFW Point Reyes MPAs and special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Reyes",
+      "keywords": [
+        "Point Reyes",
+        "Special Closure"
+      ]
+    },
+    "rules-cordell": {
+      "name": "CDFW Cordell Bank groundfish restriction",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "keywords": [
+        "Cordell Bank",
+        "groundfish"
+      ]
+    }
+  },
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "required_source_ids": [
+    "rules-groundfish",
+    "rules-groundfish-pdf",
+    "rules-inseason",
+    "rules-health",
+    "rules-book",
+    "rules-proposals",
+    "rules-san-francisco",
+    "mpa-point-reyes",
+    "rules-cordell"
+  ]
+}
