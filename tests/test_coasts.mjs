@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {coastAt,coastURL,coastForPackage,ensoCurrent,sourceFresh,seasonalMarkup,coastalTargetOptions} from '../dist/coasts.js';
+import {coastAt,coastURL,coastForPackage,ensoCurrent,sourceFresh,seasonalMarkup,coastalTargetOptions,localTargetAdvisory} from '../dist/coasts.js';
 import {chartLayers} from '../dist/chart-map.js';
 const catalog=JSON.parse(fs.readFileSync(new URL('../dist/data/coasts.json',import.meta.url)));
 const at=(lat,lon=-123)=>coastAt({latitude:lat,longitude:lon},catalog)?.id;
@@ -45,6 +45,14 @@ test('a supported seasonal visitor appears only in its own fresh coastal browse 
   assert.ok(coastalTargetOptions(coast,status,now).find(t=>t.id==='yellowfin')?.seasonal);
   assert.ok(!coastalTargetOptions(coast,status,now+40*3600000).some(t=>t.id==='yellowfin'));
   assert.ok(!coastalTargetOptions(catalog.regions[0],status,now).some(t=>t.id==='yellowfin'));
+});
+test('San Francisco salmon advisory follows the Point Reyes latitude and expires',()=>{
+  const coast=catalog.regions.find(r=>r.id==='san-francisco');
+  const active=Date.parse('2026-09-23T16:00:00Z');
+  assert.match(localTargetAdvisory(coast,'salmon',38.20,active).text,/No opening is established/);
+  assert.match(localTargetAdvisory(coast,'salmon',37.98,active).text,/south of CDFW/);
+  assert.match(localTargetAdvisory(coast,'salmon',38.20,Date.parse('2026-11-02T00:00:00Z')).text,/has ended/);
+  assert.equal(localTargetAdvisory(coast,'reef',38.20,active),null);
 });
 test('clean chart removes cables, traffic and extra areas; full chart stays optional',()=>{
   assert.equal(chartLayers('fishing'),'0,1,2,6');assert.equal(chartLayers('nautical'),'0,1,2,3,4,5,6,7');

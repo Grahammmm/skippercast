@@ -3,7 +3,7 @@ import {initNavigation} from './navigation.js?v=8.11';
 import {esc} from './marine-charts.js?v=8.11';
 import {viewFromURL} from './location-context.js?v=8.11';
 import {mappedPackageAt} from './map-response.js?v=8.11';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.11';
+import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions,localTargetAdvisory} from './coasts.js?v=8.34';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
 import {updateCoastalForecast} from './coastal-forecast-v2.js?v=8.16';
 
@@ -21,11 +21,21 @@ export async function initCoastalDiscovery(catalog,coast) {
   select.replaceChildren(...targetOptions.map(t=>new Option(t.name,t.id)));
   const desired=new URL(location.href).searchParams.get('target');select.value=coast.targets.includes(desired)?desired:coast.targets[0];select.disabled=false;
   const rules=document.getElementById('species-regulations');
+  function updateLocalTargetAdvisory() {
+    const advisory=localTargetAdvisory(coast,select.value,map.getCenter().lat);
+    for(const id of ['coastal-local-rule','coastal-local-guide']){
+      const line=document.getElementById(id);if(!line)continue;
+      line.hidden=!advisory;
+      if(advisory)line.innerHTML=`${esc(advisory.text)} <a href="${esc(advisory.url)}" target="_blank" rel="noopener">CDFW source ↗</a>`;
+      else line.replaceChildren();
+    }
+  }
   function targetInfo() {
     const t=targetOptions.find(t=>t.id===select.value);
-    rules.innerHTML=`<summary>${esc(t.name)} · check local season</summary><div class="reg-body"><p>${esc(t.note)}</p><p>Potential regional target; surveyed spots and date-specific legal evaluation are not yet available here. Seasons, gear, depth and protected areas can restrict fishing.</p><p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} regulations ↗</a></p>${select.value==='reef'&&coast.groundfish_table_url?`<p><a href="${esc(coast.groundfish_table_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} groundfish table (PDF) ↗</a></p>`:''}${t.sources.map(url=>`<p><a href="${esc(url)}" target="_blank" rel="noopener">Species habitat source ↗</a></p>`).join('')}<p id="coastal-mpa-status" role="status">Checking MPA boundaries…</p><p id="coastal-federal-status" role="status">Checking federal groundfish areas…</p></div>`;
+    rules.innerHTML=`<summary>${esc(t.name)} · check local season</summary><div class="reg-body"><p>${esc(t.note)}</p><p id="coastal-local-rule" class="small" role="status" hidden></p><p>Potential regional target; surveyed spots and date-specific legal evaluation are not yet available here. Seasons, gear, depth and protected areas can restrict fishing.</p><p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} regulations ↗</a></p>${select.value==='reef'&&coast.groundfish_table_url?`<p><a href="${esc(coast.groundfish_table_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} groundfish table (PDF) ↗</a></p>`:''}${t.sources.map(url=>`<p><a href="${esc(url)}" target="_blank" rel="noopener">Species habitat source ↗</a></p>`).join('')}<p id="coastal-mpa-status" role="status">Checking MPA boundaries…</p><p id="coastal-federal-status" role="status">Checking federal groundfish areas…</p></div>`;
     const url=new URL(location.href);url.searchParams.set('target',select.value);history.replaceState(null,'',url);
-    const guide=document.getElementById('coastal-target-guide');guide.innerHTML=`<h2>${esc(t.name)}</h2><p>${esc(t.note)}</p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Check this coast’s rules ↗</a>`;
+    const guide=document.getElementById('coastal-target-guide');guide.innerHTML=`<h2>${esc(t.name)}</h2><p>${esc(t.note)}</p><p id="coastal-local-guide" class="small" role="status" hidden></p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Check this coast’s rules ↗</a>`;
+    updateLocalTargetAdvisory();
     drawMPAs();
     drawFederal();
   }
@@ -417,6 +427,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     const sector=sectorAt(sectorPacket,coast.id,point);
     caption.textContent=next?`${coast.name} · ${sector?.name||coast.limits}${sector?' · discovery sector':''}`:'Outside California coastal browse coverage';
     select.disabled=!next;rules.hidden=!next;
+    updateLocalTargetAdvisory();
     const url=coastURL(location.href,coast,{point,zoom:map.getZoom(),target:select.value,overview:true});url.hash=location.hash;history.replaceState(null,'',url);
     drawMPAs();
     drawFederal();

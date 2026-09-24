@@ -106,6 +106,17 @@
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
+      "local_target_advisories": [
+        {
+          "target": "salmon",
+          "north_of_latitude": 38.03333333333333,
+          "through": "2026-10-31",
+          "north_note": "The 2026 ocean salmon opening described by CDFW starts at 38°02′ N near Point Reyes. No opening is established for this map position north of that line.",
+          "south_note": "This map position is south of CDFW’s 38°02′ N boundary for the September–October 2026 salmon opening. Check the current harvest guideline and in-season changes before fishing.",
+          "expired_note": "The referenced 2026 salmon season window has ended. Check current CDFW rules for this position before planning salmon fishing.",
+          "source_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco"
+        }
+      ],
       "packages": [],
       "targets": [
         "reef",

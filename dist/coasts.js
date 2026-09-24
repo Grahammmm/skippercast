@@ -40,6 +40,12 @@ export function coastalTargetOptions(coast,status,now=Date.now()) {
   for(const target of coast.watch_options||[])if(supported.includes(target.id)&&!options.some(t=>t.id===target.id))options.push({...target,name:target.name+' · recent reports',seasonal:true});
   return options;
 }
+export function localTargetAdvisory(coast,target,latitude,now=Date.now()) {
+  const advisory=coast.local_target_advisories?.find(item=>item.target===target);
+  if(!advisory||!Number.isFinite(latitude))return null;
+  const expired=now>Date.parse(advisory.through+'T23:59:59-07:00');
+  return {text:expired?advisory.expired_note:latitude>=advisory.north_of_latitude?advisory.north_note:advisory.south_note,url:advisory.source_url};
+}
 export function initCoastSelector(catalog,coast) {
   const select=document.getElementById('coast-select');
   select.replaceChildren(...catalog.regions.map(r=>new Option(r.name,r.id)));select.value=coast.id;select.disabled=false;

@@ -28,6 +28,12 @@ def compile_coasts(root=REPO):
         for ident in region['targets'] + region['watch']:
             if ident not in targets:
                 raise ValueError('Unknown biological target')
+        for advisory in region.get('local_target_advisories', []):
+            if (advisory.get('target') not in region['targets']
+                    or not region['latitude'][0] < advisory.get('north_of_latitude', 0) < region['latitude'][1]
+                    or not all(advisory.get(key) for key in ('north_note', 'south_note', 'expired_note', 'through'))):
+                raise ValueError('Invalid local coastal target advisory')
+            public_url(advisory['source_url'])
         for ident in region['packages']:
             if not (root / f'regions/{ident}/region.json').is_file():
                 raise ValueError('Unknown mapped package')
