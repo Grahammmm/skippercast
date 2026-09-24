@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-vdatum-point-coverage-audit",
+  "checked_at": "2026-09-24T23:42:13.510231+00:00",
+  "source_context": "USGS Offshore Monterey 2 m historical class and NAVD88 bathymetry",
+  "source_context_compiled_at": "2026-09-24T12:04:29.775547+00:00",
+  "source_depth_audited_at": "2026-09-24T12:11:06.683148+00:00",
+  "service_documentation_url": "https://vdatum.noaa.gov/docs/services.html",
+  "source_horizontal_assumption": "NAD83_2011 requested; original EPSG:26910 only identifies NAD83 and does not prove realization or epoch",
+  "interpretation": "Zero-height point conversions test service coverage only. An available point does not convert a polygon or original pixels; no source-grid uncertainty, interpolation field, epoch, route, legal or fish review is supplied.",
+  "mllw_raster_converted": false,
+  "fishing_target": false,
+  "exportable": false,
+  "samples": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "longitude": -121.9798082,
+      "latitude": 36.5732808,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9798082&s_y=36.5732808&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "sample_available",
+      "offset_m": -0.036,
+      "vdatum_uncertainty_m": 0.096
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-006",
+      "longitude": -121.9702758,
+      "latitude": 36.6051406,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9702758&s_y=36.6051406&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "sample_available",
+      "offset_m": -0.035,
+      "vdatum_uncertainty_m": 0.095
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "longitude": -121.9033107,
+      "latitude": 36.6789039,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9033107&s_y=36.6789039&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "sample_available",
+      "offset_m": -0.037,
+      "vdatum_uncertainty_m": 0.094
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "longitude": -121.9413176,
+      "latitude": 36.6497892,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9413176&s_y=36.6497892&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "sample_available",
+      "offset_m": -0.036,
+      "vdatum_uncertainty_m": 0.093
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "longitude": -121.9073751,
+      "latitude": 36.6843458,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9073751&s_y=36.6843458&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "sample_available",
+      "offset_m": -0.039,
+      "vdatum_uncertainty_m": 0.094
+    },
+    {
+      "sample_type": "coverage_probe",
+      "longitude": -121.9,
+      "latitude": 36.6,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.9000000&s_y=36.6000000&s_z=0&s_h_frame=NAD83_2011&s_v_frame=NAVD88&s_v_unit=m&t_h_frame=IGS14&t_v_frame=MLLW&t_v_unit=m",
+      "status": "unavailable",
+      "reason": "missing_numeric_result"
+    }
+  ]
+}
