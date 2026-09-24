@@ -218,8 +218,8 @@
       "reason": "Current statewide CDFW MPA polygons are available; exact local exclusions and all other closures need review before a target."
     },
     "regulations": {
-      "status": "research",
-      "reason": "Dedicated Mendocino authority watchlist exists, but no hash-bound legal decision or live card has been approved."
+      "status": "partial",
+      "reason": "Seven 2026 Mendocino outer-coast species profiles and this draft footprint have a hash-bound 18-source review. No first regional daily rule-health feed, current closure clearance or qualified fishing target is published."
     },
     "dynamic-closures": {
       "status": "research",

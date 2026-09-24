@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "scope": "historical-camera-window-versus-noaa-enc-danger-research-screen",
+  "reviewed_at": "2026-09-24",
+  "survey_id": "H11967",
+  "enc_scope_id": "h11967-greenwood-tile",
+  "enc_bounds": [-123.84, 39.14, -123.74, 39.25],
+  "enc_checked_at": "2026-09-24T17:57:30.602048+00:00",
+  "enc_source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "enc_snapshot_sha256": "4a41b8ce4e590d52f36269f9a2bf1bf826b889f2e83ac35b2c013b5cbcd95069",
+  "queried_danger_layers": 18,
+  "charted_danger_features_in_bounded_snapshot": 618,
+  "original_grid_qualified_historical_camera_windows_checked": 18,
+  "camera_windows_with_charted_danger_within_100m": 0,
+  "historical_report_dangers_checked": 5,
+  "historical_report_danger_nearest_charted_feature_m": [1.9, 4.6, 19.9, 0.0, 33.5],
+  "candidate_research_context_sha256": "7623f045b24c61df68de325c223184478fede1e983fd6863bbf3871c33ab2780",
+  "candidate_positions_published": false,
+  "fishing_target": false,
+  "exportable": false,
+  "survey_hold_removed": false,
+  "interpretation": "All five historical danger positions have a charted danger feature nearby in this bounded NOAA ENC Direct snapshot, but proximity cannot identify the same object or establish current chart status. None of the 18 correlated historical camera windows is within the 100 m research buffer of the queried danger features. This does not clear a target, route, MPA, or survey holiday; H11967 remains withheld.",
+  "limitations": [
+    "The 18 camera windows come from one historical transect and are not 18 independent fishing sites.",
+    "NOAA ENC Direct is not certified for navigation, and this query covers only its 18 configured danger layers within a clipped rectangle.",
+    "Original survey holidays have uncertain least depths and cannot be reduced to five point buffers.",
+    "Fresh legal, exact MPA and special closure, substrate footprint, source rights, route and forecast checks remain required."
+  ]
+}

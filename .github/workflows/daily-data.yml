@@ -106,6 +106,9 @@ jobs:
       - name: Refresh Point Reyes and Tomales NOAA ENC danger review
         continue-on-error: true
         run: python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/daily/enc-hazards/point-reyes-tomales.geojson
+      - name: Refresh Greenwood NOAA ENC danger review
+        continue-on-error: true
+        run: python scripts/refresh_enc_hazards.py --scope h11967-greenwood-tile --output var/daily/enc-hazards/h11967-greenwood-tile.geojson
       - name: Discover USGS state-waters map-block products
         continue-on-error: true
         run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
@@ -134,6 +137,7 @@ jobs:
             if [ -f var/daily/bag-head-inventory.json ]; then cp var/daily/bag-head-inventory.json var/published/; fi
             if [ -f var/daily/enc-hazards/santa-barbara-island.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/santa-barbara-island.geojson var/published/enc-hazards/; fi
             if [ -f var/daily/enc-hazards/point-reyes-tomales.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/point-reyes-tomales.geojson var/published/enc-hazards/; fi
+            if [ -f var/daily/enc-hazards/h11967-greenwood-tile.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/h11967-greenwood-tile.geojson var/published/enc-hazards/; fi
             if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
             if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
             if [ -f var/daily/usgs-csmp-map-blocks.json ]; then cp var/daily/usgs-csmp-map-blocks.json var/published/; fi
@@ -164,6 +168,7 @@ jobs:
           if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
           if [ -f var/published/enc-hazards/santa-barbara-island.geojson ]; then git -C var/published add enc-hazards/santa-barbara-island.geojson; fi
           if [ -f var/published/enc-hazards/point-reyes-tomales.geojson ]; then git -C var/published add enc-hazards/point-reyes-tomales.geojson; fi
+          if [ -f var/published/enc-hazards/h11967-greenwood-tile.geojson ]; then git -C var/published add enc-hazards/h11967-greenwood-tile.geojson; fi
           if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
           if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
           if [ -f var/published/usgs-csmp-map-blocks.json ]; then git -C var/published add usgs-csmp-map-blocks.json; fi
@@ -265,7 +270,7 @@ jobs:
           from pathlib import Path
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write('\n## NOAA ENC danger review\n')
-              for scope in ('santa-barbara-island', 'point-reyes-tomales'):
+              for scope in ('santa-barbara-island', 'point-reyes-tomales', 'h11967-greenwood-tile'):
                   path = Path(f'var/daily/enc-hazards/{scope}.geojson')
                   if not path.is_file():
                       raise SystemExit(f'NOAA ENC danger-layer refresh produced no {scope} snapshot')

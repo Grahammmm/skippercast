@@ -67,7 +67,7 @@ def bag_camera_status(path, polygons, coordinates, tree, x, y):
 
 
 def review(tile, survey_id, cruise, scheme, nbs_cache, bag_audit, bag_cache,
-           video_manifest, video_cache, mpa_snapshot, latitude):
+           video_manifest, video_cache, mpa_snapshot, latitude, candidate_context=None):
     nbs = audit_nbs(scheme, tile, nbs_cache)
     if not any(item["survey_id"].startswith(survey_id) for item in nbs["qualified_contributors"]):
         raise ValueError("Selected NOAA NBS tile has no qualified pixels from the original survey")
@@ -120,6 +120,15 @@ def review(tile, survey_id, cruise, scheme, nbs_cache, bag_audit, bag_cache,
             bx, by = bag_project.transform(lon, lat)
             bag_status = bag_camera_status(path, polygons, coordinates, tree, bx, by)
             compare[(nbs_status, bag_status)] += 1
+            if (candidate_context is not None and nbs_status == 'locally_qualified_90pct'
+                    and bag_status == 'original_locally_qualified_90pct'):
+                candidate_context.append({
+                    'type': 'Feature',
+                    'geometry': {'type': 'Point', 'coordinates': [lon, lat]},
+                    'properties': {'id': f'{survey_id}-camera-window-{len(candidate_context) + 1}',
+                                   'survey_id': survey_id,
+                                   'evidence': 'historical-camera-window-and-original-bag-screen',
+                                   'fishing_target': False, 'exportable': False}})
     if counts["rocky_camera_windows_in_tile_envelope"] != sum(
             count for key, count in counts.items() if key.startswith("nbs_")):
         raise ValueError("Camera windows lost in NBS screen")
@@ -159,15 +168,30 @@ def main():
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--candidate-context", type=Path,
+                        help="Optional research-only positions of original-grid-qualified historical camera windows")
     args = parser.parse_args()
     sector = next(item for item in json.loads(args.sectors.read_text())["sectors"]
                   if item["id"] == args.sector_id)
+    candidate_context = [] if args.candidate_context else None
     result = review(args.tile, args.survey_id, args.cruise, args.scheme, args.nbs_cache,
                     json.loads(args.bag_audit.read_text()), args.bag_cache,
                     json.loads(args.video_manifest.read_text()), args.video_cache,
-                    json.loads(args.mpas.read_text()), sector["latitude"])
+                    json.loads(args.mpas.read_text()), sector["latitude"], candidate_context)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
+    if args.candidate_context:
+        if len(candidate_context) != next((row['historical_camera_windows'] for row in result['comparison']
+            if row['nbs_status'] == 'locally_qualified_90pct'
+            and row['original_bag_status'] == 'original_locally_qualified_90pct'), 0):
+            raise ValueError('Research-only camera context count disagrees with reconciliation')
+        args.candidate_context.parent.mkdir(parents=True, exist_ok=True)
+        args.candidate_context.write_text(json.dumps({
+            'type': 'FeatureCollection', 'schema_version': 1,
+            'scope': 'unpublished-historical-camera-window-research',
+            'fishing_target': False, 'exportable': False,
+            'limitations': 'Correlated camera windows from one historical transect. These points are not verified fish sites or navigational clearances.',
+            'features': candidate_context}, indent=2) + '\n')
     print(result["counts"], result["comparison"])
 
 

@@ -5,11 +5,11 @@ import {getRegion,setRegion} from '../dist/region.js?v=8.11';
 import {regulationState,validRegulations} from '../dist/regulations.js';
 
 const region=JSON.parse(readFileSync(new URL('../regions/fort-bragg-point-arena/region.json',import.meta.url)));
-const draft=JSON.parse(readFileSync(new URL('../dist/data/regulations-mendocino.json',import.meta.url)));
+const reviewed=JSON.parse(readFileSync(new URL('../dist/data/regulations-mendocino.json',import.meta.url)));
 const now=Date.parse('2026-09-24T18:00:00Z');
 
 function matchedFixture(){
-  const data=structuredClone(draft);
+  const data=structuredClone(reviewed);
   data.reviewed_at=new Date(now-3600000).toISOString();
   data.rules_review_status='reviewed';
   for(const [id,source] of Object.entries(data.sources)){
@@ -39,10 +39,12 @@ test('Mendocino 2026 seasons and regional limits stay distinct from Northern and
   }finally{setRegion(previous);}
 });
 
-test('draft Mendocino registry cannot claim an approved opening',()=>{
+test('loss of Mendocino legal approval withholds an opening',()=>{
   const previous=getRegion();
   try{
     setRegion(region);
-    assert.equal(regulationState(draft,'reef',now,'2026-09-24').status,'unknown');
+    const unreviewed=structuredClone(reviewed);
+    unreviewed.rules_review_status='content-needs-review';
+    assert.equal(regulationState(unreviewed,'reef',now,'2026-09-24').status,'unknown');
   }finally{setRegion(previous);}
 });

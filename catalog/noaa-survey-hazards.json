@@ -4,6 +4,60 @@
   "reviewed_at": "2026-09-24",
   "surveys": [
     {
+      "survey_id": "H11967",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/DR/H11967.pdf",
+      "report_sha256": "02fae1f4b1fd7cb42cc8ffbfb06135a7ff8ac660d002c950f9c1988d6afcc96c",
+      "report_section": "Final office review page 19 and danger report page 20",
+      "interpretation": "The report lists five 2009 dangers applied to then-current charts. The office review replaces the original fifth DTON with a shoaler rock at slightly different coordinates. The two rock entries have no established least depth; their reported fathoms are only the shoalest acquired soundings. Survey holidays also lacked confident least depths. These are historical research holds, not present chart or route clearance.",
+      "hazards": [
+        {
+          "id": "H11967-dton-1-sounding",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 39.2393416667,
+          "longitude": -123.7878166667,
+          "reported_depth_ft": 23.4,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical 3.9-fathom sounding review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11967-dton-2-sounding",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 39.2204083333,
+          "longitude": -123.7833027778,
+          "reported_depth_ft": 23.4,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical 3.9-fathom sounding review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11967-dton-3-rock-uncertain-least-depth",
+          "kind": "historical-danger-to-navigation-uncertain-least-depth",
+          "latitude": 39.2093583333,
+          "longitude": -123.7813722222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The 2.6-fathom figure was only the shoalest sounding acquired; least depth was not obtained. This is a research hold, not a safe standoff distance."
+        },
+        {
+          "id": "H11967-dton-4-sounding",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 39.1966472222,
+          "longitude": -123.7815972222,
+          "reported_depth_ft": 57,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical 9.5-fathom sounding review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11967-final-office-replacement-rock",
+          "kind": "historical-danger-to-navigation-uncertain-least-depth",
+          "latitude": 39.1930630556,
+          "longitude": -123.7717430556,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Final office review replaces the field-report fifth DTON with this shoaler rock; least depth is not established. Historical research hold only."
+        }
+      ]
+    },
+    {
       "survey_id": "H11981",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
       "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",

@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-mendocino",
+  "revision": "2026-09-24-mendocino-reviewed-1",
+  "reviewed_at": "2026-09-24T17:47:36Z",
+  "record_path": "jurisdictions/reviews/2026-09-24-california-mendocino.json",
+  "rules_content_sha256": "42bc9aad7cd7fbef98c164dcd79af1233d61463f4e03fe57ab4b8b6088d5c4ad",
+  "reviewed_species": [
+    "lingcod",
+    "rockfish",
+    "halibut",
+    "salmon",
+    "albacore",
+    "dungeness",
+    "pacific-halibut"
+  ],
+  "reviewed_regions": [
+    {
+      "id": "fort-bragg-point-arena",
+      "fishing_bounds": [
+        -124.25,
+        38.96,
+        -123.45,
+        39.445
+      ]
+    }
+  ],
+  "scope": "Reviewed original 2026 official rule text for recreational boat fishing in the Fort Bragg–Point Arena outer-coast draft. Dynamic closure, precise MPA location, route and harbor clearance remain separate.",
+  "sources": {
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "note": "Reviewed 2026 CDFW general finfish gear text: lingcod and rockfish aboard impose one-line/two-hook limits; salmon gear is separately restricted."
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "note": "Reviewed current CDFW section 29.80 gear text for recreational crab traps, hoop nets, snares, marking and tending; gear permission is separate from season status."
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "note": "Reviewed CDFW 2026–27 whale-safe status: recreational Dungeness season is presently closed, and November trap authorization needs the later zone declaration."
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "note": "Reviewed CDFW fishery-health notices and Mendocino-related advisories; no health page was treated as an automatic future crab or finfish clearance."
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "note": "Reviewed the 2026 CDFW ocean index and links to species, in-season and health rules; the index alone grants no location-specific permission."
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "note": "Reviewed June 2026 CDFW groundfish summary: Mendocino boat season Apr–Dec all depths, RCG ten with two vermilion/sunset here, lingcod two at 22 inches and descending device."
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "note": "Reviewed dated CDFW in-season actions through September 11, including the Fort Bragg August salmon closure and Fishing Zone 3 recreational trap restriction; future openings need new review."
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "note": "Reviewed CDFW 2026 salmon page: the September fall season starts south of 38°02′ N, not in the Fort Bragg Management Area; north-of-Point-Conception barbless gear rules remain relevant."
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "note": "Reviewed CDFW crab landing page and links to gear and whale-safe declarations; it does not confirm a future Mendocino recreational trap opening."
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "note": "Reviewed original 2026 CDFW ocean booklet: California halibut two fish north of Point Sur, albacore 25 north of Point Conception, crab limits and gear, and the §27.65 fillet rule limited to south of Point Arena."
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "note": "Reviewed 2026 Fish and Game Commission rulemaking index: groundfish conformance is proposed without an operative effective date in this packet and was not treated as current law."
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "note": "Reviewed original current eCFR 50 CFR 660.721 section: 25 albacore north of Point Conception, ten if a trip enters the southern EEZ, and trip/day possession constraints."
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "note": "Reviewed original August 19 CDFW salmon flyer: Fort Bragg August 10–31 closure, no fall season north of 38°02′ N, and salmon rod/hook restrictions."
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "a73a1a94794b4a9fb9707610d7abd477aaae7588d246ad76cf7ace0d7e573c48",
+      "note": "Reviewed original 2026 Mendocino groundfish PDF: Apr–Dec all-depth boat season, ten RCG with one copper/two canary/two vermilion-sunset, two lingcod at 22 inches, no-retention species and descending device."
+    },
+    "rules-pacific-halibut": {
+      "decision": "approve",
+      "content_sha256": "3ecf742e9969b582bec4e1ef56439e7ca66333e2c4ac43880bbc641704786f65",
+      "note": "Reviewed current CDFW Pacific halibut page: north of Point Arena open Apr 1–Nov 15 or quota closure, one fish with no minimum size and one-line/two-hook angling rule."
+    },
+    "rules-mendocino": {
+      "decision": "approve",
+      "content_sha256": "759ec68919c5ac0e45c078301d583579c048212a95733c367cd6b07544cdcdbb",
+      "note": "Reviewed CDFW Mendocino regional page updated August 10: Fort Bragg salmon closed rest of 2026, Dungeness closed with scheduled Nov 7 opener, California and Pacific halibut distinct, and local bounds."
+    },
+    "mpa-russian-gulch": {
+      "decision": "approve",
+      "content_sha256": "3cccb4a2417f1095e8dacd3133da6ab36483453dbda4a43a6581aea1007b0d89",
+      "note": "Reviewed CDFW Russian Gulch SMCA page: recreational take is allowed under current rules, though SkipperCast conservatively excludes the MPA from target geometry and exports."
+    },
+    "mpa-point-arena": {
+      "decision": "approve",
+      "content_sha256": "15a1c47e833e1e122f6453df856dd53417755a253482753450ad8536d59f811b",
+      "note": "Reviewed CDFW Point Arena and Sea Lion Cove MPA page: SMR no take, Point Arena SMCA salmon trolling only, Sea Lion Cove SMCA finfish exception; app still excludes all mapped MPA targets."
+    }
+  }
+}
