@@ -9,6 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  ncei-survey-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify bounded survey discovery
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_ncei_multibeam_discovery -v
+      - name: Discover original multibeam survey leads for all 19 sectors
+        run: >-
+          python scripts/discover_ncei_multibeam.py
+          --output var/review/ncei-multibeam-discovery.json
+      - name: Upload unpublished source-lead review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ncei-multibeam-discovery
+          path: var/review/ncei-multibeam-discovery.json
+          retention-days: 30
   csumb-native:
     runs-on: ubuntu-latest
     timeout-minutes: 45

@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "scope": "california-ncei-multibeam-trackline-discovery",
+  "service_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/multibeam_dynamic/MapServer/0",
+  "documentation_url": "https://www.ngdc.noaa.gov/mgg/bathymetry/multibeam/",
+  "notes": [
+    "Query envelopes are bounded search regions, not legal fishing areas, surveyed-bottom coverage or a navigable coast buffer.",
+    "A trackline crossing a sector does not prove any particular cell has measured bathymetry, usable vertical datum, substrate classification, or fish.",
+    "Source organizations may differ from the NOAA archive that distributes the data. Inspect each linked original survey page and product."
+  ],
+  "searches": [
+    {
+      "sector_id": "del-norte",
+      "bbox_wgs84": [
+        -125.0,
+        41.7,
+        -123.7,
+        42.0
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "bbox_wgs84": [
+        -125.1,
+        40.95,
+        -123.6,
+        41.7
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "bbox_wgs84": [
+        -125.1,
+        40.166666666666664,
+        -123.5,
+        40.95
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "bbox_wgs84": [
+        -125.0,
+        39.45,
+        -123.4,
+        40.166666666666664
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "bbox_wgs84": [
+        -124.6,
+        38.958333333333336,
+        -123.1,
+        39.45
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "bbox_wgs84": [
+        -124.4,
+        38.3,
+        -122.8,
+        38.958333333333336
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "bbox_wgs84": [
+        -124.0,
+        37.95,
+        -122.6,
+        38.3
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "bbox_wgs84": [
+        -123.6,
+        37.18333333333333,
+        -122.1,
+        37.95
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "bbox_wgs84": [
+        -122.8,
+        36.6,
+        -121.4,
+        37.18333333333333
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "bbox_wgs84": [
+        -122.4,
+        36.3,
+        -121.4,
+        36.6
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "bbox_wgs84": [
+        -122.3,
+        35.9,
+        -121.5,
+        36.3
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "bbox_wgs84": [
+        -122.2,
+        35.6,
+        -120.9,
+        35.9
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "bbox_wgs84": [
+        -121.6,
+        35.35,
+        -120.5,
+        35.6
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "bbox_wgs84": [
+        -121.8,
+        34.45,
+        -120.0,
+        35.35
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "bbox_wgs84": [
+        -121.1,
+        34.05,
+        -118.8,
+        34.45
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "bbox_wgs84": [
+        -120.5,
+        33.75,
+        -117.9,
+        34.05
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "bbox_wgs84": [
+        -119.2,
+        33.45,
+        -117.3,
+        33.75
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "bbox_wgs84": [
+        -118.5,
+        32.8,
+        -116.7,
+        33.45
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "bbox_wgs84": [
+        -118.1,
+        32.5343,
+        -116.6,
+        32.8
+      ]
+    }
+  ]
+}
