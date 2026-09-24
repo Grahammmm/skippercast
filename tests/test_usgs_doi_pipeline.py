@@ -31,6 +31,23 @@ class DoiPipelineTests(unittest.TestCase):
         self.assertFalse(doi.official(other,'P9ZSTUK1',landing))
         self.assertFalse(doi.official('https://attacker.example/'+good,'P9ZSTUK1',landing))
 
+    def test_reviewed_official_page_can_repair_an_index_omission(self):
+        index={'P9J1K4QX':{'doi':'https://doi.org/10.5066/P9J1K4QX',
+                            'study_areas':['Offshore of Eureka, California']}}
+        extra={'schema_version':1,'scope':'reviewed-usgs-ds781-doi-additions','releases':[{
+            'doi':'https://doi.org/10.5066/P9EC35PF','study_area':'Offshore of Eureka, California',
+            'official_source_page':'https://www.usgs.gov/data/bathymetry-backscatter-intensity-seismic-reflection-and-benthic-habitat-data-offshore-eureka',
+            'reason':'USGS index points at the Arcata release'}]}
+        merged=doi.with_reviewed_additions(index,extra)
+        self.assertEqual(set(merged),{'P9J1K4QX','P9EC35PF'})
+        self.assertEqual(merged['P9EC35PF']['study_areas'],['Offshore of Eureka, California'])
+        corrected={**index,'P9EC35PF':{'doi':'https://doi.org/10.5066/P9EC35PF',
+                                       'study_areas':['Offshore of Eureka, California']}}
+        self.assertEqual(doi.with_reviewed_additions(corrected,extra)['P9EC35PF']['study_areas'],
+                         ['Offshore of Eureka, California'])
+        extra['releases'][0]['official_source_page']='https://www.usgs.gov.evil.example/data/eureka'
+        with self.assertRaises(ValueError):doi.with_reviewed_additions(index,extra)
+
     def test_modern_original_xml_categorical_hard_class(self):
         raw=b'''<metadata><idinfo><spdom><bounding><westbc>-121.1</westbc><eastbc>-121.0</eastbc><southbc>35.3</southbc><northbc>35.4</northbc></bounding></spdom></idinfo>
         <eainfo><detailed><attr><attrlabl>Value</attrlabl><attrdomv><edom><edomv>3</edomv><edomvd>hard and rugose boulder and bedrock seafloor</edomvd></edom></attrdomv></attr></detailed></eainfo></metadata>'''

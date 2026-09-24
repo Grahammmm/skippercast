@@ -18,6 +18,7 @@ from discover_usgs_map_blocks import INDEX
 
 DOI = re.compile(r'^https://doi\.org/10\.5066/([A-Z0-9]+)$')
 MAX_PAGE=1_500_000
+ADDITIONAL=Path('catalog/usgs-additional-doi-releases.json')
 
 
 class Anchors(HTMLParser):
@@ -44,6 +45,28 @@ def index_dois(raw):
             entry=releases.setdefault(match.group(1),{'doi':href,'study_areas':[]})
             entry['study_areas'].append(label.split('—',1)[-1].strip()[:150])
     return releases
+
+
+def with_reviewed_additions(entries, additions):
+    """Include official releases omitted or mislinked by the DS781 HTML index."""
+    if additions.get('schema_version') != 1 or additions.get('scope') != 'reviewed-usgs-ds781-doi-additions':
+        raise ValueError('Unreviewed USGS DOI additions')
+    result={ident:{**entry} for ident,entry in entries.items()}
+    for row in additions['releases']:
+        doi=row['doi'];match=DOI.fullmatch(doi)
+        page=urlsplit(row['official_source_page'])
+        if (not match or page.scheme!='https' or page.hostname!='www.usgs.gov'
+                or not page.path.startswith('/data/') or not row.get('study_area') or not row.get('reason')):
+            raise ValueError('USGS DOI addition lacks a reviewed official release page')
+        ident=match.group(1)
+        previous=result.get(ident)
+        if previous and previous['doi']!=doi:
+            raise ValueError('USGS DOI identity conflicts with the DS781 index: '+ident)
+        result[ident]={'doi':doi,'study_areas':list(dict.fromkeys([
+                           *(previous['study_areas'] if previous else []),row['study_area']])),
+                       'official_source_page':row['official_source_page'],
+                       'discovery_note':row['reason']}
+    return result
 
 
 def official(url,ident,landing=None):
@@ -88,17 +111,22 @@ def inspect(entry,*,now,fetcher=fetch):
         xml=next((value for filename,value in links.items() if filename.lower() in {(stem+'_metadata.xml').lower(),(stem+'.xml').lower()}),None)
         if xml:products.append({'kind':kind,'archive_url':url,'metadata_url':xml,'filename':base})
     products.sort(key=lambda row:(row['kind'],row['filename']))
-    return {'doi':entry['doi'],'release_id':ident,'study_areas':entry['study_areas'],'landing_url':landing,
+    return {'doi':entry['doi'],'release_id':ident,'study_areas':entry['study_areas'],
+            'official_source_page':entry.get('official_source_page'),
+            'discovery_note':entry.get('discovery_note'),'landing_url':landing,
             'landing_sha256':hashlib.sha256(raw).hexdigest(),'checked_at':now.isoformat(),
             'status':'ok','products':products,'issue':None}
 
 
-def discover(previous=None,*,now=None,fetcher=fetch):
+def discover(previous=None,*,now=None,fetcher=fetch,additions=None):
     now=now or datetime.now(timezone.utc)
     final,raw=fetcher(INDEX)
     if final!=INDEX:raise ValueError('USGS DS781 index unexpectedly redirected')
     entries=index_dois(raw)
     if len(entries)<10:raise ValueError('USGS DS781 index omitted expected DOI releases')
+    if additions is not None:entries=with_reviewed_additions(entries,additions)
+    additional_sha256=(hashlib.sha256(json.dumps(additions,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                       if additions is not None else None)
     old={row['release_id']:row for row in (previous or {}).get('releases',[])}
     rows=[]
     with ThreadPoolExecutor(max_workers=5) as pool:
@@ -117,7 +145,8 @@ def discover(previous=None,*,now=None,fetcher=fetch):
     return {'schema_version':1,'scope':'usgs-state-waters-doi-product-links','collected_at':now.isoformat(),
             'last_complete_scan_at':now.isoformat() if not issues else (previous or {}).get('last_complete_scan_at'),
             'index_url':INDEX,'index_sha256':hashlib.sha256(raw).hexdigest(),
-            'method':'Official DS781 DOI links resolved to matching CMGDS release pages; original archive and XML links only. No native raster or fishing area approved.',
+            'additional_sha256':additional_sha256,
+            'method':'Official DS781 DOI links plus separately reviewed official USGS release-page additions resolved to matching CMGDS pages; original archive and XML links only. No native raster or fishing area approved.',
             'release_count':len(rows),'product_count':sum(len(row['products']) for row in rows),
             'health':{'status':'ok' if not issues else 'degraded','issues':issues},'releases':rows}
 
@@ -127,16 +156,21 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--previous',type=Path)
     parser.add_argument('--max-age-days',type=int,default=30)
+    parser.add_argument('--additional',type=Path,default=ADDITIONAL)
     args=parser.parse_args()
     old=json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
+    additions=json.loads(args.additional.read_text()) if args.additional.is_file() else None
+    additional_sha256=(hashlib.sha256(json.dumps(additions,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                       if additions is not None else None)
     now=datetime.now(timezone.utc)
-    if old and old.get('health',{}).get('status')=='ok' and old.get('last_complete_scan_at'):
+    if (old and old.get('health',{}).get('status')=='ok' and old.get('last_complete_scan_at')
+            and old.get('additional_sha256')==additional_sha256):
         age=now-datetime.fromisoformat(old['last_complete_scan_at'])
         if timedelta(0)<=age<timedelta(days=args.max_age_days):
             args.output.parent.mkdir(parents=True,exist_ok=True)
             args.output.write_bytes(args.previous.read_bytes())
             print('Retained complete USGS DOI inventory from '+old['last_complete_scan_at']);return
-    result=discover(old,now=now)
+    result=discover(old,now=now,additions=additions)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
     temp.write_text(json.dumps(result,separators=(',',':'),ensure_ascii=False)+'\n')

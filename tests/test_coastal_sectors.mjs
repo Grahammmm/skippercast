@@ -21,6 +21,16 @@ test('survey source links require official HTTPS host and matching survey identi
   assert.equal(trustedNoaaLink('https://www.ngdc.noaa.gov.evil.example/H11983/BAG/grid.bag','H11983'),false);
   assert.equal(trustedNoaaLink('https://data.ngdc.noaa.gov/nos/H11111/BAG/grid.bag','H11983'),false);
 });
+test('Eureka original class remains historical context rather than a fishing target',()=>{
+  const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/usgs-hard-context-northern.geojson',import.meta.url)));
+  const eureka=layer.features.filter(f=>f.properties.release_id==='P9EC35PF');
+  assert.equal(eureka.length,2);
+  assert.ok(eureka.every(f=>f.properties.source_file_sha256===
+    'c3d17d3361c96e80835120a0d9861a87257336ecbe261c1a7f2abd8f01a0dfcf' &&
+    f.properties.fishing_target===false && f.properties.exportable===false &&
+    f.properties.depth_qualified===false && f.properties.fish_confirmed===false &&
+    f.properties.mpa_screened_at));
+});
 test('Point Conception original-cell layer cannot become fishing or export coordinates',()=>{
   const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-context.geojson',import.meta.url)));
   const summary=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-review-summary.json',import.meta.url)));
