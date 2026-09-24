@@ -1,0 +1,464 @@
+{
+  "schema_version": 1,
+  "scope": "usgs-ds781-statewide-original-video-audit",
+  "checked_at": "2026-09-24T03:06:03+00:00",
+  "catalog_url": "https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html",
+  "position_caveat": "Camera observations have variable unknown position accuracy; counts are dated transect evidence, not verified fishing spots or proof that adjacent unsampled seabed has the same habitat.",
+  "species_caveat": "Positive rockfish/lingcod codes are historical visual observations, not catch, abundance, current presence, or permission to fish.",
+  "sector_caveat": "Latitude-band assignments are a discovery index, not verified survey coverage throughout a sector.",
+  "fishing_target": false,
+  "exportable": false,
+  "cruises": [
+    {
+      "id": "c0111sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "bounds_wgs84": [
+        -118.80265,
+        32.55741,
+        -117.155428,
+        34.035944
+      ],
+      "first_observation_date": "2011-08-15",
+      "last_observation_date": "2011-09-02",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 4688,
+      "bottom_observations": 3665,
+      "rockfish_field_observations": 3665,
+      "lingcod_field_observations": 3665,
+      "rock_boulder_cobble_observations": 551,
+      "rockfish_positive_observations": 275,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "c0212sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "bounds_wgs84": [
+        -122.347947,
+        34.502362,
+        -120.561532,
+        37.097404
+      ],
+      "first_observation_date": "2012-08-10",
+      "last_observation_date": "2012-08-30",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 5936,
+      "bottom_observations": 4895,
+      "rockfish_field_observations": 4895,
+      "lingcod_field_observations": 4895,
+      "rock_boulder_cobble_observations": 1440,
+      "rockfish_positive_observations": 400,
+      "lingcod_positive_observations": 64
+    },
+    {
+      "id": "c109nc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c109nc_video_observations.zip",
+      "sha256": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
+      "bounds_wgs84": [
+        -124.411145,
+        40.69168,
+        -124.10421,
+        41.996925
+      ],
+      "first_observation_date": "2009-07-14",
+      "last_observation_date": "2009-07-30",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 1615,
+      "bottom_observations": 1111,
+      "rockfish_field_observations": 1111,
+      "lingcod_field_observations": 1111,
+      "rock_boulder_cobble_observations": 355,
+      "rockfish_positive_observations": 52,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "c210nc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "bounds_wgs84": [
+        -124.530512,
+        38.937202,
+        -123.707672,
+        40.807163
+      ],
+      "first_observation_date": "2010-07-21",
+      "last_observation_date": "2010-08-08",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 2718,
+      "bottom_observations": 2262,
+      "rockfish_field_observations": 2262,
+      "lingcod_field_observations": 2262,
+      "rock_boulder_cobble_observations": 804,
+      "rockfish_positive_observations": 273,
+      "lingcod_positive_observations": 18
+    },
+    {
+      "id": "f208nc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "bounds_wgs84": [
+        -123.751261,
+        37.847433,
+        -122.582776,
+        38.920457
+      ],
+      "first_observation_date": "2008-09-03",
+      "last_observation_date": "2008-09-07",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 1103,
+      "bottom_observations": 972,
+      "rockfish_field_observations": 972,
+      "lingcod_field_observations": 972,
+      "rock_boulder_cobble_observations": 269,
+      "rockfish_positive_observations": 106,
+      "lingcod_positive_observations": 2
+    },
+    {
+      "id": "f307nc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "bounds_wgs84": [
+        -123.06489,
+        37.07877,
+        -122.34079,
+        38.04581
+      ],
+      "first_observation_date": "2007-09-27",
+      "last_observation_date": "2007-10-04",
+      "has_rockfish_field": false,
+      "has_lingcod_field": false,
+      "records": 2790,
+      "bottom_observations": 2790,
+      "rock_boulder_cobble_observations": 1138
+    },
+    {
+      "id": "l908nc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "bounds_wgs84": [
+        -123.385458,
+        38.036613,
+        -122.969477,
+        38.599295
+      ],
+      "first_observation_date": "2008-08-15",
+      "last_observation_date": "2008-08-21",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 1917,
+      "bottom_observations": 1660,
+      "rockfish_field_observations": 1660,
+      "lingcod_field_observations": 1660,
+      "rock_boulder_cobble_observations": 582,
+      "rockfish_positive_observations": 262,
+      "lingcod_positive_observations": 4
+    },
+    {
+      "id": "s1c08sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "bounds_wgs84": [
+        -120.464473,
+        34.067408,
+        -119.091449,
+        34.465902
+      ],
+      "first_observation_date": "2008-09-29",
+      "last_observation_date": "2008-10-08",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 1722,
+      "bottom_observations": 1228,
+      "rockfish_field_observations": 1228,
+      "lingcod_field_observations": 1228,
+      "rock_boulder_cobble_observations": 87,
+      "rockfish_positive_observations": 49,
+      "lingcod_positive_observations": 1
+    },
+    {
+      "id": "s2210mb",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+      "sha256": "48283dc9362a1f3654ec24452f72cb84c25092157f2867d9cb6c060393bb44a6",
+      "bounds_wgs84": [
+        -122.324813,
+        36.228359,
+        -121.81169,
+        37.097705
+      ],
+      "first_observation_date": "2010-10-18",
+      "last_observation_date": "2010-11-01",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 1848,
+      "bottom_observations": 1389,
+      "rockfish_field_observations": 1389,
+      "lingcod_field_observations": 1389,
+      "rock_boulder_cobble_observations": 363,
+      "rockfish_positive_observations": 140,
+      "lingcod_positive_observations": 34
+    },
+    {
+      "id": "sw109sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "bounds_wgs84": [
+        -120.552933,
+        33.28081,
+        -118.276947,
+        34.513517
+      ],
+      "first_observation_date": "2009-08-11",
+      "last_observation_date": "2009-08-20",
+      "has_rockfish_field": true,
+      "has_lingcod_field": true,
+      "records": 2380,
+      "bottom_observations": 1908,
+      "rockfish_field_observations": 1908,
+      "lingcod_field_observations": 1908,
+      "rockfish_positive_observations": 176,
+      "rock_boulder_cobble_observations": 189
+    },
+    {
+      "id": "z107sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+      "sha256": "d7dd49f9a97183506111309a8f6ac957af3554c03d23ee56282a8b31470e54a7",
+      "bounds_wgs84": [
+        -120.296705,
+        34.065623,
+        -119.127344,
+        34.449593
+      ],
+      "first_observation_date": "2007-07-09",
+      "last_observation_date": "2007-07-14",
+      "has_rockfish_field": false,
+      "has_lingcod_field": false,
+      "records": 667,
+      "bottom_observations": 667,
+      "rock_boulder_cobble_observations": 28
+    },
+    {
+      "id": "z206sc",
+      "source_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+      "sha256": "6cd03626573042381c678facbfe54058bf6e9aa3fe4344de3dfcd630cad5bcec",
+      "bounds_wgs84": [
+        -119.90762,
+        34.220287,
+        -119.271926,
+        34.40752
+      ],
+      "first_observation_date": "2006-07-23",
+      "last_observation_date": "2006-07-25",
+      "has_rockfish_field": true,
+      "has_lingcod_field": false,
+      "records": 603,
+      "bottom_observations": 458,
+      "rockfish_field_observations": 458,
+      "rock_boulder_cobble_observations": 77,
+      "rockfish_positive_observations": 21
+    }
+  ],
+  "sectors": [
+    {
+      "id": "del-norte",
+      "records": 671,
+      "bottom_observations": 432,
+      "rockfish_field_observations": 432,
+      "lingcod_field_observations": 432,
+      "rock_boulder_cobble_observations": 161,
+      "rockfish_positive_observations": 18,
+      "lingcod_positive_observations": 4
+    },
+    {
+      "id": "crescent-city-humboldt",
+      "records": 859,
+      "bottom_observations": 643,
+      "rock_boulder_cobble_observations": 194,
+      "rockfish_field_observations": 643,
+      "lingcod_field_observations": 643,
+      "lingcod_positive_observations": 2,
+      "rockfish_positive_observations": 34
+    },
+    {
+      "id": "humboldt-cape",
+      "records": 800,
+      "bottom_observations": 601,
+      "rockfish_field_observations": 601,
+      "lingcod_field_observations": 601,
+      "rock_boulder_cobble_observations": 248,
+      "rockfish_positive_observations": 98,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "north-mendocino",
+      "records": 1205,
+      "bottom_observations": 1018,
+      "rockfish_field_observations": 1018,
+      "lingcod_field_observations": 1018,
+      "rock_boulder_cobble_observations": 306,
+      "rockfish_positive_observations": 112,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "fort-bragg-arena",
+      "records": 718,
+      "bottom_observations": 611,
+      "rockfish_field_observations": 611,
+      "lingcod_field_observations": 611,
+      "rock_boulder_cobble_observations": 225,
+      "rockfish_positive_observations": 56,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "arena-bodega",
+      "records": 1810,
+      "bottom_observations": 1580,
+      "rockfish_field_observations": 1580,
+      "lingcod_field_observations": 1580,
+      "rock_boulder_cobble_observations": 419,
+      "rockfish_positive_observations": 188,
+      "lingcod_positive_observations": 2
+    },
+    {
+      "id": "bodega-reyes",
+      "records": 1840,
+      "bottom_observations": 1681,
+      "rock_boulder_cobble_observations": 564,
+      "rockfish_field_observations": 1042,
+      "lingcod_field_observations": 1042,
+      "rockfish_positive_observations": 187,
+      "lingcod_positive_observations": 4
+    },
+    {
+      "id": "reyes-pigeon",
+      "records": 1954,
+      "bottom_observations": 1943,
+      "rockfish_field_observations": 78,
+      "lingcod_field_observations": 78,
+      "rock_boulder_cobble_observations": 879
+    },
+    {
+      "id": "pigeon-monterey",
+      "records": 3604,
+      "bottom_observations": 2922,
+      "rockfish_field_observations": 2636,
+      "lingcod_field_observations": 2636,
+      "rock_boulder_cobble_observations": 752,
+      "rockfish_positive_observations": 219,
+      "lingcod_positive_observations": 46
+    },
+    {
+      "id": "monterey-sur",
+      "records": 519,
+      "bottom_observations": 395,
+      "rock_boulder_cobble_observations": 176,
+      "rockfish_field_observations": 395,
+      "lingcod_field_observations": 395,
+      "rockfish_positive_observations": 75,
+      "lingcod_positive_observations": 11
+    },
+    {
+      "id": "big-sur",
+      "records": 1104,
+      "bottom_observations": 877,
+      "rockfish_field_observations": 877,
+      "lingcod_field_observations": 877,
+      "rock_boulder_cobble_observations": 240,
+      "rockfish_positive_observations": 115,
+      "lingcod_positive_observations": 12
+    },
+    {
+      "id": "sur-san-simeon",
+      "records": 678,
+      "bottom_observations": 568,
+      "rockfish_field_observations": 568,
+      "lingcod_field_observations": 568,
+      "rock_boulder_cobble_observations": 246,
+      "rockfish_positive_observations": 26,
+      "lingcod_positive_observations": 6
+    },
+    {
+      "id": "cambria-morro",
+      "records": 648,
+      "bottom_observations": 553,
+      "rockfish_field_observations": 553,
+      "lingcod_field_observations": 553,
+      "rock_boulder_cobble_observations": 176,
+      "rockfish_positive_observations": 58,
+      "lingcod_positive_observations": 12
+    },
+    {
+      "id": "morro-conception",
+      "records": 1767,
+      "bottom_observations": 1463,
+      "rockfish_field_observations": 1463,
+      "lingcod_field_observations": 1463,
+      "rock_boulder_cobble_observations": 397,
+      "rockfish_positive_observations": 54,
+      "lingcod_positive_observations": 11
+    },
+    {
+      "id": "conception-ventura",
+      "records": 3464,
+      "bottom_observations": 2735,
+      "rockfish_field_observations": 2068,
+      "lingcod_field_observations": 1610,
+      "rock_boulder_cobble_observations": 227,
+      "rockfish_positive_observations": 100,
+      "lingcod_positive_observations": 1
+    },
+    {
+      "id": "ventura-los-angeles",
+      "records": 2152,
+      "bottom_observations": 1748,
+      "rockfish_field_observations": 1748,
+      "lingcod_field_observations": 1748,
+      "rock_boulder_cobble_observations": 290,
+      "rockfish_positive_observations": 174,
+      "lingcod_positive_observations": 3
+    },
+    {
+      "id": "los-angeles-orange",
+      "records": 1382,
+      "bottom_observations": 1115,
+      "rockfish_field_observations": 1115,
+      "lingcod_field_observations": 1115,
+      "rockfish_positive_observations": 90,
+      "rock_boulder_cobble_observations": 120,
+      "lingcod_positive_observations": 1
+    },
+    {
+      "id": "orange-san-diego",
+      "records": 2356,
+      "bottom_observations": 1840,
+      "rockfish_field_observations": 1840,
+      "lingcod_field_observations": 1840,
+      "rock_boulder_cobble_observations": 191,
+      "rockfish_positive_observations": 141,
+      "lingcod_positive_observations": 2
+    },
+    {
+      "id": "san-diego-border",
+      "records": 456,
+      "bottom_observations": 280,
+      "rockfish_field_observations": 280,
+      "lingcod_field_observations": 280,
+      "rock_boulder_cobble_observations": 72,
+      "rockfish_positive_observations": 9
+    }
+  ],
+  "cape_mendocino_outline_check": {
+    "source_cruise": "c210nc",
+    "display_outline_count": 121,
+    "radius_m": 250,
+    "bottom_observations_within_250m": 0,
+    "bottom_observations_inside_display_outlines": 0,
+    "video_verified_outlines": 0,
+    "reason": "No direct camera overlap was found; near matches would require a position-accuracy review before attribution."
+  }
+}
