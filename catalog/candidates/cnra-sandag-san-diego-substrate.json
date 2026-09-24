@@ -24,7 +24,7 @@
   "temporal": {
     "source_time": null,
     "checked_at": "2026-09-24T22:35:33+00:00",
-    "update_cadence": "Unstated historical compilation; recheck service metadata monthly",
+    "update_cadence": "Historical 2002 catalog product; recheck service metadata monthly",
     "coverage_start": null,
     "coverage_end": null
   },
@@ -35,7 +35,7 @@
     },
     {
       "url": "https://dbw.parks.ca.gov/29602",
-      "supports": "California state spatial catalog separately lists the San Diego nearshore sonar-backscatter and camera substrate layer."
+      "supports": "California state spatial catalog separately lists the San Diego nearshore sonar-backscatter and camera substrate layer with a 2002 dataset year, not exact survey acquisition dates."
     },
     {
       "url": "https://www.sandag.org/data-and-research/geographic-information-systems",
@@ -43,7 +43,7 @@
     }
   ],
   "limitations": [
-    "The state service says SANDAG compiled the original mapping and Moffatt Nichol supplied this layer. Its acquisition date, native mapping resolution, classification accuracy, original camera linkage, and exact redistribution rights are not stated in the service metadata.",
+    "The state catalog labels this as a 2002 dataset, but exact survey acquisition dates are not verified. The state service says SANDAG compiled the original mapping and Moffatt Nichol supplied this layer. Native mapping resolution, classification accuracy, original camera linkage, and exact redistribution rights are not stated in the service metadata.",
     "The WGS84 bounds are a transformed service envelope, not a polygon-coverage footprint. Blank descrip values, kelp-obscured bottom and other classes must never be converted to hard substrate.",
     "The bounded La Jolla camera review found 13 polygons, including three labeled Bedrock. One unclassified polygon has invalid geometry and is excluded from spatial comparison. The reviewed 50–58 m camera windows are 1.03–1.56 km from the valid polygons. This source does not validate that offshore rocky lead.",
     "Depth, product uncertainty, MPAs, date/method rules, chart hazards, route and species fit require independent screens before a polygon can become a fishing area or export."
