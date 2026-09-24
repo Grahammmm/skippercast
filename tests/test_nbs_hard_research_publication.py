@@ -63,7 +63,11 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
             self.assertEqual(layer["scope"], f"{coast_id}-nbs-usgs-hard-research-context")
             self.assertEqual(layer["maximum_screen_uncertainty_m"], 1)
             self.assertGreater(len(layer["features"]), 0)
-            self.assertLessEqual(len(layer["features"]), max_features)
+            by_tile = {}
+            for feature in layer["features"]:
+                tile = feature["properties"]["tile"]
+                by_tile[tile] = by_tile.get(tile, 0) + 1
+            self.assertTrue(all(count <= max_features for count in by_tile.values()))
             for feature in layer["features"]:
                 p = feature["properties"]
                 self.assertIn(p["sector_id"], sectors)
@@ -102,7 +106,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
 
     def test_estero_layer_contains_only_screened_research_outlines(self):
         review = json.loads((ROOT / "dist/data/nbs-central-usgs-hard-overlap-review.json").read_text())
-        layer = json.loads((ROOT / "dist/data/central-nbs-usgs-hard-research-context.geojson").read_text())
+        layer = json.loads((ROOT / "dist/data/central-estero-nbs-usgs-hard-research-context.geojson").read_text())
         self.assertEqual(review["status"], "research-leads-only")
         self.assertFalse(review["fishing_target"])
         self.assertFalse(review["exportable"])
@@ -126,6 +130,22 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
             self.assertEqual(p["nbs_raster_sha256"], source_tiles[p["tile"]]["source_raster_sha256"])
             self.assertTrue(p["usgs_sources"])
             self.assertEqual(feature["geometry"]["type"], "Polygon")
+
+    def test_central_browse_merges_distinct_source_batches_without_native_duplicate(self):
+        import hashlib
+        merged = json.loads((ROOT / "dist/data/central-nbs-usgs-hard-research-context.geojson").read_text())
+        self.assertTrue({"cambria-morro", "morro-conception"}.issubset(merged["sector_ids"]))
+        self.assertEqual(len(merged["features"]), 13)
+        self.assertEqual(len(merged["native_duplicate_screen"]["held_additions"]), 1)
+        self.assertTrue(all(feature["properties"]["fishing_target"] is False and
+                            feature["properties"]["exportable"] is False
+                            for feature in merged["features"]))
+        for source in merged["source_layers"]:
+            source_path = ROOT / source["path"]
+            self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), source["sha256"])
+            original = json.loads(source_path.read_text())
+            self.assertEqual(source["features"], len(original["features"]))
+            self.assertEqual(source["compiled_at"], original["compiled_at"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -248,7 +248,7 @@ export async function initCoastalDiscovery(catalog,coast) {
   const measuredHardResearch={
     northern:{name:'Cape Mendocino',sectors:['humboldt-cape'],uncertainty:1},
     'san-francisco':{name:'Bodega–Point Reyes',sectors:['arena-bodega','bodega-reyes'],uncertainty:1},
-    central:{name:'Estero Bay',sectors:['cambria-morro'],uncertainty:2}
+    central:{name:'Estero Bay–Point Conception',sectors:['cambria-morro','morro-conception'],uncertainty:2}
   }[coast.id];
   if(measuredHardResearch){
     const hardLayer=L.layerGroup();map.createPane('measuredHardResearch').style.zIndex=427;

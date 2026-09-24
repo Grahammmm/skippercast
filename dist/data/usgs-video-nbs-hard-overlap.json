@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "usgs-video-vs-native-hard-context-review",
-  "checked_at": "2026-09-24T07:22:50+00:00",
+  "checked_at": "2026-09-24T07:42:01+00:00",
   "source_catalog_url": "https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html",
   "cruise_position_accuracy": {
     "c0111sc": "Highly variable on the order of 10 meters.",
@@ -139,8 +139,8 @@
     {
       "context_file": "central-nbs-usgs-hard-research-context.geojson",
       "context_scope": "central-nbs-usgs-hard-research-context",
-      "context_compiled_at": "2026-09-24T07:03:44.763534+00:00",
-      "outline_count": 10,
+      "context_compiled_at": "2026-09-24T07:41:45.180183+00:00",
+      "outline_count": 13,
       "outlines_with_interior_camera_evidence": 0,
       "matched_outlines": []
     }
