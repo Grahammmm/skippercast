@@ -46,6 +46,7 @@ test('lobster opening cannot auto-authorize a morning set or unreviewed gear',()
  const old=getRegion();setRegion(region);
  try{
   const data=read('dist/'+source.assets.regulations),now=Date.parse('2026-09-22T18:00:00Z');
+  data.reviewed_at=new Date(now).toISOString();
   for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
   assert.equal(regulationState(data,'lobster',now,'2026-09-22','hoop').status,'closed');
   assert.notEqual(regulationState(data,'lobster',now,'2026-10-02','hoop').status,'open');
@@ -55,6 +56,7 @@ test('a reviewed timed season honors the opening instant and does not treat a da
  const old=getRegion();setRegion(region);
  try{
   const data=read('dist/'+source.assets.regulations),before=Date.parse('2026-10-02T17:59:00-07:00'),opening=Date.parse('2026-10-02T18:00:00-07:00');
+  data.reviewed_at=new Date(before).toISOString();
   for(const [id,s] of Object.entries(data.sources)){s.approved_content_sha256='a'.repeat(64);data.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(before).toISOString()};}
   // Exercise the future reviewed state too; today the opening-review gate remains in place.
   for(const w of data.species.lobster.windows){delete w.requires_opening_review;delete w.restriction;}

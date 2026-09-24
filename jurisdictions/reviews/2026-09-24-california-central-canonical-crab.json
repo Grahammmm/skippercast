@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-central",
+  "revision": "2026-09-24-central-canonical-crab-1",
+  "reviewed_at": "2026-09-24T21:30:56Z",
+  "rules_content_sha256": "fa0523b854c88986f98941c9232da7fe20215eea7601766de2fac7971bb75d4b",
+  "reviewed_species": [
+    "lingcod",
+    "rockfish",
+    "halibut",
+    "salmon",
+    "albacore",
+    "bluefin",
+    "dungeness"
+  ],
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    }
+  ],
+  "record_path": "jurisdictions/reviews/2026-09-24-california-central-canonical-crab.json",
+  "scope": "Recreational boat-fishing legal summaries, source identity and documented area notices. Not live operational clearance or verification of every map boundary.",
+  "sources": {
+    "rules-central": {
+      "decision": "approve",
+      "content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed Central summary updated September 11, 2026 for the named Avila\u2013San Simeon footprints: local species, fall salmon, halibut five, northern albacore allowance and Dungeness season. Future trap opener stays unconfirmed. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:00Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 88188,
+          "sha256": "092a394a7bba746cee400b601422ab11cdacc18aa17a7363ef99985cb75beabd"
+        }
+      ]
+    },
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed general finfish aggregation, landing-net, line/hook and nearshore metallic/wire line or leader limits. Species possession can impose tighter groundfish gear limits when switching targets. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:00Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 110108,
+          "sha256": "7d7b89376540029ea72a53aa09e61ade3eeaf7e9d9b0eb0561358f6855f50ae4"
+        }
+      ]
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed current visible gear text and the booklet. Obsolete lobster language in an HTML comment is excluded by text-and-links-v3. Keep trap, hoop, snare and hand methods distinct; no future trap clearance inferred. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:00Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 55925,
+          "sha256": "b8960b2c16d16ea55182ef8597457d33d1f1991ecf830dbece91e97c82fe7576"
+        }
+      ]
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Recreational fishery is presently closed. No declaration in this inspected notice authorizes the November 2026 recreational trap opener; retain the opening-review and gear-clearance gates. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:00Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 112004,
+          "sha256": "39e974d337df9b11cc150a34e6d4b7c6f95d0cab9fdd870d97ec77995b001086"
+        }
+      ]
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed current CDFW fishery notices. No current Dungeness or spiny-lobster biotoxin closure was listed; this does not open their seasons. Northern-island bivalve and rock-crab-organ eating advice is distinct. Direct CDPH pages were unavailable and are not claimed checked. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 39516,
+          "sha256": "d256e29deff14d172521c671b34f93522524de4669fc21025e15776785358918"
+        }
+      ]
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed official regulation index and its linked current-year resources. Used for detecting replacement booklets and updates; an index or successful retrieval is not itself fishing permission. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 72054,
+          "sha256": "b14c25fb0477d1582bce7a52cb58707bdfceb1e1038d0f7b188b0f2a3211f194"
+        }
+      ]
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed 2026 RCG sublimits, prohibited species and management-area links against the jurisdiction-specific season tables. RCA access follows legal coordinates, not a sounder reading. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 46654,
+          "sha256": "4d0ac1b7ea0f7f7f61a7a93e772e49895367e9e94fb0e489fc7bd0003bde6a4c"
+        }
+      ]
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "retrieved_at": "2026-09-22T15:55:01Z",
+      "note": "Reviewed current in-season notices through the listed September 11 update. Monterey anchovy human-consumption restriction is outside these fishing footprints; no subsequent September salmon closure appears in the inspected notices. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:00 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 34797,
+          "sha256": "42810980fd1205884dfb6980f1e6d086e18463e649fedc907aee8a6b7bbe5726"
+        }
+      ]
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "retrieved_at": "2026-09-22T15:55:02Z",
+      "note": "Reviewed the 2026 recreational salmon page against the August update flyer, including dates, two-fish daily limit, fall 20-inch total length and quota-related notice monitoring. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:02 GMT",
+          "final_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 34917,
+          "sha256": "e4aed7e421000e1c4d9ef6fa82083af4571ee395f3c9c4cd21c300dbdd7a3323"
+        }
+      ]
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Crab",
+      "retrieved_at": "2026-09-22T15:55:02Z",
+      "note": "Reviewed recreational crab FAQ, method distinctions and opening dependencies. Crab-trap restrictions do not alone close legal hoops, loops or hand take; species season and health rules still apply. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical. The old CDFW URL permanently redirects to the canonical official crab page; the new watch uses that exact destination.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Crab",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:02 GMT",
+          "final_url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 74176,
+          "sha256": "e61e4e9ab86df402611dc16939f59d194d53d45f7b6d43fcb3a16ee48e474478"
+        }
+      ]
+    },
+    "mpa-buchon": {
+      "decision": "approve",
+      "content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
+      "retrieved_at": "2026-09-22T15:55:02Z",
+      "note": "Reviewed Point Buchon reserve/conservation rules and exact official map links. App conservatively excludes mapped MPAs; Diablo Canyon security access remains a separate restriction. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:02 GMT",
+          "final_url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 80180,
+          "sha256": "f01c300d61527914063f76ee8650a02422352cb66f4c6fa7e4633cede7961f4b"
+        }
+      ]
+    },
+    "mpa-cambria": {
+      "decision": "approve",
+      "content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
+      "retrieved_at": "2026-09-22T15:55:02Z",
+      "note": "Reviewed Cambria and White Rock reserve/conservation rules and species/method exceptions. Existing all-MPA display exclusion remains more conservative than individual lawful exceptions. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:01Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:02 GMT",
+          "final_url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 80683,
+          "sha256": "39b801fe50489027908086c1b5e10218f283c21b577003a5514ac4b99037eb9f"
+        }
+      ]
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "normalization": "pdf-bytes-v1",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "retrieved_at": "2026-09-22T15:55:06Z",
+      "note": "Read the 2026 ocean booklet and relevant sections on aggregation, possession, boat limits, fillets, species limits, RCG sublimits, gear, crab and lobster. Independent review checked active Southern selectors and Central salmon, crab and tuna. Use agreed 28-inch white-seabass total length where alternate-length summaries conflict.",
+      "receipts": [
+        {
+          "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:02Z",
+          "compressed_bytes": 24976290,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:03 GMT",
+          "final_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+          "content_type": "application/pdf",
+          "last_modified": "Fri, 17 Jul 2026 23:38:14 GMT",
+          "bytes": 26142062,
+          "sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e"
+        }
+      ]
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "normalization": "text-and-links-v3",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "retrieved_at": "2026-09-22T15:55:03Z",
+      "note": "Reviewed effective versus proposed changes. Measurement amendments adopted August 13 and filed with OAL September 17 remain pending, with no effective date listed. Proposed tuna harpoon changes and MPA petitions are not applied as law.",
+      "receipts": [
+        {
+          "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:02Z",
+          "compressed_bytes": 13145,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:02 GMT",
+          "final_url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 66332,
+          "sha256": "573cd7acb9f6d098c61561ed681cf14e01e9d91d52c5a7bcbdefc51aa1ee1a7e"
+        }
+      ]
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "normalization": "ecfr-section-text-v1",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "retrieved_at": "2026-09-22T15:55:03Z",
+      "note": "Read current 50 CFR 660.721 via the supported eCFR API. Albacore ten-fish onboard restriction applies if any part of a trip is in U.S. EEZ south of Conception; north allowance is 25. Bluefin two. Daily/24-hour and southern six-piece processing conditions are retained. Current-through and retrieval dates remain distinct.",
+      "receipts": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/titles.json",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:02Z",
+          "compressed_bytes": 1267,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:03 GMT",
+          "final_url": "https://www.ecfr.gov/api/versioner/v1/titles.json",
+          "content_type": "application/json; charset=utf-8",
+          "last_modified": null,
+          "bytes": 8033,
+          "sha256": "8e3a5d862c691cc3510414093ef066a317f29533ecd39b0d2a77a7f8a8c492f5"
+        },
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-15/title-50.xml?section=660.721",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:03Z",
+          "compressed_bytes": 1532,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:03 GMT",
+          "final_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-15/title-50.xml?section=660.721",
+          "content_type": "text/xml",
+          "last_modified": null,
+          "bytes": 3645,
+          "sha256": "b7a05f4d104c48044d6ff77b85b15f19d9f60f047361f1bcde7a2d9af19ce942"
+        }
+      ],
+      "ecfr_current_through": "2026-09-18"
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "normalization": "pdf-bytes-v1",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "retrieved_at": "2026-09-22T15:55:03Z",
+      "note": "Inspected the August 19, 2026 recreational ocean salmon flyer. Fall September 1\u201330, minimum 20-inch total length and two daily fish apply to the reviewed Monterey-area coast. Future closure notices remain a required dependency.",
+      "receipts": [
+        {
+          "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:02Z",
+          "compressed_bytes": 684376,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:03 GMT",
+          "final_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+          "content_type": "application/pdf",
+          "last_modified": "Wed, 19 Aug 2026 20:16:12 GMT",
+          "bytes": 708731,
+          "sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3"
+        }
+      ]
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
+      "normalization": "pdf-bytes-v1",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
+      "retrieved_at": "2026-09-22T15:55:03Z",
+      "note": "Inspected January 1, 2026 Central groundfish season table: April 1\u2013December 31 at all depths, RCG group and species sublimits, two lingcod at 22 inches, and prohibited species. Seasonal access is separate from MPAs and exclusion areas.",
+      "receipts": [
+        {
+          "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:03Z",
+          "compressed_bytes": 196071,
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:03 GMT",
+          "final_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
+          "content_type": "application/pdf",
+          "last_modified": "Wed, 07 Jan 2026 00:03:31 GMT",
+          "bytes": 212525,
+          "sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e"
+        }
+      ]
+    },
+    "mpa-piedras": {
+      "decision": "approve",
+      "content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
+      "normalization": "text-and-links-v3",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
+      "retrieved_at": "2026-09-22T15:55:04Z",
+      "note": "Reviewed Piedras Blancas nearshore reserve and offshore conservation area for the San Simeon expansion. Offshore exception is recreational/commercial salmon and albacore, not all finfish; app excludes both mapped areas. September 24 original-page comparison: only the site navigation label News Room changed to Newsroom; rule text and linked resources are otherwise identical.",
+      "receipts": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
+          "attempt": 1,
+          "retrieved_at": "2026-09-22T15:55:03Z",
+          "http_status": 200,
+          "http_date": "Tue, 22 Sep 2026 15:55:04 GMT",
+          "final_url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
+          "content_type": "text/html; charset=utf-8",
+          "last_modified": null,
+          "bytes": 81044,
+          "sha256": "1829699bf0d5bc6a8bb31a50cc2deaf90e366e2eb83b3c8e40b7a61e8d87db6e"
+        }
+      ]
+    }
+  },
+  "conclusion": "The exact CDFW crab URL was migrated to its official permanent-redirect destination. Every changed official HTML source was compared against its archived, approved September 22 source: the sole normalized difference is the site-wide News Room to Newsroom navigation label. Other source fingerprints are unchanged. Existing interpretations, dates and methods are retained; current notices, closures, health, position and harbor access remain separate checks."
+}
