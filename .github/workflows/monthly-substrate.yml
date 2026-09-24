@@ -259,6 +259,24 @@ jobs:
           --audit var/review/usgs-doi-native-audit.json
           --metadata var/review/usgs-doi-metadata.json
           --output var/review/statewide-original-class-fine-tile-queue.json
+      - name: Audit every positive original-class tile against NOAA measured depth
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/triage_original_class_tile_queue.py
+          --queue var/review/statewide-original-class-fine-tile-queue.json
+          --all --fetch
+          --output var/review/statewide-original-class-depth-triage.json
+      - name: Check exact original class against qualifying measured cells statewide
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/screen_statewide_original_class_leads.py
+          --queue var/review/statewide-original-class-fine-tile-queue.json
+          --triage var/review/statewide-original-class-depth-triage.json
+          --audit var/review/usgs-doi-native-audit.json
+          --metadata var/review/usgs-doi-metadata.json
+          --output var/review/statewide-original-class-measured-overlap-review.json
       - name: Recheck the Pigeon Point to Monterey source gap
         env:
           PYTHONPATH: src:.

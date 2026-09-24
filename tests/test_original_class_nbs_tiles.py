@@ -6,6 +6,7 @@ from pathlib import Path
 from scripts.queue_nbs_original_class_tiles import intersecting_scheme_rows
 from scripts.queue_statewide_original_class_tiles import build as build_statewide_queue
 from scripts.screen_original_class_nbs_tiles import screen
+from scripts.screen_statewide_original_class_leads import build as build_statewide_overlap
 from scripts.triage_original_class_tile_queue import triage
 
 
@@ -57,6 +58,21 @@ class OriginalClassNbsTilesTest(unittest.TestCase):
                             "products": []}
             with self.assertRaisesRegex(ValueError, "missing from source queue"):
                 triage(source_queue, scheme, Path(directory), ["F7513W80"])
+
+    def test_statewide_overlap_requires_complete_matching_source_triage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scheme = Path(directory) / "scheme"
+            scheme.write_bytes(b"scheme")
+            digest = __import__("hashlib").sha256(b"scheme").hexdigest()
+            source_queue = {"scope": "statewide-original-class-noaa-fine-tile-source-queue",
+                            "noaa_scheme_sha256": digest,
+                            "products": [{"release_id": "sample", "original_archive_sha256": "a" * 64}]}
+            depth_triage = {"scope": "statewide-original-class-noaa-measured-depth-triage",
+                            "noaa_scheme_sha256": digest, "products": []}
+            with self.assertRaisesRegex(ValueError, "does not cover every original class grid"):
+                build_statewide_overlap(source_queue, depth_triage,
+                                        {"scope": "usgs-state-waters-doi-native-grid-audit"}, {},
+                                        scheme, Path(directory), Path(directory))
 
 
 if __name__ == "__main__":

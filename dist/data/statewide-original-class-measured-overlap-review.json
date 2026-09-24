@@ -1,0 +1,490 @@
+{
+  "schema_version": 1,
+  "scope": "statewide-original-class-noaa-measured-cell-overlap-review",
+  "reviewed_at": "2026-09-24T21:42:42+00:00",
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "original_class_grids": 17,
+  "source_tile_pairs_with_qualified_depth": 20,
+  "tile_level_overlap_cells": 4942671,
+  "products": [
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "positive_source_tile_leads": 6,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "positive_source_tile_leads": 0,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7513W80",
+      "original_archive_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+      "positive_source_tile_leads": 5,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7CJ8BJW",
+      "original_archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+      "positive_source_tile_leads": 5,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7K35RQB",
+      "original_archive_sha256": "925ff387a48ca3a903609fac664db9fb685252d4be994107095746331e5854cd",
+      "positive_source_tile_leads": 0,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7K35RQB",
+      "original_archive_sha256": "9fcab31d296bcf75c26c3aa937fe7fff190f0365299b6a287f76e93694dbcead",
+      "positive_source_tile_leads": 5,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7QN64XQ",
+      "original_archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+      "positive_source_tile_leads": 5,
+      "tiles_with_qualified_measured_depth": 5,
+      "strict_original_class3_measured_depth_overlap_cells": 250407,
+      "tiles": [
+        {
+          "tile": "BH45G5BH",
+          "noaa_raster_sha256": "de96bc81c6bf824330504bc395daf224b027d7ffb8778418552a4859748bcfa1",
+          "noaa_rat_sha256": "9c63ae0f037d9002d1c6524863b7fd2b47dad713ae34b6fa354e5c04ceeefe52",
+          "qualified_measured_depth_pixels": 681353,
+          "original_class3_pixels_at_noaa_cell_centers": 185461,
+          "strict_measured_class3_overlap_pixels": 55931,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11951_MB_1m_MLLW_1of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 27337
+            },
+            {
+              "source_survey_id": "H11951_MB_2m_MLLW_2of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 25216
+            },
+            {
+              "source_survey_id": "H11952_MB_1m_MLLW_1of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 748
+            },
+            {
+              "source_survey_id": "H11952_MB_2m_MLLW_2of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 2630
+            }
+          ]
+        },
+        {
+          "tile": "BH45F5BH",
+          "noaa_raster_sha256": "0a45db7d2b98af833fa6677d5d80b28f41c00237f8e8d490436cde3a1612bf3a",
+          "noaa_rat_sha256": "3431ad38b78a6e690420be6ba0926e2101cc18ac37293856c25d74229d25f275",
+          "qualified_measured_depth_pixels": 1398846,
+          "original_class3_pixels_at_noaa_cell_centers": 143332,
+          "strict_measured_class3_overlap_pixels": 138864,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11952_MB_1m_MLLW_1of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 89097
+            },
+            {
+              "source_survey_id": "H11952_MB_2m_MLLW_2of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 49767
+            }
+          ]
+        },
+        {
+          "tile": "BH45F5BJ",
+          "noaa_raster_sha256": "fd2e0aedc410f42a030a9b0d8dc3400428d8582ea67d74eb17bcf50f251e6b74",
+          "noaa_rat_sha256": "fc49ca9ee673b5a1e8d891754fc3e7bf433459850e991ce4114c3f0a1be28b27",
+          "qualified_measured_depth_pixels": 209476,
+          "original_class3_pixels_at_noaa_cell_centers": 36505,
+          "strict_measured_class3_overlap_pixels": 31838,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11952_MB_1m_MLLW_1of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 25075
+            },
+            {
+              "source_survey_id": "H11952_MB_2m_MLLW_2of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 6763
+            }
+          ]
+        },
+        {
+          "tile": "BH45D5BJ",
+          "noaa_raster_sha256": "e38d71dc9cbf47ee04e8f91dce01915e3a11366d917d33df7c9a8480d1f4563f",
+          "noaa_rat_sha256": "8a73c2ec5786ba88c167b0486b2b3c12aca287bdcfd89bf08f874f54ca6002da",
+          "qualified_measured_depth_pixels": 1790118,
+          "original_class3_pixels_at_noaa_cell_centers": 25765,
+          "strict_measured_class3_overlap_pixels": 23245,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11952_MB_1m_MLLW_1of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 16763
+            },
+            {
+              "source_survey_id": "H11952_MB_2m_MLLW_2of4",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 1441
+            },
+            {
+              "source_survey_id": "H11953_MB_1m_MLLW_1of4",
+              "survey_date_end": "2008-09-05",
+              "overlap_pixels": 5041
+            }
+          ]
+        },
+        {
+          "tile": "BH45H5BH",
+          "noaa_raster_sha256": "d8cd577e2f7edb849f3d2f07664a1d8fca77a8cad4e53d89e6c26927e2757d5c",
+          "noaa_rat_sha256": "7bd3a54dc96d1d7b62d2f35307c1a4925da254e417991484f6c58ed1d7fff165",
+          "qualified_measured_depth_pixels": 924191,
+          "original_class3_pixels_at_noaa_cell_centers": 7029,
+          "strict_measured_class3_overlap_pixels": 529,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11951_MB_1m_MLLW_1of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 377
+            },
+            {
+              "source_survey_id": "H11951_MB_2m_MLLW_2of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 152
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "release_id": "F7TH8JWJ",
+      "original_archive_sha256": "f8605263b06aeff232f48e5bd21b306d18d75511772a007ce5de1534a646a0fa",
+      "positive_source_tile_leads": 4,
+      "tiles_with_qualified_measured_depth": 4,
+      "strict_original_class3_measured_depth_overlap_cells": 38350,
+      "tiles": [
+        {
+          "tile": "BH45H5BH",
+          "noaa_raster_sha256": "d8cd577e2f7edb849f3d2f07664a1d8fca77a8cad4e53d89e6c26927e2757d5c",
+          "noaa_rat_sha256": "7bd3a54dc96d1d7b62d2f35307c1a4925da254e417991484f6c58ed1d7fff165",
+          "qualified_measured_depth_pixels": 924191,
+          "original_class3_pixels_at_noaa_cell_centers": 81113,
+          "strict_measured_class3_overlap_pixels": 30053,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11951_MB_1m_MLLW_1of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 22536
+            },
+            {
+              "source_survey_id": "H11951_MB_2m_MLLW_2of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 7517
+            }
+          ]
+        },
+        {
+          "tile": "BH45J5BH",
+          "noaa_raster_sha256": "c90dfbc9828f590d786a6ad13eb3731ccfe9012d3312df7642b4e2de7d231634",
+          "noaa_rat_sha256": "7703db900d223e667e7834ee04f59973b667b5bba94969cf2fff9445aa670c40",
+          "qualified_measured_depth_pixels": 30510,
+          "original_class3_pixels_at_noaa_cell_centers": 32373,
+          "strict_measured_class3_overlap_pixels": 2764,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11951_MB_1m_MLLW_1of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 2010
+            },
+            {
+              "source_survey_id": "H11951_MB_2m_MLLW_2of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 754
+            }
+          ]
+        },
+        {
+          "tile": "BH45G5BH",
+          "noaa_raster_sha256": "de96bc81c6bf824330504bc395daf224b027d7ffb8778418552a4859748bcfa1",
+          "noaa_rat_sha256": "9c63ae0f037d9002d1c6524863b7fd2b47dad713ae34b6fa354e5c04ceeefe52",
+          "qualified_measured_depth_pixels": 681353,
+          "original_class3_pixels_at_noaa_cell_centers": 12084,
+          "strict_measured_class3_overlap_pixels": 5533,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11951_MB_1m_MLLW_1of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 1851
+            },
+            {
+              "source_survey_id": "H11951_MB_2m_MLLW_2of5",
+              "survey_date_end": "2008-09-04",
+              "overlap_pixels": 3682
+            }
+          ]
+        },
+        {
+          "tile": "BH45K5BH",
+          "noaa_raster_sha256": "3cffd1d713b4dbe386b360fe4fff73e7a7128601525c9da279c7b4c5dbdf2694",
+          "noaa_rat_sha256": "eee97b92c08768a2c50cfe47f2d79e2e33d9266f22d5b5161242ee772270d961",
+          "qualified_measured_depth_pixels": 1759,
+          "original_class3_pixels_at_noaa_cell_centers": 3784,
+          "strict_measured_class3_overlap_pixels": 0,
+          "source_survey_contributors": []
+        }
+      ]
+    },
+    {
+      "release_id": "F7TM785G",
+      "original_archive_sha256": "b6e86d2d518619cb7760f8f2331b2eb768e054a89ab74498e42634c414471cd3",
+      "positive_source_tile_leads": 5,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "original_archive_sha256": "05d3c11229ca3a33f45d22da49970c0a84efbffd5fdd718036ed29d25059eeb1",
+      "positive_source_tile_leads": 0,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "original_archive_sha256": "d1c9ccc9b0c686d9461107dfd4ae9bfacd713b132560c5f8c7710b4798db7363",
+      "positive_source_tile_leads": 4,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "P902YIF5",
+      "original_archive_sha256": "f7b2c5847e12ba463a71287ce0d410b32aafa4ee05169be14825727583756821",
+      "positive_source_tile_leads": 4,
+      "tiles_with_qualified_measured_depth": 2,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": [
+        {
+          "tile": "BH42H5FJ",
+          "noaa_raster_sha256": "cce8e7954f4bc78fde266fac44c7bfaf53cade505c6a4194fdd4fd6d033e396d",
+          "noaa_rat_sha256": "19f963906eb955de4402e2f1527cb1914ebcda57a22cd49c4349b1452bb97b70",
+          "qualified_measured_depth_pixels": 667,
+          "original_class3_pixels_at_noaa_cell_centers": 6217,
+          "strict_measured_class3_overlap_pixels": 0,
+          "source_survey_contributors": []
+        },
+        {
+          "tile": "BH42H5FH",
+          "noaa_raster_sha256": "a406c665ac99e091a3ea99bd22d33dcc9d1bc3ef99d6a4c2c73671181375cd38",
+          "noaa_rat_sha256": "e48e3be8cc368eaa294c7f245021a0ebdb433d5668b6297b46b18bcd3054e142",
+          "qualified_measured_depth_pixels": 143192,
+          "original_class3_pixels_at_noaa_cell_centers": 6056,
+          "strict_measured_class3_overlap_pixels": 0,
+          "source_survey_contributors": []
+        }
+      ]
+    },
+    {
+      "release_id": "P9HEZNRO",
+      "original_archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+      "positive_source_tile_leads": 6,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "P9J1K4QX",
+      "original_archive_sha256": "927bc802fda0c6229f5b55f6e57616a57428e4c55428f06685dcfbe41eaf2fed",
+      "positive_source_tile_leads": 2,
+      "tiles_with_qualified_measured_depth": 1,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": [
+        {
+          "tile": "BH42L5FM",
+          "noaa_raster_sha256": "53e48ba4d6e49f1022ea7114f613100f7825efcceb5b83436093782416e0c0ee",
+          "noaa_rat_sha256": "85181e33528daa85fb446db283397df32f7edfa4b6896bb90ab3107d67fac435",
+          "qualified_measured_depth_pixels": 11913,
+          "original_class3_pixels_at_noaa_cell_centers": 1,
+          "strict_measured_class3_overlap_pixels": 0,
+          "source_survey_contributors": []
+        }
+      ]
+    },
+    {
+      "release_id": "P9KBGELE",
+      "original_archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "positive_source_tile_leads": 7,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "P9U0SUGL",
+      "original_archive_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+      "positive_source_tile_leads": 8,
+      "tiles_with_qualified_measured_depth": 8,
+      "strict_original_class3_measured_depth_overlap_cells": 4653914,
+      "tiles": [
+        {
+          "tile": "BH42G5FG",
+          "noaa_raster_sha256": "d918e11e5d1b7110fcdbc5196cd5f1f070818a30f81c3c654daee8bb51e40cb6",
+          "noaa_rat_sha256": "de5c1e7fd91c3b109cf6408fb0271d6422a136c566132485dc12fec56e231e96",
+          "qualified_measured_depth_pixels": 3173836,
+          "original_class3_pixels_at_noaa_cell_centers": 2581223,
+          "strict_measured_class3_overlap_pixels": 2460520,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 2460520
+            }
+          ]
+        },
+        {
+          "tile": "BH42G5FF",
+          "noaa_raster_sha256": "4f46073f96dad13a34deb740f71a3f7904544013c612c9d28dd816b9b4358ced",
+          "noaa_rat_sha256": "e0cd834597b3cce1a8f0da68ed5f5f4bfeb07d29bb0a6d974633d991d628c428",
+          "qualified_measured_depth_pixels": 1115484,
+          "original_class3_pixels_at_noaa_cell_centers": 1008277,
+          "strict_measured_class3_overlap_pixels": 719932,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 719932
+            }
+          ]
+        },
+        {
+          "tile": "BH42F5FG",
+          "noaa_raster_sha256": "bf18ea422563d2175b591cfaf0aa2efb04978de06143cf869e8e18301ea3f014",
+          "noaa_rat_sha256": "92d9f2096eb68d91ac5160db5b2b6cfc6049488a18c8f0705e02424e0b51a4da",
+          "qualified_measured_depth_pixels": 644241,
+          "original_class3_pixels_at_noaa_cell_centers": 886406,
+          "strict_measured_class3_overlap_pixels": 491857,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 491857
+            }
+          ]
+        },
+        {
+          "tile": "BH42H5FG",
+          "noaa_raster_sha256": "35ddd9b8d37fd7c2a1dad105c96cbe0c06954344ddbfe42e9b97ebbf1a717e90",
+          "noaa_rat_sha256": "95a687b6d657d9df0c1255cd18f8cbe8a6b6f73bdc18b88e9c4542204e4ee865",
+          "qualified_measured_depth_pixels": 812577,
+          "original_class3_pixels_at_noaa_cell_centers": 636197,
+          "strict_measured_class3_overlap_pixels": 586394,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 586394
+            }
+          ]
+        },
+        {
+          "tile": "BH42H5FH",
+          "noaa_raster_sha256": "a406c665ac99e091a3ea99bd22d33dcc9d1bc3ef99d6a4c2c73671181375cd38",
+          "noaa_rat_sha256": "e48e3be8cc368eaa294c7f245021a0ebdb433d5668b6297b46b18bcd3054e142",
+          "qualified_measured_depth_pixels": 143192,
+          "original_class3_pixels_at_noaa_cell_centers": 354476,
+          "strict_measured_class3_overlap_pixels": 72813,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 72813
+            }
+          ]
+        },
+        {
+          "tile": "BH42H5FF",
+          "noaa_raster_sha256": "aad588262031d184957a93274b578c142f21b7399eee979026460f9198d84391",
+          "noaa_rat_sha256": "72cf4be6a35f8c29b0f6d4fcfd2f37ea214977831851a0ddee1106a69f7b70c2",
+          "qualified_measured_depth_pixels": 1251361,
+          "original_class3_pixels_at_noaa_cell_centers": 360571,
+          "strict_measured_class3_overlap_pixels": 278567,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 278567
+            }
+          ]
+        },
+        {
+          "tile": "BH42F5FF",
+          "noaa_raster_sha256": "e2259b0d0dbc0aa4386141ccabfcf55b76bc8498e5dbdbb82898a3bd6afda9f7",
+          "noaa_rat_sha256": "891a3a7bc27703921704232dc4838b3e0342e0abd8e34a466cb929a3bd4c2520",
+          "qualified_measured_depth_pixels": 44623,
+          "original_class3_pixels_at_noaa_cell_centers": 174120,
+          "strict_measured_class3_overlap_pixels": 42548,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 42548
+            }
+          ]
+        },
+        {
+          "tile": "BH42G5FH",
+          "noaa_raster_sha256": "5604e346a8b0783584fc72f1c6451c61e75743885cbee04ea28ebe576d7469d1",
+          "noaa_rat_sha256": "0fe8dd65bc85ad7cf1a880d9c3ce93bfcb1ca53fb467f2706e10582a77a27903",
+          "qualified_measured_depth_pixels": 12964,
+          "original_class3_pixels_at_noaa_cell_centers": 18803,
+          "strict_measured_class3_overlap_pixels": 1283,
+          "source_survey_contributors": [
+            {
+              "source_survey_id": "H11975_MB_VR_MLLW_1of1",
+              "survey_date_end": "2009-10-22",
+              "overlap_pixels": 1283
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "release_id": "P9ZSTUK1",
+      "original_archive_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+      "positive_source_tile_leads": 7,
+      "tiles_with_qualified_measured_depth": 0,
+      "strict_original_class3_measured_depth_overlap_cells": 0,
+      "tiles": []
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "USGS class and NOAA depth are historical, differently acquired sources; cells are not independent fish observations.",
+    "Counts may overlap across tiles and original USGS products; no coastwide unique area is claimed.",
+    "A nonzero class/depth overlap still requires original survey hazard reports, current ENC, MPA and method-specific legal review, approach routes, species evidence and position uncertainty before any target or export."
+  ]
+}

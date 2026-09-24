@@ -51,14 +51,17 @@ def triage(source_queue, scheme, cache, release_ids, *, fetch=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, required=True)
-    parser.add_argument("--release-id", action="append", required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--release-id", action="append")
+    selection.add_argument("--all", action="store_true", help="Audit every reviewed original grid in the queue")
     parser.add_argument("--scheme", type=Path, default=Path("var/nbs-cache/modeling-tile-scheme.gpkg"))
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache"))
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = triage(json.loads(args.queue.read_text()), args.scheme, args.cache,
-                    args.release_id, fetch=args.fetch)
+    source_queue = json.loads(args.queue.read_text())
+    release_ids = sorted({row["release_id"] for row in source_queue["products"]}) if args.all else args.release_id
+    result = triage(source_queue, args.scheme, args.cache, release_ids, fetch=args.fetch)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(result["unique_noaa_tiles_checked"], "exact NOAA tiles checked;",
