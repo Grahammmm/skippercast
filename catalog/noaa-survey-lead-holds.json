@@ -24,8 +24,16 @@
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11972/DR/H11972.pdf",
       "report_sha256": "06cbdbe11697666659a3465ec9161c19e36316825985df4f5844e9d45cc1cae7",
-      "reason": "The 2008–2009 Point Delgada original survey is the measured contributor behind a North Mendocino NOAA NBS test tile with 46 historical rocky-camera windows passing the local source screen. Its final descriptive report identifies seven dangers to navigation, two rocks of unknown depth placed over survey holidays on shoals shallower than four fathoms, revisions to charted islets and more extensive submerged rock than formerly charted. Dynamic sediment bottom also changed between the two acquisition periods. Withhold the whole survey as a fishing-target source until the original fine BAG cells, current ENC hazards, exact substrate and MPA footprints, access and Mendocino rules are reconciled. The tile and 2010 camera records alone do not locate a present fishable reef.",
+      "reason": "The 2008–2009 Point Delgada survey is the measured contributor behind a North Mendocino NOAA NBS test tile with 46 historically rocky camera windows passing the tile's 25 m screen, but only three also pass the original 242 MB BAG's fine-grid/depth/uncertainty neighborhood screen; 43 are held near original fine-grid edges. Its final descriptive report identifies seven dangers to navigation, two rocks of unknown depth over shallow shoal holidays, charted-islet corrections and dynamic sediment bottom. Withhold the survey from fishing-target promotion until current ENC hazards, exact substrate and MPA footprints, access and Mendocino rules are reconciled. The tile and 2010 camera records alone do not locate a present fishable reef.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11972.html"
+    },
+    {
+      "survey_id": "H11970",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11970/DR/H11970.pdf",
+      "report_sha256": "270ae7b0835cfd59e846bb9c29f8ef7827e3f953641c443259c1b28eb187fa5c",
+      "reason": "The 2009 Big White Rock–Abalone Point survey contributes measured cells to another North Mendocino NOAA NBS test tile. Of 35 tile-qualified historical rocky-camera windows, only seven pass the exact original 222 MB BAG fine-grid/depth/uncertainty neighborhood screen; 25 are held at original fine-grid edges and three fail original cell qualification. Its report identifies four dangers to navigation and chart contour and shoal discrepancies, including a 10-fathom contour displaced by as much as 400 m in an older chart comparison. Keep the survey as a source lead, not a fishing target, until the current ENC, historical hazards, exact substrate and MPA footprints, access and Mendocino rules are reviewed.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11970.html"
     }
   ]
 }

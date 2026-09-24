@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "scope": "nbs-versus-original-vr-bag-rocky-camera-reconciliation",
+  "reviewed_at": "2026-09-24T05:44:58+00:00",
+  "tile": "BH42M5F8",
+  "nbs_raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42M5F8/Modeling_BH42M5F8_20260716.tiff",
+  "nbs_raster_sha256": "5a874a0d044edd0fbd18458f847a6f949019b7231017a50ebc759896ff5ecc1f",
+  "nbs_rat_sha256": "d5ec16628765dc3090832817946b3d7c0df934c711404ee701fa70a752c9b743",
+  "original_survey_id": "H11972",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11972/BAG/H11972_MB_VR_MLLW_1of1.bag",
+  "original_bag_sha256": "b5b2a2581d91c496e41bba678004c6fc5ee0b7772da5661ff8c67b4ca5237d1b",
+  "original_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11972/DR/H11972.pdf",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+  "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+  "cdfw_mpa_source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "counts": {
+    "rocky_camera_windows_in_tile_envelope": 46,
+    "nbs_locally_qualified_90pct": 46
+  },
+  "comparison": [
+    {
+      "nbs_status": "locally_qualified_90pct",
+      "original_bag_status": "original_fine_grid_edge_held",
+      "historical_camera_windows": 43
+    },
+    {
+      "nbs_status": "locally_qualified_90pct",
+      "original_bag_status": "original_locally_qualified_90pct",
+      "historical_camera_windows": 3
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "NBS reuses original NOAA survey measurements; it is not an independent seabed observation.",
+    "Camera windows are correlated historical transect records, not unique sites or present fish evidence.",
+    "Survey descriptive-report hazards, current chart, federal closures, local rules and route remain unreviewed for target promotion."
+  ]
+}
