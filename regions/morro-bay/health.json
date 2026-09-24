@@ -1,1 +1,1 @@
-{"region_id":"morro-bay","generated_at":"2026-09-24T17:29:56Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":60,"sources_total":63,"issues":["sst","chlorophyll","currents"]}
+{"region_id":"morro-bay","generated_at":"2026-09-24T17:33:19Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":63,"issues":["currents"]}
