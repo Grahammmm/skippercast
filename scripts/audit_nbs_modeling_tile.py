@@ -66,6 +66,13 @@ def contributors(rat_path):
         for node in root.findall(".//Row"))}
 
 
+def is_measured_survey(item):
+    source = item["source_survey_id"].lower()
+    return (item["coverage"] == "1" and item["bathy_coverage"] == "1"
+            and ".interpolated" not in source and "chart" not in source
+            and "generalization" not in source)
+
+
 def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey_year=1990):
     row = scheme_row(scheme, tile)
     raster_path = cache / f"{tile}.tiff"
@@ -79,13 +86,15 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
         if "MLLW" not in raster.crs.to_wkt():
             raise ValueError("Vertical datum is not explicitly MLLW")
         elevation, uncertainty, contributor = raster.read()
+        unlisted = set(np.unique(contributor[np.isfinite(contributor)]).astype(int)) - set(source_rows)
+        if unlisted:
+            raise ValueError(f"Contributor RAT is missing raster values: {sorted(unlisted)[:5]}")
         depth = np.isfinite(elevation) & (elevation <= -25 / 3.28084) & (elevation >= -200 / 3.28084)
         measured = {value for value, item in source_rows.items()
-                    if item["coverage"] == "1" and item["bathy_coverage"] == "1"
-                    and ".interpolated" not in item["source_survey_id"].lower()}
+                    if is_measured_survey(item)}
         recent = {value for value in measured
                   if item_year(source_rows[value]["survey_date_end"]) >= min_survey_year}
-        uncertainty_ok = np.isfinite(uncertainty) & (uncertainty <= max_uncertainty_m)
+        uncertainty_ok = np.isfinite(uncertainty) & (uncertainty >= 0) & (uncertainty <= max_uncertainty_m)
         qualified = depth & uncertainty_ok & np.isin(contributor, list(recent))
         counts = {"depth_25_to_200_ft_pixels": int(depth.sum()),
                   "measured_depth_pixels": int((depth & np.isin(contributor, list(measured))).sum()),

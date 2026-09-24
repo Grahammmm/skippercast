@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.audit_nbs_modeling_tile import audit, item_year, verified_file
+from scripts.audit_nbs_modeling_tile import audit, is_measured_survey, item_year, verified_file
 
 
 class NbsModelingTileTest(unittest.TestCase):
@@ -17,6 +17,12 @@ class NbsModelingTileTest(unittest.TestCase):
             path.write_bytes(b"data")
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 verified_file("https://example.invalid/tile", "0" * 64, path, False)
+
+    def test_charts_and_interpolation_are_not_measured_surveys(self):
+        row = {"coverage": "1", "bathy_coverage": "1", "source_survey_id": "H12345"}
+        self.assertTrue(is_measured_survey(row))
+        for source in ("H12345.interpolated", "Chart 18686", "NBS Generalization"):
+            self.assertFalse(is_measured_survey({**row, "source_survey_id": source}))
 
     def test_real_point_sur_tile_does_not_promote_old_or_interpolated_depth(self):
         root = Path(__file__).resolve().parents[1]
