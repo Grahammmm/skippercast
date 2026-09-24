@@ -63,7 +63,7 @@ def select_tiles(scheme, manifest, video_cache, sectors):
 
 
 def camera_window_screen(raster, source_rows, longitude, latitude, project, inverse, protected,
-                         *, radius_m=25):
+                         *, radius_m=25, max_uncertainty_m=1.0):
     x, y = project.transform(longitude, latitude)
     footprint = transform(inverse.transform, Point(x, y).buffer(radius_m))
     if protected.intersects(footprint):
@@ -77,7 +77,7 @@ def camera_window_screen(raster, source_rows, longitude, latitude, project, inve
     window = Window(col - pad, row - pad, pad * 2 + 1, pad * 2 + 1)
     elevation, uncertainty, contributor = raster.read(window=window)
     eligible = qualified_mask(elevation, uncertainty, contributor, source_rows,
-                              resolution_m=max(raster.res))
+                              resolution_m=max(raster.res), max_uncertainty_m=max_uncertainty_m)
     if not eligible[pad, pad]:
         return "center_not_qualified"
     xx, yy = np.meshgrid(np.arange(-pad, pad + 1) * raster.res[0],
@@ -87,7 +87,7 @@ def camera_window_screen(raster, source_rows, longitude, latitude, project, inve
     return "locally_qualified_90pct" if fraction >= .9 else "neighborhood_not_qualified"
 
 
-def screen_camera_positions(cache, tile, positions, protected):
+def screen_camera_positions(cache, tile, positions, protected, *, max_uncertainty_m=1.0):
     counts = Counter()
     source_rows = contributors(cache / f"{tile}.tiff.aux.xml")
     with rasterio.open(cache / f"{tile}.tiff") as raster:
@@ -95,7 +95,8 @@ def screen_camera_positions(cache, tile, positions, protected):
         inverse = Transformer.from_crs(raster.crs, "EPSG:4326", always_xy=True)
         for longitude, latitude in positions:
             counts[camera_window_screen(raster, source_rows, longitude, latitude,
-                                        project, inverse, protected)] += 1
+                                        project, inverse, protected,
+                                        max_uncertainty_m=max_uncertainty_m)] += 1
     return dict(counts)
 
 

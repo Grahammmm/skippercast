@@ -117,7 +117,10 @@ def build(scheme, manifest, video_cache, sectors, cache, mpa_snapshot, *, coast,
                               'source_audit': audited.get(tile), 'source_failure': failed.get(tile),
                               'uncertainty_diagnostic': diagnostics.get(tile),
                               'historical_camera_native_cell_screen': screen_camera_positions(
-                                  cache, tile, positions[(sid, tile)], protected) if tile in audited else None})
+                                  cache, tile, positions[(sid, tile)], protected) if tile in audited else None,
+                              'historical_camera_2m_uncertainty_sensitivity': screen_camera_positions(
+                                  cache, tile, positions[(sid, tile)], protected,
+                                  max_uncertainty_m=2.0) if tile in audited else None})
         rows.append({'sector_id': sid, 'name': sector['name'],
                      'historical_rocky_camera_windows': camera_counts[sid],
                      'candidate_tiles': len(ranked[sid]), 'reviewed_tiles': tile_rows})
@@ -136,6 +139,7 @@ def build(scheme, manifest, video_cache, sectors, cache, mpa_snapshot, *, coast,
                             'Camera windows along the same transect and overlapping tiles are correlated; counts are not additive.',
                             'NBS Modeling is test-and-evaluation bathymetry and may reuse the same original NOAA surveys.',
                             'A zero in these selected tiles does not establish absent habitat in the sector.',
+                            'The 2 m uncertainty sensitivity is a research comparison, not a change to the 1 m target gate or a fishing waypoint.',
                             'Original survey, substrate, hazards, current chart, rights, closures and local rules remain separate target gates.']}
 
 

@@ -246,6 +246,48 @@ export async function initCoastalDiscovery(catalog,coast) {
     });
   }
   if(coast.id==='central'){
+    const esteroLayer=L.layerGroup();map.createPane('esteroMeasuredHard').style.zIndex=427;
+    const esteroLabel=document.createElement('label');esteroLabel.className='map-layer-option';
+    const esteroCheck=document.createElement('input');esteroCheck.type='checkbox';
+    const esteroTitle=document.createElement('span');esteroTitle.textContent='Estero Bay · measured-depth hard-bottom research';
+    esteroLabel.append(esteroCheck,esteroTitle);body.append(esteroLabel);
+    const esteroNote=document.createElement('p');esteroNote.className='small';
+    esteroNote.textContent='Optional historical USGS bottom class intersected with NOAA measured depth. Research tier: 1–2 m supplied depth uncertainty, no verified fish or fishing points.';
+    body.append(esteroNote);
+    let esteroLoaded=false,esteroShapes=[];
+    function drawEstero(){if(!esteroCheck.checked||!esteroLoaded)return;
+      for(const {shape,bounds} of esteroShapes){
+        if(bounds.intersects(map.getBounds())){if(!esteroLayer.hasLayer(shape))esteroLayer.addLayer(shape);}
+        else if(esteroLayer.hasLayer(shape))esteroLayer.removeLayer(shape);
+      }
+    }
+    map.on('moveend',drawEstero);
+    esteroCheck.addEventListener('change',async()=>{
+      if(!esteroCheck.checked){map.removeLayer(esteroLayer);return;}
+      if(esteroLoaded){esteroLayer.addTo(map);drawEstero();return;}
+      esteroNote.textContent='Loading reviewed original-cell research outlines…';
+      try{
+        const response=await fetch('data/central-nbs-usgs-hard-research-context.geojson',{signal:AbortSignal.timeout(20000)});
+        if(!response.ok)throw Error('Estero Bay source review unavailable');
+        const data=await response.json();
+        if(data.type!=='FeatureCollection'||data.scope!=='central-nbs-usgs-hard-research-context'
+          ||data.coast_id!=='central'||!Array.isArray(data.features)
+          ||data.features.some(f=>f.properties?.sector_id!=='cambria-morro'||f.properties?.fishing_target!==false
+            ||f.properties?.exportable!==false||f.properties?.legal_clearance!==false
+            ||f.properties?.fish_confirmed!==false||f.properties?.depth_qualified_for_target!==false
+            ||!Number.isFinite(f.properties?.maximum_supplied_uncertainty_m)
+            ||!Array.isArray(f.properties?.usgs_sources)||!f.properties.usgs_sources.length))throw Error('Unreviewed Estero Bay source layer');
+        esteroShapes=data.features.map(f=>{
+          const p=f.properties;
+          const source=p.usgs_sources[0];
+          const shape=L.geoJSON(f,{pane:'esteroMeasuredHard',style:{color:'#866b37',weight:1.4,fillColor:'#c9b078',fillOpacity:.23}})
+            .bindPopup(`<strong>Historical measured-depth hard-bottom research</strong><p>${esc(p.sector_id)} · ${esc(p.measured_depth_ft_range.join('–'))} ft MLLW in original NOAA cells; supplied uncertainty up to ${esc(p.maximum_supplied_uncertainty_m)} m. ${esc(p.approx_display_area_m2.toLocaleString())} m² displayed in conservative ${esc(p.display_cell_m)} m squares. USGS class-3 rock/boulder interpretation is historical, and local camera confirmation is absent. This does not establish fish, a rated fishing spot, legal access or navigation safety.</p><p>MPA and federal exclusion screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck present boundaries and rules.</p><a href="${esc(p.nbs_raster_url)}" target="_blank" rel="noopener">NOAA original tile ↗</a> · <a href="${esc(source.metadata_url)}" target="_blank" rel="noopener">USGS bottom-class metadata ↗</a>`);
+          return {shape,bounds:shape.getBounds()};
+        });
+        esteroLoaded=true;esteroLayer.addTo(map);drawEstero();
+        esteroNote.textContent=`${data.features.length} historical research outlines near Estero Bay. These are not verified fishing grounds or exportable positions; current charts, rules and fish presence still require review.`;
+      }catch(error){esteroCheck.checked=false;esteroNote.textContent=error.message+' · consult NOAA and USGS sources.';}
+    });
     const sedimentLayer=L.layerGroup();map.createPane('centralSedimentContext').style.zIndex=422;
     const sedimentLabel=document.createElement('label');sedimentLabel.className='map-layer-option';
     const sedimentCheck=document.createElement('input');sedimentCheck.type='checkbox';

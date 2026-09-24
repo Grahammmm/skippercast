@@ -1,0 +1,683 @@
+{
+  "schema_version": 1,
+  "scope": "central-nbs-usgs-hard-source-review",
+  "reviewed_at": "2026-09-24T06:38:45.084831+00:00",
+  "status": "research-leads-only",
+  "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "usgs_context_sha256": "3eddd1f56df2ed1e4d173cbf084f585858f989685ee5b73db8fab69094f7f263",
+  "usgs_original_audit_sha256": "8c2ce7dc43c3a8e77b5709c3619ca8bfc7b2ddeeb5cd2bd599a719cca169962a",
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "noaa_federal_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
+  "method": "Actual NBS MLLW measured-contributor cells at 25\u2013200 ft; supplied uncertainty plus 2 m planning margin. Strict 1 m and research-only 2 m sensitivity. Compare 20 m display-generalized USGS hard polygons with separately hash-checked original 2 m USGS class-3 raster; 100 m conservative MPA/GEA buffers.",
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Counts can overlap across USGS releases and neighboring NBS tiles; unique counts are per tile only.",
+    "Original USGS class is sampled at NBS 4 m cell centers with nearest-neighbor category transfer; this is a cross-source screen, not an independent position-accuracy estimate.",
+    "USGS class and NBS contributors are historical; original contributor products, source hazard reports and legal access must be inspected before any target.",
+    "NBS Modeling is a test-and-evaluation compilation, not a navigation chart or independent original sounding.",
+    "A measured hard overlap is habitat context, not fish presence, a catch prediction, legal clearance or a waypoint."
+  ],
+  "sectors": [
+    {
+      "sector_id": "pigeon-monterey",
+      "tiles": [
+        {
+          "tile": "BH44M5CP",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "cc088f1569873ed1190e7c314d162a0606b4d643f2b88d0586a6a6b9c74a5a7c",
+          "source_rat_sha256": "776a2e1cb1fe09755d0a4bdf2653309bf70c65d7dc83551f0d23022dd999fdeb",
+          "closure_polygons_intersecting_tile": 1,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 79,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F7TM785G",
+              "display_hard_polygons": 57,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "b6e86d2d518619cb7760f8f2331b2eb768e054a89ab74498e42634c414471cd3",
+                  "metadata_sha256": "d79e9764962113f55ee66327dee9c4967c5c7cba437610f1cfc5f0ce36bf3dd9"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 0,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 0,
+              "nbs_contributors": []
+            }
+          ]
+        },
+        {
+          "tile": "BH44H5CR",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "42ddee02b02ed3f59e2c56d0a7baad0ccc8b500553ebc202b5a834c1c6638b32",
+          "source_rat_sha256": "25762dc64eb3481c97482c2cffaba786068c65bccb1e8ae05ba8b8f300522e5b",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F7513W80",
+              "display_hard_polygons": 3,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+                  "metadata_sha256": "ac06031a3332ba203882084b212e30c62e578a8a87a3df735999440e6aec4d99"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 0,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 0,
+              "nbs_contributors": []
+            },
+            {
+              "usgs_release_id": "F7CJ8BJW",
+              "display_hard_polygons": 2,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+                  "metadata_sha256": "45a1d3d60409a32e2b5c839ccdc1ce43120879e943018dca797e17a26044692f"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 0,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 0,
+              "nbs_contributors": []
+            }
+          ]
+        },
+        {
+          "tile": "BH44J5CQ",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "32de2f05945abbbf4874d044281533dbdde8715cdf532af4f9657505725b2924",
+          "source_rat_sha256": "e8867441d2015dec9eddb563ec88aea8671624cb381b7db3c94a2f58cfa780fb",
+          "closure_polygons_intersecting_tile": 1,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F7CJ8BJW",
+              "display_hard_polygons": 10,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+                  "metadata_sha256": "45a1d3d60409a32e2b5c839ccdc1ce43120879e943018dca797e17a26044692f"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 0,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 0,
+              "nbs_contributors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tiles": [
+        {
+          "tile": "BH44N5CH",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "4c76744ce11f3218947e00add32292be61e7c6d5292c523811c902edcfda24c8",
+          "source_rat_sha256": "6d48c05e64ae631eff2da84efca440e953611c86d53cde45dd953880512a15f9",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH44N5CJ",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "d7ce04f9c85de804376b841ba854b80a312b39023cd453e5eed308ed6a554e1e",
+          "source_rat_sha256": "08c078f6138ebbd26afefa28f7737958238091f4ac94428f2f349bfa84f62cc1",
+          "closure_polygons_intersecting_tile": 4,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 6790,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 353,
+          "sensitivity_2m_hard_overlap_area_km2": 0.00565,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 62,
+          "sensitivity_2m_original_class3_area_km2": 0.00099,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F70Z71C8",
+              "display_hard_polygons": 8,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+                  "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db"
+                },
+                {
+                  "archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+                  "metadata_sha256": "54965696356bf1261fbbcc68b3290443ed3efe0ba23742d49b964a508961a803"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 353,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 62,
+              "nbs_contributors": [
+                {
+                  "id": 124063,
+                  "source_survey_id": "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+                  "survey_date_end": "2014-10-05",
+                  "pixels": 353
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tile": "BH44P5CJ",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "dc2187a38a56dc246fa20b8c37f9ef450c3ec6940c3912b0be538ed1dbeb8ea1",
+          "source_rat_sha256": "e7ed1aafb73468f7bc6fc9120f85f0cb2b2ef8cb20007cd81884f95fa00161d3",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F70Z71C8",
+              "display_hard_polygons": 5,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+                  "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db"
+                },
+                {
+                  "archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+                  "metadata_sha256": "54965696356bf1261fbbcc68b3290443ed3efe0ba23742d49b964a508961a803"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 0,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 0,
+              "nbs_contributors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "tiles": [
+        {
+          "tile": "BH44R5CC",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "843c921c2b3c9d3d0bb01633bb3faca9ccf189a319696ee97d80bf6df0939eb3",
+          "source_rat_sha256": "281fc386effdd2eecad0bf03a3d86eb49feec0f8ea4e172c066cec7e8dd4a3a5",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH44V5C8",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "e4623b45ddc071352bbccf3c31895d843d698a2a6538a4b2ce7fe37d7b0753c4",
+          "source_rat_sha256": "63b833551da18a6f573a69051545f76ee97766841d92d2f68e73e67d091af6db",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH44S5CB",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "92a1cd127483fb6d2a6b38325b9e686309c169b3e351decfac97dd29dd65ba32",
+          "source_rat_sha256": "9ac7de6aafc755bb0827761528ced0ce025fcff065ecdffaf3d1192b2bf895a8",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        }
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tiles": [
+        {
+          "tile": "BH44Z5C4",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "f0bd589127ec7f6afd7d54019311d4a0949d904d2fe75c2225a58be01a56e72f",
+          "source_rat_sha256": "5b037e2f7b3c3c3d680df3108f783df6e9b572d46050cdcbcc256301356aa9af",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH44W5C6",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "db81e29a867f934c75a9256560e9a09a674aa056bc1ffec655b4e38764f56824",
+          "source_rat_sha256": "b4d213af9d490ad95dca54783c4dab3c8998fd1196f2074d2e0046dbce2ec2f6",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH4525C2",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "fada26a4d0f28924a88b64ceaa1a029936b528de1c04b4216dc00095262b4e7b",
+          "source_rat_sha256": "3ed637ecee494c6f98e5390d7c2dad54f3f33eb9b2342ef0d26ca2be2da19017",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        }
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "tiles": [
+        {
+          "tile": "BH4545C2",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "8d69af3d551f969fceaf8844e15a5dc96a9087f8e0d558ecbbc0537f012bc262",
+          "source_rat_sha256": "77359d498995aaa844dc2360444404bd13719e63db2a73fd7dc4d3d52795294c",
+          "closure_polygons_intersecting_tile": 1,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 5155,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH4575BW",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "e36da42b65b694949f0419788538fbd7ac4fc170b8206c4436a36ac2fca86632",
+          "source_rat_sha256": "fbc2f107a1652d00333dd992a03bd42401bdfc0339acc939f5ebd83718d882e3",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 1119,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 6,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0001,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 6,
+          "sensitivity_2m_original_class3_area_km2": 0.0001,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "P9HEZNRO",
+              "display_hard_polygons": 19,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+                  "metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 6,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 6,
+              "nbs_contributors": [
+                {
+                  "id": 115648,
+                  "source_survey_id": "H10532",
+                  "survey_date_end": "1994-01-01",
+                  "pixels": 6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tile": "BH4575BX",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "4e95628ffcc1d939f0cbba443e3c0c211ff9f79d5fb1047568e4a6d41fdae696",
+          "source_rat_sha256": "45173440f4e1cb3d03ce8d0a676b2a0b6ace52bdaca10aa7af585dbae43724d8",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 451367,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 223068,
+          "sensitivity_2m_hard_overlap_area_km2": 3.56909,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 202830,
+          "sensitivity_2m_original_class3_area_km2": 3.24528,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "P9HEZNRO",
+              "display_hard_polygons": 25,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+                  "metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 198230,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 188101,
+              "nbs_contributors": [
+                {
+                  "id": 115654,
+                  "source_survey_id": "H10531",
+                  "survey_date_end": "1994-01-01",
+                  "pixels": 10346
+                },
+                {
+                  "id": 115710,
+                  "source_survey_id": "ca2015_usace_ncmp_ca_dem_J1337036tR05_C14",
+                  "survey_date_end": "2015-09-29",
+                  "pixels": 11726
+                },
+                {
+                  "id": 115711,
+                  "source_survey_id": "ca2015_usace_ncmp_ca_dem_J1337036tR05_C15",
+                  "survey_date_end": "2015-09-29",
+                  "pixels": 176158
+                }
+              ]
+            },
+            {
+              "usgs_release_id": "P9ZSTUK1",
+              "display_hard_polygons": 25,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+                  "metadata_sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 156282,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 146217,
+              "nbs_contributors": [
+                {
+                  "id": 115654,
+                  "source_survey_id": "H10531",
+                  "survey_date_end": "1994-01-01",
+                  "pixels": 8476
+                },
+                {
+                  "id": 115710,
+                  "source_survey_id": "ca2015_usace_ncmp_ca_dem_J1337036tR05_C14",
+                  "survey_date_end": "2015-09-29",
+                  "pixels": 27292
+                },
+                {
+                  "id": 115711,
+                  "source_survey_id": "ca2015_usace_ncmp_ca_dem_J1337036tR05_C15",
+                  "survey_date_end": "2015-09-29",
+                  "pixels": 120514
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "tiles": [
+        {
+          "tile": "BH45C5BM",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "235020b16b3f183931f0bd29e57add730f4ea1a1bff1700a730540a64ebd1479",
+          "source_rat_sha256": "37fdb3fb671aac84fd7a55a2f52ef8a3c333dde5d6ad30dd5829874398ffcd55",
+          "closure_polygons_intersecting_tile": 1,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 0,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_area_km2": 0.0,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_area_km2": 0.0,
+          "usgs_releases": []
+        },
+        {
+          "tile": "BH45D5BJ",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "e38d71dc9cbf47ee04e8f91dce01915e3a11366d917d33df7c9a8480d1f4563f",
+          "source_rat_sha256": "8a73c2ec5786ba88c167b0486b2b3c12aca287bdcfd89bf08f874f54ca6002da",
+          "closure_polygons_intersecting_tile": 0,
+          "strict_1m_measured_pixels_outside_closures": 1790118,
+          "sensitivity_2m_measured_pixels_outside_closures": 1790118,
+          "strict_1m_hard_overlap_unique_pixels": 23639,
+          "sensitivity_2m_hard_overlap_unique_pixels": 23639,
+          "sensitivity_2m_hard_overlap_area_km2": 0.37822,
+          "strict_1m_original_class3_unique_pixels": 23245,
+          "sensitivity_2m_original_class3_unique_pixels": 23245,
+          "sensitivity_2m_original_class3_area_km2": 0.37192,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "F7QN64XQ",
+              "display_hard_polygons": 12,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+                  "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2"
+                }
+              ],
+              "strict_1m_overlap_pixels": 23639,
+              "sensitivity_2m_overlap_pixels": 23639,
+              "strict_1m_original_class3_pixels": 23245,
+              "sensitivity_2m_original_class3_pixels": 23245,
+              "nbs_contributors": [
+                {
+                  "id": 115347,
+                  "source_survey_id": "H11952_MB_1m_MLLW_1of4",
+                  "survey_date_end": "2008-09-04",
+                  "pixels": 15670
+                },
+                {
+                  "id": 115348,
+                  "source_survey_id": "H11952_MB_2m_MLLW_2of4",
+                  "survey_date_end": "2008-09-04",
+                  "pixels": 1068
+                },
+                {
+                  "id": 115354,
+                  "source_survey_id": "H11953_MB_4m_MLLW_3of4",
+                  "survey_date_end": "2008-09-05",
+                  "pixels": 1464
+                },
+                {
+                  "id": 115506,
+                  "source_survey_id": "H11953_MB_1m_MLLW_1of4",
+                  "survey_date_end": "2008-09-05",
+                  "pixels": 5437
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tile": "BH4575BV",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "source_raster_sha256": "37e52db60f57af7036e24c5f4530d71718ae20bd1908df1159e3db7a7b462a28",
+          "source_rat_sha256": "47cf84e78cd2d1a2f843f9dc632e8d0167b1082da5795fad728cbc62861ab9e7",
+          "closure_polygons_intersecting_tile": 2,
+          "strict_1m_measured_pixels_outside_closures": 0,
+          "sensitivity_2m_measured_pixels_outside_closures": 68886,
+          "strict_1m_hard_overlap_unique_pixels": 0,
+          "sensitivity_2m_hard_overlap_unique_pixels": 58265,
+          "sensitivity_2m_hard_overlap_area_km2": 0.93224,
+          "strict_1m_original_class3_unique_pixels": 0,
+          "sensitivity_2m_original_class3_unique_pixels": 56951,
+          "sensitivity_2m_original_class3_area_km2": 0.91122,
+          "usgs_releases": [
+            {
+              "usgs_release_id": "P9HEZNRO",
+              "display_hard_polygons": 31,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+                  "metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 300,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 308,
+              "nbs_contributors": [
+                {
+                  "id": 115648,
+                  "source_survey_id": "H10532",
+                  "survey_date_end": "1994-01-01",
+                  "pixels": 300
+                }
+              ]
+            },
+            {
+              "usgs_release_id": "P9KBGELE",
+              "display_hard_polygons": 7,
+              "original_usgs_class_sources": [
+                {
+                  "archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+                  "metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214"
+                }
+              ],
+              "strict_1m_overlap_pixels": 0,
+              "sensitivity_2m_overlap_pixels": 57965,
+              "strict_1m_original_class3_pixels": 0,
+              "sensitivity_2m_original_class3_pixels": 56643,
+              "nbs_contributors": [
+                {
+                  "id": 115708,
+                  "source_survey_id": "ca2015_usace_ncmp_ca_dem_J1337036tR04_C15",
+                  "survey_date_end": "2015-09-29",
+                  "pixels": 57965
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

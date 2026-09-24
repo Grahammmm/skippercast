@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "coast-nbs-multiple-rocky-camera-tile-source-review",
-  "reviewed_at": "2026-09-24T05:33:56+00:00",
+  "reviewed_at": "2026-09-24T06:31:46+00:00",
   "coast": "central",
   "max_tiles_per_sector": 3,
   "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
@@ -25,7 +25,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:42+00:00",
             "tile": "BH44M5CP",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:46:55",
@@ -77,6 +77,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 121
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 121
           }
         },
         {
@@ -85,7 +88,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:42+00:00",
             "tile": "BH44H5CR",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 02:57:27",
@@ -138,6 +141,10 @@
           "historical_camera_native_cell_screen": {
             "mpa_or_edge_held": 50,
             "center_not_qualified": 49
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "mpa_or_edge_held": 50,
+            "center_not_qualified": 49
           }
         },
         {
@@ -146,7 +153,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:42+00:00",
             "tile": "BH44J5CQ",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:33:34",
@@ -199,6 +206,10 @@
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 53,
             "mpa_or_edge_held": 18
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 53,
+            "mpa_or_edge_held": 18
           }
         }
       ]
@@ -215,7 +226,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:42+00:00",
             "tile": "BH44N5CH",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:03:10",
@@ -268,6 +279,10 @@
           "historical_camera_native_cell_screen": {
             "mpa_or_edge_held": 48,
             "center_not_qualified": 20
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "mpa_or_edge_held": 48,
+            "center_not_qualified": 20
           }
         },
         {
@@ -276,7 +291,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44N5CJ",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:10:08",
@@ -328,6 +343,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 46
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 46
           }
         },
         {
@@ -336,7 +354,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44P5CJ",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 01:06:55",
@@ -388,6 +406,9 @@
           },
           "historical_camera_native_cell_screen": {
             "mpa_or_edge_held": 20
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "mpa_or_edge_held": 20
           }
         }
       ]
@@ -404,7 +425,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44R5CC",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 01:28:58",
@@ -456,6 +477,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 75
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 75
           }
         },
         {
@@ -464,7 +488,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44V5C8",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 00:53:32",
@@ -516,6 +540,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 31
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 31
           }
         },
         {
@@ -524,7 +551,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44S5CB",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 03:25:00",
@@ -577,6 +604,10 @@
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 17,
             "mpa_or_edge_held": 6
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 17,
+            "mpa_or_edge_held": 6
           }
         }
       ]
@@ -593,7 +624,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44Z5C4",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 03:10:34",
@@ -646,6 +677,10 @@
           "historical_camera_native_cell_screen": {
             "mpa_or_edge_held": 76,
             "center_not_qualified": 14
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "mpa_or_edge_held": 76,
+            "center_not_qualified": 14
           }
         },
         {
@@ -654,7 +689,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH44W5C6",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 01:22:38",
@@ -706,6 +741,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 33
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 33
           }
         },
         {
@@ -714,7 +752,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH4525C2",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:45:25",
@@ -766,6 +804,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 29
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 29
           }
         }
       ]
@@ -782,7 +823,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH4545C2",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 01:52:29",
@@ -835,6 +876,10 @@
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 33,
             "mpa_or_edge_held": 15
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 33,
+            "mpa_or_edge_held": 15
           }
         },
         {
@@ -843,7 +888,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH4575BW",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:42:29",
@@ -895,6 +940,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 35
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 35
           }
         },
         {
@@ -903,7 +951,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH4575BX",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 02:29:13",
@@ -955,6 +1003,10 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 32
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 29,
+            "neighborhood_not_qualified": 3
           }
         }
       ]
@@ -971,7 +1023,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:54+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH45C5BM",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:10:19",
@@ -1023,6 +1075,9 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 79
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 79
           }
         },
         {
@@ -1031,7 +1086,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:54+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH45D5BJ",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 04:06:03",
@@ -1116,6 +1171,11 @@
             "center_not_qualified": 20,
             "locally_qualified_90pct": 38,
             "neighborhood_not_qualified": 1
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 20,
+            "locally_qualified_90pct": 38,
+            "neighborhood_not_qualified": 1
           }
         },
         {
@@ -1124,7 +1184,7 @@
           "source_audit": {
             "schema_version": 1,
             "scope": "nbs-modeling-single-tile-source-screen",
-            "reviewed_at": "2026-09-24T05:33:53+00:00",
+            "reviewed_at": "2026-09-24T06:31:43+00:00",
             "tile": "BH4575BV",
             "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
             "delivered_date": "2026-09-05 05:03:34",
@@ -1176,6 +1236,10 @@
           },
           "historical_camera_native_cell_screen": {
             "center_not_qualified": 57
+          },
+          "historical_camera_2m_uncertainty_sensitivity": {
+            "center_not_qualified": 54,
+            "neighborhood_not_qualified": 3
           }
         }
       ]
@@ -1188,6 +1252,7 @@
     "Camera windows along the same transect and overlapping tiles are correlated; counts are not additive.",
     "NBS Modeling is test-and-evaluation bathymetry and may reuse the same original NOAA surveys.",
     "A zero in these selected tiles does not establish absent habitat in the sector.",
+    "The 2 m uncertainty sensitivity is a research comparison, not a change to the 1 m target gate or a fishing waypoint.",
     "Original survey, substrate, hazards, current chart, rights, closures and local rules remain separate target gates."
   ]
 }
