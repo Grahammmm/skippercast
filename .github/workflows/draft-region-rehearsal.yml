@@ -2,11 +2,14 @@ name: Draft region evidence rehearsal
 
 on:
   workflow_dispatch:
-    inputs:
-      region_id:
-        description: Existing region ID to inspect without publishing its feed
-        required: true
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/draft-region-rehearsal.yml"
+      - "scripts/refresh_regions.py"
+      - "regions/**"
+      - "jurisdictions/**"
+      - "dist/data/regulations-*.json"
 
 permissions:
   contents: read
@@ -15,6 +18,10 @@ jobs:
   rehearse:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        region_id: [bodega-point-reyes, fort-bragg-point-arena]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,7 +30,7 @@ jobs:
       - name: Validate draft and collect source evidence
         env:
           PYTHONPATH: src
-          REGION_ID: ${{ inputs.region_id }}
+          REGION_ID: ${{ matrix.region_id }}
         run: |
           python - <<'PY'
           import os
@@ -36,11 +43,35 @@ jobs:
           python scripts/refresh_regions.py daily \
             --output "var/draft-rehearsal/${REGION_ID}" \
             --only-region "${REGION_ID}" --include-drafts
+      - name: Report legal and source health
+        if: always()
+        env:
+          REGION_ID: ${{ matrix.region_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          region = os.environ['REGION_ID']
+          root = Path('var/draft-rehearsal') / region / 'regions' / region
+          if not (root / 'latest.json').is_file():
+              raise SystemExit('Draft collector produced no regional receipt')
+          evidence = json.loads((root / 'latest.json').read_text())
+          rules = json.loads((root / 'regulations-health.json').read_text())
+          health = evidence['health']
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(f"## {region} draft rehearsal\n")
+              out.write(f"{health['sources_ok']}/{health['sources_total']} sources healthy; legal source changes or failures: {len(rules['review_required'])}.\n")
+              out.write('This is unpublished source evidence, not fishing permission or site clearance.\n')
+              for issue in health['issues']:
+                  out.write(f'- {issue}\n')
+          if rules['review_required'] or not health['critical_available']:
+              raise SystemExit('Draft evidence needs review before regional promotion')
+          PY
       - name: Upload unpublished evidence and health
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: draft-rehearsal-${{ inputs.region_id }}-${{ github.run_id }}
-          path: var/draft-rehearsal/
+          name: draft-rehearsal-${{ matrix.region_id }}-${{ github.run_id }}
+          path: var/draft-rehearsal/${{ matrix.region_id }}/
           if-no-files-found: warn
           retention-days: 14
