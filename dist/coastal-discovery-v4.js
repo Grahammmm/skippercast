@@ -284,15 +284,27 @@ export async function initCoastalDiscovery(catalog,coast) {
             ||!Number.isFinite(f.properties?.maximum_supplied_uncertainty_m)
             ||f.properties.maximum_supplied_uncertainty_m>measuredHardResearch.uncertainty
             ||!Array.isArray(f.properties?.usgs_sources)||!f.properties.usgs_sources.length))throw Error('Unreviewed measured-depth source layer');
+        const cameraReview=await fetch('data/usgs-video-nbs-hard-overlap.json',{signal:AbortSignal.timeout(10000)})
+          .then(async response=>response.ok?response.json():null).catch(()=>null);
+        const sourceFile=`${coast.id}-nbs-usgs-hard-research-context.geojson`;
+        const cameraLayer=cameraReview?.scope==='usgs-video-vs-native-hard-context-review'
+          &&cameraReview.fishing_target===false&&cameraReview.exportable===false
+          &&cameraReview.minimum_interior_clearance_m===25
+          ?cameraReview.layers?.find(layer=>layer.context_file===sourceFile
+            &&layer.context_compiled_at===data.compiled_at&&layer.outline_count===data.features.length):null;
+        const cameraById=new Map((cameraLayer?.matched_outlines||[])
+          .filter(row=>row.interior_windows>0).map(row=>[row.outline_id,row]));
         hardShapes=data.features.map(f=>{
           const p=f.properties;
           const source=p.usgs_sources[0];
-          const shape=L.geoJSON(f,{pane:'measuredHardResearch',style:{color:'#866b37',weight:1.4,fillColor:'#c9b078',fillOpacity:.23}})
-            .bindPopup(`<strong>Historical measured-depth hard-bottom research</strong><p>${esc(p.sector_id)} · ${esc(p.measured_depth_ft_range.join('–'))} ft MLLW in NOAA measured cells; supplied uncertainty up to ${esc(p.maximum_supplied_uncertainty_m)} m. ${esc(p.approx_display_area_m2.toLocaleString())} m² displayed in conservative ${esc(p.display_cell_m)} m squares. USGS class-3 rock/boulder interpretation is historical; no camera confirmation is claimed for this outline. This does not establish fish, a rated fishing spot, legal access or navigation safety.</p><p>MPA and federal exclusion screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck present boundaries and rules.</p><a href="${esc(p.nbs_raster_url)}" target="_blank" rel="noopener">NOAA source tile ↗</a> · <a href="${esc(source.metadata_url)}" target="_blank" rel="noopener">USGS bottom-class metadata ↗</a>`);
+          const camera=cameraById.get(p.id);
+          const cameraText=camera?`<p>USGS camera ${esc(camera.observation_dates.join(', '))}: ${esc(camera.interior_windows)} annotated windows on ${esc(camera.distinct_transects)} historical transect(s) at least 25 m inside this displayed outline. ${esc(camera.rock_boulder_cobble_windows)} labeled rock/boulder/cobble; ${esc(camera.sand_mud_windows)} sand/mud.${camera.rockfish_positive_windows?` Rockfish appeared in ${esc(camera.rockfish_positive_windows)} windows; these are old sightings, not catches or a current fish forecast.`:''} <a href="${esc(camera.source_urls[0])}" target="_blank" rel="noopener">Original camera log ↗</a></p>`:'<p>No position-qualified camera observation is attached to this outline.</p>';
+          const shape=L.geoJSON(f,{pane:'measuredHardResearch',style:{color:camera?'#256f77':'#866b37',weight:camera?2:1.4,fillColor:camera?'#6eb5b5':'#c9b078',fillOpacity:.23}})
+            .bindPopup(`<strong>Historical measured-depth hard-bottom research</strong><p>${esc(p.sector_id)} · ${esc(p.measured_depth_ft_range.join('–'))} ft MLLW in NOAA measured cells; supplied uncertainty up to ${esc(p.maximum_supplied_uncertainty_m)} m. ${esc(p.approx_display_area_m2.toLocaleString())} m² displayed in conservative ${esc(p.display_cell_m)} m squares. USGS class-3 rock/boulder interpretation is historical. This does not establish a rated fishing spot, legal access or navigation safety.</p>${cameraText}<p>MPA and federal exclusion screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck present boundaries and rules.</p><a href="${esc(p.nbs_raster_url)}" target="_blank" rel="noopener">NOAA source tile ↗</a> · <a href="${esc(source.metadata_url)}" target="_blank" rel="noopener">USGS bottom-class metadata ↗</a>`);
           return {shape,bounds:shape.getBounds()};
         });
         hardLoaded=true;hardLayer.addTo(map);drawHard();
-        hardNote.textContent=`${data.features.length} historical research outlines near ${measuredHardResearch.name}. These are not verified fishing grounds or exportable positions; current charts, rules and fish presence still require review.`;
+        hardNote.textContent=`${data.features.length} historical research outlines near ${measuredHardResearch.name}.${cameraById.size?` ${cameraById.size} teal outlines have dated USGS camera observations.`:''} These are not verified fishing grounds or exportable positions; current charts, rules and fish presence still require review.`;
       }catch(error){hardCheck.checked=false;hardNote.textContent=error.message+' · consult NOAA and USGS sources.';}
     });
   }

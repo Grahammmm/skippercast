@@ -135,6 +135,7 @@ def audit(manifest, cache, contexts, *, checked_at=None):
             })
         output.append({"context_file": filename,
                        "context_scope": data["scope"],
+                       "context_compiled_at": data.get("compiled_at"),
                        "outline_count": len(data["features"]),
                        "outlines_with_interior_camera_evidence": sum(row["interior_windows"] > 0 for row in matched),
                        "matched_outlines": matched})
@@ -158,11 +159,13 @@ def main():
     parser.add_argument("--manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--contexts", type=Path, default=Path("dist/data"))
+    parser.add_argument("--context-name", action="append",
+                        help="Repeat for an explicit reviewed GeoJSON context; defaults to the four native hard-bottom layers.")
     parser.add_argument("--output", type=Path, default=Path("dist/data/usgs-video-native-overlap.json"))
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text())
     result = audit(manifest, args.cache,
-                   [args.contexts / name for name in CONTEXTS])
+                   [args.contexts / name for name in (args.context_name or CONTEXTS)])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print("Audited", sum(layer["outline_count"] for layer in result["layers"]),

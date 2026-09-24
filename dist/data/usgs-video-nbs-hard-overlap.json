@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "scope": "usgs-video-vs-native-hard-context-review",
+  "checked_at": "2026-09-24T07:22:50+00:00",
+  "source_catalog_url": "https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html",
+  "cruise_position_accuracy": {
+    "c0111sc": "Highly variable on the order of 10 meters.",
+    "c0212sc": "Highly variable on the order of 10 meters.",
+    "c109nc": "Highly variable on the order of 10 meters.",
+    "c210nc": "Highly variable on the order of 10 meters.",
+    "f208nc": "Highly variable, on the order of 10 meters.",
+    "f307nc": "Highly variable, on the order of 10 meters.",
+    "l908nc": "Highly variable, on the order of 10 meters.",
+    "s1c08sc": "Highly variable, on the order of 10 meters.",
+    "s2210mb": "Highly variable on the order of 10 meters.",
+    "sw109sc": "Highly variable on the order of 10 meters.",
+    "z107sc": "Highly variable, on the order of 10 meters.",
+    "z206sc": "Highly variable, on the order of 10 meters."
+  },
+  "minimum_interior_clearance_m": 25,
+  "method": "Original WGS84 camera windows reprojected to California Albers meters; contains test and minimum clearance from generalized display boundary; same-line windows counted as one transect.",
+  "limitations": "Historical observations are not independent catches, current fish presence, precise rock limits, legal clearance or navigable fishing spots. Missing species codes do not mean absence.",
+  "fishing_target": false,
+  "exportable": false,
+  "layers": [
+    {
+      "context_file": "northern-nbs-usgs-hard-research-context.geojson",
+      "context_scope": "northern-nbs-usgs-hard-research-context",
+      "context_compiled_at": "2026-09-24T07:02:23.216332+00:00",
+      "outline_count": 10,
+      "outlines_with_interior_camera_evidence": 4,
+      "matched_outlines": [
+        {
+          "outline_id": "nbs-usgs-c54aeb6ce8",
+          "inside_display_outline": 6,
+          "near_edge_held": 4,
+          "interior_windows": 2,
+          "rock_boulder_cobble_windows": 2,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [
+            "c210nc"
+          ],
+          "observation_dates": [
+            "2010-07-24"
+          ],
+          "distinct_transects": 1,
+          "source_urls": [
+            "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip"
+          ],
+          "source_archive_sha256": {
+            "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8"
+          }
+        },
+        {
+          "outline_id": "nbs-usgs-19ebda3140",
+          "inside_display_outline": 20,
+          "near_edge_held": 16,
+          "interior_windows": 4,
+          "rock_boulder_cobble_windows": 2,
+          "sand_mud_windows": 2,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [
+            "c210nc"
+          ],
+          "observation_dates": [
+            "2010-07-24"
+          ],
+          "distinct_transects": 1,
+          "source_urls": [
+            "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip"
+          ],
+          "source_archive_sha256": {
+            "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8"
+          }
+        },
+        {
+          "outline_id": "nbs-usgs-b0c6003bef",
+          "inside_display_outline": 5,
+          "near_edge_held": 4,
+          "interior_windows": 1,
+          "rock_boulder_cobble_windows": 1,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [
+            "c210nc"
+          ],
+          "observation_dates": [
+            "2010-07-27"
+          ],
+          "distinct_transects": 1,
+          "source_urls": [
+            "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip"
+          ],
+          "source_archive_sha256": {
+            "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8"
+          }
+        },
+        {
+          "outline_id": "nbs-usgs-918635e24d",
+          "inside_display_outline": 10,
+          "near_edge_held": 8,
+          "interior_windows": 2,
+          "rock_boulder_cobble_windows": 2,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [
+            "c210nc"
+          ],
+          "observation_dates": [
+            "2010-07-27"
+          ],
+          "distinct_transects": 1,
+          "source_urls": [
+            "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip"
+          ],
+          "source_archive_sha256": {
+            "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8"
+          }
+        }
+      ]
+    },
+    {
+      "context_file": "san-francisco-nbs-usgs-hard-research-context.geojson",
+      "context_scope": "san-francisco-nbs-usgs-hard-research-context",
+      "context_compiled_at": "2026-09-24T07:03:45.670177+00:00",
+      "outline_count": 1,
+      "outlines_with_interior_camera_evidence": 0,
+      "matched_outlines": []
+    },
+    {
+      "context_file": "central-nbs-usgs-hard-research-context.geojson",
+      "context_scope": "central-nbs-usgs-hard-research-context",
+      "context_compiled_at": "2026-09-24T07:03:44.763534+00:00",
+      "outline_count": 10,
+      "outlines_with_interior_camera_evidence": 0,
+      "matched_outlines": []
+    }
+  ]
+}

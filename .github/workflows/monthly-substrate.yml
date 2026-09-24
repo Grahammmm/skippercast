@@ -117,6 +117,13 @@ jobs:
           --mpas var/published/latest.json
           --federal var/review/noaa-federal-areas.json
           --output var/review/nbs-statewide-usgs-hard-overlap-review.json
+      - name: Check original USGS camera windows inside published measured-depth research outlines
+        run: >-
+          python scripts/audit_usgs_native_overlap.py
+          --context-name northern-nbs-usgs-hard-research-context.geojson
+          --context-name san-francisco-nbs-usgs-hard-research-context.geojson
+          --context-name central-nbs-usgs-hard-research-context.geojson
+          --output var/review/usgs-video-nbs-hard-overlap.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
       - name: Build MPA-screened review layers

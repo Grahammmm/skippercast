@@ -8,6 +8,28 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NbsHardResearchPublicationTests(unittest.TestCase):
+    def test_camera_evidence_matches_current_outlines_and_is_not_a_catch_claim(self):
+        receipt = json.loads((ROOT / "dist/data/usgs-video-nbs-hard-overlap.json").read_text())
+        self.assertFalse(receipt["fishing_target"])
+        self.assertFalse(receipt["exportable"])
+        self.assertEqual(receipt["minimum_interior_clearance_m"], 25)
+        for layer in receipt["layers"]:
+            context = json.loads((ROOT / "dist/data" / layer["context_file"]).read_text())
+            self.assertEqual(layer["context_compiled_at"], context["compiled_at"])
+            self.assertEqual(layer["outline_count"], len(context["features"]))
+            ids = {feature["properties"]["id"] for feature in context["features"]}
+            for match in layer["matched_outlines"]:
+                self.assertIn(match["outline_id"], ids)
+                self.assertGreaterEqual(match["inside_display_outline"], match["interior_windows"])
+                self.assertGreaterEqual(match["interior_windows"],
+                                        match["rock_boulder_cobble_windows"] + match["sand_mud_windows"])
+                self.assertTrue(match["observation_dates"])
+                self.assertTrue(all(url.startswith("https://pubs.usgs.gov/")
+                                    for url in match["source_urls"]))
+        cape = next(layer for layer in receipt["layers"]
+                    if layer["context_file"] == "northern-nbs-usgs-hard-research-context.geojson")
+        self.assertEqual(cape["outlines_with_interior_camera_evidence"], 4)
+
     def test_other_coast_layers_keep_native_depth_and_source_policy(self):
         statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
         for coast_id, sectors, cell_m, max_features in (
