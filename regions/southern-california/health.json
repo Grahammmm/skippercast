@@ -1,1 +1,1 @@
-{"region_id":"southern-california","generated_at":"2026-09-24T22:42:57Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":52,"sources_total":54,"issues":["currents","harbor"]}
+{"region_id":"southern-california","generated_at":"2026-09-24T22:54:17Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":52,"sources_total":54,"issues":["currents","harbor"]}
