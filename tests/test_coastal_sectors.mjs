@@ -106,3 +106,16 @@ test('Point Conception original-cell layer cannot become fishing or export coord
     f.properties.legal_clearance===false && f.properties.fish_confirmed===false &&
     f.properties.depth_qualified_for_target===false && f.properties.depth_ft_range[1]<=200));
 });
+test('charted-danger review flags only existing historical outlines',()=>{
+  for(const [name,expected] of [['cape-mendocino',27],['point-conception',0],['gaviota',6]]){
+    const context=JSON.parse(fs.readFileSync(new URL(`../dist/data/${name}-native-hard-context.geojson`,import.meta.url)));
+    const review=JSON.parse(fs.readFileSync(new URL(`../dist/data/${name}-enc-context-review.json`,import.meta.url)));
+    const ids=new Set(context.features.map(f=>f.properties.id));
+    assert.equal(review.status,'research-screen-only');
+    assert.equal(review.queried_layers,18);
+    assert.equal(Object.values(review.context_outlines_in_scope_by_survey).reduce((a,b)=>a+b,0),ids.size);
+    assert.equal(review.outlines_near_charted_dangers.length,expected);
+    assert.ok(review.outlines_near_charted_dangers.every(row=>ids.has(row.context_id) && row.charted_dangers_within_buffer>0));
+    assert.ok(context.features.every(f=>f.properties.fishing_target===false && f.properties.exportable===false));
+  }
+});
