@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "scope": "usgs-video-vs-native-hard-context-review",
+  "checked_at": "2026-09-24T03:17:07+00:00",
+  "source_catalog_url": "https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html",
+  "cruise_position_accuracy": {
+    "c0111sc": "Highly variable on the order of 10 meters.",
+    "c0212sc": "Highly variable on the order of 10 meters.",
+    "c109nc": "Highly variable on the order of 10 meters.",
+    "c210nc": "Highly variable on the order of 10 meters.",
+    "f208nc": "Highly variable, on the order of 10 meters.",
+    "f307nc": "Highly variable, on the order of 10 meters.",
+    "l908nc": "Highly variable, on the order of 10 meters.",
+    "s1c08sc": "Highly variable, on the order of 10 meters.",
+    "s2210mb": "Highly variable on the order of 10 meters.",
+    "sw109sc": "Highly variable on the order of 10 meters.",
+    "z107sc": "Highly variable, on the order of 10 meters.",
+    "z206sc": "Highly variable, on the order of 10 meters."
+  },
+  "minimum_interior_clearance_m": 25,
+  "method": "Original WGS84 camera windows reprojected to California Albers meters; contains test and minimum clearance from generalized display boundary; same-line windows counted as one transect.",
+  "limitations": "Historical observations are not independent catches, current fish presence, precise rock limits, legal clearance or navigable fishing spots. Missing species codes do not mean absence.",
+  "fishing_target": false,
+  "exportable": false,
+  "layers": [
+    {
+      "context_file": "cape-mendocino-native-hard-context.geojson",
+      "context_scope": "northern-native-noaa-usgs-hard-bottom-context",
+      "outline_count": 121,
+      "outlines_with_interior_camera_evidence": 0,
+      "matched_outlines": []
+    },
+    {
+      "context_file": "sf-native-hard-context.geojson",
+      "context_scope": "sf-native-noaa-usgs-hard-bottom-context",
+      "outline_count": 133,
+      "outlines_with_interior_camera_evidence": 0,
+      "matched_outlines": [
+        {
+          "outline_id": "native-hard-H11733-1666",
+          "inside_display_outline": 1,
+          "near_edge_held": 1,
+          "interior_windows": 0,
+          "rock_boulder_cobble_windows": 0,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [],
+          "observation_dates": [],
+          "distinct_transects": 0,
+          "source_urls": [],
+          "source_archive_sha256": {}
+        },
+        {
+          "outline_id": "native-hard-H11735-3680",
+          "inside_display_outline": 1,
+          "near_edge_held": 1,
+          "interior_windows": 0,
+          "rock_boulder_cobble_windows": 0,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [],
+          "observation_dates": [],
+          "distinct_transects": 0,
+          "source_urls": [],
+          "source_archive_sha256": {}
+        },
+        {
+          "outline_id": "native-hard-H11735-5629",
+          "inside_display_outline": 1,
+          "near_edge_held": 1,
+          "interior_windows": 0,
+          "rock_boulder_cobble_windows": 0,
+          "sand_mud_windows": 0,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [],
+          "observation_dates": [],
+          "distinct_transects": 0,
+          "source_urls": [],
+          "source_archive_sha256": {}
+        }
+      ]
+    },
+    {
+      "context_file": "point-conception-native-hard-context.geojson",
+      "context_scope": "central-native-noaa-usgs-hard-bottom-context",
+      "outline_count": 21,
+      "outlines_with_interior_camera_evidence": 1,
+      "matched_outlines": [
+        {
+          "outline_id": "native-hard-H11953-1",
+          "inside_display_outline": 10,
+          "near_edge_held": 0,
+          "interior_windows": 10,
+          "rock_boulder_cobble_windows": 9,
+          "sand_mud_windows": 1,
+          "other_bottom_windows": 0,
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "cruise_ids": [
+            "c0212sc"
+          ],
+          "observation_dates": [
+            "2012-08-22"
+          ],
+          "distinct_transects": 1,
+          "source_urls": [
+            "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip"
+          ],
+          "source_archive_sha256": {
+            "c0212sc": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409"
+          }
+        }
+      ]
+    },
+    {
+      "context_file": "gaviota-native-hard-context.geojson",
+      "context_scope": "southern-native-noaa-usgs-hard-bottom-context",
+      "outline_count": 12,
+      "outlines_with_interior_camera_evidence": 0,
+      "matched_outlines": []
+    }
+  ]
+}

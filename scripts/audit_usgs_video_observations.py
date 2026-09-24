@@ -155,7 +155,7 @@ def audit(manifest, sectors, cache, outlines, *, download=False, checked_at=None
         "scope": "usgs-ds781-statewide-original-video-audit",
         "checked_at": checked_at,
         "catalog_url": manifest["catalog_url"],
-        "position_caveat": "Camera observations have variable unknown position accuracy; counts are dated transect evidence, not verified fishing spots or proof that adjacent unsampled seabed has the same habitat.",
+        "position_caveat": "USGS describes horizontal camera positions as highly variable, on the order of 10 meters. Counts are dated transect evidence, not verified fishing spots or proof that adjacent unsampled seabed has the same habitat.",
         "species_caveat": "Positive rockfish/lingcod codes are historical visual observations, not catch, abundance, current presence, or permission to fish.",
         "sector_caveat": "Latitude-band assignments are a discovery index, not verified survey coverage throughout a sector.",
         "fishing_target": False,

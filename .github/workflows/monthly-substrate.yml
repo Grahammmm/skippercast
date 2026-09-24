@@ -33,6 +33,10 @@ jobs:
           python scripts/audit_usgs_video_observations.py
           --download-missing
           --output var/review/usgs-video-observation-audit.json
+      - name: Cross-check camera transects against native context
+        run: >-
+          python scripts/audit_usgs_native_overlap.py
+          --output var/review/usgs-video-native-overlap.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
       - name: Build MPA-screened review layers

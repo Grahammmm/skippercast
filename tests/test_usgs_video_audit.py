@@ -2,13 +2,18 @@
 
 import hashlib
 import json
+from collections import Counter
+from datetime import date
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
 import unittest
 
+from shapely.geometry import Point, box
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from audit_usgs_video_observations import first_field, load_archive, sector_for
+from audit_usgs_native_overlap import hit_counters
 
 
 class USGSVideoAuditTests(unittest.TestCase):
@@ -30,6 +35,19 @@ class USGSVideoAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "hash mismatch"):
                 load_archive(root, "test", hashlib.sha256(b"original").hexdigest(),
                              "https://pubs.usgs.gov/ds/781/video_observations/data/", False)
+
+    def test_camera_edge_hold_does_not_turn_a_nearby_fish_into_polygon_evidence(self):
+        polygon = box(0, 0, 100, 100)
+        row = {"MAJOR_GEO": "rock", "rockfish": 1, "Date_": date(2012, 8, 22), "LINE": "106"}
+        counts = Counter()
+        self.assertTrue(hit_counters(counts, polygon, Point(10, 50), row, "c0212sc"))
+        self.assertEqual(counts["near_edge_held"], 1)
+        self.assertEqual(counts["interior_windows"], 0)
+        self.assertTrue(hit_counters(counts, polygon, Point(50, 50), row, "c0212sc"))
+        self.assertTrue(hit_counters(counts, polygon, Point(55, 50), row, "c0212sc"))
+        self.assertEqual(counts["interior_windows"], 2)
+        self.assertEqual(counts["rockfish_positive_windows"], 2)
+        self.assertEqual(len(counts["transects"]), 1)
 
 
 if __name__ == "__main__":

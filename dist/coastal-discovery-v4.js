@@ -214,12 +214,20 @@ export async function initCoastalDiscovery(catalog,coast) {
             ||f.properties?.depth_qualified_for_target!==false
             ||(northern&&(!Number.isFinite(f.properties?.sampled_relief_5_95_m)||!Number.isFinite(f.properties?.approx_display_area_m2)
               ||f.properties?.depth_range_kind!=='screened-policy-not-local-depth-range'))))throw Error('Unreviewed original-cell layer');
+        const overlap=await fetch('data/usgs-video-native-overlap.json',{signal:AbortSignal.timeout(10000)})
+          .then(async response=>response.ok?response.json():null).catch(()=>null);
+        const reviewedOverlap=overlap?.schema_version===1&&overlap.scope==='usgs-video-vs-native-hard-context-review'
+          &&overlap.fishing_target===false&&overlap.exportable===false&&overlap.minimum_interior_clearance_m===25
+          ?overlap.layers?.find(layer=>layer.context_file===nativeFile&&layer.outline_count===data.features.length):null;
+        const cameraById=new Map((reviewedOverlap?.matched_outlines||[]).map(item=>[item.outline_id,item]));
         nativeShapes=data.features.map(f=>{
           const p=f.properties;
+          const camera=cameraById.get(p.id);
           const depthText=northern?`original cells screened to ${esc(p.depth_screen_ft.join('–'))} ft MLLW planning range; no polygon-specific depth claim`:`source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW`;
           const structureText=northern?`<p>Approximate displayed patch ${esc(p.approx_display_area_m2.toLocaleString())} m²; sampled 5–95% bottom relief ${esc(p.sampled_relief_5_95_m)} m. These describe historical physical structure, not a fish or bite rating.</p>`:'';
+          const cameraText=camera?.interior_windows?`<p>USGS camera, ${esc(camera.observation_dates.join(', '))}: ${camera.interior_windows} annotated windows on ${camera.distinct_transects} historical transect(s) at least 25 m inside this displayed outline. ${camera.rock_boulder_cobble_windows} labeled rock/boulder/cobble; ${camera.sand_mud_windows} sand/mud. This supports mixed bottom along the camera path, not fish presence or the whole patch. <a href="${esc(camera.source_urls[0])}" target="_blank" rel="noopener">Original camera log ↗</a></p>`:'';
           const shape=L.geoJSON(f,{pane:nativePane,style:{color:'#396a75',weight:1.4,fillColor:'#70aab4',fillOpacity:.22}})
-            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · ${depthText} · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p>${structureText}<p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
+            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · ${depthText} · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p>${structureText}${cameraText}<p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
           return {shape,bounds:shape.getBounds()};
         });
         nativeLoaded=true;nativeLayer.addTo(map);drawNative();
