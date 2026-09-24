@@ -46,6 +46,76 @@ def candidate_pairs(audit, positions):
     return pairs
 
 
+def deduplicate_camera_windows(rows):
+    """Count original camera records once across overlapping NOAA BAG files."""
+    archives = {}
+    unique = set()
+    positive_rockfish = set()
+    positive_lingcod = set()
+    transects = set()
+    sector_windows = {}
+    sector_transects = {}
+    attributed_sectors = {}
+    pair_window_count = 0
+    for row in rows:
+        cruise = row["cruise"]
+        digest = row["camera_archive_sha256"]
+        if cruise in archives and archives[cruise] != digest:
+            raise ValueError(f"One cruise refers to different camera archive bytes: {cruise}")
+        archives[cruise] = digest
+        local = set()
+        sector = row.get("sector_id")
+        for group in row["transects"]:
+            indices = group["camera_record_indices"]
+            if len(indices) != group["window_count"] or len(indices) != len(set(indices)):
+                raise ValueError("Camera record indices do not match transect windows")
+            keys = {(cruise, index) for index in indices}
+            if local & keys:
+                raise ValueError("Camera record appears twice in one BAG review")
+            local.update(keys)
+            transect = (cruise, group["date"], group["line"])
+            transects.add(transect)
+            sector_transects.setdefault(sector, set()).add(transect)
+            for field, destination, count_field in (
+                ("rockfish_positive_record_indices", positive_rockfish, "rockfish_positive_windows"),
+                ("lingcod_positive_record_indices", positive_lingcod, "lingcod_positive_windows"),
+            ):
+                positives = group[field]
+                if positives is None:
+                    if group[count_field] is not None:
+                        raise ValueError("Missing camera species field has a positive count")
+                    continue
+                if len(positives) != group[count_field] or not set(positives) <= set(indices):
+                    raise ValueError("Positive camera record indices do not match transect counts")
+                destination.update((cruise, index) for index in positives)
+        if len(local) != row["counts"].get("qualified_rocky_camera_windows", 0):
+            raise ValueError("Camera record indices do not match BAG pair counts")
+        pair_window_count += len(local)
+        unique.update(local)
+        if local:
+            sector_windows.setdefault(sector, set()).update(local)
+        for key in local:
+            attributed_sectors.setdefault(key, set()).add(sector)
+    return {
+        "pair_attributed_qualified_windows": pair_window_count,
+        "distinct_original_camera_windows": len(unique),
+        "repeated_pair_attributions": pair_window_count - len(unique),
+        "distinct_original_camera_transects": len(transects),
+        "distinct_historical_rockfish_positive_windows": len(positive_rockfish),
+        "distinct_historical_lingcod_positive_windows": len(positive_lingcod),
+        "camera_windows_attributed_to_multiple_browse_sectors": sum(len(v) > 1 for v in attributed_sectors.values()),
+        "by_approximate_sector": [
+            {"sector_id": sector, "distinct_original_camera_windows": len(windows),
+             "distinct_original_camera_transects": len(sector_transects.get(sector, set()))}
+            for sector, windows in sorted(sector_windows.items(), key=lambda item: item[0] or "")
+        ],
+        "identity": "Original camera archive cruise plus zero-based shapefile record index; source ZIP SHA-256 is checked separately.",
+        "limitations": ["The same transect can cross survey BAG files or browse sectors; a transect is not an independent fishing site.",
+                        "Historical visual species codes are not catches, abundance estimates or evidence of current presence.",
+                        "Rows omitted by missing BAGs, unsupported datums or closure screens are not represented by these counts."]
+    }
+
+
 def reviewed_hazards(catalog, report_cache, survey_id, report_url):
     """Link a lead only to the exact original report inspected for hazards."""
     matches = [item for item in catalog["surveys"] if item["survey_id"] == survey_id]
@@ -123,6 +193,7 @@ def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache
             "summary": dict(Counter({"pairs_with_qualified_windows": sum(bool(r["counts"].get("qualified_rocky_camera_windows")) for r in rows),
                                      "distinct_surveys_with_qualified_windows": len({r["survey_id"] for r in rows if r["counts"].get("qualified_rocky_camera_windows")}),
                                      "failed_pairs": len(failures)})),
+            "observation_deduplication": deduplicate_camera_windows(rows),
             "pair_reviews": rows,
             "caveats": ["Rows are sorted by browsing sector and source identity, not fishing quality.",
                         "The same camera window can intersect multiple survey files; pair counts are not unique sites or fish abundance.",

@@ -93,7 +93,8 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
     transects = defaultdict(lambda: {"windows": 0, "rock": 0, "boulder": 0,
                                      "rockfish_positive_windows": 0, "lingcod_positive_windows": 0,
                                      "depths_m": [], "uncertainties_m": [], "coverage": [],
-                                     "coordinates": []})
+                                     "coordinates": [], "record_indices": [],
+                                     "rockfish_positive_indices": [], "lingcod_positive_indices": []})
     with rasterio.open(path) as raster:
         if raster.count != 2 or max(raster.res) > 4:
             raise ValueError("Expected fine regular two-band BAG")
@@ -104,7 +105,7 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
             raise ValueError("Embedded NOAA metadata changed")
         project = Transformer.from_crs("EPSG:4326", raster.crs, always_xy=True)
         inverse = Transformer.from_crs(raster.crs, "EPSG:4326", always_xy=True)
-        for item in reader.iterShapeRecords():
+        for record_index, item in enumerate(reader.iterShapeRecords()):
             if not item.shape.points:
                 continue
             lon, lat = item.shape.points[0]
@@ -131,11 +132,18 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
             key = (day, str(first_field(row, "LINE", "Line")))
             group = transects[key]
             group["windows"] += 1
+            group["record_indices"].append(record_index)
             group[major] = group.get(major, 0) + 1
             if has_rockfish:
-                group["rockfish_positive_windows"] += int(float(first_field(row, "ROCKFISH", "rockfish") or 0) > 0)
+                positive = float(first_field(row, "ROCKFISH", "rockfish") or 0) > 0
+                group["rockfish_positive_windows"] += int(positive)
+                if positive:
+                    group["rockfish_positive_indices"].append(record_index)
             if has_lingcod:
-                group["lingcod_positive_windows"] += int(float(first_field(row, "LINGCOD", "lingcod") or 0) > 0)
+                positive = float(first_field(row, "LINGCOD", "lingcod") or 0) > 0
+                group["lingcod_positive_windows"] += int(positive)
+                if positive:
+                    group["lingcod_positive_indices"].append(record_index)
             group["depths_m"].append(sample["depth_m_mllw"])
             group["uncertainties_m"].append(sample["product_uncertainty_m"])
             group["coverage"].append(sample["qualified_neighborhood_fraction"])
@@ -143,6 +151,9 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
     groups = []
     for (day, line), g in sorted(transects.items()):
         groups.append({"date": day, "line": line, "window_count": g["windows"],
+                       "camera_record_indices": sorted(g["record_indices"]),
+                       "rockfish_positive_record_indices": sorted(g["rockfish_positive_indices"]) if has_rockfish else None,
+                       "lingcod_positive_record_indices": sorted(g["lingcod_positive_indices"]) if has_lingcod else None,
                        "bottom_classes": {k: g[k] for k in ("rock", "boulder", "cobble") if g.get(k)},
                        "rockfish_positive_windows": g["rockfish_positive_windows"] if has_rockfish else None,
                        "lingcod_positive_windows": g["lingcod_positive_windows"] if has_lingcod else None,
@@ -165,7 +176,7 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
             "mpa_url": data["source_url"], "mpa_retrieved_at": source["data_retrieved_at"],
             "mpa_geojson_sha256": hashlib.sha256(json.dumps(data["geojson"], sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
             "counts": dict(counts), "transects": groups,
-            "method": "Original camera rock/boulder/cobble windows sampled against original regular BAG depth and product uncertainty; 25 m local cell coverage, native grid-edge and MPA holds. A line of windows counts as one historical transect.",
+            "method": "Original camera rock/boulder/cobble windows sampled against original regular BAG depth and product uncertainty; 25 m local cell coverage, native grid-edge and MPA holds. Zero-based camera record indices identify observations within the hash-pinned original ZIP so overlapping BAG pairs can be deduplicated. A line of windows counts as one historical transect.",
             "limitations": ["Camera positions have variable accuracy on the order of 10 m; a 25 m window is a conservative review device, not an exact rock footprint.",
                             "Historical visual fish codes do not establish current fish, catch rate, or charter AIS activity.",
                             "Current chart hazards, local rules, access and route are not cleared."],
