@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "scope": "nbs-versus-original-vr-bag-rocky-camera-reconciliation",
+  "reviewed_at": "2026-09-24T05:15:21+00:00",
+  "tile": "BH42R5DS",
+  "nbs_raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42R5DS/Modeling_BH42R5DS_20260716.tiff",
+  "nbs_raster_sha256": "9cb8ea4c66096ad2e1b720bba048f228eda361d11d9bfaef61a92696726b74f9",
+  "nbs_rat_sha256": "2b1ebd162d3009f691d8298c15c79c712f7cf60bc1cb32b13ad6c9571e3882b1",
+  "original_survey_id": "H11967",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/BAG/H11967_MB_VR_MLLW_1of1.bag",
+  "original_bag_sha256": "cbe4e1c0a187e1dc5b8e7f65ef92ed499378cac4dd8623a700383b810150ecdb",
+  "original_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/DR/H11967.pdf",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+  "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+  "cdfw_mpa_source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "counts": {
+    "rocky_camera_windows_in_tile_envelope": 77,
+    "nbs_locally_qualified_90pct": 60,
+    "nbs_center_not_qualified": 16,
+    "nbs_raster_edge_held": 1
+  },
+  "comparison": [
+    {
+      "nbs_status": "center_not_qualified",
+      "original_bag_status": "outside_original_fine_grid",
+      "historical_camera_windows": 16
+    },
+    {
+      "nbs_status": "locally_qualified_90pct",
+      "original_bag_status": "original_cell_not_qualified",
+      "historical_camera_windows": 5
+    },
+    {
+      "nbs_status": "locally_qualified_90pct",
+      "original_bag_status": "original_fine_grid_edge_held",
+      "historical_camera_windows": 37
+    },
+    {
+      "nbs_status": "locally_qualified_90pct",
+      "original_bag_status": "original_locally_qualified_90pct",
+      "historical_camera_windows": 18
+    },
+    {
+      "nbs_status": "raster_edge_held",
+      "original_bag_status": "original_locally_qualified_90pct",
+      "historical_camera_windows": 1
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "NBS reuses original NOAA survey measurements; it is not an independent seabed observation.",
+    "Camera windows are correlated historical transect records, not unique sites or present fish evidence.",
+    "Survey descriptive-report hazards, current chart, federal closures, local rules and route remain unreviewed for target promotion."
+  ]
+}

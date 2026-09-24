@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "reviewed-noaa-survey-fishing-lead-holds",
-  "reviewed_at": "2026-09-23",
+  "reviewed_at": "2026-09-24",
   "holds": [
     {
       "survey_id": "F00562",
@@ -10,6 +10,14 @@
       "report_sha256": "d3918c40678662bf91b52ecf05cdb364dd0e34a69132c37845e1cd8acdc036e5",
       "reason": "This is a 2008 Crescent City harbor and approach survey. Its descriptive report identifies significant channel shoaling, numerous uncharted rocks along the southern offshore edge, and incomplete full-bottom coverage of the approach. The five eligible 4 m screen cells overlapping a predicted-hard polygon (about 80 square meters) cannot establish a natural fishing reef or a safe approach. Keep the survey for harbor-source review; do not promote it to a fishing target without a current chart, site-specific original-cell review and separate substrate evidence.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00562.html"
+    },
+    {
+      "survey_id": "H11967",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/DR/H11967.pdf",
+      "report_sha256": "02fae1f4b1fd7cb42cc8ffbfb06135a7ff8ac660d002c950f9c1988d6afcc96c",
+      "reason": "The 2009 Stil Well Point–Greenwood Cove survey contains fine measured depth and historical rocky-camera overlap, but its original report identifies five dangers to navigation, charted rocks/islets needing correction, and holidays where least depths were not established. The NOAA NBS sample has 60 locally qualified rocky-camera windows, yet only 18 also pass the strict 25 m original-BAG native-grid and depth screen; 37 are held at original fine-grid edges. Do not promote a Fort Bragg–Point Arena target until hazards are reconciled with the current ENC, exact source footprints and position uncertainty are reviewed, and local species/method rules and access pass separately.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11967.html"
     }
   ]
 }
