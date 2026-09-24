@@ -9,6 +9,37 @@ permissions:
   contents: read
 
 jobs:
+  usgs-caldig-deepwater:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned native-grid reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify 200 and 300 foot source exclusions
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_usgs_caldig_v2 -v
+      - name: Reuse exact USGS version 2 original archives
+        uses: actions/cache@v4
+        with:
+          path: var/usgs-dig-cache/Cal_DIG_I_v2_*.zip
+          key: usgs-caldig-v2-original-${{ hashFiles('catalog/usgs-caldig-v2.json') }}
+      - name: Rescan exact original bathymetry and CMECS polygons
+        run: >-
+          python scripts/audit_usgs_caldig_v2.py
+          --fetch
+          --output var/review/usgs-caldig-v2-native-review.json
+      - name: Upload deepwater source review, not fishing targets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-caldig-v2-source-review
+          path: var/review/usgs-caldig-v2-native-review.json
+          retention-days: 30
   ncei-survey-discovery:
     runs-on: ubuntu-latest
     timeout-minutes: 20

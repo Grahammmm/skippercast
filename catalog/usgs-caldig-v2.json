@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "usgs-caldig-i-v2-2026",
+  "name": "USGS Cal DIG I version 2 original bathymetry and CMECS polygons",
+  "release_url": "https://doi.org/10.5066/P9QQZ27U",
+  "publication_date": "2026-08-26",
+  "producer": "U.S. Geological Survey",
+  "rights": "CC0-1.0; cite USGS, BOEM, NOAA and MBARI as requested by original bathymetry metadata; not for navigation",
+  "sector_ids": ["sur-san-simeon", "cambria-morro", "morro-conception"],
+  "expected_crs": "EPSG:26910",
+  "expected_resolution_m": 10,
+  "archives": {
+    "bathymetry": {
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/07133678547c4279920b7670e707d96e/Cal_DIG_I_v2_Bathymetry.zip",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/f06321c9269d4c61baa4ba695f86e7fc/Cal_DIG_I_v2_Bathymetry_Metadata.txt",
+      "bytes": 313215664,
+      "sha256": "bd91ec3ddab8c6884113d9d794f1c8a10335ad825e526d883dd28e4c32ff456c",
+      "member": "Cal_DIG_I_v2_Bathymetry.tif"
+    },
+    "cmecs": {
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/e6b7cd5ab99b4bdf9e03ff64f2d024d9/Cal_DIG_I_v2_CMECS.zip",
+      "metadata_url": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/CMGDS_DR_tool/DR_P9QQZ27U/Cal_DIG_I_v2_CMECS_Metadata.html",
+      "bytes": 89741110,
+      "sha256": "fe0b480b4566d14fe06ca3fa410b058b77f0e02bd31f10443e04c5a7b0cb9e9f",
+      "member_stem": "Cal_DIG_I_v2_CMECS"
+    }
+  },
+  "limitations": [
+    "The original bathymetry is a 10 m offshore grid. A source extent or 373,920 interpreted polygons is not 373,920 fishing grounds.",
+    "This source must not populate 200 ft or 300 ft bottom-fishing targets if the exact bathymetry scan finds no measured cells in those ranges.",
+    "CMECS bedrock classes are historical habitat interpretations and video-supervised, not present fish or catch observations.",
+    "Offshore use still needs MPA/federal-area geometry, date-specific regulations, depth and route checks."
+  ]
+}

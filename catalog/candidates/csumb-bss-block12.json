@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "csumb-bss-block12-native-candidate",
+  "name": "Big Sur South Block 12 original 2 m bathymetry and terrain class",
+  "sector_ids": ["big-sur"],
+  "need_ids": ["bathymetry"],
+  "producer": {
+    "name": "CSU Monterey Bay Seafloor Mapping Lab",
+    "url": "https://csumb.edu/undersea/sfml-data-library/"
+  },
+  "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block12_mb.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version2/products/BSS_Block12_additional_products.tar.gz",
+  "access_status": "accessible",
+  "variables": ["bathymetry_elevation", "derived_terrain_roughness_class"],
+  "units": {
+    "bathymetry_elevation": "m NAVD88 Geoid09 elevation",
+    "derived_terrain_roughness_class": "original categorical code; rough/smooth and depth band"
+  },
+  "rights": {
+    "license": null,
+    "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-121.60594995090688, 35.99791679582613, -121.57411179589171, 36.01703463928315],
+    "resolution_m": 2,
+    "horizontal_crs": "EPSG:26910",
+    "vertical_datum": "NAVD88 Geoid09",
+    "footprint_kind": "valid-cell-envelope",
+    "footprint_url": null,
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T15:22:32Z",
+    "update_cadence": "Static 2011 acquisition; monthly original-archive integrity and source-catalog review.",
+    "coverage_start": "2011-09-01",
+    "coverage_end": "2011-09-10"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI archive of the original CSUMB survey; not an independent seabed measurement",
+    "raw_sha256": "3162a535ac84d1aa115f315bf4b6e65874151147c7250a20d1f47b1aa8ddbeb7",
+    "transformations": [
+      "Opened the exact hash-pinned Esri bathymetry and terrain grids; counted valid cells and transformed the valid-cell bounding envelope to WGS84; no cell interpolation, vertical-datum conversion, target polygon or waypoint generated."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block12_mb.html",
+      "supports": "NOAA original survey page identifies BSS_Block12 and links the product archive."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "supports": "Original producer metadata identifies the bathymetry product, acquisition period and unresolved access/use constraints."
+    },
+    {
+      "url": "https://csumb.edu/undersea/sfml-data-library/",
+      "supports": "Producer's current policy restricts for-profit use without express permission, despite NOAA's general archive availability statement."
+    }
+  ],
+  "limitations": [
+    "The exact inspected bathymetry valid-cell envelope is not the full surveyed footprint; it includes holes and cannot be used as a fishing area.",
+    "NAVD88 elevation is not MLLW chart depth. No approved local conversion or per-cell product uncertainty is supplied.",
+    "Rough/smooth codes are derived from the same depth surface, not independent rock or fish observations.",
+    "NOAA's general public-access language and the producer's for-profit restriction have not been reconciled for public commercial reuse of these derived products.",
+    "No MPA, local-rule, hazard, route or species assessment has qualified a fishing target or export."
+  ]
+}

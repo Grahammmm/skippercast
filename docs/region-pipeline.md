@@ -29,7 +29,7 @@ flowchart LR
 | Stage | Contract or implementation | Cadence / gate |
 | --- | --- | --- |
 | Define the need | `catalog/data-needs.json` and `catalog/targets.json` | Reused for every region; no provider selected yet. |
-| Discover | `$skippercast-discover-data`, `catalog/source-candidate.schema.json`, `catalog/sources.json` | Candidate records stay unpublished until footprint, access and rights review. |
+| Discover | `$skippercast-discover-data`, `catalog/source-candidate.schema.json`, `catalog/sources.json` | Candidate records may name a reviewed discovery sector before a detailed region exists. They stay unpublished until footprint, access and rights review. |
 | Bind a region | `regions/<id>/region.json`, `jurisdictions/`, `catalog/ecology/`, `catalog/primary-strategies.json` | Stable ID, bounds, harbor, stations, forecast points, species, sources and coverage. Each offered target needs rules and a starter strategy. |
 | Ingest and qualify | `$skippercast-ingest-data`, `src/skippercast/pipeline/`, `src/skippercast/platform/`, survey compilers | Raw receipt; original clocks, units, datum, native masks, geometry, provenance and failure state. Fishing targets require full-footprint depth and closure checks. |
 | Build | `python -m skippercast.platform.build`, `scripts/build_primary_strategies.py`, `scripts/check_web.py`, `pnpm build` | Compiles region assets and shared Worker; validation fails on missing contracts. |
@@ -53,3 +53,5 @@ The half-hourly job collects the distinct **ECMWF IFS and NOAA GFS** wind foreca
 The installed `$skippercast-add-region` skill is the operational checklist. The [data contracts](data-contracts.md) define the reusable types; [regional setup](regions.md) has commands; [quality gates](data-quality-rollout.md) explain where a partial package must stop. A source registered in the catalog is not proof that it covers a new coast, and a forecast or habitat score is not a measured catch probability.
 
 For statewide seabed expansion, the NOAA footprint collector identifies intersecting survey IDs, while the separate original-product audit identifies linked BAG and descriptive-report files. Neither qualifies bottom. The reusable USGS classified-raster adapter accepts a hash-pinned local map block and publishes generalized, non-exportable context geometry. A regional target still needs native depth, substrate, rights, current closures and reviewed species rules for its full footprint; see [California buildout ledger](statewide-buildout.md).
+
+The 2026 USGS Cal DIG I v2 audit adds an explicit **source-level depth triage** before polygon promotion: it scans every valid native depth cell and reports how many could even fall within 200 or 300 ft. Its 373,920 habitat polygons have no qualifying shallow-depth cells, so their research value does not create shallow fishing targets. Apply the same native-depth test to future large habitat releases before spending review time on species scores or map exports.

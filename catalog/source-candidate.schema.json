@@ -7,7 +7,6 @@
     "schema_version",
     "id",
     "name",
-    "region_ids",
     "need_ids",
     "documentation_url",
     "access_url",
@@ -35,6 +34,14 @@
       "minLength": 1
     },
     "region_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "sector_ids": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -136,8 +143,9 @@
         "footprint_kind": {
           "enum": [
             "catalog-envelope",
-            "survey-track-envelope",
-            "valid-data-mask",
+          "survey-track-envelope",
+          "valid-cell-envelope",
+          "valid-data-mask",
             "measured-geometry",
             "unknown"
           ]
@@ -291,5 +299,9 @@
         }
       }
     }
-  }
+  },
+  "anyOf": [
+    {"required": ["region_ids"]},
+    {"required": ["sector_ids"]}
+  ]
 }

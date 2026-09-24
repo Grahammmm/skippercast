@@ -2,8 +2,9 @@
 from datetime import datetime
 from datetime import date
 import math
+from pathlib import Path
 import re
-from .contracts import REPO, ID, bbox, load_catalogs, load_region, public_url
+from .contracts import REPO, ID, bbox, load_catalogs, load_region, public_url, read_json
 
 
 def text(value, name, nullable=False):
@@ -14,8 +15,10 @@ def text(value, name, nullable=False):
 
 
 def validate_candidate(data, root=REPO):
-    fields = {"schema_version", "id", "name", "region_ids", "need_ids", "documentation_url", "access_url", "access_status", "rights", "spatial", "temporal", "evidence", "limitations", "producer", "variables", "units", "provenance"}
-    if set(data) != fields or data["schema_version"] != 1 or isinstance(data["schema_version"], bool):
+    fields = {"schema_version", "id", "name", "need_ids", "documentation_url", "access_url", "access_status", "rights", "spatial", "temporal", "evidence", "limitations", "producer", "variables", "units", "provenance"}
+    location_keys = {"region_ids", "sector_ids"} & set(data)
+    if (set(data) != fields | location_keys or not location_keys or data["schema_version"] != 1
+            or isinstance(data["schema_version"], bool)):
         raise ValueError("Candidate fields must match source-candidate.schema.json")
     if not ID.fullmatch(data["id"]):
         raise ValueError("Invalid source candidate id")
@@ -35,12 +38,16 @@ def validate_candidate(data, root=REPO):
     if not isinstance(provenance["transformations"], list): raise ValueError("Transformations must be a list")
     for value in provenance["transformations"]: text(value, "transformation")
     needs, _ = load_catalogs(root)
-    for key in ("region_ids", "need_ids"):
+    for key in (*sorted(location_keys), "need_ids"):
         values = data[key]
         if not isinstance(values, list) or not values or any(not isinstance(v, str) for v in values) or len(values) != len(set(values)):
             raise ValueError(f"{key} must contain distinct identifiers")
-    for region in data["region_ids"]:
+    for region in data.get("region_ids", []):
         load_region(region, root)
+    if "sector_ids" in data:
+        sector_ids = {row["id"] for row in read_json(Path(root) / "catalog/coastal-sectors.json")["sectors"]}
+        if not set(data["sector_ids"]) <= sector_ids:
+            raise ValueError("Unknown California discovery sector")
     if not set(data["need_ids"]) <= needs.keys():
         raise ValueError("Unknown data need")
     public_url(data["documentation_url"])
@@ -65,7 +72,7 @@ def validate_candidate(data, root=REPO):
         raise ValueError("Resolution must be a positive number or null")
     for key in ("horizontal_crs", "vertical_datum"):
         text(spatial[key], key, nullable=True)
-    if spatial.get("footprint_kind", "unknown") not in {"catalog-envelope", "survey-track-envelope", "valid-data-mask", "measured-geometry", "unknown"}:
+    if spatial.get("footprint_kind", "unknown") not in {"catalog-envelope", "survey-track-envelope", "valid-cell-envelope", "valid-data-mask", "measured-geometry", "unknown"}:
         raise ValueError("Unknown footprint interpretation")
     if spatial.get("resolution_basis", "unknown") not in {"advertised", "inspected", "unknown"}:
         raise ValueError("Unknown resolution basis")

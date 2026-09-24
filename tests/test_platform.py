@@ -61,6 +61,19 @@ class RegionalContracts(TestCase):
             data=candidate();mutate(data)
             with self.assertRaises(ValueError):validate_candidate(data)
 
+    def test_sector_source_candidate_can_precede_a_region_package(self):
+        data = candidate()
+        del data["region_ids"]
+        data["sector_ids"] = ["big-sur"]
+        data["spatial"]["footprint_kind"] = "valid-cell-envelope"
+        self.assertFalse(validate_candidate(data)["publication_approved"])
+        data["sector_ids"] = ["imaginary-coast"]
+        with self.assertRaisesRegex(ValueError, "Unknown California discovery sector"):
+            validate_candidate(data)
+        del data["sector_ids"]
+        with self.assertRaisesRegex(ValueError, "Candidate fields"):
+            validate_candidate(data)
+
     def test_all_tiles_have_original_source_identity_and_measured_center(self):
         import base64, hashlib, struct
         index=read_json(REPO/"dist/regions/morro-bay/bottom/index.json")
