@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "scope": "san-diego-nearshore-substrate-source-lead",
+  "checked_at": "2026-09-24T22:37:13.907253+00:00",
+  "bounds": [
+    -117.35,
+    32.77,
+    -117.3,
+    32.85
+  ],
+  "source_layer": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0",
+  "source_receipt": {
+    "metadata_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0?f=pjson",
+    "metadata_sha256": "31809cd217bc43204cc2c9c2407ed86d7a182654f5d3213a400ea2fae9754a88",
+    "count_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+    "count_sha256": "a801e3865bd6b93fa0f4735ca65ca39157d0351f446ccecbb37ba7501a2e8faf",
+    "data_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID%2Cdescrip&returnGeometry=true&outSR=4326&f=geojson",
+    "data_sha256": "4a663a30dff9b60973952afe1ca3975b7c808ab9b30a26ef1cb8c15552469cb2"
+  },
+  "source_polygon_count": 13,
+  "valid_polygon_count": 12,
+  "invalid_polygon_objectids": [
+    56102
+  ],
+  "source_classes": {
+    "Bedrock": 3,
+    "Kelp Canopy Obscuring Seafloor": 2,
+    "Sand": 7,
+    "unclassified": 1
+  },
+  "historical_camera_source": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+  "historical_camera_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
+  "original_bag_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
+  "transects": [
+    {
+      "date": "2011-08-31",
+      "line": "119",
+      "historical_camera_windows": 8,
+      "distance_to_nearest_source_polygon_m_range": [
+        1027.3,
+        1560.5
+      ],
+      "nearest_source_polygon_classes": [
+        "Bedrock"
+      ]
+    },
+    {
+      "date": "2011-09-02",
+      "line": "137",
+      "historical_camera_windows": 3,
+      "distance_to_nearest_source_polygon_m_range": [
+        1441.9,
+        1481.4
+      ],
+      "nearest_source_polygon_classes": [
+        "Sand"
+      ]
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The state mirror credits SANDAG and its partners, but original acquisition dates, resolution, accuracy and redistribution rights remain unverified.",
+    "This bounded query does not describe full San Diego coverage; intersecting polygon count is not an area or habitat-quality measure.",
+    "A kelp-obscured or unclassified polygon is not hard substrate. Invalid geometries are excluded from distance comparisons and held from promotion.",
+    "Polygons this far from the offshore camera transects cannot validate those rocky windows or define their reef boundary.",
+    "Current legal, depth, chart, route, source-rights and species screens are required before any fishing target or export."
+  ]
+}

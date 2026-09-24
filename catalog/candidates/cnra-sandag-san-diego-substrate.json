@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "cnra-sandag-san-diego-substrate",
+  "name": "San Diego Nearshore Seafloor Substrate polygons, SANDAG origin via California CNRA",
+  "sector_ids": ["los-angeles-orange", "orange-san-diego", "san-diego-border"],
+  "need_ids": ["substrate", "groundtruth"],
+  "documentation_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0",
+  "access_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0/query",
+  "access_status": "accessible",
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.sandag.org/data-and-research/geographic-information-systems",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-117.727308, 32.525857, -117.123523, 33.463773],
+    "resolution_m": null,
+    "resolution_basis": "unknown",
+    "horizontal_crs": "EPSG:3857 in published feature layer; original mapping CRS not verified",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T22:35:33+00:00",
+    "update_cadence": "Unstated historical compilation; recheck service metadata monthly",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_San_Diego_Nearshore_Seafloor_Substrate/MapServer/0?f=pjson",
+      "supports": "Official state layer lists polygon geometry, descrip classes, Web Mercator service extent and query capabilities; it names SANDAG/UCSD source lineage without original acquisition dates."
+    },
+    {
+      "url": "https://dbw.parks.ca.gov/29602",
+      "supports": "California state spatial catalog separately lists the San Diego nearshore sonar-backscatter and camera substrate layer."
+    },
+    {
+      "url": "https://www.sandag.org/data-and-research/geographic-information-systems",
+      "supports": "Original regional GIS steward describes public access and its data-use disclaimer; exact redistribution permission remains to review."
+    }
+  ],
+  "limitations": [
+    "The state service says SANDAG compiled the original mapping and Moffatt Nichol supplied this layer. Its acquisition date, native mapping resolution, classification accuracy, original camera linkage, and exact redistribution rights are not stated in the service metadata.",
+    "The WGS84 bounds are a transformed service envelope, not a polygon-coverage footprint. Blank descrip values, kelp-obscured bottom and other classes must never be converted to hard substrate.",
+    "The bounded La Jolla camera review found 13 polygons, including three labeled Bedrock. One unclassified polygon has invalid geometry and is excluded from spatial comparison. The reviewed 50–58 m camera windows are 1.03–1.56 km from the valid polygons. This source does not validate that offshore rocky lead.",
+    "Depth, product uncertainty, MPAs, date/method rules, chart hazards, route and species fit require independent screens before a polygon can become a fishing area or export."
+  ],
+  "producer": {
+    "name": "San Diego Association of Governments Nearshore Program; distributed by California Natural Resources Agency",
+    "url": "https://www.sandag.org/data-and-research/geographic-information-systems"
+  },
+  "variables": ["interpreted_nearshore_substrate_class", "polygon_geometry"],
+  "units": {
+    "interpreted_nearshore_substrate_class": "categorical descrip field",
+    "polygon_geometry": "EPSG:3857 service coordinates; WGS84 query available"
+  },
+  "provenance": {
+    "access_service": "California CNRA ArcGIS MapServer mirror of reported SANDAG Nearshore Program mapping",
+    "raw_sha256": null,
+    "transformations": [
+      "Transformed the published EPSG:3857 rectangular service extent to WGS84 for candidate discovery only.",
+      "Queried the original service's feature layer within a bounded La Jolla review envelope; no polygon geometry is yet republished or bound to a fishing target."
+    ]
+  }
+}
