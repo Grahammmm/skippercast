@@ -8,6 +8,30 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NbsHardResearchPublicationTests(unittest.TestCase):
+    def test_other_coast_layers_keep_native_depth_and_source_policy(self):
+        statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
+        for coast_id, sectors, cell_m, max_features in (
+                ("northern", {"humboldt-cape"}, 40, 10),
+                ("san-francisco", {"arena-bodega", "bodega-reyes"}, 20, 10)):
+            layer = json.loads((ROOT / f"dist/data/{coast_id}-nbs-usgs-hard-research-context.geojson").read_text())
+            coast = next(row for row in statewide["coasts"] if row["coast_id"] == coast_id)
+            tiles = {tile["tile"]: tile for sector in coast["source_review"]["sectors"]
+                     for tile in sector["tiles"]}
+            self.assertEqual(layer["scope"], f"{coast_id}-nbs-usgs-hard-research-context")
+            self.assertEqual(layer["maximum_screen_uncertainty_m"], 1)
+            self.assertGreater(len(layer["features"]), 0)
+            self.assertLessEqual(len(layer["features"]), max_features)
+            for feature in layer["features"]:
+                p = feature["properties"]
+                self.assertIn(p["sector_id"], sectors)
+                self.assertEqual(p["display_cell_m"], cell_m)
+                self.assertTrue(all(p[key] is False for key in (
+                    "fishing_target", "exportable", "legal_clearance", "fish_confirmed",
+                    "depth_qualified_for_target")))
+                self.assertLessEqual(p["maximum_supplied_uncertainty_m"], 1)
+                self.assertLessEqual(p["maximum_depth_with_uncertainty_and_margin_ft"], 200)
+                self.assertEqual(p["nbs_raster_sha256"], tiles[p["tile"]]["source_raster_sha256"])
+
     def test_statewide_review_covers_each_sampled_sector_without_promoting_points(self):
         statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
         sampled = json.loads((ROOT / "dist/data/nbs-statewide-multiple-camera-tile-review.json").read_text())
@@ -41,6 +65,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
         self.assertFalse(review["exportable"])
         self.assertEqual(layer["scope"], "central-nbs-usgs-hard-research-context")
         self.assertEqual(layer["coast_id"], "central")
+        self.assertEqual(layer["maximum_screen_uncertainty_m"], 2)
         self.assertLessEqual(len(layer["features"]), layer["maximum_displayed_per_tile"])
         self.assertEqual(len({f["properties"]["id"] for f in layer["features"]}),
                          len(layer["features"]))

@@ -24,12 +24,27 @@ from scripts.review_nbs_hard_overlap import current_federal, mask_for, original_
 
 
 def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache, mpas, federal,
-                    *, sector_ids=("cambria-morro", "monterey-sur"), max_per_tile=10,
-                    minimum_area_m2=2500):
+                    *, map_audit=None, map_cache=None, coast_id="central",
+                    sector_ids=("cambria-morro", "monterey-sur"), max_uncertainty_m=2,
+                    max_per_tile=10, minimum_area_m2=2500, display_block=5):
     if (review.get("scope") != "central-nbs-usgs-hard-source-review"
             or review.get("status") != "research-leads-only"
             or review["scheme_sha256"] != digest(scheme)):
         raise ValueError("Reviewed source overlap or scheme changed")
+    if not 0 < max_uncertainty_m <= 2:
+        raise ValueError("Only reviewed 1 m and 2 m screens are supported")
+    if not 5 <= display_block <= 20:
+        raise ValueError("Displayed aggregation must remain conservative and bounded")
+    if (map_audit is None) != (map_cache is None):
+        raise ValueError("Original map-block audit and cache must be paired")
+    original_products = list(usgs_audit["products"])
+    cache_dirs = usgs_cache
+    if map_audit is not None:
+        if map_audit.get("scope") != "usgs-state-waters-native-grid-audit":
+            raise ValueError("Original map-block audit changed")
+        original_products.extend({**row, "release_id": row["block_id"]}
+                                 for row in map_audit["products"])
+        cache_dirs = (usgs_cache, map_cache)
     mpa_record = mpas["sources"]["mpas"]
     checked = datetime.fromisoformat(mpa_record["data_retrieved_at"].replace("Z", "+00:00"))
     if (mpa_record["status"] != "ok" or not 0 <= (datetime.now(timezone.utc) - checked).total_seconds() <= 36 * 3600
@@ -54,7 +69,7 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
                 to_geo = Transformer.from_crs(raster.crs, 4326, always_xy=True).transform
                 to_native = Transformer.from_crs(4326, raster.crs, always_xy=True).transform
                 bounds = transform(to_geo, box(*raster.bounds))
-                local_hard = sorted({f["properties"]["release_id"] for f in hard_features
+                local_hard = sorted({f["properties"].get("release_id") or f["properties"].get("block_id") for f in hard_features
                                      if shape(f["geometry"]).intersects(bounds)})
                 local_closures = [f for f in mpa_features + geas if shape(f["geometry"]).intersects(bounds)]
                 closure_shapes = [transform(to_native, shape(f["geometry"])) for f in local_closures]
@@ -63,18 +78,20 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
                 usgs_sources = []
                 for release_id in local_hard:
                     cells, originals = original_usgs_class(
-                        release_id, raster, bounds, usgs_audit["products"], usgs_cache)
+                        release_id, raster, bounds, original_products, cache_dirs)
                     class3 |= cells
                     usgs_sources.extend({"release_id": release_id, "archive_sha256": row["archive_sha256"],
                                          "metadata_url": row["metadata_url"]} for row in originals)
                 elevation, uncertainty, contributor = raster.read()
                 supported = (qualified_mask(elevation, uncertainty, contributor,
                                             contributors(cache / f"{tile}.tiff.aux.xml"),
-                                            max_uncertainty_m=2, resolution_m=max(raster.res))
+                                            max_uncertainty_m=max_uncertainty_m, resolution_m=max(raster.res))
                              & class3 & ~closed)
-                if int(supported.sum()) != source_tile["sensitivity_2m_original_class3_unique_pixels"]:
+                count_key = ("strict_1m_original_class3_unique_pixels" if max_uncertainty_m <= 1
+                             else "sensitivity_2m_original_class3_unique_pixels")
+                if int(supported.sum()) != source_tile[count_key]:
                     raise ValueError("Source-overlap count changed: " + tile)
-                block = 5  # A displayed 20 m square requires all 25 measured 4 m cells.
+                block = display_block  # Every underlying measured cell must pass.
                 coarse_height, coarse_width = raster.height // block, raster.width // block
                 conservative = supported[:coarse_height * block, :coarse_width * block].reshape(
                     coarse_height, block, coarse_width, block).all(axis=(1, 3))
@@ -119,16 +136,17 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
                         "fishing_target": False, "exportable": False, "legal_clearance": False,
                         "fish_confirmed": False, "depth_qualified_for_target": False}})
     return {"type": "FeatureCollection", "schema_version": 1,
-            "scope": "central-nbs-usgs-hard-research-context", "coast_id": "central",
+            "scope": f"{coast_id}-nbs-usgs-hard-research-context", "coast_id": coast_id,
             "compiled_at": datetime.now(timezone.utc).isoformat(),
             "source_review": "data/nbs-central-usgs-hard-overlap-review.json",
             "mpa_screened_at": mpa_record["data_retrieved_at"],
             "federal_screened_at": federal["retrieved_at"],
             "minimum_component_area_m2": minimum_area_m2, "maximum_displayed_per_tile": max_per_tile,
+            "maximum_screen_uncertainty_m": max_uncertainty_m,
             "sector_ids": list(sector_ids),
             "omitted_smaller_or_lower_ranked_components": omitted,
-            "method": "Original 2 m USGS class-3 pixels sampled at NOAA NBS 4 m measured-contributor cells; 25–200 ft MLLW with supplied uncertainty <=2 m and 2 m planning margin; complete 100 m MPA/GEA buffers. Each displayed 20 m square requires all 25 underlying 4 m cells to pass; largest connected components only.",
-            "limitations": ["Research sensitivity tier, not the existing 1 m target qualification policy.",
+            "method": f"Original 2 m USGS class-3 pixels sampled at NOAA NBS 4 m measured-contributor cells; 25–200 ft MLLW with supplied uncertainty <={max_uncertainty_m} m and 2 m planning margin; complete 100 m MPA/GEA buffers. Each displayed {4 * display_block} m square requires all {display_block * display_block} underlying 4 m cells to pass; largest connected components only.",
+            "limitations": ["Research context even where uncertainty passes the 1 m depth screen; a target requires many more gates.",
                             "Historical USGS classes and compiled NBS cells are not independent confirmations of fish, recent bottom stability or catch success.",
                             "Original NBS contributor provenance, present chart hazards, routes, species rules and access need review before any point or export.",
                             "No fishing target, legal clearance or navigation claim; recheck current MPA and GEA boundaries."],
@@ -143,14 +161,34 @@ def main():
     parser.add_argument("--hard", type=Path, default=Path("dist/data/usgs-hard-context-central.geojson"))
     parser.add_argument("--usgs-audit", type=Path, default=Path("var/usgs-doi-native-audit.json"))
     parser.add_argument("--usgs-cache", type=Path, default=Path("var/usgs-doi-native-cache"))
+    parser.add_argument("--map-audit", type=Path)
+    parser.add_argument("--map-cache", type=Path)
+    parser.add_argument("--coast-id", default="central")
+    parser.add_argument("--sector-id", action="append")
+    parser.add_argument("--max-uncertainty-m", type=float, default=2)
+    parser.add_argument("--display-block", type=int, default=5)
+    parser.add_argument("--max-per-tile", type=int, default=10)
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--federal", type=Path, default=Path("dist/data/noaa-federal-areas.json"))
     parser.add_argument("--output", type=Path, default=Path("dist/data/central-nbs-usgs-hard-research-context.geojson"))
     args = parser.parse_args()
-    result = compile_context(json.loads(args.review.read_text()), args.scheme, args.cache,
+    source_review = json.loads(args.review.read_text())
+    if source_review.get("scope") == "california-nbs-usgs-original-class-source-review":
+        if source_review.get("status") != "research-leads-only":
+            raise ValueError("Statewide source review changed")
+        coast = next((row for row in source_review["coasts"] if row["coast_id"] == args.coast_id), None)
+        if coast is None:
+            raise ValueError("Coast not present in source review")
+        source_review = coast["source_review"]
+    sectors = tuple(args.sector_id or ("cambria-morro", "monterey-sur"))
+    result = compile_context(source_review, args.scheme, args.cache,
                              json.loads(args.hard.read_text()), json.loads(args.usgs_audit.read_text()),
                              args.usgs_cache, json.loads(args.mpas.read_text()),
-                             json.loads(args.federal.read_text()))
+                             json.loads(args.federal.read_text()),
+                             map_audit=json.loads(args.map_audit.read_text()) if args.map_audit else None,
+                             map_cache=args.map_cache, coast_id=args.coast_id,
+                             sector_ids=sectors, max_uncertainty_m=args.max_uncertainty_m,
+                             display_block=args.display_block, max_per_tile=args.max_per_tile)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.write_text(json.dumps(result, separators=(",", ":")) + "\n")
