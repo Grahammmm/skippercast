@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from skippercast.pipeline.coastal_watch import parse_enso, parse_rules, located_reports
+from skippercast.pipeline.coastal_watch import parse_enso, parse_rules, located_reports, groundfish_table_loader
 from skippercast.pipeline.collect import source
 from skippercast.platform.coasts import compile_coasts
 
@@ -23,6 +23,29 @@ class CoastalWatchTests(unittest.TestCase):
         def fail(client):raise ValueError('offline')
         got=source('enso','NOAA','page-watch','https://www.cpc.ncep.noaa.gov/',1080,fail,self.now,old)
         self.assertEqual(got['status'],'retained');self.assertEqual(got['data_retrieved_at'],old['data_retrieved_at'])
+
+    def test_each_coast_watches_its_own_official_groundfish_pdf(self):
+        urls=[r['groundfish_table_url'] for r in self.catalog['regions']]
+        self.assertEqual(len(urls),len(set(urls)))
+        self.assertTrue(all(url.startswith('https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=') for url in urls))
+        class PDFClient:
+            def get(self,url,**options):
+                self.options=options
+                return b'%PDF-1.7\nexample'
+        client=PDFClient()
+        result=groundfish_table_loader(client,urls[0])
+        self.assertEqual(result['normalization'],'pdf-bytes-v1')
+        self.assertIsNone(result['permission_to_fish'])
+        self.assertEqual(client.options,{'as_pdf':True,'as_binary':True})
+        with self.assertRaises(ValueError):groundfish_table_loader(type('Bad',(),{'get':lambda *a,**kw:b'<html>error</html>'})(),urls[0])
+        class SourceClient:
+            def __init__(self,now):self.requests=[]
+            def get(self,url,**options):return b'%PDF-1.7\nexample'
+        prior={'data':{'content_sha256':'0'*64}}
+        checked=source('northern-groundfish-table','CDFW northern','pdf-watch',urls[0],36,
+                       lambda c:groundfish_table_loader(c,urls[0]),self.now,prior,SourceClient)
+        self.assertEqual(checked['status'],'ok')
+        self.assertIs(checked['changed_since_previous'],True)
 
     def test_port_reports_and_enso_alone_cannot_promote_species(self):
         report={'date':'2026-09-21','coordinates':None,'port':'Morro Bay','source_url':'https://example.org/report','catches':[{'species':'yellowfin','count':5}]}

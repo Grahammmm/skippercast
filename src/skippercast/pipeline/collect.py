@@ -118,7 +118,7 @@ def source(ident, name, kind, url, max_age, loader, now, previous=None, client_f
                 result.update(status="stale", issue="Source time is outside this product's freshness window")
         if data.get("total_cells") and data.get("valid_cells") == 0:
             result.update(status="missing", issue="No usable cells in this regional grid; no gap filling applied")
-        if kind == "page-watch":
+        if kind in ("page-watch", "pdf-watch"):
             old_hash = (previous or {}).get("data", {}).get("content_sha256") if (previous or {}).get("data") else None
             result["changed_since_previous"] = old_hash != data["content_sha256"] if old_hash else None
     except Exception as error:

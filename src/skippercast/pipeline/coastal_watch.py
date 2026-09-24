@@ -87,6 +87,15 @@ def mpa_loader(client):
     return {'geojson':geo,'feature_count':count,'source_url':url}
 
 
+def groundfish_table_loader(client, url):
+    body = client.get(url, as_pdf=True, as_binary=True)
+    if not isinstance(body, bytes) or not body.startswith(b'%PDF-') or len(body) > 5_000_000:
+        raise ValueError('Official groundfish table PDF is missing or oversized')
+    return {'content_sha256': hashlib.sha256(body).hexdigest(), 'normalization': 'pdf-bytes-v1',
+            'permission_to_fish': None,
+            'interpretation': 'Official groundfish table watch only. A byte change needs legal review; method, location and date still control.'}
+
+
 def located_reports(coast, reports, now, policy):
     """Only location-bearing, recent observations can support a candidate. A port is not a position."""
     accepted = {}
@@ -123,6 +132,9 @@ def collect(now=None, previous=None, reports=None, client_factory=CoastalClient)
           ('mpas','CDFW statewide MPAs','boundaries',MPA,36,mpa_loader)]
     for r in directory['regions']:
         jobs.append((r['id']+'-rules','CDFW '+r['name'],'page-watch',r['rules_url'],36,lambda c,r=r:parse_rules(c.get(r['rules_url']),r)))
+        if r.get('groundfish_table_url'):
+            jobs.append((r['id']+'-groundfish-table','CDFW '+r['name']+' groundfish table','pdf-watch',r['groundfish_table_url'],36,
+                         lambda c,r=r:groundfish_table_loader(c,r['groundfish_table_url'])))
     def run(job):
         ident,name,kind,url,max_age,loader=job
         record=source(ident,name,kind,url,max_age,loader,now,prior.get(ident),client_factory)

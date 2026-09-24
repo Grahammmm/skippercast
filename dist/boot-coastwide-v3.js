@@ -1,11 +1,11 @@
 import { initRegion } from "./region.js?v=8.11";
-import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.11';
+import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.26';
 import {initRecentDiscussions} from './recent-discussions.js?v=8.12';
 try {
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {
     const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
-    const {initCoastalDiscovery}=await import('./coastal-discovery-v4.js?v=8.25');
+    const {initCoastalDiscovery}=await import('./coastal-discovery-v4.js?v=8.26');
     await initCoastalDiscovery(catalog,coast);
   } else {
     await initRegion();

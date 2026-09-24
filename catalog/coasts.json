@@ -35,6 +35,7 @@
         8
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
+      "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185055&inline=",
       "packages": [],
       "targets": [
         "reef",
@@ -69,6 +70,7 @@
         8
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
+      "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185054&inline=",
       "packages": [],
       "targets": [
         "reef",
@@ -103,6 +105,7 @@
         8
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
+      "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
       "packages": [],
       "targets": [
         "reef",
@@ -136,6 +139,7 @@
         7
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
       "packages": [
         "morro-bay",
         "cambria-san-simeon"
@@ -176,6 +180,7 @@
         8
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185058&inline=",
       "packages": [
         "southern-california"
       ],

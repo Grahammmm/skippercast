@@ -60,6 +60,7 @@ export async function loadCoastalStatus(catalog) {
 export function seasonalMarkup(catalog,coast,status) {
   const record=status?.sources?.enso,current=ensoCurrent(record,catalog),data=record?.data;
   const rules=status?.sources?.[coast.id+'-rules'];
+  const groundfish=status?.sources?.[coast.id+'-groundfish-table'];
   const watch=status?.regions?.[coast.id]?.watch || coast.watch.map(target=>({target,status:'watch-only',evidence:[]}));
   const fresh=sourceFresh({status:'ok',data_retrieved_at:status?.completed_at});
   return `<p>${esc(coast.limits)}. ${esc(coast.note)}</p>
@@ -67,6 +68,7 @@ export function seasonalMarkup(catalog,coast,status) {
     <p>${watch.length?'Seasonal watch: '+watch.map(w=>`${esc(catalog.target_names[w.target]||w.target)}${fresh&&w.status==='recent-located-reports'?' · recent located reports':''}`).join('; ')+'.':''} A watch is a reason to check local water and reports; it does not establish fish presence.</p>
     ${watch.filter(w=>fresh&&w.status==='recent-located-reports').map(w=>`<p>${esc(catalog.target_names[w.target])}: ${w.evidence.filter(e=>/^https:\/\//.test(e.url)).map(e=>`<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.date)} · ${esc(e.publisher)}</a>`).join(' · ')}</p>`).join('')}
     <p class="small">CDFW summary: ${rules?.data?.published_date?'updated '+esc(rules.data.published_date):'update date unavailable'} · ${sourceFresh(rules)?'source checked '+esc(rules.data_retrieved_at.slice(0,10)):'current source check unavailable'}${rules?.changed_since_previous?' · document changed; read the latest rules':''}. Daily source checks do not approve legal changes automatically.</p>
+    ${coast.groundfish_table_url?`<p class="small">CDFW groundfish table: ${sourceFresh(groundfish)?'PDF checked '+esc(groundfish.data_retrieved_at.slice(0,10)):'current PDF check unavailable'}${groundfish?.changed_since_previous?' · document changed; review needed':''}. <a href="${esc(coast.groundfish_table_url)}" target="_blank" rel="noopener">Open official table ↗</a></p>`:''}
     <p class="small">NOAA temperature, currents and ocean-color layers in mapped areas retain their own dates and coverage. Unlocated port totals cannot promote a fishing location.</p>
     <p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">${esc(coast.name)} CDFW rules ↗</a> · <a href="${esc(catalog.seasonal_source)}" target="_blank" rel="noopener">Why species can shift ↗</a></p>`;
 }

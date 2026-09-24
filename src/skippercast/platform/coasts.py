@@ -17,6 +17,10 @@ def compile_coasts(root=REPO):
     for i, region in enumerate(regions):
         bbox(region['bounds'])
         public_url(region['rules_url'])
+        if region.get('groundfish_table_url'):
+            public_url(region['groundfish_table_url'])
+            if not region['groundfish_table_url'].startswith('https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID='):
+                raise ValueError('Groundfish table must link to the reviewed CDFW document service')
         if i and regions[i-1]['latitude'][0] != region['latitude'][1]:
             raise ValueError('Coastal latitude boundaries must meet exactly')
         if len(set(region['targets'])) != len(region['targets']):
