@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region_id: [bodega-point-reyes, fort-bragg-point-arena]
+        region_id: [bodega-point-reyes, fort-bragg-point-arena, crescent-city]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
