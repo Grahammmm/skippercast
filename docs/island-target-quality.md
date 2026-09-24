@@ -79,7 +79,7 @@ For the next California deployment, bind a new survey manifest with an explicit 
 
 ## Next evidence to import
 
-1. Continue with adjoining original BAGs H13322, H13324 and H13325 after independent metadata and source-quality review; these should expand Santa Cruz coverage without relabeling the merged NCCOS grid.
+1. Continue with adjoining original BAGs. H13322 and H13325 have passed an initial native-cell depth/uncertainty screen, but are explicitly held in `catalog/noaa-survey-lead-holds.json`: H13322's report lists three new obstructions, while H13325's report says the western navigable-area limit and most features there were not investigated. Obtain the exact feature positions, reconcile a current ENC, and clip unresolved areas before considering any targets. H13324 still needs its own original-product and report review. None of these surveys currently adds a fishing target.
 2. Import geographically matched seabed samples and georeferenced camera/ROV observations. Record sampling footprint, dates and classification confidence. The inaccessible older USGS sidescan catalogs remain leads until actual files and metadata can be verified.
 3. Review the original NOAA backscatter mosaics as a separate variable, with acquisition frequency, processing and ground truth. Brightness alone is not a rock class.
 4. Add species-specific depth/substrate evidence and observations with effort and zero catches. Do not turn occurrence points, charter schedules or general species preferences into a calibrated local bite score.

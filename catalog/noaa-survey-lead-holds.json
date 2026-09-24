@@ -44,6 +44,22 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13084.html"
     },
     {
+      "survey_id": "H13322",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13322/DR/H13322_DR.pdf",
+      "report_sha256": "21cf47acbe0331421e96d939dbe9009c118d25aabed18723e030ec590a6b040d",
+      "reason": "The 2019 Prisoners Harbor to Cavern Point original MLLW variable-resolution BAG has millions of native fine cells passing the preliminary depth and product-uncertainty screen. The report's section D.1.4 nevertheless identifies three new obstructions in the Final Feature File, despite D.1.2 saying no shoals or potentially hazardous features exist. The report also describes incomplete nearshore navigable-area coverage. Keep this survey as a depth lead, not a fishing target, until obstruction positions and current ENC are reconciled with each candidate footprint, exact hard substrate and closures are screened, and local access and fishing rules pass.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13322.html"
+    },
+    {
+      "survey_id": "H13325",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13325/DR/H13325_DR.pdf",
+      "report_sha256": "e56210ea333b5d46a8e62ab9cdc7992cfc83fe7285ec905306df0f21a417cbdf",
+      "reason": "The 2019 Bowen Point to Posa Anchorage original MLLW variable-resolution BAG has millions of native fine cells passing the preliminary depth and product-uncertainty screen. The report's section D.2.9 says sea conditions and time limits prevented defining the navigable-area limit in the western half and that most mapped features there were not investigated. Keep the full survey on hold until the report's Figure 21 and feature positions are georeferenced, incomplete areas are excluded, current ENC and exact substrate are checked, and MPA, access and local fishing rules pass. A reported absence of shoals elsewhere does not resolve this coverage gap.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13325.html"
+    },
+    {
       "survey_id": "H13555",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13555/DR/H13555_DR.pdf",
