@@ -26,6 +26,12 @@ def listed_schemes(raw):
 
 
 def refresh(manifest, cache):
+    tiles = manifest["tile_ids"]
+    if not tiles or len(tiles) != len(set(tiles)):
+        raise ValueError("BlueTopo sample tile IDs are empty or repeated")
+    sector_tiles = manifest.get("sector_tile_ids")
+    if sector_tiles is not None and (len(sector_tiles) != len(tiles) or set(sector_tiles.values()) != set(tiles)):
+        raise ValueError("BlueTopo sample does not identify one distinct tile per review sector")
     scheme_url = manifest["scheme_url"]
     if (urlparse(scheme_url).scheme != "https"
             or urlparse(scheme_url).hostname != "noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com"
@@ -44,19 +50,21 @@ def refresh(manifest, cache):
     current = scheme_url.removeprefix(BUCKET)
     if current not in listed:
         raise ValueError("Pinned BlueTopo scheme missing from publisher listing")
-    rows = [audit(scheme, tile, cache, fetch=True) for tile in manifest["tile_ids"]]
+    rows = [audit(scheme, tile, cache, fetch=True) for tile in tiles]
     if any(row["fishing_target"] or row["exportable"] for row in rows):
         raise ValueError("BlueTopo source review cannot publish fishing targets")
     return {"schema_version": 1, "scope": "bluetopo-pinned-source-sample-refresh",
             "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "pinned_scheme_url": scheme_url, "pinned_scheme_sha256": sha256(scheme),
             "latest_listed_scheme_key": listed[-1], "newer_scheme_available": listed[-1] != current,
-            "tiles": rows, "fishing_target": False, "exportable": False}
+            "selection_basis": manifest.get("selection_basis"),
+            "sector_tile_ids": sector_tiles, "tiles": rows,
+            "fishing_target": False, "exportable": False}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("catalog/bluetopo-sample.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("catalog/bluetopo-statewide-sample.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/bluetopo-cache"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

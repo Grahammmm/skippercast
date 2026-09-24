@@ -23,12 +23,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: var/bluetopo-cache
-          key: bluetopo-pinned-source-${{ hashFiles('catalog/bluetopo-sample.json') }}
+          key: bluetopo-statewide-source-${{ hashFiles('catalog/bluetopo-statewide-sample.json') }}
       - name: Recheck measured contributor pixels and publisher scheme
         env:
           PYTHONPATH: src:.
         run: >-
           python scripts/refresh_bluetopo_samples.py
+          --manifest catalog/bluetopo-statewide-sample.json
           --output var/review/bluetopo-pinned-samples.json
       - name: Upload unpublished BlueTopo source review
         if: always()

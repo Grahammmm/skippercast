@@ -32,7 +32,13 @@ class BlueTopoSourceReviewTests(unittest.TestCase):
 
     def test_rejects_scheme_outside_noaa_bucket_before_network(self):
         with self.assertRaisesRegex(ValueError, "outside the reviewed NOAA source"):
-            refresh({"scheme_url": "https://example.com/fake.gpkg"}, Path("unused"))
+            refresh({"tile_ids": ["A"], "scheme_url": "https://example.com/fake.gpkg"}, Path("unused"))
+
+    def test_rejects_duplicate_or_unmapped_sector_tiles_before_network(self):
+        with self.assertRaisesRegex(ValueError, "empty or repeated"):
+            refresh({"tile_ids": ["A", "A"]}, Path("unused"))
+        with self.assertRaisesRegex(ValueError, "one distinct tile"):
+            refresh({"tile_ids": ["A", "B"], "sector_tile_ids": {"north": "A"}}, Path("unused"))
 
 
 if __name__ == "__main__":

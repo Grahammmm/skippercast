@@ -219,7 +219,8 @@
         "basis": "Official NOAA dated tile scheme and SHA-256-verified original GeoTIFF and contributor RAT",
         "transport": "HTTPS; exact NOAA NBS bucket host only"
       },
-      "coverage_note": "Three exact Central Coast tiles have source-only reviews. A scheme tile and below-NAVD88 pixel count do not establish statewide fishing-depth coverage.",
+      "coverage_note": "A bounded sample of one camera-prioritized tile in each of 19 California discovery sectors, plus three Central Coast tile receipts, has source-only reviews. A scheme tile and below-NAVD88 pixel count do not establish statewide fishing-depth coverage.",
+      "statewide_research_receipt": "dist/data/bluetopo-statewide-source-review.json",
       "research_receipts": [
         "dist/data/bluetopo-BH4545C2-source-review.json",
         "dist/data/bluetopo-BH4525C2-source-review.json",
