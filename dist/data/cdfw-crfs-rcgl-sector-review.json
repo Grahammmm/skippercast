@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "source": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3185_fpu/FeatureServer/0",
+  "source_metadata_sha256": "4b559bd7edb7f8fbc22f1728cc9703c5b1b7d61d9f539938d922ce2e8e0f3cc5",
+  "source_last_edit_ms": 1753738702086,
+  "retrieved_at": "2026-09-24T23:30:37.496200+00:00",
+  "records_reviewed": 4471,
+  "outside_browse_sectors": 48,
+  "source_pages": [
+    {
+      "offset": 0,
+      "rows": 1000,
+      "response_sha256": "c17741e0ade1cd995cbc1cd57713606448ca78cd3862ab8dc2ecfe9e2fbb7a3b"
+    },
+    {
+      "offset": 1000,
+      "rows": 1000,
+      "response_sha256": "0602342ac1f33745e3a34ba030f358840dd1dc8e7f903dd8243dd894e8d8a657"
+    },
+    {
+      "offset": 2000,
+      "rows": 1000,
+      "response_sha256": "b076eb0ee52179a6d4db51971c735a2a86ec0d7d8d48022a11da49527c0fc034"
+    },
+    {
+      "offset": 3000,
+      "rows": 1000,
+      "response_sha256": "31bc7aa0eb6ea03f5035c68bbe5f26851c78a68e69a535a1e2d55534c4120e2a"
+    },
+    {
+      "offset": 4000,
+      "rows": 471,
+      "response_sha256": "fd24c2d019fa93ff2fadc7239d64d63870c10128045e80f6f4d0b5df5d3b4f23"
+    }
+  ],
+  "sectors": [
+    {
+      "sector_id": "del-norte",
+      "reported_blocks": 99,
+      "survey_samples_2004_2024_sum": 11664,
+      "blocks_2021_2024_all_catch": {
+        "positive": 81,
+        "unavailable": 7,
+        "zero": 11
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 80,
+        "unavailable": 7,
+        "zero": 12
+      }
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "reported_blocks": 191,
+      "survey_samples_2004_2024_sum": 16373,
+      "blocks_2021_2024_all_catch": {
+        "positive": 107,
+        "unavailable": 45,
+        "zero": 39
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 106,
+        "unavailable": 45,
+        "zero": 40
+      }
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "reported_blocks": 224,
+      "survey_samples_2004_2024_sum": 5226,
+      "blocks_2021_2024_all_catch": {
+        "positive": 89,
+        "unavailable": 58,
+        "zero": 77
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 83,
+        "unavailable": 58,
+        "zero": 83
+      }
+    },
+    {
+      "sector_id": "north-mendocino",
+      "reported_blocks": 150,
+      "survey_samples_2004_2024_sum": 6471,
+      "blocks_2021_2024_all_catch": {
+        "positive": 113,
+        "unavailable": 21,
+        "zero": 16
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 113,
+        "unavailable": 21,
+        "zero": 16
+      }
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "reported_blocks": 85,
+      "survey_samples_2004_2024_sum": 4914,
+      "blocks_2021_2024_all_catch": {
+        "positive": 69,
+        "unavailable": 14,
+        "zero": 2
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 65,
+        "unavailable": 14,
+        "zero": 6
+      }
+    },
+    {
+      "sector_id": "arena-bodega",
+      "reported_blocks": 149,
+      "survey_samples_2004_2024_sum": 6872,
+      "blocks_2021_2024_all_catch": {
+        "positive": 98,
+        "unavailable": 40,
+        "zero": 11
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 97,
+        "unavailable": 40,
+        "zero": 12
+      }
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "reported_blocks": 130,
+      "survey_samples_2004_2024_sum": 3676,
+      "blocks_2021_2024_all_catch": {
+        "positive": 106,
+        "unavailable": 19,
+        "zero": 5
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 106,
+        "unavailable": 19,
+        "zero": 5
+      }
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "reported_blocks": 472,
+      "survey_samples_2004_2024_sum": 17454,
+      "blocks_2021_2024_all_catch": {
+        "positive": 338,
+        "unavailable": 104,
+        "zero": 30
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 336,
+        "unavailable": 104,
+        "zero": 32
+      }
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "reported_blocks": 443,
+      "survey_samples_2004_2024_sum": 37658,
+      "blocks_2021_2024_all_catch": {
+        "positive": 383,
+        "unavailable": 46,
+        "zero": 14
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 380,
+        "unavailable": 46,
+        "zero": 17
+      }
+    },
+    {
+      "sector_id": "monterey-sur",
+      "reported_blocks": 79,
+      "survey_samples_2004_2024_sum": 4550,
+      "blocks_2021_2024_all_catch": {
+        "positive": 64,
+        "unavailable": 14,
+        "zero": 1
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 64,
+        "unavailable": 14,
+        "zero": 1
+      }
+    },
+    {
+      "sector_id": "big-sur",
+      "reported_blocks": 34,
+      "survey_samples_2004_2024_sum": 305,
+      "blocks_2021_2024_all_catch": {
+        "positive": 25,
+        "unavailable": 9
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 25,
+        "unavailable": 9
+      }
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "reported_blocks": 74,
+      "survey_samples_2004_2024_sum": 1002,
+      "blocks_2021_2024_all_catch": {
+        "positive": 48,
+        "unavailable": 26
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 48,
+        "unavailable": 26
+      }
+    },
+    {
+      "sector_id": "cambria-morro",
+      "reported_blocks": 132,
+      "survey_samples_2004_2024_sum": 9235,
+      "blocks_2021_2024_all_catch": {
+        "positive": 126,
+        "unavailable": 6
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 125,
+        "unavailable": 6,
+        "zero": 1
+      }
+    },
+    {
+      "sector_id": "morro-conception",
+      "reported_blocks": 269,
+      "survey_samples_2004_2024_sum": 17407,
+      "blocks_2021_2024_all_catch": {
+        "positive": 167,
+        "unavailable": 84,
+        "zero": 18
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 163,
+        "unavailable": 84,
+        "zero": 22
+      }
+    },
+    {
+      "sector_id": "conception-ventura",
+      "reported_blocks": 427,
+      "survey_samples_2004_2024_sum": 9592,
+      "blocks_2021_2024_all_catch": {
+        "positive": 152,
+        "unavailable": 200,
+        "zero": 75
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 125,
+        "unavailable": 200,
+        "zero": 102
+      }
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "reported_blocks": 538,
+      "survey_samples_2004_2024_sum": 22349,
+      "blocks_2021_2024_all_catch": {
+        "positive": 273,
+        "unavailable": 163,
+        "zero": 102
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 250,
+        "unavailable": 163,
+        "zero": 125
+      }
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "reported_blocks": 353,
+      "survey_samples_2004_2024_sum": 33128,
+      "blocks_2021_2024_all_catch": {
+        "positive": 179,
+        "unavailable": 46,
+        "zero": 128
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 129,
+        "unavailable": 46,
+        "zero": 178
+      }
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "reported_blocks": 373,
+      "survey_samples_2004_2024_sum": 21789,
+      "blocks_2021_2024_all_catch": {
+        "positive": 164,
+        "unavailable": 93,
+        "zero": 116
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 143,
+        "unavailable": 93,
+        "zero": 137
+      }
+    },
+    {
+      "sector_id": "san-diego-border",
+      "reported_blocks": 201,
+      "survey_samples_2004_2024_sum": 18117,
+      "blocks_2021_2024_all_catch": {
+        "positive": 85,
+        "unavailable": 68,
+        "zero": 48
+      },
+      "blocks_2021_2024_kept_catch": {
+        "positive": 75,
+        "unavailable": 68,
+        "zero": 58
+      }
+    }
+  ],
+  "fishing_target": false,
+  "current_fish_presence": false,
+  "exportable": false,
+  "limitations": [
+    "CDFW combined RCGL catch per bottomfish angler, not species-specific lingcod or rockfish catch and not a boat-only survey.",
+    "One-minute blocks are interview-reported; when a trip reported several blocks, catch was divided among them. They are not observed catch coordinates or seafloor habitat.",
+    "Data are multi-year historical 2004\u20132024; the recent columns combine 2021\u20132024 and may contain -9999 missing values, which this audit keeps separate from zero.",
+    "Only blocks with at least three reported trips over the whole period were included; the Samples field is all-period and cannot weight the recent 2021\u20132024 CPUA.",
+    "Some service polygons are clipped smaller than the nominal one-minute block. Browse-sector assignment uses their envelope centers and latitude only; legal MPAs, fisheries rules, exact target areas, chart hazards, season and depth are not inferred.",
+    "No public block-level catch polygons, fishing scores, routes or chartplotter exports are generated."
+  ]
+}

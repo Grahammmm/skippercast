@@ -9,6 +9,27 @@ permissions:
   contents: read
 
 jobs:
+  cdfw-crfs-historical-rcgl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify missing-value and block-location handling
+        run: python -m unittest tests.test_cdfw_crfs_rcgl -v
+      - name: Recheck CDFW source version and every RCGL block
+        run: >-
+          python scripts/audit_cdfw_crfs_rcgl.py
+          --output var/review/cdfw-crfs-rcgl-2004-2024.json
+      - name: Upload unpublished CDFW survey review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdfw-crfs-rcgl-review
+          path: var/review/cdfw-crfs-rcgl-2004-2024.json
+          retention-days: 30
   noaa-dismap-groundfish:
     runs-on: ubuntu-latest
     timeout-minutes: 20

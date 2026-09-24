@@ -14,6 +14,20 @@ test('statewide discovery sectors are complete and cannot be mistaken for mapped
   assert.equal(sectorAt(packet,'northern',{latitude:41.5,longitude:-126}),null);
   assert.equal(sectorAt(packet,'northern',{latitude:NaN,longitude:-124.5}),null);
 });
+test('CDFW historical catch context covers every sector without publishing block locations',()=>{
+  const review=JSON.parse(fs.readFileSync(new URL('../dist/data/cdfw-crfs-rcgl-sector-review.json',import.meta.url)));
+  assert.equal(review.records_reviewed,4471);
+  assert.equal(review.fishing_target,false);
+  assert.equal(review.exportable,false);
+  assert.equal(review.sectors.length,packet.sectors.length);
+  assert.equal(review.sectors.reduce((sum,row)=>sum+row.reported_blocks,0)+review.outside_browse_sectors,4471);
+  assert.ok(review.sectors.every(row=>{
+    const parts=row.blocks_2021_2024_all_catch;
+    return !('geometry' in row) && !('coordinates' in row) &&
+      (parts.positive||0)+(parts.zero||0)+(parts.unavailable||0)===row.reported_blocks;
+  }));
+  assert.equal(review.sectors.reduce((sum,row)=>sum+(row.blocks_2021_2024_all_catch.unavailable||0),0),1063);
+});
 test('survey source links require official HTTPS host and matching survey identity',()=>{
   assert.equal(trustedNoaaLink('https://www.ngdc.noaa.gov/nos/H10001-H12000/H11983.html','H11983','catalog'),true);
   assert.equal(trustedNoaaLink('https://data.ngdc.noaa.gov/nos/H11983/BAG/grid.bag','H11983'),true);

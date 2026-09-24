@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "cdfw-crfs-rcgl-blocks",
+  "name": "CDFW CRFS combined rockfish, cabezon, greenling and lingcod catch per bottomfish angler",
+  "sector_ids": ["del-norte", "crescent-city-humboldt", "humboldt-cape", "north-mendocino", "fort-bragg-arena", "arena-bodega", "bodega-reyes", "reyes-pigeon", "pigeon-monterey", "monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception", "conception-ventura", "ventura-los-angeles", "los-angeles-orange", "orange-san-diego", "san-diego-border"],
+  "need_ids": ["catch-effort", "species-occurrence"],
+  "documentation_url": "https://catalog.data.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-rockfish-cabezon-greenl",
+  "access_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3185_fpu/FeatureServer/0",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC BY (version not specified in data.gov catalog)",
+    "terms_url": "https://catalog.data.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-rockfish-cabezon-greenl",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": null,
+    "resolution_m": null,
+    "horizontal_crs": "WGS84 transformed service geometry requested for review; original service geometry is Web Mercator EPSG:3857",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3185_fpu/FeatureServer/0",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T23:31:56Z",
+    "update_cadence": "Monthly source revision and complete-page check; human review before replacing public sector context",
+    "coverage_start": "2004-01-01",
+    "coverage_end": "2024-12-31"
+  },
+  "evidence": [
+    {
+      "url": "https://wildlife.ca.gov/Conservation/Marine/CRFS",
+      "supports": "CDFW describes statewide recreational catch-and-effort survey design and public RecFIN access."
+    },
+    {
+      "url": "https://catalog.data.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-rockfish-cabezon-greenl",
+      "supports": "CDFW's public layer metadata defines combined RCGL catch, bottomfish effort, five-year bins, one-minute reported blocks, multi-block allocation, three-trip inclusion rule and CC BY catalog attribution."
+    },
+    {
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3185_fpu/FeatureServer/0",
+      "supports": "Direct service inspection found 4,471 records, the expected catch/effort fields and -9999 missing-period sentinel."
+    }
+  ],
+  "limitations": [
+    "Combined RCGL catch cannot separate lingcod from rockfish, cabezon or greenling. Bottomfish effort includes modes other than a private recreational boat.",
+    "Historical 2004–2024 interview-reported one-minute blocks do not mark exact catches; multi-block trips allocate catch across all reported blocks.",
+    "The 2021–2024 CPUA fields are multi-year averages. The Samples field covers the whole period and is not a 2021–2024 denominator. -9999 means unavailable, not zero.",
+    "Some service polygons are clipped within nominal blocks. Latitude browse sectors are not management areas, exact fishing locations or MPA clearance.",
+    "The catalog gives CC BY without a version-specific terms statement; raw-block redistribution is not approved by this candidate. Publish broad attributed sector counts only."
+  ],
+  "producer": {
+    "name": "California Department of Fish and Wildlife, California Recreational Fisheries Survey",
+    "url": "https://wildlife.ca.gov/Conservation/Marine/CRFS"
+  },
+  "variables": ["reported_block", "combined_rcgl_catch_per_angler", "survey_samples_all_periods", "catch_group", "trip_group"],
+  "units": {
+    "reported_block": null,
+    "combined_rcgl_catch_per_angler": "fish per angler",
+    "survey_samples_all_periods": "survey samples",
+    "catch_group": null,
+    "trip_group": null
+  },
+  "provenance": {
+    "access_service": "CDFW ArcGIS FeatureServer for BIOS ds3185, distributed via California open-data catalog",
+    "raw_sha256": null,
+    "transformations": [
+      "Check CDFW service edit timestamp, required schema, complete 4,471-record page count and distinct OBJECTID/BlockBox identifiers.",
+      "Transform service polygons to WGS84, inspect clipped block extents and assign their envelope centers to approximate coastal latitude sectors.",
+      "Count 2021–2024 positive, zero and unavailable combined-catch and kept-catch blocks separately; publish only broad sector summaries, never raw locations or a fishing target."
+    ]
+  }
+}
