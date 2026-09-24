@@ -25,6 +25,7 @@ on:
       - "src/skippercast/pipeline/habitat_dynamics.py"
       - "src/skippercast/pipeline/wave_ensemble.py"
       - "scripts/check_saved_trips.py"
+      - "scripts/run_core_tests.py"
       - "requirements-ocean.txt"
       - "deployments/**"
 
