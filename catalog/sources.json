@@ -202,6 +202,38 @@
       ]
     },
     {
+      "id": "noaa-bluetopo",
+      "name": "NOAA BlueTopo bathymetry",
+      "provider": "NOAA National Ocean Service, Office of Coast Survey",
+      "needs": ["bathymetry"],
+      "documentation_url": "https://nauticalcharts.noaa.gov/data/bluetopo_specs.html",
+      "adapter": "bluetopo-geotiff-source-review",
+      "review_status": "candidate",
+      "reviewed_at": "2026-09-24",
+      "rights": {
+        "license": "U.S. public domain/CC0-1.0 product; check each contributor RAT for source restrictions",
+        "attribution": "NOAA National Ocean Service, Office of Coast Survey; identify original contributors",
+        "terms_url": "https://nauticalcharts.noaa.gov/data/bluetopo_faq.html"
+      },
+      "authenticity": {
+        "basis": "Official NOAA dated tile scheme and SHA-256-verified original GeoTIFF and contributor RAT",
+        "transport": "HTTPS; exact NOAA NBS bucket host only"
+      },
+      "coverage_note": "Three exact Central Coast tiles have source-only reviews. A scheme tile and below-NAVD88 pixel count do not establish statewide fishing-depth coverage.",
+      "research_receipts": [
+        "dist/data/bluetopo-BH4545C2-source-review.json",
+        "dist/data/bluetopo-BH4525C2-source-review.json",
+        "dist/data/bluetopo-BH44P5CD-source-review.json"
+      ],
+      "limitations": [
+        "BlueTopo uses NAVD88, not chart MLLW; conversion and original-survey validation are required before any depth-qualified fishing target.",
+        "The product includes interpolated, old, coastal-topography and repeated-survey contributors; a fine cell size alone does not prove measured reef habitat.",
+        "The reviewed BH4525C2 tile points to original W00479, whose report gives a 99.1–799.8 m MLLW survey depth range, beyond the 200 ft bottom-fishing limit.",
+        "Not for navigation; original hazards, current chart, MPAs, access and local rules remain separate gates."
+      ],
+      "allowed_hosts": ["nauticalcharts.noaa.gov", "noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com"]
+    },
+    {
       "id": "noaa-west-coast-substrate",
       "name": "West Coast seafloor induration 2017",
       "provider": "NOAA Fisheries",

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "scope": "reviewed-bluetopo-central-coast-source-sample",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_150737.gpkg",
+  "scheme_sha256": "1a77fbef8e11bb27eda165e9b7af72ec4a7d90e9001c1e9594d8ee023f948531",
+  "tile_ids": ["BH4545C2", "BH4525C2", "BH44P5CD"],
+  "fishing_target": false
+}

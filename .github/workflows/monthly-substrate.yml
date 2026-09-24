@@ -9,6 +9,34 @@ permissions:
   contents: read
 
 jobs:
+  bluetopo-source-leads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned raster reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Reuse exact NOAA BlueTopo originals
+        uses: actions/cache@v4
+        with:
+          path: var/bluetopo-cache
+          key: bluetopo-pinned-source-${{ hashFiles('catalog/bluetopo-sample.json') }}
+      - name: Recheck measured contributor pixels and publisher scheme
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/refresh_bluetopo_samples.py
+          --output var/review/bluetopo-pinned-samples.json
+      - name: Upload unpublished BlueTopo source review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluetopo-source-leads
+          path: var/review/bluetopo-pinned-samples.json
+          retention-days: 30
   usgs-caldig-deepwater:
     runs-on: ubuntu-latest
     timeout-minutes: 35
