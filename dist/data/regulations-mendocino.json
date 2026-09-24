@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "revision": "2026-09-23-mendocino-draft-1",
+  "reviewed_at": null,
+  "valid_from": "2026-01-01",
+  "valid_through": "2026-12-31",
+  "timezone": "America/Los_Angeles",
+  "area": "California Mendocino Groundfish Management Area · 40°10′ N to 38°57.5′ N",
+  "scope": "Recreational boat fishing; pending Mendocino source and legal review. No open-season claim is published.",
+  "check_interval_hours": 24,
+  "max_age_hours": 36,
+  "common_notes": [
+    "This is the Mendocino Management Area, not Northern or San Francisco. Exact species seasons, method restrictions, local MPAs and closures need a separate legal review.",
+    "This draft does not confirm any season opening or legal fishing position."
+  ],
+  "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
+  "checked_at": null,
+  "review_required": [
+    "rules-gear",
+    "rules-invertebrates",
+    "rules-whales",
+    "rules-health",
+    "rules-ocean",
+    "rules-groundfish",
+    "rules-inseason",
+    "rules-salmon",
+    "rules-crab",
+    "rules-book",
+    "rules-proposals",
+    "rules-tuna-federal",
+    "rules-salmon-pdf",
+    "rules-groundfish-pdf",
+    "rules-pacific-halibut",
+    "rules-mendocino",
+    "mpa-russian-gulch",
+    "mpa-point-arena"
+  ],
+  "jurisdiction_id": "california-mendocino",
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "reviewed_regions": [],
+  "review_record": null,
+  "approved_rules_content_sha256": null,
+  "rules_review_status": "pending",
+  "checks": {},
+  "sources": {
+    "rules-gear": {
+      "name": "CDFW finfish gear and general rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-invertebrates": {
+      "name": "CDFW invertebrate gear rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-whales": {
+      "name": "CDFW whale-safe crab restrictions",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-health": {
+      "name": "CDFW fishery health closures",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-ocean": {
+      "name": "CDFW official regulation index",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-groundfish": {
+      "name": "CDFW groundfish",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-inseason": {
+      "name": "CDFW in-season changes",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-salmon": {
+      "name": "CDFW salmon",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-crab": {
+      "name": "CDFW crab",
+      "url": "https://wildlife.ca.gov/Crab",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing booklet",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "approved_content_sha256": null,
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer · August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW Mendocino groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185054&inline=",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-pacific-halibut": {
+      "name": "CDFW Pacific halibut season and quota",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "rules-mendocino": {
+      "name": "CDFW Mendocino management area rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "mpa-russian-gulch": {
+      "name": "CDFW Russian Gulch SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Russian-Gulch",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    },
+    "mpa-point-arena": {
+      "name": "CDFW Point Arena and Sea Lion Cove MPAs",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Arena-Sea-Lion-Cove",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Mendocino source and legal-content review."
+    }
+  },
+  "species": {
+    "lingcod": {
+      "name": "Lingcod",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "rockfish": {
+      "name": "Rockfish / rock cod",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "halibut": {
+      "name": "California halibut",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    },
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "season": "Unconfirmed for the Mendocino Management Area; check current CDFW rules.",
+      "windows": [],
+      "bag": "Unconfirmed; see current official species rules.",
+      "size": "Unconfirmed; see current official species rules.",
+      "details": [
+        "No legal clearance is published from this draft. Confirm current season, gear, limits, health and local access before fishing."
+      ],
+      "source_ids": [
+        "rules-mendocino",
+        "rules-inseason",
+        "rules-health",
+        "rules-book"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific Mendocino gear rules are pending review."
+        }
+      }
+    }
+  },
+  "area_notices": [
+    {
+      "id": "mendocino-mpas",
+      "name": "Mendocino coast MPAs",
+      "note": "Current CDFW MPA geometry and individual legal exceptions require exact position and method review. No fishing target is published in this draft.",
+      "source_ids": [
+        "mpa-russian-gulch",
+        "mpa-point-arena"
+      ]
+    }
+  ]
+}
