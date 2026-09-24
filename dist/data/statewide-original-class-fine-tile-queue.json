@@ -1,0 +1,1099 @@
+{
+  "schema_version": 1,
+  "scope": "statewide-original-class-noaa-fine-tile-source-queue",
+  "queued_at": "2026-09-24T21:00:42+00:00",
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "source_grids": 17,
+  "positive_source_tile_pairs": 73,
+  "products": [
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "original_metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+      "positive_fine_tile_leads": 6,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44P5CK",
+          "tile_envelope_wgs84": [
+            -121.95001220703125,
+            36.599998474121094,
+            -121.875,
+            36.67500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 106089,
+          "class3_pixel_area_m2_upper_bound": 424356,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CK",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.599998474121094,
+            -121.79998779296875,
+            36.67500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 46247,
+          "class3_pixel_area_m2_upper_bound": 184988,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44P5CJ",
+          "tile_envelope_wgs84": [
+            -121.95001220703125,
+            36.524993896484375,
+            -121.875,
+            36.600006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 19112,
+          "class3_pixel_area_m2_upper_bound": 76448,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44N5CK",
+          "tile_envelope_wgs84": [
+            -122.0250015258789,
+            36.599998474121094,
+            -121.94999694824219,
+            36.67500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3906,
+          "class3_pixel_area_m2_upper_bound": 15624,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44N5CJ",
+          "tile_envelope_wgs84": [
+            -122.0250015258789,
+            36.524993896484375,
+            -121.94999694824219,
+            36.600006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3165,
+          "class3_pixel_area_m2_upper_bound": 12660,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CL",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.67499923706055,
+            -121.79998779296875,
+            36.75
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 4,
+          "class3_pixel_area_m2_upper_bound": 16,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "original_metadata_sha256": "54965696356bf1261fbbcc68b3290443ed3efe0ba23742d49b964a508961a803",
+      "positive_fine_tile_leads": 0,
+      "ranked_positive_tiles": []
+    },
+    {
+      "release_id": "F7513W80",
+      "original_archive_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+      "original_metadata_sha256": "ac06031a3332ba203882084b212e30c62e578a8a87a3df735999440e6aec4d99",
+      "positive_fine_tile_leads": 5,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44H5CS",
+          "tile_envelope_wgs84": [
+            -122.4000015258789,
+            37.125,
+            -122.32499694824219,
+            37.20000076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 346119,
+          "class3_pixel_area_m2_upper_bound": 1384476,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44J5CR",
+          "tile_envelope_wgs84": [
+            -122.32501220703125,
+            37.04999923706055,
+            -122.25,
+            37.125
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 287766,
+          "class3_pixel_area_m2_upper_bound": 1151064,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44G5CT",
+          "tile_envelope_wgs84": [
+            -122.47501373291016,
+            37.19999694824219,
+            -122.39998626708984,
+            37.275001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 77946,
+          "class3_pixel_area_m2_upper_bound": 311784,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44H5CR",
+          "tile_envelope_wgs84": [
+            -122.4000015258789,
+            37.04999923706055,
+            -122.32499694824219,
+            37.125
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 68405,
+          "class3_pixel_area_m2_upper_bound": 273620,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44G5CS",
+          "tile_envelope_wgs84": [
+            -122.47501373291016,
+            37.125,
+            -122.39998626708984,
+            37.20000076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 18406,
+          "class3_pixel_area_m2_upper_bound": 73624,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7CJ8BJW",
+      "original_archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+      "original_metadata_sha256": "45a1d3d60409a32e2b5c839ccdc1ce43120879e943018dca797e17a26044692f",
+      "positive_fine_tile_leads": 5,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44K5CQ",
+          "tile_envelope_wgs84": [
+            -122.25,
+            36.974998474121094,
+            -122.17498779296875,
+            37.05000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 249456,
+          "class3_pixel_area_m2_upper_bound": 997824,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44J5CR",
+          "tile_envelope_wgs84": [
+            -122.32501220703125,
+            37.04999923706055,
+            -122.25,
+            37.125
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 188736,
+          "class3_pixel_area_m2_upper_bound": 754944,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44J5CQ",
+          "tile_envelope_wgs84": [
+            -122.32501220703125,
+            36.974998474121094,
+            -122.25,
+            37.05000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 47635,
+          "class3_pixel_area_m2_upper_bound": 190540,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44H5CR",
+          "tile_envelope_wgs84": [
+            -122.4000015258789,
+            37.04999923706055,
+            -122.32499694824219,
+            37.125
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 11592,
+          "class3_pixel_area_m2_upper_bound": 46368,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44K5CR",
+          "tile_envelope_wgs84": [
+            -122.25,
+            37.04999923706055,
+            -122.17498779296875,
+            37.125
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 36,
+          "class3_pixel_area_m2_upper_bound": 144,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7K35RQB",
+      "original_archive_sha256": "925ff387a48ca3a903609fac664db9fb685252d4be994107095746331e5854cd",
+      "original_metadata_sha256": "f08dcdd91c725f56c498ed7b249eef7efa9626295c52d1be5f735b3d3d549097",
+      "positive_fine_tile_leads": 0,
+      "ranked_positive_tiles": []
+    },
+    {
+      "release_id": "F7K35RQB",
+      "original_archive_sha256": "9fcab31d296bcf75c26c3aa937fe7fff190f0365299b6a287f76e93694dbcead",
+      "original_metadata_sha256": "bee0fe7a6c2b007d4b3111c58870f973f9164a45d331c5816ca3294bd3ad1eb1",
+      "positive_fine_tile_leads": 5,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44N5CP",
+          "tile_envelope_wgs84": [
+            -122.0250015258789,
+            36.899993896484375,
+            -121.94999694824219,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 98766,
+          "class3_pixel_area_m2_upper_bound": 395064,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44P5CP",
+          "tile_envelope_wgs84": [
+            -121.95001220703125,
+            36.899993896484375,
+            -121.875,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 13959,
+          "class3_pixel_area_m2_upper_bound": 55836,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CP",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.899993896484375,
+            -121.79998779296875,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 8740,
+          "class3_pixel_area_m2_upper_bound": 34960,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CN",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.82499694824219,
+            -121.79998779296875,
+            36.900001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 659,
+          "class3_pixel_area_m2_upper_bound": 2636,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44P5CQ",
+          "tile_envelope_wgs84": [
+            -121.95001220703125,
+            36.974998474121094,
+            -121.875,
+            37.05000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 313,
+          "class3_pixel_area_m2_upper_bound": 1252,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7QN64XQ",
+      "original_archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+      "original_metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+      "positive_fine_tile_leads": 5,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH45G5BH",
+          "tile_envelope_wgs84": [
+            -120.45001220703125,
+            34.42499923706055,
+            -120.375,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 734379,
+          "class3_pixel_area_m2_upper_bound": 2937516,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45F5BH",
+          "tile_envelope_wgs84": [
+            -120.5250015258789,
+            34.42499923706055,
+            -120.44999694824219,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 568810,
+          "class3_pixel_area_m2_upper_bound": 2275240,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45F5BJ",
+          "tile_envelope_wgs84": [
+            -120.5250015258789,
+            34.5,
+            -120.44999694824219,
+            34.57500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 127642,
+          "class3_pixel_area_m2_upper_bound": 510568,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45D5BJ",
+          "tile_envelope_wgs84": [
+            -120.60001373291016,
+            34.5,
+            -120.52498626708984,
+            34.57500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 93051,
+          "class3_pixel_area_m2_upper_bound": 372204,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45H5BH",
+          "tile_envelope_wgs84": [
+            -120.375,
+            34.42499923706055,
+            -120.29998779296875,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 5043,
+          "class3_pixel_area_m2_upper_bound": 20172,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7TH8JWJ",
+      "original_archive_sha256": "f8605263b06aeff232f48e5bd21b306d18d75511772a007ce5de1534a646a0fa",
+      "original_metadata_sha256": "b5ab1dde41df4397c1d200f8b6e428d8dc08618fdfd1ad9bba2e38530d592601",
+      "positive_fine_tile_leads": 4,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH45H5BH",
+          "tile_envelope_wgs84": [
+            -120.375,
+            34.42499923706055,
+            -120.29998779296875,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 293367,
+          "class3_pixel_area_m2_upper_bound": 1173468,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45J5BH",
+          "tile_envelope_wgs84": [
+            -120.30000305175781,
+            34.42499923706055,
+            -120.2249984741211,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 120773,
+          "class3_pixel_area_m2_upper_bound": 483092,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45G5BH",
+          "tile_envelope_wgs84": [
+            -120.45001220703125,
+            34.42499923706055,
+            -120.375,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 39930,
+          "class3_pixel_area_m2_upper_bound": 159720,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH45K5BH",
+          "tile_envelope_wgs84": [
+            -120.22501373291016,
+            34.42499923706055,
+            -120.14998626708984,
+            34.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 12446,
+          "class3_pixel_area_m2_upper_bound": 49784,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7TM785G",
+      "original_archive_sha256": "b6e86d2d518619cb7760f8f2331b2eb768e054a89ab74498e42634c414471cd3",
+      "original_metadata_sha256": "d79e9764962113f55ee66327dee9c4967c5c7cba437610f1cfc5f0ce36bf3dd9",
+      "positive_fine_tile_leads": 5,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44M5CP",
+          "tile_envelope_wgs84": [
+            -122.10001373291016,
+            36.899993896484375,
+            -122.02498626708984,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 474949,
+          "class3_pixel_area_m2_upper_bound": 1899796,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44L5CP",
+          "tile_envelope_wgs84": [
+            -122.17500305175781,
+            36.899993896484375,
+            -122.0999984741211,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 190207,
+          "class3_pixel_area_m2_upper_bound": 760828,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44N5CP",
+          "tile_envelope_wgs84": [
+            -122.0250015258789,
+            36.899993896484375,
+            -121.94999694824219,
+            36.975006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 122333,
+          "class3_pixel_area_m2_upper_bound": 489332,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44L5CQ",
+          "tile_envelope_wgs84": [
+            -122.17500305175781,
+            36.974998474121094,
+            -122.0999984741211,
+            37.05000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 27421,
+          "class3_pixel_area_m2_upper_bound": 109684,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44K5CQ",
+          "tile_envelope_wgs84": [
+            -122.25,
+            36.974998474121094,
+            -122.17498779296875,
+            37.05000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 26311,
+          "class3_pixel_area_m2_upper_bound": 105244,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "original_archive_sha256": "05d3c11229ca3a33f45d22da49970c0a84efbffd5fdd718036ed29d25059eeb1",
+      "original_metadata_sha256": "f3265cd37bca09b6cbc47e79e21cbb6054f91c3d51a0f9ac0b1c01faaa6760d8",
+      "positive_fine_tile_leads": 0,
+      "ranked_positive_tiles": []
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "original_archive_sha256": "d1c9ccc9b0c686d9461107dfd4ae9bfacd713b132560c5f8c7710b4798db7363",
+      "original_metadata_sha256": "d6305eb2b2cce51dfa8006a64b18c81447b00f5b16944943393de80279d0022b",
+      "positive_fine_tile_leads": 4,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH44Q5CM",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.75,
+            -121.79998779296875,
+            36.82500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 248,
+          "class3_pixel_area_m2_upper_bound": 992,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CL",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.67499923706055,
+            -121.79998779296875,
+            36.75
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 245,
+          "class3_pixel_area_m2_upper_bound": 980,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44Q5CN",
+          "tile_envelope_wgs84": [
+            -121.875,
+            36.82499694824219,
+            -121.79998779296875,
+            36.900001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 23,
+          "class3_pixel_area_m2_upper_bound": 92,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH44R5CM",
+          "tile_envelope_wgs84": [
+            -121.80000305175781,
+            36.75,
+            -121.7249984741211,
+            36.82500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 6,
+          "class3_pixel_area_m2_upper_bound": 24,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P902YIF5",
+      "original_archive_sha256": "f7b2c5847e12ba463a71287ce0d410b32aafa4ee05169be14825727583756821",
+      "original_metadata_sha256": "f822eaaaff93ea01026fe252b45a0d2c6223c2e26d86abaa8ea2822984b9a893",
+      "positive_fine_tile_leads": 4,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH42J5FK",
+          "tile_envelope_wgs84": [
+            -124.35001373291016,
+            40.649993896484375,
+            -124.27498626708984,
+            40.725006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 27206,
+          "class3_pixel_area_m2_upper_bound": 108819,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42H5FJ",
+          "tile_envelope_wgs84": [
+            -124.42500305175781,
+            40.57499694824219,
+            -124.3499984741211,
+            40.650001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 24681,
+          "class3_pixel_area_m2_upper_bound": 98720,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42H5FH",
+          "tile_envelope_wgs84": [
+            -124.42500305175781,
+            40.5,
+            -124.3499984741211,
+            40.57500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 24157,
+          "class3_pixel_area_m2_upper_bound": 96624,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42J5FJ",
+          "tile_envelope_wgs84": [
+            -124.35001373291016,
+            40.57499694824219,
+            -124.27498626708984,
+            40.650001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 7860,
+          "class3_pixel_area_m2_upper_bound": 31439,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P9HEZNRO",
+      "original_archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+      "original_metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3",
+      "positive_fine_tile_leads": 6,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH4575BX",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.399993896484375,
+            -120.89998626708984,
+            35.475006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2618019,
+          "class3_pixel_area_m2_upper_bound": 10472076,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BV",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.25,
+            -120.89998626708984,
+            35.32500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 1734899,
+          "class3_pixel_area_m2_upper_bound": 6939596,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BV",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.25,
+            -120.82499694824219,
+            35.32500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 498547,
+          "class3_pixel_area_m2_upper_bound": 1994188,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BW",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.32499694824219,
+            -120.89998626708984,
+            35.400001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 294941,
+          "class3_pixel_area_m2_upper_bound": 1179764,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BX",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.399993896484375,
+            -120.82499694824219,
+            35.475006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 286744,
+          "class3_pixel_area_m2_upper_bound": 1146976,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BW",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.32499694824219,
+            -120.82499694824219,
+            35.400001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 251000,
+          "class3_pixel_area_m2_upper_bound": 1004000,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P9J1K4QX",
+      "original_archive_sha256": "927bc802fda0c6229f5b55f6e57616a57428e4c55428f06685dcfbe41eaf2fed",
+      "original_metadata_sha256": "3875373c9623bd6ca03a76db35f313ae928ada97d3ac06bc67e1537734852e70",
+      "positive_fine_tile_leads": 2,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH42L5FN",
+          "tile_envelope_wgs84": [
+            -124.20001220703125,
+            40.875,
+            -124.125,
+            40.95000076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 55,
+          "class3_pixel_area_m2_upper_bound": 220,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42L5FM",
+          "tile_envelope_wgs84": [
+            -124.20001220703125,
+            40.79999923706055,
+            -124.125,
+            40.875
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2,
+          "class3_pixel_area_m2_upper_bound": 8,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P9KBGELE",
+      "original_archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "original_metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+      "positive_fine_tile_leads": 7,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH4595BS",
+          "tile_envelope_wgs84": [
+            -120.82501220703125,
+            35.099998474121094,
+            -120.75,
+            35.17500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2539886,
+          "class3_pixel_area_m2_upper_bound": 10159544,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BT",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.17499923706055,
+            -120.82499694824219,
+            35.25
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2173719,
+          "class3_pixel_area_m2_upper_bound": 8694876,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BV",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.25,
+            -120.89998626708984,
+            35.32500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2101283,
+          "class3_pixel_area_m2_upper_bound": 8405132,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BS",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.099998474121094,
+            -120.82499694824219,
+            35.17500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 1940193,
+          "class3_pixel_area_m2_upper_bound": 7760772,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4595BT",
+          "tile_envelope_wgs84": [
+            -120.82501220703125,
+            35.17499923706055,
+            -120.75,
+            35.25
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 488550,
+          "class3_pixel_area_m2_upper_bound": 1954200,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4585BV",
+          "tile_envelope_wgs84": [
+            -120.9000015258789,
+            35.25,
+            -120.82499694824219,
+            35.32500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 437262,
+          "class3_pixel_area_m2_upper_bound": 1749048,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BT",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.17499923706055,
+            -120.89998626708984,
+            35.25
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 216198,
+          "class3_pixel_area_m2_upper_bound": 864792,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P9U0SUGL",
+      "original_archive_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+      "original_metadata_sha256": "a426f7c8dac175779c45733e00f9ae5d294f991005bb83620d2870cb165342bf",
+      "positive_fine_tile_leads": 8,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH42G5FG",
+          "tile_envelope_wgs84": [
+            -124.5,
+            40.42499923706055,
+            -124.42498779296875,
+            40.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 9906983,
+          "class3_pixel_area_m2_upper_bound": 39627932,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42G5FF",
+          "tile_envelope_wgs84": [
+            -124.5,
+            40.349998474121094,
+            -124.42498779296875,
+            40.42500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3781239,
+          "class3_pixel_area_m2_upper_bound": 15124956,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42F5FG",
+          "tile_envelope_wgs84": [
+            -124.57501220703125,
+            40.42499923706055,
+            -124.5,
+            40.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3353896,
+          "class3_pixel_area_m2_upper_bound": 13415584,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42H5FG",
+          "tile_envelope_wgs84": [
+            -124.42500305175781,
+            40.42499923706055,
+            -124.3499984741211,
+            40.5
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2394999,
+          "class3_pixel_area_m2_upper_bound": 9579996,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42H5FH",
+          "tile_envelope_wgs84": [
+            -124.42500305175781,
+            40.5,
+            -124.3499984741211,
+            40.57500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 1377978,
+          "class3_pixel_area_m2_upper_bound": 5511912,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42H5FF",
+          "tile_envelope_wgs84": [
+            -124.42500305175781,
+            40.349998474121094,
+            -124.3499984741211,
+            40.42500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 1333724,
+          "class3_pixel_area_m2_upper_bound": 5334896,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42F5FF",
+          "tile_envelope_wgs84": [
+            -124.57501220703125,
+            40.349998474121094,
+            -124.5,
+            40.42500305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 608795,
+          "class3_pixel_area_m2_upper_bound": 2435180,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH42G5FH",
+          "tile_envelope_wgs84": [
+            -124.5,
+            40.5,
+            -124.42498779296875,
+            40.57500076293945
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 33727,
+          "class3_pixel_area_m2_upper_bound": 134908,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    },
+    {
+      "release_id": "P9ZSTUK1",
+      "original_archive_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+      "original_metadata_sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708",
+      "positive_fine_tile_leads": 7,
+      "ranked_positive_tiles": [
+        {
+          "tile": "BH4565BX",
+          "tile_envelope_wgs84": [
+            -121.05000305175781,
+            35.399993896484375,
+            -120.9749984741211,
+            35.475006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3963039,
+          "class3_pixel_area_m2_upper_bound": 15852156,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4555BZ",
+          "tile_envelope_wgs84": [
+            -121.125,
+            35.474998474121094,
+            -121.04998779296875,
+            35.55000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 3658191,
+          "class3_pixel_area_m2_upper_bound": 14632764,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BX",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.399993896484375,
+            -120.89998626708984,
+            35.475006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 2364047,
+          "class3_pixel_area_m2_upper_bound": 9456188,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4565BZ",
+          "tile_envelope_wgs84": [
+            -121.05000305175781,
+            35.474998474121094,
+            -120.9749984741211,
+            35.55000305175781
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 815979,
+          "class3_pixel_area_m2_upper_bound": 3263916,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4555BX",
+          "tile_envelope_wgs84": [
+            -121.125,
+            35.399993896484375,
+            -121.04998779296875,
+            35.475006103515625
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 105266,
+          "class3_pixel_area_m2_upper_bound": 421064,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4575BW",
+          "tile_envelope_wgs84": [
+            -120.97501373291016,
+            35.32499694824219,
+            -120.89998626708984,
+            35.400001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 1669,
+          "class3_pixel_area_m2_upper_bound": 6676,
+          "has_published_raster_and_rat": true
+        },
+        {
+          "tile": "BH4565BW",
+          "tile_envelope_wgs84": [
+            -121.05000305175781,
+            35.32499694824219,
+            -120.9749984741211,
+            35.400001525878906
+          ],
+          "tile_resolution_m": 4.0,
+          "class3_pixels_in_envelope": 166,
+          "class3_pixel_area_m2_upper_bound": 664,
+          "has_published_raster_and_rat": true
+        }
+      ]
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Original class-3 pixels inside a NOAA tile envelope are acquisition leads only.",
+    "Product/tile pairs may share source cells, and no fine measured depth, legal area or fish presence is established by this inventory.",
+    "Every promising raster and contributor table must be fetched, hash-checked and screened cell by cell before considering a map layer."
+  ]
+}

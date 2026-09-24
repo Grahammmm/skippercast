@@ -11,6 +11,7 @@ import sqlite3
 import numpy as np
 from pyproj import Transformer
 import rasterio
+from rasterio.errors import WindowError
 from rasterio.features import geometry_mask
 from rasterio.windows import from_bounds
 from shapely.geometry import box, mapping
@@ -40,11 +41,12 @@ def intersecting_scheme_rows(scheme, bounds, *, maximum=250):
     return [dict(row) for row in rows]
 
 
-def queue(release_id, audit, metadata, scheme, usgs_cache):
+def queue(release_id, audit, metadata, scheme, usgs_cache, *, archive_sha256=None):
     if audit.get("scope") != "usgs-state-waters-doi-native-grid-audit":
         raise ValueError("Original USGS DOI native audit required")
     rows = [row for row in audit["products"] if row.get("release_id") == release_id
-            and row.get("kind") == "seafloor_character" and row.get("status") == "ok"]
+            and row.get("kind") == "seafloor_character" and row.get("status") == "ok"
+            and (archive_sha256 is None or row.get("archive_sha256") == archive_sha256)]
     if len(rows) != 1:
         raise ValueError("Expected one audited original USGS seafloor-character grid")
     original = rows[0]
@@ -69,7 +71,12 @@ def queue(release_id, audit, metadata, scheme, usgs_cache):
             if clipped.is_empty or clipped.area <= 0:
                 continue
             window = from_bounds(*clipped.bounds, transform=raster.transform).round_offsets().round_lengths()
-            window = window.intersection(rasterio.windows.Window(0, 0, raster.width, raster.height))
+            if window.width < 1 or window.height < 1:
+                continue
+            try:
+                window = window.intersection(rasterio.windows.Window(0, 0, raster.width, raster.height))
+            except WindowError:
+                continue
             cells = raster.read(1, window=window, masked=True)
             within_tile = geometry_mask([mapping(clipped)], out_shape=cells.shape,
                                         transform=raster.window_transform(window), invert=True)
@@ -94,6 +101,7 @@ def queue(release_id, audit, metadata, scheme, usgs_cache):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-id", required=True)
+    parser.add_argument("--archive-sha256", help="Select one original grid when a release contains multiple grids")
     parser.add_argument("--audit", type=Path, default=Path("var/usgs-doi-native-audit.json"))
     parser.add_argument("--metadata", type=Path, default=Path("var/usgs-doi-metadata.json"))
     parser.add_argument("--scheme", type=Path, default=Path("var/nbs-cache/modeling-tile-scheme.gpkg"))
@@ -101,7 +109,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = queue(args.release_id, json.loads(args.audit.read_text()), json.loads(args.metadata.read_text()),
-                   args.scheme, args.usgs_cache)
+                   args.scheme, args.usgs_cache, archive_sha256=args.archive_sha256)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(args.release_id, result["candidate_tiles"], "source tile leads")

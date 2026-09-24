@@ -251,6 +251,23 @@ jobs:
           --metadata var/review/usgs-doi-metadata.json
           --cache var/usgs-doi-native-cache
           --output var/review/usgs-doi-native-audit.json
+      - name: Queue every reviewed USGS class grid against fine NOAA tiles
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/queue_statewide_original_class_tiles.py
+          --audit var/review/usgs-doi-native-audit.json
+          --metadata var/review/usgs-doi-metadata.json
+          --output var/review/statewide-original-class-fine-tile-queue.json
+      - name: Recheck the Pigeon Point to Monterey source gap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/triage_original_class_tile_queue.py
+          --queue var/review/statewide-original-class-fine-tile-queue.json
+          --release-id F70Z71C8 --release-id F7513W80 --release-id F7CJ8BJW
+          --fetch
+          --output var/review/pigeon-monterey-original-class-depth-triage.json
       - name: Recheck Eel River original-class NOAA tile coverage
         env:
           PYTHONPATH: src:.

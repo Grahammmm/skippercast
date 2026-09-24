@@ -25,7 +25,8 @@ def screen(queue, native_audit, metadata, scheme, nbs_cache, usgs_cache, tile_re
         raise ValueError("NOAA tile scheme changed")
     release_id = queue["release_id"]
     rows = [row for row in native_audit["products"] if row.get("release_id") == release_id
-            and row.get("kind") == "seafloor_character" and row.get("status") == "ok"]
+            and row.get("kind") == "seafloor_character" and row.get("status") == "ok"
+            and row.get("archive_sha256") == queue["usgs_original_archive_sha256"]]
     if len(rows) != 1 or rows[0]["archive_sha256"] != queue["usgs_original_archive_sha256"] \
             or rows[0]["metadata_sha256"] != queue["usgs_original_metadata_sha256"]:
         raise ValueError("Original USGS source or metadata changed")

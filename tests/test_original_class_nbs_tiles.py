@@ -4,7 +4,9 @@ import unittest
 from pathlib import Path
 
 from scripts.queue_nbs_original_class_tiles import intersecting_scheme_rows
+from scripts.queue_statewide_original_class_tiles import build as build_statewide_queue
 from scripts.screen_original_class_nbs_tiles import screen
+from scripts.triage_original_class_tile_queue import triage
 
 
 class OriginalClassNbsTilesTest(unittest.TestCase):
@@ -37,6 +39,24 @@ class OriginalClassNbsTilesTest(unittest.TestCase):
             queue["noaa_scheme_sha256"] = __import__("hashlib").sha256(b"scheme").hexdigest()
             with self.assertRaisesRegex(ValueError, "native audit required"):
                 screen(queue, {}, {}, scheme, Path(directory), Path(directory), [])
+
+    def test_statewide_queue_requires_reviewed_originals(self):
+        with self.assertRaisesRegex(ValueError, "Original DOI native audit required"):
+            build_statewide_queue({}, {}, Path("unused"), Path("unused"))
+        with self.assertRaisesRegex(ValueError, "No reviewed original"):
+            build_statewide_queue({"scope": "usgs-state-waters-doi-native-grid-audit", "products": []},
+                                  {}, Path("unused"), Path("unused"))
+
+    def test_triage_cannot_silently_omit_a_requested_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scheme = Path(directory) / "scheme"
+            scheme.write_bytes(b"scheme")
+            source_queue = {"scope": "statewide-original-class-noaa-fine-tile-source-queue",
+                            "fishing_target": False,
+                            "noaa_scheme_sha256": __import__("hashlib").sha256(b"scheme").hexdigest(),
+                            "products": []}
+            with self.assertRaisesRegex(ValueError, "missing from source queue"):
+                triage(source_queue, scheme, Path(directory), ["F7513W80"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "scope": "statewide-original-class-noaa-measured-depth-triage",
+  "reviewed_at": "2026-09-24T21:04:38+00:00",
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "release_ids": [
+    "F70Z71C8",
+    "F7513W80",
+    "F7CJ8BJW"
+  ],
+  "unique_noaa_tiles_checked": 14,
+  "products": [
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "positive_fine_tile_leads": 6,
+      "tiles": [
+        {
+          "tile": "BH44P5CK",
+          "original_class3_pixels_in_tile_envelope": 106089,
+          "noaa_raster_sha256": "b8e39347cb7b06112823087e7a8173d2c432ac12d1987ec04a814f5d787a0c8b",
+          "noaa_rat_sha256": "d138fb5d3cc42d699cedee6ffec6dc3bd4dbbdb084b59e03dd126d68101b18f7",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44Q5CK",
+          "original_class3_pixels_in_tile_envelope": 46247,
+          "noaa_raster_sha256": "c6e0fb1f5d27fe202c6db20709f54ae28c21700a253668638d43334dc2e6e707",
+          "noaa_rat_sha256": "a9cc46ae604bdf34887590a716008a04f7f668e9e743761cb2dfff3505335b90",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44P5CJ",
+          "original_class3_pixels_in_tile_envelope": 19112,
+          "noaa_raster_sha256": "dc2187a38a56dc246fa20b8c37f9ef450c3ec6940c3912b0be538ed1dbeb8ea1",
+          "noaa_rat_sha256": "e7ed1aafb73468f7bc6fc9120f85f0cb2b2ef8cb20007cd81884f95fa00161d3",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44N5CK",
+          "original_class3_pixels_in_tile_envelope": 3906,
+          "noaa_raster_sha256": "365dde86c02284690e31b3b47911a681c2107e222e4e018651fab31cf1f387a9",
+          "noaa_rat_sha256": "b90bd3c6eb7348ab3b92e5b8b0cc4593fe842af6f0cb06d56803b497bc163521",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44N5CJ",
+          "original_class3_pixels_in_tile_envelope": 3165,
+          "noaa_raster_sha256": "d7ce04f9c85de804376b841ba854b80a312b39023cd453e5eed308ed6a554e1e",
+          "noaa_rat_sha256": "08c078f6138ebbd26afefa28f7737958238091f4ac94428f2f349bfa84f62cc1",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44Q5CL",
+          "original_class3_pixels_in_tile_envelope": 4,
+          "noaa_raster_sha256": "9a36b39c79519bccf52ac967246efb03a9269641242d80be56beb00142e7552d",
+          "noaa_rat_sha256": "e450714b05cc716902631ec5e39e3819e46860f16553fd6612e8ab2e3bf50202",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        }
+      ]
+    },
+    {
+      "release_id": "F70Z71C8",
+      "original_archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "positive_fine_tile_leads": 0,
+      "tiles": []
+    },
+    {
+      "release_id": "F7513W80",
+      "original_archive_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+      "positive_fine_tile_leads": 5,
+      "tiles": [
+        {
+          "tile": "BH44H5CS",
+          "original_class3_pixels_in_tile_envelope": 346119,
+          "noaa_raster_sha256": "d0b32f1a73035f70df308cd02592e60b64fd6e525adece76850c7e217a39310a",
+          "noaa_rat_sha256": "8e3423e2c4eea5c7e140f2c58c64de5fbe61f476311614b6558f8888f3ec12c5",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44J5CR",
+          "original_class3_pixels_in_tile_envelope": 287766,
+          "noaa_raster_sha256": "79a73ebee59372ae63deec0bb2a067634608e42129881b3ca98c8103ab432aab",
+          "noaa_rat_sha256": "afb39a5242746d6a52c1b2481e5ba8a0d161d0760d15268fc775af8fcc19a071",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44G5CT",
+          "original_class3_pixels_in_tile_envelope": 77946,
+          "noaa_raster_sha256": "60201884467bc21f5e2b4ae6e53499fdbaeee5736d076e490bd97744602e0829",
+          "noaa_rat_sha256": "530fee5b535365b6316c329512d60c493c2ba97fcd2ab97844e03aed16e765d4",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44H5CR",
+          "original_class3_pixels_in_tile_envelope": 68405,
+          "noaa_raster_sha256": "42ddee02b02ed3f59e2c56d0a7baad0ccc8b500553ebc202b5a834c1c6638b32",
+          "noaa_rat_sha256": "25762dc64eb3481c97482c2cffaba786068c65bccb1e8ae05ba8b8f300522e5b",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44G5CS",
+          "original_class3_pixels_in_tile_envelope": 18406,
+          "noaa_raster_sha256": "f180b038fd1241fd9d3de9b62b4bd12ada5fdc99d5f8403321c120cc96d4135e",
+          "noaa_rat_sha256": "c5c37206cb8b6dfea0b792e669fc62e0cb264087fd2bb2e4c3450830f8812d3a",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        }
+      ]
+    },
+    {
+      "release_id": "F7CJ8BJW",
+      "original_archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+      "positive_fine_tile_leads": 5,
+      "tiles": [
+        {
+          "tile": "BH44K5CQ",
+          "original_class3_pixels_in_tile_envelope": 249456,
+          "noaa_raster_sha256": "ead735f567d01476b53f6aa3a842112f0a65f39c840e73cb30950ee13242c015",
+          "noaa_rat_sha256": "08e651675098c7ac584b29be96f185dd04de565c271530d8ebdb202ff1e7f79c",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44J5CR",
+          "original_class3_pixels_in_tile_envelope": 188736,
+          "noaa_raster_sha256": "79a73ebee59372ae63deec0bb2a067634608e42129881b3ca98c8103ab432aab",
+          "noaa_rat_sha256": "afb39a5242746d6a52c1b2481e5ba8a0d161d0760d15268fc775af8fcc19a071",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44J5CQ",
+          "original_class3_pixels_in_tile_envelope": 47635,
+          "noaa_raster_sha256": "32de2f05945abbbf4874d044281533dbdde8715cdf532af4f9657505725b2924",
+          "noaa_rat_sha256": "e8867441d2015dec9eddb563ec88aea8671624cb381b7db3c94a2f58cfa780fb",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44H5CR",
+          "original_class3_pixels_in_tile_envelope": 11592,
+          "noaa_raster_sha256": "42ddee02b02ed3f59e2c56d0a7baad0ccc8b500553ebc202b5a834c1c6638b32",
+          "noaa_rat_sha256": "25762dc64eb3481c97482c2cffaba786068c65bccb1e8ae05ba8b8f300522e5b",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        },
+        {
+          "tile": "BH44K5CR",
+          "original_class3_pixels_in_tile_envelope": 36,
+          "noaa_raster_sha256": "eb6ef0e6e9bd45f44b6f8e0f7136164f7ab9caabbe537165a96e451bbd119026",
+          "noaa_rat_sha256": "0156ce75ceb968ba27ac9f4d452ee7ce45e242e825230f7dfb5f01b109f0c910",
+          "qualified_measured_depth_pixels": 0,
+          "needs_exact_class_depth_overlap": false
+        }
+      ]
+    }
+  ],
+  "all_checked_tiles_have_zero_qualified_depth": true,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "An original USGS class-3 tile-envelope count is not a class/depth overlap.",
+    "NOAA NBS Modeling is a test-and-evaluation compilation, not a navigation chart.",
+    "Passing depth cells would still need exact source-class, current closure, hazard, chart, species and local rule review before map promotion."
+  ]
+}
