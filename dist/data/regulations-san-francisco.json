@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-24-san-francisco-draft-3",
-  "reviewed_at": null,
+  "revision": "2026-09-24-san-francisco-reviewed-1",
+  "reviewed_at": "2026-09-24T17:23:25Z",
   "valid_from": "2026-01-01",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
@@ -15,27 +15,8 @@
     "The salmon opening begins at 38°02′ N and is not a Bodega-wide season; crab reopening is scheduled only and requires a new gear/health review."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
-  "checked_at": null,
-  "review_required": [
-    "rules-gear",
-    "rules-invertebrates",
-    "rules-whales",
-    "rules-health",
-    "rules-ocean",
-    "rules-groundfish",
-    "rules-inseason",
-    "rules-salmon",
-    "rules-crab",
-    "rules-book",
-    "rules-proposals",
-    "rules-tuna-federal",
-    "rules-salmon-pdf",
-    "rules-groundfish-pdf",
-    "rules-pacific-halibut",
-    "rules-san-francisco",
-    "mpa-point-reyes",
-    "rules-cordell"
-  ],
+  "checked_at": "2026-09-24T17:23:31Z",
+  "review_required": [],
   "jurisdiction_id": "california-san-francisco",
   "authority_hosts": [
     "wildlife.ca.gov",
@@ -47,154 +28,317 @@
     "www.govinfo.gov"
   ],
   "reviewed_regions": [],
-  "review_record": null,
-  "approved_rules_content_sha256": null,
-  "rules_review_status": "pending",
-  "checks": {},
+  "review_record": "jurisdictions/reviews/2026-09-24-california-san-francisco.json",
+  "approved_rules_content_sha256": "d5645f3e868a97191e475dd0d19daf979bbc5974900645a22408b21916e31f8f",
+  "rules_review_status": "reviewed",
+  "checks": {
+    "rules-gear": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:42Z",
+      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-invertebrates": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:42Z",
+      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-whales": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:42Z",
+      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-health": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:42Z",
+      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-ocean": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-groundfish": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-inseason": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-salmon": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-crab": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:44Z",
+      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "url": "https://wildlife.ca.gov/Crab",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-book": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:46Z",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-proposals": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-tuna-federal": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "normalization": "ecfr-section-text-v1",
+      "source_status": "ok"
+    },
+    "rules-salmon-pdf": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:43Z",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-groundfish-pdf": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:44Z",
+      "content_sha256": "247f68cfe100573e3501e49c6f16ab578a0fe320d638de0f7518333a0bd4ad1e",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
+      "normalization": "pdf-bytes-v1",
+      "source_status": "ok"
+    },
+    "rules-pacific-halibut": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:44Z",
+      "content_sha256": "3ecf742e9969b582bec4e1ef56439e7ca66333e2c4ac43880bbc641704786f65",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-san-francisco": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:44Z",
+      "content_sha256": "2570e25830e9ef1627ca395722005b0ba0fc0e79a1dd4b79ef8f2f6c073a8748",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "mpa-point-reyes": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:45Z",
+      "content_sha256": "9d7081e29b0c0a7fe9425f4bfd107bb602b80cb74ce2868c3494395f3e442669",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Reyes",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    },
+    "rules-cordell": {
+      "status": "unchanged",
+      "checked_at": "2026-09-24T17:20:41Z",
+      "data_retrieved_at": "2026-09-24T17:20:45Z",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
+    }
+  },
   "sources": {
     "rules-gear": {
       "name": "CDFW finfish gear and general rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW July 2026 finfish gear text: one line and at most two hooks with lingcod or rockfish aboard; salmon north of Point Conception has its own one-rod and barbless-hook rule."
     },
     "rules-invertebrates": {
       "name": "CDFW invertebrate gear rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed current CDFW section 29.80 crab gear text: trap validation, deployment limit, marking, pre-opener prohibition and servicing requirements; season permission remains separate."
     },
     "rules-whales": {
       "name": "CDFW whale-safe crab restrictions",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW 2026–27 Whale Safe Fisheries page: recreational Dungeness season currently closed; any future trap authorization requires the current zone decision."
     },
     "rules-health": {
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW health-closure page and dated September 2026 advisories; no listed Bodega target-specific closure was converted into a season opening or entrance clearance."
     },
     "rules-ocean": {
       "name": "CDFW official regulation index",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW 2026 ocean index and official regional, in-season, health and species links; the index is a navigation source, not independent permission to fish."
     },
     "rules-groundfish": {
       "name": "CDFW groundfish",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW groundfish summary: San Francisco area all-depth Apr–Dec season, descending device and Cordell Bank all-groundfish prohibition; exact closure geometry remains separate."
     },
     "rules-inseason": {
       "name": "CDFW in-season changes",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW in-season page through September 11: August San Francisco summer salmon closure did not change the September fall opening; May Fishing Zone 3 trap action requires new gear clearance."
     },
     "rules-salmon": {
       "name": "CDFW salmon",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW 2026 fall salmon page: September 1–October 31 only from 38°02′ N to Pigeon Point, 20,000 Chinook guideline, two fish excluding coho and north-coast barbless gear."
     },
     "rules-crab": {
       "name": "CDFW crab",
       "url": "https://wildlife.ca.gov/Crab",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW crab page and its links to the current invertebrate and whale-safe rules; it does not by itself confirm a future trap opening."
     },
     "rules-book": {
       "name": "CDFW 2026 ocean sport fishing booklet",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed original 2026 CDFW ocean booklet sections and tables for California halibut, Dungeness, albacore, finfish possession and gear; PDF fingerprint verified."
     },
     "rules-proposals": {
       "name": "California FGC rulemaking: effective and pending changes",
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed FGC 2026 rulemaking index: proposed recreational conformance action has pending adoption and no effective date, so it was not treated as operative law."
     },
     "rules-tuna-federal": {
       "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "normalization": "ecfr-section-text-v1",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed current eCFR 50 CFR 660.721: 25 albacore north of Point Conception, 10 if trip enters southern EEZ, 24-hour/calendar-day and onboard restrictions."
     },
     "rules-salmon-pdf": {
       "name": "CDFW 2026 ocean salmon season flyer · August update",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed original August 2026 CDFW salmon flyer: fall latitude band, 20-inch minimum, two-fish bag, no coho, single rod and barbless hook restrictions; PDF fingerprint verified."
     },
     "rules-groundfish-pdf": {
       "name": "CDFW San Francisco groundfish season table",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "247f68cfe100573e3501e49c6f16ab578a0fe320d638de0f7518333a0bd4ad1e",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed original June 23 San Francisco groundfish table: Apr–Dec all depths, lingcod two at 22 inches, RCG ten with sublimits and four no-retention rockfish; PDF fingerprint verified."
     },
     "rules-pacific-halibut": {
       "name": "CDFW Pacific halibut season and quota",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "3ecf742e9969b582bec4e1ef56439e7ca66333e2c4ac43880bbc641704786f65",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW Pacific halibut page to distinguish it from California halibut; one-fish Pacific rule and south-of-Point-Arena quota season are not assigned to the California-halibut card."
     },
     "rules-san-francisco": {
       "name": "CDFW San Francisco outer-coast rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "2570e25830e9ef1627ca395722005b0ba0fc0e79a1dd4b79ef8f2f6c073a8748",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed September 1 CDFW outer-coast page: Point Arena–Pigeon Point jurisdiction, 38°02′ salmon line, California-halibut two at 22 inches and scheduled November 7 Dungeness opener."
     },
     "mpa-point-reyes": {
       "name": "CDFW Point Reyes MPAs and special closure",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Reyes",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "9d7081e29b0c0a7fe9425f4bfd107bb602b80cb74ce2868c3494395f3e442669",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW Point Reyes SMR, SMCA and Headlands Special Closure: no take in SMR, only salmon trolling or Dungeness trap in SMCA, and restricted Headlands entry."
     },
     "rules-cordell": {
       "name": "CDFW Cordell Bank groundfish restriction",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
-      "approved_content_sha256": null,
+      "approved_content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
       "normalization": "text-and-links-v3",
-      "reviewed_at": null,
-      "review_note": "Pending San Francisco source and legal-content review."
+      "reviewed_at": "2026-09-24T17:23:25Z",
+      "review_note": "Reviewed CDFW groundfish summary statement prohibiting all groundfish fishing at Cordell Bank; the exact federal exclusion footprint remains a separate geometry gate."
     }
   },
   "species": {

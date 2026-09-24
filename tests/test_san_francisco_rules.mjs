@@ -40,11 +40,13 @@ test('San Francisco salmon opening remains spatially limited even with matching 
   } finally {setRegion(previous);}
 });
 
-test('draft status itself cannot be mistaken for approved season data',()=>{
+test('loss of legal content approval withholds the San Francisco opening',()=>{
   const previous=getRegion();
   try {
     setRegion(region);
-    assert.equal(regulationState(draft,'salmon',now,null,'rod',null,location(38.01)).status,'unknown');
-    assert.equal(regulationState(draft,'dungeness',now,null,'trap',null,location(38.15)).status,'unknown');
+    const unreviewed=structuredClone(draft);
+    unreviewed.rules_review_status='content-needs-review';
+    assert.equal(regulationState(unreviewed,'salmon',now,null,'rod',null,location(38.01)).status,'unknown');
+    assert.equal(regulationState(unreviewed,'dungeness',now,null,'trap',null,location(38.15)).status,'unknown');
   } finally {setRegion(previous);}
 });

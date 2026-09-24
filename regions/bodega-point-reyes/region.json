@@ -243,8 +243,8 @@
       "reason": "CDFW MPAs and NOAA federal GEA geometry were screened for the context layer; exact local method/date restrictions and route remain under review."
     },
     "regulations": {
-      "status": "research",
-      "reason": "Dedicated San Francisco jurisdiction watchlist is pending hash-bound legal review; the 38°02′ N salmon boundary requires local treatment."
+      "status": "partial",
+      "reason": "Six 2026 outer-coast species profiles have a hash-bound San Francisco review, including the 38°02′ N salmon latitude gate. This draft region has no first daily rule-health feed or date-and-position clearance."
     },
     "dynamic-closures": {
       "status": "research",
