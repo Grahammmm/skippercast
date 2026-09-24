@@ -61,12 +61,10 @@
     "latitude": 38.33,
     "longitude": -123.05,
     "entrance_note": "Bodega Harbor approach and shoaling require current chart, notices and local clearance. NOAA tide predictions do not certify entrance conditions.",
-    "information_url": "https://parks.sonomacounty.ca.gov/Microsites/Regional%20Parks/Documents/Visit/Maps/spud-point-marina-map.pdf",
+    "information_url": "https://parks.sonomacounty.ca.gov/visit/find-a-park/spud-point-marina",
     "watch_keywords": [
-      "Bodega Harbor",
-      "Spud Point",
-      "bar",
-      "shoaling"
+      "Spud Point Marina",
+      "Bodega Bay"
     ]
   },
   "boat": {

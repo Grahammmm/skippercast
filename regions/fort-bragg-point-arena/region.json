@@ -42,12 +42,10 @@
     "latitude": 39.425,
     "longitude": -123.805,
     "entrance_note": "Noyo River entrance requires current local clearance; the harbor district page is not a live bar report.",
-    "information_url": "https://noyoharbordistrict.org/",
+    "information_url": "https://noyoharbordistrict.org/the-harbor/",
     "watch_keywords": [
-      "Noyo",
-      "Fort Bragg",
-      "harbor",
-      "bar"
+      "Noyo Harbor",
+      "Fort Bragg"
     ]
   },
   "boat": {

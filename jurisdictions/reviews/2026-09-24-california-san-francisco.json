@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "jurisdiction_id": "california-san-francisco",
-  "revision": "2026-09-24-san-francisco-reviewed-1",
-  "reviewed_at": "2026-09-24T17:23:25Z",
+  "revision": "2026-09-24-san-francisco-reviewed-2",
+  "reviewed_at": "2026-09-24T18:18:36Z",
   "record_path": "jurisdictions/reviews/2026-09-24-california-san-francisco.json",
-  "rules_content_sha256": "d5645f3e868a97191e475dd0d19daf979bbc5974900645a22408b21916e31f8f",
+  "rules_content_sha256": "857667be8ea63a911891593a5611e73a56373e2d08e19922e03a7930ac3efd0c",
   "reviewed_species": [
     "lingcod",
     "rockfish",
@@ -105,5 +105,5 @@
       "note": "Reviewed CDFW groundfish summary statement prohibiting all groundfish fishing at Cordell Bank; the exact federal exclusion footprint remains a separate geometry gate."
     }
   },
-  "conclusion": "The six 2026 outer-coast profiles were compared with the archived official source documents. Season windows remain conditional on fresh source checks, exact geography, MPAs, method and current advisories. This decision does not activate the Bodega–Point Reyes draft package or certify fishing targets."
+  "conclusion": "The six 2026 outer-coast profiles and Bodega–Point Reyes draft fishing rectangle were compared with the archived official source documents and CDFW's September 1 San Francisco management-area page. The entire draft rectangle lies between Point Arena and Pigeon Point; its northern portion remains outside the 38°02′ N salmon opening. Season windows remain conditional on fresh source checks, exact geography, MPAs, method and current advisories. This decision does not activate the draft package or certify fishing targets."
 }

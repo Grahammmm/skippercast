@@ -1,0 +1,46 @@
+name: Draft region evidence rehearsal
+
+on:
+  workflow_dispatch:
+    inputs:
+      region_id:
+        description: Existing region ID to inspect without publishing its feed
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate draft and collect source evidence
+        env:
+          PYTHONPATH: src
+          REGION_ID: ${{ inputs.region_id }}
+        run: |
+          python - <<'PY'
+          import os
+          from skippercast.platform.contracts import load_region
+          region = load_region(os.environ['REGION_ID'])
+          if region['status'] != 'draft':
+              raise SystemExit('This workflow accepts draft regions only')
+          print(region['id'], region['name'])
+          PY
+          python scripts/refresh_regions.py daily \
+            --output "var/draft-rehearsal/${REGION_ID}" \
+            --only-region "${REGION_ID}" --include-drafts
+      - name: Upload unpublished evidence and health
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-rehearsal-${{ inputs.region_id }}-${{ github.run_id }}
+          path: var/draft-rehearsal/
+          if-no-files-found: warn
+          retention-days: 14
