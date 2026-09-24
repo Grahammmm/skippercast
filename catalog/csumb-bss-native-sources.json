@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "scope": "original-csumb-big-sur-south-native-grid-leads",
+  "sources": [
+    {
+      "id": "csumb-bss-block12",
+      "survey_id": "BSS_Block12",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version2/products/BSS_Block12_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block12_mb.html",
+      "original_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "archive_sha256": "3162a535ac84d1aa115f315bf4b6e65874151147c7250a20d1f47b1aa8ddbeb7",
+      "archive_bytes": 49032573,
+      "bathymetry_grid": "BSS_Block12/Bathymetry/ArcViewGrids/bss12_2mbathy",
+      "habitat_grid": "BSS_Block12/Habitat/ArcViewGrids/bss12_2mhab",
+      "acquisition_year": 2011,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+      "status": "research-only",
+      "limitations": "The original grid is not a chart: NAVD88 needs a reviewed local chart-datum transformation, per-cell uncertainty is absent, and rough terrain is inferred from bathymetry rather than confirmed rock. Redistribution rights, hazards, MPAs, local rules and species evidence remain unreviewed. No fishing target, score or export is supported."
+    }
+  ]
+}
