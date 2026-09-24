@@ -5,9 +5,28 @@ import unittest
 from unittest.mock import patch
 
 from scripts.refresh_enc_hazards import LAYERS, query_layer, refresh
+from scripts.audit_enc_context_overlap import audit
 
 
 class EncHazardRefreshTests(unittest.TestCase):
+    def test_context_audit_holds_charted_danger_and_preserves_historical_hold(self):
+        enc = {'scope_id': 'point-reyes-tomales', 'bounds': [-123.18, 38.02, -122.92, 38.26],
+               'checked_at': '2026-09-24T00:00:00Z', 'source_url': 'https://encdirect.noaa.gov/arcgis/rest/services/encdirect',
+               'query_receipts': [{'count': 1}] + [{'count': 0}] * 17,
+               'features': [{'geometry': {'type': 'Point', 'coordinates': [-122.98, 38.17]}}]}
+        context = {'features': [{'properties': {'id': 'outline-1', 'survey_id': 'H11735'},
+                    'geometry': {'type': 'Polygon', 'coordinates': [[[-122.981, 38.169],
+                        [-122.979, 38.169], [-122.979, 38.171], [-122.981, 38.171],
+                        [-122.981, 38.169]]]}}]}
+        historical = {'surveys': [{'survey_id': 'H11735', 'hazards': [
+            {'id': 'old-dton', 'longitude': -122.98, 'latitude': 38.17}]}]}
+        result = audit(enc, context, historical)
+        self.assertEqual(result['outlines_near_charted_dangers'][0]['context_id'], 'outline-1')
+        self.assertFalse(result['historical_report_dangers'][0]['reconciled_with_current_chart'])
+        enc['query_receipts'][0]['count'] = 0
+        with self.assertRaisesRegex(ValueError, 'count does not match'):
+            audit(enc, context, historical)
+
     def test_count_disagreement_cannot_be_published_as_empty_hazard_water(self):
         responses = iter([({"count": 1}, "a" * 64),
                           ({"type": "FeatureCollection", "features": []}, "b" * 64)])

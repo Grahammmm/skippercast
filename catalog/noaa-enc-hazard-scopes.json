@@ -8,6 +8,12 @@
       "region_id": "southern-california",
       "bounds": [-119.12, 33.33, -118.98, 33.54],
       "output": "dist/regions/southern-california/enc-hazards-santa-barbara.geojson"
+    },
+    {
+      "id": "point-reyes-tomales",
+      "region_id": "bodega-point-reyes",
+      "bounds": [-123.18, 38.02, -122.92, 38.26],
+      "output": "dist/regions/bodega-point-reyes/enc-hazards-point-reyes-tomales.geojson"
     }
   ]
 }

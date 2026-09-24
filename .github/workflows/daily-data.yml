@@ -28,6 +28,7 @@ on:
       - "scripts/audit_usgs_doi_metadata.py"
       - "scripts/collect_noaa_groundfish_areas.py"
       - "scripts/refresh_enc_hazards.py"
+      - "scripts/audit_enc_context_overlap.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -102,6 +103,9 @@ jobs:
       - name: Refresh bounded NOAA ENC danger review
         continue-on-error: true
         run: python scripts/refresh_enc_hazards.py --scope santa-barbara-island --output var/daily/enc-hazards/santa-barbara-island.geojson
+      - name: Refresh Point Reyes and Tomales NOAA ENC danger review
+        continue-on-error: true
+        run: python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/daily/enc-hazards/point-reyes-tomales.geojson
       - name: Discover USGS state-waters map-block products
         continue-on-error: true
         run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
@@ -123,6 +127,7 @@ jobs:
             if [ -f var/daily/survey-products.json ]; then cp var/daily/survey-products.json var/published/; fi
             if [ -f var/daily/bag-head-inventory.json ]; then cp var/daily/bag-head-inventory.json var/published/; fi
             if [ -f var/daily/enc-hazards/santa-barbara-island.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/santa-barbara-island.geojson var/published/enc-hazards/; fi
+            if [ -f var/daily/enc-hazards/point-reyes-tomales.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/point-reyes-tomales.geojson var/published/enc-hazards/; fi
             if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
             if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
             if [ -f var/daily/usgs-doi-releases.json ]; then cp var/daily/usgs-doi-releases.json var/published/; fi
@@ -247,16 +252,18 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          path = Path('var/daily/enc-hazards/santa-barbara-island.geojson')
-          if not path.is_file():
-              raise SystemExit('NOAA ENC danger-layer refresh produced no snapshot')
-          data = json.loads(path.read_text())
-          if (data.get('status') != 'charted-danger-screen-only'
-                  or data.get('scope_id') != 'santa-barbara-island'
-                  or len(data.get('query_receipts', [])) != 18):
-              raise SystemExit('NOAA ENC danger-layer review is incomplete')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write(f"\n## NOAA ENC danger review\n{len(data['features'])} charted features across 18 complete layer queries; retrieved {data['checked_at']}. This is not navigation clearance.\n")
+              out.write('\n## NOAA ENC danger review\n')
+              for scope in ('santa-barbara-island', 'point-reyes-tomales'):
+                  path = Path(f'var/daily/enc-hazards/{scope}.geojson')
+                  if not path.is_file():
+                      raise SystemExit(f'NOAA ENC danger-layer refresh produced no {scope} snapshot')
+                  data = json.loads(path.read_text())
+                  if (data.get('status') != 'charted-danger-screen-only'
+                          or data.get('scope_id') != scope
+                          or len(data.get('query_receipts', [])) != 18):
+                      raise SystemExit(f'NOAA ENC danger-layer review incomplete: {scope}')
+                  out.write(f"{scope}: {len(data['features'])} charted features across 18 complete layer queries; retrieved {data['checked_at']}. Not navigation clearance.\n")
           PY
       - name: Report NOAA survey discovery coverage
         if: always()

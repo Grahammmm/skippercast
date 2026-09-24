@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "scope_id": "point-reyes-tomales",
+  "enc_checked_at": "2026-09-24T11:11:51.313989+00:00",
+  "source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "queried_layers": 18,
+  "charted_danger_features": 552,
+  "review_buffer_m": 100,
+  "context_outlines_in_scope_by_survey": {
+    "H11734": 5,
+    "H11735": 38,
+    "H11738": 1
+  },
+  "outlines_near_charted_dangers": [
+    {
+      "context_id": "native-hard-H11735-4",
+      "survey_id": "H11735",
+      "charted_dangers_within_buffer": 2
+    }
+  ],
+  "historical_report_dangers": [
+    {
+      "hazard_id": "H11735-final-hcell-dton-53ft",
+      "nearest_enc_danger_m": 605.5,
+      "reconciled_with_current_chart": false
+    }
+  ],
+  "status": "research-screen-only",
+  "limitations": "No target or route is cleared. ENC Direct is not certified for navigation. The nearest charted feature need not be the same object as a historical DTON. Scope clips and incomplete danger classes cannot certify an area free of hazards. Separate current MPA/special-closure, fishing-rule, source-rights and original-cell review remain required.",
+  "audited_at": "2026-09-24T11:16:12.131537+00:00"
+}
