@@ -1,0 +1,477 @@
+{
+  "schema_version": 1,
+  "revision": "2026-09-23-northern-draft-1",
+  "reviewed_at": null,
+  "valid_from": "2026-01-01",
+  "valid_through": "2026-12-31",
+  "timezone": "America/Los_Angeles",
+  "area": "California Northern Groundfish Management Area · Oregon border to 40°10′ N",
+  "scope": "Recreational boat fishing; pending source and legal review. No open-season claim is published.",
+  "check_interval_hours": 24,
+  "max_age_hours": 36,
+  "common_notes": [
+    "Northern Management Area is Oregon border to 40°10′ N. MPA and federal closures are position- and method-specific. A boat depth limit is not a legal depth boundary.",
+    "This draft is not an open-season clearance. Fresh official source review and region-footprint binding are required before publication."
+  ],
+  "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
+  "checked_at": null,
+  "review_required": [
+    "rules-gear",
+    "rules-invertebrates",
+    "rules-whales",
+    "rules-health",
+    "rules-ocean",
+    "rules-groundfish",
+    "rules-inseason",
+    "rules-salmon",
+    "rules-crab",
+    "rules-book",
+    "rules-proposals",
+    "rules-tuna-federal",
+    "rules-salmon-pdf",
+    "rules-groundfish-pdf",
+    "rules-northern",
+    "mpa-pyramid",
+    "mpa-st-george",
+    "mpa-reading",
+    "rules-pacific-halibut"
+  ],
+  "jurisdiction_id": "california-northern",
+  "authority_hosts": [
+    "wildlife.ca.gov",
+    "nrm.dfg.ca.gov",
+    "www.fisheries.noaa.gov",
+    "www.ecfr.gov",
+    "fgc.ca.gov",
+    "www.nps.gov",
+    "www.govinfo.gov"
+  ],
+  "reviewed_regions": [],
+  "review_record": null,
+  "approved_rules_content_sha256": null,
+  "rules_review_status": "pending",
+  "checks": {},
+  "sources": {
+    "rules-gear": {
+      "name": "CDFW finfish gear and general rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-invertebrates": {
+      "name": "CDFW invertebrate gear rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-whales": {
+      "name": "CDFW whale-safe crab restrictions",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-health": {
+      "name": "CDFW fishery health closures",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-ocean": {
+      "name": "CDFW official regulation index",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-groundfish": {
+      "name": "CDFW groundfish",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-inseason": {
+      "name": "CDFW in-season changes",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-salmon": {
+      "name": "CDFW salmon",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-crab": {
+      "name": "CDFW crab",
+      "url": "https://wildlife.ca.gov/Crab",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-book": {
+      "name": "CDFW 2026 ocean sport fishing booklet",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-proposals": {
+      "name": "California FGC rulemaking: effective and pending changes",
+      "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-tuna-federal": {
+      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
+      "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
+      "approved_content_sha256": null,
+      "normalization": "ecfr-section-text-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-salmon-pdf": {
+      "name": "CDFW 2026 ocean salmon season flyer · August update",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-groundfish-pdf": {
+      "name": "CDFW Northern groundfish season table",
+      "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185055&inline=",
+      "approved_content_sha256": null,
+      "normalization": "pdf-bytes-v1",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-northern": {
+      "name": "CDFW Northern Region rules",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "mpa-pyramid": {
+      "name": "CDFW Pyramid Point SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pyramid-Point",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "mpa-st-george": {
+      "name": "CDFW Point St. George Reef Offshore SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-St-George-Reef",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "mpa-reading": {
+      "name": "CDFW Reading Rock MPAs",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Reading-Rock",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    },
+    "rules-pacific-halibut": {
+      "name": "CDFW Pacific halibut season and quota",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
+      "approved_content_sha256": null,
+      "normalization": "text-and-links-v3",
+      "reviewed_at": null,
+      "review_note": "Pending Northern source and legal-content review."
+    }
+  },
+  "species": {
+    "lingcod": {
+      "name": "Lingcod",
+      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Northern Management Area.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 per person daily; 2 in possession. Separate from the 10-fish RCG limit.",
+      "size": "22 in minimum total length.",
+      "details": [
+        "Use one line with no more than two hooks when targeting lingcod, or when lingcod are aboard. Your double-drop rig fits that limit.",
+        "Carry a descending device ready for immediate use.",
+        "Fillets aboard: at least 14 in, with all skin attached."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-gear",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-groundfish",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "mpa-reading",
+        "rules-groundfish-pdf"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "rockfish": {
+      "name": "Rockfish / rock cod",
+      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the Northern Management Area.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 total rockfish, cabezon and greenlings combined per person daily and in possession.",
+      "size": "No minimum length for retained rockfish. Species must be identified.",
+      "details": [
+        "Within the 10: at most 1 copper, 2 canary, and 4 vermilion/sunset rockfish combined.",
+        "No retention of yelloweye, quillback, cowcod or bronzespotted rockfish.",
+        "Use one line with no more than two hooks when targeting rockfish, or when rockfish are aboard. Carry a descending device ready for use.",
+        "Retained rockfish fillets must have all skin attached."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-gear",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-groundfish",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "mpa-reading",
+        "rules-groundfish-pdf"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "halibut": {
+      "name": "California halibut",
+      "season": "California halibut: year-round in the reviewed 2026 Northern rules; distinct from Pacific halibut.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 per person daily and in possession north of Point Sur.",
+      "size": "22 in minimum total length.",
+      "details": [
+        "California halibut only; Pacific halibut has a different season and rules.",
+        "General ocean hook-and-line rules apply. With rockfish or lingcod aboard, use one line and no more than two hooks; salmon aboard triggers salmon gear rules.",
+        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish.",
+        "Do not halve halibut fillets. A lengthwise midline split is allowed only if the pieces remain joined for at least two inches at one end; retain all skin and the minimum fillet length."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-gear",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "mpa-reading"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "season": "Ocean salmon is closed in the Klamath Management Zone for the remainder of 2026.",
+      "windows": [],
+      "bag": "No retention while the Northern/Klamath recreational season is closed.",
+      "size": "Not applicable during the 2026 closed season.",
+      "details": [
+        "CDFW says the Klamath Management Zone remains closed for the rest of 2026; do not use a Central/Southern fall opener here.",
+        "Future seasons depend on federal and state action and require a new review."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-gear",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-salmon",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "mpa-reading",
+        "rules-salmon-pdf"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "season": "Year-round in reviewed 2026 state and federal rules, subject to current notices in U.S. waters north of Point Conception.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "25 per person daily and in possession, in addition to the general 20-finfish limit.",
+      "size": "No minimum size in these recreational rules.",
+      "details": [
+        "The albacore limit drops to 10 south of Point Conception (34°27′ N). This card does not cover Mexico.",
+        "General ocean hook-and-line rules apply; fish already aboard can impose stricter rod and hook limits.",
+        "If processing tuna aboard south of Point Conception, follow the tuna-specific fillet, skin and bag-label requirements in §27.65. This card covers day trips; multi-day possession rules differ.",
+        "If any part of an albacore trip enters U.S. EEZ waters south of 34°27′ N, no more than 10 albacore per person may be onboard for that trip; the rule is not determined only by where a fish was caught.",
+        "Federal tuna limits apply per 24-hour period at sea and never authorize more than one daily bag per calendar day. Multi-day possession needs separate review.",
+        "South of Point Conception (34°27′ N), tuna processed aboard must use the six-piece arrangement required by §27.65, keep all skin attached, and be individually bagged with its species labeled. That specific six-piece rule does not apply to processing north of the line."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-gear",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-ocean",
+        "rules-book",
+        "rules-health",
+        "rules-proposals",
+        "mpa-reading",
+        "rules-tuna-federal"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile is for recreational rod-and-reel fishing from a boat. Read the species-specific hook, line, retention and on-board restrictions below."
+        }
+      }
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "season": "Closed after Jul 31, 2026. Nov 7, 2026 is a scheduled reopening, subject to health and gear declarations.",
+      "windows": [
+        {
+          "start": "2026-11-07",
+          "end": "2026-12-31",
+          "requires_opening_review": true
+        }
+      ],
+      "bag": "When open: 10 per person daily; 10 in possession on a private boat.",
+      "size": "5¾ in shell width, measured across the body just in front of the side spines, excluding those spines. Carry a crab gauge.",
+      "details": [
+        "Season opening and trap permission are separate. Northern November trap clearance has not been confirmed; check CDFW whale-safe and health notices.",
+        "A crab-trap validation is required to use traps. Maximum 10 deployed traps per person; required escape rings, destruct device, GO ID and buoy markings apply.",
+        "Hoop nets and snares have separate gear rules. A trap restriction does not itself close those methods, but the season and health closures still apply.",
+        "Check the current 2026 hoop-net marking rules and all gear details in §29.80 before setting gear.",
+        "Crab traps may not be deployed during the seven days before the Dungeness season opens. Service deployed traps at intervals no greater than nine days, weather conditions permitting (§29.80(c)).",
+        "Crab loop traps or snares may have no more than six loops. Hoop nets must be raised and inspected at least every two hours (§29.80).",
+        "North of Point Arguello, each hoop net must have the required surface buoy marked with the operator’s GO ID; the main buoy may not exceed 6 in in diameter or 14 in in length. An optional orange marker marked H and its connecting line have additional marking specifications; check §29.80(b) before rigging."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-inseason",
+        "rules-crab",
+        "rules-whales",
+        "rules-health",
+        "rules-invertebrates",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "rules-ocean",
+        "rules-book",
+        "rules-proposals",
+        "mpa-reading"
+      ],
+      "methods": {
+        "trap": {
+          "note": "Trap permission is checked separately from the Dungeness season and health closures. Confirm the current recreational trap declaration, validation, marking and tending rules before setting.",
+          "requires_clearance": true
+        },
+        "hoop": {
+          "note": "A hoop net is a different gear category from a crab trap. Follow the current hoop-net construction, attendance and deployment rules; season and health closures still apply."
+        },
+        "snare": {
+          "note": "Use the current snare definition and gear limits. A trap restriction does not by itself establish permission to take Dungeness; the season and health checks also apply."
+        }
+      }
+    },
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "season": "Apr 1–Nov 15, 2026 north of Point Arena, or until the quota is reached earlier.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-11-15"
+        }
+      ],
+      "bag": "1 per person daily; 1 in possession.",
+      "size": "No minimum size.",
+      "details": [
+        "When angling, use no more than one line with two hooks attached.",
+        "Quota can close the season early; check the current CDFW halibut page and hotline before fishing.",
+        "Pacific halibut is distinct from California halibut; do not apply the two-fish California halibut limit.",
+        "Check the exact MPA, method and all other gear rules at the selected position and date."
+      ],
+      "source_ids": [
+        "rules-northern",
+        "rules-pacific-halibut",
+        "rules-inseason",
+        "rules-gear",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "mpa-pyramid",
+        "mpa-st-george",
+        "mpa-reading"
+      ],
+      "methods": {
+        "rod": {
+          "note": "This profile covers recreational boat angling. One line with a maximum of two hooks; quota and geographic notices still apply."
+        }
+      }
+    }
+  },
+  "area_notices": [
+    {
+      "id": "northern-mpas",
+      "name": "Northern California MPAs",
+      "note": "Pyramid Point, Point St. George Reef Offshore, Reading Rock and other MPAs have different take exceptions. Conservative app policy excludes them from fishing targets; exact coordinates and method-specific regulations still require review.",
+      "source_ids": [
+        "mpa-pyramid",
+        "mpa-st-george",
+        "mpa-reading"
+      ]
+    }
+  ]
+}

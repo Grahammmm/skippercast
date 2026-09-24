@@ -81,6 +81,8 @@ Across the browsing boundary, [NOAA H11951](https://www.ngdc.noaa.gov/nos/H10001
 
 [CDFW's Point Conception SMR](https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception) prohibits take inside its legal boundary. [NOAA Coast Pilot 7](https://nauticalcharts.noaa.gov/publications/coast-pilot/files/cp7/CPB7_WEB.pdf) identifies Vandenberg danger zones from Point Conception toward Point Sal; [Vandenberg's maritime updates](https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/) provide current operational status. The compiled MPA/GEA snapshot and old survey cannot clear a route, date-specific danger zone, chart hazard, fishing method, or current fish presence. The layer stays context only while those gates remain open.
 
+The [Crescent City / Del Norte rollout](northern-crescent-city-rollout.md) now has a draft region contract and pending Northern legal-source registry. It is not in the live selector or scheduled region feeds until the official source hashes, local observations and native target geometry pass their gates.
+
 ## What is ready and what remains
 
 | Coverage | Current state | Next gate |

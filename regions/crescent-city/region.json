@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "id": "crescent-city",
+  "name": "Crescent City & Del Norte",
+  "status": "draft",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California · Northern Groundfish Management Area",
+  "bounds": [
+    -124.75,
+    41.55,
+    -124.05,
+    42.0
+  ],
+  "fishing_bounds": [
+    -124.6,
+    41.6,
+    -124.1,
+    41.99
+  ],
+  "map": {
+    "center": [
+      41.76,
+      -124.27
+    ],
+    "zoom": 10,
+    "locality_method": "Draft discovery footprint for Del Norte. No fishing target, season status or route is published until native bottom, legal and forecast sources pass regional review. Geographic discovery extents are not legal boundaries.",
+    "region_notice_ids": [
+      "northern-mpas"
+    ],
+    "local_areas": [],
+    "discovery_bounds": [
+      -124.75,
+      41.55,
+      -124.05,
+      42.0
+    ],
+    "unavailable_targets": {},
+    "unavailable_target_sources": {}
+  },
+  "harbor": {
+    "name": "Crescent City Harbor",
+    "latitude": 41.744,
+    "longitude": -124.185,
+    "entrance_note": "Harbor and bar access require current local clearance; historical harbor surveys describe shoaling and uncharted approach rocks.",
+    "information_url": "https://www.ccharbor.com/",
+    "watch_keywords": [
+      "Crescent City",
+      "harbor",
+      "bar"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23 · planning profile",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "crescent-south",
+      "name": "Crescent City south coast",
+      "latitude": 41.7,
+      "longitude": -124.26,
+      "context": "south-of-st-george"
+    },
+    {
+      "id": "point-st-george",
+      "name": "Off Point St. George",
+      "latitude": 41.79,
+      "longitude": -124.38,
+      "context": "north-of-st-george"
+    },
+    {
+      "id": "smith-river",
+      "name": "Smith River outer coast",
+      "latitude": 41.91,
+      "longitude": -124.36,
+      "context": "north-of-st-george"
+    },
+    {
+      "id": "offshore-south",
+      "name": "Crescent City offshore south",
+      "latitude": 41.7,
+      "longitude": -124.55,
+      "context": "south-of-st-george",
+      "offshore": true
+    },
+    {
+      "id": "offshore-north",
+      "name": "Del Norte offshore north",
+      "latitude": 41.89,
+      "longitude": -124.58,
+      "context": "north-of-st-george",
+      "offshore": true
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ450",
+    "offshore": "PZZ470",
+    "north-coastal": "PZZ356",
+    "north-offshore": "PZZ376"
+  },
+  "stations": {
+    "tide": "9419750",
+    "tide_name": "Crescent City",
+    "tide_note": "Crescent City station predicts water level, not the harbor entrance current, bottom drift or safe bar crossing.",
+    "airport": "KCEC",
+    "airport_name": "Crescent City airport",
+    "nearshore_buoy": "46027",
+    "nearshore_buoy_name": "St. Georges, CA",
+    "offshore_buoy": "46015",
+    "offshore_buoy_name": "Port Orford, OR · distant reference",
+    "offshore_buoy_note": "Outside the region; do not present as an observation of Del Norte fishing grounds."
+  },
+  "mpa": {
+    "bounds": [
+      -124.75,
+      41.55,
+      -124.05,
+      42.0
+    ],
+    "minimum_features": 2
+  },
+  "species": [
+    "reef",
+    "pacific-halibut",
+    "halibut",
+    "salmon",
+    "dungeness",
+    "albacore"
+  ],
+  "source_names": {},
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "usgs-camera-samples",
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin"
+    ],
+    "charter-identity": [],
+    "ais-history": [
+      "noaa-ais"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "partial",
+      "reason": "Original NOAA F00562/H11981 files were inspected as leads. F00562 harbor/approach survey is held; H11981 still requires native-cell, chart-hazard and substrate review."
+    },
+    "substrate": {
+      "status": "partial",
+      "reason": "Statewide CDFW predicted-hard context exists, but is not verified natural rock or a local fishing target."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "protected-areas": {
+      "status": "partial",
+      "reason": "Statewide CDFW MPA polygons are available for screening; exact Northern source and freshness must be verified in this package."
+    },
+    "regulations": {
+      "status": "research",
+      "reason": "Northern rules draft and source watches exist but legal documents have not passed the hash-bound review gate."
+    },
+    "dynamic-closures": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "wind-forecast": {
+      "status": "partial",
+      "reason": "Independent NOAA GFS and ECMWF IFS adapters exist; grid coverage and local context need first regional receipt."
+    },
+    "wave-forecast": {
+      "status": "partial",
+      "reason": "Independent NOAA GFS Wave and ECMWF WAM adapters exist; local reception and issue times need first regional receipt."
+    },
+    "wave-observations": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "weather-observations": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "tides": {
+      "status": "partial",
+      "reason": "Crescent City 9419750 is a water-level reference, not bar-current clearance."
+    },
+    "surface-currents": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "sea-temperature": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "chlorophyll": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "charter-identity": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "harbor-access": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "wind-ensemble": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "wave-ensemble": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    },
+    "forecast-verification": {
+      "status": "research",
+      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+    }
+  },
+  "assets": {
+    "atlas": "regions/crescent-city/atlas.json",
+    "habitats": "regions/crescent-city/habitats.json",
+    "protected_areas": "data/protected-areas.geojson",
+    "regulations": "data/regulations-northern.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/crescent-city/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/crescent-city/ecology.json",
+    "search_plans": "regions/crescent-city/search-plans.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/crescent-city/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/crescent-city/latest.json",
+  "landing_names": [
+    "Crescent City"
+  ],
+  "coverage_note": "Draft Del Norte package. Historical depth and predicted substrate leads exist, but no reviewed fishing target, current legal clearance or complete regional forecast has been published.",
+  "landing_note": "Port landings do not locate catches on Del Norte grounds.",
+  "jurisdiction_id": "california-northern",
+  "pipeline_sources": {
+    "sst": "mur-sst",
+    "chlorophyll": "modis-chlorophyll",
+    "currents": "ioos-hfr"
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/crescent-city/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/crescent-city/habitat-dynamics.json",
+  "contexts": {
+    "south-of-st-george": {
+      "name": "Crescent City to Point St. George",
+      "stations": {
+        "tide": "9419750",
+        "tide_name": "Crescent City",
+        "tide_note": "Crescent City station predicts water level, not the harbor entrance current, bottom drift or safe bar crossing.",
+        "airport": "KCEC",
+        "airport_name": "Crescent City airport",
+        "nearshore_buoy": "46027",
+        "nearshore_buoy_name": "St. Georges, CA",
+        "offshore_buoy": "46015",
+        "offshore_buoy_name": "Port Orford, OR · distant reference",
+        "offshore_buoy_note": "Outside the region; do not present as an observation of Del Norte fishing grounds."
+      },
+      "marine_zones": {
+        "coastal": "PZZ450",
+        "offshore": "PZZ470"
+      }
+    },
+    "north-of-st-george": {
+      "name": "Point St. George to Oregon line",
+      "stations": {
+        "tide": "9419750",
+        "tide_name": "Crescent City",
+        "tide_note": "Crescent City station predicts water level, not the harbor entrance current, bottom drift or safe bar crossing.",
+        "airport": "KCEC",
+        "airport_name": "Crescent City airport",
+        "nearshore_buoy": "46027",
+        "nearshore_buoy_name": "St. Georges, CA",
+        "offshore_buoy": "46015",
+        "offshore_buoy_name": "Port Orford, OR · distant reference",
+        "offshore_buoy_note": "Outside the region; do not present as an observation of Del Norte fishing grounds."
+      },
+      "marine_zones": {
+        "coastal": "PZZ356",
+        "offshore": "PZZ376"
+      }
+    }
+  }
+}

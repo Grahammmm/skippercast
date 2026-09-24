@@ -10,6 +10,9 @@ class SearchGeometry(unittest.TestCase):
  def test_sources_boundaries_and_species(self):
   for path in (ROOT/'regions').glob('*/region.json'):
    r=json.loads(path.read_text());asset=r['assets'].get('search_plans')
+   if r['status']=='draft':
+    if asset:self.assertFalse((ROOT/'dist'/asset).exists())
+    continue
    if not asset:continue
    d=json.loads((ROOT/'dist'/asset).read_text());exclusions=[]
    for key in ('protected_areas','closures'):
