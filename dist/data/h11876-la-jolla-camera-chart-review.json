@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "original-camera-chart-mpa-source-lead",
-  "reviewed_at": "2026-09-24T22:19:38.961602+00:00",
+  "reviewed_at": "2026-09-24T22:31:15.269815+00:00",
   "survey_id": "H11876",
   "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
   "original_bag_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
@@ -55,6 +55,42 @@
     "sand": 2,
     "sand,gravel": 2
   },
+  "charted_seabed_area_receipts": [
+    {
+      "service": "enc_harbour",
+      "layer": "Seabed_Area",
+      "layer_id": 200,
+      "count": 0,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/200/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/200/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+      "metadata_sha256": "e772b15b9e0557496aaf68a47b24090b6bac07ab4f2d6f324325535a9d4d8f2e"
+    },
+    {
+      "service": "enc_approach",
+      "layer": "Seabed_Area",
+      "layer_id": 205,
+      "count": 0,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer/205/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer/205/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+      "metadata_sha256": "bc097404d58ac0ba640f81041349f49c42505323b76bf4c228744401efc7eaea"
+    },
+    {
+      "service": "enc_coastal",
+      "layer": "Seabed_Area",
+      "layer_id": 144,
+      "count": 0,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/144/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/144/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+      "metadata_sha256": "1a711baf61ae1a153df18f69f76cd5fb1eee684595182df768ebecc1f7be7c0c"
+    }
+  ],
+  "charted_seabed_area_count_by_nature": {},
   "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
   "transects": [
     {
@@ -122,7 +158,7 @@
   "fishing_target": false,
   "exportable": false,
   "limitations": [
-    "Charted seabed symbols are generalized, dated source observations; a nearby symbol does not delineate the camera-observed patch.",
+    "Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.",
     "Selected ENC danger classes returning zero do not certify safe navigation or an approach route.",
     "Historical camera rockfish codes are observations, not catch rates or present fish presence.",
     "The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.",

@@ -40,6 +40,8 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
     reader = open_original_zip(camera_raw)
     chart = []
     receipts = []
+    seabed_areas = []
+    area_receipts = []
     for service, prefix in SERVICES:
         metadata, metadata_sha = fetch_json(f'{BASE}/{service}/MapServer?f=pjson')
         matches = [r['id'] for r in metadata.get('layers', []) if r.get('name') == prefix + '.Seabed_Area_point']
@@ -48,6 +50,12 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
         features, receipt = query_layer(service, 'Seabed_Area_point', matches[0], bounds)
         chart.extend(features)
         receipts.append({**receipt, 'metadata_sha256': metadata_sha})
+        area_ids = [r['id'] for r in metadata.get('layers', []) if r.get('name') == prefix + '.Seabed_Area']
+        if len(area_ids) != 1:
+            raise ValueError('Required charted seabed-area layer changed')
+        areas, area_receipt = query_layer(service, 'Seabed_Area', area_ids[0], bounds)
+        seabed_areas.extend(areas)
+        area_receipts.append({**area_receipt, 'metadata_sha256': metadata_sha})
     rock = [transform(project, shape(f['geometry'])) for f in chart
             if str(f.get('properties', {}).get('NATSUR') or '').lower() == 'rock']
     if not rock:
@@ -93,11 +101,13 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
         'enc_danger_features_in_bounded_scope': len(enc['features']),
         'charted_seabed_point_receipts': receipts,
         'charted_seabed_point_count_by_nature': dict(Counter(str(f['properties'].get('NATSUR') or 'unknown').lower() for f in chart)),
+        'charted_seabed_area_receipts': area_receipts,
+        'charted_seabed_area_count_by_nature': dict(Counter(str(f['properties'].get('NATSUR') or 'unknown').lower() for f in seabed_areas)),
         'cdfw_mpa_retrieved_at': mpa_snapshot['sources']['mpas']['data_retrieved_at'],
         'transects': rows, 'historical_camera_windows': sum(r['historical_rocky_camera_windows'] for r in rows),
         'fishing_target': False, 'exportable': False,
         'limitations': [
-            'Charted seabed symbols are generalized, dated source observations; a nearby symbol does not delineate the camera-observed patch.',
+            'Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.',
             'Selected ENC danger classes returning zero do not certify safe navigation or an approach route.',
             'Historical camera rockfish codes are observations, not catch rates or present fish presence.',
             'The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.',
