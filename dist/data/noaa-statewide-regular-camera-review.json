@@ -1,0 +1,3855 @@
+{
+  "schema_version": 1,
+  "scope": "statewide-original-camera-regular-bag-discovery-review",
+  "reviewed_at": "2026-09-24T04:38:45+00:00",
+  "cdfw_mpa_source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "cdfw_mpa_geojson_sha256": "cbbfb5b60813a9e36e067db8f15516d6381aa515e0b1faab2b5f106448b2e95f",
+  "original_bag_catalog_count": 291,
+  "candidate_pairs_with_actual_rocky_camera_positions": 84,
+  "reviewed_pairs": 79,
+  "failed_or_uncached_pairs": [
+    {
+      "survey_id": "H11767",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11767/BAG/H11767_MB_2m_MLLW_1of1.bag",
+      "cruise": "l908nc",
+      "reason": "ValueError: A named MLLW vertical datum is required; unknown/ellipsoid grids are held"
+    },
+    {
+      "survey_id": "H11950",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11950/BAG/H11950_MB_4m_MLLW_1of3.bag",
+      "cruise": "sw109sc",
+      "reason": "ValueError: A named MLLW vertical datum is required; unknown/ellipsoid grids are held"
+    },
+    {
+      "survey_id": "H11950",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11950/BAG/H11950_MB_4m_MLLW_1of3.bag",
+      "cruise": "z206sc",
+      "reason": "ValueError: A named MLLW vertical datum is required; unknown/ellipsoid grids are held"
+    },
+    {
+      "survey_id": "H12620",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12620/BAG/H12620_MB_2m_MLLW_2of3.bag",
+      "cruise": "c0111sc",
+      "reason": "ValueError: A named MLLW vertical datum is required; unknown/ellipsoid grids are held"
+    },
+    {
+      "survey_id": "H12620",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12620/BAG/H12620_MB_4m_MLLW_3of3.bag",
+      "cruise": "c0111sc",
+      "reason": "ValueError: A named MLLW vertical datum is required; unknown/ellipsoid grids are held"
+    }
+  ],
+  "summary": {
+    "pairs_with_qualified_windows": 34,
+    "distinct_surveys_with_qualified_windows": 15,
+    "failed_pairs": 5
+  },
+  "pair_reviews": [
+    {
+      "survey_id": "F00507",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00507/BAG/F00507_MB_1m_MLLW_1of1.bag",
+      "bag_sha256": "bf4bcd22cd2af4a26eac48e18e91f8cfef7491f7ba7d09a5efa4c13c32a9edea",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 2,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 2,
+        "masked_or_ineligible_cell": 2
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00507/DR/F00507.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "F00513",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/BAG/F00513_MB_50cm_MLLW_2of4.bag",
+      "bag_sha256": "29103bcf5117a93443c894ffd5cc70ce447e63d0f690be7c09ba658d306e9985",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 41,
+      "native_cell_m": [
+        0.5,
+        0.5
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 41,
+        "masked_or_ineligible_cell": 41
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/DR/F00513.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "F00513",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/BAG/F00513_VB_1m_MLLW_4of4.bag",
+      "bag_sha256": "327a9d05bbc8cc13ebd67c2eb82748aa371a60f9954b259bf0fb20ac895080f4",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 54,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 53,
+        "masked_or_ineligible_cell": 53
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/DR/F00513.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "062073816f10665f784d3747b5f8fce150aa3db454b88c3f9954ee39d876ba17",
+      "cruise": "c210nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 54,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 54,
+        "mpa_or_edge_held": 40,
+        "masked_or_ineligible_cell": 13,
+        "measured_qualified_cell": 1
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "062073816f10665f784d3747b5f8fce150aa3db454b88c3f9954ee39d876ba17",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 159,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 159,
+        "masked_or_ineligible_cell": 122,
+        "mpa_or_edge_held": 37
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "4b84d870acb6c6f502fb2ece27fe336def869cc1bb272e9b05b11141744a4e4d",
+      "cruise": "c210nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 54,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 54,
+        "mpa_or_edge_held": 40,
+        "masked_or_ineligible_cell": 14
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11731",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/BAG/H11731_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "4995aba0f64d88a22493e7246c48b5161f6868d2f2ff60fa021e06d20175fd84",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 173,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 171,
+        "masked_or_ineligible_cell": 128,
+        "mpa_or_edge_held": 43
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11732",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/BAG/H11732_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "bad5045d5fdff30d32f227641120baef6c32615f13d5492a9a647901d1942da1",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 25
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11733",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/BAG/H11733_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "4cdb90f59e80eaa56cc5b6180b9eddf90b1ca1693527de6d6010410d230e2c9b",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 27,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 27,
+        "masked_or_ineligible_cell": 27
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11734",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/BAG/H11734_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "58df58dcca30a1523a7b0c82619bb6a452c1d335718cc3d191ae4b41bc0a7bbc",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 245,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 245,
+        "masked_or_ineligible_cell": 163,
+        "mpa_or_edge_held": 82
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11734",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/BAG/H11734_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "c1f3e597b298655b364df764df20d3d3d4ffbfbc8bf38a9c9749183f0adda1aa",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 250,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 249,
+        "masked_or_ineligible_cell": 167,
+        "mpa_or_edge_held": 82
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11735",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_1m_MLLW_1of3.bag",
+      "bag_sha256": "caa0fb4d6f30b172527d15ed5cc1e57de3118fbf2b9090cc4490a47f10d06a9e",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 6,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 6,
+        "masked_or_ineligible_cell": 6
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11735",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_1m_MLLW_1of3.bag",
+      "bag_sha256": "caa0fb4d6f30b172527d15ed5cc1e57de3118fbf2b9090cc4490a47f10d06a9e",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 394,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 394,
+        "masked_or_ineligible_cell": 394
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11735",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_4m_MLLW_3of3.bag",
+      "bag_sha256": "602e27ea5a1d8ec6081a5059a60e329232193419c64af87431f9b9a097e1fc8e",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 3,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 2,
+        "masked_or_ineligible_cell": 2
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_150cm_MLLW_1of4.bag",
+      "bag_sha256": "8d3a1b2c8f7930419322c6e4df61cae36125fdf32828450d6827f38481eaf5c6",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 44,
+      "native_cell_m": [
+        1.5,
+        1.5
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 44,
+        "masked_or_ineligible_cell": 44
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_1m_MLLW_2of4.bag",
+      "bag_sha256": "8a3de8fb8e162bb98606aa0fad453e78c54d5f986359b42e43589ffae413f476",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 108,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 108,
+        "masked_or_ineligible_cell": 99,
+        "measured_qualified_cell": 2,
+        "mpa_or_edge_held": 7
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_1m_MLLW_2of4.bag",
+      "bag_sha256": "8a3de8fb8e162bb98606aa0fad453e78c54d5f986359b42e43589ffae413f476",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 44,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 44,
+        "masked_or_ineligible_cell": 44
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11876",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_1of5.bag",
+      "bag_sha256": "4bf89908af4cffe9b8095cdc462dd9b9d92d98b0d1f7eb291eee4b0c8969f810",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 70,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 70,
+        "mpa_or_edge_held": 16,
+        "masked_or_ineligible_cell": 54
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11876",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_4m_MLLW_3of5.bag",
+      "bag_sha256": "b12b7881954fbccf1982dbc1588abcec4ca40382c1eac6df0660de610e621da0",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 70,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 70,
+        "mpa_or_edge_held": 16,
+        "masked_or_ineligible_cell": 54
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11878",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/BAG/H11878_MB_1m_MLLW_1of5.bag",
+      "bag_sha256": "ba74f1e49c2e81e1f0e19d655576d7abf312fc7b9691d3f8ccec587d8b75ff14",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 3,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 3,
+        "masked_or_ineligible_cell": 3
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/DR/H11878.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11878",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/BAG/H11878_MB_4m_MLLW_2of5.bag",
+      "bag_sha256": "4699260c074246a8efce1bcff8654f95f6cb10b19fda6b820b43e0ffdaac265c",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 3,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 3,
+        "masked_or_ineligible_cell": 3
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/DR/H11878.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11879",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/BAG/H11879_MB_2m_MLLW_1of5.bag",
+      "bag_sha256": "34616d233d0935284075479fde899be483071890d39737bb77e724fb4684d94b",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 34,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 34,
+        "mpa_or_edge_held": 10,
+        "masked_or_ineligible_cell": 24
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/DR/H11879.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11879",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/BAG/H11879_MB_4m_MLLW_2of5.bag",
+      "bag_sha256": "021335a262b801ef1514d21e532ffe877d22fb195c6701e161f19335aeff2ad7",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 24,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 24,
+        "masked_or_ineligible_cell": 24
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/DR/H11879.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11880",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/BAG/H11880_MB_1m_MLLW_1of6.bag",
+      "bag_sha256": "3b346dc97450f4a3733712db07097ec0d2f2bd022a126f37368af94da10a6a4e",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 74,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 74,
+        "masked_or_ineligible_cell": 11,
+        "mpa_or_edge_held": 63
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11880",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/BAG/H11880_MB_2m_MLLW_2of6.bag",
+      "bag_sha256": "c0a6252605b5117bb78563ec396f7eb33b6662358d17e9a71142956cfd332573",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 70,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 70,
+        "masked_or_ineligible_cell": 7,
+        "mpa_or_edge_held": 63
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11880",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/BAG/H11880_MB_4m_MLLW_3of6.bag",
+      "bag_sha256": "903d37d77d1bbb6df05d12193f3ba6503d01653d96218157ebc1f75583adf9b5",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 70,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 70,
+        "masked_or_ineligible_cell": 7,
+        "mpa_or_edge_held": 63
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11883",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/BAG/H11883_MB_2m_MLLW_3of4.bag",
+      "bag_sha256": "c61941b2bd8bc9f154f586ee75db5a7e93fb8e50a8a0c47ddf268c37526aa4e9",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 3,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 2,
+        "masked_or_ineligible_cell": 2
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11883",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/BAG/H11883_MB_4m_MLLW_4of4.bag",
+      "bag_sha256": "c7ef143cbbbffa3c5cee3d628029d424e1819679ff51fead7143723197d8e3b4",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 3,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 3,
+        "masked_or_ineligible_cell": 3
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_1m_MLLW_1of6.bag",
+      "bag_sha256": "bc16859be8b8383bc5a97cce39ffc69d67c7c6973050760813d4f8988b65561d",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 21,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 10,
+        "mpa_or_edge_held": 10
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_2m_MLLW_2of6.bag",
+      "bag_sha256": "0a66438f808d6beb73bee8510a45743f31f2a92256ee43c6e0313b63b4e2e571",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 69,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 69,
+        "masked_or_ineligible_cell": 35,
+        "mpa_or_edge_held": 34
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_4m_MLLW_3of6.bag",
+      "bag_sha256": "ed92f07cc311fc76f4e7ab606632f5b60f93dbd275a1778c3df72ed9991eb1c4",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 76,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 76,
+        "masked_or_ineligible_cell": 42,
+        "mpa_or_edge_held": 34
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_2m_MLLW_2of5.bag",
+      "bag_sha256": "471111622cd997881fa0da1abcdfee40f2149e3846f91c7af30d178a4052004d",
+      "cruise": "z107sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+      "camera_archive_sha256": "d7dd49f9a97183506111309a8f6ac957af3554c03d23ee56282a8b31470e54a7",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 8,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 8,
+        "masked_or_ineligible_cell": 8
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_4m_MLLW_3of5.bag",
+      "bag_sha256": "35cd1ae2df36ca04498a16bc72f584147f137b977d6e53e420e21a70cdb0059e",
+      "cruise": "z107sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+      "camera_archive_sha256": "d7dd49f9a97183506111309a8f6ac957af3554c03d23ee56282a8b31470e54a7",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 8,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 8,
+        "masked_or_ineligible_cell": 8
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 33,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 21,
+        "masked_or_ineligible_cell": 21
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+      "cruise": "s1c08sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "camera_archive_sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 23,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 23,
+        "masked_or_ineligible_cell": 10,
+        "mpa_or_edge_held": 13
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 59,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 59,
+        "masked_or_ineligible_cell": 59
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "cruise": "s1c08sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "camera_archive_sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 23,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 23,
+        "masked_or_ineligible_cell": 10,
+        "mpa_or_edge_held": 13
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 22,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 20,
+        "masked_or_ineligible_cell": 18,
+        "measured_qualified_cell": 2
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "cruise": "s1c08sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "camera_archive_sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 23,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 23,
+        "masked_or_ineligible_cell": 10,
+        "mpa_or_edge_held": 13
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11971",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/BAG/H11971_MB_4m_MLLW_1of5.bag",
+      "bag_sha256": "14d0691024282fbd9fc9631f68f98251d2da34346a2f52d2978b8c16735ad454",
+      "cruise": "c210nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 75,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 75,
+        "masked_or_ineligible_cell": 75
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H12109",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/BAG/H12109_MB_1m_MLLW_1of2.bag",
+      "bag_sha256": "cedf02a8b350e59201a66a4d4ca2395da05d2c966bb1f2b2a91d69813a46a416",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 1,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 1,
+        "masked_or_ineligible_cell": 1
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H12111",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/BAG/H12111_MB_2m_MLLW_2of2.bag",
+      "bag_sha256": "11ca233d232f66a88ddf7b80d38ede7dc61bae136e2c1dffa57519b5a88d7058",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 1,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 1,
+        "masked_or_ineligible_cell": 1
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H12112",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/BAG/H12112_MB_2m_MLLW_2of3.bag",
+      "bag_sha256": "ef679f99d9db67b28a74f0d582f0c0a9c523b7999e979ac6b2334bf259048b4d",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 2,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 2,
+        "masked_or_ineligible_cell": 2
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H12112",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/BAG/H12112_MB_4m_MLLW_3of3.bag",
+      "bag_sha256": "b92ed5ad1b4e50b537a826fda194e6c8522bb605238348caae98a8b9f4b92cc6",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 2,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 2,
+        "masked_or_ineligible_cell": 1,
+        "measured_qualified_cell": 1
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H12113",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12113/BAG/H12113_MB_2m_MLLW_2of2.bag",
+      "bag_sha256": "75de2e72e11dd4b9d1722a268e63365f370a9114bee7172a2093ce0ad9113281",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": null,
+      "rocky_camera_windows_in_bag_bounds": 6,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 6,
+        "masked_or_ineligible_cell": 6
+      },
+      "transects": [],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12113/DR/H12113.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "625881fc4e7ac378f0a5b265cef1f4d70ba87008d89f9358d858b3d41bb53325",
+      "cruise": "c210nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 54,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 54,
+        "mpa_or_edge_held": 40,
+        "measured_qualified_cell": 14,
+        "qualified_rocky_camera_windows": 14
+      },
+      "transects": [
+        {
+          "date": "2010-08-02",
+          "line": "49",
+          "window_count": 14,
+          "bottom_classes": {
+            "rock": 14
+          },
+          "rockfish_positive_windows": 4,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            19.76,
+            28.82
+          ],
+          "product_uncertainty_m_range": [
+            0.231,
+            0.346
+          ],
+          "minimum_25m_qualified_fraction": 0.9755,
+          "camera_position_bounds": [
+            -123.752195,
+            38.937518,
+            -123.75061,
+            38.939741
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "625881fc4e7ac378f0a5b265cef1f4d70ba87008d89f9358d858b3d41bb53325",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 159,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 159,
+        "masked_or_ineligible_cell": 78,
+        "mpa_or_edge_held": 37,
+        "measured_qualified_cell": 44,
+        "qualified_rocky_camera_windows": 40
+      },
+      "transects": [
+        {
+          "date": "2008-09-07",
+          "line": "114",
+          "window_count": 6,
+          "bottom_classes": {
+            "rock": 3,
+            "boulder": 3
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            36.07,
+            39.29
+          ],
+          "product_uncertainty_m_range": [
+            0.276,
+            0.332
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.716305,
+            38.89636,
+            -123.715688,
+            38.89704
+          ]
+        },
+        {
+          "date": "2008-09-07",
+          "line": "115",
+          "window_count": 34,
+          "bottom_classes": {
+            "rock": 22,
+            "boulder": 12
+          },
+          "rockfish_positive_windows": 10,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            22.65,
+            38.52
+          ],
+          "product_uncertainty_m_range": [
+            0.23,
+            0.415
+          ],
+          "minimum_25m_qualified_fraction": 0.9836,
+          "camera_position_bounds": [
+            -123.733688,
+            38.905972,
+            -123.728749,
+            38.911163
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11730",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "4b84d870acb6c6f502fb2ece27fe336def869cc1bb272e9b05b11141744a4e4d",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 159,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 159,
+        "masked_or_ineligible_cell": 57,
+        "mpa_or_edge_held": 37,
+        "measured_qualified_cell": 65,
+        "qualified_rocky_camera_windows": 62
+      },
+      "transects": [
+        {
+          "date": "2008-09-07",
+          "line": "113",
+          "window_count": 14,
+          "bottom_classes": {
+            "rock": 14
+          },
+          "rockfish_positive_windows": 2,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            52.12,
+            55.42
+          ],
+          "product_uncertainty_m_range": [
+            0.29,
+            0.426
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.70075,
+            38.866914,
+            -123.698689,
+            38.868114
+          ]
+        },
+        {
+          "date": "2008-09-07",
+          "line": "114",
+          "window_count": 25,
+          "bottom_classes": {
+            "rock": 18,
+            "boulder": 7
+          },
+          "rockfish_positive_windows": 4,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            37.33,
+            53.99
+          ],
+          "product_uncertainty_m_range": [
+            0.273,
+            0.395
+          ],
+          "minimum_25m_qualified_fraction": 0.9917,
+          "camera_position_bounds": [
+            -123.720503,
+            38.890209,
+            -123.715778,
+            38.896922
+          ]
+        },
+        {
+          "date": "2008-09-07",
+          "line": "115",
+          "window_count": 23,
+          "bottom_classes": {
+            "rock": 19,
+            "boulder": 1,
+            "cobble": 3
+          },
+          "rockfish_positive_windows": 6,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            38.83,
+            58.11
+          ],
+          "product_uncertainty_m_range": [
+            0.269,
+            0.43
+          ],
+          "minimum_25m_qualified_fraction": 0.9174,
+          "camera_position_bounds": [
+            -123.736485,
+            38.902688,
+            -123.733496,
+            38.906102
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11731",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/BAG/H11731_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "afefacee00cbe049c7006a817b13ab183460b53bcb31b4d1f787dd0959b4a57f",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 171,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 171,
+        "masked_or_ineligible_cell": 87,
+        "measured_qualified_cell": 41,
+        "qualified_rocky_camera_windows": 36,
+        "mpa_or_edge_held": 43
+      },
+      "transects": [
+        {
+          "date": "2008-09-05",
+          "line": "105",
+          "window_count": 10,
+          "bottom_classes": {
+            "rock": 10
+          },
+          "rockfish_positive_windows": 5,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            20.98,
+            27.39
+          ],
+          "product_uncertainty_m_range": [
+            0.241,
+            0.277
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.492416,
+            38.723916,
+            -123.491655,
+            38.726411
+          ]
+        },
+        {
+          "date": "2008-09-05",
+          "line": "106",
+          "window_count": 23,
+          "bottom_classes": {
+            "rock": 23
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            25.53,
+            28.11
+          ],
+          "product_uncertainty_m_range": [
+            0.24,
+            0.34
+          ],
+          "minimum_25m_qualified_fraction": 0.9939,
+          "camera_position_bounds": [
+            -123.519304,
+            38.735019,
+            -123.511786,
+            38.737701
+          ]
+        },
+        {
+          "date": "2008-09-06",
+          "line": "107",
+          "window_count": 3,
+          "bottom_classes": {
+            "rock": 3
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            37.23,
+            38.65
+          ],
+          "product_uncertainty_m_range": [
+            0.311,
+            0.496
+          ],
+          "minimum_25m_qualified_fraction": 0.9059,
+          "camera_position_bounds": [
+            -123.524704,
+            38.732192,
+            -123.524637,
+            38.732724
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11731",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/BAG/H11731_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "8d771cba533b9e613e86f9a315f0b51c86cf407eeb905c26607dbfe90bdb1c6b",
+      "cruise": "f208nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "camera_archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 185,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 185,
+        "measured_qualified_cell": 33,
+        "qualified_rocky_camera_windows": 31,
+        "masked_or_ineligible_cell": 109,
+        "mpa_or_edge_held": 43
+      },
+      "transects": [
+        {
+          "date": "2008-09-05",
+          "line": "105",
+          "window_count": 4,
+          "bottom_classes": {
+            "rock": 4
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            48.15,
+            51.47
+          ],
+          "product_uncertainty_m_range": [
+            0.371,
+            0.385
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.489199,
+            38.715625,
+            -123.489027,
+            38.716198
+          ]
+        },
+        {
+          "date": "2008-09-06",
+          "line": "107",
+          "window_count": 20,
+          "bottom_classes": {
+            "rock": 20
+          },
+          "rockfish_positive_windows": 7,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            38.05,
+            57.25
+          ],
+          "product_uncertainty_m_range": [
+            0.234,
+            0.449
+          ],
+          "minimum_25m_qualified_fraction": 0.9835,
+          "camera_position_bounds": [
+            -123.52556,
+            38.727752,
+            -123.524481,
+            38.733006
+          ]
+        },
+        {
+          "date": "2008-09-06",
+          "line": "110",
+          "window_count": 2,
+          "bottom_classes": {
+            "rock": 2
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            40.13,
+            41.66
+          ],
+          "product_uncertainty_m_range": [
+            0.305,
+            0.369
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.592952,
+            38.791101,
+            -123.59103,
+            38.791111
+          ]
+        },
+        {
+          "date": "2008-09-06",
+          "line": "112",
+          "window_count": 5,
+          "bottom_classes": {
+            "rock": 2,
+            "boulder": 3
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            53.55,
+            56.34
+          ],
+          "product_uncertainty_m_range": [
+            0.239,
+            0.534
+          ],
+          "minimum_25m_qualified_fraction": 0.9339,
+          "camera_position_bounds": [
+            -123.669051,
+            38.832842,
+            -123.668152,
+            38.833027
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11732",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/BAG/H11732_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "5ab819d0141a0f5e17787c04988d130399d5edf16849fb6fa929c42c897e9a4c",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 20,
+        "measured_qualified_cell": 5,
+        "qualified_rocky_camera_windows": 1
+      },
+      "transects": [
+        {
+          "date": "2008-08-20",
+          "line": "75",
+          "window_count": 1,
+          "bottom_classes": {
+            "rock": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            35.89,
+            35.89
+          ],
+          "product_uncertainty_m_range": [
+            0.327,
+            0.327
+          ],
+          "minimum_25m_qualified_fraction": 0.953,
+          "camera_position_bounds": [
+            -123.318963,
+            38.55399,
+            -123.318963,
+            38.55399
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11732",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/BAG/H11732_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "a23d9ecfc18f272a4cdb83423dc0c0c86570ffe7253ac036798b5e6b4e7bec24",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 8,
+        "measured_qualified_cell": 17,
+        "qualified_rocky_camera_windows": 15
+      },
+      "transects": [
+        {
+          "date": "2008-08-20",
+          "line": "75",
+          "window_count": 15,
+          "bottom_classes": {
+            "rock": 14,
+            "boulder": 1
+          },
+          "rockfish_positive_windows": 8,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            36.12,
+            49.67
+          ],
+          "product_uncertainty_m_range": [
+            0.246,
+            0.404
+          ],
+          "minimum_25m_qualified_fraction": 0.9587,
+          "camera_position_bounds": [
+            -123.322825,
+            38.553972,
+            -123.318045,
+            38.55452
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11733",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/BAG/H11733_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "43745d24261376a8344537e02ffbbfe67ec92f77560b873790ea2443601f3a13",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 27,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 27,
+        "masked_or_ineligible_cell": 17,
+        "measured_qualified_cell": 10,
+        "qualified_rocky_camera_windows": 8
+      },
+      "transects": [
+        {
+          "date": "2008-08-16",
+          "line": "59",
+          "window_count": 8,
+          "bottom_classes": {
+            "rock": 8
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            30.41,
+            37.8
+          ],
+          "product_uncertainty_m_range": [
+            0.25,
+            0.362
+          ],
+          "minimum_25m_qualified_fraction": 0.9407,
+          "camera_position_bounds": [
+            -123.213098,
+            38.476037,
+            -123.212983,
+            38.477502
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11733",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/BAG/H11733_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "060305a3485646e7f37c1ebce157d14330bd85bf618bec2c24ba20c522f3f049",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "arena-bodega",
+      "rocky_camera_windows_in_bag_bounds": 27,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 27,
+        "measured_qualified_cell": 13,
+        "qualified_rocky_camera_windows": 9,
+        "masked_or_ineligible_cell": 14
+      },
+      "transects": [
+        {
+          "date": "2008-08-16",
+          "line": "59",
+          "window_count": 9,
+          "bottom_classes": {
+            "rock": 9
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            37.58,
+            43.0
+          ],
+          "product_uncertainty_m_range": [
+            0.249,
+            0.422
+          ],
+          "minimum_25m_qualified_fraction": 0.9835,
+          "camera_position_bounds": [
+            -123.213357,
+            38.47515,
+            -123.213013,
+            38.477502
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11734",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/BAG/H11734_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "c4a1eaccf4bcd7417f4db913e5bb7006a8c2ceb55ee521252eb8a9828cc487fc",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 247,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 246,
+        "masked_or_ineligible_cell": 153,
+        "measured_qualified_cell": 11,
+        "qualified_rocky_camera_windows": 11,
+        "mpa_or_edge_held": 82
+      },
+      "transects": [
+        {
+          "date": "2008-08-16",
+          "line": "51",
+          "window_count": 11,
+          "bottom_classes": {
+            "rock": 10,
+            "boulder": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            21.94,
+            25.79
+          ],
+          "product_uncertainty_m_range": [
+            0.23,
+            0.303
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.021092,
+            38.263393,
+            -123.015677,
+            38.264168
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11735",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_2m_MLLW_2of3.bag",
+      "bag_sha256": "42453401241301b4801f56ea8e3c41c6a17e28883c5f6b32f53b085eafe9edc5",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 387,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 387,
+        "masked_or_ineligible_cell": 326,
+        "measured_qualified_cell": 61,
+        "qualified_rocky_camera_windows": 60
+      },
+      "transects": [
+        {
+          "date": "2008-08-18",
+          "line": "64",
+          "window_count": 47,
+          "bottom_classes": {
+            "rock": 47
+          },
+          "rockfish_positive_windows": 7,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            32.17,
+            39.55
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.372
+          ],
+          "minimum_25m_qualified_fraction": 0.9489,
+          "camera_position_bounds": [
+            -122.976355,
+            38.133655,
+            -122.969613,
+            38.138987
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "65",
+          "window_count": 13,
+          "bottom_classes": {
+            "rock": 13
+          },
+          "rockfish_positive_windows": 6,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            33.38,
+            39.73
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.463
+          ],
+          "minimum_25m_qualified_fraction": 0.9693,
+          "camera_position_bounds": [
+            -122.982363,
+            38.173625,
+            -122.980148,
+            38.173905
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11735",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/BAG/H11735_MB_4m_MLLW_3of3.bag",
+      "bag_sha256": "602e27ea5a1d8ec6081a5059a60e329232193419c64af87431f9b9a097e1fc8e",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 394,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 394,
+        "masked_or_ineligible_cell": 144,
+        "measured_qualified_cell": 250,
+        "qualified_rocky_camera_windows": 225
+      },
+      "transects": [
+        {
+          "date": "2008-08-17",
+          "line": "61",
+          "window_count": 17,
+          "bottom_classes": {
+            "rock": 17
+          },
+          "rockfish_positive_windows": 4,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            54.29,
+            58.17
+          ],
+          "product_uncertainty_m_range": [
+            0.229,
+            0.536
+          ],
+          "minimum_25m_qualified_fraction": 0.9256,
+          "camera_position_bounds": [
+            -123.049915,
+            38.057473,
+            -123.040742,
+            38.062788
+          ]
+        },
+        {
+          "date": "2008-08-17",
+          "line": "63",
+          "window_count": 37,
+          "bottom_classes": {
+            "rock": 12,
+            "boulder": 22,
+            "cobble": 3
+          },
+          "rockfish_positive_windows": 8,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            43.17,
+            58.06
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.511
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.010967,
+            38.111605,
+            -122.991597,
+            38.111947
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "64",
+          "window_count": 16,
+          "bottom_classes": {
+            "rock": 16
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            37.0,
+            44.13
+          ],
+          "product_uncertainty_m_range": [
+            0.255,
+            0.444
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -122.985098,
+            38.126377,
+            -122.97502,
+            38.134852
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "65",
+          "window_count": 32,
+          "bottom_classes": {
+            "rock": 32
+          },
+          "rockfish_positive_windows": 13,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            36.87,
+            51.1
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.555
+          ],
+          "minimum_25m_qualified_fraction": 0.9008,
+          "camera_position_bounds": [
+            -122.998648,
+            38.17386,
+            -122.981522,
+            38.175933
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "66",
+          "window_count": 36,
+          "bottom_classes": {
+            "rock": 36
+          },
+          "rockfish_positive_windows": 14,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            54.86,
+            57.56
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.494
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.012222,
+            38.193838,
+            -123.008493,
+            38.200982
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "67",
+          "window_count": 19,
+          "bottom_classes": {
+            "rock": 18,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 10,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            46.29,
+            55.96
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.428
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.011267,
+            38.208653,
+            -123.008577,
+            38.21297
+          ]
+        },
+        {
+          "date": "2008-08-18",
+          "line": "68",
+          "window_count": 34,
+          "bottom_classes": {
+            "rock": 21,
+            "boulder": 13
+          },
+          "rockfish_positive_windows": 13,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            46.62,
+            57.91
+          ],
+          "product_uncertainty_m_range": [
+            0.23,
+            0.449
+          ],
+          "minimum_25m_qualified_fraction": 0.9256,
+          "camera_position_bounds": [
+            -123.025175,
+            38.222075,
+            -123.023265,
+            38.227195
+          ]
+        },
+        {
+          "date": "2008-08-19",
+          "line": "68",
+          "window_count": 26,
+          "bottom_classes": {
+            "rock": 13,
+            "boulder": 13
+          },
+          "rockfish_positive_windows": 16,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            46.68,
+            50.82
+          ],
+          "product_uncertainty_m_range": [
+            0.229,
+            0.391
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.023233,
+            38.227367,
+            -123.021693,
+            38.23132
+          ]
+        },
+        {
+          "date": "2008-08-21",
+          "line": "78",
+          "window_count": 8,
+          "bottom_classes": {
+            "boulder": 8
+          },
+          "rockfish_positive_windows": 2,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            56.73,
+            58.17
+          ],
+          "product_uncertainty_m_range": [
+            0.23,
+            0.492
+          ],
+          "minimum_25m_qualified_fraction": 0.9835,
+          "camera_position_bounds": [
+            -123.018462,
+            38.103622,
+            -123.017115,
+            38.104462
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_150cm_MLLW_1of4.bag",
+      "bag_sha256": "8d3a1b2c8f7930419322c6e4df61cae36125fdf32828450d6827f38481eaf5c6",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 108,
+      "native_cell_m": [
+        1.5,
+        1.5
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 108,
+        "measured_qualified_cell": 56,
+        "qualified_rocky_camera_windows": 55,
+        "masked_or_ineligible_cell": 45,
+        "mpa_or_edge_held": 7
+      },
+      "transects": [
+        {
+          "date": "2007-10-02",
+          "line": "34",
+          "window_count": 13,
+          "bottom_classes": {
+            "rock": 13
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            26.64,
+            34.11
+          ],
+          "product_uncertainty_m_range": [
+            0.234,
+            0.469
+          ],
+          "minimum_25m_qualified_fraction": 0.935,
+          "camera_position_bounds": [
+            -122.95507,
+            37.979,
+            -122.95248,
+            37.98108
+          ]
+        },
+        {
+          "date": "2007-10-02",
+          "line": "35",
+          "window_count": 1,
+          "bottom_classes": {
+            "cobble": 1
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            25.51,
+            25.51
+          ],
+          "product_uncertainty_m_range": [
+            0.257,
+            0.257
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -122.86695,
+            38.00547,
+            -122.86695,
+            38.00547
+          ]
+        },
+        {
+          "date": "2007-10-03",
+          "line": "36",
+          "window_count": 26,
+          "bottom_classes": {
+            "rock": 16,
+            "boulder": 5,
+            "cobble": 5
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            20.45,
+            24.48
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.428
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -122.86859,
+            38.0044,
+            -122.85228,
+            38.00658
+          ]
+        },
+        {
+          "date": "2007-10-03",
+          "line": "37",
+          "window_count": 15,
+          "bottom_classes": {
+            "rock": 12,
+            "boulder": 3
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            23.72,
+            29.88
+          ],
+          "product_uncertainty_m_range": [
+            0.229,
+            0.409
+          ],
+          "minimum_25m_qualified_fraction": 0.9989,
+          "camera_position_bounds": [
+            -122.85285,
+            37.99835,
+            -122.84292,
+            37.99937
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_2m_MLLW_3of4.bag",
+      "bag_sha256": "5fc1e5c050c3759cc50520f1991bd3bad6112e7670d523702fea26928fd08fbe",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 108,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 108,
+        "masked_or_ineligible_cell": 67,
+        "measured_qualified_cell": 34,
+        "qualified_rocky_camera_windows": 30,
+        "mpa_or_edge_held": 7
+      },
+      "transects": [
+        {
+          "date": "2007-10-02",
+          "line": "34",
+          "window_count": 16,
+          "bottom_classes": {
+            "rock": 12,
+            "boulder": 4
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            31.74,
+            43.27
+          ],
+          "product_uncertainty_m_range": [
+            0.228,
+            0.516
+          ],
+          "minimum_25m_qualified_fraction": 0.9836,
+          "camera_position_bounds": [
+            -122.95365,
+            37.97581,
+            -122.94907,
+            37.9799
+          ]
+        },
+        {
+          "date": "2007-10-04",
+          "line": "41",
+          "window_count": 14,
+          "bottom_classes": {
+            "rock": 13,
+            "boulder": 1
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            37.28,
+            40.65
+          ],
+          "product_uncertainty_m_range": [
+            0.268,
+            0.705
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.04343,
+            38.00161,
+            -123.04108,
+            38.00323
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_2m_MLLW_3of4.bag",
+      "bag_sha256": "5fc1e5c050c3759cc50520f1991bd3bad6112e7670d523702fea26928fd08fbe",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 44,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 44,
+        "masked_or_ineligible_cell": 43,
+        "measured_qualified_cell": 1,
+        "qualified_rocky_camera_windows": 1
+      },
+      "transects": [
+        {
+          "date": "2008-08-17",
+          "line": "60",
+          "window_count": 1,
+          "bottom_classes": {
+            "boulder": 1
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            49.04,
+            49.04
+          ],
+          "product_uncertainty_m_range": [
+            0.416,
+            0.416
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.029705,
+            38.036688,
+            -123.029705,
+            38.036688
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_4m_MLLW_4of4.bag",
+      "bag_sha256": "6e54118b7757d5ebba64246cd917d49dfb36af0462e7fb84ebbd1366fbeacb0d",
+      "cruise": "f307nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "camera_archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 108,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 108,
+        "masked_or_ineligible_cell": 77,
+        "measured_qualified_cell": 24,
+        "qualified_rocky_camera_windows": 24,
+        "mpa_or_edge_held": 7
+      },
+      "transects": [
+        {
+          "date": "2007-10-02",
+          "line": "34",
+          "window_count": 8,
+          "bottom_classes": {
+            "rock": 8
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            47.86,
+            54.26
+          ],
+          "product_uncertainty_m_range": [
+            0.318,
+            0.61
+          ],
+          "minimum_25m_qualified_fraction": 0.9174,
+          "camera_position_bounds": [
+            -122.94907,
+            37.97433,
+            -122.94703,
+            37.97581
+          ]
+        },
+        {
+          "date": "2007-10-04",
+          "line": "42",
+          "window_count": 16,
+          "bottom_classes": {
+            "rock": 16
+          },
+          "rockfish_positive_windows": null,
+          "lingcod_positive_windows": null,
+          "depth_m_mllw_range": [
+            51.56,
+            57.64
+          ],
+          "product_uncertainty_m_range": [
+            0.229,
+            0.917
+          ],
+          "minimum_25m_qualified_fraction": 0.9835,
+          "camera_position_bounds": [
+            -123.06454,
+            38.0186,
+            -123.05725,
+            38.02735
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": false,
+        "lingcod": false
+      }
+    },
+    {
+      "survey_id": "H11738",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/BAG/H11738_MB_4m_MLLW_4of4.bag",
+      "bag_sha256": "6e54118b7757d5ebba64246cd917d49dfb36af0462e7fb84ebbd1366fbeacb0d",
+      "cruise": "l908nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "camera_archive_sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "sector_id": "bodega-reyes",
+      "rocky_camera_windows_in_bag_bounds": 44,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 44,
+        "measured_qualified_cell": 20,
+        "qualified_rocky_camera_windows": 16,
+        "masked_or_ineligible_cell": 24
+      },
+      "transects": [
+        {
+          "date": "2008-08-17",
+          "line": "60",
+          "window_count": 7,
+          "bottom_classes": {
+            "rock": 5,
+            "boulder": 2
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            49.05,
+            56.86
+          ],
+          "product_uncertainty_m_range": [
+            0.243,
+            0.448
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -123.041797,
+            38.036688,
+            -123.029705,
+            38.038598
+          ]
+        },
+        {
+          "date": "2008-08-17",
+          "line": "61",
+          "window_count": 9,
+          "bottom_classes": {
+            "rock": 9
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            54.19,
+            57.16
+          ],
+          "product_uncertainty_m_range": [
+            0.263,
+            0.61
+          ],
+          "minimum_25m_qualified_fraction": 0.9174,
+          "camera_position_bounds": [
+            -123.04292,
+            38.057473,
+            -123.040742,
+            38.058843
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_2m_MLLW_2of5.bag",
+      "bag_sha256": "471111622cd997881fa0da1abcdfee40f2149e3846f91c7af30d178a4052004d",
+      "cruise": "s1c08sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "camera_archive_sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "sector_id": "conception-ventura",
+      "rocky_camera_windows_in_bag_bounds": 15,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 14,
+        "measured_qualified_cell": 7,
+        "qualified_rocky_camera_windows": 7,
+        "masked_or_ineligible_cell": 7
+      },
+      "transects": [
+        {
+          "date": "2008-09-30",
+          "line": "2",
+          "window_count": 7,
+          "bottom_classes": {
+            "rock": 6,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            18.82,
+            22.8
+          ],
+          "product_uncertainty_m_range": [
+            0.234,
+            0.259
+          ],
+          "minimum_25m_qualified_fraction": 0.9632,
+          "camera_position_bounds": [
+            -120.404599,
+            34.438405,
+            -120.403012,
+            34.440107
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_2m_MLLW_2of5.bag",
+      "bag_sha256": "471111622cd997881fa0da1abcdfee40f2149e3846f91c7af30d178a4052004d",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "conception-ventura",
+      "rocky_camera_windows_in_bag_bounds": 13,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 13,
+        "measured_qualified_cell": 12,
+        "qualified_rocky_camera_windows": 12,
+        "masked_or_ineligible_cell": 1
+      },
+      "transects": [
+        {
+          "date": "2009-08-13",
+          "line": "10",
+          "window_count": 12,
+          "bottom_classes": {
+            "rock": 12
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            19.85,
+            26.4
+          ],
+          "product_uncertainty_m_range": [
+            0.244,
+            0.27
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.35337,
+            34.443032,
+            -120.349978,
+            34.445935
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_4m_MLLW_3of5.bag",
+      "bag_sha256": "35cd1ae2df36ca04498a16bc72f584147f137b977d6e53e420e21a70cdb0059e",
+      "cruise": "s1c08sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "camera_archive_sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "sector_id": "conception-ventura",
+      "rocky_camera_windows_in_bag_bounds": 15,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 14,
+        "masked_or_ineligible_cell": 11,
+        "measured_qualified_cell": 3,
+        "qualified_rocky_camera_windows": 3
+      },
+      "transects": [
+        {
+          "date": "2008-09-30",
+          "line": "3",
+          "window_count": 3,
+          "bottom_classes": {
+            "rock": 1,
+            "boulder": 1,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 2,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            43.56,
+            52.75
+          ],
+          "product_uncertainty_m_range": [
+            0.327,
+            0.437
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.35335,
+            34.419783,
+            -120.350122,
+            34.423204
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11951",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_4m_MLLW_3of5.bag",
+      "bag_sha256": "35cd1ae2df36ca04498a16bc72f584147f137b977d6e53e420e21a70cdb0059e",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "conception-ventura",
+      "rocky_camera_windows_in_bag_bounds": 13,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 13,
+        "masked_or_ineligible_cell": 12,
+        "measured_qualified_cell": 1,
+        "qualified_rocky_camera_windows": 1
+      },
+      "transects": [
+        {
+          "date": "2009-08-13",
+          "line": "11",
+          "window_count": 1,
+          "bottom_classes": {
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            51.99,
+            51.99
+          ],
+          "product_uncertainty_m_range": [
+            0.277,
+            0.277
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.33207,
+            34.424493,
+            -120.33207,
+            34.424493
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11981",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/BAG/H11981_MB_150cm_MLLW_2of3.bag",
+      "bag_sha256": "3b29138ab6aab8ff10b678b23a5c52674be28f92af0aeed6919c2e158e1c8290",
+      "cruise": "c109nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c109nc_video_observations.zip",
+      "camera_archive_sha256": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
+      "sector_id": "crescent-city-humboldt",
+      "rocky_camera_windows_in_bag_bounds": 147,
+      "native_cell_m": [
+        1.5,
+        1.5
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 147,
+        "masked_or_ineligible_cell": 97,
+        "mpa_or_edge_held": 21,
+        "measured_qualified_cell": 29,
+        "qualified_rocky_camera_windows": 29
+      },
+      "transects": [
+        {
+          "date": "2009-07-28",
+          "line": "54",
+          "window_count": 29,
+          "bottom_classes": {
+            "rock": 18,
+            "boulder": 11
+          },
+          "rockfish_positive_windows": 5,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            39.43,
+            43.89
+          ],
+          "product_uncertainty_m_range": [
+            0.344,
+            0.607
+          ],
+          "minimum_25m_qualified_fraction": 0.9977,
+          "camera_position_bounds": [
+            -124.185043,
+            41.345393,
+            -124.179032,
+            41.346893
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 49,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 49,
+        "masked_or_ineligible_cell": 29,
+        "mpa_or_edge_held": 18,
+        "measured_qualified_cell": 2,
+        "qualified_rocky_camera_windows": 1
+      },
+      "transects": [
+        {
+          "date": "2009-08-12",
+          "line": "6",
+          "window_count": 1,
+          "bottom_classes": {
+            "rock": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            19.26,
+            19.26
+          ],
+          "product_uncertainty_m_range": [
+            0.247,
+            0.247
+          ],
+          "minimum_25m_qualified_fraction": 0.9556,
+          "camera_position_bounds": [
+            -120.496022,
+            34.482923,
+            -120.496022,
+            34.482923
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 49,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 49,
+        "masked_or_ineligible_cell": 25,
+        "mpa_or_edge_held": 18,
+        "measured_qualified_cell": 6,
+        "qualified_rocky_camera_windows": 6
+      },
+      "transects": [
+        {
+          "date": "2009-08-12",
+          "line": "6",
+          "window_count": 6,
+          "bottom_classes": {
+            "rock": 6
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            19.3,
+            35.65
+          ],
+          "product_uncertainty_m_range": [
+            0.247,
+            0.269
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.505213,
+            34.48119,
+            -120.496022,
+            34.482923
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11952",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 49,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 49,
+        "masked_or_ineligible_cell": 6,
+        "measured_qualified_cell": 25,
+        "qualified_rocky_camera_windows": 24,
+        "mpa_or_edge_held": 18
+      },
+      "transects": [
+        {
+          "date": "2009-08-12",
+          "line": "4",
+          "window_count": 12,
+          "bottom_classes": {
+            "rock": 12
+          },
+          "rockfish_positive_windows": 5,
+          "lingcod_positive_windows": 1,
+          "depth_m_mllw_range": [
+            54.75,
+            58.19
+          ],
+          "product_uncertainty_m_range": [
+            0.259,
+            0.463
+          ],
+          "minimum_25m_qualified_fraction": 0.9421,
+          "camera_position_bounds": [
+            -120.52245,
+            34.462897,
+            -120.51893,
+            34.464433
+          ]
+        },
+        {
+          "date": "2009-08-12",
+          "line": "5",
+          "window_count": 12,
+          "bottom_classes": {
+            "rock": 12
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            52.9,
+            56.18
+          ],
+          "product_uncertainty_m_range": [
+            0.257,
+            0.47
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.507873,
+            34.45048,
+            -120.507302,
+            34.453273
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11953",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "bag_sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 81,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 73,
+        "mpa_or_edge_held": 14,
+        "masked_or_ineligible_cell": 50,
+        "measured_qualified_cell": 9,
+        "qualified_rocky_camera_windows": 9
+      },
+      "transects": [
+        {
+          "date": "2012-08-22",
+          "line": "106",
+          "window_count": 9,
+          "bottom_classes": {
+            "rock": 9
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            10.17,
+            11.66
+          ],
+          "product_uncertainty_m_range": [
+            0.253,
+            0.259
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.563413,
+            34.53927,
+            -120.562742,
+            34.539576
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11953",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 81,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 66,
+        "mpa_or_edge_held": 7,
+        "masked_or_ineligible_cell": 39,
+        "measured_qualified_cell": 20,
+        "qualified_rocky_camera_windows": 20
+      },
+      "transects": [
+        {
+          "date": "2012-08-22",
+          "line": "107",
+          "window_count": 20,
+          "bottom_classes": {
+            "rock": 19,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 2,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            30.04,
+            36.1
+          ],
+          "product_uncertainty_m_range": [
+            0.249,
+            0.286
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -120.590031,
+            34.531704,
+            -120.58695,
+            34.534123
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11953",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+      "cruise": "c0212sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "sector_id": "morro-conception",
+      "rocky_camera_windows_in_bag_bounds": 81,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 81,
+        "mpa_or_edge_held": 22,
+        "masked_or_ineligible_cell": 47,
+        "measured_qualified_cell": 12,
+        "qualified_rocky_camera_windows": 9
+      },
+      "transects": [
+        {
+          "date": "2012-08-22",
+          "line": "105",
+          "window_count": 9,
+          "bottom_classes": {
+            "rock": 9
+          },
+          "rockfish_positive_windows": 4,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            56.2,
+            57.89
+          ],
+          "product_uncertainty_m_range": [
+            0.256,
+            0.314
+          ],
+          "minimum_25m_qualified_fraction": 0.9752,
+          "camera_position_bounds": [
+            -120.566038,
+            34.502775,
+            -120.564664,
+            34.503681
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11971",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/BAG/H11971_MB_2m_MLLW_5of5.bag",
+      "bag_sha256": "ccb11fa7bae8c7be4f428bf88b57ab5fa9ac51d2a1da5dbd76694d30093eaa41",
+      "cruise": "c210nc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "sector_id": "north-mendocino",
+      "rocky_camera_windows_in_bag_bounds": 75,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 75,
+        "masked_or_ineligible_cell": 61,
+        "measured_qualified_cell": 14,
+        "qualified_rocky_camera_windows": 13
+      },
+      "transects": [
+        {
+          "date": "2010-07-31",
+          "line": "36",
+          "window_count": 5,
+          "bottom_classes": {
+            "cobble": 5
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            41.5,
+            41.89
+          ],
+          "product_uncertainty_m_range": [
+            0.335,
+            0.373
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -124.024419,
+            39.930341,
+            -124.023388,
+            39.930583
+          ]
+        },
+        {
+          "date": "2010-07-31",
+          "line": "40",
+          "window_count": 8,
+          "bottom_classes": {
+            "rock": 8
+          },
+          "rockfish_positive_windows": 6,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            44.15,
+            46.03
+          ],
+          "product_uncertainty_m_range": [
+            0.347,
+            0.492
+          ],
+          "minimum_25m_qualified_fraction": 0.9366,
+          "camera_position_bounds": [
+            -123.913936,
+            39.843045,
+            -123.913135,
+            39.844253
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11876",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
+      "bag_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": "orange-san-diego",
+      "rocky_camera_windows_in_bag_bounds": 70,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 70,
+        "mpa_or_edge_held": 16,
+        "masked_or_ineligible_cell": 43,
+        "measured_qualified_cell": 11,
+        "qualified_rocky_camera_windows": 11
+      },
+      "transects": [
+        {
+          "date": "2011-08-31",
+          "line": "119",
+          "window_count": 8,
+          "bottom_classes": {
+            "rock": 3,
+            "boulder": 5
+          },
+          "rockfish_positive_windows": 2,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            50.17,
+            57.76
+          ],
+          "product_uncertainty_m_range": [
+            0.253,
+            0.461
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -117.326735,
+            32.831507,
+            -117.320646,
+            32.832161
+          ]
+        },
+        {
+          "date": "2011-09-02",
+          "line": "137",
+          "window_count": 3,
+          "bottom_classes": {
+            "rock": 2,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            53.12,
+            55.24
+          ],
+          "product_uncertainty_m_range": [
+            0.266,
+            0.441
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -117.317454,
+            32.791436,
+            -117.316712,
+            32.792164
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11883",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/BAG/H11883_MB_2m_MLLW_2of4.bag",
+      "bag_sha256": "64ceb1e695cff32dcded1c1ba482406362a53b99ba26a5413b134cad7dc359e8",
+      "cruise": "c0111sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "sector_id": "ventura-los-angeles",
+      "rocky_camera_windows_in_bag_bounds": 12,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 12,
+        "measured_qualified_cell": 7,
+        "qualified_rocky_camera_windows": 5,
+        "masked_or_ineligible_cell": 5
+      },
+      "transects": [
+        {
+          "date": "2011-08-17",
+          "line": "14",
+          "window_count": 4,
+          "bottom_classes": {
+            "boulder": 3,
+            "cobble": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            18.41,
+            19.56
+          ],
+          "product_uncertainty_m_range": [
+            0.242,
+            0.271
+          ],
+          "minimum_25m_qualified_fraction": 0.9796,
+          "camera_position_bounds": [
+            -118.488367,
+            33.968787,
+            -118.487413,
+            33.969713
+          ]
+        },
+        {
+          "date": "2011-08-18",
+          "line": "27",
+          "window_count": 1,
+          "bottom_classes": {
+            "boulder": 1
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            22.72,
+            22.72
+          ],
+          "product_uncertainty_m_range": [
+            0.263,
+            0.263
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -118.536961,
+            34.004835,
+            -118.536961,
+            34.004835
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_1m_MLLW_1of6.bag",
+      "bag_sha256": "bc16859be8b8383bc5a97cce39ffc69d67c7c6973050760813d4f8988b65561d",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "ventura-los-angeles",
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        1.0,
+        1.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 20,
+        "measured_qualified_cell": 5,
+        "qualified_rocky_camera_windows": 5
+      },
+      "transects": [
+        {
+          "date": "2009-08-19",
+          "line": "56",
+          "window_count": 5,
+          "bottom_classes": {
+            "rock": 5
+          },
+          "rockfish_positive_windows": 0,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            9.57,
+            11.52
+          ],
+          "product_uncertainty_m_range": [
+            0.225,
+            0.229
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -118.889405,
+            34.033333,
+            -118.888703,
+            34.033943
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_2m_MLLW_2of6.bag",
+      "bag_sha256": "0a66438f808d6beb73bee8510a45743f31f2a92256ee43c6e0313b63b4e2e571",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "ventura-los-angeles",
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        2.0,
+        2.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 14,
+        "measured_qualified_cell": 11,
+        "qualified_rocky_camera_windows": 9
+      },
+      "transects": [
+        {
+          "date": "2009-08-19",
+          "line": "59",
+          "window_count": 1,
+          "bottom_classes": {
+            "rock": 1
+          },
+          "rockfish_positive_windows": 1,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            38.88,
+            38.88
+          ],
+          "product_uncertainty_m_range": [
+            0.269,
+            0.269
+          ],
+          "minimum_25m_qualified_fraction": 0.9898,
+          "camera_position_bounds": [
+            -118.911383,
+            34.022307,
+            -118.911383,
+            34.022307
+          ]
+        },
+        {
+          "date": "2009-08-19",
+          "line": "60",
+          "window_count": 8,
+          "bottom_classes": {
+            "rock": 8
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            21.26,
+            35.43
+          ],
+          "product_uncertainty_m_range": [
+            0.227,
+            0.257
+          ],
+          "minimum_25m_qualified_fraction": 0.998,
+          "camera_position_bounds": [
+            -118.97775,
+            34.041138,
+            -118.973992,
+            34.04545
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    },
+    {
+      "survey_id": "H11891",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/BAG/H11891_MB_4m_MLLW_3of6.bag",
+      "bag_sha256": "ed92f07cc311fc76f4e7ab606632f5b60f93dbd275a1778c3df72ed9991eb1c4",
+      "cruise": "sw109sc",
+      "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "camera_archive_sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "sector_id": "ventura-los-angeles",
+      "rocky_camera_windows_in_bag_bounds": 25,
+      "native_cell_m": [
+        4.0,
+        4.0
+      ],
+      "counts": {
+        "rocky_camera_windows_in_bag_bounds": 25,
+        "masked_or_ineligible_cell": 15,
+        "measured_qualified_cell": 10,
+        "qualified_rocky_camera_windows": 10
+      },
+      "transects": [
+        {
+          "date": "2009-08-19",
+          "line": "59",
+          "window_count": 5,
+          "bottom_classes": {
+            "rock": 3,
+            "boulder": 2
+          },
+          "rockfish_positive_windows": 4,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            38.89,
+            42.8
+          ],
+          "product_uncertainty_m_range": [
+            0.231,
+            0.339
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -118.911383,
+            34.020878,
+            -118.911335,
+            34.022307
+          ]
+        },
+        {
+          "date": "2009-08-19",
+          "line": "61",
+          "window_count": 5,
+          "bottom_classes": {
+            "rock": 5
+          },
+          "rockfish_positive_windows": 3,
+          "lingcod_positive_windows": 0,
+          "depth_m_mllw_range": [
+            50.59,
+            54.02
+          ],
+          "product_uncertainty_m_range": [
+            0.235,
+            0.266
+          ],
+          "minimum_25m_qualified_fraction": 1.0,
+          "camera_position_bounds": [
+            -118.983173,
+            34.029055,
+            -118.98248,
+            34.029583
+          ]
+        }
+      ],
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
+      "report_hazard_review_complete": false,
+      "survey_hold": null,
+      "camera_species_fields": {
+        "rockfish": true,
+        "lingcod": true
+      }
+    }
+  ],
+  "caveats": [
+    "Rows are sorted by browsing sector and source identity, not fishing quality.",
+    "The same camera window can intersect multiple survey files; pair counts are not unique sites or fish abundance.",
+    "A 25 m qualified depth neighborhood corroborates measured depth only around a historical camera window; it is not an exact rock outline.",
+    "Survey report, current chart hazards, local species rules, access notices and separate area-source review are still required before any target promotion."
+  ],
+  "fishing_target": false,
+  "exportable": false
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "historical-camera-original-regular-bag-review",
-  "reviewed_at": "2026-09-24T04:29:56+00:00",
+  "reviewed_at": "2026-09-24T04:39:31+00:00",
   "survey_id": "H11981",
   "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/BAG/H11981_MB_150cm_MLLW_2of3.bag",
   "bag_sha256": "3b29138ab6aab8ff10b678b23a5c52674be28f92af0aeed6919c2e158e1c8290",
@@ -17,6 +17,10 @@
   "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c109nc_video_observations.zip",
   "camera_archive_sha256": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
   "camera_accuracy": "Highly variable on the order of 10 meters.",
+  "camera_species_fields": {
+    "rockfish": true,
+    "lingcod": true
+  },
   "mpa_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
   "mpa_retrieved_at": "2026-09-23T22:30:59Z",
   "mpa_geojson_sha256": "cbbfb5b60813a9e36e067db8f15516d6381aa515e0b1faab2b5f106448b2e95f",
@@ -55,7 +59,7 @@
       ]
     }
   ],
-  "method": "Original camera rock/boulder/cobble windows sampled against original 1.5 m BAG depth and product uncertainty; 25 m local cell coverage and MPA edge holds. A line of windows counts as one historical transect.",
+  "method": "Original camera rock/boulder/cobble windows sampled against original regular BAG depth and product uncertainty; 25 m local cell coverage, native grid-edge and MPA holds. A line of windows counts as one historical transect.",
   "limitations": [
     "Camera positions have variable accuracy on the order of 10 m; a 25 m window is a conservative review device, not an exact rock footprint.",
     "Historical visual fish codes do not establish current fish, catch rate, or charter AIS activity.",

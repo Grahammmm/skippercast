@@ -20,7 +20,7 @@ from pyproj import Transformer
 from shapely.geometry import Point, shape
 from shapely.ops import transform, unary_union
 
-from scripts.audit_usgs_video_observations import load_archive, open_original_zip
+from scripts.audit_usgs_video_observations import first_field, load_archive, open_original_zip
 from skippercast.platform.bottom_targets import bag_metadata, cells_qualified, sha256, source_url_allowed
 
 
@@ -45,6 +45,8 @@ def cell_review(raster, x, y, *, radius_m=25):
     if not valid:
         return {"status": "masked_or_ineligible_cell"}
     pad = int(np.ceil(radius_m / min(raster.res)))
+    if col < pad or row < pad or col + pad >= raster.width or row + pad >= raster.height:
+        return {"status": "native_grid_edge_held"}
     left, top = max(0, col - pad), max(0, row - pad)
     width = min(raster.width - left, 2 * pad + 1)
     height = min(raster.height - top, 2 * pad + 1)
@@ -58,8 +60,12 @@ def cell_review(raster, x, y, *, radius_m=25):
             "qualified_neighborhood_fraction": round(fraction, 4)}
 
 
-def reviewed_archive(audit, survey_id, cache):
-    record = next((r for r in audit["files"] if r.get("survey_id") == survey_id), None)
+def reviewed_archive(audit, survey_id, cache, *, bag_url=None):
+    matches = [r for r in audit["files"] if r.get("survey_id") == survey_id
+               and (bag_url is None or r.get("url") == bag_url)]
+    if bag_url is None and len(matches) != 1:
+        raise ValueError("Survey has multiple original BAG files; select an exact --bag-url")
+    record = matches[0] if len(matches) == 1 else None
     if not record or record.get("status") != "ok" or not source_url_allowed(record["url"]):
         raise ValueError("Reviewed NOAA BAG record is unavailable")
     path = cache / (survey_id + "-" + hashlib.sha256(record["url"].encode()).hexdigest()[:16] + ".bag")
@@ -68,8 +74,8 @@ def reviewed_archive(audit, survey_id, cache):
     return record, path
 
 
-def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981", cruise="c109nc"):
-    record, path = reviewed_archive(audit, survey_id, cache)
+def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981", cruise="c109nc", bag_url=None):
+    record, path = reviewed_archive(audit, survey_id, cache, bag_url=bag_url)
     source = snapshot["sources"]["mpas"]
     data = source["data"]
     features = data["geojson"]["features"]
@@ -80,6 +86,9 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
     protected = unary_union([shape(f["geometry"]) for f in features])
     raw = load_archive(video_cache, cruise, manifest["archives"][cruise], manifest["base_url"], False)
     reader = open_original_zip(raw)
+    fields = {field.name.lower() for field in reader.fields[1:]}
+    has_rockfish = "rockfish" in fields
+    has_lingcod = "lingcod" in fields
     counts = Counter()
     transects = defaultdict(lambda: {"windows": 0, "rock": 0, "boulder": 0,
                                      "rockfish_positive_windows": 0, "lingcod_positive_windows": 0,
@@ -117,14 +126,16 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
             if sample["status"] != "measured_qualified_cell" or sample["qualified_neighborhood_fraction"] < .9:
                 continue
             counts["qualified_rocky_camera_windows"] += 1
-            when = row.get("STARTOFENT")
+            when = first_field(row, "STARTOFENT", "StartofEnt", "DATE", "Date", "Date_")
             day = when.isoformat() if isinstance(when, date) else str(when)[:10]
-            key = (day, str(row.get("LINE")))
+            key = (day, str(first_field(row, "LINE", "Line")))
             group = transects[key]
             group["windows"] += 1
             group[major] = group.get(major, 0) + 1
-            group["rockfish_positive_windows"] += int(float(row.get("ROCKFISH") or 0) > 0)
-            group["lingcod_positive_windows"] += int(float(row.get("LINGCOD") or 0) > 0)
+            if has_rockfish:
+                group["rockfish_positive_windows"] += int(float(first_field(row, "ROCKFISH", "rockfish") or 0) > 0)
+            if has_lingcod:
+                group["lingcod_positive_windows"] += int(float(first_field(row, "LINGCOD", "lingcod") or 0) > 0)
             group["depths_m"].append(sample["depth_m_mllw"])
             group["uncertainties_m"].append(sample["product_uncertainty_m"])
             group["coverage"].append(sample["qualified_neighborhood_fraction"])
@@ -133,8 +144,8 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
     for (day, line), g in sorted(transects.items()):
         groups.append({"date": day, "line": line, "window_count": g["windows"],
                        "bottom_classes": {k: g[k] for k in ("rock", "boulder", "cobble") if g.get(k)},
-                       "rockfish_positive_windows": g["rockfish_positive_windows"],
-                       "lingcod_positive_windows": g["lingcod_positive_windows"],
+                       "rockfish_positive_windows": g["rockfish_positive_windows"] if has_rockfish else None,
+                       "lingcod_positive_windows": g["lingcod_positive_windows"] if has_lingcod else None,
                        "depth_m_mllw_range": [min(g["depths_m"]), max(g["depths_m"])],
                        "product_uncertainty_m_range": [min(g["uncertainties_m"]), max(g["uncertainties_m"])],
                        "minimum_25m_qualified_fraction": min(g["coverage"]),
@@ -150,10 +161,11 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
             "camera_archive_url": manifest["base_url"] + cruise + "_video_observations.zip",
             "camera_archive_sha256": manifest["archives"][cruise],
             "camera_accuracy": camera_accuracy(raw),
+            "camera_species_fields": {"rockfish": has_rockfish, "lingcod": has_lingcod},
             "mpa_url": data["source_url"], "mpa_retrieved_at": source["data_retrieved_at"],
             "mpa_geojson_sha256": hashlib.sha256(json.dumps(data["geojson"], sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
             "counts": dict(counts), "transects": groups,
-            "method": "Original camera rock/boulder/cobble windows sampled against original 1.5 m BAG depth and product uncertainty; 25 m local cell coverage and MPA edge holds. A line of windows counts as one historical transect.",
+            "method": "Original camera rock/boulder/cobble windows sampled against original regular BAG depth and product uncertainty; 25 m local cell coverage, native grid-edge and MPA holds. A line of windows counts as one historical transect.",
             "limitations": ["Camera positions have variable accuracy on the order of 10 m; a 25 m window is a conservative review device, not an exact rock footprint.",
                             "Historical visual fish codes do not establish current fish, catch rate, or charter AIS activity.",
                             "Current chart hazards, local rules, access and route are not cleared."],
@@ -168,12 +180,13 @@ def main():
     p.add_argument("--cache", type=Path, default=Path("var/noaa-native-cache"))
     p.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))
     p.add_argument("--survey-id", default="H11981")
+    p.add_argument("--bag-url", help="Required when a survey has multiple original BAG files")
     p.add_argument("--cruise", default="c109nc")
     p.add_argument("--output", type=Path, default=Path("dist/data/noaa-h11981-camera-depth-review.json"))
     a = p.parse_args()
     result = review(json.loads(a.audit.read_text()), json.loads(a.manifest.read_text()),
                     json.loads(a.mpas.read_text()), a.cache, a.video_cache,
-                    survey_id=a.survey_id, cruise=a.cruise)
+                    survey_id=a.survey_id, cruise=a.cruise, bag_url=a.bag_url)
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2) + "\n")
     print(result["survey_id"], result["counts"], len(result["transects"]), "transects")
