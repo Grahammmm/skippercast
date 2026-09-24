@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scripts.screen_vr_native_depth import native_counts, containing_sector, summarize_by_sector
+from scripts.screen_vr_native_depth import native_counts, containing_sector, summarize_by_sector, summarize_by_region
 from scripts.coastal_review_areas import containing_island, load_island_review_areas
 
 
@@ -47,6 +47,15 @@ class VariableResolutionNativeReviewTest(unittest.TestCase):
         self.assertEqual(summary[0]['source_files_with_eligible_cells'], 1)
         self.assertEqual(summary[0]['depth_uncertainty_eligible_cells'], 3)
         self.assertEqual(summary[1]['fine_native_grids'], 0)
+
+    def test_package_counts_remain_separate_from_wider_sector(self):
+        files = [{'status': 'ok', 'sectors': {'del-norte': {'fine_native_grids': 3}},
+                  'regional_packages': {'crescent-city': {'fine_native_grids': 1,
+                      'measured_native_cells': 4, 'depth_uncertainty_eligible_cells': 2}}}]
+        rows = summarize_by_region(files, [{'id': 'crescent-city'}, {'id': 'other'}])
+        self.assertEqual(rows[0]['region_id'], 'crescent-city')
+        self.assertEqual(rows[0]['fine_native_grids'], 1)
+        self.assertEqual(rows[1]['fine_native_grids'], 0)
 
 
 if __name__ == '__main__':

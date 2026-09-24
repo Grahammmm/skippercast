@@ -78,7 +78,13 @@ def summarize_by_sector(files, sectors):
     return list(rows.values())
 
 
-def screen_file(record, sectors, cache, islands=()):
+def summarize_by_region(files, regions):
+    rows = summarize_by_sector(
+        [{**row, 'sectors': row.get('regional_packages', {})} for row in files], regions)
+    return [{'region_id': row.pop('sector_id'), **row} for row in rows]
+
+
+def screen_file(record, sectors, cache, islands=(), regions=()):
     url = record['url']
     if (record.get('status') != 'ok' or
             record.get('metadata_status') != 'mllw-product-uncertainty-reviewed-by-adapter' or
@@ -135,6 +141,7 @@ def screen_file(record, sectors, cache, islands=()):
                   'depth_uncertainty_eligible_cells': 0, 'outside_sector_grids': 0}
         assigned = {}
         island_assigned = {}
+        region_assigned = {}
         for row, col in indices:
             m = metadata[row, col]
             measured, eligible = native_counts(refinements, m)
@@ -143,6 +150,16 @@ def screen_file(record, sectors, cache, islands=()):
                                      raster.res[0], raster.res[1], int(row), int(col), m)
             lon, lat = to_geo.transform(transform.c + nx*float(m['resolution_x'])/2,
                                         transform.f - ny*float(m['resolution_y'])/2)
+            # Package counts are independent of browse-sector assignment and
+            # use each package's actual bounds, not a survey name or overview.
+            for region in regions:
+                west, south, east, north = region['bounds']
+                if west <= lon < east and south <= lat < north:
+                    bucket = region_assigned.setdefault(region['id'], {'fine_native_grids': 0,
+                        'measured_native_cells': 0, 'depth_uncertainty_eligible_cells': 0})
+                    bucket['fine_native_grids'] += 1
+                    bucket['measured_native_cells'] += measured
+                    bucket['depth_uncertainty_eligible_cells'] += eligible
             island = containing_island(lon, lat, islands)
             sector = None if island else containing_sector(lon, lat, sectors)
             if island:
@@ -171,7 +188,8 @@ def screen_file(record, sectors, cache, islands=()):
             'metadata_sha256': record['metadata_sha256'], 'source_report_url': record['source_report_url'],
             'survey_dates': [record['survey_start'], record['survey_end']],
             'status': 'ok', 'gdal_geolocation_probes': len({0, len(indices)//2, len(indices)-1}),
-            'counts': counts, 'sectors': assigned, 'offshore_islands': island_assigned}
+            'counts': counts, 'sectors': assigned, 'offshore_islands': island_assigned,
+            'regional_packages': region_assigned}
 
 
 def main():
@@ -179,12 +197,14 @@ def main():
     p.add_argument('--audit', type=Path, default=Path('var/noaa-native-audit-100mb-refined.json'))
     p.add_argument('--sectors', type=Path, default=Path('dist/data/coastal-sectors.json'))
     p.add_argument('--cache', type=Path, default=Path('var/noaa-native-cache'))
+    p.add_argument('--regions', type=Path, default=Path('regions'))
     p.add_argument('--survey-id', action='append')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     audit = json.loads(a.audit.read_text())
     sectors = json.loads(a.sectors.read_text())['sectors']
     islands = load_island_review_areas()
+    regions = [json.loads(path.read_text()) for path in sorted(a.regions.glob('*/region.json'))]
     if audit.get('scope') != 'noaa-original-bag-native-overview-audit' or len(sectors) < 19:
         raise ValueError('Wrong statewide BAG audit or incomplete sector inventory')
     selected = [r for r in audit['files'] if r.get('status') == 'ok'
@@ -196,7 +216,7 @@ def main():
     rows = []
     for record in selected:
         try:
-            result = screen_file(record, sectors, a.cache, islands)
+            result = screen_file(record, sectors, a.cache, islands, regions)
         except (OSError, ValueError, KeyError, TypeError) as error:
             result = {'survey_id': record['survey_id'], 'bag_url': record['url'],
                       'bag_sha256': record['file_sha256'], 'status': 'failed', 'issue': str(error)[:250]}
@@ -208,13 +228,15 @@ def main():
               'audit_collected_at': audit['collected_at'], 'upstream_audit_health': audit['health'],
               'status': 'degraded' if failed else 'ok',
               'failed_survey_ids': failed, 'survey_file_count': len(rows),
-              'method': 'Original fine-resolution BAG refinement cells (<=4 m), MLLW and supplied product uncertainty. A grid center is assigned first to an approximate offshore-island review envelope, otherwise to one mainland browse sector; boundary grids may straddle envelopes.',
+              'method': 'Original fine-resolution BAG refinement cells (<=4 m), MLLW and supplied product uncertainty. A grid center is assigned first to an approximate offshore-island review envelope, otherwise to one mainland browse sector; each regional package is counted separately against its actual bounds. Boundary grids may straddle envelopes.',
               'limitations': ['This is a depth/uncertainty workload inventory, not surveyed hard substrate, fish habitat, legal clearance, navigation data, or fishing coordinates.',
                               'Grid-center sector assignment is approximate and does not establish complete water coverage.',
                               'Offshore-island review boxes are approximate organizational envelopes, not shorelines or surveyed footprints.',
-                              'Only audited MLLW files <=100 MB are included; larger, failed and unavailable files are gaps.',
+                              'Only audited MLLW files in the selected input audit are included; other, failed and unavailable files are gaps.',
+                              'Package totals assign whole native supergrids by center. Cells near the package edge may fall outside its bounds; totals are workload counts, not exact within-package cell counts.',
                               'Original descriptive reports, current MPAs/GEAs, hazards, routes and local fishing rules require separate review.'],
               'sectors': summarize_by_sector(rows, sectors),
+              'regional_packages': summarize_by_region(rows, regions),
               'offshore_islands': summarize_by_sector(
                   [{**row, 'sectors': row.get('offshore_islands', {})} for row in rows], islands),
               'files': rows}
