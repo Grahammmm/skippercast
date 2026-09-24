@@ -109,9 +109,15 @@ jobs:
       - name: Discover USGS state-waters map-block products
         continue-on-error: true
         run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
+      - name: Discover additional official USGS CSMP map-block products
+        continue-on-error: true
+        run: python scripts/discover_usgs_map_blocks.py --catalog-family csmp --output var/daily/usgs-csmp-map-blocks.json --previous var/published/usgs-csmp-map-blocks.json --max-age-days 30
       - name: Verify original USGS map-block XML metadata
         continue-on-error: true
         run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-map-blocks.json --output var/daily/usgs-map-metadata.json --previous var/published/usgs-map-metadata.json --max-age-days 30
+      - name: Verify original USGS CSMP XML metadata
+        continue-on-error: true
+        run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-csmp-map-blocks.json --output var/daily/usgs-csmp-map-metadata.json --previous var/published/usgs-csmp-map-metadata.json --max-age-days 30
       - name: Discover newer USGS DOI release products
         continue-on-error: true
         run: python scripts/discover_usgs_doi_releases.py --output var/daily/usgs-doi-releases.json --previous var/published/usgs-doi-releases.json --max-age-days 30
@@ -130,6 +136,8 @@ jobs:
             if [ -f var/daily/enc-hazards/point-reyes-tomales.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/point-reyes-tomales.geojson var/published/enc-hazards/; fi
             if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
             if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
+            if [ -f var/daily/usgs-csmp-map-blocks.json ]; then cp var/daily/usgs-csmp-map-blocks.json var/published/; fi
+            if [ -f var/daily/usgs-csmp-map-metadata.json ]; then cp var/daily/usgs-csmp-map-metadata.json var/published/; fi
             if [ -f var/daily/usgs-doi-releases.json ]; then cp var/daily/usgs-doi-releases.json var/published/; fi
             if [ -f var/daily/usgs-doi-metadata.json ]; then cp var/daily/usgs-doi-metadata.json var/published/; fi
             mkdir -p var/published/regions
@@ -155,8 +163,11 @@ jobs:
           if [ -f var/published/survey-products.json ]; then git -C var/published add survey-products.json; fi
           if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
           if [ -f var/published/enc-hazards/santa-barbara-island.geojson ]; then git -C var/published add enc-hazards/santa-barbara-island.geojson; fi
+          if [ -f var/published/enc-hazards/point-reyes-tomales.geojson ]; then git -C var/published add enc-hazards/point-reyes-tomales.geojson; fi
           if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
           if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
+          if [ -f var/published/usgs-csmp-map-blocks.json ]; then git -C var/published add usgs-csmp-map-blocks.json; fi
+          if [ -f var/published/usgs-csmp-map-metadata.json ]; then git -C var/published add usgs-csmp-map-metadata.json; fi
           if [ -f var/published/usgs-doi-releases.json ]; then git -C var/published add usgs-doi-releases.json; fi
           if [ -f var/published/usgs-doi-metadata.json ]; then git -C var/published add usgs-doi-metadata.json; fi
           if [ -f var/published/noaa-federal-areas.json ]; then git -C var/published add noaa-federal-areas.json; fi
@@ -299,7 +310,7 @@ jobs:
           from pathlib import Path
           lines=['\n## Native seabed source inventory']
           unhealthy=[]
-          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS map blocks'),('usgs-map-metadata.json','USGS original XML records'),('usgs-doi-releases.json','USGS newer DOI releases'),('usgs-doi-metadata.json','USGS newer DOI XML records')]:
+          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS DS 781 map blocks'),('usgs-map-metadata.json','USGS DS 781 original XML records'),('usgs-csmp-map-blocks.json','USGS CSMP map blocks'),('usgs-csmp-map-metadata.json','USGS CSMP original XML records'),('usgs-doi-releases.json','USGS newer DOI releases'),('usgs-doi-metadata.json','USGS newer DOI XML records')]:
               p=Path('var/daily')/name
               if not p.is_file():
                   lines.append(f'- {label}: missing inventory')

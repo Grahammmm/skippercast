@@ -4,6 +4,14 @@
   "reviewed_at": "2026-09-24",
   "surveys": [
     {
+      "survey_id": "H11981",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
+      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
+      "report_section": "Descriptive report PDF pages 16 and 19–23; final office review notes 11 and 13 on page 22",
+      "interpretation": "Field section D.1 says no dangers to navigation, but the final office review notes additional holidays around charted rocks without established least depths. It also records visible offsets on some lines from use of NAD83-to-NAVD88 instead of NAD83-to-MLLW, judged within survey specifications. These are survey-quality and coverage holds, not point hazards; no exact geometry is supplied in the report. Do not infer that the historical rocky-camera transect is unaffected.",
+      "hazards": []
+    },
+    {
       "survey_id": "H11951",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
       "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",

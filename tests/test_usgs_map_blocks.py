@@ -22,6 +22,26 @@ class UsgsMapBlockTests(unittest.TestCase):
     def test_no_third_party_url(self):
         self.assertFalse(mod.approved('https://example.com/ds/781/OffshoreX'))
         self.assertFalse(mod.approved('http://pubs.usgs.gov/ds/781/OffshoreX'))
+        self.assertFalse(mod.approved('https://example.com/data/csmp/OffshoreX'))
+        self.assertTrue(mod.approved('https://cmgds.marine.usgs.gov/data/csmp/OffshoreX/data_catalog_OffshoreX.html'))
+
+    def test_secondary_csmp_index_discovers_original_monterey_products(self):
+        directory = b'<a href="OffshoreMonterey/">Monterey</a><a href="https://bad.example/no/">bad</a>'
+        listing = b'<a href="data_catalog_OffshoreMonterey.html">Catalog</a>'
+        catalog = b'''<table><tr><td>Bathymetry (2m/pixel), Offshore Monterey</td>
+        <td><a href="metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml">xml</a></td>
+        <td><a href="data/Bathymetry_2m_OffshoreMonterey.zip">zip</a></td><td></td><td></td></tr>
+        <tr><td>Seafloor Character (2m/pixel), Offshore Monterey</td>
+        <td><a href="metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml">xml</a></td>
+        <td><a href="data/SeafloorCharacter_2m_OffshoreMonterey.zip">zip</a></td><td></td><td></td></tr></table>'''
+        pages = {mod.CSMP_INDEX: directory,
+                 mod.CSMP_INDEX + 'OffshoreMonterey/': listing,
+                 mod.CSMP_INDEX + 'OffshoreMonterey/data_catalog_OffshoreMonterey.html': catalog}
+        result = mod.discover(now=datetime(2026, 9, 24, tzinfo=timezone.utc),
+                              fetcher=pages.__getitem__, family='csmp')
+        self.assertEqual(result['catalog_family'], 'csmp')
+        self.assertEqual(result['block_count'], 1)
+        self.assertEqual(set(result['blocks'][0]['products']), {'bathymetry', 'seafloor_character'})
 
     def test_failed_catalog_is_visible_and_retains_review_history(self):
         index = b'<a href="OffshoreX/data_catalog_OffshoreX.html">X</a>'

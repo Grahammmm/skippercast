@@ -22,6 +22,31 @@
       "source_year": 2023,
       "rights": "USGS public-domain data; credit USGS and CSU Monterey Bay Seafloor Mapping Lab. Not for navigation.",
       "limitations": "Historical video-supervised substrate model; downsampled display polygons omit small patches. Bathymetry's reported vertical reference is instantaneous sea level, so no legal 200-foot depth qualification is inferred. No fish or catch verification."
+    },
+    {
+      "id": "offshore-monterey-character-2016",
+      "sector_id": "monterey-sur",
+      "additional_sector_ids": ["pigeon-monterey"],
+      "name": "Offshore Monterey 2 m seafloor character",
+      "publication_url": "https://pubs.usgs.gov/publication/ofr20161110",
+      "data_release_url": "https://doi.org/10.5066/F70Z71C8",
+      "character_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_2m_OffshoreMonterey.zip",
+      "character_metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+      "bathymetry_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+      "bathymetry_metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+      "bathymetry_vertical_datum": "NAVD88",
+      "character_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "bathymetry_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "native_class_resolution_m": 2,
+      "display_resolution_m": 10,
+      "minimum_display_area_m2": 2500,
+      "class": 3,
+      "class_name": "Historical rock and boulder, rugose seabed",
+      "class_code_rule": "ones-digit",
+      "valid_codes": [-128, 1, 2, 3, 4, 11, 12, 13, 14, 51, 52, 53, 54, 61, 62, 63, 64, 101, 102, 103, 111, 112, 113],
+      "source_year": 2016,
+      "rights": "USGS metadata specifies CC0 public-domain data and asks attribution to USGS and CSU Monterey Bay Seafloor Mapping Lab. Not for navigation.",
+      "limitations": "The 2 m video-supervised substrate classification encodes substrate as the ones digit, depth zone in tens and slope class in increments of 50. This import selects class 3 only, then generalizes to 10 m; it is historical habitat context, not an individual-rock outline, surveyed MLLW depth, legal fishing position or catch prediction. The paired bathymetry is NAVD88 and requires a reviewed local MLLW conversion before depth qualification. The dataset footprint crosses two browsing sectors; no whole-sector coverage is implied."
     }
   ]
 }

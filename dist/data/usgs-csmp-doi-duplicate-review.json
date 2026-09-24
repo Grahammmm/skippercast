@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "scope": "usgs-csmp-vs-published-doi-context",
+  "checked_at": "2026-09-24T12:29:38.982234+00:00",
+  "candidate_catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/",
+  "candidate_outlines": 343,
+  "fully_contained_outlines": 343,
+  "method": "Intersect each projected MPA-screened CSMP context outline with the union of existing DOI-sourced browse context shapes; report per-outline area containment, never add overlapping counts as new seabed.",
+  "fishing_target": false,
+  "blocks": [
+    {
+      "block_id": "MontereyCanyon",
+      "outlines": 6,
+      "fully_contained_outlines": 6,
+      "overlap_fraction_min": 0.9999999999999264,
+      "doi_release_ids": [
+        "F70Z71C8",
+        "F7XD0ZQ4"
+      ]
+    },
+    {
+      "block_id": "OffshoreAptos",
+      "outlines": 17,
+      "fully_contained_outlines": 17,
+      "overlap_fraction_min": 0.9999999999999997,
+      "doi_release_ids": [
+        "F7K35RQB"
+      ]
+    },
+    {
+      "block_id": "OffshoreGaviota",
+      "outlines": 72,
+      "fully_contained_outlines": 72,
+      "overlap_fraction_min": 0.9999999999999443,
+      "doi_release_ids": [
+        "F7QN64XQ",
+        "F7TH8JWJ"
+      ]
+    },
+    {
+      "block_id": "OffshoreMonterey",
+      "outlines": 88,
+      "fully_contained_outlines": 88,
+      "overlap_fraction_min": 0.9999999999999222,
+      "doi_release_ids": [
+        "F70Z71C8",
+        "F7XD0ZQ4"
+      ]
+    },
+    {
+      "block_id": "OffshorePigeonPoint",
+      "outlines": 37,
+      "fully_contained_outlines": 37,
+      "overlap_fraction_min": 0.9999999999999989,
+      "doi_release_ids": [
+        "F7513W80",
+        "F7CJ8BJW"
+      ]
+    },
+    {
+      "block_id": "OffshoreSantaCruz",
+      "outlines": 90,
+      "fully_contained_outlines": 90,
+      "overlap_fraction_min": 0.9999999999999439,
+      "doi_release_ids": [
+        "F7CJ8BJW",
+        "F7TM785G"
+      ]
+    },
+    {
+      "block_id": "OffshoreScottCreek",
+      "outlines": 33,
+      "fully_contained_outlines": 33,
+      "overlap_fraction_min": 0.999999999999923,
+      "doi_release_ids": [
+        "F7513W80",
+        "F7CJ8BJW",
+        "F7TM785G"
+      ]
+    }
+  ]
+}

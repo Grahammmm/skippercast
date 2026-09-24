@@ -15,12 +15,15 @@ from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 INDEX = 'https://pubs.usgs.gov/ds/781/'
+CSMP_INDEX = 'https://cmgds.marine.usgs.gov/data/csmp/'
 MAX_PAGE = 500_000
 
 
 def approved(url):
     parts = urlsplit(url)
-    return parts.scheme == 'https' and parts.hostname == 'pubs.usgs.gov' and parts.path.startswith('/ds/781/')
+    return parts.scheme == 'https' and (
+        (parts.hostname == 'pubs.usgs.gov' and parts.path.startswith('/ds/781/'))
+        or (parts.hostname == 'cmgds.marine.usgs.gov' and parts.path.startswith('/data/csmp/')))
 
 
 class CatalogParser(HTMLParser):
@@ -69,16 +72,40 @@ def fetch(url):
         return raw
 
 
-def catalog_urls(raw):
+def catalog_urls(raw, *, index=INDEX):
     parser = CatalogParser()
     parser.feed(raw.decode('utf-8', errors='replace'))
     links = []
     for href in parser.links:
-        url = urljoin(INDEX, href)
+        url = urljoin(index, href)
         if approved(url) and '/data_catalog_' in urlsplit(url).path and urlsplit(url).path.endswith('.html') and '/video_observations/' not in url:
             if url not in links:
                 links.append(url)
     return links
+
+
+def csmp_catalog_urls(raw, *, fetcher=fetch):
+    """The separate USGS CSMP index links directories, then each block catalog."""
+    parser = CatalogParser()
+    parser.feed(raw.decode('utf-8', errors='replace'))
+    directories = []
+    for href in parser.links:
+        url = urljoin(CSMP_INDEX, href)
+        if (approved(url) and url.startswith(CSMP_INDEX) and url.endswith('/')
+                and url != CSMP_INDEX and urlsplit(url).path.count('/') == 4
+                and url not in directories):
+            directories.append(url)
+    if not directories:
+        raise ValueError('USGS CSMP index contained no block directories')
+    catalogs = []
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        for directory, page in zip(directories, pool.map(fetcher, directories)):
+            for url in catalog_urls(page, index=directory):
+                if url.startswith(directory) and url not in catalogs:
+                    catalogs.append(url)
+    if not catalogs:
+        raise ValueError('USGS CSMP directories contained no block catalogs')
+    return catalogs
 
 
 def inspect_catalog(url, raw, *, now):
@@ -107,10 +134,13 @@ def inspect_catalog(url, raw, *, now):
             'catalog_sha256': hashlib.sha256(raw).hexdigest(), 'products': products, 'issue': None}
 
 
-def discover(previous=None, *, now=None, fetcher=fetch):
+def discover(previous=None, *, now=None, fetcher=fetch, family='ds781'):
     now = now or datetime.now(timezone.utc)
-    raw = fetcher(INDEX)
-    urls = catalog_urls(raw)
+    if family not in ('ds781', 'csmp'):
+        raise ValueError('Unknown USGS catalog family')
+    index = INDEX if family == 'ds781' else CSMP_INDEX
+    raw = fetcher(index)
+    urls = catalog_urls(raw) if family == 'ds781' else csmp_catalog_urls(raw, fetcher=fetcher)
     if not urls:
         raise ValueError('USGS index contained no map-block catalogs')
     old = {row['catalog_url']: row for row in (previous or {}).get('blocks', [])}
@@ -128,10 +158,11 @@ def discover(previous=None, *, now=None, fetcher=fetch):
                              'checked_at': None, 'catalog_sha256': None, 'products': {}, 'issue': str(error)[:180]})
     rows.sort(key=lambda row: row['id'])
     issues = [row['id'] for row in rows if row['status'] != 'ok']
-    return {'schema_version': 1, 'scope': 'usgs-state-waters-map-block-links', 'collected_at': now.isoformat(),
+    return {'schema_version': 1, 'scope': 'usgs-state-waters-map-block-links', 'catalog_family': family,
+            'collected_at': now.isoformat(),
             'last_complete_scan_at': now.isoformat() if not issues else (previous or {}).get('last_complete_scan_at'),
-            'source_url': INDEX, 'index_sha256': hashlib.sha256(raw).hexdigest(),
-            'method': 'Original USGS DS 781 map-block catalog links only. No native raster, extent, datum, substrate class, precision, license or fishing ground approved.',
+            'source_url': index, 'index_sha256': hashlib.sha256(raw).hexdigest(),
+            'method': 'Original USGS map-block catalog links only. No native raster, extent, datum, substrate class, precision, license or fishing ground approved.',
             'block_count': len(rows),
             'bathymetry_blocks': sum(bool(row['products'].get('bathymetry')) for row in rows),
             'seafloor_character_blocks': sum(bool(row['products'].get('seafloor_character')) for row in rows),
@@ -143,9 +174,12 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--previous', type=Path)
     parser.add_argument('--max-age-days', type=int, default=30)
+    parser.add_argument('--catalog-family', choices=('ds781', 'csmp'), default='ds781')
     args = parser.parse_args()
     previous = json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
     now = datetime.now(timezone.utc)
+    if previous and previous.get('catalog_family', 'ds781') != args.catalog_family:
+        raise ValueError('Previous catalog family differs from requested family')
     if previous and previous.get('health', {}).get('status') == 'ok' and previous.get('last_complete_scan_at'):
         age = now - datetime.fromisoformat(previous['last_complete_scan_at'])
         if timedelta(0) <= age < timedelta(days=args.max_age_days):
@@ -153,7 +187,7 @@ def main():
             args.output.write_bytes(args.previous.read_bytes())
             print('Retained complete USGS map-block catalog inventory from ' + previous['last_complete_scan_at'])
             return
-    result = discover(previous, now=now)
+    result = discover(previous, now=now, family=args.catalog_family)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temp = args.output.with_suffix(args.output.suffix + '.tmp')
     temp.write_text(json.dumps(result, separators=(',', ':'), ensure_ascii=False) + '\n')

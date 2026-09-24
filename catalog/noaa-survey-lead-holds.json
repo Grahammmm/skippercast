@@ -4,6 +4,14 @@
   "reviewed_at": "2026-09-24",
   "holds": [
     {
+      "survey_id": "H11981",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
+      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
+      "reason": "The original 1.5 m MLLW BAG and USGS c109nc camera log overlap in 29 measured 39.43–43.89 m windows on one July 28, 2009 transect, including five historical rockfish observations, but these are not 29 independent reefs. The final H11981 office review (PDF page 22, notes 11 and 13) says additional survey holidays surround charted rocks where least depth was not obtained and some survey lines used the wrong VDatum model (NAD83-to-NAVD88 rather than NAD83-to-MLLW), with visible offsets considered within specifications. The report does not identify those lines here, so the candidate cannot be assumed unaffected. Hold fishing promotion until exact affected-line and holiday footprints are checked against the original cells and current ENC, then local substrate, complete MPA/access geometry, Northern rules and route are reviewed.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11981.html"
+    },
+    {
       "survey_id": "F00562",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00562/DR/F00562.pdf",

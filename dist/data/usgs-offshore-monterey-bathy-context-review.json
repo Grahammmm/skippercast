@@ -1,0 +1,1421 @@
+{
+  "schema_version": 1,
+  "scope": "original-usgs-bathymetry-vs-habitat-context",
+  "audited_at": "2026-09-24T12:11:06.683148+00:00",
+  "source_id": "offshore-monterey-character-2016",
+  "bathymetry_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+  "bathymetry_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+  "native_resolution_m": 2,
+  "vertical_datum": "NAVD88",
+  "mllw_conversion_reviewed": false,
+  "product_uncertainty_grid_available": false,
+  "context_outlines": 88,
+  "outlines_with_original_measured_cells": 87,
+  "outlines_with_historical_camera_evidence": 5,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "NAVD88 depth is not MLLW depth. No per-cell uncertainty was supplied with this source; hydrographic survey dates vary. Context boundaries are generalized and camera positions are variable. No navigation, legal 200 ft fishing depth, present fish abundance or catch likelihood is inferred.",
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "native_measured_cells": 737649,
+      "historical_camera_interior_windows": 13,
+      "historical_rock_boulder_windows": 13,
+      "historical_rockfish_positive_windows": 1,
+      "distinct_historical_transects": 1,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 3.57,
+        "p10": 16.73,
+        "median": 27.65,
+        "p90": 47.51,
+        "maximum": 67.3
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-002",
+      "native_measured_cells": 606,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 34.15,
+        "p10": 37.13,
+        "median": 46.6,
+        "p90": 53.39,
+        "maximum": 54.75
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "native_measured_cells": 4270,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 37.9,
+        "p10": 46.75,
+        "median": 54.59,
+        "p90": 60.73,
+        "maximum": 64.83
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-004",
+      "native_measured_cells": 64824,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 10.04,
+        "p10": 16.07,
+        "median": 21.45,
+        "p90": 27.76,
+        "maximum": 33.08
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-005",
+      "native_measured_cells": 7,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 16.55,
+        "p10": 16.93,
+        "median": 17.2,
+        "p90": 17.43,
+        "maximum": 17.48
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-006",
+      "native_measured_cells": 520114,
+      "historical_camera_interior_windows": 8,
+      "historical_rock_boulder_windows": 8,
+      "historical_rockfish_positive_windows": 1,
+      "distinct_historical_transects": 2,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 3.13,
+        "p10": 12.49,
+        "median": 20.99,
+        "p90": 30.34,
+        "maximum": 37.89
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-007",
+      "native_measured_cells": 3249,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 45.43,
+        "p10": 48.75,
+        "median": 51.12,
+        "p90": 53.73,
+        "maximum": 55.32
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-008",
+      "native_measured_cells": 5,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 47.37,
+        "p10": 47.7,
+        "median": 48.21,
+        "p90": 48.3,
+        "maximum": 48.3
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-009",
+      "native_measured_cells": 112121,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 17.9,
+        "p10": 29.22,
+        "median": 38.56,
+        "p90": 49.07,
+        "maximum": 57.0
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-010",
+      "native_measured_cells": 8599,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 31.84,
+        "p10": 36.59,
+        "median": 39.9,
+        "p90": 43.4,
+        "maximum": 54.15
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "native_measured_cells": 125375,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 34.74,
+        "p10": 40.06,
+        "median": 47.09,
+        "p90": 56.7,
+        "maximum": 65.46
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-012",
+      "native_measured_cells": 2,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -0.72,
+        "p10": -0.71,
+        "median": -0.68,
+        "p90": -0.65,
+        "maximum": -0.64
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-013",
+      "native_measured_cells": 16,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -0.43,
+        "p10": -0.23,
+        "median": 0.79,
+        "p90": 1.18,
+        "maximum": 1.27
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-014",
+      "native_measured_cells": 0,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-015",
+      "native_measured_cells": 2,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -0.6,
+        "p10": -0.6,
+        "median": -0.59,
+        "p90": -0.58,
+        "maximum": -0.57
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-016",
+      "native_measured_cells": 64930,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 18.96,
+        "p10": 24.79,
+        "median": 29.07,
+        "p90": 34.36,
+        "maximum": 39.35
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-017",
+      "native_measured_cells": 5775,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 26.11,
+        "p10": 29.02,
+        "median": 32.83,
+        "p90": 36.32,
+        "maximum": 38.62
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-018",
+      "native_measured_cells": 6594,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 11.56,
+        "p10": 13.89,
+        "median": 16.05,
+        "p90": 18.05,
+        "maximum": 19.31
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-019",
+      "native_measured_cells": 721,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 10.31,
+        "p10": 12.01,
+        "median": 13.19,
+        "p90": 14.11,
+        "maximum": 14.53
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-020",
+      "native_measured_cells": 48,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 12.16,
+        "p10": 12.21,
+        "median": 12.63,
+        "p90": 12.71,
+        "maximum": 12.74
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-021",
+      "native_measured_cells": 6,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 11.51,
+        "p10": 11.52,
+        "median": 11.67,
+        "p90": 11.91,
+        "maximum": 11.91
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-022",
+      "native_measured_cells": 39890,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 26.07,
+        "p10": 36.08,
+        "median": 39.49,
+        "p90": 43.32,
+        "maximum": 47.31
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "native_measured_cells": 22500,
+      "historical_camera_interior_windows": 5,
+      "historical_rock_boulder_windows": 5,
+      "historical_rockfish_positive_windows": 1,
+      "distinct_historical_transects": 1,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 75.83,
+        "p10": 78.25,
+        "median": 80.68,
+        "p90": 83.15,
+        "maximum": 84.6
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-024",
+      "native_measured_cells": 21440,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 30.2,
+        "p10": 36.35,
+        "median": 41.2,
+        "p90": 49.74,
+        "maximum": 55.06
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-025",
+      "native_measured_cells": 16590,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 21.02,
+        "p10": 26.63,
+        "median": 31.37,
+        "p90": 36.99,
+        "maximum": 43.0
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "native_measured_cells": 12560,
+      "historical_camera_interior_windows": 3,
+      "historical_rock_boulder_windows": 2,
+      "historical_rockfish_positive_windows": 2,
+      "distinct_historical_transects": 1,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 43.77,
+        "p10": 54.86,
+        "median": 61.04,
+        "p90": 67.09,
+        "maximum": 69.47
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-027",
+      "native_measured_cells": 13590,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 43.11,
+        "p10": 47.34,
+        "median": 49.47,
+        "p90": 50.97,
+        "maximum": 54.43
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-028",
+      "native_measured_cells": 11030,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 36.71,
+        "p10": 39.0,
+        "median": 40.75,
+        "p90": 41.82,
+        "maximum": 43.27
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-029",
+      "native_measured_cells": 10104,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 15.48,
+        "p10": 17.43,
+        "median": 20.12,
+        "p90": 21.26,
+        "maximum": 21.82
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-030",
+      "native_measured_cells": 9943,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 13.63,
+        "p10": 14.95,
+        "median": 16.12,
+        "p90": 16.7,
+        "maximum": 17.19
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-031",
+      "native_measured_cells": 5089,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 33.61,
+        "p10": 37.45,
+        "median": 39.86,
+        "p90": 42.08,
+        "maximum": 43.91
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-032",
+      "native_measured_cells": 9570,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 38.07,
+        "p10": 42.72,
+        "median": 44.35,
+        "p90": 46.28,
+        "maximum": 49.8
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "native_measured_cells": 9500,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 81.33,
+        "p10": 82.93,
+        "median": 85.26,
+        "p90": 86.64,
+        "maximum": 87.32
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "native_measured_cells": 9200,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 60.41,
+        "p10": 62.38,
+        "median": 67.07,
+        "p90": 71.87,
+        "maximum": 74.63
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-035",
+      "native_measured_cells": 8170,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 41.74,
+        "p10": 44.61,
+        "median": 46.95,
+        "p90": 49.21,
+        "maximum": 50.89
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-036",
+      "native_measured_cells": 7800,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 16.32,
+        "p10": 17.32,
+        "median": 18.57,
+        "p90": 19.94,
+        "maximum": 21.13
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-037",
+      "native_measured_cells": 7480,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 36.99,
+        "p10": 43.76,
+        "median": 47.19,
+        "p90": 49.46,
+        "maximum": 51.16
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "native_measured_cells": 6600,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 65.45,
+        "p10": 67.03,
+        "median": 68.18,
+        "p90": 69.52,
+        "maximum": 70.64
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-039",
+      "native_measured_cells": 5600,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 13.67,
+        "p10": 14.61,
+        "median": 16.75,
+        "p90": 17.6,
+        "maximum": 18.53
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "native_measured_cells": 5330,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 47.87,
+        "p10": 50.41,
+        "median": 62.7,
+        "p90": 74.89,
+        "maximum": 86.84
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-041",
+      "native_measured_cells": 5195,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 11.68,
+        "p10": 13.01,
+        "median": 14.56,
+        "p90": 16.29,
+        "maximum": 17.69
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-042",
+      "native_measured_cells": 5100,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 41.84,
+        "p10": 44.32,
+        "median": 46.09,
+        "p90": 48.05,
+        "maximum": 49.16
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-043",
+      "native_measured_cells": 4500,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 36.87,
+        "p10": 40.62,
+        "median": 42.23,
+        "p90": 44.44,
+        "maximum": 46.27
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-044",
+      "native_measured_cells": 4100,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 52.53,
+        "p10": 55.19,
+        "median": 56.73,
+        "p90": 58.4,
+        "maximum": 59.09
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-045",
+      "native_measured_cells": 4000,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 10.33,
+        "p10": 14.26,
+        "median": 16.38,
+        "p90": 18.12,
+        "maximum": 19.34
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "native_measured_cells": 3800,
+      "historical_camera_interior_windows": 2,
+      "historical_rock_boulder_windows": 2,
+      "historical_rockfish_positive_windows": 1,
+      "distinct_historical_transects": 1,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 81.14,
+        "p10": 82.3,
+        "median": 84.56,
+        "p90": 86.06,
+        "maximum": 86.76
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-047",
+      "native_measured_cells": 112,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 24.87,
+        "p10": 25.2,
+        "median": 25.76,
+        "p90": 26.28,
+        "maximum": 26.37
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-048",
+      "native_measured_cells": 45,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 25.19,
+        "p10": 25.99,
+        "median": 26.8,
+        "p90": 26.88,
+        "maximum": 26.97
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-049",
+      "native_measured_cells": 3640,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 30.44,
+        "p10": 36.17,
+        "median": 37.87,
+        "p90": 39.36,
+        "maximum": 40.49
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-050",
+      "native_measured_cells": 151,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -0.16,
+        "p10": 2.16,
+        "median": 4.91,
+        "p90": 7.11,
+        "maximum": 8.86
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-051",
+      "native_measured_cells": 22,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -3.29,
+        "p10": -2.19,
+        "median": 1.55,
+        "p90": 6.12,
+        "maximum": 8.14
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-052",
+      "native_measured_cells": 1,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -3.48,
+        "p10": -3.48,
+        "median": -3.48,
+        "p90": -3.48,
+        "maximum": -3.48
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-053",
+      "native_measured_cells": 13,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -3.4,
+        "p10": -3.39,
+        "median": -0.94,
+        "p90": -0.57,
+        "maximum": -0.34
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-054",
+      "native_measured_cells": 25,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -1.52,
+        "p10": -1.08,
+        "median": -0.3,
+        "p90": 1.75,
+        "maximum": 2.58
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-055",
+      "native_measured_cells": 737,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": -2.53,
+        "p10": 0.0,
+        "median": 11.46,
+        "p90": 14.53,
+        "maximum": 14.8
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "native_measured_cells": 3220,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 64.73,
+        "p10": 73.24,
+        "median": 82.29,
+        "p90": 92.31,
+        "maximum": 107.65
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-057",
+      "native_measured_cells": 3200,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 51.29,
+        "p10": 55.13,
+        "median": 56.87,
+        "p90": 58.44,
+        "maximum": 59.47
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-058",
+      "native_measured_cells": 3100,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 52.84,
+        "p10": 54.27,
+        "median": 55.38,
+        "p90": 56.54,
+        "maximum": 57.62
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "native_measured_cells": 3104,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 80.05,
+        "p10": 80.79,
+        "median": 82.93,
+        "p90": 84.65,
+        "maximum": 85.44
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-060",
+      "native_measured_cells": 3100,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 19.98,
+        "p10": 21.09,
+        "median": 22.5,
+        "p90": 23.69,
+        "maximum": 25.05
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-061",
+      "native_measured_cells": 3010,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 38.53,
+        "p10": 40.52,
+        "median": 41.87,
+        "p90": 44.13,
+        "maximum": 45.23
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-062",
+      "native_measured_cells": 2800,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 44.89,
+        "p10": 47.18,
+        "median": 48.97,
+        "p90": 50.19,
+        "maximum": 51.8
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-063",
+      "native_measured_cells": 2600,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 13.71,
+        "p10": 14.48,
+        "median": 15.33,
+        "p90": 16.1,
+        "maximum": 16.72
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-064",
+      "native_measured_cells": 2600,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 48.25,
+        "p10": 49.2,
+        "median": 49.99,
+        "p90": 50.72,
+        "maximum": 51.38
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-065",
+      "native_measured_cells": 2300,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 19.25,
+        "p10": 20.11,
+        "median": 20.84,
+        "p90": 21.52,
+        "maximum": 22.17
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-066",
+      "native_measured_cells": 2310,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 47.76,
+        "p10": 50.52,
+        "median": 51.76,
+        "p90": 53.09,
+        "maximum": 53.73
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-067",
+      "native_measured_cells": 1810,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 36.36,
+        "p10": 37.8,
+        "median": 39.74,
+        "p90": 40.42,
+        "maximum": 41.36
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-068",
+      "native_measured_cells": 1790,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 39.96,
+        "p10": 42.72,
+        "median": 44.57,
+        "p90": 46.71,
+        "maximum": 47.66
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-069",
+      "native_measured_cells": 1800,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 17.67,
+        "p10": 18.31,
+        "median": 19.37,
+        "p90": 19.88,
+        "maximum": 20.09
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "native_measured_cells": 1700,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 82.68,
+        "p10": 83.64,
+        "median": 84.47,
+        "p90": 85.25,
+        "maximum": 85.62
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "native_measured_cells": 1700,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 84.88,
+        "p10": 85.44,
+        "median": 86.93,
+        "p90": 87.63,
+        "maximum": 87.96
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "native_measured_cells": 1700,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 78.38,
+        "p10": 80.09,
+        "median": 83.16,
+        "p90": 84.13,
+        "maximum": 84.38
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-073",
+      "native_measured_cells": 1690,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 48.96,
+        "p10": 50.78,
+        "median": 51.85,
+        "p90": 52.7,
+        "maximum": 52.91
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-074",
+      "native_measured_cells": 1590,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 7.85,
+        "p10": 8.74,
+        "median": 10.2,
+        "p90": 11.08,
+        "maximum": 12.61
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-075",
+      "native_measured_cells": 1600,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 14.67,
+        "p10": 15.63,
+        "median": 16.57,
+        "p90": 17.23,
+        "maximum": 17.47
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "native_measured_cells": 1580,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 57.1,
+        "p10": 57.98,
+        "median": 59.53,
+        "p90": 60.96,
+        "maximum": 61.92
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-077",
+      "native_measured_cells": 1500,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 29.16,
+        "p10": 30.17,
+        "median": 30.9,
+        "p90": 31.55,
+        "maximum": 32.08
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-078",
+      "native_measured_cells": 1520,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 42.07,
+        "p10": 45.25,
+        "median": 47.17,
+        "p90": 49.0,
+        "maximum": 49.67
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-079",
+      "native_measured_cells": 1500,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 37.12,
+        "p10": 39.24,
+        "median": 41.67,
+        "p90": 42.99,
+        "maximum": 43.93
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-080",
+      "native_measured_cells": 1490,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 39.24,
+        "p10": 40.66,
+        "median": 42.71,
+        "p90": 48.49,
+        "maximum": 49.07
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-081",
+      "native_measured_cells": 1400,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 33.57,
+        "p10": 34.4,
+        "median": 35.57,
+        "p90": 36.83,
+        "maximum": 37.23
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-082",
+      "native_measured_cells": 1410,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 13.75,
+        "p10": 14.17,
+        "median": 14.74,
+        "p90": 15.27,
+        "maximum": 15.8
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-083",
+      "native_measured_cells": 1400,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 19.91,
+        "p10": 20.58,
+        "median": 21.62,
+        "p90": 23.2,
+        "maximum": 23.87
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-084",
+      "native_measured_cells": 421,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 42.38,
+        "p10": 43.2,
+        "median": 44.44,
+        "p90": 45.93,
+        "maximum": 46.66
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-085",
+      "native_measured_cells": 9,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 41.2,
+        "p10": 41.2,
+        "median": 41.27,
+        "p90": 41.38,
+        "maximum": 41.38
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "native_measured_cells": 1380,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 72.44,
+        "p10": 73.8,
+        "median": 75.05,
+        "p90": 76.61,
+        "maximum": 77.69
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-087",
+      "native_measured_cells": 1410,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 47.38,
+        "p10": 48.83,
+        "median": 49.86,
+        "p90": 52.15,
+        "maximum": 53.54
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-088",
+      "native_measured_cells": 1290,
+      "historical_camera_interior_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "distinct_historical_transects": 0,
+      "depth_qualified_for_target": false,
+      "depth_m_below_navd88": {
+        "minimum": 46.48,
+        "p10": 47.34,
+        "median": 48.35,
+        "p90": 49.42,
+        "maximum": 50.06
+      }
+    }
+  ]
+}

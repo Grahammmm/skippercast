@@ -122,7 +122,7 @@ def build(blocks,metadata,audit,mpas,cache):
                 'fish_confirmed':False,'mpa_screened_at':mpas['sources']['mpas']['data_retrieved_at']}})
     return {'type':'FeatureCollection','schema_version':1,'scope':'generalized-statewide-usgs-hard-bottom-context',
             'compiled_at':datetime.now(timezone.utc).isoformat(),'source':'USGS California State Waters Map Series (DS 781)',
-            'source_catalog_url':'https://pubs.usgs.gov/ds/781/',
+            'source_catalog_url':blocks['source_url'],
             'method':'Original categorical GeoTIFF class 3, mode resampled to 20 m, polygons >=5,000 m², largest 100 per reviewed map block, generalized and cut by complete current CDFW MPA polygons. Historical context only.',
             'limitations':['Map blocks are discontinuous and contain unsurveyed pixels.','Published outlines omit smaller hard patches and cannot mark exact rock edges.','Depth grids use separate datums; this layer is not depth-qualified.','No catch or legal access is inferred.'],
             'failed_blocks':sorted(set(failures)),'features':features}

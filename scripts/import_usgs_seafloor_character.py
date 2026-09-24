@@ -10,6 +10,23 @@ from pathlib import Path
 import zipfile
 
 
+def class_mask(values, source):
+    """Decode only a reviewed raster code scheme; never guess from palette colors."""
+    import numpy as np
+    observed = {int(value) for value in np.unique(values)}
+    valid = set(source.get('valid_codes', (0, 1, 2, 3)))
+    if not observed <= valid:
+        raise ValueError('Unreviewed seafloor class code')
+    rule = source.get('class_code_rule', 'direct')
+    if rule == 'direct':
+        return values == source['class']
+    if rule == 'ones-digit':
+        if not source.get('valid_codes') or source['class'] not in (1, 2, 3, 4):
+            raise ValueError('Composite seafloor code needs reviewed values and substrate class')
+        return np.isin(values, [code for code in valid if code >= 0 and code % 10 == source['class']])
+    raise ValueError('Unreviewed seafloor class code rule')
+
+
 def compile_context(source, archive, output):
     import numpy as np
     import rasterio
@@ -37,10 +54,8 @@ def compile_context(source, archive, output):
             raise ValueError('Unsupported display generalization')
         width, height = round(raster.width*native/cell), round(raster.height*native/cell)
         values = raster.read(1, out_shape=(height,width), resampling=Resampling.mode)
-        if not set(np.unique(values)) <= {0,1,2,3}:
-            raise ValueError('Unreviewed seafloor class code')
         affine = raster.transform * raster.transform.scale(raster.width/width, raster.height/height)
-        selected = (values == source['class']).astype('uint8')
+        selected = class_mask(values, source).astype('uint8')
         project = Transformer.from_crs(raster.crs, 'EPSG:4326', always_xy=True).transform
         candidates = []
         for geometry, value in shapes(selected, mask=selected.astype(bool), transform=affine):
@@ -67,6 +82,7 @@ def compile_context(source, archive, output):
     payload={'type':'FeatureCollection','schema_version':1,'scope':'generalized-seafloor-character-context',
              'source_id':source['id'],'sector_id':source['sector_id'],
              'source_url':source['data_release_url'],'source_file_sha256':actual,
+             'class_code_rule':source.get('class_code_rule','direct'),
              'method':f"Mode resampling of {native} m source class to {cell} m display cells; polygons below {source['minimum_display_area_m2']} m² omitted; simplified by {cell/2:g} m in source projection.",
              'rights':source['rights'],'limitations':source['limitations'],
              'features':features}
