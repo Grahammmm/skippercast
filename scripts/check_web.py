@@ -51,6 +51,25 @@ def check_native_depth_review(name, scope):
             assert row[key] == value, (name, row['sector_id'], key)
 
 
+def check_central_sediment_context():
+    manifest = json.loads((ROOT / 'catalog/usgs-central-sediment-source.json').read_text())
+    data = json.loads((WEB / 'data/usgs-central-thin-sediment-context.geojson').read_text())
+    assert data['type'] == 'FeatureCollection'
+    assert data['scope'] == 'usgs-central-interpreted-sediment-context'
+    assert data['source']['raster_sha256'] == manifest['raster_sha256']
+    assert data['source']['metadata_sha256'] == manifest['metadata_sha256']
+    assert data['screen']['negative_source_cells_excluded'] > 0
+    assert len(data['features']) >= 20
+    for feature in data['features']:
+        props = feature['properties']
+        assert feature['geometry']['type'] in {'Polygon', 'MultiPolygon'}
+        assert props['source_id'] == manifest['id']
+        assert props['kind'] == 'estimated-thin-sediment'
+        assert props['estimated_sediment_thickness_m'] == [0, manifest['screening_threshold_m']]
+        assert all(props[key] is False for key in
+                   ('fishing_target', 'exportable', 'depth_qualified', 'fish_confirmed'))
+
+
 def main():
     assert (WEB / "index.html").is_file()
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
@@ -84,6 +103,7 @@ def main():
                               'california-original-vr-native-depth-review')
     check_native_depth_review('noaa-regular-native-depth-review.json',
                               'california-original-regular-native-depth-review')
+    check_central_sediment_context()
     print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
 
 

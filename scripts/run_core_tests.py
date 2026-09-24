@@ -11,6 +11,7 @@ import unittest
 GIS_TEST_MODULES = {
     'test_bottom_targets',
     'test_cdfw_substrate_pipeline',
+    'test_central_sediment_context',
     'test_native_sector_leads',
     'test_regular_native_depth',
     'test_regular_bag_hard',

@@ -137,6 +137,46 @@ export async function initCoastalDiscovery(catalog,coast) {
       statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
     }catch(error){statewideCheck.checked=false;statewideNote.textContent=error.message+' · consult the original USGS catalog.';}
   });
+  if(coast.id==='central'){
+    const sedimentLayer=L.layerGroup();map.createPane('centralSedimentContext').style.zIndex=422;
+    const sedimentLabel=document.createElement('label');sedimentLabel.className='map-layer-option';
+    const sedimentCheck=document.createElement('input');sedimentCheck.type='checkbox';
+    const sedimentTitle=document.createElement('span');sedimentTitle.textContent='USGS thin-sediment interpretation · central coast';
+    sedimentLabel.append(sedimentCheck,sedimentTitle);body.append(sedimentLabel);
+    const sedimentNote=document.createElement('p');sedimentNote.className='small';
+    sedimentNote.textContent='Optional 50 m interpretation of 0–2.5 m sediment above an ancient surface. Broad geology context only; it does not identify rock piles, fish or legal depth.';
+    body.append(sedimentNote);
+    let sedimentLoaded=false,sedimentShapes=[];
+    function drawSediment(){if(!sedimentCheck.checked||!sedimentLoaded)return;
+      for(const {shape,bounds} of sedimentShapes){
+        if(bounds.intersects(map.getBounds())){if(!sedimentLayer.hasLayer(shape))sedimentLayer.addLayer(shape);}
+        else if(sedimentLayer.hasLayer(shape))sedimentLayer.removeLayer(shape);
+      }
+    }
+    map.on('moveend',drawSediment);
+    sedimentCheck.addEventListener('change',async()=>{
+      if(!sedimentCheck.checked){map.removeLayer(sedimentLayer);return;}
+      if(sedimentLoaded){sedimentLayer.addTo(map);drawSediment();return;}
+      sedimentNote.textContent='Loading original USGS sediment interpretation…';
+      try{
+        const response=await fetch('data/usgs-central-thin-sediment-context.geojson',{signal:AbortSignal.timeout(20000)});
+        if(!response.ok)throw Error('USGS sediment context unavailable');
+        const data=await response.json();
+        if(data.type!=='FeatureCollection'||data.scope!=='usgs-central-interpreted-sediment-context'
+          ||data.source?.id!=='usgs-point-sur-arguello-sediment-thickness-2019'||!Array.isArray(data.features)
+          ||data.features.some(f=>f.properties?.kind!=='estimated-thin-sediment'||f.properties?.fishing_target!==false
+            ||f.properties?.exportable!==false||f.properties?.depth_qualified!==false||f.properties?.fish_confirmed!==false))throw Error('Unreviewed USGS sediment context');
+        sedimentShapes=data.features.map(f=>{
+          const p=f.properties;
+          const shape=L.geoJSON(f,{pane:'centralSedimentContext',style:{color:'#627887',weight:1,fillColor:'#9fb8c5',fillOpacity:.22}})
+            .bindPopup(`<strong>Interpreted thin sediment</strong><p>USGS ${esc(data.source.publication_year)} · estimated 0–2.5 m sediment above an ancient surface, 50 m source grid. This does not establish exposed rock, a fishing spot, legal depth or safe navigation.</p><p>${esc(p.sector_ids.join(', '))}</p><a href="${esc(data.source.publication_url)}" target="_blank" rel="noopener">Original USGS study ↗</a>`);
+          return {shape,bounds:shape.getBounds()};
+        });
+        sedimentLoaded=true;sedimentLayer.addTo(map);drawSediment();
+        sedimentNote.textContent=`${data.features.length} broad historical sediment areas. Negative source pixels were excluded; current MPAs and local rules still control fishing.`;
+      }catch(error){sedimentCheck.checked=false;sedimentNote.textContent=error.message+' · consult the original USGS study.';}
+    });
+  }
   const predictedContext=L.layerGroup();map.createPane('predictedSeabed').style.zIndex=423;
   const predictedLabel=document.createElement('label');predictedLabel.className='map-layer-option';
   const predictedCheck=document.createElement('input');predictedCheck.type='checkbox';
