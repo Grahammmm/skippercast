@@ -23,5 +23,17 @@ class UsgsMetadataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             mod.parse_metadata('https://pubs.usgs.gov/ds/781/X/metadata/Bathymetry_X.xml',b'<metadata/>',now=datetime.now(timezone.utc))
 
+    def test_structured_vertical_datum_is_separate_from_text_mentions(self):
+        bounds=b'<bounding><westbc>-122.5</westbc><eastbc>-122.4</eastbc><southbc>37.2</southbc><northbc>37.4</northbc></bounding>'
+        structured=b'<metadata>'+bounds+b'<vertdef><altsys><altdatum>North American Vertical Datum of 1988</altdatum></altsys></vertdef><abstract>Input MLLW soundings were converted.</abstract></metadata>'
+        row=mod.parse_metadata('https://pubs.usgs.gov/ds/781/X/metadata/Bathymetry_X.xml',structured,now=datetime.now(timezone.utc))
+        self.assertEqual(row['native_vertical_datum_code'],'NAVD88')
+        self.assertEqual(row['vertical_datum_evidence'],'structured-xml')
+        self.assertIn('MLLW',row['vertical_datum_mentions'])
+        unstructured=b'<metadata>'+bounds+b'<abstract>NAVD88 bathymetry</abstract></metadata>'
+        row=mod.parse_metadata('https://pubs.usgs.gov/ds/781/X/metadata/Bathymetry_X.xml',unstructured,now=datetime.now(timezone.utc))
+        self.assertIsNone(row['native_vertical_datum_code'])
+        self.assertEqual(row['vertical_datum_evidence'],'unverified-text-mentions')
+
 
 if __name__=='__main__':unittest.main()

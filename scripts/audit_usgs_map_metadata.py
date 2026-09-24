@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree as ET
 
@@ -50,6 +51,18 @@ def parse_metadata(url, raw, *, now):
                 if code and label:categorical.append({'field':name,'code':code[:30],'label':label[:250]})
     projection=(root.findtext('.//mapprojn') or '').strip()
     horizontal=(root.findtext('.//horizdn') or '').strip()
+    vertical=(root.findtext('.//vertdef/altsys/altdatum') or
+              root.findtext('.//vertdef/depthsys/depthdn') or '').strip()
+    vertical_code = ('NAVD88' if vertical.lower() in {'north american vertical datum of 1988', 'navd88', 'navd 88'} else
+                     'MLLW' if vertical.lower() in {'mean lower low water', 'mllw'} else None)
+    # Free-text descriptions can mention input and output datums together.
+    # Retain mentions as review leads, never as a depth-conversion decision.
+    prose=' '.join(root.itertext())
+    mentions=[]
+    for label,pattern in [('NAVD88',r'\b(?:NAVD\s*88|North American Vertical Datum of 1988)\b'),
+                          ('MLLW',r'\b(?:MLLW|Mean Lower Low Water)\b'),
+                          ('instantaneous sea level',r'\binstantaneous sea level\b')]:
+        if re.search(pattern,prose,re.I):mentions.append(label)
     # Explicit metadata-backed fallback for a few USGS TIFFs missing embedded
     # CRS. No location-derived or filename-derived CRS guess is allowed.
     projected_crs='EPSG:32611' if projection=='WGS 1984 UTM Zone 11N' and horizontal=='D WGS 1984' else None
@@ -57,6 +70,11 @@ def parse_metadata(url, raw, *, now):
             'bounds':box,'title':(root.findtext('.//title') or '').strip()[:200],
             'published_date':(root.findtext('.//pubdate') or '').strip()[:20],
             'native_projection_name':projection,'native_horizontal_datum':horizontal,
+            'native_vertical_datum_declared':vertical or None,
+            'native_vertical_datum_code':vertical_code,
+            'vertical_datum_evidence':('structured-xml' if vertical else
+                'unverified-text-mentions' if mentions else 'unknown'),
+            'vertical_datum_mentions':mentions,
             'metadata_projected_crs':projected_crs,
             'substrate_definitions':definitions,'categorical_classes':categorical,'issue':None}
 
