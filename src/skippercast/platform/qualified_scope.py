@@ -47,6 +47,33 @@ def _timestamp(value):
     _require(parsed.tzinfo is not None, "Compilation receipts need explicit time zones")
 
 
+def _held_original_surveys(root):
+    path = root / "catalog" / "noaa-survey-lead-holds.json"
+    _require(path.is_file(), "Reviewed original-survey hold registry is missing")
+    registry = read_json(path)
+    _require(registry.get("schema_version") == 1
+             and registry.get("scope") == "reviewed-noaa-survey-fishing-lead-holds"
+             and isinstance(registry.get("holds"), list), "Invalid original-survey hold registry")
+    held = set()
+    for row in registry["holds"]:
+        ident = row.get("survey_id")
+        _require(isinstance(ident, str) and re.fullmatch(r"[A-Z][0-9]{5}", ident)
+                 and ident not in held
+                 and row.get("disposition") == "withhold_from_fishing_promotion"
+                 and isinstance(row.get("reason"), str) and row["reason"]
+                 and isinstance(row.get("report_sha256"), str)
+                 and re.fullmatch(r"[a-f0-9]{64}", row["report_sha256"]),
+                 "Invalid reviewed original-survey hold")
+        held.add(ident)
+    return held
+
+
+def _require_unheld_original_source(url, held_surveys):
+    match = re.search(r"/([A-Z][0-9]{5})/BAG/", url)
+    _require(not match or match.group(1) not in held_surveys,
+             "Reviewed original NOAA survey is held from fishing promotion")
+
+
 def _digest(path, receipt=None):
     content = path.read_bytes()
     digest = hashlib.sha256(content).hexdigest()
@@ -234,6 +261,9 @@ def _validate(region, atlas, root):
              "Protected-area coverage and an approved binding remain mandatory")
     specs = _indexed(config["sources"], "id", "reviewed source")
     _require(bool(specs) and len({s.lower() for s in specs}) == len(specs), "Empty or ambiguous reviewed sources")
+    held_surveys = _held_original_surveys(root)
+    for spec in specs.values():
+        _require_unheld_original_source(spec.get("url", ""), held_surveys)
     receipts = _indexed(quality["source_receipts"], "url", "source receipt")
     _require(set(receipts) == {s["url"] for s in specs.values()}, "Subset source receipts differ from reviewed sources")
     expected_sources = []

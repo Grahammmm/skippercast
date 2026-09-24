@@ -10,7 +10,8 @@ from unittest.mock import patch
 
 from skippercast.platform.bottom_targets import VERSION
 from skippercast.platform.qualified_scope import (
-    validate_qualified_scope, qualified_subset_satisfies, _intersects, _polygons)
+    validate_qualified_scope, qualified_subset_satisfies, _intersects, _polygons,
+    _require_unheld_original_source)
 
 
 def polygon(west, south, east, north):
@@ -23,6 +24,8 @@ class QualifiedScopeTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        self.write("catalog/noaa-survey-lead-holds.json", {
+            "schema_version": 1, "scope": "reviewed-noaa-survey-fishing-lead-holds", "holds": []})
         self.rid = "test-coast"
         self.base = "regions/test-coast/"
         self.folder = self.root / "dist" / self.base / "qualified-bottom"
@@ -182,6 +185,21 @@ class QualifiedScopeTests(unittest.TestCase):
                 self.assert_held()
                 source[key] = previous
         self.region["source_bindings"]["bathymetry"] = []
+        self.assert_held()
+
+    def test_original_survey_hold_blocks_fishing_promotion(self):
+        url = "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/BAG/H11967_MB_VR_MLLW.bag"
+        with self.assertRaisesRegex(ValueError, "held from fishing promotion"):
+            _require_unheld_original_source(url, {"H11967"})
+        _require_unheld_original_source(url, {"F00562"})
+        self.write("catalog/noaa-survey-lead-holds.json", {
+            "schema_version": 1, "scope": "reviewed-noaa-survey-fishing-lead-holds", "holds": [{
+                "survey_id": "H11967", "disposition": "withhold_from_fishing_promotion",
+                "reason": "Original report hazards require current ENC review.",
+                "report_sha256": "a" * 64}]})
+        self.spec["url"] = url
+        self.quality["config_sha256"] = self.write(
+            "regions/test-coast/bottom-sources.reviewed.json", self.config)["sha256"]
         self.assert_held()
 
     def test_source_receipts_require_exact_set_size_digest_and_status(self):
