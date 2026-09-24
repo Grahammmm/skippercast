@@ -338,6 +338,7 @@
   "coverage_note": "Draft Del Norte package. Historical depth and predicted substrate leads exist, but no reviewed fishing target, current legal clearance or complete regional forecast has been published.",
   "landing_note": "Port landings do not locate catches on Del Norte grounds.",
   "jurisdiction_id": "california-northern",
+  "ecology_profile": "california-northern",
   "pipeline_sources": {
     "sst": "mur-sst",
     "chlorophyll": "modis-chlorophyll",

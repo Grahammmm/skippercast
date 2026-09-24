@@ -42,7 +42,9 @@ def build(root=ROOT):
      'source_url':p.get('source_url'),'source_date':p.get('source_date',p.get('survey_year')),
      'depth_qualified':key=='atlas' or key=='habitats','depth_note':p.get('depth_note','Only the published survey footprint is shown; confirm depth with sonar.'),
      'source_id':p.get('source_id'),'fish_confirmed':False,'exportable':False}})
-  local=read(root/'catalog/ecology'/(r['intelligence']['ecology_profile']+'.json'))['profiles']
+  ecology_id=r.get('ecology_profile') or r.get('intelligence',{}).get('ecology_profile')
+  if not ecology_id:raise ValueError('Published regional search plans need a reviewed ecology profile')
+  local=read(root/'catalog/ecology'/(ecology_id+'.json'))['profiles']
   profiles={}
   for k in r['species']:
    if k not in local:raise ValueError('Missing regional ecological profile '+k)

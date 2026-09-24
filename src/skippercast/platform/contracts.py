@@ -40,6 +40,15 @@ def stamp(now=None):
     return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def ecology_profile_id(region):
+    """Ecology can be reviewed before ocean-model providers are configured."""
+    standalone = region.get('ecology_profile')
+    legacy = (region.get('intelligence') or {}).get('ecology_profile')
+    if standalone and legacy and standalone != legacy:
+        raise ValueError('Conflicting regional ecology profiles')
+    return standalone or legacy
+
+
 def atomic_json(path, value, *, indent=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -144,6 +153,17 @@ def validate_region(region, needs, sources, root=REPO):
             raise ValueError('Target habitat and control method must be explicit')
         if not target.get('source_species') or not target.get('name') or not isinstance(target.get('habitat_kinds'),list):
             raise ValueError('Target has no biological evidence grouping')
+    ecology_id = ecology_profile_id(region)
+    if ecology_id:
+        if not ID.fullmatch(ecology_id):
+            raise ValueError('Invalid regional ecology profile ID')
+        ecology = read_json(within(Path(root) / 'catalog/ecology', ecology_id + '.json'))
+        eb = bbox(ecology['bounds'])
+        rb = bbox(region['fishing_bounds'])
+        if (region['jurisdiction_id'] not in ecology['jurisdictions']
+                or not set(region['species']) <= ecology['profiles'].keys()
+                or not (eb[0] <= rb[0] < rb[2] <= eb[2] and eb[1] <= rb[1] < rb[3] <= eb[3])):
+            raise ValueError('Ecology dossier does not cover this jurisdiction, species set and geography')
     for area in region.get('map',{}).get('focus_areas',[]):
         bbox(area['bounds'])
         if not ID.fullmatch(area.get('id','')) or not area.get('name'):raise ValueError('Invalid regional map focus')

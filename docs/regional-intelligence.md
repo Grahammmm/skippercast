@@ -37,7 +37,7 @@ The first real collection obtained all Morro Bay products. The northern sample h
 
 ## Reuse in another region
 
-Configure `intelligence.providers`, station metadata, comfort preferences, forecast points and `ecology_profile` in `regions/<id>/region.json`. Contracts require approved source bindings. Reuse current adapters only within their actual coverage. A different regional ocean model needs a new adapter and tests, not a renamed WCOFS source. Unknown provider selections are rejected.
+Configure `ecology_profile` independently of ocean intelligence in `regions/<id>/region.json`; a draft can have reviewed species ecology without claiming current-model coverage. Configure `intelligence.providers`, station metadata, comfort preferences and forecast points when approved regional ocean sources are available. The earlier nested `intelligence.ecology_profile` remains readable, but conflicting profile IDs are rejected. Contracts require approved source bindings. Reuse current adapters only within their actual coverage. A different regional ocean model needs a new adapter and tests, not a renamed WCOFS source. Unknown provider selections are rejected.
 
 `catalog/ecology/<profile>.json` contains methods, life stage, evidence gaps and geographic/jurisdiction scope. It references primary agency dossiers in `catalog/species.json`. The compiler rejects transfers beyond reviewed scope. Terrain, ecology, actual fish observations and AIS stay separate. Camera candidates remain unverified until a local, licensed, dated sample is attached. This release adds no claimed fish detections or calibrated bite probabilities.
 

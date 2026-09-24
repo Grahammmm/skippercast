@@ -215,7 +215,7 @@
       "scientific_name": "Metacarcinus magister",
       "life_stage": "Legal-sized adults; larval and nursery evidence separate",
       "region_scope": "California coast; local precision varies by source",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-24",
       "claims": [
         {
           "claim": "CDFW quality sampling uses depth strings at 90, 150–180 and 210–240 feet. Those are sampling strata, not proof that the deepest stratum maximizes recreational catch.",
@@ -223,6 +223,13 @@
           "evidence_type": "primary agency synthesis",
           "confidence": "Moderate for broad habitat context; local catch rate uncalibrated",
           "geographic_transfer": "Check the original geography, life stage and method before applying elsewhere."
+        },
+        {
+          "claim": "A 2019–2021 pilot using GPS loggers on 14 volunteer commercial vessels from the Oregon border to Lopez Point found most modeled pot-setting behavior at 40–120 m over soft, relatively sandy bottom. This estimates participating fleet behavior, not crab abundance, recreational catch or an exact current hotspot.",
+          "source_url": "https://journal.wildlife.ca.gov/2026/05/22/identifying-highly-used-dungeness-crab-fleet-fishing-areas-off-central-and-northern-california-to-inform-entanglement-risks-of-large-whales/",
+          "evidence_type": "primary CDFW scientific-journal fleet-effort pilot",
+          "confidence": "Moderate for sampled fleet behavior only; 14 vessels, 2019–2021 tracks, weak Point Arena representation. Article header has an internally inconsistent acceptance date requiring editorial verification.",
+          "geographic_transfer": "Do not apply the 40–120 m commercial-effort range as a Morro Bay or recreational crab optimum, or publish vessel locations from this paper."
         }
       ],
       "map_policy": "Show connected soft-bottom areas and separate gear/season/whale-risk permission. The reported unsuccessful shallow trip and otter explanation are a local hypothesis to test, not a fitted depth rule.",

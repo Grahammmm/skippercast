@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "california-northern",
+  "reviewed_at": "2026-09-24",
+  "bounds": [-124.8, 37.8, -122.7, 42.0],
+  "jurisdictions": ["california-northern", "california-mendocino", "california-san-francisco"],
+  "interpretation": "Northern California species dossiers give habitat and method hypotheses, not current catch probabilities, legal permission, exact fishing locations or transferable southern-coast predictions.",
+  "profiles": {
+    "reef": {
+      "name": "Lingcod & rockfish",
+      "life_stage": "Adult recreational targets; rockfish species differ in depth and structure use.",
+      "habitat": "Verified rocky reef, relief and adjoining edges are search leads. NOAA identifies rocky reef as important to lingcod and many rockfish, but a broad hard-bottom class or a historical camera window does not prove an occupied fishing pile.",
+      "method": "Confirm legal species and depth, use the sounder to resolve the actual reef edge, then make controlled bottom-contact drifts. Record both marks and empty drifts rather than ranking an unverified polygon as a catch hotspot.",
+      "timing": "Season, species-specific closures and in-season notices govern take; nesting and seasonal movement do not create a predictable bite window.",
+      "condition_response": "Wind, crossing swell and drift speed change whether a rig can remain near bottom without snagging. The planned drift must be revised from the boat's observed track and line angle.",
+      "regional_notes": "Crescent City, Mendocino and Point Reyes survey leads remain habitat context until native depth, substrate, MPA and chart screens are complete.",
+      "depth_guidance": "Follow the current management-area depth rule and the boat's qualified gear depth. Source grid resolution does not establish safe or fishable bottom.",
+      "evidence_needed": ["Original measured bathymetry and hard-substrate footprint", "Current MPA and area-access geometry", "Identified fish observations with effort and unsuccessful drifts"],
+      "source_species": ["lingcod", "rockfish"]
+    },
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "life_stage": "Adults on seasonal shelf feeding grounds; juvenile nursery habitat is separate.",
+      "habitat": "Shelf soft or mixed-bottom lanes with prey are broad search leads. Pacific halibut are not interchangeable with California halibut, and a California-halibut sediment area cannot be reused as its fishing spot.",
+      "method": "Check the live quota, season, line and hook rules, then sound a depth-qualified shelf lane and fish a controlled near-bottom presentation. Record species identity and unsuccessful effort.",
+      "timing": "IPHC describes seasonal feeding and deeper winter spawning, but no fixed North Coast waypoint or universal depth follows. California quota closures can supersede a published season date.",
+      "condition_response": "Near-bottom presentation requires measured drift control; full transit, fog, swell direction and return conditions still govern a trip.",
+      "regional_notes": "The Northern California and south-of-Point-Arena allocation split requires local date and quota review before a target is shown as open.",
+      "depth_guidance": "A 200-foot boat limit is an equipment/plan constraint, not a Pacific-halibut optimum. Deeper shelf water needs its own qualified bottom and gear plan.",
+      "evidence_needed": ["Native shelf depth and substrate", "Current IPHC/NOAA/CDFW quota and local rules", "Local identified Pacific-halibut observations with effort"],
+      "source_species": ["pacific-halibut"]
+    },
+    "halibut": {
+      "name": "California halibut",
+      "life_stage": "Adult coastal flatfish; estuarine nursery data do not locate adults.",
+      "habitat": "CDFW identifies estuary and open-coast soft-bottom habitat. Connected sand or mud and edges can bound a search, but bottom type alone cannot establish fish presence.",
+      "method": "Work a legal soft-bottom lane near the seabed with comparable drifts; check bait and record depth, location, method and zero-catch time.",
+      "timing": "Movement and El Niño conditions can shift distribution. A static historic polygon is not a current abundance map.",
+      "condition_response": "Enough movement to cover ground can aid searching, but excess drift prevents effective near-bottom presentation; do not infer bottom current from tide height.",
+      "regional_notes": "Treat California and Pacific halibut as distinct targets with separate rules and evidence.",
+      "depth_guidance": "CDFW's broad 0–300 ft species range is not a location-specific depth optimum or an override of the user's fishing limit.",
+      "evidence_needed": ["Verified soft-bottom footprint and native depth", "Dated bait and identified fish observations", "Comparable successful and unsuccessful drift effort"],
+      "source_species": ["halibut"]
+    },
+    "salmon": {
+      "name": "Chinook salmon",
+      "life_stage": "Ocean-feeding fish; stock and year matter to access.",
+      "habitat": "Mobile water-column forage, shelf conditions and migration matter more than a fixed seafloor pin. A coastal sector is only a search reference.",
+      "method": "Check the current ocean opening and gear rule, then look for actual bait and fish marks and troll at the observed water-column depth.",
+      "timing": "Run timing and ocean survival vary by stock and year; an old landing or solunar rating cannot establish a present school.",
+      "condition_response": "Evaluate offshore exposure, fog and the complete return window. Water-column presentation depth must not be confused with seabed depth.",
+      "regional_notes": "Northern river-stock context informs ecology but is not a current local salmon opening or catch forecast.",
+      "depth_guidance": "Set presentation depth from observed marks and lawful gear, not a static 200- or 300-foot bottom contour.",
+      "evidence_needed": ["Current CDFW/NOAA season and stock context", "Fresh forage and fish depth observations", "Fishing hours and zero-catch search effort"],
+      "source_species": ["salmon"]
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "life_stage": "Legal-sized adults; nursery observations and commercial pot-setting are different measures.",
+      "habitat": "CDFW identifies sand and sand-mud adult habitat. A 2019–2021 pilot of 14 Northern and Central California commercial vessels found most modeled pot-setting at 40–120 m, but that describes sampled fleet behavior, not abundance, a recreational optimum or Morro Bay performance.",
+      "method": "If season, gear, MPA and whale-risk rules permit, compare a few verified soft-bottom depth bands with the same bait and soak time. Log zero sets, legal-size crabs and gear details.",
+      "timing": "Opening, health and entanglement restrictions change independently; month in the commercial study reflects fleet decisions and regulations as well as crab availability.",
+      "condition_response": "Deeper gear increases line, buoy, handling and retrieval demands. Choose a band only when the boat can set and retrieve safely in the full trip conditions.",
+      "regional_notes": "The pilot under-sampled Point Arena, used GPS loggers rather than AIS, and cannot identify exact recreational hotspots. The article page's acceptance date conflicts with its publication date, so its bibliographic chronology needs editorial verification.",
+      "depth_guidance": "CDFW quality sampling includes 90, 150–180 and 210–240 ft strata. This supports a controlled deeper comparison, not a claim that 250–300 ft is best. Keep the current 200-ft fishing-plan ceiling unless a separate deeper crab plan passes gear, legal, source and safety gates.",
+      "evidence_needed": ["Complete soft-bottom area and actual depth", "Paired trap/hoop set outcomes including zero sets", "Current lawful gear and whale-risk restrictions", "Observed predation rather than an assumed sea-otter depth threshold"],
+      "source_species": ["dungeness"]
+    },
+    "albacore": {
+      "name": "Pacific albacore tuna",
+      "life_stage": "Mostly juvenile surface-fishery targets in the California Current; behavior differs for deeper adults.",
+      "habitat": "Open-water temperature and oceanic fronts can narrow an offshore search. NOAA says juveniles often use fronts; a temperature contour alone is not a fish observation.",
+      "method": "Use recent quality-screened SST, ocean color and weather to choose a safe search sector, then look for actual bait, birds or fish before making trolling passes.",
+      "timing": "Migration and fronts move; stale imagery and historical catches do not justify a persistent hotspot.",
+      "condition_response": "Offshore distance, fuel reserve, visibility, swell and return weather matter more than a nearshore reef score. Missing imagery or model disagreement lowers confidence.",
+      "regional_notes": "A fixed northern tuna polygon cannot predict fish on a selected future date; forecast water-mass evidence must be valid for the planned time.",
+      "depth_guidance": "Water-column search and lure depth are distinct from seabed depth. Do not apply the bottom-fishing 200-ft ceiling to open-water tuna habitat.",
+      "evidence_needed": ["Dated SST/front imagery with cloud mask and native resolution", "Independent forage/fish sightings", "Trolling effort and zero-catch tracks", "Full route and return-weather plan"],
+      "source_species": ["albacore"]
+    }
+  }
+}

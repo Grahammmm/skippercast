@@ -316,6 +316,7 @@
   "coverage_note": "Draft Mendocino package. Native bathymetry and historical camera windows are research leads only; no reviewed fishing target, season status or complete local forecast has been published.",
   "landing_note": "Port landings and offshore buoy observations do not locate catches or clear Noyo entrance.",
   "jurisdiction_id": "california-mendocino",
+  "ecology_profile": "california-northern",
   "pipeline_sources": {
     "sst": "mur-sst",
     "chlorophyll": "modis-chlorophyll",

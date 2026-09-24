@@ -343,6 +343,7 @@
   "coverage_note": "Draft Bodega Bay–Point Reyes package. Original-cell hard-bottom context is historical research only. No reviewed target, season status, route or local forecast is published.",
   "landing_note": "Bodega buoy observations and harbor tide predictions do not locate fish or clear the harbor approach.",
   "jurisdiction_id": "california-san-francisco",
+  "ecology_profile": "california-northern",
   "pipeline_sources": {
     "sst": "mur-sst",
     "chlorophyll": "modis-chlorophyll",

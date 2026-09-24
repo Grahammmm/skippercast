@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
-from .contracts import REPO, atomic_json, load_catalogs, load_region, read_json, requirement_report, within
+from .contracts import REPO, atomic_json, ecology_profile_id, load_catalogs, load_region, read_json, requirement_report, within
 from ..pipeline.regulations import validate_bindings, validate_region_binding, regulatory_snapshot
 from datetime import datetime, timezone
 from .qualified_scope import validate_qualified_scope, qualified_subset_satisfies
@@ -45,7 +45,7 @@ def build(root=REPO):
         region['target_options'] = target_options(region, targets)
         output = root / "dist/regions" / region["id"]
         output.mkdir(parents=True, exist_ok=True)
-        ecology_id=region.get('intelligence',{}).get('ecology_profile')
+        ecology_id=ecology_profile_id(region)
         if ecology_id:
             ecology=read_json(within(root/'catalog/ecology',ecology_id+'.json'))
             if region['jurisdiction_id'] not in ecology['jurisdictions'] or not set(region['species'])<=ecology['profiles'].keys():
