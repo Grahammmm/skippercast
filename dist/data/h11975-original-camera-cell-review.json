@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "scope": "h11975-original-cells-vs-historical-camera-centers",
+  "reviewed_at": "2026-09-24T07:34:53+00:00",
+  "context_compiled_at": "2026-09-24T07:02:23.216332+00:00",
+  "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+  "bag_sha256": "9cf8d46441b5f45711231bc4823361cd7cd32a7fc0b0bf7de039dec850fc12b0",
+  "usgs_archive_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+  "screened_mpa_at": "2026-09-23T22:30:59Z",
+  "screened_federal_at": "2026-09-23T22:56:33.483262+00:00",
+  "minimum_display_interior_clearance_m": 25,
+  "total_camera_windows": 9,
+  "centers_on_qualified_original_cells": 5,
+  "outlines": [
+    {
+      "outline_id": "nbs-usgs-19ebda3140",
+      "camera_windows": 4,
+      "centers_on_qualified_original_cells": 2,
+      "qualified_center_depths_ft": [
+        169.9,
+        170.4
+      ]
+    },
+    {
+      "outline_id": "nbs-usgs-918635e24d",
+      "camera_windows": 2,
+      "centers_on_qualified_original_cells": 1,
+      "qualified_center_depths_ft": [
+        106.7
+      ]
+    },
+    {
+      "outline_id": "nbs-usgs-b0c6003bef",
+      "camera_windows": 1,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": []
+    },
+    {
+      "outline_id": "nbs-usgs-c54aeb6ce8",
+      "camera_windows": 2,
+      "centers_on_qualified_original_cells": 2,
+      "qualified_center_depths_ft": [
+        115.1,
+        127.0
+      ]
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "method": "Historical camera center is tested against original H11975 <=4 m measured BAG refinement cells that pass original USGS class-3 two-cell inset, 25\u2013200 ft depth with 2 m margin and <=1 m uncertainty, and buffered current MPA/GEA plus original-report danger exclusions.",
+  "limitations": [
+    "Camera positions have highly variable accuracy near 10 m; a center-cell match does not verify the surrounding bottom.",
+    "No present-day fish, catch, safe route, current navigation chart or local species and gear rules are established."
+  ]
+}

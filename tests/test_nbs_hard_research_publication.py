@@ -30,6 +30,27 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
                     if layer["context_file"] == "northern-nbs-usgs-hard-research-context.geojson")
         self.assertEqual(cape["outlines_with_interior_camera_evidence"], 4)
 
+    def test_cape_camera_centers_are_reconciled_with_original_survey_cells(self):
+        camera = json.loads((ROOT / "dist/data/usgs-video-nbs-hard-overlap.json").read_text())
+        original = json.loads((ROOT / "dist/data/h11975-original-camera-cell-review.json").read_text())
+        cape = next(layer for layer in camera["layers"]
+                    if layer["context_file"] == "northern-nbs-usgs-hard-research-context.geojson")
+        context = json.loads((ROOT / "dist/data/northern-nbs-usgs-hard-research-context.geojson").read_text())
+        self.assertEqual(original["context_compiled_at"], context["compiled_at"])
+        self.assertFalse(original["fishing_target"])
+        self.assertFalse(original["exportable"])
+        self.assertEqual(original["total_camera_windows"],
+                         sum(row["interior_windows"] for row in cape["matched_outlines"]))
+        self.assertEqual(original["centers_on_qualified_original_cells"],
+                         sum(row["centers_on_qualified_original_cells"] for row in original["outlines"]))
+        source = {row["outline_id"]: row for row in cape["matched_outlines"]}
+        for row in original["outlines"]:
+            self.assertEqual(row["camera_windows"], source[row["outline_id"]]["interior_windows"])
+            self.assertLessEqual(row["centers_on_qualified_original_cells"], row["camera_windows"])
+            self.assertEqual(len(row["qualified_center_depths_ft"]),
+                             row["centers_on_qualified_original_cells"])
+            self.assertTrue(all(25 <= depth <= 200 for depth in row["qualified_center_depths_ft"]))
+
     def test_other_coast_layers_keep_native_depth_and_source_policy(self):
         statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
         for coast_id, sectors, cell_m, max_features in (
