@@ -11,13 +11,16 @@ import io
 import json
 import tarfile
 import tempfile
+import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 from xml.etree import ElementTree
 
 import numpy as np
 import rasterio
+from rasterio.warp import transform_bounds
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +36,32 @@ def file_digest(path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             checksum.update(chunk)
     return checksum.hexdigest()
+
+
+def acquire(spec, cache, fetch):
+    path = cache / (spec["survey_id"] + "_additional_products.tar.gz")
+    if not path.exists():
+        if not fetch:
+            raise FileNotFoundError(f"Missing original archive: {path}")
+        if urlparse(spec["archive_url"]).hostname != "data.ngdc.noaa.gov":
+            raise ValueError("Unreviewed source host")
+        cache.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".partial")
+        try:
+            with urllib.request.urlopen(spec["archive_url"], timeout=120) as response:
+                if response.status != 200 or urlparse(response.url).hostname != "data.ngdc.noaa.gov":
+                    raise ValueError("Unexpected source response or redirect")
+                if int(response.headers.get("Content-Length", "-1")) != spec["archive_bytes"]:
+                    raise ValueError("Original archive size changed")
+                with temporary.open("wb") as output:
+                    while chunk := response.read(1024 * 1024):
+                        output.write(chunk)
+            if temporary.stat().st_size != spec["archive_bytes"] or file_digest(temporary) != spec["archive_sha256"]:
+                raise ValueError("Original archive incomplete or changed")
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return path
 
 
 def metadata_text(zipped, grid, tag):
@@ -54,14 +83,22 @@ def inspect_zip(data, grid, kind):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(archive.read(item))
         with rasterio.open(Path(tmp) / grid) as dataset:
-            values = dataset.read(1, masked=True).compressed()
+            cells = dataset.read(1, masked=True)
+            values = cells.compressed()
             if values.size == 0:
                 raise ValueError("Grid has no measured cells")
+            valid_rows = np.flatnonzero(np.any(~np.ma.getmaskarray(cells), axis=1))
+            valid_cols = np.flatnonzero(np.any(~np.ma.getmaskarray(cells), axis=0))
+            left, top = dataset.transform * (int(valid_cols[0]), int(valid_rows[0]))
+            right, bottom = dataset.transform * (int(valid_cols[-1]) + 1, int(valid_rows[-1]) + 1)
+            valid_envelope = [float(left), float(bottom), float(right), float(top)]
             result = {
                 "grid": grid,
                 "crs": str(dataset.crs),
                 "resolution_m": list(dataset.res),
                 "bounds_native": list(dataset.bounds),
+                "valid_cell_envelope_native": valid_envelope,
+                "valid_cell_envelope_wgs84": list(transform_bounds(dataset.crs, "EPSG:4326", *valid_envelope)),
                 "valid_cells": int(values.size),
                 "minimum": float(values.min()),
                 "maximum": float(values.max()),
@@ -75,8 +112,8 @@ def inspect_zip(data, grid, kind):
         return result
 
 
-def audit(spec, cache):
-    archive_path = cache / (spec["survey_id"] + "_additional_products.tar.gz")
+def audit(spec, cache, fetch=False):
+    archive_path = acquire(spec, cache, fetch)
     if archive_path.stat().st_size != spec["archive_bytes"]:
         raise ValueError("Source archive byte count changed")
     if file_digest(archive_path) != spec["archive_sha256"]:
@@ -110,11 +147,12 @@ def main():
     parser.add_argument("--manifest", type=Path, default=ROOT / "catalog/csumb-scc-native-sources.json")
     parser.add_argument("--cache", type=Path, default=ROOT / "var/noaa-native-cache")
     parser.add_argument("--output", type=Path, default=ROOT / "dist/data/csumb-scc-native-source-review.json")
+    parser.add_argument("--fetch", action="store_true", help="Fetch missing exact hash-pinned NOAA NCEI archives")
     args = parser.parse_args()
     sources = json.loads(args.manifest.read_text())["sources"]
     result = {"schema_version": 1, "scope": "original-csumb-scc-native-grid-review",
               "reviewed_at": datetime.now(timezone.utc).isoformat(),
-              "publication_status": "source-evidence-only", "sources": [audit(s, args.cache) for s in sources]}
+              "publication_status": "source-evidence-only", "sources": [audit(s, args.cache, args.fetch) for s in sources]}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(".partial")
     temporary.write_text(json.dumps(result, separators=(",", ":")) + "\n")

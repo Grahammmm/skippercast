@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "csumb-scc-block04-native-candidate",
+  "name": "CSUMB SCC_Block04 inspected native bathymetry and terrain-habitat grids",
+  "region_ids": [
+    "cambria-san-simeon"
+  ],
+  "need_ids": [
+    "bathymetry",
+    "substrate"
+  ],
+  "producer": {
+    "name": "CSU Monterey Bay Seafloor Mapping Lab (CSUMB/SFML)",
+    "url": "https://csumb.edu/"
+  },
+  "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+  "access_status": "accessible",
+  "variables": [
+    "bathymetry",
+    "rough_smooth_terrain_class"
+  ],
+  "units": {
+    "bathymetry": "m NAVD88 Geoid09 elevation",
+    "rough_smooth_terrain_class": "coded 2 m cells; -1/-31 rough and 0/-30 smooth"
+  },
+  "rights": {
+    "license": "US federal archive distribution; original CSUMB product redistribution terms still under review",
+    "terms_url": "https://www.ngdc.noaa.gov/metaview/page?xml=NOAA/NESDIS/NGDC/MGG/Multibeam/iso/xml/SCC_Block05_Multibeam.xml&view=getDataView&header=none",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [
+      -121.30600066632175,
+      35.60598281518067,
+      -121.15389727946102,
+      35.64324622972741
+    ],
+    "resolution_m": 2,
+    "horizontal_crs": "EPSG:26910 for inspected ArcInfo grids; WGS84 bounds are the separate NCEI track envelope",
+    "vertical_datum": "NAVD88 Geoid09",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T10:19:14.481378+00:00",
+    "update_cadence": "Static 2010 survey; monthly catalog check for revised releases, no automatic native-data replacement.",
+    "coverage_start": "2010-03-20",
+    "coverage_end": "2010-08-10"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI archive of CSUMB observations, not an independent survey",
+    "raw_sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+    "transformations": [
+      "Opened exact bathymetry and habitat ArcInfo grids from the hash-pinned original archive; no datum conversion, interpolation or fishing target generation"
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "supports": "Primary NCEI survey page identifies original CSUMB survey and 2010-03-20 through 2010-08-10 acquisition interval."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "supports": "Complete original archive opened and SHA-256 verified: b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a. The 2 m EPSG:26910 bathymetry grid has 7,699,899 valid cells; the aligned terrain grid has 7,668,985. The displayed WGS84 box bounds the valid cells but is not a full wet-cell geometry. Exact audit: dist/data/csumb-scc-native-source-review.json."
+    }
+  ],
+  "limitations": [
+    "Original grids are inspected for measured coverage only. NAVD88 elevations need a reviewed local chart-datum transformation before any depth gate. Rough terrain codes are not independent rock samples. Per-cell uncertainty, hazards, protected areas and local fishing rules remain to be reconciled; no public target or export is supported yet.",
+    "The 2 m rough/smooth terrain class is derived from the same bathymetry and is not independent rock groundtruth.",
+    "The WGS84 box is the valid-cell bounding envelope only; it includes unmeasured holes and is not a complete survey footprint.",
+    "Producer redistribution terms for native and derived grids remain unreviewed; no public target or map export is approved."
+  ]
+}

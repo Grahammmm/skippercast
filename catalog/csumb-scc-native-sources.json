@@ -3,6 +3,25 @@
   "scope": "original-csumb-south-central-coast-native-grid-leads",
   "sources": [
     {
+      "id": "csumb-scc-block04",
+      "survey_id": "SCC_Block04",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "archive_sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+      "archive_bytes": 282859139,
+      "bathymetry_member": "SCC_Blk04_2m.5m_bathygrids.zip",
+      "bathymetry_member_sha256": "215bb06e12bfb5da85d29df0a39b69181d25e4e4ad3e38dce0584b79a1dc3290",
+      "bathymetry_grid": "ArcViewGrids/scc04_2mbathy",
+      "habitat_member": "SCC_Blk04_2m.5m_habitat.zip",
+      "habitat_member_sha256": "a7d9d2bd3bbcdd51d89cf9e9e28a3424db9bb558aa1ca48053f8d90845029a2d",
+      "habitat_grid": "ArcViewGrids/scc04_2mhab",
+      "acquisition_year": 2010,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "status": "research-only",
+      "limitations": "Original grids are inspected for measured coverage only. NAVD88 elevations need a reviewed local chart-datum transformation before any depth gate. Rough terrain codes are not independent rock samples. Per-cell uncertainty, hazards, protected areas and local fishing rules remain to be reconciled; no public target or export is supported yet."
+    },
+    {
       "id": "csumb-scc-block05",
       "survey_id": "SCC_Block05",
       "producer": "CSU Monterey Bay Seafloor Mapping Lab",
@@ -20,6 +39,25 @@
       "native_vertical_datum": "NAVD88 Geoid09",
       "status": "research-only",
       "limitations": "Original grids were inspected, but NAVD88 elevations are not qualified MLLW fishing depths. The habitat grid codes rough versus smooth terrain inferred from bathymetry, not sampled rock. The metadata's positional/vertical accuracy statements vary with depth and are not per-cell product uncertainty. No target or export may be generated from this source until datum, substrate, hazards and complete legal geometry are reviewed."
+    },
+    {
+      "id": "csumb-scc-block06",
+      "survey_id": "SCC_Block06",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block06/multibeam/data/version2/products/SCC_Block06_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block06_mb.html",
+      "archive_sha256": "ddc507f83c2b68dcb8ad869fa37c78dca402ffd73e8abe58e44a652607af1d4a",
+      "archive_bytes": 227806888,
+      "bathymetry_member": "SCC_Blk06_2m_bathygrids.zip",
+      "bathymetry_member_sha256": "76ce023a40a4c29e63eeca327bf2546dd9653aab8f042a09f03375bf45af6cb8",
+      "bathymetry_grid": "ArcViewGrids/scc06_2mbathy",
+      "habitat_member": "SCC_Blk06_2m_habitat.zip",
+      "habitat_member_sha256": "4403f948103ed00595244114dcc99a5b287efff265dc493608512b2afed06dec",
+      "habitat_grid": "ArcViewGrids/scc06_2mhab",
+      "acquisition_year": 2010,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "status": "research-only",
+      "limitations": "Original grids are inspected for measured coverage only. NAVD88 elevations need a reviewed local chart-datum transformation before any depth gate. Rough terrain codes are not independent rock samples. Per-cell uncertainty, hazards, protected areas and local fishing rules remain to be reconciled; no public target or export is supported yet."
     }
   ]
 }

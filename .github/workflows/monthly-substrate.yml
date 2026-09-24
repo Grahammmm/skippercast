@@ -9,6 +9,33 @@ permissions:
   contents: read
 
 jobs:
+  csumb-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned native-grid reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Reuse original CSUMB archives
+        uses: actions/cache@v4
+        with:
+          path: var/noaa-native-cache/SCC_Block*_additional_products.tar.gz
+          key: csumb-scc-original-v1-${{ hashFiles('catalog/csumb-scc-native-sources.json') }}
+      - name: Audit exact original CSUMB bathymetry and terrain classes
+        run: >-
+          python scripts/audit_csumb_scc_native.py
+          --fetch
+          --output var/review/csumb-scc-native-source-review.json
+      - name: Upload unpublished source review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csumb-scc-native-review
+          path: var/review/csumb-scc-native-source-review.json
+          retention-days: 30
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest
