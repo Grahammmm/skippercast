@@ -171,6 +171,37 @@
       ]
     },
     {
+      "id": "noaa-nbs-modeling",
+      "name": "NOAA National Bathymetric Source Modeling tiles",
+      "provider": "NOAA National Ocean Service, Office of Coast Survey",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://nauticalcharts.noaa.gov/learn/nbs.html",
+      "adapter": "nbs-modeling-geotiff",
+      "review_status": "candidate",
+      "reviewed_at": "2026-09-24",
+      "rights": {
+        "license": "CC0-1.0 recorded in inspected contributor tables",
+        "attribution": "NOAA National Ocean Service, Office of Coast Survey; original contributor identified per cell",
+        "terms_url": "https://nauticalcharts.noaa.gov/learn/nbs.html"
+      },
+      "authenticity": {
+        "basis": "Official NOAA NBS project and hash-pinned public NOAA tile scheme, GeoTIFF and contributor table",
+        "transport": "HTTPS; exact NOAA S3 host only"
+      },
+      "coverage_note": "One source tile has been audited in each of 19 mainland browse sectors; only actual measured cells, not tile envelopes, count as candidate depth evidence.",
+      "limitations": [
+        "Test-and-evaluation product, not a navigation chart or independently measured source when it republishes an existing NOAA survey.",
+        "Interpolated and chart-derived contributors, old surveys, high uncertainty and missing native pixels cannot become fishing targets.",
+        "The 19-tile sample does not prove complete statewide coverage or identify rock, fish, safe access or legal permission."
+      ],
+      "allowed_hosts": [
+        "nauticalcharts.noaa.gov",
+        "noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com"
+      ]
+    },
+    {
       "id": "noaa-west-coast-substrate",
       "name": "West Coast seafloor induration 2017",
       "provider": "NOAA Fisheries",
