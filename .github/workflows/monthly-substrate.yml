@@ -141,6 +141,12 @@ jobs:
           python scripts/audit_usgs_video_observations.py
           --download-missing
           --output var/review/usgs-video-observation-audit.json
+      - name: Check NOAA composite induration against pinned original camera records
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_noaa_induration_camera.py
+          --output var/review/noaa-induration-camera-review.json
       - name: Cross-check camera transects against native context
         run: >-
           python scripts/audit_usgs_native_overlap.py

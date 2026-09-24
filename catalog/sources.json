@@ -211,7 +211,7 @@
       "documentation_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer",
       "adapter": "arcgis",
       "review_status": "candidate",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-24",
       "rights": {
         "license": "metadata-review-needed",
         "attribution": "NOAA Fisheries",
@@ -221,10 +221,17 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "U.S. West Coast composite substrate map.",
+      "coverage_note": "U.S. West Coast 25 m induration composite with separate source-data-quality layer. A bounded original-camera sample was retrieved in nine California browse sectors; neither the sample nor the service envelope proves cell coverage everywhere.",
+      "research_receipt": "dist/data/noaa-induration-camera-review.json",
+      "service_layer_ids": {
+        "hard_mixed_soft": 0,
+        "data_quality": 2
+      },
       "limitations": [
-        "Mixed source resolution and dates; retain source-level confidence.",
-        "Coarse regional context cannot replace local 2 m surveys."
+        "The source combines older surveys and classifications at 25 m; it is not an independent measurement where it reuses NOAA or USGS inputs.",
+        "Its 1–10 data-quality value rates input data and interpretation, not fishing quality or catch probability.",
+        "A point sample does not verify an entire camera transect or a rock outline; source lineage and redistribution terms remain to review before promotion.",
+        "Coarse regional context cannot replace local 1–2 m surveys or current chart, MPA and rules checks."
       ],
       "allowed_hosts": [
         "maps.fisheries.noaa.gov"

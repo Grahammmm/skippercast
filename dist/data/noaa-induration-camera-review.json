@@ -1,0 +1,795 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-2017-induration-historical-camera-research-sample",
+  "checked_at": "2026-09-24T19:45:15+00:00",
+  "service_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer",
+  "service_metadata_sha256": "1f2b0823a4919fd1a0c399a353fd172a319cd42a5ec0261446558d2b741892a9",
+  "service_legend_sha256": "2a7a6c1a73a85e897542750aca0dbcbb6358f70b153b591fdeb003d4fe49fdc5",
+  "class_code_probe_receipts": [
+    {
+      "expected_class": "hard",
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "expected_class": "mixed",
+      "response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158"
+    },
+    {
+      "expected_class": "soft",
+      "response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652"
+    }
+  ],
+  "camera_archive_sha256": {
+    "c0111sc": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+    "c0212sc": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+    "c109nc": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
+    "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+    "f208nc": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+    "f307nc": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+    "l908nc": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+    "s1c08sc": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+    "sw109sc": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+    "z107sc": "d7dd49f9a97183506111309a8f6ac957af3554c03d23ee56282a8b31470e54a7"
+  },
+  "upstream_camera_review_sha256": "9607b6b274bbe029167274bd7c06bcad9397106f79f210e88ab1eae661482bcb",
+  "source_2017_cell_m": 25,
+  "sampling_method": "One exact original USGS camera record, chosen by the middle sorted record index, from each distinct qualifying dated transect; record IDs are deduplicated across NOAA BAG files. NOAA layer 0 induration and layer 2 source-data quality are sampled at that position. Three fixed publisher-map probe cells check the reviewed class-code mapping on every run.",
+  "sampled_transects": 49,
+  "class_counts": {
+    "mixed": 10,
+    "hard": 30,
+    "soft": 9
+  },
+  "quality_counts": {
+    "6.2": 18,
+    "7.1": 9,
+    "8.6": 3,
+    "10.0": 19
+  },
+  "rows": [
+    {
+      "cruise": "c0111sc",
+      "date": "2011-08-17",
+      "line": "14",
+      "camera_record_index": 665,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c0111sc",
+      "date": "2011-08-18",
+      "line": "27",
+      "camera_record_index": 1313,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c0111sc",
+      "date": "2011-08-31",
+      "line": "119",
+      "camera_record_index": 4307,
+      "sector_id": "orange-san-diego",
+      "service_response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c0111sc",
+      "date": "2011-09-02",
+      "line": "137",
+      "camera_record_index": 4621,
+      "sector_id": "san-diego-border",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c0212sc",
+      "date": "2012-08-22",
+      "line": "105",
+      "camera_record_index": 3704,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "07bbc97c97cbcbc77b1020a322cacc41ebf6963d0dd1a246ddb2597f9eb74329",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "c0212sc",
+      "date": "2012-08-22",
+      "line": "106",
+      "camera_record_index": 3741,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "07bbc97c97cbcbc77b1020a322cacc41ebf6963d0dd1a246ddb2597f9eb74329",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "c0212sc",
+      "date": "2012-08-22",
+      "line": "107",
+      "camera_record_index": 3785,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "66221e8e174cd72ec5b957d94f93a323717ceec83553456939d446260a6d3dd0",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 86,
+        "data_quality_of_10": 8.6
+      }
+    },
+    {
+      "cruise": "c109nc",
+      "date": "2009-07-28",
+      "line": "54",
+      "camera_record_index": 1501,
+      "sector_id": "crescent-city-humboldt",
+      "service_response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c210nc",
+      "date": "2010-07-31",
+      "line": "36",
+      "camera_record_index": 1007,
+      "sector_id": "north-mendocino",
+      "service_response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c210nc",
+      "date": "2010-07-31",
+      "line": "40",
+      "camera_record_index": 1098,
+      "sector_id": "north-mendocino",
+      "service_response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "c210nc",
+      "date": "2010-08-02",
+      "line": "49",
+      "camera_record_index": 1509,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-05",
+      "line": "105",
+      "camera_record_index": 277,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-05",
+      "line": "106",
+      "camera_record_index": 347,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-06",
+      "line": "107",
+      "camera_record_index": 482,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-06",
+      "line": "110",
+      "camera_record_index": 648,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-06",
+      "line": "112",
+      "camera_record_index": 787,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-07",
+      "line": "113",
+      "camera_record_index": 853,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-07",
+      "line": "114",
+      "camera_record_index": 943,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "date": "2008-09-07",
+      "line": "115",
+      "camera_record_index": 1043,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-02",
+      "line": "34",
+      "camera_record_index": 2185,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-02",
+      "line": "35",
+      "camera_record_index": 2278,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "3ab61e69c9f910c2cd5e2aca6c9562483058d7cf5fcb24209848e56a5c842c41",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-03",
+      "line": "36",
+      "camera_record_index": 2342,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "3ab61e69c9f910c2cd5e2aca6c9562483058d7cf5fcb24209848e56a5c842c41",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-03",
+      "line": "37",
+      "camera_record_index": 2402,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-04",
+      "line": "41",
+      "camera_record_index": 2604,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "f307nc",
+      "date": "2007-10-04",
+      "line": "42",
+      "camera_record_index": 2693,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "3ab61e69c9f910c2cd5e2aca6c9562483058d7cf5fcb24209848e56a5c842c41",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-16",
+      "line": "51",
+      "camera_record_index": 134,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-16",
+      "line": "59",
+      "camera_record_index": 393,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "3ab61e69c9f910c2cd5e2aca6c9562483058d7cf5fcb24209848e56a5c842c41",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-17",
+      "line": "60",
+      "camera_record_index": 424,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-17",
+      "line": "61",
+      "camera_record_index": 503,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-17",
+      "line": "63",
+      "camera_record_index": 749,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-18",
+      "line": "64",
+      "camera_record_index": 892,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-18",
+      "line": "65",
+      "camera_record_index": 993,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-18",
+      "line": "66",
+      "camera_record_index": 1100,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-18",
+      "line": "67",
+      "camera_record_index": 1198,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-18",
+      "line": "68",
+      "camera_record_index": 1268,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-19",
+      "line": "68",
+      "camera_record_index": 1311,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-20",
+      "line": "75",
+      "camera_record_index": 1726,
+      "sector_id": "arena-bodega",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "l908nc",
+      "date": "2008-08-21",
+      "line": "78",
+      "camera_record_index": 1883,
+      "sector_id": "bodega-reyes",
+      "service_response_sha256": "54e4199c367144a8962fa5d04b3b5900df775b7e314155d492732540717381ac",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 100,
+        "data_quality_of_10": 10.0
+      }
+    },
+    {
+      "cruise": "s1c08sc",
+      "date": "2008-09-30",
+      "line": "2",
+      "camera_record_index": 103,
+      "sector_id": "conception-ventura",
+      "service_response_sha256": "95df7a31f7aeb38863222d58b862ec90819f3ee1e0a2e7c66e98a564152bd3d5",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "s1c08sc",
+      "date": "2008-09-30",
+      "line": "3",
+      "camera_record_index": 128,
+      "sector_id": "conception-ventura",
+      "service_response_sha256": "07bbc97c97cbcbc77b1020a322cacc41ebf6963d0dd1a246ddb2597f9eb74329",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-12",
+      "line": "4",
+      "camera_record_index": 2063,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "07bbc97c97cbcbc77b1020a322cacc41ebf6963d0dd1a246ddb2597f9eb74329",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-12",
+      "line": "5",
+      "camera_record_index": 2092,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "07bbc97c97cbcbc77b1020a322cacc41ebf6963d0dd1a246ddb2597f9eb74329",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-12",
+      "line": "6",
+      "camera_record_index": 2147,
+      "sector_id": "morro-conception",
+      "service_response_sha256": "95df7a31f7aeb38863222d58b862ec90819f3ee1e0a2e7c66e98a564152bd3d5",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-13",
+      "line": "10",
+      "camera_record_index": 2277,
+      "sector_id": "conception-ventura",
+      "service_response_sha256": "95df7a31f7aeb38863222d58b862ec90819f3ee1e0a2e7c66e98a564152bd3d5",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-13",
+      "line": "11",
+      "camera_record_index": 2315,
+      "sector_id": "conception-ventura",
+      "service_response_sha256": "95df7a31f7aeb38863222d58b862ec90819f3ee1e0a2e7c66e98a564152bd3d5",
+      "status": "ok",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 71,
+        "data_quality_of_10": 7.1
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-19",
+      "line": "56",
+      "camera_record_index": 1491,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-19",
+      "line": "59",
+      "camera_record_index": 1632,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-19",
+      "line": "60",
+      "camera_record_index": 1681,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "1270322f68c7af849a987bb3e769162fe414f47923e9bc05dff525a0ca6daa24",
+      "status": "ok",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 86,
+        "data_quality_of_10": 8.6
+      }
+    },
+    {
+      "cruise": "sw109sc",
+      "date": "2009-08-19",
+      "line": "61",
+      "camera_record_index": 1703,
+      "sector_id": "ventura-los-angeles",
+      "service_response_sha256": "66221e8e174cd72ec5b957d94f93a323717ceec83553456939d446260a6d3dd0",
+      "status": "ok",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 86,
+        "data_quality_of_10": 8.6
+      }
+    }
+  ],
+  "limitations": [
+    "The sampled camera record does not classify its whole transect or nearby unsampled water.",
+    "This 2017 composite is a 25 m synthesis of older, mixed-quality inputs, not a new 2026 survey or an independent measurement where it reuses USGS/NOAA sources.",
+    "Data quality is the source's 1\u201310 classification score, not SkipperCast fishing quality or a catch probability.",
+    "Historical camera position uncertainty is on the order of 10 m; a single 25 m composite cell may disagree at a boundary.",
+    "No fishing target, waypoint, drift or bottom-rock image may be published from this sample alone."
+  ],
+  "fishing_target": false,
+  "exportable": false
+}
