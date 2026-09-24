@@ -93,11 +93,15 @@ def inspect_file(path,survey_id):
                 'metadata_sha256':meta['metadata_sha256'] if meta else hashlib.sha256(raw.encode()).hexdigest()}
 
 
-def scan(inventory,products,cache,*,max_bytes=DEFAULT_MAX_BYTES,fetcher=download,max_workers=4):
+def scan(inventory,products,cache,*,max_bytes=DEFAULT_MAX_BYTES,fetcher=download,max_workers=4,
+         survey_ids=None):
     if inventory.get('scope')!='noaa-bag-head-inventory' or products.get('scope')!='noaa-survey-product-links':
         raise ValueError('Wrong NOAA source inventory scope')
     surveys={s['id']:s for s in products['surveys']}
-    selected=[r for r in inventory['files'] if r['status']=='ok' and r['bytes']<=max_bytes and 'MLLW' in r['url'].upper()]
+    selected=[r for r in inventory['files'] if r['status']=='ok' and r['bytes']<=max_bytes
+              and 'MLLW' in r['url'].upper() and (survey_ids is None or r['survey_id'] in survey_ids)]
+    if survey_ids is not None and set(survey_ids) != {row['survey_id'] for row in selected}:
+        raise ValueError('Requested survey has no accessible MLLW BAG within the selected bound')
     def one(row):
         url=row['url'];ident=row['survey_id']
         if ident not in surveys or url not in surveys[ident]['products']['bag']:
@@ -139,9 +143,13 @@ def main():
     for name in ('inventory','products','cache','output'):parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--max-bytes',type=int,default=DEFAULT_MAX_BYTES)
     parser.add_argument('--workers',type=int,default=4)
+    parser.add_argument('--survey-id',action='append',help='Review only these original survey IDs')
     args=parser.parse_args()
-    if not 1<=args.workers<=8 or not 1<=args.max_bytes<=100_000_000:raise ValueError('Unsupported native BAG scan bound')
-    result=scan(json.loads(args.inventory.read_text()),json.loads(args.products.read_text()),args.cache,max_bytes=args.max_bytes,max_workers=args.workers)
+    if not 1<=args.workers<=8 or not 1<=args.max_bytes<=200_000_000:raise ValueError('Unsupported native BAG scan bound')
+    if args.max_bytes>100_000_000 and not args.survey_id:
+        raise ValueError('Large native BAG review requires explicit --survey-id selection')
+    result=scan(json.loads(args.inventory.read_text()),json.loads(args.products.read_text()),args.cache,
+                max_bytes=args.max_bytes,max_workers=args.workers,survey_ids=args.survey_id)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
     temp.write_text(json.dumps(result,separators=(',',':'))+'\n')

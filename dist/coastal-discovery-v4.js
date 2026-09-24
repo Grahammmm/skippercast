@@ -40,7 +40,24 @@ export async function initCoastalDiscovery(catalog,coast) {
     note.innerHTML='Off Cape Mendocino, an optional <a href="https://doi.org/10.5066/P9U0SUGL" target="_blank" rel="noopener">USGS hard-seabed context layer ↗</a> is available in Map Options. Historical substrate is not a verified fish location or legal-depth clearance.';
     panel.append(note);
   }
+  if(coast.id==='southern'){
+    const islandNote=document.createElement('details');islandNote.className='guide-topic';
+    islandNote.innerHTML='<summary>Offshore island seabed review</summary><div id="island-native-review" class="small">Loading original-grid screening…</div>';
+    panel.querySelector('#sector-survey-details').after(islandNote);
+  }
   let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null,regularDepthData=null;
+  function showIslandReview(){
+    const box=panel.querySelector('#island-native-review');if(!box)return;
+    const names={'anacapa':'Anacapa','santa-cruz':'Santa Cruz','santa-rosa':'Santa Rosa','san-miguel':'San Miguel',
+      'santa-barbara-island':'Santa Barbara Island','catalina':'Santa Catalina','san-clemente':'San Clemente','san-nicolas':'San Nicolas'};
+    const variable=nativeDepthData?.offshore_islands||[],regular=regularDepthData?.offshore_islands||[];
+    if(!variable.length&&!regular.length){box.textContent='Original island-grid screening unavailable.';return;}
+    const byId=rows=>new Map(rows.map(row=>[row.sector_id,row]));const v=byId(variable),r=byId(regular);
+    box.innerHTML=`<p>These approximate island envelopes keep original NOAA depth-cell evidence out of mainland sector counts. They are not surveyed extents, target spots, legal clearance or fish forecasts.</p><ul class="survey-source-list">${Object.entries(names).map(([id,name])=>{
+      const fine=v.get(id)?.source_files_with_eligible_cells||0,grid=r.get(id)?.source_files_with_eligible_cells||0;
+      return `<li>${esc(name)} · ${fine} variable-grid and ${grid} regular-grid file(s) with depth/uncertainty-eligible cells</li>`;
+    }).join('')}</ul><p><a href="data/noaa-vr-native-depth-review.json" target="_blank" rel="noopener">Variable-grid source receipts ↗</a> · <a href="data/noaa-regular-native-depth-review.json" target="_blank" rel="noopener">Regular-grid source receipts ↗</a></p>`;
+  }
   const sourceSelector=document.createElement('select');
   sourceSelector.id='survey-sector-select';
   sourceSelector.setAttribute('aria-label','Choose a coastal sector for original survey sources');
@@ -82,14 +99,14 @@ export async function initCoastalDiscovery(catalog,coast) {
     const data=await response.json();
     if(data.scope!=='california-original-vr-native-depth-review'||data.status!=='ok'||data.survey_file_count!==data.files?.length
       ||data.sectors?.length!==sectorPacket.sectors.length||data.files.some(file=>file.status!=='ok'))throw Error('Incomplete native-grid review');
-    nativeDepthData=data;showSurveySources();
+    nativeDepthData=data;showSurveySources();showIslandReview();
   }).catch(()=>{/* Keep original survey catalog usable if the optional native review is unavailable. */});
   void fetch('data/noaa-regular-native-depth-review.json',{signal:AbortSignal.timeout(10000)}).then(async response=>{
     if(!response.ok)throw Error('Regular native-grid review unavailable');
     const data=await response.json();
     if(data.scope!=='california-original-regular-native-depth-review'||data.status!=='ok'||data.survey_file_count!==data.files?.length
       ||data.sectors?.length!==sectorPacket.sectors.length||data.files.some(file=>file.status!=='ok'))throw Error('Incomplete regular native-grid review');
-    regularDepthData=data;showSurveySources();
+    regularDepthData=data;showSurveySources();showIslandReview();
   }).catch(()=>{/* Keep original survey catalog usable if the optional native review is unavailable. */});
   const forecastPanel=document.getElementById('forecast-panel');
   document.getElementById('export-panel').innerHTML=`<h1>Fishing-plan export</h1><p>Only reviewed, surveyed fishing areas can be exported. Choose a detailed mapped area; discovery sectors and survey catalog footprints are not waypoints.</p>${links||'<p>This coast’s detailed fishing package is pending.</p>'}<a href="#map">Back to map</a>`;

@@ -19,7 +19,9 @@ from pyproj import CRS, Transformer
 import rasterio
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from skippercast.platform.bottom_targets import bag_metadata, cells_qualified, sha256, source_url_allowed
+from scripts.coastal_review_areas import load_island_review_areas
 
 
 def regular_audited_rows(audit):
@@ -30,15 +32,27 @@ def regular_audited_rows(audit):
             and max(row['overview_resolution_m']) <= 4]
 
 
-def count_sector_cells(lon, lat, measured, eligible, sectors):
+def count_sector_cells(lon, lat, measured, eligible, sectors, islands=(), island_counts=None):
     """Assign cell centers once; report valid data outside browse envelopes."""
     if not (lon.shape == lat.shape == measured.shape == eligible.shape):
         raise ValueError('Native coordinate and mask shapes differ')
     assigned = np.zeros(measured.shape, dtype=bool)
+    island_mask = np.zeros(measured.shape, dtype=bool)
+    for area in islands:
+        west, south, east, north = area['bounds']
+        inside = ((lon >= west) & (lon < east) & (lat >= south) & (lat < north)
+                  & measured & ~island_mask)
+        island_mask |= inside
+        if island_counts is not None and np.any(inside):
+            bucket = island_counts.setdefault(area['id'], {'measured_native_cells': 0,
+                'depth_uncertainty_eligible_cells': 0})
+            bucket['measured_native_cells'] += int(np.count_nonzero(inside))
+            bucket['depth_uncertainty_eligible_cells'] += int(np.count_nonzero(inside & eligible))
     counts = {}
     for sector in sectors:
         west, south, east, north = sector['bounds']
-        inside = ((lon >= west) & (lon < east) & (lat >= south) & (lat < north) & measured)
+        inside = ((lon >= west) & (lon < east) & (lat >= south) & (lat < north)
+                  & measured & ~island_mask)
         if np.any(inside & assigned):
             raise ValueError('Browse sector envelopes overlap over original cells')
         assigned |= inside
@@ -47,10 +61,10 @@ def count_sector_cells(lon, lat, measured, eligible, sectors):
         if valid_count:
             counts[sector['id']] = {'measured_native_cells': valid_count,
                                     'depth_uncertainty_eligible_cells': eligible_count}
-    return counts, int(np.count_nonzero(measured & ~assigned))
+    return counts, int(np.count_nonzero(measured & ~assigned & ~island_mask))
 
 
-def screen_file(record, sectors, cache):
+def screen_file(record, sectors, cache, islands=()):
     url = record['url']
     if not source_url_allowed(url):
         raise ValueError('Original NOAA BAG URL was not approved')
@@ -82,6 +96,7 @@ def screen_file(record, sectors, cache):
                   'depth_uncertainty_eligible_cells': 0,
                   'measured_outside_browse_sectors': 0, 'tracked_soundings': int(root['tracking_list'].size)}
         assigned = {}
+        island_counts = {}
         for _, window in raster.block_windows(1):
             depth_masked = raster.read(1, window=window, masked=True)
             depth = depth_masked.data
@@ -98,7 +113,8 @@ def screen_file(record, sectors, cache):
             rows = rows + int(window.row_off)
             xy = raster.transform * (cols + .5, rows + .5)
             lon, lat = to_geo.transform(xy[0], xy[1])
-            placed, outside = count_sector_cells(lon, lat, measured, eligible, sectors)
+            placed, outside = count_sector_cells(lon, lat, measured, eligible, sectors,
+                                                 islands, island_counts)
             totals['measured_native_cells'] += int(np.count_nonzero(measured))
             totals['depth_uncertainty_eligible_cells'] += int(np.count_nonzero(eligible))
             totals['measured_outside_browse_sectors'] += outside
@@ -109,10 +125,16 @@ def screen_file(record, sectors, cache):
                     bucket[key] += value
         if totals['overview_finite_elevation_cells'] != record['overview_valid_cells']:
             raise ValueError('Native valid cell count changed from original audit')
+        located = (sum(item['measured_native_cells'] for item in assigned.values())
+                   + sum(item['measured_native_cells'] for item in island_counts.values())
+                   + totals['measured_outside_browse_sectors'])
+        if located != totals['measured_native_cells']:
+            raise ValueError('Original native cells were lost or double-counted in review areas')
     return {'survey_id': record['survey_id'], 'bag_url': url, 'bag_sha256': record['file_sha256'],
             'metadata_sha256': record['metadata_sha256'], 'source_report_url': record['source_report_url'],
             'survey_dates': [record['survey_start'], record['survey_end']], 'status': 'ok',
-            'native_resolution_m': list(raster.res), 'counts': totals, 'sectors': assigned}
+            'native_resolution_m': list(raster.res), 'counts': totals,
+            'sectors': assigned, 'offshore_islands': island_counts}
 
 
 def summarize_by_sector(files, sectors):
@@ -141,6 +163,7 @@ def main():
     a = p.parse_args()
     audit = json.loads(a.audit.read_text())
     sectors = json.loads(a.sectors.read_text())['sectors']
+    islands = load_island_review_areas()
     if audit.get('scope') != 'noaa-original-bag-native-overview-audit' or len(sectors) < 19:
         raise ValueError('Wrong statewide BAG audit or incomplete sector inventory')
     selected = [r for r in regular_audited_rows(audit)
@@ -150,7 +173,7 @@ def main():
     files = []
     for record in selected:
         try:
-            result = screen_file(record, sectors, a.cache)
+            result = screen_file(record, sectors, a.cache, islands)
         except (OSError, ValueError, KeyError, TypeError) as error:
             result = {'survey_id': record['survey_id'], 'bag_url': record['url'],
                       'bag_sha256': record['file_sha256'], 'status': 'failed', 'issue': str(error)[:250]}
@@ -162,12 +185,16 @@ def main():
               'audit_collected_at': audit['collected_at'], 'upstream_audit_health': audit['health'],
               'status': 'degraded' if failed else 'ok', 'failed_survey_ids': failed,
               'survey_file_count': len(files),
-              'method': 'Original <=4 m regular BAG depth and uncertainty cells, transformed to WGS84 and assigned by cell center to one browse sector. MLLW/product-uncertainty metadata and original file digest checked.',
+              'method': 'Original <=4 m regular BAG depth and uncertainty cells, transformed to WGS84 and assigned by cell center to a separate approximate offshore-island review envelope first, otherwise to one mainland browse sector. MLLW/product-uncertainty metadata and original file digest checked.',
               'limitations': ['Depth and uncertainty alone are not hard substrate, fish habitat, legal clearance, safe navigation or fishing coordinates.',
                               'Counts include overlapping historical surveys and cannot be summed as unique seafloor coverage.',
-                              'Only audited MLLW files <=100 MB are included; larger, failed and unavailable files are gaps.',
+                              'Offshore-island review boxes are approximate organizational envelopes, not shorelines or surveyed footprints.',
+                              f"Only audited MLLW files <= {audit['max_bytes'] / 1_000_000:g} MB are included; larger, failed and unavailable files are gaps.",
                               'Descriptive reports, MPAs, federal exclusions, hazards, routes and local rules require separate review.'],
-              'sectors': summarize_by_sector(files, sectors), 'files': files}
+              'sectors': summarize_by_sector(files, sectors),
+              'offshore_islands': summarize_by_sector(
+                  [{**row, 'sectors': row.get('offshore_islands', {})} for row in files], islands),
+              'files': files}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     temp = a.output.with_suffix(a.output.suffix + '.tmp')
     temp.write_text(json.dumps(output, separators=(',', ':')) + '\n')

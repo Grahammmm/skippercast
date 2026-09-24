@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 
 from scripts.screen_vr_native_depth import native_counts, containing_sector, summarize_by_sector
+from scripts.coastal_review_areas import containing_island, load_island_review_areas
 
 
 class VariableResolutionNativeReviewTest(unittest.TestCase):
@@ -28,6 +29,11 @@ class VariableResolutionNativeReviewTest(unittest.TestCase):
         sectors = [{'id': 'a', 'bounds': [-124, 35, -123, 36]}]
         self.assertEqual(containing_sector(-123.5, 35.5, sectors), 'a')
         self.assertIsNone(containing_sector(-122, 35.5, sectors))
+
+    def test_channel_island_has_separate_review_envelope(self):
+        islands = load_island_review_areas()
+        self.assertEqual(containing_island(-119.05, 33.50, islands), 'santa-barbara-island')
+        self.assertIsNone(containing_island(-121.9, 36.6, islands))
 
     def test_sector_summary_keeps_empty_sectors_and_review_only_counts(self):
         sectors = [{'id': 'a'}, {'id': 'b'}]
