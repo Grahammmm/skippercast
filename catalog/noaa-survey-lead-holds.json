@@ -44,6 +44,22 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13084.html"
     },
     {
+      "survey_id": "H13201",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13201/DR/H13201_DR.pdf",
+      "report_sha256": "38dc803587535060c9bc433c0cce2390084419c655d19d508577caa2a021edab",
+      "reason": "The original 2018 Santa Barbara Island MLLW variable-resolution survey overlaps six historical hard-substrate footprints. A research-only 60–200 ft, 1–4 m native-cell, 1 m product-uncertainty and current MPA/GEA screen yielded four patches with a 4 m support erosion, including one B-grade patch. The report identifies incomplete nearshore coverage, several holidays, rock and kelp hazards, and dangerous wave exposure. A 50 m inward erosion removes enough unsupported-edge terrain that the former B patch falls to C; with 100 m it disappears. NOAA ENC Direct's charted danger snapshot is a separate screen, not a complete navigation clearance. Do not publish the trial coordinates as high-quality fishing grounds without a stronger, robust measured substrate patch, exact gap and chart review, and local rules/access verification.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13201.html"
+    },
+    {
+      "survey_id": "H13209",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13209/DR/H13209_DR.pdf",
+      "report_sha256": "399d0c8da5aca0b15a0428d48f2a4924b901221ea5b99286b24ffa2bb6b74b2e",
+      "reason": "The 2019 East Santa Cruz Channel original MLLW survey has 1,350,654 native cells in the historical-hard-habitat review area passing a research-only 60–200 ft, 1 m product-uncertainty and 50 m survey-support erosion screen. Only two candidate patches remain, both C (physical habitat scores 43 and 33, not catch probabilities). The report identifies an underwater rock with a 1.75 m least depth, two new kelp areas, a rocky acoustic-shadow holiday and a correction noting that charted features were present. Keep this survey out of public fishing-target promotion until exact feature/holiday locations, current ENC, stronger substrate evidence and local rules/access are reconciled.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13209.html"
+    },
+    {
       "survey_id": "H13322",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13322/DR/H13322_DR.pdf",

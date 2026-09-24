@@ -26,9 +26,9 @@ class QualifiedScopeTests(unittest.TestCase):
         holds = json.loads((project / "catalog/noaa-survey-lead-holds.json").read_text())
         held_ids = {row["survey_id"] for row in holds["holds"]}
         reviewed = json.loads((project / "regions/southern-california/bottom-sources.reviewed.json").read_text())
-        self.assertTrue({"H13322", "H13324", "H13325"}.issubset(held_ids))
+        self.assertTrue({"H13201", "H13209", "H13322", "H13324", "H13325"}.issubset(held_ids))
         self.assertTrue(held_ids.isdisjoint({row["survey_id"] for row in reviewed["sources"]}))
-        for survey_id in ("H13322", "H13324", "H13325"):
+        for survey_id in ("H13201", "H13209", "H13322", "H13324", "H13325"):
             url = f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/{survey_id}/BAG/{survey_id}_MB_VR_MLLW.bag"
             with self.subTest(survey_id=survey_id), self.assertRaisesRegex(ValueError, "held from fishing promotion"):
                 _require_unheld_original_source(url, held_ids)

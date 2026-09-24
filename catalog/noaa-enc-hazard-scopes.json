@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "provider": "NOAA ENC Direct to GIS",
+  "source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "scopes": [
+    {
+      "id": "santa-barbara-island",
+      "region_id": "southern-california",
+      "bounds": [-119.12, 33.33, -118.98, 33.54],
+      "output": "dist/regions/southern-california/enc-hazards-santa-barbara.geojson"
+    }
+  ]
+}

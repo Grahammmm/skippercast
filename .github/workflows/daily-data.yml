@@ -27,6 +27,7 @@ on:
       - "scripts/discover_usgs_doi_releases.py"
       - "scripts/audit_usgs_doi_metadata.py"
       - "scripts/collect_noaa_groundfish_areas.py"
+      - "scripts/refresh_enc_hazards.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -98,6 +99,9 @@ jobs:
         env:
           PYTHONPATH: src
         run: python scripts/triage_noaa_bag_files.py --discovery var/daily/survey-discovery.json --products var/daily/survey-products.json --output var/daily/bag-head-inventory.json --previous var/published/bag-head-inventory.json --max-age-days 30
+      - name: Refresh bounded NOAA ENC danger review
+        continue-on-error: true
+        run: python scripts/refresh_enc_hazards.py --scope santa-barbara-island --output var/daily/enc-hazards/santa-barbara-island.geojson
       - name: Discover USGS state-waters map-block products
         continue-on-error: true
         run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
@@ -118,6 +122,7 @@ jobs:
             if [ -f var/daily/survey-discovery.json ]; then cp var/daily/survey-discovery.json var/published/; fi
             if [ -f var/daily/survey-products.json ]; then cp var/daily/survey-products.json var/published/; fi
             if [ -f var/daily/bag-head-inventory.json ]; then cp var/daily/bag-head-inventory.json var/published/; fi
+            if [ -f var/daily/enc-hazards/santa-barbara-island.geojson ]; then mkdir -p var/published/enc-hazards; cp var/daily/enc-hazards/santa-barbara-island.geojson var/published/enc-hazards/; fi
             if [ -f var/daily/usgs-map-blocks.json ]; then cp var/daily/usgs-map-blocks.json var/published/; fi
             if [ -f var/daily/usgs-map-metadata.json ]; then cp var/daily/usgs-map-metadata.json var/published/; fi
             if [ -f var/daily/usgs-doi-releases.json ]; then cp var/daily/usgs-doi-releases.json var/published/; fi
@@ -144,6 +149,7 @@ jobs:
           if [ -f var/published/survey-discovery.json ]; then git -C var/published add survey-discovery.json; fi
           if [ -f var/published/survey-products.json ]; then git -C var/published add survey-products.json; fi
           if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
+          if [ -f var/published/enc-hazards/santa-barbara-island.geojson ]; then git -C var/published add enc-hazards/santa-barbara-island.geojson; fi
           if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
           if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
           if [ -f var/published/usgs-doi-releases.json ]; then git -C var/published add usgs-doi-releases.json; fi
@@ -235,6 +241,23 @@ jobs:
       - name: Report regulation coverage in every region
         if: always()
         run: python scripts/report_regulations.py --root var/daily
+      - name: Report NOAA ENC danger-source coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path('var/daily/enc-hazards/santa-barbara-island.geojson')
+          if not path.is_file():
+              raise SystemExit('NOAA ENC danger-layer refresh produced no snapshot')
+          data = json.loads(path.read_text())
+          if (data.get('status') != 'charted-danger-screen-only'
+                  or data.get('scope_id') != 'santa-barbara-island'
+                  or len(data.get('query_receipts', [])) != 18):
+              raise SystemExit('NOAA ENC danger-layer review is incomplete')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(f"\n## NOAA ENC danger review\n{len(data['features'])} charted features across 18 complete layer queries; retrieved {data['checked_at']}. This is not navigation clearance.\n")
+          PY
       - name: Report NOAA survey discovery coverage
         if: always()
         run: |
