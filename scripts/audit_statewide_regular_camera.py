@@ -46,12 +46,35 @@ def candidate_pairs(audit, positions):
     return pairs
 
 
-def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache, *, limit=None):
+def reviewed_hazards(catalog, report_cache, survey_id, report_url):
+    """Link a lead only to the exact original report inspected for hazards."""
+    matches = [item for item in catalog["surveys"] if item["survey_id"] == survey_id]
+    if len(matches) > 1:
+        raise ValueError(f"Duplicate historical hazard review: {survey_id}")
+    if not matches:
+        return None
+    item = matches[0]
+    if item["report_url"] != report_url:
+        raise ValueError(f"Historical hazard review refers to another report: {survey_id}")
+    original = report_cache / f"{survey_id}.pdf"
+    if not original.is_file():
+        return None
+    actual = hashlib.sha256(original.read_bytes()).hexdigest()
+    if actual != item["report_sha256"]:
+        raise ValueError(f"Original report changed since historical hazard review: {survey_id}")
+    return {"report_sha256": actual, "report_section": item["report_section"],
+            "historical_hazard_ids": [hazard["id"] for hazard in item["hazards"]],
+            "scope": "historical survey hazards only; no current chart or route clearance"}
+
+
+def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache, *, hazard_catalog=None, report_cache=None, limit=None):
     positions = rocky_camera_positions(manifest, video_cache)
     pairs = candidate_pairs(source, positions)
     if limit is not None:
         pairs = pairs[:limit]
     held = {item["survey_id"]: item["reason"] for item in holds["holds"]}
+    hazard_catalog = hazard_catalog or {"surveys": []}
+    report_cache = report_cache or Path("var/noaa-report-cache")
     rows = []
     failures = []
     for record, cruise, camera_count in pairs:
@@ -69,6 +92,8 @@ def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache
             continue
         latitudes = [g["camera_position_bounds"][1:4:2] for g in result["transects"]]
         midpoint = sum(sum(pair) / 2 for pair in latitudes) / len(latitudes) if latitudes else None
+        hazard_review = reviewed_hazards(hazard_catalog, report_cache,
+                                         record["survey_id"], record.get("source_report_url"))
         rows.append({"survey_id": record["survey_id"], "bag_url": record["url"],
                      "bag_sha256": result["bag_sha256"], "cruise": cruise,
                      "camera_archive_url": result["camera_archive_url"],
@@ -78,7 +103,8 @@ def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache
                      "native_cell_m": result["native_cell_m"],
                      "counts": result["counts"], "transects": result["transects"],
                      "survey_report_url": record.get("source_report_url"),
-                     "report_hazard_review_complete": False,
+                     "report_hazard_review_complete": hazard_review is not None,
+                     "historical_hazard_review": hazard_review,
                      "survey_hold": held.get(record["survey_id"]),
                      "camera_species_fields": result["camera_species_fields"]})
     rows.sort(key=lambda row: (row["sector_id"] or "", row["survey_id"],
@@ -112,6 +138,8 @@ def main():
     p.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     p.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     p.add_argument("--holds", type=Path, default=Path("catalog/noaa-survey-lead-holds.json"))
+    p.add_argument("--hazards", type=Path, default=Path("catalog/noaa-survey-hazards.json"))
+    p.add_argument("--report-cache", type=Path, default=Path("var/noaa-report-cache"))
     p.add_argument("--bag-cache", type=Path, default=Path("var/noaa-native-cache"))
     p.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))
     p.add_argument("--limit", type=int, help="Bounded diagnostic run; omit for a complete review")
@@ -119,7 +147,9 @@ def main():
     a = p.parse_args()
     result = audit_all(json.loads(a.audit.read_text()), json.loads(a.manifest.read_text()),
                        json.loads(a.mpas.read_text()), json.loads(a.sectors.read_text())["sectors"],
-                       json.loads(a.holds.read_text()), a.bag_cache, a.video_cache, limit=a.limit)
+                       json.loads(a.holds.read_text()), a.bag_cache, a.video_cache,
+                       hazard_catalog=json.loads(a.hazards.read_text()), report_cache=a.report_cache,
+                       limit=a.limit)
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2) + "\n")
     print(result["candidate_pairs_with_actual_rocky_camera_positions"], "pairs;",

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "statewide-original-camera-regular-bag-discovery-review",
-  "reviewed_at": "2026-09-24T11:40:31+00:00",
+  "reviewed_at": "2026-09-24T19:06:39+00:00",
   "cdfw_mpa_source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
   "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
   "cdfw_mpa_geojson_sha256": "cbbfb5b60813a9e36e067db8f15516d6381aa515e0b1faab2b5f106448b2e95f",
@@ -66,6 +66,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00507/DR/F00507.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -92,6 +93,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/DR/F00513.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -118,6 +120,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00513/DR/F00513.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -146,6 +149,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -173,6 +177,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -200,6 +205,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -227,6 +233,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -252,7 +259,17 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+        "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11\u201312",
+        "historical_hazard_ids": [
+          "H11732-rock-two-fathoms-five-feet-or-shoaler",
+          "H11732-rock-four-fathoms-or-shoaler",
+          "H11732-rock-four-fathoms-four-feet"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -278,7 +295,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+        "report_section": "Dangers to Navigation and final-tide correction, pages 11\u201312; north-border feature is documented by H11732",
+        "historical_hazard_ids": [
+          "H11733-rock-four-fathoms-or-shoaler",
+          "H11732-north-border-rock"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -305,7 +331,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+        "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19\u201321",
+        "historical_hazard_ids": [
+          "H11734-final-hcell-dton-16m",
+          "H11734-charted-wreck-pa"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -332,7 +367,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+        "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19\u201321",
+        "historical_hazard_ids": [
+          "H11734-final-hcell-dton-16m",
+          "H11734-charted-wreck-pa"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -358,7 +402,15 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+        "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+        "historical_hazard_ids": [
+          "H11735-final-hcell-dton-53ft"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -384,7 +436,15 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+        "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+        "historical_hazard_ids": [
+          "H11735-final-hcell-dton-53ft"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -410,7 +470,15 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+        "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+        "historical_hazard_ids": [
+          "H11735-final-hcell-dton-53ft"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -436,7 +504,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -464,7 +541,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -490,7 +576,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -518,6 +613,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -545,6 +641,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -571,6 +668,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/DR/H11878.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -597,6 +695,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11878/DR/H11878.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -624,6 +723,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/DR/H11879.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -650,6 +750,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11879/DR/H11879.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -677,6 +778,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -704,6 +806,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -731,6 +834,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11880/DR/H11880.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -757,6 +861,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -783,6 +888,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -809,6 +915,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -836,6 +943,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -863,6 +971,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -888,7 +997,17 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -914,7 +1033,17 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -940,7 +1069,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -967,7 +1107,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -993,7 +1144,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1020,7 +1182,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1047,7 +1220,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1074,7 +1258,18 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1101,6 +1296,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1126,7 +1322,13 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "b0f4610042d6931d713b9c9747f022610d73e00935300b60b5938c9383c31fd2",
+        "report_section": "Features, AWOIS investigations and final HCell revisions, PDF pages 17 and 20\u201322",
+        "historical_hazard_ids": [],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1152,7 +1354,16 @@
       },
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",
+        "report_section": "Final HCell revision 23 and Danger to Navigation report, PDF pages 24\u201329",
+        "historical_hazard_ids": [
+          "H12111-final-hcell-rock-2m",
+          "H12111-final-hcell-rock-3m22"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1179,6 +1390,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -1206,6 +1418,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -1232,6 +1445,7 @@
       "transects": [],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12113/DR/H12113.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -1286,6 +1500,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1368,6 +1583,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1476,6 +1692,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1581,6 +1798,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1712,6 +1930,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1765,7 +1984,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+        "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11\u201312",
+        "historical_hazard_ids": [
+          "H11732-rock-two-fathoms-five-feet-or-shoaler",
+          "H11732-rock-four-fathoms-or-shoaler",
+          "H11732-rock-four-fathoms-four-feet"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1820,7 +2049,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+        "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11\u201312",
+        "historical_hazard_ids": [
+          "H11732-rock-two-fathoms-five-feet-or-shoaler",
+          "H11732-rock-four-fathoms-or-shoaler",
+          "H11732-rock-four-fathoms-four-feet"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1874,7 +2113,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+        "report_section": "Dangers to Navigation and final-tide correction, pages 11\u201312; north-border feature is documented by H11732",
+        "historical_hazard_ids": [
+          "H11733-rock-four-fathoms-or-shoaler",
+          "H11732-north-border-rock"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1928,7 +2176,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+        "report_section": "Dangers to Navigation and final-tide correction, pages 11\u201312; north-border feature is documented by H11732",
+        "historical_hazard_ids": [
+          "H11733-rock-four-fathoms-or-shoaler",
+          "H11732-north-border-rock"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -1984,7 +2241,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+        "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19\u201321",
+        "historical_hazard_ids": [
+          "H11734-final-hcell-dton-16m",
+          "H11734-charted-wreck-pa"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2063,7 +2329,15 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+        "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+        "historical_hazard_ids": [
+          "H11735-final-hcell-dton-53ft"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2322,7 +2596,15 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+        "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+        "historical_hazard_ids": [
+          "H11735-final-hcell-dton-53ft"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2455,7 +2737,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -2537,7 +2828,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -2591,7 +2891,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2671,7 +2980,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": false,
@@ -2751,7 +3069,16 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+        "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+        "historical_hazard_ids": [
+          "H11738-rock-four-fathoms-four-feet",
+          "H11738-shoal-four-fathoms-five-feet-at-coverage-edge"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2806,7 +3133,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2860,7 +3197,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2916,7 +3263,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -2970,7 +3327,17 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+        "historical_hazard_ids": [
+          "H11951-new-wreck",
+          "H11951-retained-wellheads-west",
+          "H11951-retained-wellhead-east"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3026,7 +3393,13 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
+        "report_section": "Descriptive report PDF pages 16 and 19\u201323; final office review notes 11 and 13 on page 22",
+        "historical_hazard_ids": [],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": "The original 1.5 m MLLW BAG and USGS c109nc camera log overlap in 29 measured 39.43\u201343.89 m windows on one July 28, 2009 transect, including five historical rockfish observations, but these are not 29 independent reefs. The final H11981 office review (PDF page 22, notes 11 and 13) says additional survey holidays surround charted rocks where least depth was not obtained and some survey lines used the wrong VDatum model (NAD83-to-NAVD88 rather than NAD83-to-MLLW), with visible offsets considered within specifications. The report does not identify those lines here, so the candidate cannot be assumed unaffected. Hold fishing promotion until exact affected-line and holiday footprints are checked against the original cells and current ENC, then local substrate, complete MPA/access geometry, Northern rules and route are reviewed.",
       "camera_species_fields": {
         "rockfish": true,
@@ -3081,7 +3454,18 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3136,7 +3520,18 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3216,7 +3611,18 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+        "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+        "historical_hazard_ids": [
+          "H11952-uncharted-wreck",
+          "H11952-retained-well-50656",
+          "H11952-retained-well-50670",
+          "H11952-cojo-anchorage-moorings"
+        ],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3271,7 +3677,13 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+        "report_section": "Descriptive report page 15 and final HCell review page 20",
+        "historical_hazard_ids": [],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3327,7 +3739,13 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+        "report_section": "Descriptive report page 15 and final HCell review page 20",
+        "historical_hazard_ids": [],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3382,7 +3800,13 @@
         }
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
-      "report_hazard_review_complete": false,
+      "report_hazard_review_complete": true,
+      "historical_hazard_review": {
+        "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+        "report_section": "Descriptive report page 15 and final HCell review page 20",
+        "historical_hazard_ids": [],
+        "scope": "historical survey hazards only; no current chart or route clearance"
+      },
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3462,6 +3886,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3544,6 +3969,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3624,6 +4050,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11883/DR/H11883.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3678,6 +4105,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3757,6 +4185,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
@@ -3837,6 +4266,7 @@
       ],
       "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11891/DR/H11891.pdf",
       "report_hazard_review_complete": false,
+      "historical_hazard_review": null,
       "survey_hold": null,
       "camera_species_fields": {
         "rockfish": true,
