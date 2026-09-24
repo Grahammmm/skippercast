@@ -25,9 +25,11 @@ def publish(region_id,root=REPO):
     # Only previously compiler-owned qualified views may be superseded.
     owned={t['id'] for t in old_atlas['targets'] if t.get('qualification',{}).get('policy')==manifest['transformation_version']}
     index['views']={k:v for k,v in index['views'].items() if k not in owned or k in fragment['views']}
+    # Validate the complete proposed state before replacing either public asset.
+    # A failed source/closure review must leave the current atlas intact.
+    result=validate_qualified_scope(region,payload['atlas.json'],root,bottom_index=index)
     atomic_json(within(root/'dist',region['assets']['atlas']),payload['atlas.json'])
     atomic_json(within(root/'dist',region['assets']['bottom_index']),index)
-    result=validate_qualified_scope(region,payload['atlas.json'],root)
     return result
 
 if __name__=='__main__':

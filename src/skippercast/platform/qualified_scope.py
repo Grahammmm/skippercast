@@ -202,17 +202,17 @@ def qualified_subset_satisfies(report, qualification):
             and set(gate["gaps"]) <= {"bathymetry", "substrate"})
 
 
-def validate_qualified_scope(region, atlas, root):
+def validate_qualified_scope(region, atlas, root, *, bottom_index=None):
     """Return limited readiness, or fail closed on an inconsistent release."""
     if not region.get("assets", {}).get("target_qualification"):
         return None
     try:
-        return _validate(region, atlas, Path(root))
+        return _validate(region, atlas, Path(root), bottom_index=bottom_index)
     except (KeyError, TypeError, AttributeError, IndexError) as exc:
         raise ValueError("Incomplete or malformed qualified subset release") from exc
 
 
-def _validate(region, atlas, root):
+def _validate(region, atlas, root, *, bottom_index=None):
     ident = region["id"]
     asset = region["assets"]["target_qualification"]
     _require(asset.startswith(f"regions/{ident}/"), "Qualification must belong to its region")
@@ -316,7 +316,7 @@ def _validate(region, atlas, root):
     _require(targets and set(views["views"]) == set(targets), "Missing or extra qualified bottom views")
     for key, count in (("target_count", len(targets)), ("area_count", len(areas)), ("bottom_views", len(targets))):
         _require(type(quality.get(key)) is int and quality[key] == count, "Inconsistent qualified subset count")
-    index = read_json(within(root / "dist", region["assets"]["bottom_index"]))
+    index = bottom_index if bottom_index is not None else read_json(within(root / "dist", region["assets"]["bottom_index"]))
     _identity(index, ident, "published bottom index")
     used_areas = set()
     for target_id, target in targets.items():
