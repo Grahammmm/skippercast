@@ -39,6 +39,31 @@ class NativeSectorLeadsTest(unittest.TestCase):
         self.assertEqual(row['variable_resolution_4m_refinement_bboxes'], 1)
         self.assertEqual(row['not_in_sector_bbox_count'], 1)
 
+    def test_reviewed_harbor_hold_is_counted_but_not_promotable(self):
+        audit = {'scope': 'noaa-original-bag-native-overview-audit', 'collected_at': '2026-09-23',
+                 'max_bytes': 100000000, 'file_count': 1, 'inspected_count': 1,
+                 'health': {'status': 'ok', 'issues': []}, 'files': [
+                     {'survey_id': 'F00562', 'url': 'https://example.org/harbor.bag', 'status': 'ok',
+                      'raster_bounds_wgs84': [-124.3, 41.7, -124.1, 41.8],
+                      'metadata_status': 'mllw-product-uncertainty-reviewed-by-adapter',
+                      'overview_resolution_m': [1, 1], 'variable_refinement_records': 0}]}
+        discovery = {'scope': 'noaa-bag-survey-discovery', 'collected_at': '2026-09-23',
+                     'sectors': [{'sector_id': 'del-norte', 'status': 'ok',
+                                  'request_url': 'https://example.org/query?geometry=-124.5%2C41.5%2C-124%2C42',
+                                  'surveys': [{'id': 'F00562'}]}]}
+        sectors = {'sectors': [{'id': 'del-norte', 'name': 'Del Norte', 'coast': 'northern'}]}
+        overlap = {'scope': 'statewide-native-depth-substrate-overlap-leads',
+                   'leads': [{'survey_id': 'F00562', 'url': 'https://example.org/harbor.bag',
+                              'source_report_url': 'https://data.ngdc.noaa.gov/report.pdf'}]}
+        holds = {'schema_version': 1, 'scope': 'reviewed-noaa-survey-fishing-lead-holds',
+                 'holds': [{'survey_id': 'F00562', 'disposition': 'withhold_from_fishing_promotion',
+                            'reason': 'Original report identifies uncharted approach rocks.',
+                            'report_url': 'https://data.ngdc.noaa.gov/report.pdf', 'report_sha256': 'a'*64}]}
+        row = build(audit, discovery, sectors, overlap, holds)['sectors'][0]
+        self.assertEqual(row['substrate_overlap_screen_bboxes'], 1)
+        self.assertEqual(row['held_survey_ids'], ['F00562'])
+        self.assertEqual(row['eligible_for_native_substrate_review_bboxes'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

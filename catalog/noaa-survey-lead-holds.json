@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "scope": "reviewed-noaa-survey-fishing-lead-holds",
+  "reviewed_at": "2026-09-23",
+  "holds": [
+    {
+      "survey_id": "F00562",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00562/DR/F00562.pdf",
+      "report_sha256": "d3918c40678662bf91b52ecf05cdb364dd0e34a69132c37845e1cd8acdc036e5",
+      "reason": "This is a 2008 Crescent City harbor and approach survey. Its descriptive report identifies significant channel shoaling, numerous uncharted rocks along the southern offshore edge, and incomplete full-bottom coverage of the approach. The five eligible 4 m screen cells overlapping a predicted-hard polygon (about 80 square meters) cannot establish a natural fishing reef or a safe approach. Keep the survey for harbor-source review; do not promote it to a fishing target without a current chart, site-specific original-cell review and separate substrate evidence.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00562.html"
+    }
+  ]
+}
