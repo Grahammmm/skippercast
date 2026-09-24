@@ -156,7 +156,7 @@ export async function initCoastalDiscovery(catalog,coast) {
       statewideShapes=data.features.map(f=>{
         const p=f.properties;
         const shape=L.geoJSON(f,{pane:'statewideHistoricalSeabed',style:{color:'#8b612e',weight:1,fillColor:'#d7a35e',fillOpacity:.24}})
-          .bindPopup(`<strong>Historical hard, rugged seabed</strong><p>${esc(p.block_id)} · USGS ${esc(p.source_year)} · generalized 20 m view. No fishing target, legal-depth clearance, catch report or navigation accuracy.</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original USGS metadata ↗</a>`);
+          .bindPopup(`<strong>Historical hard, rugged seabed</strong><p>${esc(p.block_id||p.release_id)} · USGS ${esc(p.source_year)} · generalized 20 m view. No fishing target, legal-depth clearance, catch report or navigation accuracy.</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original USGS metadata ↗</a>`);
         return {shape,bounds:shape.getBounds()};
       });
       statewideLoaded=true;statewideContext.addTo(map);drawStatewideContext();
@@ -164,18 +164,19 @@ export async function initCoastalDiscovery(catalog,coast) {
       statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
     }catch(error){statewideCheck.checked=false;statewideNote.textContent=error.message+' · consult the original USGS catalog.';}
   });
-  if(['san-francisco','central','southern'].includes(coast.id)){
+  if(['northern','san-francisco','central','southern'].includes(coast.id)){
+    const northern=coast.id==='northern';
     const pointConception=coast.id==='central';
     const gaviota=coast.id==='southern';
-    const nativePane=pointConception?'pointConceptionNativeHard':gaviota?'gaviotaNativeHard':'sfNativeHard';
-    const nativeFile=pointConception?'point-conception-native-hard-context.geojson':gaviota?'gaviota-native-hard-context.geojson':'sf-native-hard-context.geojson';
+    const nativePane=northern?'capeNativeHard':pointConception?'pointConceptionNativeHard':gaviota?'gaviotaNativeHard':'sfNativeHard';
+    const nativeFile=northern?'cape-mendocino-native-hard-context.geojson':pointConception?'point-conception-native-hard-context.geojson':gaviota?'gaviota-native-hard-context.geojson':'sf-native-hard-context.geojson';
     const nativeLayer=L.layerGroup();map.createPane(nativePane).style.zIndex=426;
     const nativeLabel=document.createElement('label');nativeLabel.className='map-layer-option';
     const nativeCheck=document.createElement('input');nativeCheck.type='checkbox';
-    const nativeTitle=document.createElement('span');nativeTitle.textContent=pointConception?'Point Conception · surveyed hard bottom':gaviota?'Cojo–Gaviota · surveyed hard bottom':'Bodega–Bolinas · surveyed hard bottom';
+    const nativeTitle=document.createElement('span');nativeTitle.textContent=northern?'Cape Mendocino · screened hard bottom':pointConception?'Point Conception · surveyed hard bottom':gaviota?'Cojo–Gaviota · surveyed hard bottom':'Bodega–Bolinas · surveyed hard bottom';
     nativeLabel.append(nativeCheck,nativeTitle);body.append(nativeLabel);
     const nativeNote=document.createElement('p');nativeNote.className='small';
-    nativeNote.textContent='Optional historical NOAA 1–2 m depth and USGS hard-seabed intersection. Research context only; not a fishing target, current legal clearance or navigation chart.'+(pointConception?' Check Point Conception military danger-zone notices before travel.':'');
+    nativeNote.textContent='Optional historical NOAA native-depth and USGS hard-seabed intersection. Research context only; not a fishing target, current legal clearance or navigation chart.'+(pointConception?' Check Point Conception military danger-zone notices before travel.':'');
     body.append(nativeNote);
     let nativeLoaded=false,nativeShapes=[];
     function drawNative(){if(!nativeCheck.checked||!nativeLoaded)return;
@@ -200,8 +201,9 @@ export async function initCoastalDiscovery(catalog,coast) {
             ||f.properties?.depth_qualified_for_target!==false))throw Error('Unreviewed original-cell layer');
         nativeShapes=data.features.map(f=>{
           const p=f.properties;
+          const depthText=northern?`original cells screened to ${esc(p.depth_screen_ft.join('–'))} ft MLLW planning range; no polygon-specific depth claim`:`source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW`;
           const shape=L.geoJSON(f,{pane:nativePane,style:{color:'#396a75',weight:1.4,fillColor:'#70aab4',fillOpacity:.22}})
-            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p><p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
+            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · ${depthText} · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p><p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
           return {shape,bounds:shape.getBounds()};
         });
         nativeLoaded=true;nativeLayer.addTo(map);drawNative();

@@ -61,7 +61,7 @@ def exclusions(bag,horizontal,source_bounds_wgs84,mpas,federal,hazards,report_ca
     return unary_union(shapes) if shapes else None,review
 
 
-def screen(bag,source,metadata,bag_cache,usgs_cache,mpas,federal,hazards,report_cache,*,limit_ft=200):
+def screen(bag,source,metadata,bag_cache,usgs_cache,mpas,federal,hazards,report_cache,*,limit_ft=200,mask_callback=None):
     if (bag.get('status')!='ok' or bag.get('metadata_status')!='mllw-product-uncertainty-reviewed-by-adapter'
             or bag.get('refinement_grids_at_most_4m',0)<=0):
         raise ValueError('Original NOAA fine VR BAG is missing or metadata-unreviewed')
@@ -158,6 +158,8 @@ def screen(bag,source,metadata,bag_cache,usgs_cache,mpas,federal,hazards,report_
                 kept=int(retained.sum())
                 totals['joined_cells_after_mpa_gea_historical_dton']+=kept
                 totals['fine_supergrids_after_exclusions']+=kept>0
+                if kept and mask_callback is not None:
+                    mask_callback(retained, transform, horizontal)
             if counter%5000==0:print(ident,'screened',counter,'/',len(indices),flush=True)
         return {'schema_version':1,'scope':'original-vr-noaa-usgs-hard-depth-cell-screen',
                 'screened_at':datetime.now(timezone.utc).isoformat(),

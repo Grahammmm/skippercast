@@ -62,6 +62,19 @@ test('Cape Mendocino native evidence is a held source review, never a fishing ta
   assert.ok(screen.counts.joined_cells_after_mpa_gea_historical_dton>0);
   assert.ok(screen.counts.joined_cells_after_mpa_gea_historical_dton<screen.counts.joined_hard_depth_cells);
   assert.ok(screen.joined_depth_ft_range[0]>=25 && screen.joined_depth_ft_range[1]<=200);
+  const context=JSON.parse(fs.readFileSync(new URL('../dist/data/cape-mendocino-native-hard-context.geojson',import.meta.url)));
+  assert.equal(context.scope,'northern-native-noaa-usgs-hard-bottom-context');
+  assert.equal(context.coast_id,'northern');
+  assert.equal(context.historical_hazards_screened,11);
+  assert.deepEqual(context.source_screen_counts,screen.counts);
+  assert.ok(context.features.length>100 && context.features.length<500);
+  assert.ok(context.features.every(f=>f.properties.survey_id==='H11975' &&
+    f.properties.fishing_target===false && f.properties.exportable===false &&
+    f.properties.legal_clearance===false && f.properties.fish_confirmed===false &&
+    f.properties.depth_qualified_for_target===false &&
+    f.properties.depth_range_kind==='screened-policy-not-local-depth-range' &&
+    f.properties.depth_screen_ft[1]===200 &&
+    f.properties.noaa_bag_sha256===screen.bag_sha256));
 });
 test('Point Conception original-cell layer cannot become fishing or export coordinates',()=>{
   const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-context.geojson',import.meta.url)));
