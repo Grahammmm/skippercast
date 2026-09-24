@@ -205,6 +205,27 @@ jobs:
           python scripts/audit_usgs_video_observations.py
           --download-missing
           --output var/review/usgs-video-observation-audit.json
+      - name: Refresh bounded La Jolla chart-danger evidence
+        run: >-
+          python scripts/refresh_enc_hazards.py
+          --scope la-jolla-h11876-camera-context
+          --output var/review/enc-hazards-la-jolla-h11876.geojson
+      - name: Retrieve reviewed original H11876 descriptive report
+        run: |
+          mkdir -p var/noaa-report-cache
+          curl --fail --location --silent --show-error --max-time 45 \
+            https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf \
+            --output var/noaa-report-cache/H11876.pdf
+      - name: Cross-check La Jolla original camera and charted seabed source lead
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_original_camera_chart_lead.py
+          --survey-id H11876
+          --bag-url https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag
+          --enc var/review/enc-hazards-la-jolla-h11876.geojson
+          --mpas var/published/latest.json
+          --output var/review/h11876-la-jolla-camera-chart-review.json
       - name: Check NOAA composite induration against pinned original camera records
         env:
           PYTHONPATH: src:.

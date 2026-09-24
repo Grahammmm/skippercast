@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "scope": "original-camera-chart-mpa-source-lead",
+  "reviewed_at": "2026-09-24T22:19:38.961602+00:00",
+  "survey_id": "H11876",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
+  "original_bag_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
+  "original_camera_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+  "original_camera_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+  "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+  "survey_report_sha256": "a34335c6bef67de0f1f4d1bb1d4782d2159719e5dbe933c9d8aab607795b0cfc",
+  "survey_report_interpretation": "The 2008 Pacific Beach survey and final-office review report no new dangers to navigation, but note historically displaced canyon soundings and one charted 20-fathom sounding recommended for removal after full coverage. The HCell generalized twelve survey rocky-seabed areas to four and retained two additional areas. The HCell rock features and 2011 camera windows are historical habitat evidence, not an exact present reef edge or safe route. No current ENC, MPA, date-specific fishing rule or fish-presence clearance follows from this report.",
+  "survey_fishing_promotion_hold": "Eleven 2011 rocky USGS camera observations pass the original 2008 H11876 2 m MLLW depth and uncertainty neighborhood screen near La Jolla. Two camera windows show historical rockfish, but these are correlated transect observations, not current catch data. The southern transect comes within 60 m of generalized charted rock symbols; the northern transect is over 1 km from one. NOAA's HCell describes generalized rocky seabed areas, not a precise current target polygon. A bounded 18-layer ENC danger query returned zero features, which does not certify a safe approach. The MPA geometry is a dated snapshot, and Southern California date/method rules and full route remain unchecked for a candidate trip. Keep this research lead out of fishing targets and exports until exact substrate footprint, chart, access and rules are reviewed.",
+  "enc_danger_receipt_checked_at": "2026-09-24T22:13:44.535871+00:00",
+  "enc_danger_queried_layers": 18,
+  "enc_danger_features_in_bounded_scope": 0,
+  "charted_seabed_point_receipts": [
+    {
+      "service": "enc_harbour",
+      "layer": "Seabed_Area_point",
+      "layer_id": 71,
+      "count": 0,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/71/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/71/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+      "metadata_sha256": "e772b15b9e0557496aaf68a47b24090b6bac07ab4f2d6f324325535a9d4d8f2e"
+    },
+    {
+      "service": "enc_approach",
+      "layer": "Seabed_Area_point",
+      "layer_id": 75,
+      "count": 22,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer/75/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "bd067fc23d73cdd4d33068cde59fdb859d185e3ebdcfa796a120af35c24d27f3",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer/75/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "6888fa9cb7a589f27e3f2862f3fed2ba862ef1485d67c3846a3e7e7cc9995afd",
+      "metadata_sha256": "bc097404d58ac0ba640f81041349f49c42505323b76bf4c228744401efc7eaea"
+    },
+    {
+      "service": "enc_coastal",
+      "layer": "Seabed_Area_point",
+      "layer_id": 56,
+      "count": 12,
+      "count_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/56/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "count_sha256": "8a5c7f0a249309a0a490436246d7e4c75abc97488ad2da0c6e85a517ac13cdd2",
+      "data_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/56/query?where=1%3D1&geometry=-117.35%2C32.77%2C-117.3%2C32.85&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326&f=geojson",
+      "data_sha256": "d4604b16485764b18a9b48d266c48f4768a821314c57a039a8e9cc8f73560be3",
+      "metadata_sha256": "1a711baf61ae1a153df18f69f76cd5fb1eee684595182df768ebecc1f7be7c0c"
+    }
+  ],
+  "charted_seabed_point_count_by_nature": {
+    "rock": 22,
+    "mud": 8,
+    "sand": 2,
+    "sand,gravel": 2
+  },
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "transects": [
+    {
+      "date": "2011-08-31",
+      "line": "119",
+      "historical_rocky_camera_windows": 8,
+      "historical_rockfish_positive_windows": 2,
+      "bottom_classes": {
+        "rock": 3,
+        "boulder": 5
+      },
+      "measured_depth_m_mllw_range": [
+        50.17,
+        57.76
+      ],
+      "product_uncertainty_m_range": [
+        0.253,
+        0.461
+      ],
+      "camera_position_bounds": [
+        -117.326735,
+        32.831507,
+        -117.320646,
+        32.832161
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        1021.5,
+        1300.4
+      ],
+      "nearest_cdfw_mpa_boundary_m_min": 585.8,
+      "within_100m_mpa_review_buffer": 0
+    },
+    {
+      "date": "2011-09-02",
+      "line": "137",
+      "historical_rocky_camera_windows": 3,
+      "historical_rockfish_positive_windows": 0,
+      "bottom_classes": {
+        "rock": 2,
+        "cobble": 1
+      },
+      "measured_depth_m_mllw_range": [
+        53.12,
+        55.24
+      ],
+      "product_uncertainty_m_range": [
+        0.266,
+        0.441
+      ],
+      "camera_position_bounds": [
+        -117.317454,
+        32.791436,
+        -117.316712,
+        32.792164
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        59.5,
+        159.1
+      ],
+      "nearest_cdfw_mpa_boundary_m_min": 767.6,
+      "within_100m_mpa_review_buffer": 0
+    }
+  ],
+  "historical_camera_windows": 11,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Charted seabed symbols are generalized, dated source observations; a nearby symbol does not delineate the camera-observed patch.",
+    "Selected ENC danger classes returning zero do not certify safe navigation or an approach route.",
+    "Historical camera rockfish codes are observations, not catch rates or present fish presence.",
+    "The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.",
+    "No fishing coordinate, rating, plan or export is approved by this source-lead review."
+  ]
+}

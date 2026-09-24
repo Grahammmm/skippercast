@@ -41,6 +41,13 @@
       "bounds": [-120.43, 34.41, -120.27, 34.47],
       "research_only": true,
       "output": "var/review/enc-hazards-gaviota.geojson"
+    },
+    {
+      "id": "la-jolla-h11876-camera-context",
+      "region_id": "southern-california",
+      "bounds": [-117.35, 32.77, -117.30, 32.85],
+      "research_only": true,
+      "output": "var/review/enc-hazards-la-jolla-h11876.geojson"
     }
   ]
 }

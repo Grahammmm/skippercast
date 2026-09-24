@@ -4,6 +4,14 @@
   "reviewed_at": "2026-09-24",
   "surveys": [
     {
+      "survey_id": "H11876",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "report_sha256": "a34335c6bef67de0f1f4d1bb1d4782d2159719e5dbe933c9d8aab607795b0cfc",
+      "report_section": "Final descriptive report D.1.1-D.1.4 and HCell report section 5, PDF pages 14 and 19",
+      "interpretation": "The 2008 Pacific Beach survey and final-office review report no new dangers to navigation, but note historically displaced canyon soundings and one charted 20-fathom sounding recommended for removal after full coverage. The HCell generalized twelve survey rocky-seabed areas to four and retained two additional areas. The HCell rock features and 2011 camera windows are historical habitat evidence, not an exact present reef edge or safe route. No current ENC, MPA, date-specific fishing rule or fish-presence clearance follows from this report.",
+      "hazards": []
+    },
+    {
       "survey_id": "H11967",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11967/DR/H11967.pdf",
       "report_sha256": "02fae1f4b1fd7cb42cc8ffbfb06135a7ff8ac660d002c950f9c1988d6afcc96c",

@@ -4,6 +4,14 @@
   "reviewed_at": "2026-09-24",
   "holds": [
     {
+      "survey_id": "H11876",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "report_sha256": "a34335c6bef67de0f1f4d1bb1d4782d2159719e5dbe933c9d8aab607795b0cfc",
+      "reason": "Eleven 2011 rocky USGS camera observations pass the original 2008 H11876 2 m MLLW depth and uncertainty neighborhood screen near La Jolla. Two camera windows show historical rockfish, but these are correlated transect observations, not current catch data. The southern transect comes within 60 m of generalized charted rock symbols; the northern transect is over 1 km from one. NOAA's HCell describes generalized rocky seabed areas, not a precise current target polygon. A bounded 18-layer ENC danger query returned zero features, which does not certify a safe approach. The MPA geometry is a dated snapshot, and Southern California date/method rules and full route remain unchecked for a candidate trip. Keep this research lead out of fishing targets and exports until exact substrate footprint, chart, access and rules are reviewed.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html"
+    },
+    {
       "survey_id": "H11981",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
