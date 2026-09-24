@@ -55,7 +55,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     islandNote.innerHTML='<summary>Offshore island seabed review</summary><div id="island-native-review" class="small">Loading original-grid screening…</div>';
     panel.querySelector('#sector-survey-details').after(islandNote);
   }
-  let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null,regularDepthData=null,usgsDatumData=null,videoAuditData=null;
+  let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null,regularDepthData=null,usgsDatumData=null,videoAuditData=null,reefcheckData=null;
   function showIslandReview(){
     const box=panel.querySelector('#island-native-review');if(!box)return;
     const names={'anacapa':'Anacapa','santa-cruz':'Santa Cruz','santa-rosa':'Santa Rosa','san-miguel':'San Miguel',
@@ -76,10 +76,12 @@ export async function initCoastalDiscovery(catalog,coast) {
   function showSurveySources(){
     const list=panel.querySelector('#sector-survey-list');
     if(!selectedSector){list.textContent='Choose a sector to inspect its source surveys.';return;}
+    const reef=reefcheckData?.sectors.find(item=>item.sector_id===selectedSector.id);
+    const reefSummary=reef?`<p class="small">Historical Reef Check scuba transects (2006–2019): ${reef.events} at ${reef.distinct_site_labels_and_coordinates} site label/coordinate combination(s); lingcod observed on ${reef.events_with_lingcod_present} transects and some rockfish on ${reef.events_with_any_rockfish_present}. Zero means no transects in this archive, not no fish. These selected shallow reefs include protected sites and have at least 250 m position uncertainty. Counts are not fish abundance, a present-day bite forecast, or fishing pins. <a href="data/reefcheck-statewide-observation-review.json" target="_blank" rel="noopener">Statewide source review ↗</a></p>`:'';
     const row=surveyData?.sectors.find(x=>x.sector_id===selectedSector.id);
     if(!row){
       const video=videoAuditData?.sectors.find(item=>item.id===selectedSector.id);
-      list.innerHTML=`<p>${esc(selectedSector.name)}: NOAA survey catalog unavailable. No seabed coverage inferred.</p>${video?`<p class="small">USGS historical camera transects: ${video.bottom_observations||0} bottom observations in this latitude band. These are not fishing spots or current fish abundance. <a href="data/usgs-video-observation-audit.json" target="_blank" rel="noopener">Original archive receipts ↗</a></p>`:''}`;
+      list.innerHTML=`<p>${esc(selectedSector.name)}: NOAA survey catalog unavailable. No seabed coverage inferred.</p>${reefSummary}${video?`<p class="small">USGS historical camera transects: ${video.bottom_observations||0} bottom observations in this latitude band. These are not fishing spots or current fish abundance. <a href="data/usgs-video-observation-audit.json" target="_blank" rel="noopener">Original archive receipts ↗</a></p>`:''}`;
       return;
     }
     const products=new Map((productData?.surveys||[]).map(item=>[item.id,item]));
@@ -98,7 +100,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     const sorted=[...row.surveys].sort((a,b)=>(b.year||0)-(a.year||0)||a.id.localeCompare(b.id));
     const entry=lead=>{const p=products.get(lead.id),bag=p?.products?.bag?.[0],report=p?.products?.report?.[0];
       return `<li><strong>${esc(lead.id)}</strong> · ${esc(lead.year||'date unknown')} · ${esc(lead.locality||'locality not recorded')}<br><a href="${esc(lead.catalog_url)}" target="_blank" rel="noopener">NOAA catalog ↗</a>${bag?` · <a href="${esc(bag)}" target="_blank" rel="noopener">BAG grid ↗</a>`:''}${report?` · <a href="${esc(report)}" target="_blank" rel="noopener">Survey report ↗</a>`:''}${p?.status==='retained'?' · product links retained from an earlier check':''}</li>`;};
-    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${regularSummary}${nativeSummary}${usgsSummary}${videoSummary}${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
+    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${regularSummary}${nativeSummary}${usgsSummary}${reefSummary}${videoSummary}${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
   }
   sourceSelector.addEventListener('change',()=>{selectedSector=sectors.find(s=>s.id===sourceSelector.value)||null;showSurveySources();});
   panel.addEventListener('click',event=>{const button=event.target.closest('[data-sector]');if(!button)return;const sector=sectors.find(s=>s.id===button.dataset.sector);if(!sector)return;selectedSector=sector;sourceSelector.value=sector.id;panel.querySelector('#sector-survey-details').open=true;showSurveySources();navigation.showView('map');requestAnimationFrame(()=>{map.invalidateSize();map.fitBounds([[sector.bounds[1],sector.bounds[0]],[sector.bounds[3],sector.bounds[2]]],{padding:[20,20],maxZoom:10});});});
@@ -113,6 +115,23 @@ export async function initCoastalDiscovery(catalog,coast) {
     }
   });
   void loadSurveyProducts(sectorPacket).then(data=>{productData=data;showSurveySources();});
+  void fetch('data/reefcheck-statewide-observation-review.json',{signal:AbortSignal.timeout(10000)}).then(async response=>{
+    if(!response.ok)throw Error('Historical Reef Check review unavailable');
+    const data=await response.json();
+    if(data.schema_version!==1||data.scope!=='statewide-historical-shallow-diver-observation-audit'
+      ||data.fishing_target!==false||data.current_fish_presence!==false||data.exportable!==false
+      ||data.sectors?.length!==sectorPacket.sectors.length
+      ||data.archive_table_rows?.['event.txt']!==19375
+      ||new Set(data.sectors.map(item=>item.sector_id)).size!==sectorPacket.sectors.length
+      ||data.sectors.some(item=>!sectorPacket.sectors.some(sector=>sector.id===item.sector_id)
+        ||!Number.isInteger(item.events)||item.events<0
+        ||!Number.isInteger(item.distinct_site_labels_and_coordinates)||item.distinct_site_labels_and_coordinates<0
+        ||!Number.isInteger(item.events_with_lingcod_present)||item.events_with_lingcod_present<0
+        ||!Number.isInteger(item.events_with_any_rockfish_present)||item.events_with_any_rockfish_present<0
+        ||item.events_with_lingcod_present>item.events
+        ||item.events_with_any_rockfish_present>item.events))throw Error('Invalid historical Reef Check audit');
+    reefcheckData=data;showSurveySources();
+  }).catch(()=>{/* Historical biology is optional context, never a reason to infer fishing spots. */});
   void fetch('data/usgs-video-observation-audit.json',{signal:AbortSignal.timeout(10000)}).then(async response=>{
     if(!response.ok)throw Error('USGS video audit unavailable');
     const data=await response.json();

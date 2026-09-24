@@ -9,6 +9,34 @@ permissions:
   contents: read
 
 jobs:
+  reefcheck-historical-observations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify historical observation audit contract
+        run: python -m unittest tests.test_reefcheck_observations -v
+      - name: Check latest NOAA IOOS / Reef Check Darwin Core archive against reviewed bytes
+        run: |
+          mkdir -p var/review/reefcheck
+          curl --fail --location --silent --show-error --max-time 120 \
+            'https://ipt-obis.gbif.us/archive.do?r=rcca_transects' \
+            --output var/review/reefcheck/dwca-rcca_transects-v1.5.zip
+      - name: Recheck table integrity and broad-sector historical evidence
+        run: >-
+          python scripts/audit_reefcheck_observations.py
+          --archive var/review/reefcheck/dwca-rcca_transects-v1.5.zip
+          --output var/review/reefcheck/statewide-observation-audit.json
+      - name: Upload unpublished observation review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reefcheck-historical-observations
+          path: var/review/reefcheck/statewide-observation-audit.json
+          retention-days: 30
   original-hard-context-enc-review:
     runs-on: ubuntu-latest
     timeout-minutes: 25

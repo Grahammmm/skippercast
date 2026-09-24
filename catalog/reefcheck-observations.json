@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "source_id": "noaa-ioos-reefcheck-california-dwca-v1.5",
+  "publisher_url": "https://ipt-obis.gbif.us/resource?r=rcca_transects&v=1.5",
+  "archive_url": "https://ipt-obis.gbif.us/archive.do?r=rcca_transects&v=1.5",
+  "latest_archive_url": "https://ipt-obis.gbif.us/archive.do?r=rcca_transects",
+  "archive_sha256": "ebbd54dd1e8b82ec60542bb8bbaf9a642e1db97dafaeb5196ec6bcf7f5db56bd",
+  "publisher_date": "2025-06-03",
+  "license": "CC0 1.0",
+  "expected_rows": {"event.txt": 19375, "occurrence.txt": 724871, "extendedmeasurementorfact.txt": 255300},
+  "reviewed_at": "2026-09-24",
+  "scope": "Historical 2006–2019 shallow nearshore scuba transects on selected rocky reef/kelp sites. Some sites are inside MPAs. Every event declares 250 m coordinate uncertainty; these are not exact fishing locations, deep-water habitat samples, current fish observations, or representative coast-wide catch effort.",
+  "publication_policy": "Aggregate only by broad browse sector; never publish event coordinates, fish hotspots, current bite scores, legal status, or exportable waypoints from this archive."
+}

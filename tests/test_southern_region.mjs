@@ -34,7 +34,7 @@ test('historical complex envelopes exclude full MPA/GEA geometry and cannot beco
  for(const area of atlas.areas)assert.ok(!exclusions.features.some(x=>geometryIntersects(area.geometry,x.geometry)));
 });
 test('Southern fall windows never become an unrestricted reef opening even with fresh matching checks',()=>{
- const d=read('dist/'+r.assets.regulations),now=Date.parse('2026-09-22T18:00:00Z');
+ const d=read('dist/'+r.assets.regulations),now=Date.parse(d.reviewed_at)+60_000;
  for(const [id,s] of Object.entries(d.sources)){s.approved_content_sha256='a'.repeat(64);d.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
  for(const id of ['lingcod','rockfish','reef']){const state=regulationState(d,id,now,'2026-10-10');assert.equal(state.status,'restricted');assert.match(state.reason,/seaward/);}
  assert.equal(regulationState(d,'halibut',now,'2026-10-10').status,'open');

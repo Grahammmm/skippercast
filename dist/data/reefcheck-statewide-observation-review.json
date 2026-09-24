@@ -1,0 +1,724 @@
+{
+  "schema_version": 1,
+  "scope": "statewide-historical-shallow-diver-observation-audit",
+  "source_id": "noaa-ioos-reefcheck-california-dwca-v1.5",
+  "source_url": "https://ipt-obis.gbif.us/resource?r=rcca_transects&v=1.5",
+  "archive_sha256": "ebbd54dd1e8b82ec60542bb8bbaf9a642e1db97dafaeb5196ec6bcf7f5db56bd",
+  "publisher_date": "2025-06-03",
+  "fishing_target": false,
+  "current_fish_presence": false,
+  "exportable": false,
+  "archive_table_rows": {
+    "event.txt": 19375,
+    "occurrence.txt": 724871,
+    "extendedmeasurementorfact.txt": 255300
+  },
+  "sampled_sectors": 16,
+  "sectors": [
+    {
+      "sector_id": "del-norte",
+      "events": 29,
+      "distinct_site_labels_and_coordinates": 1,
+      "observation_years": [
+        "2017",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        4.6,
+        19.0
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 12,
+      "events_with_relief_measurement": 12,
+      "events_with_lingcod_present": 1,
+      "events_with_any_rockfish_present": 6,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes melanops",
+        "Sebastes mystinus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "events": 98,
+      "distinct_site_labels_and_coordinates": 2,
+      "observation_years": [
+        "2008",
+        "2013",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        4.3,
+        14.9
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 42,
+      "events_with_relief_measurement": 42,
+      "events_with_lingcod_present": 21,
+      "events_with_any_rockfish_present": 36,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "events": 0,
+      "distinct_site_labels_and_coordinates": 0,
+      "observation_years": [],
+      "observed_transect_depth_m": null,
+      "declared_position_uncertainty_m": [],
+      "events_with_substrate_measurement": 0,
+      "events_with_relief_measurement": 0,
+      "events_with_lingcod_present": 0,
+      "events_with_any_rockfish_present": 0,
+      "identified_lingcod_or_rockfish_taxa_present": []
+    },
+    {
+      "sector_id": "north-mendocino",
+      "events": 26,
+      "distinct_site_labels_and_coordinates": 2,
+      "observation_years": [
+        "2015",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        3.7,
+        9.4
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 24,
+      "events_with_relief_measurement": 24,
+      "events_with_lingcod_present": 6,
+      "events_with_any_rockfish_present": 14,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "events": 1187,
+      "distinct_site_labels_and_coordinates": 9,
+      "observation_years": [
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.1,
+        17.5
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 435,
+      "events_with_relief_measurement": 435,
+      "events_with_lingcod_present": 95,
+      "events_with_any_rockfish_present": 626,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "events": 1624,
+      "distinct_site_labels_and_coordinates": 13,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        1.5,
+        19.7
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 544,
+      "events_with_relief_measurement": 544,
+      "events_with_lingcod_present": 175,
+      "events_with_any_rockfish_present": 1132,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes rastrelliger"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "events": 0,
+      "distinct_site_labels_and_coordinates": 0,
+      "observation_years": [],
+      "observed_transect_depth_m": null,
+      "declared_position_uncertainty_m": [],
+      "events_with_substrate_measurement": 0,
+      "events_with_relief_measurement": 0,
+      "events_with_lingcod_present": 0,
+      "events_with_any_rockfish_present": 0,
+      "identified_lingcod_or_rockfish_taxa_present": []
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "events": 195,
+      "distinct_site_labels_and_coordinates": 4,
+      "observation_years": [
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        3.7,
+        17.8
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 60,
+      "events_with_relief_measurement": 60,
+      "events_with_lingcod_present": 20,
+      "events_with_any_rockfish_present": 57,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "events": 2875,
+      "distinct_site_labels_and_coordinates": 13,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.3,
+        18.6
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 914,
+      "events_with_relief_measurement": 914,
+      "events_with_lingcod_present": 186,
+      "events_with_any_rockfish_present": 2404,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "events": 1942,
+      "distinct_site_labels_and_coordinates": 8,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.6,
+        21.0
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 673,
+      "events_with_relief_measurement": 674,
+      "events_with_lingcod_present": 260,
+      "events_with_any_rockfish_present": 1737,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "events": 856,
+      "distinct_site_labels_and_coordinates": 9,
+      "observation_years": [
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.7,
+        19.0
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 269,
+      "events_with_relief_measurement": 269,
+      "events_with_lingcod_present": 79,
+      "events_with_any_rockfish_present": 743,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "events": 0,
+      "distinct_site_labels_and_coordinates": 0,
+      "observation_years": [],
+      "observed_transect_depth_m": null,
+      "declared_position_uncertainty_m": [],
+      "events_with_substrate_measurement": 0,
+      "events_with_relief_measurement": 0,
+      "events_with_lingcod_present": 0,
+      "events_with_any_rockfish_present": 0,
+      "identified_lingcod_or_rockfish_taxa_present": []
+    },
+    {
+      "sector_id": "cambria-morro",
+      "events": 406,
+      "distinct_site_labels_and_coordinates": 5,
+      "observation_years": [
+        "2011",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        3.5,
+        19.0
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 126,
+      "events_with_relief_measurement": 126,
+      "events_with_lingcod_present": 33,
+      "events_with_any_rockfish_present": 327,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "events": 775,
+      "distinct_site_labels_and_coordinates": 5,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.7,
+        18.3
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 256,
+      "events_with_relief_measurement": 256,
+      "events_with_lingcod_present": 44,
+      "events_with_any_rockfish_present": 402,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes miniatus",
+        "Sebastes mystinus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "events": 558,
+      "distinct_site_labels_and_coordinates": 5,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.7,
+        18.9
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 180,
+      "events_with_relief_measurement": 180,
+      "events_with_lingcod_present": 8,
+      "events_with_any_rockfish_present": 286,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "events": 3226,
+      "distinct_site_labels_and_coordinates": 22,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        1.7,
+        20.1
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 1044,
+      "events_with_relief_measurement": 1044,
+      "events_with_lingcod_present": 5,
+      "events_with_any_rockfish_present": 1003,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "events": 2755,
+      "distinct_site_labels_and_coordinates": 18,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        1.7,
+        20.1
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 892,
+      "events_with_relief_measurement": 892,
+      "events_with_lingcod_present": 1,
+      "events_with_any_rockfish_present": 392,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Ophiodon elongatus",
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus",
+        "Sebastes nebulosus",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "events": 2400,
+      "distinct_site_labels_and_coordinates": 20,
+      "observation_years": [
+        "2006",
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        1.4,
+        21.6
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 785,
+      "events_with_relief_measurement": 785,
+      "events_with_lingcod_present": 0,
+      "events_with_any_rockfish_present": 211,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes melanops",
+        "Sebastes mystinus",
+        "Sebastes paucispinis",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "events": 397,
+      "distinct_site_labels_and_coordinates": 2,
+      "observation_years": [
+        "2007",
+        "2008",
+        "2009",
+        "2010",
+        "2011",
+        "2012",
+        "2013",
+        "2014",
+        "2015",
+        "2016",
+        "2017",
+        "2018",
+        "2019"
+      ],
+      "observed_transect_depth_m": [
+        2.6,
+        15.2
+      ],
+      "declared_position_uncertainty_m": [
+        250.0
+      ],
+      "events_with_substrate_measurement": 131,
+      "events_with_relief_measurement": 131,
+      "events_with_lingcod_present": 0,
+      "events_with_any_rockfish_present": 45,
+      "identified_lingcod_or_rockfish_taxa_present": [
+        "Sebastes",
+        "Sebastes atrovirens",
+        "Sebastes auriculatus",
+        "Sebastes carnatus",
+        "Sebastes caurinus",
+        "Sebastes chrysomelas",
+        "Sebastes rastrelliger",
+        "Sebastes serriceps"
+      ]
+    }
+  ],
+  "limitations": [
+    "2006\u20132019 selected shallow reef/kelp scuba transects; not contemporary fishing effort or catch probability.",
+    "Every event declares at least 250 m position uncertainty. Site counts are label/coordinate combinations, not independent reef areas or exact fishing spots.",
+    "Sector assignment uses approximate latitude bands; islands and MPAs are not legal-screened by this audit.",
+    "Absences and presences are recorded only for the survey's selected taxa and methods. Do not infer deep-water absence from these shallow samples.",
+    "Research context only: no coordinates, target ranking, season badge or GPX export."
+  ]
+}
