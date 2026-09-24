@@ -4,11 +4,21 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from scripts.refresh_enc_hazards import LAYERS, query_layer, refresh
+from scripts.refresh_enc_hazards import LAYERS, main, query_layer, refresh
 from scripts.audit_enc_context_overlap import audit
 
 
 class EncHazardRefreshTests(unittest.TestCase):
+    def test_research_scope_cannot_write_to_a_public_or_default_path(self):
+        for arguments in (
+            ['refresh_enc_hazards.py', '--scope', 'cape-mendocino-hard-context'],
+            ['refresh_enc_hazards.py', '--scope', 'cape-mendocino-hard-context',
+             '--output', 'var/published/enc-hazards-cape-mendocino.geojson'],
+        ):
+            with self.subTest(arguments=arguments), patch('sys.argv', arguments):
+                with self.assertRaisesRegex(ValueError, 'Research-only ENC'):
+                    main()
+
     def test_context_audit_holds_charted_danger_and_preserves_historical_hold(self):
         enc = {'scope_id': 'point-reyes-tomales', 'bounds': [-123.18, 38.02, -122.92, 38.26],
                'checked_at': '2026-09-24T00:00:00Z', 'source_url': 'https://encdirect.noaa.gov/arcgis/rest/services/encdirect',

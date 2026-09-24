@@ -112,11 +112,15 @@ def main():
     scopes = [row for row in config["scopes"] if row["id"] == args.scope]
     if len(scopes) != 1:
         raise ValueError("Unknown or duplicate NOAA ENC scope")
+    if scopes[0].get("research_only") and args.output is None:
+        raise ValueError("Research-only ENC scopes require an explicit unpublished var/review/ output")
     output = args.output or ROOT / scopes[0]["output"]
     output = output.resolve()
     if args.output:
         if not output.is_relative_to((ROOT / "var").resolve()):
             raise ValueError("Unpublished ENC output must stay under var/")
+        if scopes[0].get("research_only") and not output.is_relative_to((ROOT / "var/review").resolve()):
+            raise ValueError("Research-only ENC output must stay under var/review/")
     elif not output.is_relative_to((ROOT / "dist/regions" / scopes[0]["region_id"]).resolve()):
         raise ValueError("ENC output escaped its regional package")
     print(json.dumps(refresh(scopes[0], output)))

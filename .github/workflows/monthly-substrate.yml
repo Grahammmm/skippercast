@@ -9,6 +9,37 @@ permissions:
   contents: read
 
 jobs:
+  original-hard-context-enc-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned geometry dependencies
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify research-only ENC outputs stay unpublished
+        run: python -m unittest tests.test_enc_hazard_refresh -v
+      - name: Refresh bounded Cape Mendocino and Point Conception chart-danger screens
+        run: |
+          python scripts/refresh_enc_hazards.py --scope cape-mendocino-hard-context --output var/review/enc-hazards-cape-mendocino.geojson
+          python scripts/refresh_enc_hazards.py --scope point-conception-hard-context --output var/review/enc-hazards-point-conception.geojson
+      - name: Compare research outlines to fresh charted-danger geometry
+        run: |
+          python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-cape-mendocino.geojson --context dist/data/cape-mendocino-native-hard-context.geojson --output var/review/cape-mendocino-enc-context-review.json
+          python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-point-conception.geojson --context dist/data/point-conception-native-hard-context.geojson --output var/review/point-conception-enc-context-review.json
+      - name: Upload unpublished chart-danger research receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-hard-context-enc-review
+          path: |
+            var/review/enc-hazards-cape-mendocino.geojson
+            var/review/enc-hazards-point-conception.geojson
+            var/review/cape-mendocino-enc-context-review.json
+            var/review/point-conception-enc-context-review.json
+          retention-days: 30
   bluetopo-source-leads:
     runs-on: ubuntu-latest
     timeout-minutes: 20

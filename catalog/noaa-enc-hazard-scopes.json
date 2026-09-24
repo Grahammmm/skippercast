@@ -20,6 +20,20 @@
       "region_id": "fort-bragg-point-arena",
       "bounds": [-123.84, 39.14, -123.74, 39.25],
       "output": "dist/regions/fort-bragg-point-arena/enc-hazards-h11967-greenwood-tile.geojson"
+    },
+    {
+      "id": "cape-mendocino-hard-context",
+      "region_id": "northern",
+      "bounds": [-124.49, 40.37, -124.37, 40.53],
+      "research_only": true,
+      "output": "var/review/enc-hazards-cape-mendocino.geojson"
+    },
+    {
+      "id": "point-conception-hard-context",
+      "region_id": "southern-california",
+      "bounds": [-120.60, 34.43, -120.45, 34.56],
+      "research_only": true,
+      "output": "var/review/enc-hazards-point-conception.geojson"
     }
   ]
 }

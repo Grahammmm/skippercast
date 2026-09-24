@@ -1,5 +1,11 @@
 # California coast buildout ledger
 
+## Current ENC danger screen for historical hard-bottom outlines
+
+The [September 24 NOAA ENC Direct screen](https://encdirect.noaa.gov/arcgis/rest/services/encdirect) queried all 18 configured wreck, obstruction and awash-rock layers across harbor, approach and coastal scale bands in two bounded research scopes. [Cape Mendocino's receipt](../dist/data/cape-mendocino-enc-context-review.json) records 890 charted danger features and finds **27 of 121** historical hard-bottom display outlines within a 100 m research buffer. [Point Conception's receipt](../dist/data/point-conception-enc-context-review.json) records 87 danger features and **zero of 21** display outlines within that buffer. A zero is not a safe-route or site-clearance result: the scope is clipped, only selected ENC danger classes were queried, and ENC Direct is not a certified navigation chart. Historical survey dangers remain unreconciled with the current chart; legal, MPA, route, original-cell and species evidence gates still apply. No fishing targets or exports are promoted by this screen.
+
+The monthly substrate workflow reruns both bounded source queries and geometry comparisons, uploading raw responses and audit receipts as **unpublished research artifacts**. The research-only scope guard rejects default or public output paths. A failed or changed query stops that review rather than yielding an empty-water inference.
+
 ## BlueTopo is an additional survey-discovery feed, not a depth shortcut
 
 [NOAA BlueTopo](https://nauticalcharts.noaa.gov/data/bluetopo_specs.html) publishes dated three-band GeoTIFFs with elevation, uncertainty and a contributor code plus a separate Raster Attribute Table. Its vertical datum is **NAVD88, not chart MLLW**, and its cells mix measured surveys, interpolation and other sources. The [NOAA FAQ](https://nauticalcharts.noaa.gov/data/bluetopo_faq.html) explains the contributor coverage flags and public-domain product terms. `scripts/audit_bluetopo_tile.py` pins the original NOAA scheme, raster and RAT by publisher SHA-256 and counts only measured contributors separately from other pixels. It never converts a NAVD88 cell into fishing depth or a waypoint.
