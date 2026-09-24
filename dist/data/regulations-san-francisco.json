@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-23-san-francisco-draft-1",
+  "revision": "2026-09-24-san-francisco-draft-2",
   "reviewed_at": null,
   "valid_from": "2026-01-01",
   "valid_through": "2026-12-31",
@@ -128,7 +128,7 @@
       "name": "CDFW 2026 ocean sport fishing booklet",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
       "approved_content_sha256": null,
-      "normalization": "text-and-links-v3",
+      "normalization": "pdf-bytes-v1",
       "reviewed_at": null,
       "review_note": "Pending San Francisco source and legal-content review."
     },
@@ -144,7 +144,7 @@
       "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "approved_content_sha256": null,
-      "normalization": "text-and-links-v3",
+      "normalization": "ecfr-section-text-v1",
       "reviewed_at": null,
       "review_note": "Pending San Francisco source and legal-content review."
     },
@@ -152,7 +152,7 @@
       "name": "CDFW 2026 ocean salmon season flyer · August update",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "approved_content_sha256": null,
-      "normalization": "text-and-links-v3",
+      "normalization": "pdf-bytes-v1",
       "reviewed_at": null,
       "review_note": "Pending San Francisco source and legal-content review."
     },
@@ -160,7 +160,7 @@
       "name": "CDFW San Francisco groundfish season table",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185056&inline=",
       "approved_content_sha256": null,
-      "normalization": "text-and-links-v3",
+      "normalization": "pdf-bytes-v1",
       "reviewed_at": null,
       "review_note": "Pending San Francisco source and legal-content review."
     },
@@ -197,7 +197,175 @@
       "review_note": "Pending San Francisco source and legal-content review."
     }
   },
-  "species": [],
+  "species": {
+    "lingcod": {
+      "name": "Lingcod",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    },
+    "rockfish": {
+      "name": "Rockfish",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    },
+    "halibut": {
+      "name": "California halibut",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    },
+    "salmon": {
+      "name": "Ocean salmon",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-salmon",
+        "rules-salmon-pdf",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    },
+    "dungeness": {
+      "name": "Dungeness crab",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-crab",
+        "rules-invertebrates",
+        "rules-whales"
+      ],
+      "methods": {
+        "trap": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    },
+    "albacore": {
+      "name": "Albacore tuna",
+      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
+      "windows": [],
+      "bag": "Unconfirmed; see the current official species rules.",
+      "size": "Unconfirmed; see the current official species rules.",
+      "details": [
+        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+      ],
+      "source_ids": [
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-inseason",
+        "rules-health",
+        "rules-book",
+        "rules-proposals",
+        "rules-san-francisco",
+        "mpa-point-reyes",
+        "rules-cordell",
+        "rules-tuna-federal",
+        "rules-gear"
+      ],
+      "methods": {
+        "rod": {
+          "note": "Method-specific San Francisco outer-coast rules are pending review."
+        }
+      }
+    }
+  },
   "area_notices": [
     {
       "id": "bodega-reyes-mpas",

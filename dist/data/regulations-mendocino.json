@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-23-mendocino-draft-1",
+  "revision": "2026-09-24-mendocino-draft-2",
   "reviewed_at": null,
   "valid_from": "2026-01-01",
   "valid_through": "2026-12-31",
@@ -210,7 +210,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -231,7 +236,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -252,7 +262,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -273,7 +288,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -294,7 +314,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -315,7 +340,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {
@@ -336,7 +366,12 @@
         "rules-mendocino",
         "rules-inseason",
         "rules-health",
-        "rules-book"
+        "rules-book",
+        "rules-groundfish",
+        "rules-groundfish-pdf",
+        "rules-proposals",
+        "mpa-russian-gulch",
+        "mpa-point-arena"
       ],
       "methods": {
         "rod": {

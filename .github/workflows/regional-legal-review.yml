@@ -1,0 +1,78 @@
+name: Regional legal review packets
+
+on:
+  schedule:
+    - cron: "41 5 * * 1"
+      timezone: America/Los_Angeles
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/regional-legal-review.yml"
+      - "jurisdictions/california-northern.json"
+      - "jurisdictions/california-mendocino.json"
+      - "jurisdictions/california-san-francisco.json"
+      - "dist/data/regulations-northern.json"
+      - "dist/data/regulations-mendocino.json"
+      - "dist/data/regulations-san-francisco.json"
+      - "src/skippercast/pipeline/regulation_review.py"
+      - "src/skippercast/pipeline/regulations.py"
+
+permissions:
+  contents: read
+
+jobs:
+  packet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        jurisdiction:
+          - california-northern
+          - california-mendocino
+          - california-san-francisco
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Collect original legal sources without approving changes
+        env:
+          PYTHONPATH: src
+          JURISDICTION: ${{ matrix.jurisdiction }}
+        run: |
+          python -m skippercast.pipeline.regulation_review collect \
+            --jurisdiction "$JURISDICTION" --output "var/rules/$JURISDICTION"
+      - name: Report coverage and unresolved sources
+        if: always()
+        env:
+          JURISDICTION: ${{ matrix.jurisdiction }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          jurisdiction = os.environ['JURISDICTION']
+          path = Path('var/rules') / jurisdiction / 'coverage.json'
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write(f'## {jurisdiction}\n')
+              if not path.exists():
+                  output.write('Collection failed before a coverage receipt was saved. No legal approval was made.\n')
+              else:
+                  report = json.loads(path.read_text())
+                  checks = report['checks']
+                  ok = sum(item['source_status'] == 'ok' for item in checks.values())
+                  output.write(f'{ok}/{len(checks)} original sources retrieved. Review status: {report["rules_review_status"]}.\n')
+                  for source_id, check in checks.items():
+                      if check['status'] != 'unchanged':
+                          output.write(f'- {source_id}: {check["status"]}\n')
+                  output.write('This packet is evidence for human legal review, not season or access clearance.\n')
+          PY
+      - name: Retain immutable packet for legal review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-review-${{ matrix.jurisdiction }}-${{ github.sha }}
+          path: var/rules/${{ matrix.jurisdiction }}/
+          if-no-files-found: warn
+          retention-days: 14

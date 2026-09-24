@@ -14,6 +14,9 @@ def test_bodega_draft_has_local_salmon_boundary_and_no_approved_rules():
     assert north['bounds'][1] == 38 + 2 / 60
     assert any(item['id'] == 'salmon' for item in north['hidden_targets'])
     assert rules['rules_review_status'] == 'pending'
-    assert not rules['species']
+    assert set(rules['species']) == {'lingcod', 'rockfish', 'halibut', 'salmon', 'dungeness', 'albacore'}
+    assert all(not profile['windows'] for profile in rules['species'].values())
+    assert all(profile['season'].startswith('Unconfirmed') for profile in rules['species'].values())
+    assert all(source['approved_content_sha256'] is None for source in rules['sources'].values())
     assert rules['jurisdiction_id'] == region['jurisdiction_id']
     assert region['assets']['charters'] is None
