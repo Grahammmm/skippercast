@@ -43,18 +43,19 @@ def federal_union(data):
     return unary_union([shape(f['geometry']) for f in geas])
 
 
-def compile_context(reviews, summary, mpa_snapshot, federal_snapshot):
+def compile_context(reviews, summary, mpa_snapshot, federal_snapshot, *, expected=EXPECTED,
+                    coast_id='san-francisco', source_review='data/noaa-native-hard-review-summary.json'):
     if summary.get('scope') != 'native-noaa-usgs-review-summary':
         raise ValueError('Expected original-cell review summary')
     rows = {r['survey_id']: r for r in summary['surveys']}
-    if set(rows) != EXPECTED or set(reviews) != EXPECTED:
-        raise ValueError('The bounded seven-survey review is incomplete')
+    if set(rows) != set(expected) or set(reviews) != set(expected):
+        raise ValueError('The bounded survey review is incomplete')
     mpa = mpa_union(mpa_snapshot)
     federal = federal_union(federal_snapshot)
     exclusion = set_precision(transform(TO_METERS, unary_union([mpa, federal])).buffer(100), 0.1)
     accepted = None
     output = []
-    for ident in sorted(EXPECTED):
+    for ident in sorted(expected):
         review, row = reviews[ident], rows[ident]
         if (review.get('scope') != 'native-noaa-usgs-hard-bottom-review' or review.get('survey_id') != ident
                 or len(review.get('features', [])) != row['counts']['retained_components']
@@ -112,9 +113,9 @@ def compile_context(reviews, summary, mpa_snapshot, federal_snapshot):
                 'fish_confirmed': False, 'depth_qualified_for_target': False,
             }})
     return {'type': 'FeatureCollection', 'schema_version': 1,
-            'scope': 'sf-native-noaa-usgs-hard-bottom-context',
+            'scope': f'{coast_id}-native-noaa-usgs-hard-bottom-context',
             'compiled_at': datetime.now(timezone.utc).isoformat(),
-            'coast_id': 'san-francisco', 'source_review': 'data/noaa-native-hard-review-summary.json',
+            'coast_id': coast_id, 'source_review': source_review,
             'mpa_screened_at': mpa_snapshot['sources']['mpas']['data_retrieved_at'],
             'federal_screened_at': federal_snapshot['retrieved_at'],
             'method': 'Historical original NOAA BAG 1–2 m MLLW depth and supplied uncertainty intersected with original USGS hard class; survey hazards, complete current MPAs and GEAs screened with 100 m planning clearance. Display geometry simplified inward and overlap removed.',
@@ -131,9 +132,15 @@ def main():
     p.add_argument('--mpas', type=Path, default=Path('var/live-coastal-latest.json'))
     p.add_argument('--federal', type=Path, default=Path('dist/data/noaa-federal-areas.json'))
     p.add_argument('--output', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))
+    p.add_argument('--survey-id', action='append', dest='survey_ids')
+    p.add_argument('--coast-id', default='san-francisco')
+    p.add_argument('--source-review', default='data/noaa-native-hard-review-summary.json')
     args = p.parse_args()
-    reviews = {ident: json.loads((args.reviews / f'review-{ident.lower()}-native-hard.geojson').read_text()) for ident in EXPECTED}
-    result = compile_context(reviews, json.loads(args.summary.read_text()), json.loads(args.mpas.read_text()), json.loads(args.federal.read_text()))
+    expected = set(args.survey_ids) if args.survey_ids else EXPECTED
+    reviews = {ident: json.loads((args.reviews / f'review-{ident.lower()}-native-hard.geojson').read_text()) for ident in expected}
+    result = compile_context(reviews, json.loads(args.summary.read_text()), json.loads(args.mpas.read_text()),
+                             json.loads(args.federal.read_text()), expected=expected,
+                             coast_id=args.coast_id, source_review=args.source_review)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_suffix(args.output.suffix + '.tmp')
     tmp.write_text(json.dumps(result, separators=(',', ':')) + '\n')

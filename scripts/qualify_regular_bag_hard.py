@@ -30,13 +30,16 @@ def original_character(row, cache, metadata):
     """Return one original class raster only after archive and XML review."""
     if row.get('status') != 'ok' or row.get('kind') != 'seafloor_character':
         raise ValueError('An original USGS seafloor-character grid is required')
-    record = next((x for x in metadata['records'] if x['block_id'] == row['block_id']
+    ident = row.get('block_id') or row.get('release_id')
+    if not ident:
+        raise ValueError('Original USGS source has no reviewed block or release ID')
+    record = next((x for x in metadata['records'] if (x.get('block_id') or x.get('release_id')) == ident
                    and x['kind'] == row['kind'] and x['metadata_url'] == row['metadata_url']
                    and x['status'] == 'ok'), None)
     if not record or record['xml_sha256'] != row['metadata_sha256'] or not hard_class_review(record):
         raise ValueError('Original USGS class-3 semantics or metadata digest are unreviewed')
     url = row['archive_url']
-    path = cache / (row['block_id'] + '-' + row['kind'] + '-'
+    path = cache / (ident + '-' + row['kind'] + '-'
                     + hashlib.sha256(url.encode()).hexdigest()[:16] + '.zip')
     if not path.is_file() or sha256(path) != row['archive_sha256']:
         raise ValueError('Original USGS archive is missing or changed')
@@ -63,7 +66,9 @@ def hard_mask_on_bag(rows, cache, metadata, *, shape_, transform_, crs):
                       src_nodata=0, dst_transform=transform_, dst_crs=crs, dst_nodata=0,
                       resampling=Resampling.nearest)
             hard |= placed.astype(bool)
-            receipts.append({'block_id': row['block_id'], 'archive_url': row['archive_url'],
+            ident = row.get('block_id') or row.get('release_id')
+            receipts.append({('block_id' if 'block_id' in row else 'release_id'): ident,
+                             'archive_url': row['archive_url'],
                              'archive_sha256': row['archive_sha256'],
                              'metadata_url': row['metadata_url'],
                              'metadata_sha256': row['metadata_sha256'],
@@ -275,9 +280,9 @@ def main():
     usgs_audit = json.loads(args.usgs_audit.read_text())
     bag_row = next((x for x in bag_audit['files'] if x['survey_id'] == args.survey_id
                     and x['url'].endswith('/' + args.bag_filename)), None)
-    selected = [x for x in usgs_audit['products'] if x.get('block_id') in args.usgs_block
+    selected = [x for x in usgs_audit['products'] if (x.get('block_id') or x.get('release_id')) in args.usgs_block
                 and x.get('kind') == 'seafloor_character' and x.get('status') == 'ok']
-    if not bag_row or {x['block_id'] for x in selected} != set(args.usgs_block):
+    if not bag_row or {(x.get('block_id') or x.get('release_id')) for x in selected} != set(args.usgs_block):
         raise ValueError('Missing exact audited NOAA BAG or original USGS source block')
     result = compile_review(bag_row, selected, json.loads(args.usgs_metadata.read_text()),
                             json.loads(args.mpas.read_text()), json.loads(args.federal_areas.read_text()),

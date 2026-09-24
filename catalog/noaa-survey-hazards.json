@@ -4,6 +4,51 @@
   "reviewed_at": "2026-09-23",
   "surveys": [
     {
+      "survey_id": "H11952",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+      "report_section": "Descriptive report pages 14–15 and final HCell review pages 17 and 20",
+      "interpretation": "The field narrative says no dangers to navigation, but the final review includes an uncharted wreck and retains two charted well heads. The report also confirms Cojo Anchorage moorings. Exclude these historical observations from habitat screening; inspect the current ENC and local restrictions separately.",
+      "hazards": [
+        {
+          "id": "H11952-uncharted-wreck",
+          "kind": "historical-wreck-review-hold",
+          "latitude": 34.4451416667,
+          "longitude": -120.4471944444,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Historical wreck hold, not a navigational safety radius. The report describes a 78 by 13 m wreck-like feature with a shoaler north end."
+        },
+        {
+          "id": "H11952-retained-well-50656",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4256083333,
+          "longitude": -120.4691333333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
+        },
+        {
+          "id": "H11952-retained-well-50670",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4441305556,
+          "longitude": -120.4698361111,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
+        },
+        {
+          "id": "H11952-cojo-anchorage-moorings",
+          "kind": "historical-mooring-review-hold",
+          "latitude": 34.4452777778,
+          "longitude": -120.4422222222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 300,
+          "radius_meaning": "Approximate reported mooring-buoy location; planning review hold only, not a surveyed perimeter."
+        }
+      ]
+    },
+    {
       "survey_id": "H12111",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
       "report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",

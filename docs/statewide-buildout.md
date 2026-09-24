@@ -46,6 +46,12 @@ The hazard report registry is `catalog/noaa-survey-hazards.json`. The H11732 and
 
 This is progress toward local bottom coverage, not a finished fishing package. The source surveys date from 2007–2009; YRCA applicability, other date/method rules, current chart hazards, approach routes and fish presence are not yet cleared. A new jurisdiction package and site-specific review are required before any of these shapes can become a fishing target. Rebuild only with fresh complete closure snapshots; the published file retains the screening timestamps.
 
+### Point Conception original-cell browse layer
+
+The same bounded compiler now accepts an explicit survey list and coast ID for reuse. [NOAA survey H11952](https://www.ngdc.noaa.gov/nos/H10001-H12000/H11952.html) is a 2008 original 2 m MLLW BAG with supplied uncertainty; its reviewed cells intersect original USGS class-3 rock/boulder grids from [Offshore Point Conception](https://doi.org/10.5066/F7QN64XQ) and [Offshore Gaviota](https://doi.org/10.5066/F7TH8JWJ). The source receipts and dates are in [the review summary](../dist/data/point-conception-native-hard-review-summary.json). The native screen retained 27 components after depth, uncertainty, MPA, federal GEA and historical-survey-hazard exclusions. Inward simplification and minimum display-area filtering produce **20 optional Central Coast research outlines** in [the browse layer](../dist/data/point-conception-native-hard-context.geojson), with no fishing targets or exports. The final [NOAA descriptive report](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf) notes a wreck, retained wellheads and moorings; their historical positions are conservative review holds, not present-day chart clearance.
+
+[CDFW's Point Conception SMR](https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception) prohibits take inside its legal boundary. [NOAA Coast Pilot 7](https://nauticalcharts.noaa.gov/publications/coast-pilot/files/cp7/CPB7_WEB.pdf) identifies Vandenberg danger zones from Point Conception toward Point Sal; [Vandenberg's maritime updates](https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/) provide current operational status. The compiled MPA/GEA snapshot and old survey cannot clear a route, date-specific danger zone, chart hazard, fishing method, or current fish presence. The layer stays context only while those gates remain open.
+
 ## What is ready and what remains
 
 | Coverage | Current state | Next gate |
@@ -83,6 +89,9 @@ python scripts/collect_noaa_groundfish_areas.py --output var/noaa-federal-areas.
 PYTHONPATH=src python scripts/qualify_regular_bag_hard.py --survey-id H11735 --bag-filename H11735_MB_2m_MLLW_2of3.bag --usgs-block OffshoreTomalesPoint --usgs-block OffshorePointReyes --output var/review-h11735-native-hard.geojson
 python scripts/summarize_native_hard_reviews.py var/review-h1173{2,3,4,5,8}-native-hard.geojson var/review-h12109-native-hard.geojson var/review-h12111-native-hard.geojson --output dist/data/noaa-native-hard-review-summary.json
 PYTHONPATH=src:. python scripts/build_native_hard_context.py --reviews var --summary dist/data/noaa-native-hard-review-summary.json --mpas var/live-coastal-latest.json --federal dist/data/noaa-federal-areas.json --output dist/data/sf-native-hard-context.geojson
+PYTHONPATH=src:. python scripts/qualify_regular_bag_hard.py --survey-id H11952 --bag-filename H11952_MB_2m_MLLW_2of4.bag --usgs-block F7QN64XQ --usgs-block F7TH8JWJ --usgs-audit var/usgs-doi-native-audit.json --usgs-metadata var/usgs-doi-metadata-vertical.json --usgs-cache var/usgs-doi-native-cache --mpas var/qualification-current/coastal/latest.json --federal-areas var/noaa-federal-areas.json --output var/review-h11952-native-hard.geojson
+python scripts/summarize_native_hard_reviews.py var/review-h11952-native-hard.geojson --output dist/data/point-conception-native-hard-review-summary.json
+PYTHONPATH=src:. python scripts/build_native_hard_context.py --survey-id H11952 --coast-id central --source-review data/point-conception-native-hard-review-summary.json --reviews var --summary dist/data/point-conception-native-hard-review-summary.json --mpas var/qualification-current/coastal/latest.json --federal var/noaa-federal-areas.json --output dist/data/point-conception-native-hard-context.geojson
 PYTHONPATH=src python -m skippercast.platform needs --region <new-package-id>
 python scripts/build_primary_strategies.py
 python scripts/check_web.py

@@ -164,14 +164,17 @@ export async function initCoastalDiscovery(catalog,coast) {
       statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
     }catch(error){statewideCheck.checked=false;statewideNote.textContent=error.message+' · consult the original USGS catalog.';}
   });
-  if(coast.id==='san-francisco'){
-    const nativeLayer=L.layerGroup();map.createPane('sfNativeHard').style.zIndex=426;
+  if(coast.id==='san-francisco'||coast.id==='central'){
+    const pointConception=coast.id==='central';
+    const nativePane=pointConception?'pointConceptionNativeHard':'sfNativeHard';
+    const nativeFile=pointConception?'point-conception-native-hard-context.geojson':'sf-native-hard-context.geojson';
+    const nativeLayer=L.layerGroup();map.createPane(nativePane).style.zIndex=426;
     const nativeLabel=document.createElement('label');nativeLabel.className='map-layer-option';
     const nativeCheck=document.createElement('input');nativeCheck.type='checkbox';
-    const nativeTitle=document.createElement('span');nativeTitle.textContent='Bodega–Bolinas · surveyed hard bottom';
+    const nativeTitle=document.createElement('span');nativeTitle.textContent=pointConception?'Point Conception · surveyed hard bottom':'Bodega–Bolinas · surveyed hard bottom';
     nativeLabel.append(nativeCheck,nativeTitle);body.append(nativeLabel);
     const nativeNote=document.createElement('p');nativeNote.className='small';
-    nativeNote.textContent='Optional historical NOAA 1–2 m depth and USGS hard-seabed intersection. This is a research layer, not a fishing target, current legal clearance or navigation chart.';
+    nativeNote.textContent='Optional historical NOAA 1–2 m depth and USGS hard-seabed intersection. Research context only; not a fishing target, current legal clearance or navigation chart.'+(pointConception?' Check Point Conception military danger-zone notices before travel.':'');
     body.append(nativeNote);
     let nativeLoaded=false,nativeShapes=[];
     function drawNative(){if(!nativeCheck.checked||!nativeLoaded)return;
@@ -186,22 +189,22 @@ export async function initCoastalDiscovery(catalog,coast) {
       if(nativeLoaded){nativeLayer.addTo(map);drawNative();return;}
       nativeNote.textContent='Loading original-cell research layer…';
       try{
-        const response=await fetch('data/sf-native-hard-context.geojson',{signal:AbortSignal.timeout(20000)});
+        const response=await fetch(`data/${nativeFile}`,{signal:AbortSignal.timeout(20000)});
         if(!response.ok)throw Error('Original-cell research layer unavailable');
         const data=await response.json();
-        if(data.type!=='FeatureCollection'||data.scope!=='sf-native-noaa-usgs-hard-bottom-context'
-          ||data.coast_id!=='san-francisco'||!Array.isArray(data.features)
+        if(data.type!=='FeatureCollection'||data.scope!==`${coast.id}-native-noaa-usgs-hard-bottom-context`
+          ||data.coast_id!==coast.id||!Array.isArray(data.features)
           ||data.features.some(f=>f.properties?.fishing_target!==false||f.properties?.exportable!==false
             ||f.properties?.legal_clearance!==false||f.properties?.fish_confirmed!==false
             ||f.properties?.depth_qualified_for_target!==false))throw Error('Unreviewed original-cell layer');
         nativeShapes=data.features.map(f=>{
           const p=f.properties;
-          const shape=L.geoJSON(f,{pane:'sfNativeHard',style:{color:'#396a75',weight:1.4,fillColor:'#70aab4',fillOpacity:.22}})
-            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p><p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
+          const shape=L.geoJSON(f,{pane:nativePane,style:{color:'#396a75',weight:1.4,fillColor:'#70aab4',fillOpacity:.22}})
+            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p><p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
           return {shape,bounds:shape.getBounds()};
         });
         nativeLoaded=true;nativeLayer.addTo(map);drawNative();
-        nativeNote.textContent=`${data.features.length} reviewed historical hard-bottom outlines. Current fishing permission, YRCA rules, depth changes and catch presence still need review. No points enter plans or exports.`;
+        nativeNote.textContent=`${data.features.length} reviewed historical hard-bottom outlines. Current fishing permission, YRCA rules, depth changes and catch presence still need review.${pointConception?' Vandenberg danger-zone status must be checked before travel.':''} No points enter plans or exports.`;
       }catch(error){nativeCheck.checked=false;nativeNote.textContent=error.message+' · use original NOAA and USGS sources.';}
     });
   }
