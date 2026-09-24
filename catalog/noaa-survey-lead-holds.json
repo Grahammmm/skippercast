@@ -60,6 +60,14 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13209.html"
     },
     {
+      "survey_id": "H13210",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13210/DR/H13210_DR.pdf",
+      "report_sha256": "ac198c1533a5f5c5544bb2d828b7d5eb3e755b8aa2b5101b9a3c30a56ef4faf9",
+      "reason": "The original 2019 North-Central Santa Cruz Island MLLW variable-resolution BAG has 1,760,459 native cells passing a research-only 60–200 ft, 1 m product-uncertainty and 50 m inward support-erosion screen in the historical hard-substrate review. Only one small 0.634 ha candidate patch remains, with C-grade physical habitat score 27; this is not a catch probability. The survey report identifies two unfilled holidays, including rocky-seabed acoustic shadow, and a 1.6 m underwater rock near shore that could be hazardous to fishing vessels. The report says no bottom samples were required. Keep this survey out of public fishing-target promotion pending exact holiday/feature geometry, stronger substrate evidence, current ENC review and local rules/access verification.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13210.html"
+    },
+    {
       "survey_id": "H13322",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13322/DR/H13322_DR.pdf",
