@@ -74,6 +74,9 @@ test('Cape Mendocino native evidence is a held source review, never a fishing ta
     f.properties.depth_qualified_for_target===false &&
     f.properties.depth_range_kind==='screened-policy-not-local-depth-range' &&
     f.properties.depth_screen_ft[1]===200 &&
+    Number.isFinite(f.properties.sampled_relief_5_95_m) &&
+    f.properties.sampled_relief_5_95_m>=0 &&
+    f.properties.display_depth_samples>=20 &&
     f.properties.noaa_bag_sha256===screen.bag_sha256));
 });
 test('Point Conception original-cell layer cannot become fishing or export coordinates',()=>{

@@ -37,16 +37,19 @@ class DisplayMask:
         if not 0<self.width*self.height<=30_000_000:
             raise ValueError('Display raster outside bounded Cape source extent')
         self.array=np.zeros((self.height,self.width),dtype='uint8')
+        self.sample_depth=np.full((self.height,self.width),np.nan,dtype='float32')
         self.crs=None
         self.used=0
 
-    def add(self,mask,transform,crs):
+    def add(self,mask,depth,transform,crs):
+        if mask.shape!=depth.shape:
+            raise ValueError('Accepted-cell mask and native depth must align')
         if self.crs is None:self.crs=CRS.from_user_input(crs)
         elif not self.crs.equals(CRS.from_user_input(crs),ignore_axis_order=True):
             raise ValueError('Original native grid CRS changed during screen')
         height,width=mask.shape
-        x0,y1=transform*(0,0)
-        x1,y0=transform*(width,height)
+        x0,y1=transform @ (0,0)
+        x1,y0=transform @ (width,height)
         c0=max(0,int(math.floor((x0-self.transform.c)/self.transform.a))-1)
         c1=min(self.width,int(math.ceil((x1-self.transform.c)/self.transform.a))+1)
         r0=max(0,int(math.floor((self.transform.f-y1)/self.transform.a))-1)
@@ -55,9 +58,17 @@ class DisplayMask:
         tile=np.zeros((r1-r0,c1-c0),dtype='uint8')
         reproject(source=mask.astype('uint8'),destination=tile,
                   src_transform=transform,src_crs=self.crs,
-                  dst_transform=self.transform*Affine.translation(c0,r0),dst_crs=self.crs,
+                  dst_transform=self.transform @ Affine.translation(c0,r0),dst_crs=self.crs,
+                  resampling=Resampling.nearest)
+        tile_depth=np.full(tile.shape,np.nan,dtype='float32')
+        reproject(source=np.where(mask,depth,np.nan).astype('float32'),destination=tile_depth,
+                  src_nodata=np.nan,dst_nodata=np.nan,
+                  src_transform=transform,src_crs=self.crs,
+                  dst_transform=self.transform @ Affine.translation(c0,r0),dst_crs=self.crs,
                   resampling=Resampling.nearest)
         np.maximum(self.array[r0:r1,c0:c1],tile,out=self.array[r0:r1,c0:c1])
+        valid=(tile!=0)&np.isfinite(tile_depth)
+        self.sample_depth[r0:r1,c0:c1][valid]=tile_depth[valid]
         self.used+=1
 
 
@@ -80,8 +91,16 @@ def compile_layer(mask,bag,source,mpas,federal,hazards,report_cache,screen_resul
     selected=np.isin(components,keep)
     to_wgs=Transformer.from_crs(mask.crs,'EPSG:4326',always_xy=True).transform
     output=[]
-    for geom,value in shapes(selected.astype('uint8'),mask=selected,transform=mask.transform):
-        if value!=1:continue
+    for geom,value in shapes(components.astype('int32'),mask=selected,transform=mask.transform):
+        component_id=int(value)
+        if component_id not in keep:continue
+        samples=mask.sample_depth[components==component_id]
+        samples=samples[np.isfinite(samples)]
+        if len(samples)<20:
+            continue
+        relief=float(np.percentile(samples,95)-np.percentile(samples,5))
+        if not math.isfinite(relief) or relief<0:
+            raise ValueError('Invalid native-depth relief')
         original=polygon_only(shape(geom))
         if original.area<minimum_area_m2:continue
         candidate=polygon_only(original.buffer(-5))
@@ -99,7 +118,7 @@ def compile_layer(mask,bag,source,mpas,federal,hazards,report_cache,screen_resul
             wgs=polygon_only(make_valid(geometry_transform(to_wgs,part)))
             if wgs.is_empty or not wgs.is_valid:
                 raise ValueError('Display geometry is invalid after WGS84 transform')
-            output.append((round(part.area),mapping(wgs)))
+            output.append((round(part.area),mapping(wgs),round(relief,2),int(len(samples))))
     output.sort(key=lambda row:-row[0])
     features=[{'type':'Feature','geometry':geom,'properties':{
         'id':f'cape-mendocino-native-hard-{i:03d}',
@@ -108,11 +127,13 @@ def compile_layer(mask,bag,source,mpas,federal,hazards,report_cache,screen_resul
         'survey_report_url':bag['source_report_url'],
         'usgs_release_id':source['release_id'],'usgs_metadata_urls':[source['metadata_url']],
         'approx_display_area_m2':area,'display_cell_m':mask.transform.a,
+        'sampled_relief_5_95_m':relief,'display_depth_samples':sample_count,
+        'relief_method':'5 m nearest native-depth samples in pre-vector component; 95th–5th percentile difference, historical structure only',
         'depth_screen_ft':[25,screen_result['maximum_planning_depth_ft']],
         'depth_range_kind':'screened-policy-not-local-depth-range',
         'fishing_target':False,'exportable':False,'legal_clearance':False,
         'fish_confirmed':False,'depth_qualified_for_target':False,
-    }} for i,(area,geom) in enumerate(output,1)]
+    }} for i,(area,geom,relief,sample_count) in enumerate(output,1)]
     return {'type':'FeatureCollection','schema_version':1,
             'scope':'northern-native-noaa-usgs-hard-bottom-context','coast_id':'northern',
             'compiled_at':datetime.now(timezone.utc).isoformat(),

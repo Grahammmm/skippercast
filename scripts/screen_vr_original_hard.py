@@ -159,7 +159,7 @@ def screen(bag,source,metadata,bag_cache,usgs_cache,mpas,federal,hazards,report_
                 totals['joined_cells_after_mpa_gea_historical_dton']+=kept
                 totals['fine_supergrids_after_exclusions']+=kept>0
                 if kept and mask_callback is not None:
-                    mask_callback(retained, transform, horizontal)
+                    mask_callback(retained, depth, transform, horizontal)
             if counter%5000==0:print(ident,'screened',counter,'/',len(indices),flush=True)
         return {'schema_version':1,'scope':'original-vr-noaa-usgs-hard-depth-cell-screen',
                 'screened_at':datetime.now(timezone.utc).isoformat(),
