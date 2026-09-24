@@ -1,10 +1,47 @@
 from datetime import datetime, timezone
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 from skippercast.pipeline import parsers
-from skippercast.pipeline.collect import source, validate
+from skippercast.pipeline.collect import Client, source, validate
 
 
 class PipelineTests(unittest.TestCase):
+    def test_coastwatch_403_is_retried_but_other_hosts_stay_denied(self):
+        class Response:
+            status = 200
+            headers = {}
+            url = 'https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json'
+
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, _): return b'{"table": {"rows": []}}'
+
+        class Opener:
+            calls = 0
+            def open(self, request, timeout):
+                self.calls += 1
+                if self.calls == 1:
+                    raise HTTPError(request.full_url, 403, 'transient provider denial', {}, None)
+                return Response()
+
+        opener = Opener()
+        with patch('skippercast.pipeline.collect.check_public_address'), \
+                patch('skippercast.pipeline.collect.build_opener', return_value=opener), \
+                patch('skippercast.pipeline.collect.time.sleep'):
+            client = Client(datetime(2026, 9, 24, tzinfo=timezone.utc))
+            self.assertEqual(client.get(Response.url, as_json=True)['table']['rows'], [])
+        self.assertEqual(opener.calls, 2)
+        self.assertEqual([r.get('http_status') for r in client.requests], [403, 200])
+
+        opener = Opener()
+        with patch('skippercast.pipeline.collect.check_public_address'), \
+                patch('skippercast.pipeline.collect.build_opener', return_value=opener), \
+                patch('skippercast.pipeline.collect.time.sleep'):
+            with self.assertRaises(HTTPError):
+                Client(datetime(2026, 9, 24, tzinfo=timezone.utc)).get('https://example.org/data')
+        self.assertEqual(opener.calls, 1)
+
     def test_trip_counts_preserve_release_zero_and_unknown_location(self):
         page = '''Fish Counts September 20, 2026
         <tr><td><a href="/boats/test"><b>Example Boat</b></a>Morro Bay, CA</td>

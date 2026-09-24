@@ -5,11 +5,16 @@ import unittest
 from unittest.mock import patch
 
 from scripts.refresh_regions import refresh
+from skippercast.platform.contracts import REPO
 
 
 class DraftRehearsalTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        (REPO / 'var').mkdir(exist_ok=True)
+
     def test_one_draft_produces_only_its_local_receipt(self):
-        with tempfile.TemporaryDirectory(dir=Path('var')) as directory:
+        with tempfile.TemporaryDirectory(dir=REPO / 'var') as directory:
             output = Path(directory)
             data = {'generated_at': '2026-09-24T00:00:00Z', 'completed_at': '2026-09-24T00:00:01Z',
                     'health': {'status': 'degraded', 'issues': ['fixture']},
@@ -24,7 +29,7 @@ class DraftRehearsalTests(unittest.TestCase):
             self.assertFalse((output / 'regions/morro-bay').exists())
 
     def test_draft_cannot_enter_regular_or_external_output(self):
-        with tempfile.TemporaryDirectory(dir=Path('var')) as directory:
+        with tempfile.TemporaryDirectory(dir=REPO / 'var') as directory:
             with self.assertRaisesRegex(ValueError, 'was not collected'):
                 refresh('daily', Path(directory), only_region='bodega-point-reyes')
         with tempfile.TemporaryDirectory() as directory:

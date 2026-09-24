@@ -8,7 +8,7 @@ from io import BytesIO
 import json
 import time
 from urllib.error import HTTPError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
 
@@ -55,7 +55,9 @@ class Client:
 
     def get(self, url, as_json=False, as_pdf=False, as_binary=False):
         public_url(url)
-        for attempt in range(2):
+        coastwatch = urlsplit(url).hostname == 'coastwatch.pfeg.noaa.gov'
+        attempts = 3 if coastwatch else 2
+        for attempt in range(attempts):
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
             try:
                 check_public_address(url)
@@ -99,9 +101,12 @@ class Client:
                 if isinstance(error, HTTPError):
                     record["http_status"] = error.code
                 self.requests.append(record)
-                if attempt == 1 or isinstance(error, (ValueError, HTTPError)) and getattr(error, "code", 0) < 500:
+                retry_coastwatch_forbidden = coastwatch and isinstance(error, HTTPError) and error.code == 403
+                if (attempt == attempts - 1 or
+                        isinstance(error, (ValueError, HTTPError)) and getattr(error, "code", 0) < 500
+                        and not retry_coastwatch_forbidden):
                     raise
-                time.sleep(1)
+                time.sleep(1 + attempt)
 
 
 def source(ident, name, kind, url, max_age, loader, now, previous=None, client_factory=Client):
