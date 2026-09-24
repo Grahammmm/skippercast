@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "scope": "original-csumb-south-central-coast-native-grid-leads",
+  "sources": [
+    {
+      "id": "csumb-scc-block05",
+      "survey_id": "SCC_Block05",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block05/multibeam/data/version2/products/SCC_Block05_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
+      "archive_sha256": "894e1c2d8e463b33fdc2e9f965106f97dc113878b9d6ffd2dc3195b2ec3b1701",
+      "archive_bytes": 214391255,
+      "bathymetry_member": "SCC_Blk05_2m.5m_bathygrids.zip",
+      "bathymetry_member_sha256": "67cb71cb734293c00108a9561f92b3440286b0cbe3a36ea40af2564b177dc893",
+      "bathymetry_grid": "ArcViewGrids/scc05_2mbathy",
+      "habitat_member": "SCC_Blk05_2m.5m_habitat.zip",
+      "habitat_member_sha256": "bbd680bebf520c3dc60526ba2d65039a6448fee115800a00439938525ff441ff",
+      "habitat_grid": "ArcViewGrids/scc05_2mhab",
+      "acquisition_year": 2010,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "status": "research-only",
+      "limitations": "Original grids were inspected, but NAVD88 elevations are not qualified MLLW fishing depths. The habitat grid codes rough versus smooth terrain inferred from bathymetry, not sampled rock. The metadata's positional/vertical accuracy statements vary with depth and are not per-cell product uncertainty. No target or export may be generated from this source until datum, substrate, hazards and complete legal geometry are reviewed."
+    }
+  ]
+}

@@ -1,12 +1,13 @@
 {
   "schema_version": 1,
   "id": "csumb-scc-block05-native-candidate",
-  "name": "CSUMB SCC_Block05 measured bathymetry, native shallow-water grid lead",
+  "name": "CSUMB SCC_Block05 inspected native bathymetry and terrain-habitat grids",
   "region_ids": [
     "cambria-san-simeon"
   ],
   "need_ids": [
-    "bathymetry"
+    "bathymetry",
+    "substrate"
   ],
   "producer": {
     "name": "CSU Monterey Bay Seafloor Mapping Lab (CSUMB/SFML)",
@@ -14,15 +15,17 @@
   },
   "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
   "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block05/multibeam/data/version2/products/SCC_Block05_additional_products.tar.gz",
-  "access_status": "partial",
+  "access_status": "accessible",
   "variables": [
-    "bathymetry"
+    "bathymetry",
+    "rough_smooth_terrain_class"
   ],
   "units": {
-    "bathymetry": "m"
+    "bathymetry": "m NAVD88 Geoid09 elevation",
+    "rough_smooth_terrain_class": "coded 2 m cells; -1/-31 rough and 0/-30 smooth"
   },
   "rights": {
-    "license": null,
+    "license": "US federal archive distribution; original CSUMB product redistribution terms still under review",
     "terms_url": "https://www.ngdc.noaa.gov/metaview/page?xml=NOAA/NESDIS/NGDC/MGG/Multibeam/iso/xml/SCC_Block05_Multibeam.xml&view=getDataView&header=none",
     "redistribution_reviewed": false
   },
@@ -34,23 +37,23 @@
       35.617115177
     ],
     "resolution_m": 2,
-    "horizontal_crs": "EPSG:4326 for catalog trackline envelope; native product CRS unverified",
-    "vertical_datum": null,
+    "horizontal_crs": "EPSG:26910 for inspected ArcInfo grids; WGS84 bounds are the separate NCEI track envelope",
+    "vertical_datum": "NAVD88 Geoid09",
     "footprint_kind": "survey-track-envelope",
     "footprint_url": "https://www.ngdc.noaa.gov/metaview/page?xml=NOAA/NESDIS/NGDC/MGG/Multibeam/iso/xml/SCC_Block05_Multibeam.xml&view=getDataView&header=none",
-    "resolution_basis": "advertised"
+    "resolution_basis": "inspected"
   },
   "temporal": {
     "source_time": null,
-    "checked_at": "2026-09-21T23:53:32.876604+00:00",
+    "checked_at": "2026-09-24T10:05:34+00:00",
     "update_cadence": "Static 2010 survey; monthly catalog check for revised releases, no automatic native-data replacement.",
     "coverage_start": "2010-04-15",
     "coverage_end": "2010-08-18"
   },
   "provenance": {
     "access_service": "NOAA NCEI archive of CSUMB observations, not an independent survey",
-    "raw_sha256": null,
-    "transformations": []
+    "raw_sha256": "894e1c2d8e463b33fdc2e9f965106f97dc113878b9d6ffd2dc3195b2ec3b1701",
+    "transformations": ["Opened exact bathymetry and habitat ArcInfo grids from the hash-pinned original archive; no datum conversion, interpolation or fishing target generation"]
   },
   "evidence": [
     {
@@ -67,7 +70,7 @@
     },
     {
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block05/multibeam/data/version2/products/SCC_Block05_additional_products.tar.gz",
-      "supports": "HEAD request on 2026-09-21 returned HTTP 200, application/x-gzip, Content-Length 214391255. No archive payload was downloaded or quality-inspected."
+      "supports": "Full 214,391,255-byte original archive downloaded and SHA-256 verified on 2026-09-24. The included 2 m bathymetry ArcInfo grid opened with 6,731,576 valid EPSG:26910 cells and elevations -85 to -0.86 m; the aligned 2 m terrain-habitat grid opened with 6,705,573 valid cells. The hash-bound native audit is dist/data/csumb-scc-native-source-review.json."
     },
     {
       "url": "https://pubs.usgs.gov/sim/3327/downloads/metadata/Geology_SanSimeon_metadata_faq.html",
@@ -77,8 +80,9 @@
   "limitations": [
     "Research candidate only. It does not authorize publication or establish any fish target, habitat classification, catch rate, boulder size or current fish location.",
     "Block05 alone covers only a narrow strip within fishing_bounds [-121.32,35.53,-121.06,35.68]. Neighboring Block04 and Block06 also overlap the region but require separate product, coverage and rights review; neither their rectangles nor the Block05 rectangle prove continuous coverage.",
-    "The 214 MB archive is a bundle; the precise native 2 m grid member, horizontal CRS, elevation sign, vertical datum, nodata mask and uncertainty remain uninspected. No valid under-200-ft fishing polygon can yet be certified.",
-    "The archive metadata gives liability and citation statements but no product-specific redistribution license was established in this review. Native and derived outputs remain withheld.",
+    "The inspected 2 m elevation grid is NAVD88 Geoid09, not MLLW. The metadata states ±2 m horizontal and ±20 cm vertical accuracy varying with depth; it supplies no per-cell uncertainty band. A reviewed location-specific datum conversion and uncertainty budget are required before any under-200-ft fishing polygon can be certified.",
+    "The aligned habitat grid is a rough/smooth terrain classification derived from the same bathymetry, not independent sampled bedrock. -1 and -31 mean rough in two depth bands; 0 and -30 mean smooth. No rock-pile claim follows from a rough code alone.",
+    "The archive metadata gives liability and citation statements but no product-specific redistribution license was established in this review. Native and derived outputs remain withheld from public map/export.",
     "NCEI soundings, CSUMB native grids and USGS SIM 3327 derivatives share underlying observations; do not count them as independent substrate evidence.",
     "Bathymetry is a depth measurement, not a rock/sand classification. Geological interpretation, actual substrate groundtruth and complete closure geometry are separate checks.",
     "Survey interval is April 15\u2013August 18, 2010. Exact acquisition instants at any target are unknown."
