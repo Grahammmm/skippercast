@@ -180,6 +180,11 @@ def main():
         if coast is None:
             raise ValueError("Coast not present in source review")
         source_review = coast["source_review"]
+    if (source_review.get("usgs_context_sha256") != digest(args.hard)
+            or source_review.get("usgs_original_audit_sha256") != digest(args.usgs_audit)
+            or source_review.get("usgs_map_audit_sha256") != (
+                digest(args.map_audit) if args.map_audit else None)):
+        raise ValueError("USGS source receipts changed after the depth-overlap review")
     sectors = tuple(args.sector_id or ("cambria-morro", "monterey-sur"))
     result = compile_context(source_review, args.scheme, args.cache,
                              json.loads(args.hard.read_text()), json.loads(args.usgs_audit.read_text()),

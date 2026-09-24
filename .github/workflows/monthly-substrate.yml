@@ -12,7 +12,7 @@ jobs:
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest
-    timeout-minutes: 35
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Load latest public MPA snapshot
@@ -26,6 +26,16 @@ jobs:
           python-version: "3.12"
       - name: Install pinned geospatial reader
         run: python -m pip install -r requirements-survey.txt
+      - name: Reuse verified original-source archives
+        uses: actions/cache@v4
+        with:
+          path: |
+            var/nbs-cache
+            var/usgs-native-cache
+            var/usgs-doi-native-cache
+          key: california-original-rasters-v1-${{ hashFiles('catalog/nbs-modeling-sample.json', 'catalog/usgs-seafloor-sources.json') }}
+          restore-keys: |
+            california-original-rasters-v1-
       - name: Verify substrate adapter and class safeguards
         run: python -m unittest tests.test_cdfw_substrate_pipeline -v
       - name: Audit pinned USGS camera observations statewide
@@ -65,6 +75,48 @@ jobs:
           --fetch
           --workers 4
           --output var/review/nbs-statewide-multiple-camera-tile-review.json
+      - name: Discover older USGS map-block source links
+        run: python scripts/discover_usgs_map_blocks.py --output var/review/usgs-map-blocks.json
+      - name: Review older USGS original metadata
+        run: >-
+          python scripts/audit_usgs_map_metadata.py
+          --blocks var/review/usgs-map-blocks.json
+          --output var/review/usgs-map-metadata.json
+      - name: Inspect older USGS original class rasters
+        run: >-
+          python scripts/inspect_usgs_native_grids.py
+          --blocks var/review/usgs-map-blocks.json
+          --metadata var/review/usgs-map-metadata.json
+          --cache var/usgs-native-cache
+          --output var/review/usgs-native-audit.json
+      - name: Discover newer USGS DOI source links
+        run: python scripts/discover_usgs_doi_releases.py --output var/review/usgs-doi-releases.json
+      - name: Review newer USGS original metadata
+        run: >-
+          python scripts/audit_usgs_doi_metadata.py
+          --releases var/review/usgs-doi-releases.json
+          --output var/review/usgs-doi-metadata.json
+      - name: Inspect newer USGS original class rasters
+        run: >-
+          python scripts/inspect_usgs_doi_grids.py
+          --releases var/review/usgs-doi-releases.json
+          --metadata var/review/usgs-doi-metadata.json
+          --cache var/usgs-doi-native-cache
+          --output var/review/usgs-doi-native-audit.json
+      - name: Refresh NOAA federal groundfish exclusions
+        run: python scripts/collect_noaa_groundfish_areas.py --output var/review/noaa-federal-areas.json
+      - name: Cross-check original hard class against measured NOAA cells statewide
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/review_nbs_statewide_hard_overlap.py
+          --review var/review/nbs-statewide-multiple-camera-tile-review.json
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --usgs-audit var/review/usgs-doi-native-audit.json
+          --map-audit var/review/usgs-native-audit.json
+          --mpas var/published/latest.json
+          --federal var/review/noaa-federal-areas.json
+          --output var/review/nbs-statewide-usgs-hard-overlap-review.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
       - name: Build MPA-screened review layers
@@ -81,5 +133,5 @@ jobs:
           path: var/review/
           retention-days: 30
 
-# This workflow deliberately does not change public map files. Camera observations
-# and substrate classes need a reviewed source commit before site deployment.
+# This workflow deliberately does not change public map files. Camera observations,
+# source-class intersections and closures need a reviewed commit before deployment.
