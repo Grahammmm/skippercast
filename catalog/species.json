@@ -89,6 +89,41 @@
       "catch_probability": null
     },
     {
+      "id": "pacific-halibut",
+      "name": "Pacific halibut",
+      "scientific_name": "Hippoglossus stenolepis",
+      "life_stage": "Adults targeted by the recreational fishery; juvenile nursery habitat is separate",
+      "region_scope": "California northern and adjacent shelf waters; local presence and catch rates are uncalibrated",
+      "reviewed_at": "2026-09-23",
+      "claims": [
+        {
+          "claim": "IPHC describes adult Pacific halibut using continental-shelf feeding grounds in summer and deeper slope spawning grounds in winter. Individuals move across depth bands; no single California recreational depth is established by this broad biology.",
+          "source_url": "https://www.iphc.int/research/pacific-halibut-stock-status-biology/",
+          "evidence_type": "primary international stock biology synthesis",
+          "confidence": "High for broad migration pattern; low for a local fishing coordinate",
+          "geographic_transfer": "Do not map stock-wide seasonal habitat to a specific California boat trip without local bathymetry, substrate, legal access and recent observations."
+        },
+        {
+          "claim": "CDFW distinguishes Pacific from California halibut and applies a quota-controlled Pacific halibut season with a one-line, two-hook angling restriction.",
+          "source_url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
+          "evidence_type": "primary state regulation summary",
+          "confidence": "High for the reviewed rule structure; effective dates and quota closure require fresh checks",
+          "geographic_transfer": "Check the applicable date, management area and current in-season notices before treating the fishery as open."
+        }
+      ],
+      "map_policy": "Show only separately depth-, substrate- and closure-qualified shelf search areas. Never inherit a California-halibut sediment polygon as a Pacific-halibut target. Historical fish observations are source context, not catch probability.",
+      "depth_strategy": "A 200-foot boat limit describes available search water, not a biological optimum. IPHC describes broader shelf and slope habitat; extending gear or depth needs a separate boat, safety and legal review.",
+      "conditions_use": "Rate full outbound, fishing and return comfort and near-bottom gear control. Tide height alone is not bottom-current speed; missing conditions remain unknown.",
+      "next_measurements": [
+        "Native bathymetry and sediment/mixed-bottom classification on the chosen shelf lane",
+        "Local bait and identified Pacific halibut observations with date and method",
+        "Effort and zero-catch drifts by depth",
+        "Actual drift and line angle plus current season and quota status"
+      ],
+      "local_catch_model_validated": false,
+      "catch_probability": null
+    },
+    {
       "id": "salmon",
       "name": "Chinook salmon",
       "scientific_name": "Oncorhynchus tshawytscha",

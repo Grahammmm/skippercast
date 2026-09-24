@@ -57,6 +57,17 @@
       "steps": ["Sound the lane for bait and a change in bottom or depth.", "Make a short drift or controlled slow pass with the presentation just off bottom.", "Repeat or shift lanes only after recording the pass and whether bottom contact and bait were present."],
       "adjust": "If the rig rides high, change weight or drift angle. If it drags, lighten or raise it. Do not infer fish presence from soft sediment alone."
     },
+    "pacific-halibut": {
+      "priority": "Search a legal northern continental-shelf bottom lane with a controlled near-bottom presentation; verify bait and drift on the boat.",
+      "find": ["Surveyed shelf sediment or mixed-bottom edges with a manageable drift and room to reset safely.", "A local depth band supported by actual bottom data, not a fixed statewide halibut depth or an unverified California-halibut pin."],
+      "rig": "One line with no more than two hooks when angling for Pacific halibut. A baited near-bottom rig or a single jig can be a starting presentation; set weight by actual line angle and current. Check the current quota and local season before leaving.",
+      "steps": ["Confirm the Pacific halibut season and any quota closure, exact MPA and bottom-access rules for the trip date.", "Sound a legal shelf lane, note bottom, bait and boat drift, then make a short near-bottom test pass.", "Record effort and empty drifts; change depth or lane only when conditions and observed evidence support the move."],
+      "adjust": "Adult fish can feed away from bottom and move seasonally across the shelf. A soft-bottom polygon or a temperature edge does not establish current presence; improve boat control or search another verified lane.",
+      "method_sources": [
+        {"title": "IPHC stock biology and seasonal shelf migration", "url": "https://www.iphc.int/research/pacific-halibut-stock-status-biology/"},
+        {"title": "CDFW Pacific halibut rules and quota tracking", "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut"}
+      ]
+    },
     "white-seabass": {
       "priority": "Look for fresh bait and fish signs near kelp or coastal structure, then make quiet presentations at the observed depth.",
       "find": ["Active bait, birds or sonar marks near a legal kelp edge or island lee.", "A safe pass that does not crowd other boats or enter a protected area."],

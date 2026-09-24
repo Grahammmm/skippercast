@@ -104,6 +104,21 @@
       "category": "finfish",
       "control_mode": "bottom"
     },
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "group": "Shelf & sand",
+      "kind": "soft",
+      "source_species": [
+        "pacific-halibut"
+      ],
+      "habitat_kinds": [
+        "sediment",
+        "mixed"
+      ],
+      "category": "finfish",
+      "control_mode": "bottom",
+      "empty_map_note": "No depth- and closure-qualified Pacific halibut grounds are published here. California halibut habitat is not a substitute."
+    },
     "white-seabass": {
       "name": "White seabass",
       "group": "Coastal schools",
