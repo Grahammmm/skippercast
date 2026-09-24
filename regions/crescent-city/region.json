@@ -221,7 +221,7 @@
   "coverage": {
     "bathymetry": {
       "status": "partial",
-      "reason": "NOAA H12131 has 264 fine supergrid centers in this package, but all 264 full footprints are inside or intersect Pyramid Point SMCA in the reviewed CDFW snapshot. Its report collected no bottom samples. F00562 harbor/approach is held; H11981 lies south. No local reef target is qualified."
+      "reason": "NOAA H11985 has local fine-depth grids outside MPAs, but original USGS camera windows corroborate no hard bottom well inside them; its chart hazards and substrate remain unqualified. All local H12131 fine grids touch Pyramid Point SMCA. F00562 harbor/approach is held; H11981 lies south. No local reef target is qualified."
     },
     "substrate": {
       "status": "partial",

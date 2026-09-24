@@ -145,7 +145,7 @@ def main():
     parser.add_argument('--workers',type=int,default=4)
     parser.add_argument('--survey-id',action='append',help='Review only these original survey IDs')
     args=parser.parse_args()
-    if not 1<=args.workers<=8 or not 1<=args.max_bytes<=450_000_000:raise ValueError('Unsupported native BAG scan bound')
+    if not 1<=args.workers<=8 or not 1<=args.max_bytes<=550_000_000:raise ValueError('Unsupported native BAG scan bound')
     if args.max_bytes>100_000_000 and not args.survey_id:
         raise ValueError('Large native BAG review requires explicit --survey-id selection')
     if args.max_bytes>200_000_000 and args.workers!=1:
