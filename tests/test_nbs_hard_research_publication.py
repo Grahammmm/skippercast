@@ -8,6 +8,28 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NbsHardResearchPublicationTests(unittest.TestCase):
+    def test_monterey_big_sur_zero_is_a_complete_sampled_tile_result(self):
+        receipt = json.loads((ROOT / "dist/data/nbs-central-gap-all-camera-tiles-review.json").read_text())
+        self.assertEqual({row["sector_id"] for row in receipt["sectors"]},
+                         {"monterey-sur", "big-sur", "sur-san-simeon"})
+        self.assertEqual(receipt["requested_unique_tiles"], 26)
+        self.assertEqual(receipt["audited_unique_tiles"], 26)
+        self.assertEqual(receipt["failed_tiles"], {})
+        self.assertFalse(receipt["fishing_target"])
+        self.assertFalse(receipt["exportable"])
+        for sector in receipt["sectors"]:
+            self.assertEqual(len(sector["reviewed_tiles"]), sector["candidate_tiles"])
+            for row in sector["reviewed_tiles"]:
+                source = row["source_audit"]
+                self.assertIsNone(row["source_failure"])
+                self.assertEqual(source["counts"]["qualified_screen_pixels"], 0)
+                self.assertTrue(source["raster_url"].startswith(
+                    "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/"))
+                self.assertEqual(len(source["raster_sha256"]), 64)
+        monterey = next(row for row in receipt["sectors"] if row["sector_id"] == "monterey-sur")
+        self.assertTrue(any(tile["uncertainty_diagnostic"]["within_depth_limit_with_margin_by_supplied_uncertainty_m"]["over_1_to_2"] > 0
+                            for tile in monterey["reviewed_tiles"]))
+
     def test_camera_evidence_matches_current_outlines_and_is_not_a_catch_claim(self):
         receipt = json.loads((ROOT / "dist/data/usgs-video-nbs-hard-overlap.json").read_text())
         self.assertFalse(receipt["fishing_target"])

@@ -75,6 +75,21 @@ jobs:
           --fetch
           --workers 4
           --output var/review/nbs-statewide-multiple-camera-tile-review.json
+      - name: Audit every camera-prioritized Monterey and Big Sur tile
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_nbs_coast_camera_tiles.py
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --mpas var/published/latest.json
+          --coast central
+          --sector-id monterey-sur
+          --sector-id big-sur
+          --sector-id sur-san-simeon
+          --max-tiles 12
+          --fetch
+          --workers 4
+          --output var/review/nbs-central-gap-all-camera-tiles-review.json
       - name: Discover older USGS map-block source links
         run: python scripts/discover_usgs_map_blocks.py --output var/review/usgs-map-blocks.json
       - name: Review older USGS original metadata

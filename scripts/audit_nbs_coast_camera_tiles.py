@@ -152,13 +152,21 @@ def main():
     parser.add_argument('--cache', type=Path, default=Path('var/nbs-cache'))
     parser.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
     parser.add_argument('--coast', required=True, choices=('all', 'northern', 'mendocino', 'san-francisco', 'central', 'southern'))
+    parser.add_argument('--sector-id', action='append',
+                        help='Repeat to audit only named sectors from the reviewed statewide catalog.')
     parser.add_argument('--max-tiles', type=int, default=3)
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--fetch', action='store_true')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    sectors = json.loads(args.sectors.read_text())['sectors']
+    if args.sector_id:
+        wanted = set(args.sector_id)
+        sectors = [sector for sector in sectors if sector['id'] in wanted]
+        if {sector['id'] for sector in sectors} != wanted or not sectors:
+            raise ValueError('Unknown sector ID in requested audit subset')
     result = build(args.scheme, json.loads(args.manifest.read_text()), args.video_cache,
-                   json.loads(args.sectors.read_text())['sectors'], args.cache,
+                   sectors, args.cache,
                    json.loads(args.mpas.read_text()), coast=args.coast,
                    max_tiles=args.max_tiles, fetch=args.fetch, workers=args.workers)
     args.output.parent.mkdir(parents=True, exist_ok=True)
