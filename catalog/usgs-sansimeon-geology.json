@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "usgs-sim3327-sansimeon-geology",
+  "producer": "U.S. Geological Survey",
+  "documentation_url": "https://pubs.usgs.gov/sim/3327/",
+  "archive_url": "https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip",
+  "archive_bytes": 753951,
+  "archive_sha256": "6309074b299845769735d291e78a9a58a8d226a746c5e80ee7cbfa95f9633ad6",
+  "metadata_member_sha256": "e330211c7b5b2512f37083bcc5d96e5f921bc5bd8a035387360dd61da3efc688",
+  "shapefile_crs": "EPSG:32610",
+  "expected_polygon_count": 625,
+  "pure_bedrock_units": ["Tus", "Tm", "KJug", "KJug?", "KJf", "Ksl", "Jo", "Jo?"],
+  "composite_sediment_over_bedrock_units_excluded": ["Qms/Tus", "Qms/KJf", "Qms/KJug", "Qms/KJug?"],
+  "classification_note": "The pure units are interpreted exposed seafloor bedrock. Composite Qms/ units have a thin, potentially ephemeral sediment cover and are not classified as exposed rock in this screen. Lithology interpretation used multibeam, backscatter, samples where available and other geology; it is not a sample at every cell.",
+  "rights": "USGS public-domain data; credit USGS. Original CSUMB native-grid redistribution is separately unresolved."
+}

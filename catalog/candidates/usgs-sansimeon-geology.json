@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "usgs-sim3327-sansimeon-geology-candidate",
+  "name": "USGS SIM 3327 interpreted offshore geology, San Simeon",
+  "region_ids": ["cambria-san-simeon"],
+  "need_ids": ["substrate"],
+  "producer": {"name": "U.S. Geological Survey", "url": "https://www.usgs.gov/"},
+  "documentation_url": "https://pubs.usgs.gov/sim/3327/",
+  "access_url": "https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip",
+  "access_status": "accessible",
+  "variables": ["interpreted_geologic_map_unit", "interpreted_unit_type", "geologic_polygon"],
+  "units": {"interpreted_geologic_map_unit": "USGS SIM 3327 map-unit code", "interpreted_unit_type": null, "geologic_polygon": null},
+  "rights": {"license": "USGS public domain", "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits", "redistribution_reviewed": true},
+  "spatial": {
+    "bounds": [-121.38574782872195, 35.484300004493065, -121.02522964097642, 35.701805177220486],
+    "resolution_m": null,
+    "horizontal_crs": "EPSG:32610",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T10:46:26+00:00",
+    "update_cadence": "Static map publication; monthly source change check",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Original USGS Scientific Investigations Map 3327 download",
+    "raw_sha256": "6309074b299845769735d291e78a9a58a8d226a746c5e80ee7cbfa95f9633ad6",
+    "transformations": ["Project original WGS84 UTM 10 polygon geometry into native CSUMB NAD83 UTM 10 screen", "Inset interpreted pure-bedrock polygons by 10 m for research-only overlap"]
+  },
+  "evidence": [
+    {"url": "https://pubs.usgs.gov/sim/3327/", "supports": "Primary USGS publication describes interpreted offshore geology using integrated multibeam, backscatter, samples where available, magnetic and seismic data."},
+    {"url": "https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip", "supports": "Original 753,951-byte ZIP opened and SHA-256 pinned; 625 polygons have MapUnitAbb and UnitType attributes in WGS84 UTM zone 10."},
+    {"url": "https://pubs.usgs.gov/sim/3327/downloads/metadata/Geology_SanSimeon_metadata.html", "supports": "USGS metadata distinguishes exposed bedrock from thin, potentially ephemeral sediment over bedrock and notes that lithology may be inferred where samples are unavailable."}
+  ],
+  "limitations": [
+    "Interpreted geology is not a direct rock sample at every polygon cell, a boulder inventory or evidence of current fish abundance.",
+    "Composite Qms/bedrock units are excluded from the exposed-bedrock overlap because sediment can cover the older rock.",
+    "The research overlap with CSUMB roughness uses related bathymetry evidence; it is not an independent confirmation of every rough cell.",
+    "The separate CSUMB depth grid uses NAVD88 Geoid09; these geology polygons alone do not certify MLLW depth, legal access or a fishing waypoint."
+  ]
+}

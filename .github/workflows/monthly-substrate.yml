@@ -29,12 +29,19 @@ jobs:
           python scripts/audit_csumb_scc_native.py
           --fetch
           --output var/review/csumb-scc-native-source-review.json
+      - name: Screen original USGS geology against measured terrain and fresh CDFW MPAs
+        run: >-
+          python scripts/audit_sansimeon_bedrock_overlap.py
+          --fetch
+          --output var/review/csumb-sansimeon-bedrock-overlap-review.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: csumb-scc-native-review
-          path: var/review/csumb-scc-native-source-review.json
+          path: |
+            var/review/csumb-scc-native-source-review.json
+            var/review/csumb-sansimeon-bedrock-overlap-review.json
           retention-days: 30
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
