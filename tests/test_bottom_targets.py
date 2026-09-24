@@ -29,9 +29,11 @@ class MetadataAndClosureTests(unittest.TestCase):
         self.assertEqual(result["vertical_datum"],"MLLW")
         self.assertEqual(result["uncertainty_type"],"productUncert")
         self.assertEqual(len(result["metadata_sha256"]),64)
+        self.assertEqual(bag_metadata(metadata('VERT_CS["MLLW depth",VERT_DATUM["MLLW depth",2005]]'),"H13323")["vertical_datum"],"MLLW")
 
     def test_unknown_datum_and_misleading_title_held(self):
-        for v in ['VERT_CS["unknown",VERT_DATUM["unknown",2000]]','VERT_CS["MLLW",VERT_DATUM["ellipsoid",2000]]']:
+        for v in ['VERT_CS["unknown",VERT_DATUM["unknown",2000]]','VERT_CS["MLLW",VERT_DATUM["ellipsoid",2000]]',
+                  'VERT_CS["MLLW depth",VERT_DATUM["MLLW ellipsoid",2000]]']:
             with self.subTest(v=v),self.assertRaises(ValueError):bag_metadata(metadata(v),"H13323")
 
     def test_identity_and_uncertainty_required(self):

@@ -46,7 +46,7 @@ def bag_metadata(xml: str, survey_id: str) -> dict:
     codes = [text for name, text in leaves if name == "CharacterString"]
     horizontal = next((v for v in codes if v.startswith("PROJCS[")), None)
     vertical = next((v for v in codes if v.startswith("VERT_CS[")), None)
-    if not horizontal or not vertical or not re.search(r'VERT_DATUM\["(?:MLLW|Mean Lower Low Water)"', vertical):
+    if not horizontal or not vertical or not re.search(r'VERT_DATUM\["(?:MLLW(?: depth)?|Mean Lower Low Water)"', vertical):
         raise ValueError("A named MLLW vertical datum is required; unknown/ellipsoid grids are held")
     if not any(survey_id in v for v in codes):
         raise ValueError("Survey identity does not match the reviewed source")
