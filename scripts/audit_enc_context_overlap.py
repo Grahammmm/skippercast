@@ -19,8 +19,8 @@ from shapely.strtree import STRtree
 
 
 def audit(enc, context, historical, *, buffer_m=100):
-    if enc.get('scope_id') != 'point-reyes-tomales' or len(enc.get('query_receipts', [])) != 18:
-        raise ValueError('Point Reyes ENC snapshot must contain all 18 checked layers')
+    if not enc.get('scope_id') or len(enc.get('query_receipts', [])) != 18:
+        raise ValueError('ENC snapshot must identify a scope and contain all 18 checked layers')
     if sum(row['count'] for row in enc['query_receipts']) != len(enc.get('features', [])):
         raise ValueError('ENC feature count does not match layer receipts')
     if buffer_m < 0:
@@ -30,13 +30,13 @@ def audit(enc, context, historical, *, buffer_m=100):
     if not hazards:
         raise ValueError('Empty ENC danger snapshot needs manual review')
     tree = STRtree(hazards)
+    if len(enc.get('bounds', [])) != 4:
+        raise ValueError('ENC review bounds are missing')
     bounds = box(*enc['bounds'])
     by_survey = Counter()
     held = []
     for feature in context.get('features', []):
         props = feature['properties']
-        if props.get('survey_id') not in {'H11734', 'H11735', 'H11738'}:
-            continue
         footprint = shape(feature['geometry'])
         if not footprint.intersects(bounds):
             continue
@@ -50,15 +50,15 @@ def audit(enc, context, historical, *, buffer_m=100):
                          'charted_dangers_within_buffer': len(nearby)})
     historical_distances = []
     for survey in historical['surveys']:
-        if survey['survey_id'] != 'H11735':
-            continue
         for item in survey['hazards']:
-            point = transform(project, Point(item['longitude'], item['latitude']))
+            location = Point(item['longitude'], item['latitude'])
+            if not bounds.covers(location):
+                continue
+            point = transform(project, location)
             historical_distances.append({'hazard_id': item['id'],
+                'survey_id': survey['survey_id'],
                 'nearest_enc_danger_m': round(min(point.distance(g) for g in hazards), 1),
                 'reconciled_with_current_chart': False})
-    if not historical_distances:
-        raise ValueError('Missing historical H11735 report danger')
     return {'schema_version': 1, 'scope_id': enc['scope_id'],
         'enc_checked_at': enc['checked_at'], 'source_url': enc['source_url'],
         'queried_layers': 18, 'charted_danger_features': len(hazards),
