@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "nbs-modeling-single-tile-source-screen",
-  "reviewed_at": "2026-09-24T04:53:30+00:00",
+  "reviewed_at": "2026-09-24T04:58:48+00:00",
   "tile": "BH4545C2",
   "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
   "delivered_date": "2026-09-05 01:52:29",
@@ -22,6 +22,7 @@
     ],
     "max_uncertainty_m": 1.0,
     "min_survey_year": 1990,
+    "planning_depth_margin_m": 2,
     "measured_contributor_flags_required": true
   },
   "counts": {

@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import rasterio
+from skippercast.platform.bottom_targets import cells_qualified
 
 
 def sha256(path):
@@ -73,6 +74,15 @@ def is_measured_survey(item):
             and "generalization" not in source)
 
 
+def qualified_mask(elevation, uncertainty, contributor, source_rows, *, max_uncertainty_m=1.0,
+                   min_survey_year=1990, resolution_m=4.0):
+    recent = {value for value, item in source_rows.items()
+              if is_measured_survey(item) and item_year(item["survey_date_end"]) >= min_survey_year}
+    return (cells_qualified(elevation, uncertainty, resolution_m,
+                            maximum_uncertainty_m=max_uncertainty_m)
+            & np.isin(contributor, list(recent)))
+
+
 def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey_year=1990):
     row = scheme_row(scheme, tile)
     raster_path = cache / f"{tile}.tiff"
@@ -94,8 +104,9 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
                     if is_measured_survey(item)}
         recent = {value for value in measured
                   if item_year(source_rows[value]["survey_date_end"]) >= min_survey_year}
-        uncertainty_ok = np.isfinite(uncertainty) & (uncertainty >= 0) & (uncertainty <= max_uncertainty_m)
-        qualified = depth & uncertainty_ok & np.isin(contributor, list(recent))
+        qualified = qualified_mask(elevation, uncertainty, contributor, source_rows,
+                                   max_uncertainty_m=max_uncertainty_m,
+                                   min_survey_year=min_survey_year, resolution_m=max(raster.res))
         counts = {"depth_25_to_200_ft_pixels": int(depth.sum()),
                   "measured_depth_pixels": int((depth & np.isin(contributor, list(measured))).sum()),
                   "recent_measured_depth_pixels": int((depth & np.isin(contributor, list(recent))).sum()),
@@ -110,7 +121,8 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
             "rat_url": row["RAT_Link"], "rat_sha256": rat_digest,
             "vertical_datum": "MLLW", "raster_crs_wkt": crs, "resolution_m": resolution,
             "screen": {"depth_ft": [25, 200], "max_uncertainty_m": max_uncertainty_m,
-                       "min_survey_year": min_survey_year, "measured_contributor_flags_required": True},
+                       "min_survey_year": min_survey_year, "planning_depth_margin_m": 2,
+                       "measured_contributor_flags_required": True},
             "counts": counts,
             "qualified_contributors": [{"survey_id": source_rows[value]["source_survey_id"],
                                          "survey_date_end": source_rows[value]["survey_date_end"],

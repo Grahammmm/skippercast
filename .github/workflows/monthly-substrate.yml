@@ -12,7 +12,7 @@ jobs:
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Load latest public MPA snapshot
@@ -37,6 +37,22 @@ jobs:
         run: >-
           python scripts/audit_usgs_native_overlap.py
           --output var/review/usgs-video-native-overlap.json
+      - name: Check pinned NOAA NBS Modeling scheme and detect a newer version
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/check_nbs_modeling_scheme.py
+          --output var/review/nbs-modeling-scheme-health.json
+      - name: Screen one original NOAA NBS source tile per browse sector
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_nbs_statewide_camera_tiles.py
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --mpas var/published/latest.json
+          --fetch
+          --workers 4
+          --output var/review/nbs-statewide-camera-tile-review.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
       - name: Build MPA-screened review layers
@@ -46,6 +62,7 @@ jobs:
           --mpas var/published/latest.json
           --output-dir var/review
       - name: Upload source audit and unpublished review layers
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cdfw-ds3091-review

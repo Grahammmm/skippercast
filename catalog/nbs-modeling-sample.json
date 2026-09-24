@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "scope": "reviewed-noaa-nbs-modeling-tile-scheme",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/_Modeling_Tile_Scheme/Modeling_Tile_Scheme_20260923_175019.gpkg",
+  "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "bucket_list_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/?list-type=2&prefix=Test-and-Evaluation%2FModeling%2F_Modeling_Tile_Scheme%2F&max-keys=1000",
+  "release_class": "test-and-evaluation",
+  "fishing_target": false
+}
