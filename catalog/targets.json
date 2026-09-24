@@ -117,7 +117,9 @@
       ],
       "category": "finfish",
       "control_mode": "bottom",
-      "empty_map_note": "No depth- and closure-qualified Pacific halibut grounds are published here. California halibut habitat is not a substitute."
+      "empty_map_note": "No depth- and closure-qualified Pacific halibut grounds are published here. California halibut habitat is not a substitute.",
+      "note": "A northern shelf flatfish, distinct from California halibut. Surveyed sediment and mixed-bottom lanes are search hypotheses, not verified catch sites.",
+      "source_url": "https://www.fisheries.noaa.gov/species/pacific-halibut"
     },
     "white-seabass": {
       "name": "White seabass",

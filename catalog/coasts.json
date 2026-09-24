@@ -214,18 +214,7 @@
       "note": "Kelp bass, yellowtail, seabass, tuna and spiny lobster lead the southern selection. Lingcod occur here, but the reef selector is called Rockfish; separate species limits still apply."
     }
   ],
-  "extra_targets": {
-    "pacific-halibut": {
-      "name": "Pacific halibut",
-      "group": "Shelf & sand",
-      "kind": "soft",
-      "source_species": [
-        "pacific-halibut"
-      ],
-      "note": "A northern shelf flatfish, distinct from California halibut. Look for sediment habitat and shelf relief; this directory has no depth-qualified grounds for it.",
-      "source_url": "https://www.fisheries.noaa.gov/species/pacific-halibut"
-    }
-  },
+  "extra_targets": {},
   "source_bindings": {
     "seasonal-climate": "noaa-cpc-enso",
     "regulations": "cdfw-rules",
