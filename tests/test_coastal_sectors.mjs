@@ -26,11 +26,24 @@ test('Point Conception original-cell layer cannot become fishing or export coord
   const summary=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-review-summary.json',import.meta.url)));
   assert.equal(layer.coast_id,'central');
   assert.equal(layer.scope,'central-native-noaa-usgs-hard-bottom-context');
-  assert.equal(summary.surveys.length,1);
+  assert.equal(summary.surveys.length,2);
   assert.equal(summary.surveys[0].survey_id,'H11952');
   assert.equal(summary.surveys[0].counts.retained_components,27);
-  assert.equal(layer.features.length,20);
-  assert.ok(layer.features.every(f=>f.properties.survey_id==='H11952' &&
+  assert.equal(summary.surveys[1].survey_id,'H11953');
+  assert.equal(summary.surveys[1].counts.retained_components,1);
+  assert.equal(layer.features.length,21);
+  assert.ok(layer.features.every(f=>['H11952','H11953'].includes(f.properties.survey_id) &&
+    f.properties.fishing_target===false && f.properties.exportable===false &&
+    f.properties.legal_clearance===false && f.properties.fish_confirmed===false &&
+    f.properties.depth_qualified_for_target===false && f.properties.depth_ft_range[1]<=200));
+  const southern=JSON.parse(fs.readFileSync(new URL('../dist/data/gaviota-native-hard-context.geojson',import.meta.url)));
+  const southernSummary=JSON.parse(fs.readFileSync(new URL('../dist/data/gaviota-native-hard-review-summary.json',import.meta.url)));
+  assert.equal(southern.coast_id,'southern');
+  assert.equal(southern.scope,'southern-native-noaa-usgs-hard-bottom-context');
+  assert.equal(southernSummary.surveys[0].survey_id,'H11951');
+  assert.equal(southernSummary.surveys[0].counts.retained_components,23);
+  assert.equal(southern.features.length,12);
+  assert.ok(southern.features.every(f=>f.properties.survey_id==='H11951' &&
     f.properties.fishing_target===false && f.properties.exportable===false &&
     f.properties.legal_clearance===false && f.properties.fish_confirmed===false &&
     f.properties.depth_qualified_for_target===false && f.properties.depth_ft_range[1]<=200));

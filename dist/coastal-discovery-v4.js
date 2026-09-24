@@ -164,14 +164,15 @@ export async function initCoastalDiscovery(catalog,coast) {
       statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
     }catch(error){statewideCheck.checked=false;statewideNote.textContent=error.message+' · consult the original USGS catalog.';}
   });
-  if(coast.id==='san-francisco'||coast.id==='central'){
+  if(['san-francisco','central','southern'].includes(coast.id)){
     const pointConception=coast.id==='central';
-    const nativePane=pointConception?'pointConceptionNativeHard':'sfNativeHard';
-    const nativeFile=pointConception?'point-conception-native-hard-context.geojson':'sf-native-hard-context.geojson';
+    const gaviota=coast.id==='southern';
+    const nativePane=pointConception?'pointConceptionNativeHard':gaviota?'gaviotaNativeHard':'sfNativeHard';
+    const nativeFile=pointConception?'point-conception-native-hard-context.geojson':gaviota?'gaviota-native-hard-context.geojson':'sf-native-hard-context.geojson';
     const nativeLayer=L.layerGroup();map.createPane(nativePane).style.zIndex=426;
     const nativeLabel=document.createElement('label');nativeLabel.className='map-layer-option';
     const nativeCheck=document.createElement('input');nativeCheck.type='checkbox';
-    const nativeTitle=document.createElement('span');nativeTitle.textContent=pointConception?'Point Conception · surveyed hard bottom':'Bodega–Bolinas · surveyed hard bottom';
+    const nativeTitle=document.createElement('span');nativeTitle.textContent=pointConception?'Point Conception · surveyed hard bottom':gaviota?'Cojo–Gaviota · surveyed hard bottom':'Bodega–Bolinas · surveyed hard bottom';
     nativeLabel.append(nativeCheck,nativeTitle);body.append(nativeLabel);
     const nativeNote=document.createElement('p');nativeNote.className='small';
     nativeNote.textContent='Optional historical NOAA 1–2 m depth and USGS hard-seabed intersection. Research context only; not a fishing target, current legal clearance or navigation chart.'+(pointConception?' Check Point Conception military danger-zone notices before travel.':'');

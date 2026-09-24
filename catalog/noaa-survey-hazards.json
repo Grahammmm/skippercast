@@ -4,6 +4,50 @@
   "reviewed_at": "2026-09-23",
   "surveys": [
     {
+      "survey_id": "H11951",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+      "report_section": "Descriptive report pages 14–15 and final HCell review pages 19–20",
+      "interpretation": "The narrative says no dangers to navigation, but it identifies a new wreck, retains two charted well-head positions, and confirms mooring buoys and kelp. The final office review retains a wreck object. These are historical exclusion holds, not current chart clearance.",
+      "hazards": [
+        {
+          "id": "H11951-new-wreck",
+          "kind": "historical-wreck-review-hold",
+          "latitude": 34.4354805556,
+          "longitude": -120.3901055556,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Historical 61 by 11 m wreck-like feature; this buffer is a habitat review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11951-retained-wellheads-west",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4316666667,
+          "longitude": -120.3855555556,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Approximate charted well-head group retained despite no survey confirmation; review hold only."
+        },
+        {
+          "id": "H11951-retained-wellhead-east",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4315833333,
+          "longitude": -120.3592472222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Charted well head retained despite inconclusive survey hits; review hold only."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11953",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+      "report_section": "Descriptive report page 15 and final HCell review page 20",
+      "interpretation": "The report lists no assigned AWOIS features or dangers to navigation; its final review generalized 82 rocky seabed areas to four chart areas. An empty historical hazard list is not present-day chart or route clearance.",
+      "hazards": []
+    },
+    {
       "survey_id": "H11952",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
       "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",

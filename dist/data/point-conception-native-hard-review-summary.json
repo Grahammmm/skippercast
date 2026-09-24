@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "native-noaa-usgs-review-summary",
-  "generated_at": "2026-09-24T01:24:24.946104+00:00",
+  "generated_at": "2026-09-24T01:36:31.279100+00:00",
   "surveys": [
     {
       "survey_id": "H11952",
@@ -57,6 +57,53 @@
         "retained_components": 27
       },
       "retained_component_area_m2": 1112732,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11953",
+      "survey_dates": [
+        "2008-08-29T15:13:58",
+        "2008-09-05T01:14:20"
+      ],
+      "compiled_at": "2026-09-24T01:36:24.787755+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "noaa_bag_sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "survey_report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+      "usgs_sources": [
+        {
+          "release_id": "F7QN64XQ",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+          "archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+          "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+      "noaa_federal_areas_retrieved_at": "2026-09-23T22:56:33.483262+00:00",
+      "native_resolution_m": [
+        1.0,
+        1.0
+      ],
+      "maximum_planning_depth_ft": 200,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 1,
+        "depth_values_changed_in_current_grid": 1,
+        "maximum_depth_revision_m": 0.214
+      },
+      "counts": {
+        "hard_cells_after_inset": 129123,
+        "depth_uncertainty_qualified_cells": 6378018,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 74056,
+        "retained_components": 1
+      },
+      "retained_component_area_m2": 71459,
       "fishing_target": false,
       "legal_clearance": false,
       "exportable": false
