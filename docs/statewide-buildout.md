@@ -36,6 +36,12 @@ The [NOAA federal-area feed](../dist/data/noaa-federal-areas.json) now pulls eve
 
 The hazard report registry is `catalog/noaa-survey-hazards.json`. The H11732 and H11733 final reports correct some earlier *feet* labels to *fathoms*; the former also says two rocks lack full coverage and their least depths are unknown. The H11734, H11735 and H12111 final HCell notes identify dangers to navigation despite earlier narrative saying none. H12111's final report lists two submerged rocks at 2.00 and 3.22 m. H11738 identifies a rock and a shoal at the edge of multibeam coverage, while its HCell review recommends removing a disproved charted wreck. H12109's assigned historical wrecks were not found under full multibeam coverage and are not treated as habitat. A cross-survey H11733 hold must verify the supporting H11732 report digest. These holds are review exclusions, not safe approach distances; current ENC and notices remain necessary. The September 23 local-Mac refresh failed to connect to CDFW; the separately verified GitHub Actions [coastal status feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/coastal/status.json) completed at 23:21 UTC with all five regional rules watches healthy. A checked summary page still cannot certify date-, location- and method-specific legal fishing access, YRCA applicability, other local closures, vessel transit or current fish presence. None of these review polygons enters map targets, ranking or export.
 
+### Bodega–Bolinas original-cell browse layer
+
+`scripts/build_native_hard_context.py` now turns the seven pinned NOAA/USGS original-cell reviews into a **San Francisco coast research overlay**. It matches each survey's BAG, descriptive-report and USGS class-grid receipts to the published summary, removes survey overlap, and re-screens the complete fresh CDFW MPA and NOAA GEA geometry with a 100 m planning margin. The display polygons are simplified **inward** from the reviewed shapes and revalidated after conversion to WGS84; they do not expose the original cell edge as a chart-quality reef boundary. The optional layer is available under Map Options on the San Francisco coast browse view. It never enters species scores, drift recommendations, fishing plans or chartplotter exports.
+
+This is progress toward local bottom coverage, not a finished fishing package. The source surveys date from 2007–2009; YRCA applicability, other date/method rules, current chart hazards, approach routes and fish presence are not yet cleared. A new jurisdiction package and site-specific review are required before any of these shapes can become a fishing target. Rebuild only with fresh complete closure snapshots; the published file retains the screening timestamps.
+
 ## What is ready and what remains
 
 | Coverage | Current state | Next gate |
@@ -67,6 +73,7 @@ python scripts/summarize_native_sector_leads.py --audit var/noaa-native-audit-10
 python scripts/collect_noaa_groundfish_areas.py --output var/noaa-federal-areas.json --previous dist/data/noaa-federal-areas.json
 PYTHONPATH=src python scripts/qualify_regular_bag_hard.py --survey-id H11735 --bag-filename H11735_MB_2m_MLLW_2of3.bag --usgs-block OffshoreTomalesPoint --usgs-block OffshorePointReyes --output var/review-h11735-native-hard.geojson
 python scripts/summarize_native_hard_reviews.py var/review-h1173{2,3,4,5,8}-native-hard.geojson var/review-h12109-native-hard.geojson var/review-h12111-native-hard.geojson --output dist/data/noaa-native-hard-review-summary.json
+PYTHONPATH=src:. python scripts/build_native_hard_context.py --reviews var --summary dist/data/noaa-native-hard-review-summary.json --mpas var/live-coastal-latest.json --federal dist/data/noaa-federal-areas.json --output dist/data/sf-native-hard-context.geojson
 PYTHONPATH=src python -m skippercast.platform needs --region <new-package-id>
 python scripts/build_primary_strategies.py
 python scripts/check_web.py
