@@ -8,6 +8,31 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NbsHardResearchPublicationTests(unittest.TestCase):
+    def test_statewide_review_covers_each_sampled_sector_without_promoting_points(self):
+        statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
+        sampled = json.loads((ROOT / "dist/data/nbs-statewide-multiple-camera-tile-review.json").read_text())
+        self.assertEqual(statewide["status"], "research-leads-only")
+        self.assertFalse(statewide["fishing_target"])
+        self.assertFalse(statewide["exportable"])
+        self.assertEqual(len(statewide["coasts"]), 5)
+        reviewed = {sector["sector_id"]: sector for coast in statewide["coasts"]
+                    for sector in coast["source_review"]["sectors"]}
+        self.assertEqual(set(reviewed), {sector["sector_id"] for sector in sampled["sectors"]})
+        for source_sector in sampled["sectors"]:
+            actual = reviewed[source_sector["sector_id"]]
+            self.assertEqual({tile["tile"] for tile in actual["tiles"]},
+                             {tile["tile"] for tile in source_sector["reviewed_tiles"]})
+            for tile in actual["tiles"]:
+                self.assertLessEqual(tile["strict_1m_original_class3_unique_pixels"],
+                                     tile["sensitivity_2m_original_class3_unique_pixels"])
+                self.assertLessEqual(tile["sensitivity_2m_original_class3_unique_pixels"],
+                                     tile["sensitivity_2m_measured_pixels_outside_closures"])
+                self.assertEqual(tile["original_class_releases_not_audited"], [])
+        northern = next(coast for coast in statewide["coasts"] if coast["coast_id"] == "northern")
+        releases = {row["usgs_release_id"] for sector in northern["source_review"]["sectors"]
+                    for tile in sector["tiles"] for row in tile["usgs_releases"]}
+        self.assertNotIn("P9EC35PF", releases)  # Original CMECS identifies this Eureka class as jetty.
+
     def test_estero_layer_contains_only_screened_research_outlines(self):
         review = json.loads((ROOT / "dist/data/nbs-central-usgs-hard-overlap-review.json").read_text())
         layer = json.loads((ROOT / "dist/data/central-nbs-usgs-hard-research-context.geojson").read_text())

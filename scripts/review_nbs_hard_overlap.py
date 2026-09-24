@@ -58,7 +58,9 @@ def original_usgs_class(release_id, raster, bounds_wgs84, audit_rows, usgs_cache
                and box(*row["raster_bounds_wgs84"]).intersects(bounds_wgs84)]
     if not sources:
         raise ValueError("Original USGS class grid not audited: " + release_id)
-    matches = list(usgs_cache.glob(release_id + "-seafloor_character-*.zip"))
+    cache_dirs = usgs_cache if isinstance(usgs_cache, (tuple, list)) else (usgs_cache,)
+    matches = [path for directory in cache_dirs for path in
+               directory.glob(release_id + "-seafloor_character-*.zip")]
     cached = {digest(path): path for path in matches}
     hard = np.zeros((raster.height, raster.width), dtype=bool)
     for source in sources:
@@ -70,30 +72,42 @@ def original_usgs_class(release_id, raster, bounds_wgs84, audit_rows, usgs_cache
         if len(members) != 1:
             raise ValueError("Original USGS class archive is ambiguous: " + release_id)
         with rasterio.open(f"/vsizip/{path.resolve()}/{members[0]}") as original:
+            source_crs = str(original.crs) if original.crs else (
+                source["native_crs"] if source.get("crs_from_original_xml") else None)
             if (original.count != 1 or original.width != source["native_width"]
                     or original.height != source["native_height"]
                     or list(original.res) != source["native_resolution"]
-                    or str(original.crs) != source["native_crs"]):
+                    or source_crs != source["native_crs"]):
                 raise ValueError("Original USGS class raster changed: " + release_id)
             with WarpedVRT(original, crs=raster.crs, transform=raster.transform,
                            width=raster.width, height=raster.height,
-                           resampling=Resampling.nearest, nodata=original.nodata) as aligned:
+                           src_crs=source_crs, resampling=Resampling.nearest,
+                           nodata=original.nodata) as aligned:
                 hard |= aligned.read(1) == 3
     return hard, sources
 
 
-def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit_path, usgs_cache, mpas, federal):
+def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit_path, usgs_cache, mpas, federal,
+          *, map_audit=None, map_audit_path=None, map_cache=None):
     if review.get("scope") != "coast-nbs-multiple-rocky-camera-tile-source-review":
         raise ValueError("Expected reviewed multi-tile source audit")
     if review["scheme_sha256"] != digest(scheme) or review.get("failed_tiles"):
         raise ValueError("NBS scheme changed or source audit has failures")
     checked_mpas(mpas)
     geas = current_federal(federal)
-    if hard_context.get("type") != "FeatureCollection" or not hard_context.get("features"):
-        raise ValueError("USGS class-3 context is missing")
+    if hard_context.get("type") != "FeatureCollection" or not isinstance(hard_context.get("features"), list):
+        raise ValueError("USGS class-3 context is invalid")
     hard = hard_context["features"]
     if usgs_audit.get("scope") != "usgs-state-waters-doi-native-grid-audit" or not usgs_audit.get("products"):
         raise ValueError("Original USGS class audit required")
+    original_products = list(usgs_audit["products"])
+    if map_audit is not None:
+        if (map_audit.get("scope") != "usgs-state-waters-native-grid-audit"
+                or not map_audit.get("products") or map_audit_path is None or map_cache is None):
+            raise ValueError("Original older USGS map-block audit required")
+        original_products.extend({**row, "release_id": row["block_id"]}
+                                 for row in map_audit["products"])
+        usgs_cache = (usgs_cache, map_cache)
     mpa_features = mpas["sources"]["mpas"]["data"]["geojson"]["features"]
     rows = []
     for sector in review["sectors"]:
@@ -122,17 +136,27 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
                                            resolution_m=max(raster.res), max_uncertainty_m=2) & ~closed
                 hard_by_release = defaultdict(list)
                 for feature in locally_hard:
-                    hard_by_release[feature["properties"]["release_id"]].append(
+                    source_id = feature["properties"].get("release_id") or feature["properties"].get("block_id")
+                    if not source_id:
+                        raise ValueError("USGS hard-context feature lacks a source identity")
+                    hard_by_release[source_id].append(
                         transform(to_native, shape(feature["geometry"])))
                 release_rows = []
+                unavailable_original_classes = []
                 overlap = np.zeros(strict.shape, dtype=bool)
                 native_overlap = np.zeros(strict.shape, dtype=bool)
                 for release_id, polygons in sorted(hard_by_release.items()):
                     inside = mask_for(raster, polygons)
                     overlap |= inside
                     candidate = sensitive & inside
+                    if not any(row.get("release_id") == release_id and row.get("kind") == "seafloor_character"
+                               and row.get("status") == "ok"
+                               and box(*row["raster_bounds_wgs84"]).intersects(bounds)
+                               for row in original_products):
+                        unavailable_original_classes.append(release_id)
+                        continue
                     native_hard, usgs_sources = original_usgs_class(
-                        release_id, raster, bounds, usgs_audit["products"], usgs_cache)
+                        release_id, raster, bounds, original_products, usgs_cache)
                     native_overlap |= native_hard
                     native_candidate = sensitive & native_hard
                     ids, counts = np.unique(contributor[candidate], return_counts=True)
@@ -157,6 +181,7 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
                               "source_raster_sha256": checked["raster_sha256"],
                               "source_rat_sha256": checked["rat_sha256"],
                               "closure_polygons_intersecting_tile": len(local_mpas) + len(local_geas),
+                              "original_class_releases_not_audited": unavailable_original_classes,
                               "strict_1m_measured_pixels_outside_closures": int(strict.sum()),
                               "sensitivity_2m_measured_pixels_outside_closures": int(sensitive.sum()),
                               "strict_1m_hard_overlap_unique_pixels": int((strict & overlap).sum()),
@@ -171,11 +196,13 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
             "reviewed_at": datetime.now(timezone.utc).isoformat(), "status": "research-leads-only",
             "scheme_sha256": digest(scheme), "usgs_context_sha256": digest(hard_path),
             "usgs_original_audit_sha256": digest(usgs_audit_path),
+            "usgs_map_audit_sha256": digest(map_audit_path) if map_audit_path else None,
             "cdfw_mpa_retrieved_at": mpas["sources"]["mpas"]["data_retrieved_at"],
             "noaa_federal_retrieved_at": federal["retrieved_at"],
             "method": "Actual NBS MLLW measured-contributor cells at 25–200 ft; supplied uncertainty plus 2 m planning margin. Strict 1 m and research-only 2 m sensitivity. Compare 20 m display-generalized USGS hard polygons with separately hash-checked original 2 m USGS class-3 raster; 100 m conservative MPA/GEA buffers.",
             "fishing_target": False, "exportable": False,
             "limitations": ["Counts can overlap across USGS releases and neighboring NBS tiles; unique counts are per tile only.",
+                            "Original-class counts exclude releases without an audited original class grid; the tile lists those releases explicitly.",
                             "Original USGS class is sampled at NBS 4 m cell centers with nearest-neighbor category transfer; this is a cross-source screen, not an independent position-accuracy estimate.",
                             "USGS class and NBS contributors are historical; original contributor products, source hazard reports and legal access must be inspected before any target.",
                             "NBS Modeling is a test-and-evaluation compilation, not a navigation chart or independent original sounding.",
