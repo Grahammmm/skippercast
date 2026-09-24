@@ -268,6 +268,114 @@
           "radius_meaning": "Historical rock review hold, not a navigational safety radius."
         }
       ]
+    },
+    {
+      "survey_id": "H11975",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11975/DR/H11975.pdf",
+      "report_sha256": "d003bdd92d6c72cf835fb1c9cceefc16bcbca892d5fb66d06ae0adcd58d8f7ab",
+      "report_section": "Descriptive report pages 19–22 and Appendix I page 23 (11 DTON rock coordinates)",
+      "interpretation": "The final report describes more extensive subsurface rocks than charted in some areas, removes some unconfirmed charted rocks, and reports 11 rock dangers to navigation, one with unknown least depth. Exclude these original report positions from habitat candidate review; current ENC and route review remain separate.",
+      "hazards": [
+        {
+          "id": "H11975-DTON-1.1",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.5049166667,
+          "longitude": -124.395,
+          "reported_depth_ft": 12.4,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.2",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.5049722222,
+          "longitude": -124.3975277778,
+          "reported_depth_ft": 14.6,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.3",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4985,
+          "longitude": -124.4041944444,
+          "reported_depth_ft": 23.3,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.4",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4977777778,
+          "longitude": -124.4060555556,
+          "reported_depth_ft": 34.5,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.5",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4935833333,
+          "longitude": -124.3990555556,
+          "reported_depth_ft": 17.2,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.6",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.48875,
+          "longitude": -124.4166944444,
+          "reported_depth_ft": 37.1,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.7",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.3942222222,
+          "longitude": -124.3873611111,
+          "reported_depth_ft": 3.7,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.8",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4962222222,
+          "longitude": -124.3976388889,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 500,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.9",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4462222222,
+          "longitude": -124.4285,
+          "reported_depth_ft": 23.8,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.10",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4508888889,
+          "longitude": -124.4206111111,
+          "reported_depth_ft": 13.1,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        },
+        {
+          "id": "H11975-DTON-1.11",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 40.4380555556,
+          "longitude": -124.42925,
+          "reported_depth_ft": 33.2,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation rock. Conservative habitat-review exclusion only; this is not a navigation safety radius."
+        }
+      ]
     }
   ]
 }

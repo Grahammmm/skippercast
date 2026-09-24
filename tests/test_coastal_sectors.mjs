@@ -40,6 +40,29 @@ test('Eureka jetty class is withheld from natural hard-bottom context',()=>{
     p.largest_components[0].centroid_distance_to_landmark_m<800 &&
     p.usgs_source.archive_sha256==='c3d17d3361c96e80835120a0d9861a87257336ecbe261c1a7f2abd8f01a0dfcf'));
 });
+test('Cape Mendocino native evidence is a held source review, never a fishing target',()=>{
+  const coverage=JSON.parse(fs.readFileSync(new URL('../dist/data/noaa-cape-mendocino-vr-source-coverage.json',import.meta.url)));
+  const screen=JSON.parse(fs.readFileSync(new URL('../dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json',import.meta.url)));
+  assert.equal(coverage.scope,'original-vr-bag-usgs-source-footprint-audit');
+  assert.equal(coverage.usgs_release_id,'P9U0SUGL');
+  assert.equal(coverage.fishing_target,false);
+  assert.equal(coverage.exportable,false);
+  assert.deepEqual(coverage.surveys.map(s=>s.survey_id),['H11973','H11974','H11975']);
+  assert.equal(coverage.surveys[0].overview_bbox_intersects_source,true);
+  assert.equal(coverage.surveys[0].supergrid_footprints_intersect_source_bbox,0);
+  assert.equal(coverage.surveys[1].supergrid_footprints_intersect_source_bbox,0);
+  assert.ok(coverage.surveys[2].fine_supergrid_footprints_intersect_source_bbox>20000);
+  assert.equal(screen.scope,'original-vr-noaa-usgs-hard-depth-cell-screen');
+  assert.equal(screen.survey_id,'H11975');
+  assert.equal(screen.bag_sha256,coverage.surveys[2].bag_sha256);
+  assert.equal(screen.usgs_archive_sha256,coverage.usgs_class_sha256);
+  assert.equal(screen.fishing_target,false);
+  assert.equal(screen.exportable,false);
+  assert.equal(screen.historical_hazards_screened,11);
+  assert.ok(screen.counts.joined_cells_after_mpa_gea_historical_dton>0);
+  assert.ok(screen.counts.joined_cells_after_mpa_gea_historical_dton<screen.counts.joined_hard_depth_cells);
+  assert.ok(screen.joined_depth_ft_range[0]>=25 && screen.joined_depth_ft_range[1]<=200);
+});
 test('Point Conception original-cell layer cannot become fishing or export coordinates',()=>{
   const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-context.geojson',import.meta.url)));
   const summary=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-review-summary.json',import.meta.url)));
