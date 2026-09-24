@@ -251,6 +251,30 @@ jobs:
           --metadata var/review/usgs-doi-metadata.json
           --cache var/usgs-doi-native-cache
           --output var/review/usgs-doi-native-audit.json
+      - name: Recheck Eel River original-class NOAA tile coverage
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/queue_nbs_original_class_tiles.py \
+            --release-id P902YIF5 \
+            --audit var/review/usgs-doi-native-audit.json \
+            --metadata var/review/usgs-doi-metadata.json \
+            --output var/review/eel-river-original-class-tile-queue.json
+          for tile in BH42J5FK BH42H5FJ BH42H5FH BH42J5FJ; do
+            python scripts/audit_nbs_modeling_tile.py \
+              --scheme var/nbs-cache/modeling-tile-scheme.gpkg \
+              --tile "$tile" --cache var/nbs-cache --fetch \
+              --output "var/review/eel-river-${tile}-nbs-audit.json"
+          done
+          python scripts/screen_original_class_nbs_tiles.py \
+            --queue var/review/eel-river-original-class-tile-queue.json \
+            --audit var/review/usgs-doi-native-audit.json \
+            --metadata var/review/usgs-doi-metadata.json \
+            --tile-receipt var/review/eel-river-BH42J5FK-nbs-audit.json \
+            --tile-receipt var/review/eel-river-BH42H5FJ-nbs-audit.json \
+            --tile-receipt var/review/eel-river-BH42H5FH-nbs-audit.json \
+            --tile-receipt var/review/eel-river-BH42J5FJ-nbs-audit.json \
+            --output var/review/eel-river-class3-measured-depth-screen.json
       - name: Refresh NOAA federal groundfish exclusions
         run: python scripts/collect_noaa_groundfish_areas.py --output var/review/noaa-federal-areas.json
       - name: Check NOAA coastwide species-habitat source granularity

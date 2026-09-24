@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "scope": "original-usgs-hard-class-noaa-tile-acquisition-queue",
+  "queued_at": "2026-09-24T20:46:00+00:00",
+  "release_id": "P902YIF5",
+  "usgs_original_archive_sha256": "f7b2c5847e12ba463a71287ce0d410b32aafa4ee05169be14825727583756821",
+  "usgs_original_metadata_sha256": "f822eaaaff93ea01026fe252b45a0d2c6223c2e26d86abaa8ea2822984b9a893",
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "candidate_tiles": 10,
+  "ranked_tiles": [
+    {
+      "tile": "BH42J5FK",
+      "tile_envelope_wgs84": [
+        -124.35001373291016,
+        40.649993896484375,
+        -124.27498626708984,
+        40.725006103515625
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 27206,
+      "class3_pixel_area_m2_upper_bound": 108819,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42H5FJ",
+      "tile_envelope_wgs84": [
+        -124.42500305175781,
+        40.57499694824219,
+        -124.3499984741211,
+        40.650001525878906
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 24681,
+      "class3_pixel_area_m2_upper_bound": 98720,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42H5FH",
+      "tile_envelope_wgs84": [
+        -124.42500305175781,
+        40.5,
+        -124.3499984741211,
+        40.57500076293945
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 24157,
+      "class3_pixel_area_m2_upper_bound": 96624,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42J5FJ",
+      "tile_envelope_wgs84": [
+        -124.35001373291016,
+        40.57499694824219,
+        -124.27498626708984,
+        40.650001525878906
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 7860,
+      "class3_pixel_area_m2_upper_bound": 31439,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42G5FH",
+      "tile_envelope_wgs84": [
+        -124.5,
+        40.5,
+        -124.42498779296875,
+        40.57500076293945
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42G5FJ",
+      "tile_envelope_wgs84": [
+        -124.5,
+        40.57499694824219,
+        -124.42498779296875,
+        40.650001525878906
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42G5FK",
+      "tile_envelope_wgs84": [
+        -124.5,
+        40.649993896484375,
+        -124.42498779296875,
+        40.725006103515625
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42H5FK",
+      "tile_envelope_wgs84": [
+        -124.42500305175781,
+        40.649993896484375,
+        -124.3499984741211,
+        40.725006103515625
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42J5FH",
+      "tile_envelope_wgs84": [
+        -124.35001373291016,
+        40.5,
+        -124.27498626708984,
+        40.57500076293945
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    },
+    {
+      "tile": "BH42K5FK",
+      "tile_envelope_wgs84": [
+        -124.2750015258789,
+        40.649993896484375,
+        -124.19999694824219,
+        40.725006103515625
+      ],
+      "tile_resolution_m": 4.0,
+      "class3_pixels_in_envelope": 0,
+      "class3_pixel_area_m2_upper_bound": 0,
+      "has_published_raster_and_rat": true
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Counts are original historical USGS class-3 pixels inside NOAA tile envelopes, not overlap with measured NOAA cells.",
+    "An envelope can cross source gaps, MPAs and non-fishable depths; pixel-area figures are upper bounds and can repeat across adjacent tiles.",
+    "Each NOAA raster and RAT still needs its measured MLLW cell, age, uncertainty and depth screen, followed by exact hazards, current chart, legal areas and access."
+  ]
+}

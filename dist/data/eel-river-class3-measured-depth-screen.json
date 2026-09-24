@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "scope": "original-usgs-class3-noaa-measured-depth-screen",
+  "reviewed_at": "2026-09-24T20:46:17+00:00",
+  "release_id": "P902YIF5",
+  "usgs_original_archive_sha256": "f7b2c5847e12ba463a71287ce0d410b32aafa4ee05169be14825727583756821",
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "tiles": [
+    {
+      "tile": "BH42J5FK",
+      "noaa_raster_sha256": "de495aa3a34eb229c58a9ac3c240b6f56d46abd40bb7ffd016afa799a6172274",
+      "noaa_rat_sha256": "0ba58dcf816a10db227458a8dc8fdcab80f6a8a2eac7d60bd27262269937845b",
+      "qualified_measured_depth_pixels": 0,
+      "original_class3_pixels_at_noaa_cell_centers": 6908,
+      "strict_measured_class3_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH42H5FJ",
+      "noaa_raster_sha256": "cce8e7954f4bc78fde266fac44c7bfaf53cade505c6a4194fdd4fd6d033e396d",
+      "noaa_rat_sha256": "19f963906eb955de4402e2f1527cb1914ebcda57a22cd49c4349b1452bb97b70",
+      "qualified_measured_depth_pixels": 667,
+      "original_class3_pixels_at_noaa_cell_centers": 6217,
+      "strict_measured_class3_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH42H5FH",
+      "noaa_raster_sha256": "a406c665ac99e091a3ea99bd22d33dcc9d1bc3ef99d6a4c2c73671181375cd38",
+      "noaa_rat_sha256": "e48e3be8cc368eaa294c7f245021a0ebdb433d5668b6297b46b18bcd3054e142",
+      "qualified_measured_depth_pixels": 143192,
+      "original_class3_pixels_at_noaa_cell_centers": 6056,
+      "strict_measured_class3_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH42J5FJ",
+      "noaa_raster_sha256": "e2cfb6548845eca2e3485370cd1a1ba55d0cfd70203bbd99792d817b9f68ab7f",
+      "noaa_rat_sha256": "4a96fac491c716997a8f9d0b5e454269e936fa81c04bd9404a2a05c52f1f21cf",
+      "qualified_measured_depth_pixels": 0,
+      "original_class3_pixels_at_noaa_cell_centers": 2047,
+      "strict_measured_class3_overlap_pixels": 0,
+      "source_survey_contributors": []
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Historical class-3 habitat is nearest-neighbor sampled at NOAA cell centers; sources differ in age and survey method.",
+    "Counts are source cells, not unique fishable area or confirmed rock piles.",
+    "This screen does not establish legal access, hazards, current chart depth, safe routes, species presence or catch quality."
+  ]
+}
