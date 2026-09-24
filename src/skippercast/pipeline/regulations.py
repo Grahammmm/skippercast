@@ -7,6 +7,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 import json
 import hashlib
+import math
 import re
 import time
 from threading import Lock
@@ -151,6 +152,15 @@ def valid_window(window, timezone='America/Los_Angeles'):
             opening = datetime.fromisoformat(window['start_at'].replace('Z', '+00:00'))
             if opening.tzinfo is None or opening.astimezone(ZoneInfo(timezone)).date() != start:
                 return False
+        if 'geography' in window:
+            geographic = window['geography']
+            if geographic.get('kind') != 'latitude-band' or not all(
+                isinstance(geographic.get(key), (int, float)) and not isinstance(geographic[key], bool)
+                and math.isfinite(geographic[key]) for key in ('south', 'north')
+            ) or not -90 <= geographic['south'] < geographic['north'] <= 90:
+                return False
+            if not isinstance(geographic.get('source_id'), str) or not geographic.get('note'):
+                return False
         return True
     except (ValueError, TypeError, KeyError, AttributeError):
         return False
@@ -163,6 +173,7 @@ def regulatory_snapshot(sources, now, registry=None):
         isinstance(p, dict) and all(isinstance(p.get(key), str) for key in ('name', 'season', 'bag', 'size'))
         and isinstance(p.get('windows'), list) and all(valid_window(w, data.get('timezone', 'America/Los_Angeles')) for w in p['windows']) and p.get('source_ids')
         and all(ident in data.get('sources', {}) for ident in p['source_ids'])
+        and all(w.get('geography', {}).get('source_id') in p['source_ids'] for w in p['windows'] if 'geography' in w)
         for p in species.values()
     ):
         raise ValueError("Regulations registry is incomplete")

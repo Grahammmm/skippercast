@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-24-san-francisco-draft-2",
+  "revision": "2026-09-24-san-francisco-draft-3",
   "reviewed_at": null,
   "valid_from": "2026-01-01",
   "valid_through": "2026-12-31",
@@ -10,9 +10,9 @@
   "check_interval_hours": 24,
   "max_age_hours": 36,
   "common_notes": [
-    "This draft covers the outer coast, not San Francisco Bay. Species seasons, method restrictions, MPAs and federal closures require separate legal review.",
-    "The September–October 2026 salmon opening described by CDFW begins at 38°02′ N; it cannot be generalized to Bodega-area water north of that line.",
-    "This draft does not confirm an open season or legal fishing position."
+    "Recreational boat fishing on the San Francisco outer coast only; San Francisco Bay has different rules. California anglers age 16 and older need a fishing license.",
+    "Species and group limits, method rules, MPAs and federal conservation areas still control at the exact position. A season window does not clear a route, harbor entrance or current advisory.",
+    "The salmon opening begins at 38°02′ N and is not a Bodega-wide season; crab reopening is scheduled only and requires a new gear/health review."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
   "checked_at": null,
@@ -200,12 +200,20 @@
   "species": {
     "lingcod": {
       "name": "Lingcod",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the San Francisco Management Area.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 per person daily and in possession, separate from the 10-fish rockfish/cabezon/greenling complex.",
+      "size": "22 in minimum total length.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "When lingcod or rockfish are aboard, use only one line with no more than two hooks.",
+        "Carry a descending device ready for immediate use when taking or possessing federal groundfish from a boat.",
+        "Lingcod fillets aboard must be at least 14 in long with all skin attached.",
+        "Cordell Bank groundfish fishing is prohibited; check exact MPAs and other area restrictions."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -221,18 +229,26 @@
       ],
       "methods": {
         "rod": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "One line and at most two hooks when lingcod or rockfish are aboard."
         }
       }
     },
     "rockfish": {
       "name": "Rockfish",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Apr 1–Dec 31, 2026 · boat fishing at all depths in the San Francisco Management Area.",
+      "windows": [
+        {
+          "start": "2026-04-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "10 total rockfish, cabezon and greenlings combined per person daily and in possession.",
+      "size": "No minimum length for retained rockfish; identify the species.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "Within the 10-fish complex: at most 1 copper, 2 canary and 2 vermilion/sunset rockfish combined.",
+        "Do not retain bronzespotted, cowcod, quillback or yelloweye rockfish.",
+        "When rockfish or lingcod are aboard, use only one line with no more than two hooks. Carry a descending device ready for immediate use.",
+        "Retained rockfish fillets aboard must have all skin attached. Cordell Bank groundfish fishing is prohibited."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -248,18 +264,26 @@
       ],
       "methods": {
         "rod": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "One line and at most two hooks when rockfish or lingcod are aboard."
         }
       }
     },
     "halibut": {
       "name": "California halibut",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Year-round for California halibut in the San Francisco outer-coast management area.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "2 California halibut per person daily and in possession north of Point Sur.",
+      "size": "22 in minimum total length.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "California halibut is distinct from Pacific halibut, which has a separate quota and rules.",
+        "Carry a landing net for undersize fish; do not gaff a fish below the minimum size.",
+        "Aboard a vessel south of Point Arena, retained halibut fillets must be at least 16¾ in long with all skin attached.",
+        "Rockfish, lingcod or salmon aboard can impose stricter hook and line rules."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -275,18 +299,33 @@
       ],
       "methods": {
         "rod": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "General ocean hook-and-line rules apply; other fish aboard can impose stricter gear limits."
         }
       }
     },
     "salmon": {
       "name": "Ocean salmon",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Sep 1–Oct 31, 2026 only from 38°02′ N near Point Reyes south to Pigeon Point; may close earlier at the 20,000-Chinook harvest guideline.",
+      "windows": [
+        {
+          "start": "2026-09-01",
+          "end": "2026-10-31",
+          "geography": {
+            "kind": "latitude-band",
+            "south": 37.18333333333333,
+            "north": 38.03333333333333,
+            "source_id": "rules-salmon",
+            "note": "The 2026 fall opening in this management area runs only from 38°02′ N near Point Reyes to Pigeon Point (37°11′ N), and may close early at the harvest guideline."
+          }
+        }
+      ],
+      "bag": "2 salmon per person daily, except coho; no more than one daily bag limit aboard in ocean waters.",
+      "size": "20 in minimum total length during the 2026 fall season.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "The Bodega-side waters north of 38°02′ N are outside this fall opening. The selected point or entire area must be south of that line.",
+        "In-season action can close the fishery before Oct 31; check CDFW immediately before fishing.",
+        "North of Point Conception, use one rod and no more than two single-point, single-shank barbless hooks when fishing for salmon or with salmon aboard. Bait other than while trolling requires barbless circle hooks, hard-tied no more than 5 in apart.",
+        "Do not retain coho or steelhead and do not fillet salmon aboard."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -304,18 +343,27 @@
       ],
       "methods": {
         "rod": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "One rod; at most two single-point, single-shank barbless hooks north of Point Conception. Bait other than trolling requires barbless circle hooks."
         }
       }
     },
     "dungeness": {
       "name": "Dungeness crab",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Closed now. Scheduled to reopen Nov 7, 2026 in this area, subject to health and gear decisions.",
+      "windows": [
+        {
+          "start": "2026-11-07",
+          "end": "2026-12-31",
+          "requires_opening_review": true
+        }
+      ],
+      "bag": "When open: 10 Dungeness crabs per person daily and in possession.",
+      "size": "5¾ in minimum shell width, measured directly in front of and excluding the side spines.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "No recreational take or possession while the season is closed. Recheck the actual opener, health advisories and whale-safe gear decisions.",
+        "Crab-trap validation, buoy/GO ID marks, escape rings, destruct device and deployment limits apply to traps. Trap permission is separate from season permission.",
+        "Crab traps may not be deployed in the seven days before the season opens; service deployed traps at intervals no greater than nine days, weather permitting.",
+        "Point Reyes SMCA allows Dungeness by trap only; the nearby SMR prohibits take and the Headlands Special Closure restricts entry."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -333,18 +381,32 @@
       ],
       "methods": {
         "trap": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "Season and current whale-safe trap clearance are separate.",
+          "requires_clearance": true
+        },
+        "hoop": {
+          "note": "Check hoop-net marking, inspection intervals, season and health advisories before setting gear."
+        },
+        "snare": {
+          "note": "Check snare-loop and season rules before setting gear."
         }
       }
     },
     "albacore": {
       "name": "Albacore tuna",
-      "season": "Unconfirmed for the San Francisco outer coast; check current CDFW rules and local restrictions.",
-      "windows": [],
-      "bag": "Unconfirmed; see the current official species rules.",
-      "size": "Unconfirmed; see the current official species rules.",
+      "season": "Year-round under the reviewed 2026 rules for offshore U.S. waters north of Point Conception.",
+      "windows": [
+        {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      ],
+      "bag": "25 albacore per person daily and in possession north of Point Conception, in addition to the general 20-finfish limit.",
+      "size": "No minimum size in the cited recreational rules.",
       "details": [
-        "This draft does not clear any position, method or date for fishing. The current source packet and species-specific rules require review."
+        "If any part of the trip enters the U.S. EEZ south of 34°27′ N, the federal onboard limit is 10 albacore per person for that trip.",
+        "The federal limit applies per 24-hour period at sea and does not allow more than one daily bag in a calendar day; multi-day permits need separate review.",
+        "This card does not cover Mexican waters. Fish already aboard can impose stricter gear rules."
       ],
       "source_ids": [
         "rules-groundfish",
@@ -361,7 +423,7 @@
       ],
       "methods": {
         "rod": {
-          "note": "Method-specific San Francisco outer-coast rules are pending review."
+          "note": "General ocean hook-and-line rules apply; check trip-wide possession and other species aboard."
         }
       }
     }

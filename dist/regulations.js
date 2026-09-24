@@ -1,6 +1,7 @@
 import { getRegion, assetURL } from "./region.js?v=8.11";
 import { esc } from "./marine-charts.js?v=8.11";
 import { loadDailyEvidence } from "./bite-evidence.js?v=8.11";
+import { positions } from "./geo-screen.js?v=8.11";
 
 const HOUR = 3600000;
 export const requiredRuleIDs = (region=getRegion()) => [...new Set(region.species.flatMap(id=>id==='reef'?['lingcod','rockfish']:[id]))];
@@ -14,6 +15,10 @@ const dateFormat = new Intl.DateTimeFormat("en-CA", {
 });
 const dateOnly = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0,10)===s;
 const validOpening = (w) => w.start_at === undefined || (typeof w.start_at === 'string' && /T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(w.start_at) && Number.isFinite(Date.parse(w.start_at)) && dateFormat.format(new Date(w.start_at)) === w.start);
+const validGeography = (g, sources) => g === undefined ||
+  (g?.kind === 'latitude-band' && Number.isFinite(g.south) && Number.isFinite(g.north) &&
+   g.south >= -90 && g.north <= 90 && g.south < g.north && typeof g.source_id === 'string' &&
+   !!sources?.[g.source_id]?.url && typeof g.note === 'string' && g.note.length > 0);
 const age = (s, now) => (now - Date.parse(s)) / HOUR;
 const time = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleString("en-US", {
   timeZone: getRegion().timezone, month: "short", day: "numeric", year: "numeric",
@@ -59,7 +64,7 @@ export function validRegulations(data) {
       return p && [p.name, p.season, p.bag, p.size].every((x) => typeof x === "string") &&
         Array.isArray(p.details) && p.details.every((s) => typeof s === "string") &&
         Array.isArray(p.source_ids) && p.source_ids.length > 0 && p.source_ids.every((s) => data.sources[s]?.url) &&
-        Array.isArray(p.windows) && p.windows.every((w) => dateOnly(w.start) && dateOnly(w.end) && w.start <= w.end && validOpening(w));
+        Array.isArray(p.windows) && p.windows.every((w) => dateOnly(w.start) && dateOnly(w.end) && w.start <= w.end && validOpening(w) && validGeography(w.geography,data.sources) && (!w.geography || p.source_ids.includes(w.geography.source_id)));
     });
 }
 
@@ -71,6 +76,24 @@ export function localizeRuleState(state, location) {
   if(protection?.status==='excluded')return {...state,status:'excluded',label:'Protected area',reason:`${protection.names.join('; ')}. SkipperCast withholds fishing targets in all mapped protected areas, including conservation areas that allow some activities. Consult the exact official rules.${protection.fresh?'':' The boundary check also needs refreshing.'}`};
   if(protection?.status!=='clear')return {...state,status:'unknown',label:'Check local boundaries',reason:'The protected-area check is unavailable or stale. Saved seasonal limits do not clear this location.'};
   return state;
+}
+export function geographicSeasonState(state, window, location) {
+  const area=window?.geography;
+  if(!area || !['open','restricted'].includes(state.status))return state;
+  const point=location?.point;
+  if(!Number.isFinite(point?.latitude) || !Number.isFinite(point?.longitude))
+    return {...state,status:'unknown',label:'Choose fishing location',reason:`This season applies only within a geographic area. ${area.note}`};
+  const vertices=positions(point.geometry);
+  if(point.geometry && !vertices.length)
+    return {...state,status:'unknown',label:'Check area geometry',reason:'The selected fishing area has no usable coordinates; its legal latitude cannot be checked.'};
+  const latitudes=(vertices.length?vertices.map(p=>p[1]):[point.latitude]);
+  if(latitudes.some(lat=>!Number.isFinite(lat)))
+    return {...state,status:'unknown',label:'Check area geometry',reason:'The selected fishing area has invalid coordinates; its legal latitude cannot be checked.'};
+  const inside=latitudes.map(lat=>lat>=area.south && lat<=area.north);
+  if(inside.every(Boolean))return state;
+  if(inside.some(Boolean))
+    return {...state,status:'unknown',label:'Area crosses season line',reason:`This fishing area crosses a legal season boundary. Check every position and split the area before relying on an opening. ${area.note}`};
+  return {...state,status:'closed',label:'Outside open area',reason:`The selected fishing location is outside the area opened for this season. ${area.note}`};
 }
 export function regulationState(data, species, now = Date.now(), tripDate = null, method = null, tripInstant = null, location = null) {
   if (species === "reef") {
@@ -115,7 +138,8 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
   const methodProfile=p.methods?.[method];
   const methodReason=methodProfile?.note || null;
   if (methodProfile?.requires_clearance && status==='open') {status='scheduled';reason='Season and permission for this gear are separate. Check the current gear clearance before setting it.';}
-  return localizeRuleState({ method, methodReason, timingNote, status, label: timedRestriction && status==='restricted' ? 'Opening time applies' : { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p },location);
+  const state={ method, methodReason, timingNote, status, label: timedRestriction && status==='restricted' ? 'Opening time applies' : { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
+  return localizeRuleState(geographicSeasonState(state,window,location),location);
 }
 
 export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null, tripInstant = null, includeAreas = true, location = null) {

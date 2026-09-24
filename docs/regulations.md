@@ -6,6 +6,8 @@ Each region binds one jurisdiction in `jurisdictions/<id>.json`. Morro Bay–Avi
 
 Season, gear and local access are separate. The Southern card includes Channel Islands park rules, Anacapa and San Miguel special closures, Catalina exceptions, military island access and mainland naval restrictions. Official legal text is checked; live Navy clearance is not. The map conservatively excludes mapped MPAs and groundfish exclusion areas. It does not dynamically apply every date-dependent RCA boundary or operational closure. Habitat outlines are not clearance to fish there. Consult the exact official boundaries before choosing a position.
 
+A season window may include a source-linked `geography` latitude band when an official opening covers only part of a regional package. The rules engine checks the selected point or every vertex of a selected outline; it withholds an open badge when no position is chosen or an outline crosses the line. The geographic source must be one of that species' watched dependencies. This supplements, and never replaces, the exact MPA and other exclusion screens.
+
 ## One process for every coast
 
 ```mermaid

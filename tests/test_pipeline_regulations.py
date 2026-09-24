@@ -53,6 +53,17 @@ class RegulationChecks(unittest.TestCase):
         for profile in result['species'].values():
             self.assertTrue(set(profile['source_ids']).issubset(result['sources']))
 
+    def test_spatial_season_requires_bounded_latitudes_and_a_dependency(self):
+        window=self.registry['species']['salmon']['windows'][0]
+        window['geography']={'kind':'latitude-band','south':35.0,'north':35.4,
+                             'source_id':'rules-salmon','note':'Reviewed latitude-restricted opening.'}
+        regulatory_snapshot(self.sources,self.now,self.registry)
+        for broken in ({'north':91},{'south':35.4},{'source_id':'unknown-source'}):
+            changed=deepcopy(self.registry)
+            changed['species']['salmon']['windows'][0]['geography'].update(broken)
+            with self.assertRaises(ValueError):
+                regulatory_snapshot(self.sources,self.now,changed)
+
     def test_new_region_accepts_more_species_without_silently_dropping_them(self):
         from skippercast.platform.contracts import REPO
         registry=json.loads((REPO/'dist/regions/southern-california/regulations.json').read_text())

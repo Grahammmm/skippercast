@@ -92,3 +92,20 @@ test("combined reef selector keeps both legal limits and does not mask an unveri
   assert.equal(regulationState(d, "reef", now).status, "unknown");
   assert.equal(regulationState(null, "reef", now).status, "unknown");
 });
+
+test('latitude-limited seasons check the entire selected fishing geometry', () => {
+  const d=data();
+  d.species.salmon.windows[0].geography={kind:'latitude-band',south:35.0,north:35.4,source_id:'rules-salmon',note:'Open only between reviewed latitude lines.'};
+  const location=(latitude,geometry=null)=>({coverage:'covered',regionId:'morro-bay',point:{latitude,longitude:-120.9,geometry},protection:{status:'clear'}});
+  assert.equal(regulationState(d,'salmon',now).status,'unknown');
+  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.2)).status,'open');
+  const north=regulationState(d,'salmon',now,null,'rod',null,location(35.5));
+  assert.equal(north.status,'closed');
+  assert.match(north.reason,/outside the area opened/);
+  const crossing={type:'Polygon',coordinates:[[[-121,35.35],[-120.8,35.35],[-120.8,35.45],[-121,35.45],[-121,35.35]]]};
+  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.38,crossing)).status,'unknown');
+  d.checks['rules-salmon'].status='changed';
+  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.2)).status,'unknown');
+  d.species.salmon.windows[0].geography.north=91;
+  assert.equal(validRegulations(d),false);
+});
