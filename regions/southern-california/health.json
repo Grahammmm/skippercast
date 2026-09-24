@@ -1,1 +1,1 @@
-{"region_id":"southern-california","generated_at":"2026-09-24T02:01:02Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":50,"sources_total":54,"issues":["sst","chlorophyll","currents","harbor"]}
+{"region_id":"southern-california","generated_at":"2026-09-24T02:16:18Z","status":"degraded","critical_available":true,"recent_report_days_ok":0,"sources_ok":53,"sources_total":54,"issues":["harbor"]}
