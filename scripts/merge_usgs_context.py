@@ -25,8 +25,9 @@ def merge(legacy,doi):
             'source_catalog_url':'https://pubs.usgs.gov/ds/781/',
             'legacy_block_count':len({f['properties']['block_id'] for f in legacy['features']}),
             'doi_release_count':len({f['properties']['release_id'] for f in doi['features']}),
+            'held_releases':doi.get('held_releases',[]),
             'mpa_screened_at':checked.pop(),
-            'method':'Original video-supervised seafloor character class 3, generalized at 20 m, cut by current complete CDFW MPA polygons. Display only; no fishing waypoint or legal-depth claim.',
+            'method':'Original video-supervised seafloor character class 3, generalized at 20 m, cut by current complete CDFW MPA polygons and reviewed anthropogenic source holds. Display only; no fishing waypoint or legal-depth claim.',
             'limitations':['Map blocks are discontinuous and smaller patches are omitted.','No depth-datum conversion, fish presence or legal access is implied.','Original source metadata and archive checksums are recorded on each feature.'],
             'features':features}
 

@@ -21,15 +21,24 @@ test('survey source links require official HTTPS host and matching survey identi
   assert.equal(trustedNoaaLink('https://www.ngdc.noaa.gov.evil.example/H11983/BAG/grid.bag','H11983'),false);
   assert.equal(trustedNoaaLink('https://data.ngdc.noaa.gov/nos/H11111/BAG/grid.bag','H11983'),false);
 });
-test('Eureka original class remains historical context rather than a fishing target',()=>{
+test('Eureka jetty class is withheld from natural hard-bottom context',()=>{
   const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/usgs-hard-context-northern.geojson',import.meta.url)));
   const eureka=layer.features.filter(f=>f.properties.release_id==='P9EC35PF');
-  assert.equal(eureka.length,2);
-  assert.ok(eureka.every(f=>f.properties.source_file_sha256===
-    'c3d17d3361c96e80835120a0d9861a87257336ecbe261c1a7f2abd8f01a0dfcf' &&
-    f.properties.fishing_target===false && f.properties.exportable===false &&
-    f.properties.depth_qualified===false && f.properties.fish_confirmed===false &&
-    f.properties.mpa_screened_at));
+  assert.equal(eureka.length,0);
+  const hold=layer.held_releases.find(r=>r.release_id==='P9EC35PF');
+  assert.ok(hold?.reason.includes('North Jetty'));
+  assert.ok(hold.evidence_urls.some(url=>url.includes('9418768')));
+  const review=JSON.parse(fs.readFileSync(new URL('../dist/data/usgs-eureka-jetty-hold-review.json',import.meta.url)));
+  assert.equal(review.fishing_target,false);
+  assert.equal(review.exportable,false);
+  assert.equal(review.products.length,3);
+  assert.deepEqual(review.original_cmecs_geoform_review.candidate_centroid_checks.map(p=>p.nearest_geoform),
+    ['Jetty','Jetty']);
+  assert.ok(review.original_cmecs_geoform_review.candidate_centroid_checks.every(p=>
+    p.nearest_geoform_distance_m<15));
+  assert.ok(review.products.every(p=>p.joined_hard_depth_cells>0 &&
+    p.largest_components[0].centroid_distance_to_landmark_m<800 &&
+    p.usgs_source.archive_sha256==='c3d17d3361c96e80835120a0d9861a87257336ecbe261c1a7f2abd8f01a0dfcf'));
 });
 test('Point Conception original-cell layer cannot become fishing or export coordinates',()=>{
   const layer=JSON.parse(fs.readFileSync(new URL('../dist/data/point-conception-native-hard-context.geojson',import.meta.url)));

@@ -14,6 +14,7 @@ def module(name):
 
 doi=module('discover_usgs_doi_releases')
 metadata=module('audit_usgs_map_metadata')
+context=module('build_usgs_doi_context')
 
 
 class DoiPipelineTests(unittest.TestCase):
@@ -54,6 +55,13 @@ class DoiPipelineTests(unittest.TestCase):
         row=metadata.parse_metadata('https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/a/SeafloorCharacter.xml',raw,now=datetime(2026,9,23,tzinfo=timezone.utc))
         self.assertEqual(row['categorical_classes'][0]['code'],'3')
         self.assertIn('boulder',row['categorical_classes'][0]['label'])
+
+    def test_jetty_release_requires_pinned_review_hold(self):
+        packet=__import__('json').loads((SCRIPTS.parent/'catalog/usgs-context-holds.json').read_text())
+        holds=context.reviewed_holds(packet)
+        self.assertEqual(holds['P9EC35PF']['disposition'],'exclude_from_natural_hard_context')
+        packet['holds'][0]['evidence_urls']=['https://example.com/not-official']
+        with self.assertRaises(ValueError):context.reviewed_holds(packet)
 
 
 if __name__=='__main__':unittest.main()

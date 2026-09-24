@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "scope": "reviewed-usgs-natural-hard-context-holds",
+  "reviewed_at": "2026-09-23",
+  "holds": [
+    {
+      "release_id": "P9EC35PF",
+      "disposition": "exclude_from_natural_hard_context",
+      "source_archive_sha256": "c3d17d3361c96e80835120a0d9861a87257336ecbe261c1a7f2abd8f01a0dfcf",
+      "reason": "Both generalized class-3 polygons overlap the engineered Humboldt Bay North Jetty. A hard/boulder raster class alone cannot distinguish jetty material from natural reef. Both candidate centroids lie within 15 m of Jetty polygons in the original USGS CMECS geoform, so the release is withheld from the natural-hard fishing research layer.",
+      "cmecs_archive": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2024/10.5066-P9EC35PF/0f9a8f350d7a4beabdbe5af608b16b36/CMECS_OffshoreEureka.zip",
+        "sha256": "bb23c8c337909e1ea039309555ab991fd8220c1ed45fea52bb509a3bfc903800",
+        "metadata_sha256": "9a2a2e3947a66008db0bad6370e334532afd202cd08633b45079c1694dea20e4"
+      },
+      "candidate_centroids": [
+        {"id": "usgs-doi-P9EC35PF-001", "latitude": 40.764059332407484, "longitude": -124.24381167434187},
+        {"id": "usgs-doi-P9EC35PF-002", "latitude": 40.76951228931714, "longitude": -124.23915985889454}
+      ],
+      "landmark": {
+        "name": "NOAA North Jetty Landing station 9418768",
+        "latitude": 40.768917,
+        "longitude": -124.23889,
+        "source_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9418768.json"
+      },
+      "survey_products": [
+        {
+          "survey_id": "H11919",
+          "bag_filename": "H11919_MB_1m_MLLW_2of3.bag",
+          "report_sha256": "ba6d0288db7f376135e799630618148210418a194ed68385d34fdb3fc7021d2a"
+        },
+        {
+          "survey_id": "H11919",
+          "bag_filename": "H11919_MB_1m_MLLW_3of3.bag",
+          "report_sha256": "ba6d0288db7f376135e799630618148210418a194ed68385d34fdb3fc7021d2a"
+        },
+        {
+          "survey_id": "F00579",
+          "bag_filename": "F00579_MB_1m_MLLW_1of1.bag",
+          "report_sha256": "0ac568f09b83bd6911595add192a83b5ee9fed3e5b5c09a2e7f17d2ebfcec17b"
+        }
+      ],
+      "evidence_urls": [
+        "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9418768.json",
+        "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11919/DR/H11919.pdf",
+        "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00579/DR/F00579.pdf",
+        "https://doi.org/10.5066/P9EC35PF"
+      ]
+    }
+  ]
+}
