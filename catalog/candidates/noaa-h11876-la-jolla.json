@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h11876-la-jolla",
+  "name": "NOAA H11876 2 m MLLW grid near Pacific Beach and La Jolla",
+  "sector_ids": ["orange-san-diego", "san-diego-border"],
+  "need_ids": ["bathymetry", "substrate", "groundtruth"],
+  "documentation_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
+  "access_status": "accessible",
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-117.378445, 32.761911, -117.240305, 32.931547],
+    "resolution_m": 2,
+    "resolution_basis": "inspected",
+    "horizontal_crs": "WGS 84 / UTM zone 11N (original BAG compound CRS)",
+    "vertical_datum": "MLLW depth",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T22:19:38.961602+00:00",
+    "update_cadence": "Historical survey; monthly original-source and chart review",
+    "coverage_start": "2008-05-07",
+    "coverage_end": "2008-07-15"
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+      "supports": "Original NOAA catalog page links the H11876 survey archive and exact BAG."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
+      "supports": "Original report describes survey dates, generalized charted rocky-seabed areas and historical chart discrepancies."
+    },
+    {
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/c0111sc_video_observations_metadata_faq.html",
+      "supports": "Independent dated USGS camera-observation metadata; source ZIP was hash-pinned and cross-screened with the BAG."
+    }
+  ],
+  "limitations": [
+    "The WGS84 bounds are the transformed rectangular raster envelope, not its valid-data footprint or a fishing area. The original native-cell mask must be used.",
+    "The 2011 USGS observations form eleven qualifying rocky windows on just two correlated camera transects. They do not define reef edges, current fish presence or a catch rate.",
+    "No exact hard-bottom polygon, full current-chart and route screen, or date/method-specific local fishing clearance has been approved. Keep this source out of fishing targets, scores and exports.",
+    "The exact archive redistribution terms have not been reviewed for republication; retain the raw original in the private source cache."
+  ],
+  "producer": {
+    "name": "NOAA National Ocean Service, Office of Coast Survey",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "variables": ["seafloor_depth", "seafloor_product_uncertainty", "historical_camera_substrate_observation"],
+  "units": {
+    "seafloor_depth": "m below MLLW",
+    "seafloor_product_uncertainty": "m",
+    "historical_camera_substrate_observation": "USGS categorical code"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original-file archive; USGS Data Series 781 camera archive",
+    "raw_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
+    "transformations": [
+      "Original 2 m BAG opened; native elevation and product-uncertainty cells screened at original camera positions.",
+      "Raster extent transformed to WGS84 for catalog discovery; nodata retained and envelope not promoted as coverage.",
+      "Two historical USGS camera transects joined to the exact BAG; separate bounded ENC danger, charted seabed-point and CDFW MPA receipts recorded in h11876-la-jolla-camera-chart-review.json."
+    ]
+  }
+}
