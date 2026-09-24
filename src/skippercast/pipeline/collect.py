@@ -6,8 +6,13 @@ import hashlib
 import gzip
 from io import BytesIO
 import json
+import re
+import ssl
+import subprocess
+import tempfile
 import time
-from urllib.error import HTTPError
+from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
@@ -15,7 +20,7 @@ from zoneinfo import ZoneInfo
 from . import parsers
 from .regulations import regulatory_snapshot, watch_jobs
 from .settings import settings, previous_for_region
-from ..platform.contracts import public_url
+from ..platform.contracts import REPO, public_url
 from ..platform.source_audit import PublicRedirect, check_public_address
 
 UA = "SkipperCast/0.2 (https://github.com/Grahammmm/skippercast)"
@@ -35,6 +40,38 @@ MODEL_META = {
 POINTS = [("Point Estero", 35.45, -121.02), ("Estero Bay", 35.36, -120.94),
           ("Point Buchon", 35.24, -120.94), ("Off Avila", 35.1, -120.82),
           ("Offshore central", 35.3, -121.5)]
+
+
+def system_tls_official_watch(url, limit):
+    """Recover a Mac Python trust-store failure using verified system TLS only.
+
+    The fallback is restricted to exact California agency URLs in reviewed jurisdictions.
+    It does not follow redirects or relax certificate validation.
+    """
+    state_hosts = {'wildlife.ca.gov', 'nrm.dfg.ca.gov', 'fgc.ca.gov'}
+    if urlsplit(url).hostname not in state_hosts:
+        raise ValueError('System TLS fallback is restricted to reviewed state agencies')
+    allowed = set()
+    for path in (REPO / 'jurisdictions').glob('california-*.json'):
+        jurisdiction = json.loads(path.read_text())
+        allowed.update(watch['url'] for watch in jurisdiction['watches'].values()
+                       if urlsplit(watch['url']).hostname in state_hosts)
+    if url not in allowed:
+        raise ValueError('State agency URL is not an exact reviewed watch')
+    with tempfile.TemporaryDirectory() as directory:
+        body_path, header_path = (Path(directory) / name for name in ('body', 'headers'))
+        subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--show-error',
+                        '--proto', '=https', '--max-time', '25', '--max-filesize', str(limit),
+                        '--dump-header', str(header_path), '--output', str(body_path), url],
+                       check=True, capture_output=True, timeout=30)
+        body, headers = body_path.read_bytes(), header_path.read_text()
+    statuses = re.findall(r'^HTTP/\S+\s+(\d{3})\b', headers, re.M)
+    if not statuses or statuses[-1] != '200' or len(body) > limit or not body.strip():
+        raise ValueError('State agency system TLS response was redirected, empty or oversized')
+    final_headers = headers.split('\r\n\r\n')[-2] if '\r\n\r\n' in headers else headers
+    fields = {name.lower(): value.strip() for name, value in
+              re.findall(r'^([\w-]+):\s*(.*)$', final_headers, re.M)}
+    return body, fields
 
 
 def stamp(now=None):
@@ -61,22 +98,34 @@ class Client:
             record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
             try:
                 check_public_address(url)
-                with build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"}), timeout=25) as response:
-                    limit = 35_000_000 if as_pdf else 5_000_000
-                    body = response.read(limit + 1)
-                    if len(body) > limit:
-                        raise ValueError("Response exceeds bounded collection size")
-                    encoding = response.headers.get('Content-Encoding', 'identity').lower()
-                    if encoding == 'gzip':
-                        record['compressed_bytes'] = len(body)
-                        with gzip.GzipFile(fileobj=BytesIO(body)) as compressed:
-                            body = compressed.read(limit + 1)
-                    elif encoding != 'identity':
-                        raise ValueError('Unsupported response compression')
-                    record.update(http_status=response.status, http_date=response.headers.get("Date"),
-                                  final_url=response.url, content_type=response.headers.get('Content-Type'),
-                                  last_modified=response.headers.get("Last-Modified"), bytes=len(body),
-                                  sha256=hashlib.sha256(body).hexdigest())
+                limit = 35_000_000 if as_pdf else 5_000_000
+                try:
+                    response = build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"}), timeout=25)
+                except URLError as error:
+                    if not isinstance(error.reason, ssl.SSLCertVerificationError):
+                        raise
+                    body, fields = system_tls_official_watch(url, limit)
+                    record.update(http_status=200, http_date=fields.get('date'), final_url=url,
+                                  content_type=fields.get('content-type'),
+                                  last_modified=fields.get('last-modified'), bytes=len(body),
+                                  sha256=hashlib.sha256(body).hexdigest(),
+                                  transport='system curl; TLS verified; redirects disabled')
+                else:
+                    with response:
+                        body = response.read(limit + 1)
+                        if len(body) > limit:
+                            raise ValueError("Response exceeds bounded collection size")
+                        encoding = response.headers.get('Content-Encoding', 'identity').lower()
+                        if encoding == 'gzip':
+                            record['compressed_bytes'] = len(body)
+                            with gzip.GzipFile(fileobj=BytesIO(body)) as compressed:
+                                body = compressed.read(limit + 1)
+                        elif encoding != 'identity':
+                            raise ValueError('Unsupported response compression')
+                        record.update(http_status=response.status, http_date=response.headers.get("Date"),
+                                      final_url=response.url, content_type=response.headers.get('Content-Type'),
+                                      last_modified=response.headers.get("Last-Modified"), bytes=len(body),
+                                      sha256=hashlib.sha256(body).hexdigest())
                 if len(body) > limit:
                     raise ValueError("Response exceeds bounded collection size")
                 if not body.strip():

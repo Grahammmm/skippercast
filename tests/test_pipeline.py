@@ -1,12 +1,45 @@
 from datetime import datetime, timezone
 import unittest
 from unittest.mock import patch
-from urllib.error import HTTPError
+import ssl
+from pathlib import Path
+from urllib.error import HTTPError, URLError
 from skippercast.pipeline import parsers
-from skippercast.pipeline.collect import Client, source, validate
+from skippercast.pipeline.collect import Client, source, system_tls_official_watch, validate
 
 
 class PipelineTests(unittest.TestCase):
+    def test_cdfw_system_tls_fallback_is_exact_url_only(self):
+        with self.assertRaisesRegex(ValueError, 'exact reviewed watch'):
+            system_tls_official_watch('https://wildlife.ca.gov/unreviewed', 100)
+        with self.assertRaisesRegex(ValueError, 'restricted to reviewed state agencies'):
+            system_tls_official_watch('https://example.org/unreviewed', 100)
+
+    def test_cdfw_certificate_failure_uses_verified_fallback(self):
+        url = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs'
+        class Opener:
+            def open(self, *_args, **_kwargs):
+                raise URLError(ssl.SSLCertVerificationError('untrusted local Python certificate chain'))
+        with patch('skippercast.pipeline.collect.check_public_address'), \
+                patch('skippercast.pipeline.collect.build_opener', return_value=Opener()), \
+                patch('skippercast.pipeline.collect.system_tls_official_watch',
+                      return_value=(b'<html>official page</html>', {'content-type': 'text/html'})) as fallback:
+            client = Client(datetime(2026, 9, 24, tzinfo=timezone.utc))
+            self.assertIn('official page', client.get(url))
+        fallback.assert_called_once_with(url, 5_000_000)
+        self.assertEqual(client.requests[-1]['transport'], 'system curl; TLS verified; redirects disabled')
+
+    def test_system_tls_fallback_rejects_an_official_redirect(self):
+        url = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs'
+        def redirect(args, **_kwargs):
+            self.assertNotIn('--location', args)
+            Path(args[args.index('--dump-header') + 1]).write_text(
+                'HTTP/2 301\r\nLocation: https://wildlife.ca.gov/other\r\n\r\n')
+            Path(args[args.index('--output') + 1]).write_bytes(b'redirect')
+        with patch('skippercast.pipeline.collect.subprocess.run', side_effect=redirect):
+            with self.assertRaisesRegex(ValueError, 'redirected'):
+                system_tls_official_watch(url, 5_000_000)
+
     def test_coastwatch_403_is_retried_but_other_hosts_stay_denied(self):
         class Response:
             status = 200
