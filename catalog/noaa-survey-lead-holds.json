@@ -60,6 +60,14 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13325.html"
     },
     {
+      "survey_id": "H13324",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13324/DR/H13324_DR.pdf",
+      "report_sha256": "64e2d213e114f5970f95a0668de5581a4884c614015652dcf0a1e2372fd3f696",
+      "reason": "The 2019 eastern Santa Cruz original MLLW variable-resolution BAG has 14,160,432 native 1–4 m cells across the survey; 4,737,914 of the cells in the candidate habitat review area passed a 60–200 ft depth, 2 m planning-margin and 1 m product-uncertainty screen. A native-cell/historical-hard-substrate/closure trial generated eight research patches, one B and seven C, not public fishing targets. The survey report identifies two unresolved holidays and steep rocky nearshore features rising about six to seven meters off the bottom. Figure 16 and Figure 22 are not precise hazard masks. Withhold all eight until the gap and rock positions are georeferenced against the original grid and current ENC, individual patches clear those buffers, and local fishing rules and access are checked. The surveyed depths are not a safe route or proof of catch.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13324.html"
+    },
+    {
       "survey_id": "H13555",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13555/DR/H13555_DR.pdf",

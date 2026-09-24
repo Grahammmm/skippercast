@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from skippercast.platform.bottom_targets import (VERSION, sha256, source_url_allowed,
     bag_metadata, cells_qualified, vr_transform, fresh_closures, terrain_metrics, contained_outline, target_prefix)
 from skippercast.platform.contracts import atomic_json, read_json
+from skippercast.platform.qualified_scope import _held_original_surveys
 
 
 def polygons(geometry):
@@ -144,8 +145,15 @@ even where a neighboring supergrid support rectangle overlaps them.
             counts["native_nodes"] += int(valid.sum())
             counts["qualified_nodes"] += int(qualified.sum())
             counts["native_resolution_counts"][str(dx)] = counts["native_resolution_counts"].get(str(dx),0)+int(valid.sum())
-            yy,xx = np.nonzero(valid)
-            samples.append(np.column_stack((affine.c+(xx+.5)*dx,affine.f-(yy+.5)*dy,a[valid],u[valid],np.full(len(xx),dx))))
+            # The terrain sample pool must obey the same depth and product-
+            # uncertainty screen as the published footprint. Keeping every
+            # measured node here exhausted the regional memory budget on
+            # larger original surveys and let unqualified cells enter the
+            # display grid even though they could not create a target.
+            yy,xx = np.nonzero(qualified)
+            if len(xx):
+                samples.append(np.column_stack((affine.c+(xx+.5)*dx,affine.f-(yy+.5)*dy,
+                    a[qualified],u[qualified],np.full(len(xx),dx))))
             if not footprint.intersects(habitat):
                 continue
             # All native cells, including nodata, participate in the geometric screen.
@@ -191,7 +199,7 @@ def numeric_view(points, tree, center, spec, target_id, region_id):
         "depth_range_ft":[round(float(-mean.max())/.3048,1),round(float(-mean.min())/.3048,1)],
         "relief_m":round(float(mean.max()-mean.min()),3),"encoding":"base64-int16-le",
         "elevation_unit_m":.1,"nodata":-32768,"elevations":base64.b64encode(values.tobytes()).decode(),
-        "source_interpolation":"No gap interpolation. 4 m display cells average native 1–4 m node values falling inside each display bin; native resolution is retained separately.",
+        "source_interpolation":"No gap interpolation. 4 m display cells average depth- and uncertainty-qualified native 1–4 m node values falling inside each display bin; native resolution is retained separately.",
         "depth_qualified":True,"fishing_target":True,
         "limitations":"Historical numerical terrain view, not a photograph or navigation chart. The 512 m image can extend beyond the qualified footprint and depth band. Display means are not used to qualify depths. No rock dimensions or fish presence are inferred. "+spec["limitations"]}
 
@@ -320,11 +328,20 @@ def main():
     parser.add_argument("--cache",type=Path,default=ROOT/"var/island-targets")
     parser.add_argument("--output",type=Path,default=ROOT/"dist/regions/southern-california/qualified-bottom")
     parser.add_argument("--fetch",action="store_true")
-    args=parser.parse_args();config=read_json(args.config);args.output.mkdir(parents=True,exist_ok=True)
+    parser.add_argument("--research-only",action="store_true",
+        help="Allow held surveys only in an unpublished var/ output directory")
+    args=parser.parse_args();config=read_json(args.config)
     now=datetime.now(timezone.utc).isoformat()
     try:
         if config.get("status")!="reviewed":raise ValueError("Input manifest is not reviewed")
         target_prefix(config)
+        held = _held_original_surveys(ROOT)
+        held_inputs = {s["survey_id"] for s in config["sources"]} & held
+        if held_inputs and not args.research_only:
+            raise ValueError("Original NOAA survey is held from fishing promotion: " + ", ".join(sorted(held_inputs)))
+        if args.research_only and not args.output.resolve().is_relative_to((ROOT/"var").resolve()):
+            raise ValueError("Research-only output must stay under var/")
+        args.output.mkdir(parents=True,exist_ok=True)
         habitat_path=ROOT/config["habitat_path"]
         if sha256(habitat_path)!=config["habitat_sha256"]:raise ValueError("Derived habitat input changed; review its footprint before promotion")
         habitat=read_json(habitat_path)
