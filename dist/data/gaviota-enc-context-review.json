@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "scope_id": "gaviota-hard-context",
+  "enc_checked_at": "2026-09-24T21:56:00.246397+00:00",
+  "source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "queried_layers": 18,
+  "charted_danger_features": 39,
+  "review_buffer_m": 100,
+  "context_outlines_in_scope_by_survey": {
+    "H11951": 12
+  },
+  "outlines_near_charted_dangers": [
+    {
+      "context_id": "native-hard-H11951-2460",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 3
+    },
+    {
+      "context_id": "native-hard-H11951-2024",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 1
+    },
+    {
+      "context_id": "native-hard-H11951-1995",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 2
+    },
+    {
+      "context_id": "native-hard-H11951-2322",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 1
+    },
+    {
+      "context_id": "native-hard-H11951-2426",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 1
+    },
+    {
+      "context_id": "native-hard-H11951-2027",
+      "survey_id": "H11951",
+      "charted_dangers_within_buffer": 2
+    }
+  ],
+  "historical_report_dangers": [
+    {
+      "hazard_id": "H11951-new-wreck",
+      "survey_id": "H11951",
+      "nearest_enc_danger_m": 0.0,
+      "reconciled_with_current_chart": false
+    },
+    {
+      "hazard_id": "H11951-retained-wellheads-west",
+      "survey_id": "H11951",
+      "nearest_enc_danger_m": 27.3,
+      "reconciled_with_current_chart": false
+    },
+    {
+      "hazard_id": "H11951-retained-wellhead-east",
+      "survey_id": "H11951",
+      "nearest_enc_danger_m": 44.4,
+      "reconciled_with_current_chart": false
+    }
+  ],
+  "status": "research-screen-only",
+  "limitations": "No target or route is cleared. ENC Direct is not certified for navigation. The nearest charted feature need not be the same object as a historical DTON. Scope clips and incomplete danger classes cannot certify an area free of hazards. Separate current MPA/special-closure, fishing-rule, source-rights and original-cell review remain required.",
+  "audited_at": "2026-09-24T21:56:13.938135+00:00"
+}
