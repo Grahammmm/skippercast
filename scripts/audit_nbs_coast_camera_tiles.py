@@ -25,7 +25,7 @@ from scripts.audit_usgs_video_observations import sector_for
 
 
 def ranked_camera_tiles(scheme, manifest, video_cache, sectors, *, coast):
-    chosen = {item['id']: item for item in sectors if item['coast'] == coast}
+    chosen = {item['id']: item for item in sectors if coast == 'all' or item['coast'] == coast}
     if not chosen:
         raise ValueError(f'Unknown or empty coast group: {coast}')
     counts = Counter()
@@ -147,7 +147,7 @@ def main():
     parser.add_argument('--sectors', type=Path, default=Path('catalog/coastal-sectors.json'))
     parser.add_argument('--cache', type=Path, default=Path('var/nbs-cache'))
     parser.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
-    parser.add_argument('--coast', required=True, choices=('northern', 'mendocino', 'san-francisco', 'central', 'southern'))
+    parser.add_argument('--coast', required=True, choices=('all', 'northern', 'mendocino', 'san-francisco', 'central', 'southern'))
     parser.add_argument('--max-tiles', type=int, default=3)
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--fetch', action='store_true')

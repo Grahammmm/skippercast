@@ -53,18 +53,18 @@ jobs:
           --fetch
           --workers 4
           --output var/review/nbs-statewide-camera-tile-review.json
-      - name: Expand central-coast NOAA NBS source review to three tiles per sector
+      - name: Expand NOAA NBS source review to three tiles per sector statewide
         env:
           PYTHONPATH: src:.
         run: >-
           python scripts/audit_nbs_coast_camera_tiles.py
           --scheme var/nbs-cache/modeling-tile-scheme.gpkg
           --mpas var/published/latest.json
-          --coast central
+          --coast all
           --max-tiles 3
           --fetch
           --workers 4
-          --output var/review/nbs-central-multiple-camera-tile-review.json
+          --output var/review/nbs-statewide-multiple-camera-tile-review.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
       - name: Build MPA-screened review layers

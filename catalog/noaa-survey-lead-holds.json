@@ -18,6 +18,14 @@
       "report_sha256": "02fae1f4b1fd7cb42cc8ffbfb06135a7ff8ac660d002c950f9c1988d6afcc96c",
       "reason": "The 2009 Stil Well Point–Greenwood Cove survey contains fine measured depth and historical rocky-camera overlap, but its original report identifies five dangers to navigation, charted rocks/islets needing correction, and holidays where least depths were not established. The NOAA NBS sample has 60 locally qualified rocky-camera windows, yet only 18 also pass the strict 25 m original-BAG native-grid and depth screen; 37 are held at original fine-grid edges. Do not promote a Fort Bragg–Point Arena target until hazards are reconciled with the current ENC, exact source footprints and position uncertainty are reviewed, and local species/method rules and access pass separately.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11967.html"
+    },
+    {
+      "survey_id": "H11972",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11972/DR/H11972.pdf",
+      "report_sha256": "06cbdbe11697666659a3465ec9161c19e36316825985df4f5844e9d45cc1cae7",
+      "reason": "The 2008–2009 Point Delgada original survey is the measured contributor behind a North Mendocino NOAA NBS test tile with 46 historical rocky-camera windows passing the local source screen. Its final descriptive report identifies seven dangers to navigation, two rocks of unknown depth placed over survey holidays on shoals shallower than four fathoms, revisions to charted islets and more extensive submerged rock than formerly charted. Dynamic sediment bottom also changed between the two acquisition periods. Withhold the whole survey as a fishing-target source until the original fine BAG cells, current ENC hazards, exact substrate and MPA footprints, access and Mendocino rules are reconciled. The tile and 2010 camera records alone do not locate a present fishable reef.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11972.html"
     }
   ]
 }
