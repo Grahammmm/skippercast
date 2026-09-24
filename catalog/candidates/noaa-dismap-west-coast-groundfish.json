@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "noaa-dismap-west-coast-groundfish",
+  "name": "NOAA DisMAP West Coast annual bottom-trawl survey catch per unit effort",
+  "sector_ids": ["del-norte", "crescent-city-humboldt", "humboldt-cape", "north-mendocino", "fort-bragg-arena", "arena-bodega", "bodega-reyes", "reyes-pigeon", "pigeon-monterey", "monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception", "conception-ventura", "ventura-los-angeles", "los-angeles-orange", "orange-san-diego", "san-diego-border"],
+  "need_ids": ["species-occurrence", "catch-effort"],
+  "documentation_url": "https://www.fisheries.noaa.gov/inport/item/69743",
+  "access_url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/WC_ANN_Sample_Locations_CURRENT/FeatureServer/0",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC0-1.0",
+    "terms_url": "https://www.fisheries.noaa.gov/inport/item/69743",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-126, 32, -117, 42],
+    "resolution_m": null,
+    "horizontal_crs": "NAD83 Albers service geometry; record latitude/longitude fields used for browse-sector summaries",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/WC_ANN_Sample_Locations_CURRENT/FeatureServer/0",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T23:21:09Z",
+    "update_cadence": "Monthly service and schema audit; human review before public aggregate replacement",
+    "coverage_start": "2023-01-01",
+    "coverage_end": "2025-12-31"
+  },
+  "evidence": [
+    {
+      "url": "https://www.fisheries.noaa.gov/inport/item/69743",
+      "supports": "NOAA identifies the DisMAP survey catch-per-unit-effort product, CC0 rights and the current West Coast ArcGIS endpoint."
+    },
+    {
+      "url": "https://www.fisheries.noaa.gov/west-coast/science-data/us-west-coast-groundfish-bottom-trawl-survey",
+      "supports": "The original survey samples trawlable shelf and slope with standardized gear and is not a rocky-reef survey."
+    },
+    {
+      "url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/WC_ANN_Sample_Locations_CURRENT/FeatureServer/0",
+      "supports": "Direct layer inspection found 2023–2025 records and OBJECTID, SampleID, Year, Species, WTCPUE, Depth, Latitude and Longitude fields."
+    }
+  ],
+  "limitations": [
+    "This is a derived NOAA distribution product from the NWFSC trawl survey, not an independent biological survey or a catch forecast.",
+    "Trawl gear misses untrawlable rocky reef and many shallower nearshore habitats. A zero is a survey noncatch for a selected taxon, not species absence.",
+    "The 2026-06-01 service layer label is a data-product version, not the date of fish observations; the audited records are from 2023–2025.",
+    "The service covers offshore and island waters. Approximate latitude browse-sector summaries do not establish jurisdiction, legal access, safe routes or an exact fishing ground.",
+    "Sample coordinates and fine-scale catch patterns are withheld from public target layers; records deeper than 200 ft are separately counted and cannot validate a 200 ft nearshore target."
+  ],
+  "producer": {
+    "name": "NOAA Fisheries Office of Science and Technology (DisMAP), using Northwest Fisheries Science Center survey data",
+    "url": "https://www.fisheries.noaa.gov/inport/item/69743"
+  },
+  "variables": ["sample_year", "taxon", "sample_id", "trawl_catch_per_unit_effort", "trawl_depth", "latitude", "longitude"],
+  "units": {
+    "sample_year": "calendar year",
+    "taxon": null,
+    "sample_id": null,
+    "trawl_catch_per_unit_effort": "kg/ha",
+    "trawl_depth": "m",
+    "latitude": "degrees north",
+    "longitude": "degrees east"
+  },
+  "provenance": {
+    "access_service": "NOAA DisMAP ArcGIS FeatureServer, derived from NWFSC West Coast Groundfish Bottom Trawl Survey",
+    "raw_sha256": null,
+    "transformations": [
+      "Filter exact years 2023–2025, California latitude/longitude bounds and named lingcod, Pacific halibut and rockfish taxa.",
+      "Paginate OBJECTID-ordered records and require source count, field schema, unique object IDs, valid depths and nonnegative WTCPUE.",
+      "Aggregate by approximate coastal latitude sector, year and target group; retain distinct sampled hauls, positive/zero hauls and a separate at-or-under-200-ft count, without publishing source coordinates."
+    ]
+  }
+}

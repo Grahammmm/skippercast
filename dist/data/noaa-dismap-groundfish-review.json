@@ -1,0 +1,3886 @@
+{
+  "schema_version": 1,
+  "source": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/WC_ANN_Sample_Locations_CURRENT/FeatureServer/0",
+  "source_metadata_sha256": "965783aaab80672ed5f7734992cac0e8301e267111ba25c2eba9df94bee50d0f",
+  "service_layer_name": "West Coast Annual Sample Locations 20260601",
+  "service_last_edit_ms": 1787854524881,
+  "retrieved_at": "2026-09-24T23:21:58.050864+00:00",
+  "years": [
+    2023,
+    2024,
+    2025
+  ],
+  "latest_source_year": 2025,
+  "records_reviewed": 20881,
+  "outside_browse_sectors": 399,
+  "pages": [
+    {
+      "year": 2023,
+      "offset": 0,
+      "rows": 5000,
+      "response_sha256": "efd53c5f698e6bb7b9ba46acdb8b8d416a3fd1ae33d0ac81193e451a2d19bdbb"
+    },
+    {
+      "year": 2023,
+      "offset": 5000,
+      "rows": 1916,
+      "response_sha256": "31b67c674ed36542e07f910a6d485fbe61a3178a787fed10435192e47fd9e83c"
+    },
+    {
+      "year": 2024,
+      "offset": 0,
+      "rows": 5000,
+      "response_sha256": "f88e1ef4c227677c988b0f5074fabfd82f15580762ab8cc596637bd22f58d23b"
+    },
+    {
+      "year": 2024,
+      "offset": 5000,
+      "rows": 1631,
+      "response_sha256": "5c2af759184fd672b9a79585375059fd86f0ff5ab2123302e70d36d68b099bfb"
+    },
+    {
+      "year": 2025,
+      "offset": 0,
+      "rows": 5000,
+      "response_sha256": "6c099964448077a09c9f5a67f0fee9ce2eed5df319720f67a4d691b16e720112"
+    },
+    {
+      "year": 2025,
+      "offset": 5000,
+      "rows": 2334,
+      "response_sha256": "9b9eb7803aea8608575ee88ec9bad964a538b68bb167bb9f7c40876f3c7e0c8c"
+    }
+  ],
+  "sector_year_target": [
+    {
+      "sector_id": "arena-bodega",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.8,
+        466.6
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 18,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.8,
+        466.6
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 0,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.8,
+        466.6
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 13,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        76.6,
+        499.6
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 26,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        76.6,
+        499.6
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 24,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        76.6,
+        499.6
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 15,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.8,
+        743.4
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 22,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.8,
+        743.4
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "arena-bodega",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 15,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.8,
+        743.4
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        77.5,
+        1195.6
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        77.5,
+        1195.6
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 4,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        77.5,
+        1195.6
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        580.9,
+        1235.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        580.9,
+        1235.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        580.9,
+        1235.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.3,
+        1185.4
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.3,
+        1185.4
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.3,
+        1185.4
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.5,
+        443.1
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.5,
+        443.1
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 11,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.5,
+        443.1
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.3,
+        281.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.3,
+        281.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.3,
+        281.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.2,
+        285.1
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.2,
+        285.1
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.2,
+        285.1
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        74.9,
+        1163.4
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 15,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        74.9,
+        1163.4
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 8,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        74.9,
+        1163.4
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.0,
+        1064.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.0,
+        1064.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 9,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 4,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        68.0,
+        1064.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        100.1,
+        1051.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        100.1,
+        1051.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        100.1,
+        1051.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 3,
+      "samples_with_zero_cpue": 39,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.9,
+        698.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 42,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.9,
+        698.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 33,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.9,
+        698.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 26,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.5,
+        674.8
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 30,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.5,
+        674.8
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 21,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.5,
+        674.8
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 34,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 28,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.5,
+        617.6
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 34,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 34,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.5,
+        617.6
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "conception-ventura",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 34,
+      "samples_with_positive_cpue": 25,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.5,
+        617.6
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 23,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.2,
+        1175.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 27,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.2,
+        1175.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 13,
+      "samples_with_zero_cpue": 18,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.2,
+        1175.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 9,
+      "samples_with_zero_cpue": 17,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1233.1
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 24,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1233.1
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 10,
+      "samples_with_zero_cpue": 16,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1233.1
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 28,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.7,
+        1250.0
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 30,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.7,
+        1250.0
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 30,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 22,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.7,
+        1250.0
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        71.7,
+        1086.4
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 16,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        71.7,
+        1086.4
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        71.7,
+        1086.4
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 3,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        89.0,
+        1112.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 15,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        89.0,
+        1112.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 15,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        89.0,
+        1112.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 15,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.8,
+        950.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 16,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.8,
+        950.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "del-norte",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        93.8,
+        950.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.4,
+        964.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.4,
+        964.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        84.4,
+        964.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        98.1,
+        1057.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        98.1,
+        1057.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 10,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        98.1,
+        1057.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        90.8,
+        171.1
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        90.8,
+        171.1
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 7,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 0,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        90.8,
+        171.1
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 1,
+      "depth_range_m": [
+        59.4,
+        1238.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 1,
+      "depth_range_m": [
+        59.4,
+        1238.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 14,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 2,
+      "depth_range_m": [
+        59.4,
+        1238.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 9,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.0,
+        867.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.0,
+        867.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 12,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        69.0,
+        867.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 20,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1132.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 20,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 19,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1132.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "humboldt-cape",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 20,
+      "samples_with_positive_cpue": 11,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1132.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 19,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 19,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.2,
+        1168.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 19,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 19,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.2,
+        1168.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 19,
+      "samples_with_positive_cpue": 14,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.2,
+        1168.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        53.9,
+        1210.3
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        53.9,
+        1210.3
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        53.9,
+        1210.3
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 21,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 21,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.7,
+        1109.0
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 21,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 21,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.7,
+        1109.0
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 21,
+      "samples_with_positive_cpue": 9,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.7,
+        1109.0
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 0,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        117.8,
+        125.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        117.8,
+        125.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 0,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        117.8,
+        125.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 4,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.3,
+        1012.0
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.3,
+        1012.0
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.3,
+        1012.0
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.8,
+        872.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.8,
+        872.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 2,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 1,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        72.8,
+        872.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 45,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 39,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.5,
+        1120.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 45,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 45,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.5,
+        1120.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 45,
+      "samples_with_positive_cpue": 34,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.5,
+        1120.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 37,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        60.1,
+        1057.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 42,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        60.1,
+        1057.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 28,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        60.1,
+        1057.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 13,
+      "samples_with_zero_cpue": 29,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1154.3
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 42,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1154.3
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 42,
+      "samples_with_positive_cpue": 30,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.1,
+        1154.3
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        102.7,
+        990.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 15,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        102.7,
+        990.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 16,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 8,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        102.7,
+        990.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 10,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        110.2,
+        764.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        110.2,
+        764.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 12,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        110.2,
+        764.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 20,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        137.7,
+        1249.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 22,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        137.7,
+        1249.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "north-mendocino",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 15,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        137.7,
+        1249.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 29,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 29,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.7,
+        1245.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 29,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 29,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.7,
+        1245.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 29,
+      "samples_with_positive_cpue": 6,
+      "samples_with_zero_cpue": 23,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        82.7,
+        1245.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 41,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 40,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.6,
+        1178.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 41,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 41,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.6,
+        1178.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 41,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 23,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        67.6,
+        1178.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 31,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.7,
+        1181.0
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 31,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.7,
+        1181.0
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 31,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.7,
+        1181.0
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 2,
+      "samples_with_zero_cpue": 3,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        105.9,
+        652.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        105.9,
+        652.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 5,
+      "samples_with_positive_cpue": 4,
+      "samples_with_zero_cpue": 1,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        105.9,
+        652.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.7,
+        1106.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 17,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.7,
+        1106.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 13,
+      "samples_with_zero_cpue": 4,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        70.7,
+        1106.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 15,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.7,
+        640.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 22,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.7,
+        640.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 22,
+      "samples_with_positive_cpue": 20,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        64.7,
+        640.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 8,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1066.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 25,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1066.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 26,
+      "samples_with_positive_cpue": 20,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.5,
+        1066.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 20,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        56.3,
+        1159.8
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 27,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        56.3,
+        1159.8
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 9,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        56.3,
+        1159.8
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 19,
+      "samples_with_zero_cpue": 8,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 2,
+      "depth_range_m": [
+        60.5,
+        602.5
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 27,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        60.5,
+        602.5
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 27,
+      "samples_with_positive_cpue": 22,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 2,
+      "positive_samples_at_or_under_200ft": 1,
+      "depth_range_m": [
+        60.5,
+        602.5
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.1,
+        1081.2
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.1,
+        1081.2
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 11,
+      "samples_with_positive_cpue": 9,
+      "samples_with_zero_cpue": 2,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        65.1,
+        1081.2
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.7,
+        1033.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.7,
+        1033.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 13,
+      "samples_with_positive_cpue": 7,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.7,
+        1033.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 18,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        109.4,
+        1252.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 18,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        109.4,
+        1252.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "san-diego-border",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 18,
+      "samples_with_positive_cpue": 10,
+      "samples_with_zero_cpue": 8,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        109.4,
+        1252.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        336.6,
+        1121.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        336.6,
+        1121.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        336.6,
+        1121.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 6,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 1,
+      "depth_range_m": [
+        60.8,
+        1216.9
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 6,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        60.8,
+        1216.9
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 6,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 5,
+      "samples_at_or_under_200ft": 1,
+      "positive_samples_at_or_under_200ft": 1,
+      "depth_range_m": [
+        60.8,
+        1216.9
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 13,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.2,
+        1214.1
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 14,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.2,
+        1214.1
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 14,
+      "samples_with_positive_cpue": 3,
+      "samples_with_zero_cpue": 11,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        91.2,
+        1214.1
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2023,
+      "target": "lingcod",
+      "samples_with_taxon_record": 24,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 23,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.2,
+        900.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2023,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 24,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 24,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.2,
+        900.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2023,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 24,
+      "samples_with_positive_cpue": 18,
+      "samples_with_zero_cpue": 6,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        63.2,
+        900.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2024,
+      "target": "lingcod",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 5,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.4,
+        971.0
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2024,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 12,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.4,
+        971.0
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2024,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 12,
+      "samples_with_positive_cpue": 8,
+      "samples_with_zero_cpue": 4,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        62.4,
+        971.0
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2025,
+      "target": "lingcod",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 1,
+      "samples_with_zero_cpue": 16,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.8,
+        1093.7
+      ],
+      "source_taxa": [
+        "Ophiodon elongatus"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2025,
+      "target": "pacific-halibut",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 0,
+      "samples_with_zero_cpue": 17,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.8,
+        1093.7
+      ],
+      "source_taxa": [
+        "Hippoglossus stenolepis"
+      ]
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "year": 2025,
+      "target": "rockfish-trawl-group",
+      "samples_with_taxon_record": 17,
+      "samples_with_positive_cpue": 10,
+      "samples_with_zero_cpue": 7,
+      "samples_at_or_under_200ft": 0,
+      "positive_samples_at_or_under_200ft": 0,
+      "depth_range_m": [
+        83.8,
+        1093.7
+      ],
+      "source_taxa": [
+        "Sebastes aurora",
+        "Sebastes babcocki",
+        "Sebastes chlorostictus",
+        "Sebastes crameri",
+        "Sebastes diploproa",
+        "Sebastes elongatus",
+        "Sebastes entomelas",
+        "Sebastes flavidus",
+        "Sebastes goodei",
+        "Sebastes helvomaculatus",
+        "Sebastes jordani",
+        "Sebastes melanostictus and S. aleutianus",
+        "Sebastes melanostomus",
+        "Sebastes pinniger",
+        "Sebastes saxicola",
+        "Sebastes semicinctus",
+        "Sebastes zacentrus"
+      ]
+    }
+  ],
+  "fishing_target": false,
+  "current_fish_presence": false,
+  "exportable": false,
+  "limitations": [
+    "NOAA DisMAP standardizes survey trawl catch per unit effort (kg/ha); it is not angler catch probability.",
+    "Trawls sample trawlable shelf/slope and systematically miss many rocky reefs and shallower inshore grounds.",
+    "Each sector reports the number of sampled depths at or under 200 ft; deeper catches must not validate a 200 ft bottom-fishing candidate.",
+    "Broad latitude browse sectors include offshore and island waters and are not management or legal boundaries.",
+    "A zero is a surveyed taxon noncatch in a trawl sample, not proof of local species absence.",
+    "No source sample coordinates, target score, waypoint or route is published by this review."
+  ]
+}

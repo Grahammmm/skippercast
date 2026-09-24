@@ -1,0 +1,32 @@
+name: Monthly California fish survey evidence review
+
+on:
+  schedule:
+    - cron: "19 11 2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  noaa-dismap-groundfish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify survey aggregation contract
+        run: python -m unittest tests.test_noaa_dismap_groundfish -v
+      - name: Refresh recent NOAA trawl evidence with schema and count checks
+        run: >-
+          python scripts/audit_noaa_dismap_groundfish.py
+          --output var/review/noaa-dismap-groundfish-2023-2025.json
+      - name: Upload unpublished source review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: noaa-dismap-groundfish-review
+          path: var/review/noaa-dismap-groundfish-2023-2025.json
+          retention-days: 30
