@@ -120,6 +120,8 @@ jobs:
           --output var/review/usgs-doi-native-audit.json
       - name: Refresh NOAA federal groundfish exclusions
         run: python scripts/collect_noaa_groundfish_areas.py --output var/review/noaa-federal-areas.json
+      - name: Check NOAA coastwide species-habitat source granularity
+        run: python scripts/audit_noaa_efh_source.py --output var/review/noaa-efh-source-review.json
       - name: Cross-check original hard class against measured NOAA cells statewide
         env:
           PYTHONPATH: src:.

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-west-coast-efh-source-granularity-review",
+  "checked_at": "2026-09-24T08:06:19+00:00",
+  "service_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR/EFH_mapservice/MapServer",
+  "layer_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR/EFH_mapservice/MapServer/4",
+  "service_sha256": "3feb4819c44d67f6d751e19766dfbbaf40e9028ae39c0008e255631cb732223f",
+  "layer_sha256": "d158c5b7196ebb8f062dbaa2ad98191a76bc2d12100f7273b06dd7bd5a192be3",
+  "distinct_query_sha256": "5bf117de6f9f3daf1c6e4cf8e96cfa7dd7798fed47e2a3028c194de0d7451d62",
+  "source_catalog_urls": [
+    "https://www.fisheries.noaa.gov/resource/map/essential-fish-habitat-groundfish-and-salmon",
+    "https://www.fisheries.noaa.gov/inport/item/80209"
+  ],
+  "service_labels": [
+    "Albacore Tuna",
+    "Bigeye Tuna",
+    "Blue Shark",
+    "Broadbill Swordfish",
+    "Coastal Pelagic Species",
+    "Common Thresher Shark",
+    "Dorado",
+    "Finfish",
+    "Groundfish",
+    "Krill - Euphausia Pacifica",
+    "Krill - Thysanoessa Spinifera",
+    "Northern Bluefin Tuna",
+    "Other Krill Species",
+    "Shortfin Mako Shark",
+    "Skipjack Tuna",
+    "Striped Marlin",
+    "Yellowfin Tuna"
+  ],
+  "service_label_count": 17,
+  "bluefin_label_needs_2026_crosswalk": true,
+  "groundfish_is_aggregate_not_rockfish_or_lingcod": true,
+  "coastwide_eligibility_context_only": true,
+  "fishing_target": false,
+  "exportable": false,
+  "legal_clearance": false,
+  "method": "Original NOAA map-service metadata and distinct species labels are checked without using generalized polygon edges as precise fish positions. Compare labels against the newer 2026 NOAA HMS InPort metadata before any species crosswalk.",
+  "limitations": [
+    "EFH designations describe broad habitat necessary to fish, not current presence, catch success, a legal opening or a site-level habitat model.",
+    "The service groups groundfish and uses Northern Bluefin Tuna while the 2026 HMS InPort record names Pacific bluefin; do not silently equate or rank these from this service.",
+    "Official text descriptions remain determinative; the NOAA map polygons can overlap land and are unsuitable as precise nearshore boundaries."
+  ]
+}
