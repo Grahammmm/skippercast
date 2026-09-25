@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "noaa-vdatum-westcoast-geoid09-csumb-bridge",
+  "name": "NOAA West Coast VDatum NAVD88 GEOID09 to MLLW lead for SCC and Big Sur South",
+  "sector_ids": [
+    "big-sur",
+    "sur-san-simeon",
+    "cambria-morro"
+  ],
+  "need_ids": [
+    "bathymetry"
+  ],
+  "documentation_url": "https://vdatum.noaa.gov/docs/services.html",
+  "access_url": "https://vdatum.noaa.gov/vdatumweb/api/convert",
+  "access_status": "partial",
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.vdatum.noaa.gov/runapp_agreement.php",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": null,
+    "resolution_m": null,
+    "resolution_basis": "unknown",
+    "horizontal_crs": "Source CSUMB raster EPSG:26910; exact NAD83 realization and epoch unresolved",
+    "vertical_datum": "Source NAVD88 Geoid09; target MLLW only for queried points",
+    "footprint_kind": "unknown",
+    "footprint_url": "https://vdatum.noaa.gov/docs/services.html"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T10:25:21.803085+00:00",
+    "update_cadence": "Monthly service-availability and source-frame review; service model may change",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://vdatum.noaa.gov/docs/services.html",
+      "supports": "Official API supports explicit source GEOID09, NAVD88, MLLW and returned uncertainty; West Coast tidal target frame is IGS14."
+    },
+    {
+      "url": "https://vdatum.noaa.gov/docs/userguide.html",
+      "supports": "West Coast tidal transformation follows a distinct IGS14/xGEOID20B path; source frame and uncertainty require explicit review."
+    },
+    {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "supports": "The original CSUMB SCC block is a separately archived historic survey; its native inspected raster is EPSG:26910 and NAVD88 Geoid09."
+    }
+  ],
+  "limitations": [
+    "Six South Central Coast and Big Sur South raster-envelope midpoint requests returned offsets and conversion uncertainty, but those points are not verified native measured cells and do not define a full grid transformation.",
+    "The original CSUMB grid identifies NAD83 / UTM zone 10 but not its horizontal realization or coordinate epoch. The API rejected NAD83_1986 and accepted NAD83_2011; treating those frames as equivalent would be an unsupported source transformation.",
+    "VDatum conversion uncertainty is separate from original grid vertical error; this source lacks a per-cell product uncertainty band.",
+    "Original substrate, current MPAs and other closures, hazards, route, species/date/method rules and fish evidence remain independent promotion gates. No fishing target or export is supported."
+  ],
+  "producer": {
+    "name": "NOAA National Ocean Service, VDatum",
+    "url": "https://vdatum.noaa.gov/"
+  },
+  "variables": [
+    "NAVD88-to-MLLW point offset",
+    "VDatum transformation uncertainty"
+  ],
+  "units": {
+    "NAVD88-to-MLLW point offset": "m at queried point",
+    "VDatum transformation uncertainty": "m at queried point"
+  },
+  "provenance": {
+    "access_service": "Official NOAA VDatum West Coast JSON API",
+    "raw_sha256": null,
+    "transformations": [
+      "Queried GEOID09 NAVD88 zero-height points at six inspected SCC/BSS raster-envelope midpoints; recorded exact request URL and response SHA-256 for each.",
+      "Probed NAD83_1986 source frame separately; official API returned error 412 requiring NAD83_2011.",
+      "Preserved source-frame and missing raster-product uncertainty holds; produced no converted raster, spot or export."
+    ]
+  }
+}

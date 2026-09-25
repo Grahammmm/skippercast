@@ -238,7 +238,7 @@ jobs:
       - name: Install pinned native-grid reader
         run: python -m pip install -r requirements-survey.txt
       - name: Verify native-grid receipts stay out of fishing targets
-        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native -v
+        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_csumb_vdatum_bridge -v
       - name: Reuse original CSUMB archives
         uses: actions/cache@v4
         with:
@@ -261,6 +261,13 @@ jobs:
           python scripts/audit_csumb_bss_native.py
           --fetch
           --output var/review/csumb-bss-native-source-review.json
+      - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
+        run: >-
+          python scripts/audit_csumb_vdatum_bridge.py
+          --scc-review var/review/csumb-scc-native-source-review.json
+          --bss-review var/review/csumb-bss-native-source-review.json
+          --output var/review/csumb-vdatum-bridge-review.json
+          --verify dist/data/csumb-vdatum-bridge-review.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@v4
@@ -270,6 +277,7 @@ jobs:
             var/review/csumb-scc-native-source-review.json
             var/review/csumb-sansimeon-bedrock-overlap-review.json
             var/review/csumb-bss-native-source-review.json
+            var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.

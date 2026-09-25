@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "scope": "csumb-original-navd88-geoid09-vdatum-bridge-review",
+  "checked_at": "2026-09-25T10:30:09.250161+00:00",
+  "source_reviews": [
+    "data/csumb-scc-native-source-review.json",
+    "data/csumb-bss-native-source-review.json"
+  ],
+  "service_documentation_url": "https://vdatum.noaa.gov/docs/services.html",
+  "source_horizontal_crs": "EPSG:26910 (NAD83 / UTM zone 10N)",
+  "source_horizontal_realization_verified": false,
+  "source_vertical_datum": "NAVD88 Geoid09",
+  "requested_tidal_horizontal_frame": "IGS14",
+  "samples": [
+    {
+      "source_id": "csumb-bss-block01",
+      "archive_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.3575242,
+      "latitude": 35.7505255,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.3575242&s_y=35.7505255&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "a304f77809a0c3e91a4530720089c2fcf9ba48db7547d7abe4b3a19e7f93c836",
+      "status": "sample_available",
+      "offset_m": -0.012,
+      "vdatum_uncertainty_m": 0.096
+    },
+    {
+      "source_id": "csumb-bss-block12",
+      "archive_sha256": "3162a535ac84d1aa115f315bf4b6e65874151147c7250a20d1f47b1aa8ddbeb7",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.5900309,
+      "latitude": 36.0074757,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.5900309&s_y=36.0074757&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "7c1831ef16316b371c277a80f577d8e9ef57d0a64eeadade4057a061c1c2bf57",
+      "status": "sample_available",
+      "offset_m": 0.021,
+      "vdatum_uncertainty_m": 0.097
+    },
+    {
+      "source_id": "csumb-bss-block13",
+      "archive_sha256": "3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.7945159,
+      "latitude": 36.1861912,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.7945159&s_y=36.1861912&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "48ab0268aedfab3f23b62b08e2966869802aad1ff63fc9d245964736647361cd",
+      "status": "sample_available",
+      "offset_m": 0.031,
+      "vdatum_uncertainty_m": 0.1
+    },
+    {
+      "source_id": "csumb-scc-block04",
+      "archive_sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.229949,
+      "latitude": 35.6246145,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.2299490&s_y=35.6246145&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "1b07db5aec0b669f3a0630fc106fc581a8b1b638fb9fb4bdd94eb95cf093bd16",
+      "status": "sample_available",
+      "offset_m": -0.031,
+      "vdatum_uncertainty_m": 0.096
+    },
+    {
+      "source_id": "csumb-scc-block05",
+      "archive_sha256": "894e1c2d8e463b33fdc2e9f965106f97dc113878b9d6ffd2dc3195b2ec3b1701",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.1949128,
+      "latitude": 35.5991556,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.1949128&s_y=35.5991556&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "d6bcdfd084530aba431b6fa4f140f3ff0471ddd6e1ab6979c434ec1cc1ac982e",
+      "status": "sample_available",
+      "offset_m": -0.039,
+      "vdatum_uncertainty_m": 0.096
+    },
+    {
+      "source_id": "csumb-scc-block06",
+      "archive_sha256": "ddc507f83c2b68dcb8ad869fa37c78dca402ffd73e8abe58e44a652607af1d4a",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.1551355,
+      "latitude": 35.5726068,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.1551355&s_y=35.5726068&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "af47b94d79140097ac8da9783e82891751c6b124c759a193ee1946b655b56811",
+      "status": "sample_available",
+      "offset_m": -0.036,
+      "vdatum_uncertainty_m": 0.097
+    }
+  ],
+  "alternative_horizontal_frame_probe": {
+    "source_id": "csumb-bss-block01",
+    "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.3575242&s_y=35.7505255&s_z=0&s_h_frame=NAD83_1986&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+    "response_sha256": "17234dc7354f14e7a3831e419256fe2a61760c9269a9f43ce841d82cfde854b9",
+    "status": "api_rejected",
+    "error_code": 412,
+    "reason": "Source Horizontal Frame should be NAD83_2011"
+  },
+  "mllw_raster_converted": false,
+  "depth_qualified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The native source identifies NAD83 / UTM 10 but not its realization or coordinate epoch; NAD83_2011 point results cannot yet be applied to those source pixels.",
+    "A raster-envelope midpoint is not guaranteed to lie on a measured source cell, and three point offsets cannot define a datum-correction field across the surveyed grids.",
+    "VDatum uncertainty describes the transformation, not the original bathymetry product error; the source has no per-cell uncertainty band.",
+    "Original substrate, MPAs, other closures, charts, routes, date-specific rules and fish evidence remain independent gates."
+  ]
+}
