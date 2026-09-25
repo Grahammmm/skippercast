@@ -39,7 +39,7 @@ def scheme_row(scheme, tile):
         return dict(row)
 
 
-def verified_file(url, expected, destination, fetch):
+def verified_file(url, expected, destination, fetch, *, max_bytes=128 * 1024 * 1024):
     if not destination.exists():
         if not fetch:
             raise FileNotFoundError(destination)
@@ -47,9 +47,20 @@ def verified_file(url, expected, destination, fetch):
             raise ValueError("Unexpected NBS file host")
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_suffix(destination.suffix + ".part")
-        with urlopen(url, timeout=60) as response, temporary.open("wb") as output:
-            for chunk in iter(lambda: response.read(1024 * 1024), b""):
-                output.write(chunk)
+        try:
+            with urlopen(url, timeout=60) as response, temporary.open("wb") as output:
+                declared = response.headers.get("Content-Length")
+                if declared and int(declared) > max_bytes:
+                    raise ValueError(f"NBS file exceeds {max_bytes} byte limit")
+                size = 0
+                for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                    size += len(chunk)
+                    if size > max_bytes:
+                        raise ValueError(f"NBS file exceeds {max_bytes} byte limit")
+                    output.write(chunk)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
         temporary.replace(destination)
     actual = sha256(destination)
     if actual.lower() != expected.lower():

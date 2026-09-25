@@ -1,0 +1,1721 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-nbs-tiles-intersecting-displayed-usgs-hard-context",
+  "inventoried_at": "2026-09-25T21:26:08+00:00",
+  "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "context_sources": [
+    {
+      "coast_id": "northern",
+      "path": "dist/data/usgs-hard-context-northern.geojson",
+      "sha256": "ed49554e57955619d5326613c5e8003cd44f38e18eaf3a78ebd51323a18c1cc8",
+      "display_outlines": 109
+    },
+    {
+      "coast_id": "mendocino",
+      "path": "dist/data/usgs-hard-context-mendocino.geojson",
+      "sha256": "91bb29a5c10d9f3a5e88229488d7309f0d05f5c6a457c0bacf861c224eaf5866",
+      "display_outlines": 0
+    },
+    {
+      "coast_id": "san-francisco",
+      "path": "dist/data/usgs-hard-context-san-francisco.geojson",
+      "sha256": "830834a507cc1ef880c569ef6d7e07bcee051c537c25b075d8d3caf42e1dc1a4",
+      "display_outlines": 734
+    },
+    {
+      "coast_id": "central",
+      "path": "dist/data/usgs-hard-context-central.geojson",
+      "sha256": "3eddd1f56df2ed1e4d173cbf084f585858f989685ee5b73db8fab69094f7f263",
+      "display_outlines": 635
+    },
+    {
+      "coast_id": "southern",
+      "path": "dist/data/usgs-hard-context-southern.geojson",
+      "sha256": "9ff03521bcd1e406716ed4bd507593fcefba05b5836a87a21479ca1f2bf07f3d",
+      "display_outlines": 102
+    }
+  ],
+  "tile_count": 102,
+  "resolution_filter": [
+    "2m",
+    "4m"
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "method": "Exact polygon intersection of available NOAA 2\u20134 m NBS tile-scheme footprints with displayed generalized USGS hard-bottom context; deduplicated by tile ID.",
+  "limitations": [
+    "Only the largest generalized published USGS context outlines are sampled; smaller hard patches and unmapped stretches are omitted.",
+    "Tile intersection is an acquisition lead, not evidence that any measured MLLW cell overlaps hard substrate or passes uncertainty, depth and closure gates.",
+    "The NBS Modeling product is test-and-evaluation and may reuse original NOAA surveys; contributor reports and present certified charts remain separate.",
+    "Planning-sector association uses a representative overlap latitude, not a legal or precise coverage boundary."
+  ],
+  "tiles": [
+    {
+      "tile": "BH42F5FF",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42F5FF/Modeling_BH42F5FF_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42F5FF/Modeling_BH42F5FF_20260716.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 10
+    },
+    {
+      "tile": "BH42F5FG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42F5FG/Modeling_BH42F5FG_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42F5FG/Modeling_BH42F5FG_20260617.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 26
+    },
+    {
+      "tile": "BH42G5FF",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FF/Modeling_BH42G5FF_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FF/Modeling_BH42G5FF_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 12
+    },
+    {
+      "tile": "BH42G5FG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FG/Modeling_BH42G5FG_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FG/Modeling_BH42G5FG_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 17
+    },
+    {
+      "tile": "BH42G5FH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FH/Modeling_BH42G5FH_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42G5FH/Modeling_BH42G5FH_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH42H5FF",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FF/Modeling_BH42H5FF_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FF/Modeling_BH42H5FF_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 29
+    },
+    {
+      "tile": "BH42H5FG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FG/Modeling_BH42H5FG_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FG/Modeling_BH42H5FG_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 7
+    },
+    {
+      "tile": "BH42H5FH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FH/Modeling_BH42H5FH_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FH/Modeling_BH42H5FH_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P902YIF5",
+        "P9U0SUGL"
+      ],
+      "intersected_display_outlines": 12
+    },
+    {
+      "tile": "BH42H5FJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FJ/Modeling_BH42H5FJ_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42H5FJ/Modeling_BH42H5FJ_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P902YIF5"
+      ],
+      "intersected_display_outlines": 3
+    },
+    {
+      "tile": "BH42J5FK",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42J5FK/Modeling_BH42J5FK_20260819.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42J5FK/Modeling_BH42J5FK_20260819.tiff.aux.xml",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "source_ids": [
+        "P902YIF5"
+      ],
+      "intersected_display_outlines": 3
+    },
+    {
+      "tile": "BH42Z5DH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42Z5DH/Modeling_BH42Z5DH_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42Z5DH/Modeling_BH42Z5DH_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreFortRoss",
+        "OffshoreSaltPoint"
+      ],
+      "intersected_display_outlines": 9
+    },
+    {
+      "tile": "BH42Z5DJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42Z5DJ/Modeling_BH42Z5DJ_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH42Z5DJ/Modeling_BH42Z5DJ_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreSaltPoint"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH4425DH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4425DH/Modeling_BH4425DH_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4425DH/Modeling_BH4425DH_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreFortRoss",
+        "OffshoreSaltPoint"
+      ],
+      "intersected_display_outlines": 37
+    },
+    {
+      "tile": "BH4445DG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4445DG/Modeling_BH4445DG_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4445DG/Modeling_BH4445DG_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreFortRoss"
+      ],
+      "intersected_display_outlines": 16
+    },
+    {
+      "tile": "BH4445DH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4445DH/Modeling_BH4445DH_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4445DH/Modeling_BH4445DH_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreFortRoss"
+      ],
+      "intersected_display_outlines": 28
+    },
+    {
+      "tile": "BH4455DD",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DD/Modeling_BH4455DD_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DD/Modeling_BH4455DD_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreBodegaHead"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH4455DF",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DF/Modeling_BH4455DF_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DF/Modeling_BH4455DF_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreBodegaHead"
+      ],
+      "intersected_display_outlines": 23
+    },
+    {
+      "tile": "BH4455DG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DG/Modeling_BH4455DG_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4455DG/Modeling_BH4455DG_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "source_ids": [
+        "OffshoreBodegaHead",
+        "OffshoreFortRoss"
+      ],
+      "intersected_display_outlines": 27
+    },
+    {
+      "tile": "BH4465D8",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465D8/Modeling_BH4465D8_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465D8/Modeling_BH4465D8_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshorePointReyes"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH4465D9",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465D9/Modeling_BH4465D9_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465D9/Modeling_BH4465D9_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshorePointReyes"
+      ],
+      "intersected_display_outlines": 49
+    },
+    {
+      "tile": "BH4465DB",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DB/Modeling_BH4465DB_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DB/Modeling_BH4465DB_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 12
+    },
+    {
+      "tile": "BH4465DC",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DC/Modeling_BH4465DC_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DC/Modeling_BH4465DC_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 33
+    },
+    {
+      "tile": "BH4465DD",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DD/Modeling_BH4465DD_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4465DD/Modeling_BH4465DD_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega",
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreBodegaHead",
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 34
+    },
+    {
+      "tile": "BH4475D8",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475D8/Modeling_BH4475D8_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475D8/Modeling_BH4475D8_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "DrakesBay",
+        "OffshorePointReyes"
+      ],
+      "intersected_display_outlines": 2
+    },
+    {
+      "tile": "BH4475D9",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475D9/Modeling_BH4475D9_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475D9/Modeling_BH4475D9_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH4475DB",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DB/Modeling_BH4475DB_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DB/Modeling_BH4475DB_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 36
+    },
+    {
+      "tile": "BH4475DC",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DC/Modeling_BH4475DC_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DC/Modeling_BH4475DC_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 27
+    },
+    {
+      "tile": "BH4475DD",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DD/Modeling_BH4475DD_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4475DD/Modeling_BH4475DD_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "OffshoreBodegaHead",
+        "OffshoreTomalesPoint"
+      ],
+      "intersected_display_outlines": 15
+    },
+    {
+      "tile": "BH4485D8",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4485D8/Modeling_BH4485D8_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4485D8/Modeling_BH4485D8_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "DrakesBay"
+      ],
+      "intersected_display_outlines": 5
+    },
+    {
+      "tile": "BH4495D7",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4495D7/Modeling_BH4495D7_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4495D7/Modeling_BH4495D7_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "DrakesBay",
+        "OffshoreBolinas"
+      ],
+      "intersected_display_outlines": 15
+    },
+    {
+      "tile": "BH4495D8",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4495D8/Modeling_BH4495D8_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4495D8/Modeling_BH4495D8_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "source_ids": [
+        "DrakesBay"
+      ],
+      "intersected_display_outlines": 23
+    },
+    {
+      "tile": "BH44B5D6",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44B5D6/Modeling_BH44B5D6_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44B5D6/Modeling_BH44B5D6_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreBolinas"
+      ],
+      "intersected_display_outlines": 7
+    },
+    {
+      "tile": "BH44B5D7",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44B5D7/Modeling_BH44B5D7_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44B5D7/Modeling_BH44B5D7_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "DrakesBay",
+        "OffshoreBolinas"
+      ],
+      "intersected_display_outlines": 108
+    },
+    {
+      "tile": "BH44C5D6",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44C5D6/Modeling_BH44C5D6_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44C5D6/Modeling_BH44C5D6_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreBolinas"
+      ],
+      "intersected_display_outlines": 11
+    },
+    {
+      "tile": "BH44C5D7",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44C5D7/Modeling_BH44C5D7_20260714.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44C5D7/Modeling_BH44C5D7_20260714.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreBolinas"
+      ],
+      "intersected_display_outlines": 7
+    },
+    {
+      "tile": "BH44D5CZ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44D5CZ/Modeling_BH44D5CZ_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44D5CZ/Modeling_BH44D5CZ_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay",
+        "OffshorePacifica"
+      ],
+      "intersected_display_outlines": 2
+    },
+    {
+      "tile": "BH44D5D6",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44D5D6/Modeling_BH44D5D6_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44D5D6/Modeling_BH44D5D6_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreBolinas",
+        "OffshoreSanFrancisco"
+      ],
+      "intersected_display_outlines": 15
+    },
+    {
+      "tile": "BH44F5CW",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CW/Modeling_BH44F5CW_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CW/Modeling_BH44F5CW_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay",
+        "OffshoreSanGregorio"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH44F5CX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CX/Modeling_BH44F5CX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CX/Modeling_BH44F5CX_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay"
+      ],
+      "intersected_display_outlines": 46
+    },
+    {
+      "tile": "BH44F5CZ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CZ/Modeling_BH44F5CZ_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5CZ/Modeling_BH44F5CZ_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay",
+        "OffshorePacifica"
+      ],
+      "intersected_display_outlines": 25
+    },
+    {
+      "tile": "BH44F5D2",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D2/Modeling_BH44F5D2_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D2/Modeling_BH44F5D2_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshorePacifica"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH44F5D4",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D4/Modeling_BH44F5D4_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D4/Modeling_BH44F5D4_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshorePacifica"
+      ],
+      "intersected_display_outlines": 2
+    },
+    {
+      "tile": "BH44F5D5",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D5/Modeling_BH44F5D5_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D5/Modeling_BH44F5D5_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreSanFrancisco"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH44F5D6",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D6/Modeling_BH44F5D6_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44F5D6/Modeling_BH44F5D6_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreSanFrancisco"
+      ],
+      "intersected_display_outlines": 15
+    },
+    {
+      "tile": "BH44G5CS",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CS/Modeling_BH44G5CS_20260617.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CS/Modeling_BH44G5CS_20260617.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "F7513W80"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH44G5CT",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CT/Modeling_BH44G5CT_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CT/Modeling_BH44G5CT_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "F7513W80",
+        "OffshoreSanGregorio"
+      ],
+      "intersected_display_outlines": 25
+    },
+    {
+      "tile": "BH44G5CV",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CV/Modeling_BH44G5CV_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CV/Modeling_BH44G5CV_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreSanGregorio"
+      ],
+      "intersected_display_outlines": 21
+    },
+    {
+      "tile": "BH44G5CW",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CW/Modeling_BH44G5CW_20260623.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CW/Modeling_BH44G5CW_20260623.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay",
+        "OffshoreSanGregorio"
+      ],
+      "intersected_display_outlines": 45
+    },
+    {
+      "tile": "BH44G5CX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CX/Modeling_BH44G5CX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5CX/Modeling_BH44G5CX_20260702.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreHalfMoonBay"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH44G5D6",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5D6/Modeling_BH44G5D6_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44G5D6/Modeling_BH44G5D6_20260915.tiff.aux.xml",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "source_ids": [
+        "OffshoreSanFrancisco"
+      ],
+      "intersected_display_outlines": 10
+    },
+    {
+      "tile": "BH44H5CR",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44H5CR/Modeling_BH44H5CR_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44H5CR/Modeling_BH44H5CR_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7513W80",
+        "F7CJ8BJW"
+      ],
+      "intersected_display_outlines": 5
+    },
+    {
+      "tile": "BH44H5CS",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44H5CS/Modeling_BH44H5CS_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44H5CS/Modeling_BH44H5CS_20260702.tiff.aux.xml",
+      "coasts": [
+        "central",
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7513W80"
+      ],
+      "intersected_display_outlines": 24
+    },
+    {
+      "tile": "BH44J5CQ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44J5CQ/Modeling_BH44J5CQ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44J5CQ/Modeling_BH44J5CQ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7CJ8BJW"
+      ],
+      "intersected_display_outlines": 10
+    },
+    {
+      "tile": "BH44K5CQ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44K5CQ/Modeling_BH44K5CQ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44K5CQ/Modeling_BH44K5CQ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7CJ8BJW",
+        "F7TM785G"
+      ],
+      "intersected_display_outlines": 30
+    },
+    {
+      "tile": "BH44L5CP",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44L5CP/Modeling_BH44L5CP_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44L5CP/Modeling_BH44L5CP_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7TM785G"
+      ],
+      "intersected_display_outlines": 20
+    },
+    {
+      "tile": "BH44L5CQ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44L5CQ/Modeling_BH44L5CQ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44L5CQ/Modeling_BH44L5CQ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7TM785G"
+      ],
+      "intersected_display_outlines": 3
+    },
+    {
+      "tile": "BH44M5CP",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44M5CP/Modeling_BH44M5CP_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44M5CP/Modeling_BH44M5CP_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7TM785G"
+      ],
+      "intersected_display_outlines": 56
+    },
+    {
+      "tile": "BH44N5CJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CJ/Modeling_BH44N5CJ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CJ/Modeling_BH44N5CJ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "monterey-sur"
+      ],
+      "source_ids": [
+        "F70Z71C8"
+      ],
+      "intersected_display_outlines": 8
+    },
+    {
+      "tile": "BH44N5CK",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CK/Modeling_BH44N5CK_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CK/Modeling_BH44N5CK_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F70Z71C8"
+      ],
+      "intersected_display_outlines": 27
+    },
+    {
+      "tile": "BH44N5CP",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CP/Modeling_BH44N5CP_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CP/Modeling_BH44N5CP_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7K35RQB",
+        "F7TM785G"
+      ],
+      "intersected_display_outlines": 24
+    },
+    {
+      "tile": "BH44P5CJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CJ/Modeling_BH44P5CJ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CJ/Modeling_BH44P5CJ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "monterey-sur"
+      ],
+      "source_ids": [
+        "F70Z71C8"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH44P5CK",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CK/Modeling_BH44P5CK_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CK/Modeling_BH44P5CK_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F70Z71C8"
+      ],
+      "intersected_display_outlines": 42
+    },
+    {
+      "tile": "BH44P5CL",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CL/Modeling_BH44P5CL_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CL/Modeling_BH44P5CL_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F70Z71C8",
+        "F7XD0ZQ4"
+      ],
+      "intersected_display_outlines": 13
+    },
+    {
+      "tile": "BH44P5CP",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CP/Modeling_BH44P5CP_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CP/Modeling_BH44P5CP_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F7K35RQB"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH44Q5CK",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Q5CK/Modeling_BH44Q5CK_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Q5CK/Modeling_BH44Q5CK_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "source_ids": [
+        "F70Z71C8"
+      ],
+      "intersected_display_outlines": 7
+    },
+    {
+      "tile": "BH4555BX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4555BX/Modeling_BH4555BX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4555BX/Modeling_BH4555BX_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9ZSTUK1"
+      ],
+      "intersected_display_outlines": 10
+    },
+    {
+      "tile": "BH4555BZ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4555BZ/Modeling_BH4555BZ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4555BZ/Modeling_BH4555BZ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9ZSTUK1"
+      ],
+      "intersected_display_outlines": 36
+    },
+    {
+      "tile": "BH4565BX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4565BX/Modeling_BH4565BX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4565BX/Modeling_BH4565BX_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9ZSTUK1"
+      ],
+      "intersected_display_outlines": 36
+    },
+    {
+      "tile": "BH4565BZ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4565BZ/Modeling_BH4565BZ_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4565BZ/Modeling_BH4565BZ_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9ZSTUK1"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH4575BV",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BV/Modeling_BH4575BV_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BV/Modeling_BH4575BV_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9HEZNRO",
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 36
+    },
+    {
+      "tile": "BH4575BW",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BW/Modeling_BH4575BW_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BW/Modeling_BH4575BW_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9HEZNRO"
+      ],
+      "intersected_display_outlines": 17
+    },
+    {
+      "tile": "BH4575BX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BX/Modeling_BH4575BX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4575BX/Modeling_BH4575BX_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9HEZNRO",
+        "P9ZSTUK1"
+      ],
+      "intersected_display_outlines": 47
+    },
+    {
+      "tile": "BH4585BS",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BS/Modeling_BH4585BS_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BS/Modeling_BH4585BS_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 27
+    },
+    {
+      "tile": "BH4585BT",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BT/Modeling_BH4585BT_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BT/Modeling_BH4585BT_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 26
+    },
+    {
+      "tile": "BH4585BV",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BV/Modeling_BH4585BV_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BV/Modeling_BH4585BV_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9HEZNRO",
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 9
+    },
+    {
+      "tile": "BH4585BW",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BW/Modeling_BH4585BW_20260915.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BW/Modeling_BH4585BW_20260915.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9HEZNRO"
+      ],
+      "intersected_display_outlines": 12
+    },
+    {
+      "tile": "BH4585BX",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BX/Modeling_BH4585BX_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4585BX/Modeling_BH4585BX_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "source_ids": [
+        "P9HEZNRO"
+      ],
+      "intersected_display_outlines": 20
+    },
+    {
+      "tile": "BH4595BS",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4595BS/Modeling_BH4595BS_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4595BS/Modeling_BH4595BS_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 40
+    },
+    {
+      "tile": "BH4595BT",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4595BT/Modeling_BH4595BT_20260702.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4595BT/Modeling_BH4595BT_20260702.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "P9KBGELE"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH45D5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45D5BH/Modeling_BH45D5BH_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45D5BH/Modeling_BH45D5BH_20260716.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 9
+    },
+    {
+      "tile": "BH45D5BJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45D5BJ/Modeling_BH45D5BJ_20260629.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45D5BJ/Modeling_BH45D5BJ_20260629.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 11
+    },
+    {
+      "tile": "BH45F5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BG/Modeling_BH45F5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BG/Modeling_BH45F5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 5
+    },
+    {
+      "tile": "BH45F5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BH/Modeling_BH45F5BH_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BH/Modeling_BH45F5BH_20260716.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 21
+    },
+    {
+      "tile": "BH45F5BJ",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BJ/Modeling_BH45F5BJ_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45F5BJ/Modeling_BH45F5BJ_20260716.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 15
+    },
+    {
+      "tile": "BH45G5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45G5BG/Modeling_BH45G5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45G5BG/Modeling_BH45G5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "F7QN64XQ"
+      ],
+      "intersected_display_outlines": 2
+    },
+    {
+      "tile": "BH45G5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45G5BH/Modeling_BH45G5BH_20260629.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45G5BH/Modeling_BH45G5BH_20260629.tiff.aux.xml",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ",
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 29
+    },
+    {
+      "tile": "BH45H5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45H5BG/Modeling_BH45H5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45H5BG/Modeling_BH45H5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 14
+    },
+    {
+      "tile": "BH45H5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45H5BH/Modeling_BH45H5BH_20260629.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45H5BH/Modeling_BH45H5BH_20260629.tiff.aux.xml",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7QN64XQ",
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 41
+    },
+    {
+      "tile": "BH45J5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45J5BG/Modeling_BH45J5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45J5BG/Modeling_BH45J5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH45J5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45J5BH/Modeling_BH45J5BH_20260820.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45J5BH/Modeling_BH45J5BH_20260820.tiff.aux.xml",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 22
+    },
+    {
+      "tile": "BH45K5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45K5BG/Modeling_BH45K5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45K5BG/Modeling_BH45K5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreRefugioBeach"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH45K5BH",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45K5BH/Modeling_BH45K5BH_20260820.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45K5BH/Modeling_BH45K5BH_20260820.tiff.aux.xml",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "source_ids": [
+        "F7TH8JWJ"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH45L5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45L5BG/Modeling_BH45L5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45L5BG/Modeling_BH45L5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreRefugioBeach"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH45M5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45M5BG/Modeling_BH45M5BG_20260716.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45M5BG/Modeling_BH45M5BG_20260716.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCoalOilPoint",
+        "OffshoreRefugioBeach"
+      ],
+      "intersected_display_outlines": 4
+    },
+    {
+      "tile": "BH45N5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45N5BG/Modeling_BH45N5BG_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45N5BG/Modeling_BH45N5BG_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCoalOilPoint"
+      ],
+      "intersected_display_outlines": 3
+    },
+    {
+      "tile": "BH45P5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45P5BG/Modeling_BH45P5BG_20260914.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45P5BG/Modeling_BH45P5BG_20260914.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCoalOilPoint"
+      ],
+      "intersected_display_outlines": 3
+    },
+    {
+      "tile": "BH45S5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45S5BG/Modeling_BH45S5BG_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45S5BG/Modeling_BH45S5BG_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreSantaBarbara"
+      ],
+      "intersected_display_outlines": 5
+    },
+    {
+      "tile": "BH45T5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45T5BG/Modeling_BH45T5BG_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45T5BG/Modeling_BH45T5BG_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCarpinteria"
+      ],
+      "intersected_display_outlines": 7
+    },
+    {
+      "tile": "BH45V5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45V5BG/Modeling_BH45V5BG_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45V5BG/Modeling_BH45V5BG_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCarpinteria"
+      ],
+      "intersected_display_outlines": 2
+    },
+    {
+      "tile": "BH45W5BG",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45W5BG/Modeling_BH45W5BG_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45W5BG/Modeling_BH45W5BG_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreCarpinteria"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH45X5BF",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45X5BF/Modeling_BH45X5BF_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH45X5BF/Modeling_BH45X5BF_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "OffshoreVentura"
+      ],
+      "intersected_display_outlines": 1
+    },
+    {
+      "tile": "BH4625BC",
+      "resolution": "4m",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4625BC/Modeling_BH4625BC_20260825.tiff",
+      "contributor_table_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4625BC/Modeling_BH4625BC_20260825.tiff.aux.xml",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "source_ids": [
+        "HuenemeCanyon"
+      ],
+      "intersected_display_outlines": 1
+    }
+  ]
+}

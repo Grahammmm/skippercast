@@ -1,0 +1,2887 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-nbs-hard-footprint-native-depth-source-audit",
+  "audited_at": "2026-09-25T21:29:52+00:00",
+  "inventory_sha256": "2aff7a912d4ec61f66ac8b2c23366825775fdeff4c7f031dcb121971ca3be20c",
+  "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "inventoried_tiles": 102,
+  "completed_tiles": 102,
+  "failed_tiles": 0,
+  "status": "complete",
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Tiles intersect only selected generalized historical USGS display context, not full California hard substrate.",
+    "A passing NOAA depth pixel does not establish hard bottom, legal access, a fishing spot or present catch.",
+    "NOAA NBS Modeling is a test-and-evaluation source and does not replace current charts or original surveys."
+  ],
+  "tiles": [
+    {
+      "tile": "BH42F5FF",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "e2259b0d0dbc0aa4386141ccabfcf55b76bc8498e5dbdbb82898a3bd6afda9f7",
+      "rat_sha256": "891a3a7bc27703921704232dc4838b3e0342e0abd8e34a466cb929a3bd4c2520",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 54712,
+        "measured_depth_pixels": 54712,
+        "recent_measured_depth_pixels": 54712,
+        "qualified_screen_pixels": 44623
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42F5FG",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "bf18ea422563d2175b591cfaf0aa2efb04978de06143cf869e8e18301ea3f014",
+      "rat_sha256": "92d9f2096eb68d91ac5160db5b2b6cfc6049488a18c8f0705e02424e0b51a4da",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1100796,
+        "measured_depth_pixels": 751373,
+        "recent_measured_depth_pixels": 751166,
+        "qualified_screen_pixels": 644241
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42G5FF",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "4f46073f96dad13a34deb740f71a3f7904544013c612c9d28dd816b9b4358ced",
+      "rat_sha256": "e0cd834597b3cce1a8f0da68ed5f5f4bfeb07d29bb0a6d974633d991d628c428",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1182136,
+        "measured_depth_pixels": 1182115,
+        "recent_measured_depth_pixels": 1182115,
+        "qualified_screen_pixels": 1115484
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42G5FG",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d918e11e5d1b7110fcdbc5196cd5f1f070818a30f81c3c654daee8bb51e40cb6",
+      "rat_sha256": "de5c1e7fd91c3b109cf6408fb0271d6422a136c566132485dc12fec56e231e96",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3309510,
+        "measured_depth_pixels": 3174103,
+        "recent_measured_depth_pixels": 3173976,
+        "qualified_screen_pixels": 3173836
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42G5FH",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "5604e346a8b0783584fc72f1c6451c61e75743885cbee04ea28ebe576d7469d1",
+      "rat_sha256": "0fe8dd65bc85ad7cf1a880d9c3ce93bfcb1ca53fb467f2706e10582a77a27903",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2611979,
+        "measured_depth_pixels": 14011,
+        "recent_measured_depth_pixels": 12964,
+        "qualified_screen_pixels": 12964
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42H5FF",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "aad588262031d184957a93274b578c142f21b7399eee979026460f9198d84391",
+      "rat_sha256": "72cf4be6a35f8c29b0f6d4fcfd2f37ea214977831851a0ddee1106a69f7b70c2",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1468836,
+        "measured_depth_pixels": 1372866,
+        "recent_measured_depth_pixels": 1372423,
+        "qualified_screen_pixels": 1251361
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42H5FG",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "35ddd9b8d37fd7c2a1dad105c96cbe0c06954344ddbfe42e9b97ebbf1a717e90",
+      "rat_sha256": "95a687b6d657d9df0c1255cd18f8cbe8a6b6f73bdc18b88e9c4542204e4ee865",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 933119,
+        "measured_depth_pixels": 825970,
+        "recent_measured_depth_pixels": 825546,
+        "qualified_screen_pixels": 812577
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42H5FH",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "a406c665ac99e091a3ea99bd22d33dcc9d1bc3ef99d6a4c2c73671181375cd38",
+      "rat_sha256": "e48e3be8cc368eaa294c7f245021a0ebdb433d5668b6297b46b18bcd3054e142",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2132104,
+        "measured_depth_pixels": 146672,
+        "recent_measured_depth_pixels": 143201,
+        "qualified_screen_pixels": 143192
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42H5FJ",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "cce8e7954f4bc78fde266fac44c7bfaf53cade505c6a4194fdd4fd6d033e396d",
+      "rat_sha256": "19f963906eb955de4402e2f1527cb1914ebcda57a22cd49c4349b1452bb97b70",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3260758,
+        "measured_depth_pixels": 3591,
+        "recent_measured_depth_pixels": 667,
+        "qualified_screen_pixels": 667
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42J5FK",
+      "coasts": [
+        "northern"
+      ],
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "de495aa3a34eb229c58a9ac3c240b6f56d46abd40bb7ffd016afa799a6172274",
+      "rat_sha256": "0ba58dcf816a10db227458a8dc8fdcab80f6a8a2eac7d60bd27262269937845b",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2511363,
+        "measured_depth_pixels": 4448,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42Z5DH",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "a15f627d3c49a54ad2d96770edb4f9cbf846554adf611ab04fa4e91e35c35a2f",
+      "rat_sha256": "8baebfe4b8d4305039bcc3316f659275c4b7adcd17ae02183edb2b5317985b75",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 217471,
+        "measured_depth_pixels": 203980,
+        "recent_measured_depth_pixels": 203913,
+        "qualified_screen_pixels": 160170
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH42Z5DJ",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "9b8aa6b5eeb128c2b410a99b73301fa4adfe1bdf6129c1de29902c1f51315866",
+      "rat_sha256": "304ba41412bdfcd492122a045fbc5f81b0aa8f49f596fec05692f431bb5d6147",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 706231,
+        "measured_depth_pixels": 608635,
+        "recent_measured_depth_pixels": 608202,
+        "qualified_screen_pixels": 532394
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4425DH",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "7777d392ec5f9023a0517fc906ebd2381331c08fd8a0463be5852eb92758cd05",
+      "rat_sha256": "0c90f61fe64036eea08af91636ab809430c3dc0c46bcdddc835e19d31246f83a",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1265346,
+        "measured_depth_pixels": 1080173,
+        "recent_measured_depth_pixels": 1079154,
+        "qualified_screen_pixels": 935274
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4445DG",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "03367f5e41a28be1f36dc0949d37fc7d963941480b4efc79c2d0a7b305228b77",
+      "rat_sha256": "afaba4ccfc3e521d6b92fa30323aa9c2c03cc5ce5ca3b2263b51961aff663300",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2274409,
+        "measured_depth_pixels": 2165650,
+        "recent_measured_depth_pixels": 2165376,
+        "qualified_screen_pixels": 2056778
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4445DH",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "2d1d887fa84b602a94fbe008fe12cb75e8f2d6bd6adc1a2abf3b8aea644e8c68",
+      "rat_sha256": "3a5cd9878e81587b6f7f31f84927211c2c1c20656bc29c7ba952339e77312865",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 401867,
+        "measured_depth_pixels": 216391,
+        "recent_measured_depth_pixels": 215752,
+        "qualified_screen_pixels": 215138
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4455DD",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "5e6df87ee74642ce572aba424858146952280151ee9f518b10e9e22fa792eac9",
+      "rat_sha256": "6f730238bdf293e77458aa839562b502b564dd3828dbb6f3a5dd9982cf797c5f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 783849,
+        "measured_depth_pixels": 761416,
+        "recent_measured_depth_pixels": 761348,
+        "qualified_screen_pixels": 667515
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4455DF",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "06cadc6f286772641436b2671f0f8de465dc18ac62510f77748f2afa4e806977",
+      "rat_sha256": "1171a30259ad282a339948ac9b8513ec8cbe34fcd1d32e4083eed50e8d203b8e",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2099960,
+        "measured_depth_pixels": 1700304,
+        "recent_measured_depth_pixels": 1699208,
+        "qualified_screen_pixels": 1506102
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4455DG",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "ea4679016da0e828f7c13264714ba48c61541ffe4e66035c6a5b5c157e75f088",
+      "rat_sha256": "83bc1d30bb6f6129c043539753c37c515b0687c3df79888ee0b112b4d8b870fe",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1007548,
+        "measured_depth_pixels": 566903,
+        "recent_measured_depth_pixels": 565706,
+        "qualified_screen_pixels": 565696
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4465D8",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "62a0d86fa9cef57e871fbdd43f63aa17ecce7f2be5cefb0fa3bd6f2a07cc0176",
+      "rat_sha256": "e28c93c11bf513f3113b18bc618515c8cb0c5d324d47f9531e2a393dd0cc72b7",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2251671,
+        "measured_depth_pixels": 2196507,
+        "recent_measured_depth_pixels": 2196432,
+        "qualified_screen_pixels": 1902301
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4465D9",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "7c999bf6972d7ed62c9f388966fc8f5d1bee1bef54c6974ce29071837b622918",
+      "rat_sha256": "e51d7a8198af517ce3484fa712e80dd7b7aa2a0ecc966b9f0ad68ccede80a8a9",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2536735,
+        "measured_depth_pixels": 2388396,
+        "recent_measured_depth_pixels": 2388161,
+        "qualified_screen_pixels": 1948770
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4465DB",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "3003e02082947558ddb02b0c56ca03175de189fb947760f91225a80c6a785850",
+      "rat_sha256": "45a7d5aeac51bc37dddc401a082dc149e1c478ba1eb3f862ce10a6c6ee8cdcf1",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 603912,
+        "measured_depth_pixels": 603377,
+        "recent_measured_depth_pixels": 603377,
+        "qualified_screen_pixels": 397498
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4465DC",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "31ab5b6ad4df3542f6005f2cf1881653bcbdca693bfac83bd59b3a1b5e501a71",
+      "rat_sha256": "721f12da58ac5bf553acc4ebf5c16320b28bbe2ae5c261c19c61e48680f7076f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1146062,
+        "measured_depth_pixels": 1054934,
+        "recent_measured_depth_pixels": 1054898,
+        "qualified_screen_pixels": 893955
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4465DD",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "arena-bodega",
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "05e3436bb90604f56bd35ffa88852e6804a1f319fa82fddadb5ee29c8291e016",
+      "rat_sha256": "1a967555d105bc7ebc27467e5afbff6286ab94e1bc4e8dd3c653c5de14d83d9c",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2219472,
+        "measured_depth_pixels": 1325252,
+        "recent_measured_depth_pixels": 1322522,
+        "qualified_screen_pixels": 1177007
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4475D8",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "97da36746d5b401943e46336b7a73bf0b8aa02acc4275b42d75659b5dc1297e7",
+      "rat_sha256": "6128fcb0f05a911570aeb5dae3ea2dcf92b24497fd9f411a74ec7c16f91e000f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2330956,
+        "measured_depth_pixels": 2017999,
+        "recent_measured_depth_pixels": 2017523,
+        "qualified_screen_pixels": 1224287
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4475D9",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "b3e65ed6b6ef8e22c48f456a762e7100b91dd5226ac2d153f0c3b1ea7396eb73",
+      "rat_sha256": "6c473d30c94ef95e939cd5417462e7816bf9951709fb26bc85428cb7d05dddcd",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 600487,
+        "measured_depth_pixels": 548390,
+        "recent_measured_depth_pixels": 548268,
+        "qualified_screen_pixels": 457544
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4475DB",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "b83a3b31356446160424103d5b487df83da2bc722fe69ff9eb5d0db4b36af132",
+      "rat_sha256": "c8882445ff0fac79e683c5ccaf04657be04eff9f83ea9091dda406c5e718306c",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1813357,
+        "measured_depth_pixels": 1774813,
+        "recent_measured_depth_pixels": 1774713,
+        "qualified_screen_pixels": 1638001
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4475DC",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "c94412894ab32feb129377a3bb3dfea415972827d9bf721f11cd9ba91c1165d1",
+      "rat_sha256": "de5a1d7f6c7499cd261a4d226abcade8194625b1f283c8def9ceae683afcedb4",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 974029,
+        "measured_depth_pixels": 730289,
+        "recent_measured_depth_pixels": 730084,
+        "qualified_screen_pixels": 551588
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4475DD",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "691512a548b2dbf3530f21f147eec1c868a56fb839d6efc29b7eb6528deb97c2",
+      "rat_sha256": "0bab30e374af0b444d17a7af95faf47ef3378fe4aec9544d67c8688bded380f5",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 319079,
+        "measured_depth_pixels": 80181,
+        "recent_measured_depth_pixels": 79537,
+        "qualified_screen_pixels": 55160
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4485D8",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "4abeca75e1d1ed244f00e28faa0d588b972929a6d5701554d5dcca09401cce3e",
+      "rat_sha256": "6e30e017d240736016a6828ca28efb02489845596bc55d78aaac2d521d1106f3",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3232945,
+        "measured_depth_pixels": 2582597,
+        "recent_measured_depth_pixels": 2582202,
+        "qualified_screen_pixels": 2451466
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4495D7",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "6b719a1fc68de9342c80e8c935b8e0a67744357ee7109d51fb8b1cae1c000495",
+      "rat_sha256": "21d02f7593265afc8f5ec016ca79f708bb5a4945a5cb7bd3594bb35531401e3d",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3385802,
+        "measured_depth_pixels": 2192936,
+        "recent_measured_depth_pixels": 2192578,
+        "qualified_screen_pixels": 2192570
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4495D8",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "f071aa05fa34932269ebc5a37b8ced70fb0e0188656d782a84ec05f78c905d96",
+      "rat_sha256": "695c845a8fff8200ef037e60dbdfcff718267be4f540ddbd7bd6ac68473a1376",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1436185,
+        "measured_depth_pixels": 1227408,
+        "recent_measured_depth_pixels": 1227103,
+        "qualified_screen_pixels": 1200528
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44B5D6",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d8b174cb553317d9506aaec7ae9b10aa5e5d790fb2d22a369f3974fa7fae31b4",
+      "rat_sha256": "db77a6e21a9512b1eda49776e95bb349872ebde7277ea6cca12c2697cd9f6894",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3432078,
+        "measured_depth_pixels": 1518150,
+        "recent_measured_depth_pixels": 1517609,
+        "qualified_screen_pixels": 1517599
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44B5D7",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "37a8cee98f533fdb9a9c3e69ffbce7848099a64a1d8c93b2806948ac4291916a",
+      "rat_sha256": "7916170f88d97b2a2708b5e22d72833198b17b20b23e4d0c7d439fd23a9cf233",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1704744,
+        "measured_depth_pixels": 1034408,
+        "recent_measured_depth_pixels": 1033332,
+        "qualified_screen_pixels": 1033280
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44C5D6",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "057b740cf67557262c77cd9439ae42eb8f290d039229cc491b0343089c8c3234",
+      "rat_sha256": "472de3697725d61b797085c0651abc63eefd51d69a92061fcb318b0ceb6e7e5f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3432140,
+        "measured_depth_pixels": 3432140,
+        "recent_measured_depth_pixels": 3432140,
+        "qualified_screen_pixels": 3432140
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44C5D7",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "9c2f25ef34539cab5e6656396cdb8d23c6eb1799e8c7aa09783b0223a872cfc9",
+      "rat_sha256": "cc2bf27477d521a80d6e8479688f94c6b16429dfdb0c7f475d29e215398aeeaf",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 796196,
+        "measured_depth_pixels": 794750,
+        "recent_measured_depth_pixels": 794749,
+        "qualified_screen_pixels": 784095
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44D5CZ",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "4e97b22a98eb80e0f5ca818148b6f0c3bcd6d3d3c64952a95ce1c31380135a44",
+      "rat_sha256": "5bac7c3cfe970072f560c48e732edf41597cf3a405f2f7468f2962df2fec29de",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3445953,
+        "measured_depth_pixels": 666,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44D5D6",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "9da0980566759762b770aa67167ddc6e5e16aab999fdc10fa120302a8a6c267e",
+      "rat_sha256": "d8df6593394581f3cdf207509291f176fc5a2459d321015631f17d9b3af155e5",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2793647,
+        "measured_depth_pixels": 2793354,
+        "recent_measured_depth_pixels": 2793352,
+        "qualified_screen_pixels": 2783816
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5CW",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "41ad7f86410eac81ec8eee43581b159afa89d0e11e08d55d6ba2d1ce35e9ae36",
+      "rat_sha256": "05a512281e038f845985aacc849e005d78af147bed9e6804a90fc6a63b2b2e61",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3169326,
+        "measured_depth_pixels": 829,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5CX",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "3fa23c99ec19c83e876370dcb76097040da594e8fb219b289764ceddf42513d5",
+      "rat_sha256": "2a702b17f74edb197b48baadc1517b09ea85f7106427d25447195aca964c7117",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 3290488,
+        "measured_depth_pixels": 5354,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5CZ",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "84b4a2df1298c43cc93de9cc156d8822fb43878762b394b48d722e559b4e4755",
+      "rat_sha256": "c3d73f15713bf760bf37b208d641fa907bd70ad5f7f4b765da9d938c47678f1d",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1459708,
+        "measured_depth_pixels": 4396,
+        "recent_measured_depth_pixels": 359,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5D2",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "26eceddb95996c9d59facdcb289b4086e88a4227c8e60abbcc9c022eb5bafad9",
+      "rat_sha256": "ab58a36d91d23ea89dcfc1d7e467a3e9f38a23e4b00406a9ab29b0615b4c24d7",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1982115,
+        "measured_depth_pixels": 1481364,
+        "recent_measured_depth_pixels": 1481001,
+        "qualified_screen_pixels": 1481001
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5D4",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "a7b10c9d5a9289242b886be901e383dca00b8a382f1ddb838bb374e3a6ce53ef",
+      "rat_sha256": "cc90ec7b008ac6cf790488b684d9dd93f3621b8efcee8df509e2c7f199024f8d",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2154291,
+        "measured_depth_pixels": 1926941,
+        "recent_measured_depth_pixels": 1926941,
+        "qualified_screen_pixels": 1900122
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5D5",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "b79a3046a9210a2618ac868602d5846683645be27469ee266e726d9ad41cb327",
+      "rat_sha256": "657dda2e3e1ba11b97b95655811aed73c43ba6656b68cf1d388061825937b6e4",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1747370,
+        "measured_depth_pixels": 1565600,
+        "recent_measured_depth_pixels": 1565600,
+        "qualified_screen_pixels": 1537257
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44F5D6",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "90f5a45056d49d2434cb5f63427591b3ee98df40ae07d133db1ab95c8e50b2ec",
+      "rat_sha256": "e3585ca391a57467a383be981c7a019578960cf24e7496f9b92708fcbc390ff7",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 911261,
+        "measured_depth_pixels": 888751,
+        "recent_measured_depth_pixels": 888375,
+        "qualified_screen_pixels": 871635
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5CS",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "f180b038fd1241fd9d3de9b62b4bd12ada5fdc99d5f8403321c120cc96d4135e",
+      "rat_sha256": "c5c37206cb8b6dfea0b792e669fc62e0cb264087fd2bb2e4c3450830f8812d3a",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1738085,
+        "measured_depth_pixels": 1562,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5CT",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "60201884467bc21f5e2b4ae6e53499fdbaeee5736d076e490bd97744602e0829",
+      "rat_sha256": "530fee5b535365b6316c329512d60c493c2ba97fcd2ab97844e03aed16e765d4",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2576525,
+        "measured_depth_pixels": 3021,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5CV",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "84dfc46d71da1327e6036ff7dd41bb7b711d6feeb2bb1e15d4f35de7d5e8866e",
+      "rat_sha256": "10d5d2de2ab924044cee30d04ebf8fbf09a95b675dde02542101ca1663ca4c8a",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2974853,
+        "measured_depth_pixels": 3804,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5CW",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "268d6f7ed2add1dd4e21370b5dc720fb5f377da5a5007b35f114ee0790fde955",
+      "rat_sha256": "f1a499cd99477e607bffbc5ff8cc51583cb7fa5df17ad4d182dbb8cb3fdab0af",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2401613,
+        "measured_depth_pixels": 4091,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5CX",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "296e095ed744471b871346a7ec28ce6913adda41a800ee35c6236cebbf0a82da",
+      "rat_sha256": "9781ef827f6ceb3b926017710df26dcb2c1776dbcb8a3bc1005a6ef5516d0fd3",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 933448,
+        "measured_depth_pixels": 4521,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44G5D6",
+      "coasts": [
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "ff122fcfe9718280103bca7611e2a88a4ecf2adbfbc16bfb19aff806bccd82f2",
+      "rat_sha256": "0a65d53c20adbaf49204db00ea2d40488601c1024471364f1cdb4b34d3e290f0",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2465540,
+        "measured_depth_pixels": 1262980,
+        "recent_measured_depth_pixels": 1257941,
+        "qualified_screen_pixels": 926416
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44H5CR",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "42ddee02b02ed3f59e2c56d0a7baad0ccc8b500553ebc202b5a834c1c6638b32",
+      "rat_sha256": "25762dc64eb3481c97482c2cffaba786068c65bccb1e8ae05ba8b8f300522e5b",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1914283,
+        "measured_depth_pixels": 1648,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44H5CS",
+      "coasts": [
+        "central",
+        "san-francisco"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d0b32f1a73035f70df308cd02592e60b64fd6e525adece76850c7e217a39310a",
+      "rat_sha256": "8e3423e2c4eea5c7e140f2c58c64de5fbe61f476311614b6558f8888f3ec12c5",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1331873,
+        "measured_depth_pixels": 2046,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44J5CQ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "32de2f05945abbbf4874d044281533dbdde8715cdf532af4f9657505725b2924",
+      "rat_sha256": "e8867441d2015dec9eddb563ec88aea8671624cb381b7db3c94a2f58cfa780fb",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1255659,
+        "measured_depth_pixels": 451,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44K5CQ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "ead735f567d01476b53f6aa3a842112f0a65f39c840e73cb30950ee13242c015",
+      "rat_sha256": "08e651675098c7ac584b29be96f185dd04de565c271530d8ebdb202ff1e7f79c",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1832202,
+        "measured_depth_pixels": 11728,
+        "recent_measured_depth_pixels": 9968,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44L5CP",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "371ae1130d135c7cc92d932b27f5dd41f3ade1edc53641be08d6a6be50218dae",
+      "rat_sha256": "2afcf8c9c22708670b195568a85219e42f84b485d9ba2db7a26b261f51c0ca8e",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1743794,
+        "measured_depth_pixels": 2900,
+        "recent_measured_depth_pixels": 1673,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44L5CQ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "56a4387cec3838cbe86fcf86d324d3d45ad218a485ebd8fb191d053a7fd861f7",
+      "rat_sha256": "a6e6fcbb01884a4bd94a9805e619fce080258c644ee27910cf351457ced90c3f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 117980,
+        "measured_depth_pixels": 4261,
+        "recent_measured_depth_pixels": 4048,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44M5CP",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "cc088f1569873ed1190e7c314d162a0606b4d643f2b88d0586a6a6b9c74a5a7c",
+      "rat_sha256": "776a2e1cb1fe09755d0a4bdf2653309bf70c65d7dc83551f0d23022dd999fdeb",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2153636,
+        "measured_depth_pixels": 2234,
+        "recent_measured_depth_pixels": 79,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44N5CJ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "monterey-sur"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d7ce04f9c85de804376b841ba854b80a312b39023cd453e5eed308ed6a554e1e",
+      "rat_sha256": "08c078f6138ebbd26afefa28f7737958238091f4ac94428f2f349bfa84f62cc1",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 612620,
+        "measured_depth_pixels": 8088,
+        "recent_measured_depth_pixels": 6790,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44N5CK",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "365dde86c02284690e31b3b47911a681c2107e222e4e018651fab31cf1f387a9",
+      "rat_sha256": "b90bd3c6eb7348ab3b92e5b8b0cc4593fe842af6f0cb06d56803b497bc163521",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 883058,
+        "measured_depth_pixels": 3147,
+        "recent_measured_depth_pixels": 1684,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44N5CP",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "55d8c13b4f1fe1f598e7980524e396d44d881fb10ca43275f34eb2aa867b8d25",
+      "rat_sha256": "06a6a924d846c7b39de43cebab676efafbc0f6f4a910df93cc620c34abe45eda",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2611934,
+        "measured_depth_pixels": 3937,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44P5CJ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "monterey-sur"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "dc2187a38a56dc246fa20b8c37f9ef450c3ec6940c3912b0be538ed1dbeb8ea1",
+      "rat_sha256": "e7ed1aafb73468f7bc6fc9120f85f0cb2b2ef8cb20007cd81884f95fa00161d3",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 284641,
+        "measured_depth_pixels": 901,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44P5CK",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "b8e39347cb7b06112823087e7a8173d2c432ac12d1987ec04a814f5d787a0c8b",
+      "rat_sha256": "d138fb5d3cc42d699cedee6ffec6dc3bd4dbbdb084b59e03dd126d68101b18f7",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 989720,
+        "measured_depth_pixels": 17423,
+        "recent_measured_depth_pixels": 11828,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44P5CL",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "4567a04e0bb615b6391129082b15ec2cd6f3757031e60fd23ad51e4f1493ca2e",
+      "rat_sha256": "5081b421dcb8570f339d0f52b590af4fe025fd5fa512ba9da6c7903a616304a8",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 0,
+        "measured_depth_pixels": 0,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44P5CP",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "6460ce4bbb39f2fb6d244a097f1c51f330c794458489fe0c54c84eae1249e0da",
+      "rat_sha256": "3665189fcb48b69114e66797764c3ca5e52f2b775458ba5082946028510a4952",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2884994,
+        "measured_depth_pixels": 5277,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH44Q5CK",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "c6e0fb1f5d27fe202c6db20709f54ae28c21700a253668638d43334dc2e6e707",
+      "rat_sha256": "a9cc46ae604bdf34887590a716008a04f7f668e9e743761cb2dfff3505335b90",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1404467,
+        "measured_depth_pixels": 13930,
+        "recent_measured_depth_pixels": 9722,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4555BX",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "daa0fc73fbaaccebb748715e9ff19352d36415037c3f729334ab455b38e98db8",
+      "rat_sha256": "abd746e6943704c3618e1ad3faa56ad63aefac60cecd0fdf896f093ab7efd9cd",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 25210,
+        "measured_depth_pixels": 9,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4555BZ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "7b1d36f908dfb8bc2d49f2f0378390ae99bdd3c6a51bb4aecb3b2fde3da6947e",
+      "rat_sha256": "9ae49e18b20e1fe60d96fe05d80292236d316240fb00ae2d39e8631befe62eec",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1571343,
+        "measured_depth_pixels": 417717,
+        "recent_measured_depth_pixels": 415747,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4565BX",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "5d220c687cc7fce5c25bf4ca66db593062c7f308fb2dd6364dcadd9be9bafce9",
+      "rat_sha256": "c9048112aa88b2587ad630bbf2bbef5540276d64a8780bf86d4622982c20d6fb",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1330185,
+        "measured_depth_pixels": 512086,
+        "recent_measured_depth_pixels": 511480,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4565BZ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "65fc5750e7853121f3d6592fcbadaf0a1c8f14cddc64072f45a5b9056bd439a1",
+      "rat_sha256": "1fce59516b77b3cfbd2a6853936dcc9e86b9c62c0bb7faa99645ece601ac13bc",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 205891,
+        "measured_depth_pixels": 138365,
+        "recent_measured_depth_pixels": 138106,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4575BV",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "37e52db60f57af7036e24c5f4530d71718ae20bd1908df1159e3db7a7b462a28",
+      "rat_sha256": "47cf84e78cd2d1a2f843f9dc632e8d0167b1082da5795fad728cbc62861ab9e7",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1334626,
+        "measured_depth_pixels": 77353,
+        "recent_measured_depth_pixels": 74274,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4575BW",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "e36da42b65b694949f0419788538fbd7ac4fc170b8206c4436a36ac2fca86632",
+      "rat_sha256": "fbc2f107a1652d00333dd992a03bd42401bdfc0339acc939f5ebd83718d882e3",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1006934,
+        "measured_depth_pixels": 3659,
+        "recent_measured_depth_pixels": 3648,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4575BX",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "4e95628ffcc1d939f0cbba443e3c0c211ff9f79d5fb1047568e4a6d41fdae696",
+      "rat_sha256": "45173440f4e1cb3d03ce8d0a676b2a0b6ace52bdaca10aa7af585dbae43724d8",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2032231,
+        "measured_depth_pixels": 452019,
+        "recent_measured_depth_pixels": 452016,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4585BS",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "39a2740de25142fa31baaf886a6fc8a24e3bdff169f0e416f31d77ef46207299",
+      "rat_sha256": "51b5a193b6a008278554a9734d5a06137b13b43c552430c52154c5d22288586e",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 544079,
+        "measured_depth_pixels": 1317,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4585BT",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "2745f56937f27cf86da2941f4e1d306f470a47e076155983fd93bf8b40df3965",
+      "rat_sha256": "0048f620757ec24c0c9ef6a33a28a2c5aaa2780b723106935b30316b683aef24",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1422156,
+        "measured_depth_pixels": 125783,
+        "recent_measured_depth_pixels": 120922,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4585BV",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "93dadd865a1d957e8e99cfd01c9d6992b636a7b277edcec39e1e9ec88c0a26f1",
+      "rat_sha256": "3869cc1eaa7303540f5a077c82a47ebebabd85e5124bafb44f2cd4e47cf5b3e8",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 515396,
+        "measured_depth_pixels": 278530,
+        "recent_measured_depth_pixels": 278328,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4585BW",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "67f9defbbd4c3a099efbcd4cab33a0ac0f4f7dac7c2df2aaa1e360a1984c6fee",
+      "rat_sha256": "1d71654b3c9b6a776e025d60af63309a35db98757a3fe76bbd57740e99d1fa7c",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1390235,
+        "measured_depth_pixels": 410454,
+        "recent_measured_depth_pixels": 410448,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4585BX",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d7cd950aa9cbe7ff627e1928415c72232636e0684789e5338cb02de4e90a20b3",
+      "rat_sha256": "57d7b25fb17a6744e786ce393d3dc2b4fca2eeeffe891802a3b414558c7ad519",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 375746,
+        "measured_depth_pixels": 188488,
+        "recent_measured_depth_pixels": 188488,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4595BS",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d6b23fa9d5a49f10281368ad3750ff20248cf76a53787953a4dfa0b268568aca",
+      "rat_sha256": "c6154de5b011c7ac0062845153e3e91917f3e45f80f2f630cdfb870ba96931c9",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2648761,
+        "measured_depth_pixels": 121357,
+        "recent_measured_depth_pixels": 113386,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4595BT",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "7d4a773d7899addb9701911fefd28702c117eac23e3718fd76a12130508c7dea",
+      "rat_sha256": "8f49bcd1d727c32a79b0f45ceeac50a758f59887256d7803526875bdfc440e6d",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 171018,
+        "measured_depth_pixels": 3795,
+        "recent_measured_depth_pixels": 2991,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45D5BH",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "0b1a3275e43453c47f45f53e3e4543196492f147e0ba3847fcdc20e08d41e794",
+      "rat_sha256": "a55562702eede1273f139efe862c24839cf1e8d727c14a6d31ffd8e95e47da42",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 361857,
+        "measured_depth_pixels": 361857,
+        "recent_measured_depth_pixels": 361857,
+        "qualified_screen_pixels": 270431
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45D5BJ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "e38d71dc9cbf47ee04e8f91dce01915e3a11366d917d33df7c9a8480d1f4563f",
+      "rat_sha256": "8a73c2ec5786ba88c167b0486b2b3c12aca287bdcfd89bf08f874f54ca6002da",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1861977,
+        "measured_depth_pixels": 1845272,
+        "recent_measured_depth_pixels": 1845185,
+        "qualified_screen_pixels": 1790118
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45F5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "a31307fa7a07cdd1238b49a7779d8482f4ee3b9fa9f22260f93838b7348acd66",
+      "rat_sha256": "e1c68c85e258cbba65289a4d52c1a056af35a53a664ed08e8de41727129e7ca5",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 0,
+        "measured_depth_pixels": 0,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45F5BH",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "0a45db7d2b98af833fa6677d5d80b28f41c00237f8e8d490436cde3a1612bf3a",
+      "rat_sha256": "3431ad38b78a6e690420be6ba0926e2101cc18ac37293856c25d74229d25f275",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1544093,
+        "measured_depth_pixels": 1522453,
+        "recent_measured_depth_pixels": 1522310,
+        "qualified_screen_pixels": 1398846
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45F5BJ",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "fd2e0aedc410f42a030a9b0d8dc3400428d8582ea67d74eb17bcf50f251e6b74",
+      "rat_sha256": "fc49ca9ee673b5a1e8d891754fc3e7bf433459850e991ce4114c3f0a1be28b27",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 234278,
+        "measured_depth_pixels": 209619,
+        "recent_measured_depth_pixels": 209476,
+        "qualified_screen_pixels": 209476
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45G5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "07bce5b200c0744361e971ec4d5444362aada13004873b3793376eaefa0d1764",
+      "rat_sha256": "09f2a656946bd6f8e66d429cddc49efdbc645f918f8e1eef56152e5e6531cc6c",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 166400,
+        "measured_depth_pixels": 166400,
+        "recent_measured_depth_pixels": 166400,
+        "qualified_screen_pixels": 110005
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45G5BH",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "de96bc81c6bf824330504bc395daf224b027d7ffb8778418552a4859748bcfa1",
+      "rat_sha256": "9c63ae0f037d9002d1c6524863b7fd2b47dad713ae34b6fa354e5c04ceeefe52",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1148372,
+        "measured_depth_pixels": 1148322,
+        "recent_measured_depth_pixels": 1148321,
+        "qualified_screen_pixels": 681353
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45H5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "ec65c6a09ff2a00a425976e4b5b53e8a1b54b3aa712cb06c5efc7045ca7995a6",
+      "rat_sha256": "07bad1e5a8775cc3cf830dab5f4bad290ea06abf66d4bdd38b803274b772af22",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 301896,
+        "measured_depth_pixels": 301895,
+        "recent_measured_depth_pixels": 301895,
+        "qualified_screen_pixels": 257959
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45H5BH",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "d8cd577e2f7edb849f3d2f07664a1d8fca77a8cad4e53d89e6c26927e2757d5c",
+      "rat_sha256": "7bd3a54dc96d1d7b62d2f35307c1a4925da254e417991484f6c58ed1d7fff165",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1527433,
+        "measured_depth_pixels": 1524570,
+        "recent_measured_depth_pixels": 1524560,
+        "qualified_screen_pixels": 924191
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45J5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "2e821d5bc24b597572ee6a829b503a3564d78d094145fe6a73bad3302d8c634a",
+      "rat_sha256": "e5e2f2b46602417d9eaf1d4217963f97c6e73492f739bc93752a3d65e6f5a852",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 0,
+        "measured_depth_pixels": 0,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45J5BH",
+      "coasts": [
+        "central",
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura",
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "c90dfbc9828f590d786a6ad13eb3731ccfe9012d3312df7642b4e2de7d231634",
+      "rat_sha256": "7703db900d223e667e7834ee04f59973b667b5bba94969cf2fff9445aa670c40",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1190130,
+        "measured_depth_pixels": 887718,
+        "recent_measured_depth_pixels": 887546,
+        "qualified_screen_pixels": 30510
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45K5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "e5869d6e6740b95e1b7056eda990cde8bbe4c249df82f4d40446b93f869ad16d",
+      "rat_sha256": "14de29b2d88b80568b9c04b1c896b87bc8302800b3e357a1c4ff8ad5078fc5cd",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 0,
+        "measured_depth_pixels": 0,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45K5BH",
+      "coasts": [
+        "central"
+      ],
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "3cffd1d713b4dbe386b360fe4fff73e7a7128601525c9da279c7b4c5dbdf2694",
+      "rat_sha256": "eee97b92c08768a2c50cfe47f2d79e2e33d9266f22d5b5161242ee772270d961",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 956456,
+        "measured_depth_pixels": 415160,
+        "recent_measured_depth_pixels": 414968,
+        "qualified_screen_pixels": 1759
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45L5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "1c9c5eb73ceefbc58cd582ede355d9f862587a73f8a870a4687c3e3d68221eca",
+      "rat_sha256": "0cbf18bd40d20bfdec3cab11fbe4c6d35d72037188209a87d11578e0cc7a6f21",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 0,
+        "measured_depth_pixels": 0,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45M5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "e61dd873a600812be1f55597075f51a3d6e1fbc32622ebeddcaba4da0a5f48af",
+      "rat_sha256": "6c8ee69e0fb955ba5fa089bc05671a7a64658a35d8d478b88e3d9f35f990382b",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 56346,
+        "measured_depth_pixels": 29,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45N5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "87e310ed58264350599588a5e6a3041e57ee5005fbe080786b4ecc3c45b1301b",
+      "rat_sha256": "148e8c238982d747af6f5be53873a2eaf786064a41f26b310ca628b0440420d9",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 754274,
+        "measured_depth_pixels": 62236,
+        "recent_measured_depth_pixels": 61679,
+        "qualified_screen_pixels": 1147
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45P5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "9ac9e180442526d17464278542b110f2bdd4be2e02dede3655b330a0e5969993",
+      "rat_sha256": "7655c4a54dec91414e23e800abf8d72135800b239b894f4084b119b3aee7562f",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1190087,
+        "measured_depth_pixels": 368806,
+        "recent_measured_depth_pixels": 367340,
+        "qualified_screen_pixels": 1426
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45S5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "c4c79a68531b46c279539b8b70095696b4e1527a1723831475ee68e0adc93af4",
+      "rat_sha256": "f2d8a1395b0e8ccd2dcbe120adcc988395c97f7e76de87224d464e4263bc842b",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2878374,
+        "measured_depth_pixels": 354972,
+        "recent_measured_depth_pixels": 352001,
+        "qualified_screen_pixels": 21037
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45T5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "515e97a9eadd5abebeaaa8472b9431fe8280c6de09916d7ff759567faad9db30",
+      "rat_sha256": "1d4a3df959866c327fa2e80022083fc8aab1b146ca41f7c66b38a88954b692f1",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 2919744,
+        "measured_depth_pixels": 272177,
+        "recent_measured_depth_pixels": 269421,
+        "qualified_screen_pixels": 79011
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45V5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "2195e6fcb9017425e77d7ea82238cdca577fd4f87437cf6ea6c7d2cf5815d2f9",
+      "rat_sha256": "7cfd7c7d8da5ac190fc4dce6448ad40a86b790e78b37f96e0e4e467bc4560b2e",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1645003,
+        "measured_depth_pixels": 49592,
+        "recent_measured_depth_pixels": 47681,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45W5BG",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "df8b4de7a71b2422077953088a1f83103032bdeb91c6956aab92ed0b3b3795b6",
+      "rat_sha256": "734ebb6ce19fc066c8dde20711585b795e67dd6214b9abed43ed37064d2638d0",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 330514,
+        "measured_depth_pixels": 14633,
+        "recent_measured_depth_pixels": 14035,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH45X5BF",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "dec651bf685e4afa4f6d2f47f7a9493fa1544a7be97719be07f340a4a38ca506",
+      "rat_sha256": "3dab5e7825341a46346a89ee34ebcf282c112de080e8a9e5ba5f719aa3750fa9",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1304364,
+        "measured_depth_pixels": 2213,
+        "recent_measured_depth_pixels": 0,
+        "qualified_screen_pixels": 0
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    },
+    {
+      "tile": "BH4625BC",
+      "coasts": [
+        "southern"
+      ],
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolution": "4m",
+      "raster_sha256": "8552aca3310042ce0498420c03bbd9ec46b4f6cfcf8629a7b3359b3ed25ca1b3",
+      "rat_sha256": "5745b2d88bc30331df70eea57cf48035f98085e415051ca299405563d14161a5",
+      "counts": {
+        "depth_25_to_200_ft_pixels": 1044151,
+        "measured_depth_pixels": 476919,
+        "recent_measured_depth_pixels": 476025,
+        "qualified_screen_pixels": 15751
+      },
+      "screen": {
+        "depth_ft": [
+          25,
+          200
+        ],
+        "max_uncertainty_m": 1.0,
+        "min_survey_year": 1990,
+        "planning_depth_margin_m": 2,
+        "measured_contributor_flags_required": true
+      }
+    }
+  ],
+  "failures": []
+}

@@ -891,6 +891,47 @@ jobs:
           path: var/review/
           retention-days: 30
 
+  hard-footprint-native-depth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned geospatial audit dependencies
+        run: python -m pip install -r requirements-survey.txt
+      - name: Check pinned NOAA Modeling scheme
+        env:
+          PYTHONPATH: src:.
+        run: python scripts/check_nbs_modeling_scheme.py --output var/review/nbs-modeling-scheme-health.json
+      - name: Inventory exact 2–4 m NOAA tile intersections with displayed USGS hard context
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/inventory_nbs_hard_footprint_tiles.py
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --output var/review/nbs-hard-footprint-tile-inventory.json
+      - name: Audit every intersecting native depth raster and contributor table
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_nbs_hard_footprint_tiles.py
+          --inventory var/review/nbs-hard-footprint-tile-inventory.json
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --fetch --workers 4
+          --output var/review/nbs-hard-footprint-depth-audit.json
+      - name: Upload unpublished native-depth source receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nbs-hard-footprint-native-depth-review
+          path: |
+            var/review/nbs-modeling-scheme-health.json
+            var/review/nbs-hard-footprint-tile-inventory.json
+            var/review/nbs-hard-footprint-depth-audit.json
+          retention-days: 30
+
   usgs-sur-arguello-sediment:
     runs-on: ubuntu-latest
     timeout-minutes: 15
