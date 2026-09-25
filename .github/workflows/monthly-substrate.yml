@@ -107,7 +107,7 @@ jobs:
       - name: Verify research-only ENC outputs stay unpublished
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_enc_hazard_refresh tests.test_habitat_shortlist_closures tests.test_regular_habitat_triage -v
+        run: python -m unittest tests.test_enc_hazard_refresh tests.test_habitat_shortlist_closures tests.test_regular_habitat_triage tests.test_regular_shortlist_terrain -v
       - name: Refresh bounded Cape Mendocino, Point Conception and Gaviota chart-danger screens
         run: |
           python scripts/refresh_enc_hazards.py --scope cape-mendocino-hard-context --output var/review/enc-hazards-cape-mendocino.geojson
@@ -166,6 +166,18 @@ jobs:
             --coastal var/review/cape-current/coastal/latest.json \
             --federal var/review/cape-current/noaa-federal-areas.json \
             --output var/review/gaviota-fresh-closure-audit.json
+      - name: Measure Point Conception original-BAG terrain in the closure-screened shortlist
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/fetch_shortlist_original_bags.py \
+            --queue var/review/point-conception-regular-site-review-queue.json \
+            --context dist/data/point-conception-native-hard-context.geojson
+          python scripts/audit_regular_shortlist_terrain.py \
+            --queue var/review/point-conception-regular-site-review-queue.json \
+            --context dist/data/point-conception-native-hard-context.geojson \
+            --closures var/review/point-conception-fresh-closure-audit.json \
+            --output var/review/point-conception-shortlist-terrain-review.json
       - name: Refresh all three Bodega original-rock chart-danger scopes
         run: |
           python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson
@@ -207,6 +219,7 @@ jobs:
             var/review/cape-mendocino-fresh-closure-audit.json
             var/review/point-conception-regular-site-review-queue.json
             var/review/point-conception-fresh-closure-audit.json
+            var/review/point-conception-shortlist-terrain-review.json
             var/review/gaviota-regular-site-review-queue.json
             var/review/gaviota-fresh-closure-audit.json
             var/review/point-conception-enc-context-review.json
