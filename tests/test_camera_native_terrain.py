@@ -39,6 +39,17 @@ class CameraNativeTerrainTests(unittest.TestCase):
         self.assertGreater(rock['detrended_p95_p05_relief_m_range'][0],
                            cobble['detrended_p95_p05_relief_m_range'][1])
 
+    def test_second_coast_reuses_method_without_a_global_rock_threshold(self):
+        north = json.loads((ROOT / 'dist/data/h11971-bear-landing-native-terrain.json').read_text())
+        south = json.loads((ROOT / 'dist/data/h11876-la-jolla-native-terrain.json').read_text())
+        self.assertEqual(north['method'], south['method'])
+        self.assertEqual(south['survey_id'], 'H11876')
+        self.assertEqual(sum(row['historical_camera_windows'] for row in south['transects']), 11)
+        self.assertFalse(south['fishing_target'])
+        self.assertNotIn('camera_position_bounds', json.dumps(south))
+        self.assertLess(south['transects'][0]['detrended_p95_p05_relief_m_range'][0],
+                        north['transects'][0]['detrended_p95_p05_relief_m_range'][1])
+
 
 if __name__ == '__main__':
     unittest.main()

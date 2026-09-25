@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "scope": "held-original-camera-native-terrain-research",
+  "reviewed_at": "2026-09-25T05:03:19+00:00",
+  "survey_id": "H11876",
+  "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/BAG/H11876_MB_2m_MLLW_2of5.bag",
+  "bag_sha256": "5af72a36accf8ca4dc869c8758c12bcaa37b80eb2e998291b6620a4254b5dc0b",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+  "camera_archive_sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+  "source_camera_review": "data/h11876-la-jolla-camera-chart-review.json",
+  "native_cell_m": [
+    2.0,
+    2.0
+  ],
+  "method": "Each historical camera point: fit a plane to qualified original native MLLW elevation cells in a 25 m circle, then report 5th\u201395th percentile relief before and after detrending. Aggregate by transect, never by a claimed reef boundary.",
+  "transects": [
+    {
+      "date": "2011-08-31",
+      "line": "119",
+      "historical_camera_windows": 8,
+      "camera_bottom_classes": {
+        "rock": 3,
+        "boulder": 5
+      },
+      "historical_rockfish_visual_windows": 2,
+      "measured_depth_m_mllw_range": [
+        49.93,
+        58.25
+      ],
+      "native_cell_support_min": 489,
+      "native_cell_fraction_min": 1.0,
+      "raw_p95_p05_relief_m_range": [
+        0.425,
+        1.192
+      ],
+      "detrended_p95_p05_relief_m_range": [
+        0.281,
+        0.596
+      ],
+      "fitted_plane_slope_degrees_range": [
+        0.08,
+        1.68
+      ]
+    },
+    {
+      "date": "2011-09-02",
+      "line": "137",
+      "historical_camera_windows": 3,
+      "camera_bottom_classes": {
+        "rock": 2,
+        "cobble": 1
+      },
+      "historical_rockfish_visual_windows": 0,
+      "measured_depth_m_mllw_range": [
+        52.78,
+        55.74
+      ],
+      "native_cell_support_min": 489,
+      "native_cell_fraction_min": 1.0,
+      "raw_p95_p05_relief_m_range": [
+        0.822,
+        0.994
+      ],
+      "detrended_p95_p05_relief_m_range": [
+        0.443,
+        0.84
+      ],
+      "fitted_plane_slope_degrees_range": [
+        0.49,
+        1.02
+      ]
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Camera position accuracy varies on the order of 10 m; overlapping windows on a transect are correlated.",
+    "Depth qualification is based on the supplied product uncertainty and a 2 m planning margin; it is not navigation clearance.",
+    "Detrended relief is physical morphology, not direct substrate, fish abundance, bottom image or a calibrated bite score.",
+    "Exact rock extent, historical survey gaps, HCell/ENC hazards, federal and CDFW closures, route, access and rules remain separate promotion gates."
+  ]
+}
