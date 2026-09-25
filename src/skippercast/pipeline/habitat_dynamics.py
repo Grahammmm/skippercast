@@ -142,6 +142,22 @@ def _resolution(meta):
 
 def satellite(client, region, request, kind):
     """Use the reviewed ERDDAP adapter without its historical display stride."""
+    if request.get("adapter") == "noaa-ncss-sst":
+        from .noaa_sst import fetch
+        west, south, east, north = _bounds(region)
+        grid = fetch(client, {"latitude": [south, north], "longitude": [west, east]})
+        samples = {(r["latitude"], r["longitude"]): r for r in grid["samples"]}
+        resolution = [.05, .05]
+        times = {grid["sample_at"]}
+        metadata_url = grid["catalog_url"]
+        dataset = grid["dataset"]
+        meta = {"attrs": {"NC_GLOBAL": {"license": grid["license"]}}}
+    else:
+        samples, resolution, times, metadata_url, dataset, meta = _erddap_satellite(client, region, request, kind)
+    return _satellite_layer(samples, resolution, times, metadata_url, dataset, meta, kind, _bounds(region))
+
+
+def _erddap_satellite(client, region, request, kind):
     base, dataset, variables = request["base_url"], request["dataset"], request["variables"]
     metadata_url = f"{base}/info/{dataset}/index.json"
     meta = erddap_metadata(client.get(metadata_url, True)); resolution = _resolution(meta)
@@ -167,6 +183,11 @@ def satellite(client, region, request, kind):
             if key in samples and samples[key] != row: raise ValueError("Conflicting overlapping satellite tiles")
             samples[key] = row
     if len(times) != 1: raise ValueError("Mixed satellite valid times")
+    return samples, resolution, times, metadata_url, dataset, meta
+
+
+def _satellite_layer(samples, resolution, times, metadata_url, dataset, meta, kind, bounds):
+    west, south, east, north = bounds
     rows = []
     for (lat, lon), row in sorted(samples.items()):
         if not (south-resolution[0]/2 <= lat <= north+resolution[0]/2 and west-resolution[1]/2 <= lon <= east+resolution[1]/2):
@@ -182,10 +203,10 @@ def satellite(client, region, request, kind):
             value = row.get("chlorophyll")
             if finite(value) and .001 <= value <= 100: rows.append([lat, lon, value])
     if kind == "sst":
-        # Metadata resolution is effectively exact for MUR; rounded lookup uses native neighbors.
+        # Keep the native NOAA or MUR grid resolution; analysis is not observational precision.
         rows = gradients(rows, resolution, error_index=3)
         fields = ["latitude", "longitude", "temperature_c", "analysis_error_c", "temperature_gradient_c_per_km", "thermal_contrast_supported"]
-        limitations = "Daily L4 foundation SST analysis, partly interpolated. Native 0.01° grid spacing is not independent 1 km observational accuracy. Surface only; not bottom temperature or fish presence. Error support is not a confidence interval."
+        limitations = f"Daily L4 foundation SST analysis, partly interpolated. Native {resolution[0]:.2f}° grid spacing is not independent observational accuracy. Surface only; not bottom temperature or fish presence. Error support is not a confidence interval."
     else:
         fields = ["latitude", "longitude", "chlorophyll_mg_m3"]
         limitations = "Daily MODIS ocean-color observation; clouds and failed retrievals remain gaps. Approximately 4.6 km pixels; chlorophyll is not bait biomass or immediate feeding activity."
@@ -331,11 +352,11 @@ def run(region_id, output, previous_root=None, now=None):
     for kind, ident in (("sst", "sst-analysis"), ("chlorophyll", "chlorophyll-observation")):
         source_id = region["pipeline_sources"].get(kind); cfg = catalog[source_id]
         need = "sea-temperature" if kind == "sst" else "chlorophyll"
-        if cfg["review_status"] != "approved" or cfg["adapter"] != "erddap-grid" or source_id not in region["source_bindings"][need]:
+        if cfg["review_status"] != "approved" or cfg["adapter"] not in ({"erddap-grid", "noaa-ncss-sst"} if kind == "sst" else {"erddap-grid"}) or source_id not in region["source_bindings"][need]:
             raise ValueError("Habitat collection requires reviewed regional satellite bindings")
         request = cfg["request"]
         if urlparse(request["base_url"]).hostname not in cfg["allowed_hosts"]: raise ValueError("Unreviewed satellite host")
-        jobs.append((ident, source_id, cfg, request["max_age_hours"], lambda c, q=request, k=kind: satellite(c, region, q, k)))
+        jobs.append((ident, source_id, cfg, request["max_age_hours"], lambda c, q={**request, "adapter": cfg["adapter"]}, k=kind: satellite(c, region, q, k)))
     cfg = catalog["noaa-wcofs"]
     if region.get("intelligence", {}).get("regional_current_model") == "wcofs":
         if cfg["review_status"] != "approved" or cfg["adapter"] != "wcofs-dap2" or any("noaa-wcofs" not in region["source_bindings"][need] or need not in cfg["needs"] for need in ("sea-temperature", "surface-currents")):

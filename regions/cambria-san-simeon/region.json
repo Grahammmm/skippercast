@@ -207,6 +207,7 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
+      "noaa-blended-sst",
       "mur-sst",
       "noaa-wcofs"
     ],
@@ -367,7 +368,7 @@
   "landing_note": "Morro Bay totals do not locate catches in Cambria\u2013San Simeon; no local report publisher is bound.",
   "jurisdiction_id": "california-central",
   "pipeline_sources": {
-    "sst": "mur-sst",
+    "sst": "noaa-blended-sst",
     "chlorophyll": "modis-chlorophyll",
     "currents": "ioos-hfr"
   },

@@ -205,7 +205,9 @@
       "id": "noaa-bluetopo",
       "name": "NOAA BlueTopo bathymetry",
       "provider": "NOAA National Ocean Service, Office of Coast Survey",
-      "needs": ["bathymetry"],
+      "needs": [
+        "bathymetry"
+      ],
       "documentation_url": "https://nauticalcharts.noaa.gov/data/bluetopo_specs.html",
       "adapter": "bluetopo-geotiff-source-review",
       "review_status": "candidate",
@@ -229,10 +231,13 @@
       "limitations": [
         "BlueTopo uses NAVD88, not chart MLLW; conversion and original-survey validation are required before any depth-qualified fishing target.",
         "The product includes interpolated, old, coastal-topography and repeated-survey contributors; a fine cell size alone does not prove measured reef habitat.",
-        "The reviewed BH4525C2 tile points to original W00479, whose report gives a 99.1–799.8 m MLLW survey depth range, beyond the 200 ft bottom-fishing limit.",
+        "The reviewed BH4525C2 tile points to original W00479, whose report gives a 99.1\u2013799.8 m MLLW survey depth range, beyond the 200 ft bottom-fishing limit.",
         "Not for navigation; original hazards, current chart, MPAs, access and local rules remain separate gates."
       ],
-      "allowed_hosts": ["nauticalcharts.noaa.gov", "noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com"]
+      "allowed_hosts": [
+        "nauticalcharts.noaa.gov",
+        "noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com"
+      ]
     },
     {
       "id": "noaa-west-coast-substrate",
@@ -262,9 +267,9 @@
       },
       "limitations": [
         "The source combines older surveys and classifications at 25 m; it is not an independent measurement where it reuses NOAA or USGS inputs.",
-        "Its 1–10 data-quality value rates input data and interpretation, not fishing quality or catch probability.",
+        "Its 1\u201310 data-quality value rates input data and interpretation, not fishing quality or catch probability.",
         "A point sample does not verify an entire camera transect or a rock outline; source lineage and redistribution terms remain to review before promotion.",
-        "Coarse regional context cannot replace local 1–2 m surveys or current chart, MPA and rules checks."
+        "Coarse regional context cannot replace local 1\u20132 m surveys or current chart, MPA and rules checks."
       ],
       "allowed_hosts": [
         "maps.fisheries.noaa.gov"
@@ -372,7 +377,10 @@
       "id": "noaa-groundfish-areas",
       "name": "NOAA West Coast federal groundfish areas",
       "provider": "NOAA Fisheries West Coast Region",
-      "needs": ["protected-areas", "dynamic-closures"],
+      "needs": [
+        "protected-areas",
+        "dynamic-closures"
+      ],
       "documentation_url": "https://www.fisheries.noaa.gov/resource/map/groundfish-conservation-areas-maps-and-gis-data-west-coast-region",
       "adapter": "noaa-groundfish-gis",
       "review_status": "approved",
@@ -391,7 +399,11 @@
         "NOAA says its GIS boundaries are approximate and 50 CFR 660 governs exact limits.",
         "CCA and YRCA restrictions require fishery, gear, date and location review; a polygon alone does not determine legality."
       ],
-      "allowed_hosts": ["maps.fisheries.noaa.gov", "www.fisheries.noaa.gov", "www.ecfr.gov"],
+      "allowed_hosts": [
+        "maps.fisheries.noaa.gov",
+        "www.fisheries.noaa.gov",
+        "www.ecfr.gov"
+      ],
       "service_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
       "max_age_hours": 36
     },
@@ -1598,6 +1610,42 @@
         "www.cpc.ncep.noaa.gov"
       ],
       "max_age_hours": 1080
+    },
+    {
+      "id": "noaa-blended-sst",
+      "name": "NOAA Geo-Polar Blended night SST, 5 km",
+      "provider": "NOAA CoastWatch / OSPO",
+      "needs": [
+        "sea-temperature"
+      ],
+      "documentation_url": "https://coastwatch.noaa.gov/cwn/products/noaa-geo-polar-blended-global-sea-surface-temperature-analysis-level-4.html",
+      "adapter": "noaa-ncss-sst",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-24",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA CoastWatch / OSPO",
+        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-geo-polar-blended-global-sea-surface-temperature-analysis-level-4.html"
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Daily global 0.05 degree night-only blended foundation SST, nominal UTC sample time; land, ice and missing cells excluded.",
+      "limitations": [
+        "Level 4 blended and interpolated analysis; 5 km cells are not 5 km independent observations.",
+        "Surface context only; no bottom temperature or confirmed fish presence."
+      ],
+      "dataset_id": "noaacwBLENDEDsstDaily",
+      "allowed_hosts": [
+        "coastwatch.noaa.gov"
+      ],
+      "max_age_hours": 72,
+      "request": {
+        "base_url": "https://coastwatch.noaa.gov/thredds",
+        "dataset": "Blended/SST5km/Night/GHRSSTOSPO",
+        "max_age_hours": 72
+      }
     }
   ]
 }

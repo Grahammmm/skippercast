@@ -47,6 +47,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-sst.txt
+      - name: Install reviewed NOAA NetCDF decoder
+        run: python -m pip install -r requirements-sst.txt
       - name: Load pinned last30days research engine
         uses: actions/checkout@v4
         with:

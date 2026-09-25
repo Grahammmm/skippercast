@@ -651,6 +651,7 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
+      "noaa-blended-sst",
       "mur-sst",
       "noaa-wcofs"
     ],
@@ -815,7 +816,7 @@
   "landing_note": "No Southern California catch-position dataset has been imported; landing totals are not fishing coordinates.",
   "jurisdiction_id": "california-southern",
   "pipeline_sources": {
-    "sst": "mur-sst",
+    "sst": "noaa-blended-sst",
     "chlorophyll": "modis-chlorophyll",
     "currents": "ioos-hfr"
   },

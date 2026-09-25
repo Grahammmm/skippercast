@@ -1,0 +1,3 @@
+# NOAA THREDDS NetCDF classic subset parser for the daily public SST feed.
+numpy==2.5.3
+scipy==1.17.1

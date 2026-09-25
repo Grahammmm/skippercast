@@ -10,11 +10,11 @@ def settings(region_id="morro-bay", root=REPO):
     needs={"sst":"sea-temperature","chlorophyll":"chlorophyll","currents":"surface-currents"}
     for kind, ident in region["pipeline_sources"].items():
         source=sources[ident]
-        if ident not in region["source_bindings"][needs[kind]] or source["review_status"]!="approved" or source["adapter"]!="erddap-grid":
+        if ident not in region["source_bindings"][needs[kind]] or source["review_status"]!="approved" or source["adapter"] not in ({"erddap-grid", "noaa-ncss-sst"} if kind == "sst" else {"erddap-grid"}):
             raise ValueError("Scheduled grid requires a reviewed, compatible regional binding")
         request=source["request"]
         public_url(request["base_url"])
-        grids[kind]={**request,"source_id":ident,"name":source["name"]}
+        grids[kind]={**request,"source_id":ident,"name":source["name"],"adapter":source["adapter"],"documentation_url":source["documentation_url"]}
     jurisdiction_id=region["jurisdiction_id"]
     if not ID.fullmatch(jurisdiction_id): raise ValueError("Invalid jurisdiction id")
     jurisdiction=read_json(within(root,f"jurisdictions/{jurisdiction_id}.json"))

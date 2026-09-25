@@ -4,7 +4,7 @@
   "name": "Bodega Bay to Point Reyes",
   "status": "draft",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · San Francisco Groundfish Management Area",
+  "jurisdiction": "California \u00b7 San Francisco Groundfish Management Area",
   "bounds": [
     -123.7,
     37.95,
@@ -31,7 +31,7 @@
     "local_areas": [
       {
         "id": "bodega-north",
-        "name": "Bodega Bay to 38°02′ N",
+        "name": "Bodega Bay to 38\u00b002\u2032 N",
         "bounds": [
           -123.7,
           38.03333333333333,
@@ -41,7 +41,7 @@
         "hidden_targets": [
           {
             "id": "salmon",
-            "reason": "The reviewed September–October 2026 ocean salmon opening starts at 38°02′ N near Point Reyes and does not establish an opening north of that line.",
+            "reason": "The reviewed September\u2013October 2026 ocean salmon opening starts at 38\u00b002\u2032 N near Point Reyes and does not establish an opening north of that line.",
             "source_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco"
           }
         ]
@@ -68,7 +68,7 @@
     ]
   },
   "boat": {
-    "name": "2019 Parker 23 · planning profile",
+    "name": "2019 Parker 23 \u00b7 planning profile",
     "cruise_knots": 20,
     "bottom_depth_limit_ft": 200
   },
@@ -107,12 +107,12 @@
     "tide_name": "Bodega Harbor entrance predictions",
     "tide_note": "NOAA subordinate tide predictions only; no live water-level, entrance-current or bottom-drift observation.",
     "airport": "KSTS",
-    "airport_name": "Charles M. Schulz–Sonoma County Airport · inland reference",
+    "airport_name": "Charles M. Schulz\u2013Sonoma County Airport \u00b7 inland reference",
     "nearshore_buoy": "46013",
-    "nearshore_buoy_name": "Bodega Bay · offshore buoy",
-    "nearshore_buoy_note": "At 38.235°N, 123.317°W in 128 m water; not a harbor entrance sensor.",
+    "nearshore_buoy_name": "Bodega Bay \u00b7 offshore buoy",
+    "nearshore_buoy_note": "At 38.235\u00b0N, 123.317\u00b0W in 128 m water; not a harbor entrance sensor.",
     "offshore_buoy": "46013",
-    "offshore_buoy_name": "Bodega Bay · same station, not independent",
+    "offshore_buoy_name": "Bodega Bay \u00b7 same station, not independent",
     "offshore_buoy_note": "Same station identity as nearshore reference; do not count as a second observation."
   },
   "mpa": {
@@ -184,6 +184,7 @@
       "noaa-survey-catches"
     ],
     "sea-temperature": [
+      "noaa-blended-sst",
       "mur-sst",
       "noaa-wcofs"
     ],
@@ -228,15 +229,15 @@
     },
     "substrate": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "groundtruth": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "kelp": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "protected-areas": {
       "status": "partial",
@@ -244,19 +245,19 @@
     },
     "regulations": {
       "status": "partial",
-      "reason": "Six 2026 outer-coast species profiles have a hash-bound San Francisco review, including the 38°02′ N salmon latitude gate. This draft region has no first daily rule-health feed or date-and-position clearance."
+      "reason": "Six 2026 outer-coast species profiles have a hash-bound San Francisco review, including the 38\u00b002\u2032 N salmon latitude gate. This draft region has no first daily rule-health feed or date-and-position clearance."
     },
     "dynamic-closures": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wind-forecast": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wave-forecast": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wave-observations": {
       "status": "partial",
@@ -264,7 +265,7 @@
     },
     "weather-observations": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "tides": {
       "status": "partial",
@@ -272,51 +273,51 @@
     },
     "surface-currents": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "subsurface-ocean": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "sea-temperature": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "chlorophyll": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "charter-identity": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "ais-history": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "harbor-access": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wind-ensemble": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wave-ensemble": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "forecast-verification": {
       "status": "research",
-      "reason": "Bodega–Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     }
   },
   "assets": {
@@ -340,12 +341,12 @@
     "Tomales Bay",
     "Point Reyes"
   ],
-  "coverage_note": "Draft Bodega Bay–Point Reyes package. Original-cell hard-bottom context is historical research only. No reviewed target, season status, route or local forecast is published.",
+  "coverage_note": "Draft Bodega Bay\u2013Point Reyes package. Original-cell hard-bottom context is historical research only. No reviewed target, season status, route or local forecast is published.",
   "landing_note": "Bodega buoy observations and harbor tide predictions do not locate fish or clear the harbor approach.",
   "jurisdiction_id": "california-san-francisco",
   "ecology_profile": "california-northern",
   "pipeline_sources": {
-    "sst": "mur-sst",
+    "sst": "noaa-blended-sst",
     "chlorophyll": "modis-chlorophyll",
     "currents": "ioos-hfr"
   },
@@ -359,12 +360,12 @@
         "tide_name": "Bodega Harbor entrance predictions",
         "tide_note": "NOAA subordinate tide predictions only; no live water-level, entrance-current or bottom-drift observation.",
         "airport": "KSTS",
-        "airport_name": "Charles M. Schulz–Sonoma County Airport · inland reference",
+        "airport_name": "Charles M. Schulz\u2013Sonoma County Airport \u00b7 inland reference",
         "nearshore_buoy": "46013",
-        "nearshore_buoy_name": "Bodega Bay · offshore buoy",
-        "nearshore_buoy_note": "At 38.235°N, 123.317°W in 128 m water; not a harbor entrance sensor.",
+        "nearshore_buoy_name": "Bodega Bay \u00b7 offshore buoy",
+        "nearshore_buoy_note": "At 38.235\u00b0N, 123.317\u00b0W in 128 m water; not a harbor entrance sensor.",
         "offshore_buoy": "46013",
-        "offshore_buoy_name": "Bodega Bay · same station, not independent",
+        "offshore_buoy_name": "Bodega Bay \u00b7 same station, not independent",
         "offshore_buoy_note": "Same station identity as nearshore reference; do not count as a second observation."
       },
       "marine_zones": {
@@ -379,12 +380,12 @@
         "tide_name": "Point Reyes in Drakes Bay predictions",
         "tide_note": "NOAA Point Reyes tide predictions are a Drakes Bay reference only; they do not predict Bodega Harbor entrance currents, offshore bottom drift or safe passage.",
         "airport": "KSTS",
-        "airport_name": "Charles M. Schulz–Sonoma County Airport · distant inland reference",
+        "airport_name": "Charles M. Schulz\u2013Sonoma County Airport \u00b7 distant inland reference",
         "nearshore_buoy": "46013",
-        "nearshore_buoy_name": "Bodega Bay · distant offshore reference",
+        "nearshore_buoy_name": "Bodega Bay \u00b7 distant offshore reference",
         "nearshore_buoy_note": "North of Point Reyes; not a local reef or entrance sensor.",
         "offshore_buoy": "46026",
-        "offshore_buoy_name": "San Francisco · distant offshore reference",
+        "offshore_buoy_name": "San Francisco \u00b7 distant offshore reference",
         "offshore_buoy_note": "South of Point Reyes; a separate station but not a local reef or entrance sensor."
       },
       "marine_zones": {

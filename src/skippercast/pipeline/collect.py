@@ -186,6 +186,10 @@ def source(ident, name, kind, url, max_age, loader, now, previous=None, client_f
 
 def grid_loader(kind, bounds=None, config=None):
     bounds = BOUNDS if bounds is None else bounds
+    if config and config.get("adapter") == "noaa-ncss-sst":
+        if kind != "sst": raise ValueError("NOAA NCSS adapter only supports SST")
+        from .noaa_sst import fetch
+        return lambda client: fetch(client, bounds)
     dataset, variables, stride, _ = DATASETS[kind]
     base_url = ERDDAP
     if config:
@@ -253,7 +257,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     local_day = now.astimezone(ZoneInfo(region["timezone"])).date()
     jobs = []
     for kind, request in config["grids"].items():
-        jobs.append((kind, request["name"], "grid", f"{request['base_url']}/info/{request['dataset']}/index.html",
+        jobs.append((kind, request["name"], "grid", request["documentation_url"],
                      request["max_age_hours"], grid_loader(kind, bounds, request)))
     for ident, station, spectral in [("buoy-"+stations["nearshore_buoy"], stations["nearshore_buoy"], False), ("buoy-"+stations["nearshore_buoy"]+"-swell", stations["nearshore_buoy"], True), ("buoy-"+stations["offshore_buoy"], stations["offshore_buoy"], False)]:
         url = f"https://www.ndbc.noaa.gov/data/realtime2/{station}.{'spec' if spectral else 'txt'}"
