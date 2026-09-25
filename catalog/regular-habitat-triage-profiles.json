@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "point-conception-original-regular-bag",
+      "context_scope": "central-native-noaa-usgs-hard-bottom-context",
+      "source_review_filename": "point-conception-native-hard-review-summary.json",
+      "enc_scope": "point-conception-hard-context",
+      "survey_ids": ["H11952", "H11953"],
+      "expected_outlines": 21,
+      "review_buffer_m": 100,
+      "minimum_display_area_m2": 2500,
+      "maximum_original_depth_ft": 200,
+      "status": "research-priority-only"
+    },
+    {
+      "id": "gaviota-original-regular-bag",
+      "context_scope": "southern-native-noaa-usgs-hard-bottom-context",
+      "source_review_filename": "gaviota-native-hard-review-summary.json",
+      "enc_scope": "gaviota-hard-context",
+      "survey_ids": ["H11951"],
+      "expected_outlines": 12,
+      "review_buffer_m": 100,
+      "minimum_display_area_m2": 2500,
+      "maximum_original_depth_ft": 200,
+      "status": "research-priority-only"
+    }
+  ]
+}

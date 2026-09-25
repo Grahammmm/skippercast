@@ -107,7 +107,7 @@ jobs:
       - name: Verify research-only ENC outputs stay unpublished
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_enc_hazard_refresh tests.test_habitat_shortlist_closures -v
+        run: python -m unittest tests.test_enc_hazard_refresh tests.test_habitat_shortlist_closures tests.test_regular_habitat_triage -v
       - name: Refresh bounded Cape Mendocino, Point Conception and Gaviota chart-danger screens
         run: |
           python scripts/refresh_enc_hazards.py --scope cape-mendocino-hard-context --output var/review/enc-hazards-cape-mendocino.geojson
@@ -125,6 +125,22 @@ jobs:
           python scripts/triage_original_habitat_outlines.py
           --enc var/review/cape-mendocino-enc-context-review.json
           --output var/review/cape-mendocino-original-habitat-site-review-queue.json
+      - name: Rebuild unpublished Point Conception and Gaviota original-cell site-review queues
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/triage_regular_habitat_outlines.py \
+            --context dist/data/point-conception-native-hard-context.geojson \
+            --summary dist/data/point-conception-native-hard-review-summary.json \
+            --enc var/review/point-conception-enc-context-review.json \
+            --profile-id point-conception-original-regular-bag \
+            --output var/review/point-conception-regular-site-review-queue.json
+          python scripts/triage_regular_habitat_outlines.py \
+            --context dist/data/gaviota-native-hard-context.geojson \
+            --summary dist/data/gaviota-native-hard-review-summary.json \
+            --enc var/review/gaviota-enc-context-review.json \
+            --profile-id gaviota-original-regular-bag \
+            --output var/review/gaviota-regular-site-review-queue.json
       - name: Recheck shortlisted outlines against fresh complete CDFW MPAs and NOAA GEAs
         env:
           PYTHONPATH: src:.
@@ -136,6 +152,20 @@ jobs:
             --coastal var/review/cape-current/coastal/latest.json \
             --federal var/review/cape-current/noaa-federal-areas.json \
             --output var/review/cape-mendocino-fresh-closure-audit.json
+          python scripts/audit_habitat_shortlist_closures.py \
+            --queue var/review/point-conception-regular-site-review-queue.json \
+            --context dist/data/point-conception-native-hard-context.geojson \
+            --context-scope central-native-noaa-usgs-hard-bottom-context \
+            --coastal var/review/cape-current/coastal/latest.json \
+            --federal var/review/cape-current/noaa-federal-areas.json \
+            --output var/review/point-conception-fresh-closure-audit.json
+          python scripts/audit_habitat_shortlist_closures.py \
+            --queue var/review/gaviota-regular-site-review-queue.json \
+            --context dist/data/gaviota-native-hard-context.geojson \
+            --context-scope southern-native-noaa-usgs-hard-bottom-context \
+            --coastal var/review/cape-current/coastal/latest.json \
+            --federal var/review/cape-current/noaa-federal-areas.json \
+            --output var/review/gaviota-fresh-closure-audit.json
       - name: Refresh all three Bodega original-rock chart-danger scopes
         run: |
           python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson
@@ -175,6 +205,10 @@ jobs:
             var/review/cape-mendocino-enc-context-review.json
             var/review/cape-mendocino-original-habitat-site-review-queue.json
             var/review/cape-mendocino-fresh-closure-audit.json
+            var/review/point-conception-regular-site-review-queue.json
+            var/review/point-conception-fresh-closure-audit.json
+            var/review/gaviota-regular-site-review-queue.json
+            var/review/gaviota-fresh-closure-audit.json
             var/review/point-conception-enc-context-review.json
             var/review/gaviota-enc-context-review.json
             var/review/point-reyes-tomales-enc-current.geojson
