@@ -114,7 +114,7 @@
       ]
     },
     "rules-tuna-federal": {
-      "name": "Federal recreational Pacific tuna rules \u00b7 50 CFR 660.721",
+      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "keywords": [
         "660.721",
@@ -126,7 +126,7 @@
       "section": "660.721"
     },
     "rules-salmon-pdf": {
-      "name": "CDFW 2026 ocean salmon season flyer \u00b7 August update",
+      "name": "CDFW 2026 ocean salmon season flyer · August update",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "format": "pdf"
     },
@@ -136,11 +136,35 @@
       "format": "pdf"
     },
     "mpa-piedras": {
-      "name": "CDFW Piedras Blancas MPAs \u00b7 San Simeon",
+      "name": "CDFW Piedras Blancas MPAs · San Simeon",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
       "keywords": [
         "Piedras",
         "632"
+      ]
+    },
+    "mpa-vandenberg": {
+      "name": "CDFW Vandenberg State Marine Reserve",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Vandenberg",
+      "keywords": [
+        "Vandenberg",
+        "632"
+      ]
+    },
+    "mpa-point-conception": {
+      "name": "CDFW Point Conception State Marine Reserve",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception",
+      "keywords": [
+        "Conception",
+        "632"
+      ]
+    },
+    "access-vandenberg-maritime": {
+      "name": "Vandenberg Space Force Base maritime danger-zone updates",
+      "url": "https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/",
+      "keywords": [
+        "Danger Zone 4",
+        "Vessel Safety Areas"
       ]
     }
   },
@@ -151,7 +175,8 @@
     "www.ecfr.gov",
     "fgc.ca.gov",
     "www.nps.gov",
-    "www.govinfo.gov"
+    "www.govinfo.gov",
+    "www.vandenberg.spaceforce.mil"
   ],
   "required_source_ids": [
     "rules-inseason",

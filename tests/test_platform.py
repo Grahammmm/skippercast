@@ -44,7 +44,9 @@ class RegionalContracts(TestCase):
         search = read_json(REPO / "dist" / region["assets"]["search_plans"])
         self.assertEqual(region["status"], "preview")
         self.assertEqual(atlas["targets"], [])
-        self.assertEqual(search["features"], [])
+        self.assertEqual(len(search["features"]), 17)
+        self.assertTrue(all(not f["properties"]["exportable"] and not f["properties"]["depth_qualified"]
+                            for f in search["features"]))
         self.assertIn("salmon", [item["id"] for item in region["map"]["local_areas"][0]["hidden_targets"]])
         self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
 

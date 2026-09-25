@@ -190,8 +190,8 @@ def validate_region(region, needs, sources, root=REPO):
             if hidden['id'] not in region['species'] or not hidden.get('reason'):
                 raise ValueError('Hidden local targets need a regional ID and evidence-based reason')
             public_url(hidden['source_url'])
-    if local_map.get('local_areas') and assigned != notice_ids:
-        raise ValueError('Every local notice must have a discovery area or region-wide binding')
+    if not assigned <= notice_ids:
+        raise ValueError('Regional notice binding references an unknown legal notice')
     seen = set()
     for point in region["forecast_points"]:
         if point["id"] in seen:

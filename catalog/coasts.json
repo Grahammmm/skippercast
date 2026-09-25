@@ -160,7 +160,8 @@
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
       "packages": [
         "morro-bay",
-        "cambria-san-simeon"
+        "cambria-san-simeon",
+        "point-arguello-conception"
       ],
       "targets": [
         "reef",

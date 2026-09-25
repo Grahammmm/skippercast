@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-central",
+  "revision": "2026-09-24-central-point-arguello-conception-1",
+  "reviewed_at": "2026-09-25T04:05:42Z",
+  "record_path": "jurisdictions/reviews/2026-09-24-california-central-point-arguello-conception.json",
+  "rules_content_sha256": "2cb4015745090a8250cebebd4991e4ddf429783c0bedf70dbd3379858acd40d7",
+  "reviewed_species": [
+    "lingcod",
+    "rockfish",
+    "halibut",
+    "salmon",
+    "albacore",
+    "bluefin",
+    "dungeness"
+  ],
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    },
+    {
+      "id": "point-arguello-conception",
+      "fishing_bounds": [
+        -121.15,
+        34.45,
+        -120.38,
+        35.03
+      ]
+    }
+  ],
+  "scope": "Reviewed the Central jurisdiction expansion from Point Sal to the 34°27 N management line. The two local no-take reserves are in the reviewed MPA snapshot. Vandenberg maritime live access is held because the official collector returned 403. No fishing target or trip clearance follows.",
+  "sources": {
+    "rules-central": {
+      "decision": "approve",
+      "content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-buchon": {
+      "decision": "approve",
+      "content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-cambria": {
+      "decision": "approve",
+      "content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-piedras": {
+      "decision": "approve",
+      "content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-vandenberg": {
+      "decision": "approve",
+      "content_sha256": "8c944b71cfcf164abb33c1f71cd43d76e829cee4a41a1d2d92dae53e55ee80f6",
+      "note": "Read the official CDFW Vandenberg SMR page and coordinates. It prohibits take and describes restricted public entry. Its 32.91 square miles are a reserve, not fishable reef habitat."
+    },
+    "mpa-point-conception": {
+      "decision": "approve",
+      "content_sha256": "94229a4fb98b2bca09328bed318ada36372ea9c4479c371c5142ae50c6b3f4cb",
+      "note": "Read the official CDFW Point Conception SMR page and coordinates. It prohibits take in the mapped reserve; the regional 34°27 N management line does not erase this exclusion."
+    },
+    "access-vandenberg-maritime": {
+      "decision": "hold",
+      "content_sha256": null,
+      "note": "Held: this official Vandenberg maritime-update URL returned HTTP 403 from the scheduled collector. The public official page says Danger Zone 4 is always closed and launch zones change, but there is no fresh adapter receipt or live clearance."
+    }
+  }
+}

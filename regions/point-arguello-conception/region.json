@@ -1,0 +1,453 @@
+{
+  "schema_version": 1,
+  "id": "point-arguello-conception",
+  "name": "Point Sal to Point Conception",
+  "status": "preview",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
+  "bounds": [
+    -121.25,
+    34.45,
+    -120.35,
+    35.07
+  ],
+  "fishing_bounds": [
+    -121.15,
+    34.45,
+    -120.38,
+    35.03
+  ],
+  "map": {
+    "center": [
+      34.7,
+      -120.69
+    ],
+    "zoom": 10,
+    "locality_method": "Central management area ends at 34\u00b027\u2032 N. This browse extent is not a legal boundary, access clearance, or fishing-site recommendation.",
+    "region_notice_ids": [
+      "vandenberg-conception"
+    ],
+    "discovery_bounds": [
+      -121.25,
+      34.45,
+      -120.35,
+      35.07
+    ],
+    "local_areas": [],
+    "focus_areas": [
+      {
+        "id": "point-sal",
+        "name": "Point Sal outer coast",
+        "bounds": [
+          -121.12,
+          34.85,
+          -120.52,
+          35.03
+        ],
+        "forecast_point": "point-sal"
+      },
+      {
+        "id": "point-arguello",
+        "name": "Point Arguello",
+        "bounds": [
+          -120.82,
+          34.53,
+          -120.43,
+          34.75
+        ],
+        "forecast_point": "point-arguello"
+      },
+      {
+        "id": "point-conception",
+        "name": "Point Conception research",
+        "bounds": [
+          -120.64,
+          34.45,
+          -120.38,
+          34.57
+        ],
+        "forecast_point": "point-conception"
+      }
+    ]
+  },
+  "harbor": {
+    "name": "Port San Luis \u00b7 distant departure reference",
+    "latitude": 35.1767,
+    "longitude": -120.76,
+    "entrance_note": "Port San Luis is north of this preview. Its tide predictions do not predict bar currents or establish a safe Point Arguello route. Recheck the actual harbor and Vandenberg maritime status before travel.",
+    "information_url": "https://www.portsanluis.com/",
+    "watch_keywords": [
+      "Port San Luis",
+      "Point Arguello",
+      "Vandenberg"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23 \u00b7 planning profile",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "point-sal",
+      "name": "Off Point Sal",
+      "latitude": 34.9,
+      "longitude": -120.82,
+      "context": "north-of-sal"
+    },
+    {
+      "id": "point-arguello",
+      "name": "Off Point Arguello",
+      "latitude": 34.61,
+      "longitude": -120.76,
+      "context": "south-of-sal"
+    },
+    {
+      "id": "point-conception",
+      "name": "Off Point Conception",
+      "latitude": 34.5,
+      "longitude": -120.57,
+      "context": "south-of-sal"
+    },
+    {
+      "id": "offshore",
+      "name": "Santa Maria offshore reference",
+      "latitude": 34.82,
+      "longitude": -121.06,
+      "context": "north-of-sal",
+      "offshore": true
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ645",
+    "offshore": "PZZ670",
+    "point-sal-south": "PZZ673"
+  },
+  "stations": {
+    "tide": "9412110",
+    "tide_name": "Port San Luis",
+    "tide_note": "Port San Luis is a distant water-level reference, not Point Arguello bottom current or launch-zone clearance.",
+    "airport": "KSMX",
+    "airport_name": "Santa Maria airport \u00b7 inland reference",
+    "nearshore_buoy": "46215",
+    "nearshore_buoy_name": "Diablo Canyon \u00b7 distant wave reference",
+    "offshore_buoy": "46011",
+    "offshore_buoy_name": "Santa Maria \u00b7 21 NM NW of Point Arguello"
+  },
+  "mpa": {
+    "bounds": [
+      -121.25,
+      34.45,
+      -120.35,
+      35.07
+    ],
+    "minimum_features": 1
+  },
+  "species": [
+    "reef",
+    "halibut",
+    "salmon",
+    "dungeness",
+    "albacore",
+    "bluefin"
+  ],
+  "source_names": {
+    "H11952": "NOAA H11952 / USGS hard-bottom research",
+    "H11953": "NOAA H11953 / USGS hard-bottom research"
+  },
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "usgs-camera-samples",
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin"
+    ],
+    "charter-identity": [],
+    "ais-history": [
+      "noaa-ais"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "partial",
+      "reason": "Original 2008 NOAA H11952/H11953 MLLW BAG cells support bounded historical research outlines off Point Conception, not current chart or route clearance."
+    },
+    "substrate": {
+      "status": "partial",
+      "reason": "Original USGS 2 m hard/rugged class intersects screened native BAG cells only within a small dated footprint; it is not continuous sector coverage."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "protected-areas": {
+      "status": "partial",
+      "reason": "A dated CDFW MPA and federal GEA screen excludes mapped reserves in the research layer. Current full geometry and trip-time access remain separate gates."
+    },
+    "regulations": {
+      "status": "partial",
+      "reason": "Central management-area cards and the local Vandenberg/Point Conception notices are reviewed; in-season changes and exact position still need fresh checks."
+    },
+    "dynamic-closures": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "wind-forecast": {
+      "status": "partial",
+      "reason": "Local GFS and IFS samples are configured; first matched-hour collection is not yet verified."
+    },
+    "wave-forecast": {
+      "status": "partial",
+      "reason": "Local GFS Wave and WAM samples are configured; PZZ673 and return-route conditions need first live comparison."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "NDBC 46011 is offshore; 46215 is a distant Diablo Canyon reference, not a Point Conception measurement."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "NDBC 46011 offshore, PTGC1 Point Arguello coastal winds and KSMX inland conditions do not establish ground or entrance conditions."
+    },
+    "tides": {
+      "status": "partial",
+      "reason": "NOAA Port San Luis water-level predictions are a distant reference, not local bottom-current or launch-zone timing."
+    },
+    "surface-currents": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "sea-temperature": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "chlorophyll": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "charter-identity": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "harbor-access": {
+      "status": "research",
+      "reason": "Vandenberg danger zone 4 is always closed and other zones change during operations; the official live maritime update or Frontier Control must be checked. No automatic clearance is established."
+    },
+    "wind-ensemble": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "wave-ensemble": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    },
+    "forecast-verification": {
+      "status": "research",
+      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+    }
+  },
+  "assets": {
+    "atlas": "regions/point-arguello-conception/atlas.json",
+    "habitats": "regions/point-arguello-conception/habitats.json",
+    "protected_areas": "regions/point-arguello-conception/protected-areas.geojson",
+    "regulations": "data/regulations.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/point-arguello-conception/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/point-arguello-conception/ecology.json",
+    "search_plans": "regions/point-arguello-conception/search-plans.json",
+    "survey_habitat": "regions/point-arguello-conception/survey-habitat.geojson"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/point-arguello-conception/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-arguello-conception/latest.json",
+  "landing_names": [
+    "Point Sal",
+    "Point Arguello",
+    "Point Conception"
+  ],
+  "coverage_note": "Central Coast research preview. Four larger historical hard-bottom outlines are displayed from 21 NOAA/USGS context candidates; zero fishing targets, routes, drifts or exports are qualified.",
+  "landing_note": "The dated seabed outlines are not verified catch sites. Vandenberg launch zones and the Vandenberg and Point Conception no-take reserves need trip-time checks.",
+  "jurisdiction_id": "california-central",
+  "ecology_profile": "california-central",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-arguello-conception/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-arguello-conception/habitat-dynamics.json",
+  "contexts": {
+    "north-of-sal": {
+      "name": "Point Sal north",
+      "marine_zones": {
+        "coastal": "PZZ645",
+        "offshore": "PZZ670"
+      },
+      "stations": {
+        "tide": "9412110",
+        "tide_name": "Port San Luis \u00b7 distant reference",
+        "tide_note": "Water level only; no bottom-current or route clearance.",
+        "airport": "KSMX",
+        "airport_name": "Santa Maria inland",
+        "nearshore_buoy": "46215",
+        "nearshore_buoy_name": "Diablo Canyon \u00b7 distant reference",
+        "offshore_buoy": "46011",
+        "offshore_buoy_name": "Santa Maria offshore"
+      }
+    },
+    "south-of-sal": {
+      "name": "Point Arguello and Conception",
+      "marine_zones": {
+        "coastal": "PZZ673",
+        "offshore": "PZZ673"
+      },
+      "stations": {
+        "tide": "9412110",
+        "tide_name": "Port San Luis \u00b7 distant reference",
+        "tide_note": "Water level only; no bottom-current or route clearance.",
+        "airport": "KSMX",
+        "airport_name": "Santa Maria inland",
+        "nearshore_buoy": "46215",
+        "nearshore_buoy_name": "Diablo Canyon \u00b7 distant reference",
+        "offshore_buoy": "46011",
+        "offshore_buoy_name": "Santa Maria offshore"
+      }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46011",
+        "latitude": 34.937,
+        "longitude": -120.999,
+        "name": "Santa Maria offshore",
+        "variables": [
+          "wave_height",
+          "wind_speed"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46011"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-central",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  }
+}

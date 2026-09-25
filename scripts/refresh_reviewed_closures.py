@@ -32,10 +32,17 @@ def fetch(url):
 
 
 def refresh(region):
-    base = ROOT / "dist" / "regions" / region
+    config = read_json(ROOT / "regions" / region / "region.json")
+    if config.get("id") != region:
+        raise ValueError("Closure package identity mismatch")
+    assets = config["assets"]
     results = []
-    for filename in ("protected-areas.geojson", "groundfish-exclusions.geojson"):
-        path = base / filename
+    for key, filename in (("protected_areas", "protected-areas.geojson"), ("closures", "groundfish-exclusions.geojson")):
+        if not assets.get(key):
+            continue
+        path = ROOT / "dist" / assets[key]
+        if path.name != filename:
+            raise ValueError("Unexpected closure asset name: " + key)
         snapshot = read_json(path)
         if snapshot.get("region_id") != region or not snapshot.get("features"):
             raise ValueError("Wrong-region or empty closure snapshot: " + filename)
