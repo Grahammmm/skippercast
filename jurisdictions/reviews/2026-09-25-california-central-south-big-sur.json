@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-central",
+  "reviewed_species": [
+    "lingcod",
+    "rockfish",
+    "halibut",
+    "salmon",
+    "albacore",
+    "bluefin",
+    "dungeness"
+  ],
+  "revision": "2026-09-25-central-south-big-sur-area-review",
+  "reviewed_at": "2026-09-25T08:09:03Z",
+  "record_path": "jurisdictions/reviews/2026-09-25-california-central-south-big-sur.json",
+  "rules_content_sha256": "eededdb4d9bf2f2a665736c2d93761c0012803d4e8e8e98f1f1c1025077f0122",
+  "reviewed_regions": [
+    {
+      "id": "cambria-san-simeon",
+      "fishing_bounds": [
+        -121.32,
+        35.53,
+        -121.06,
+        35.66
+      ]
+    },
+    {
+      "id": "morro-bay",
+      "fishing_bounds": [
+        -121.18,
+        35.05,
+        -120.72,
+        35.56
+      ]
+    },
+    {
+      "id": "point-arguello-conception",
+      "fishing_bounds": [
+        -121.15,
+        34.45,
+        -120.38,
+        35.03
+      ]
+    },
+    {
+      "id": "santa-cruz-monterey-bay",
+      "fishing_bounds": [
+        -122.68,
+        36.601,
+        -121.72,
+        37.182
+      ]
+    },
+    {
+      "id": "monterey-point-sur",
+      "fishing_bounds": [
+        -122.34,
+        36.301,
+        -121.66,
+        36.624
+      ]
+    },
+    {
+      "id": "big-sur-coast",
+      "fishing_bounds": [
+        -122.19,
+        35.901,
+        -121.46,
+        36.299
+      ]
+    },
+    {
+      "id": "south-big-sur-san-simeon",
+      "fishing_bounds": [
+        -121.99,
+        35.661,
+        -121.21,
+        35.899
+      ]
+    }
+  ],
+  "scope": "Rechecked unchanged Central species-rule and Piedras Blancas SMR/SMCA fingerprints for South Big Sur–San Simeon. CDFW SMR prohibits take; SMCA allows salmon/albacore only. Both official polygons are excluded conservatively. Vandenberg 403 is held outside this fishing footprint. No harbor, route, bottom target or live trip clearance is approved.",
+  "sources": {
+    "rules-central": {
+      "decision": "approve",
+      "content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-buchon": {
+      "decision": "approve",
+      "content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-cambria": {
+      "decision": "approve",
+      "content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
+      "note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
+    },
+    "mpa-piedras": {
+      "decision": "approve",
+      "content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
+      "note": "Rechecked unchanged CDFW Piedras Blancas page and its coordinates. SMR is no-take; offshore SMCA allows salmon and albacore only. Both remain excluded from automatic target geometry and exports."
+    },
+    "mpa-vandenberg": {
+      "decision": "approve",
+      "content_sha256": "8c944b71cfcf164abb33c1f71cd43d76e829cee4a41a1d2d92dae53e55ee80f6",
+      "note": "Read the official CDFW Vandenberg SMR page and coordinates. It prohibits take and describes restricted public entry. Its 32.91 square miles are a reserve, not fishable reef habitat."
+    },
+    "mpa-point-conception": {
+      "decision": "approve",
+      "content_sha256": "94229a4fb98b2bca09328bed318ada36372ea9c4479c371c5142ae50c6b3f4cb",
+      "note": "Read the official CDFW Point Conception SMR page and coordinates. It prohibits take in the mapped reserve; the regional 34°27 N management line does not erase this exclusion."
+    },
+    "access-vandenberg-maritime": {
+      "decision": "hold",
+      "content_sha256": null,
+      "note": "Held: this official Vandenberg maritime-update URL returned HTTP 403 from the scheduled collector. The public official page says Danger Zone 4 is always closed and launch zones change, but there is no fresh adapter receipt or live clearance."
+    },
+    "mpa-ano-greyhound": {
+      "decision": "approve",
+      "content_sha256": "93236ef6e66f716f825f9ddb70c1ceb439e76d593101dcdf8652b23509759228",
+      "note": "Inspected CDFW Año Nuevo SMR and Greyhound Rock SMCA page: Año Nuevo reserve prohibits take; Greyhound Rock has specified hook-and-line shoreline finfish, giant kelp, salmon and market squid exceptions. SkipperCast excludes both mapped areas from all fishing targets and exports."
+    },
+    "mpa-soquel-canyon": {
+      "decision": "approve",
+      "content_sha256": "955e36e12c5c9de0667db2d4b7d65563c9f34275e495646e73c5de0d6e550c92",
+      "note": "Inspected CDFW Soquel Canyon SMCA page and coordinates: pelagic finfish take is excepted, while other marine take is prohibited. The app conservatively excludes the mapped area from every target and export."
+    },
+    "mpa-portuguese-ledge": {
+      "decision": "approve",
+      "content_sha256": "07f5b2b7b69a90358067a0ac0f4bb4bea65925e3967368ef6205586a70da042a",
+      "note": "Inspected CDFW Portuguese Ledge SMCA page and coordinates: pelagic finfish take is permitted and non-pelagic take is prohibited. The app conservatively excludes the mapped area from every target and export."
+    },
+    "mpa-carmel-pinnacles": {
+      "decision": "approve",
+      "content_sha256": "a86e66dff82348a43b4838ca0b3053975b5912e2847769dc4efa4589be1e97a4",
+      "note": "Read CDFW Carmel Pinnacles SMR page and coordinates: no take is allowed. Granite spires are within the reserve and are not a fishing target."
+    },
+    "mpa-carmel-bay": {
+      "decision": "approve",
+      "content_sha256": "a2f4ba2627b1d6c3b2d8018512f06aad9a918378ee4bac92939128c472c43c16",
+      "note": "Read CDFW Carmel Bay SMCA page and coordinates: recreational finfish take may be allowed, subject to other limits. Exclude the polygon from all app targets conservatively."
+    },
+    "mpa-point-lobos": {
+      "decision": "approve",
+      "content_sha256": "3aa2c0f123cc9075717f6a45505de27f50eb4d96eca4549c7ecaf42d18fe1549",
+      "note": "Read CDFW Point Lobos SMR and SMCA page: reserve prohibits take and conservation area has stated exceptions. Exclude both mapped polygons from targets."
+    },
+    "mpa-point-sur": {
+      "decision": "approve",
+      "content_sha256": "0d9e96fde5a3793268b582f4907470a7752f9dbbb0fe88f17f6d48acdfcada8d",
+      "note": "Read CDFW Point Sur SMR and SMCA page: reserve prohibits take; conservation area allows salmon and albacore only. Exclude both polygons."
+    },
+    "mpa-ricketts-lovers": {
+      "decision": "approve",
+      "content_sha256": "adc0443d36fcd0dcddff079f32641d40cbab044033b996ce7451ee66194b4bec",
+      "note": "Read CDFW Ricketts and Lovers Point page: reserve prohibits take; Ricketts SMCA has restricted hook-and-line finfish exception. Exclude both mapped polygons."
+    },
+    "mpa-asilomar": {
+      "decision": "approve",
+      "content_sha256": "632da53510794782c01d2a4746e8fdb0f87ac87bb9205aedd3e273bb31b20602",
+      "note": "Read CDFW Asilomar and Pacific Grove page: Asilomar reserve prohibits take; Pacific Grove SMCA permits finfish with other limits. Exclude all mapped polygon portions."
+    },
+    "mpa-big-creek": {
+      "decision": "approve",
+      "content_sha256": "65d1e5cf8205c1cf00263f9cbe0ce0cd9db914187bbc3255001f5506c27b7e69",
+      "note": "Read CDFW Big Creek SMR and SMCA page, coordinates and distinct permissions. SMR prohibits take and generally anchoring/mooring shallower than 10 fathoms except stated cases; SMCA permits salmon and albacore. Both polygons are excluded from app targets."
+    }
+  }
+}

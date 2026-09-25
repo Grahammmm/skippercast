@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "csumb-bss-block13-native-candidate",
+  "name": "Big Sur South Block 13 original 5 m bathymetry and derived terrain class",
+  "sector_ids": ["big-sur"],
+  "need_ids": ["bathymetry", "substrate"],
+  "producer": {"name": "CSU Monterey Bay Seafloor Mapping Lab", "url": "https://csumb.edu/undersea/sfml-data-library/"},
+  "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz",
+  "access_status": "accessible",
+  "variables": ["bathymetry_elevation", "derived_terrain_class"],
+  "units": {"bathymetry_elevation": "m NAVD88 Geoid09 elevation", "derived_terrain_class": "original categorical cells, rough/smooth and depth band"},
+  "rights": {"license": null, "terms_url": "https://csumb.edu/undersea/sfml-data-library/", "redistribution_reviewed": false},
+  "spatial": {
+    "bounds": [-121.91839314508177, 36.12079899087153, -121.67063865716908, 36.251583407662594],
+    "resolution_m": 5,
+    "horizontal_crs": "EPSG:26910",
+    "vertical_datum": "NAVD88 Geoid09",
+    "footprint_kind": "valid-cell-envelope",
+    "footprint_url": null,
+    "resolution_basis": "inspected",
+    "native_depth_screen": {"limit_ft": 200, "shallowest_depth_m": 78.32, "cells_within_limit": 0, "datum": "NAVD88 Geoid09", "basis": "original-native-grid; no chart-datum conversion"}
+  },
+  "temporal": {"source_time": null, "checked_at": "2026-09-25T08:01:47Z", "update_cadence": "Static 2011 acquisition; monthly archive integrity and catalog check", "coverage_start": "2011-09-01", "coverage_end": "2011-12-08"},
+  "provenance": {
+    "access_service": "NOAA NCEI archive of original CSUMB survey; same source as the terrain class",
+    "raw_sha256": "3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49",
+    "transformations": ["Opened SHA-256-pinned original ArcInfo bathymetry and habitat grids; counted valid cells and computed their envelope and value range without datum conversion or fishing-target generation."]
+  },
+  "evidence": [
+    {"url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html", "supports": "Original Block 13 survey identity, cruise extent and products."},
+    {"url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml", "supports": "Producer metadata identifies NAVD88 Geoid09, survey methods and unresolved access/use constraints."},
+    {"url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz", "supports": "Original archive SHA-256 3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49; 762,998 valid 5 m bathymetry cells, maximum elevation -78.32 m NAVD88. Exact audit: dist/data/csumb-bss-native-source-review.json."}
+  ],
+  "limitations": [
+    "No valid Block 13 cell is within a 200 ft depth ceiling; its shallowest NAVD88 elevation is -78.32 m before chart-datum conversion. It cannot yield a within-limit bottom-fishing point.",
+    "The valid-cell envelope includes unsurveyed holes and is not an exact habitat polygon or safe route.",
+    "Terrain class derives from the bathymetry and is not independent rock or fish evidence.",
+    "Producer redistribution rights, chart datum/uncertainty, current hazards, MPAs and access remain unresolved."
+  ]
+}

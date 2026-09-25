@@ -78,6 +78,18 @@ def validate_candidate(data, root=REPO):
         raise ValueError("Unknown resolution basis")
     if spatial.get("footprint_url"):
         public_url(spatial["footprint_url"])
+    screen = spatial.get("native_depth_screen")
+    if screen is not None:
+        if set(screen) != {"limit_ft", "shallowest_depth_m", "cells_within_limit", "datum", "basis"}:
+            raise ValueError("Native depth screen fields are incomplete")
+        for key in ("limit_ft", "shallowest_depth_m"):
+            value = screen[key]
+            if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or value < 0 or (key == "limit_ft" and value == 0):
+                raise ValueError("Native depth screen has invalid values")
+        if isinstance(screen["cells_within_limit"], bool) or not isinstance(screen["cells_within_limit"], int) or screen["cells_within_limit"] < 0:
+            raise ValueError("Native depth screen cell count is invalid")
+        text(screen["datum"], "native depth datum")
+        text(screen["basis"], "native depth screen basis")
     interval = []
     for key in ("coverage_start", "coverage_end"):
         value = data["temporal"].get(key)

@@ -124,9 +124,9 @@
     "offshore": "PZZ670"
   },
   "stations": {
-    "tide": "9412110",
-    "tide_name": "Port San Luis",
-    "tide_note": "Port San Luis is a distant reference; it does not predict San Simeon currents or Morro Bay bar currents.",
+    "tide": "9412553",
+    "tide_name": "San Simeon tide predictions",
+    "tide_note": "San Simeon is a NOAA subordinate tide-prediction station using Port San Luis offsets. Predicted highs and lows are not local currents, bottom drift or Morro Bay entrance clearance.",
     "airport": "KSBP",
     "airport_name": "San Luis Obispo airport",
     "nearshore_buoy": "46215",
@@ -300,7 +300,7 @@
     },
     "tides": {
       "status": "ready",
-      "reason": "Port San Luis is a distant reference water-level station, not a San Simeon current prediction."
+      "reason": "NOAA San Simeon subordinate station 9412553 returned high/low predictions derived from Port San Luis offsets. These are not San Simeon current or bottom-drift predictions."
     },
     "surface-currents": {
       "status": "partial",

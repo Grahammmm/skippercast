@@ -1,0 +1,16 @@
+# South Big Sur–San Simeon preview
+
+The package covers the previously unbound coast between the Cambria–San Simeon and Big Sur packages. It is a **preview**, not a set of fishing positions. Its atlas intentionally has no targets, areas, drift lines or chartplotter exports. Morro Bay is shown only as a distant planning origin; the software does not establish a safe trip, local refuge or entrance clearance.
+
+## Bound evidence
+
+- The region has two forecast contexts across the Point Piedras Blancas marine-zone boundary: NWS PZZ565/PZZ576 to the north and PZZ645/PZZ670 to the south. GFS/IFS wind and GFS Wave/WAM sea feeds were collected in the first rehearsal; headland and nearshore conditions remain unresolved by these model grids.
+- NOAA Cape San Martin buoy 46028 is the offshore observation. Diablo Canyon 46215 and KSBP are explicitly distant references. NOAA San Simeon station 9412553 supplies subordinate high/low tide predictions, not a current or Morro Bay entrance forecast.
+- The [CDFW Piedras Blancas source](https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas) supplies the SMR and SMCA geometry. Both are excluded conservatively from fishing marks. The Central California rules and this local MPA watch were hash-reviewed on 2026-09-25. Rules can change; users must check the official source for the fishing date and method.
+- The original [CSUMB Big Sur South Block 13 survey](https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html) was audited at native 5 m resolution. All 762,998 valid bathymetry cells are deeper than the user's 200 ft bottom-fishing limit in its source datum. Its terrain classes are derived from sonar rather than independent rock observations. Source use rights remain unresolved, so neither its grid nor derived fishing marks are published.
+
+## Update and promotion gates
+
+The existing daily and live regional collectors discover this non-draft package; the draft-region rehearsal workflow also checks its source and legal health on changes. The first daily and live local rehearsals on 2026-09-25 completed without source failures. A source fetch does not itself qualify a fishing position. To add one, inspect a shallow original survey grid outside the full MPA geometry, resolve chart datum and rights, verify substrate with independent evidence, and check legal access and chart dangers. Rebuild shared assets and rerun the regional and repository checks before publication.
+
+If a binding or legal review fails, return this package to `draft`, rebuild the region index, and republish the last coherent version. Retain the original dated source receipts; do not relabel old model or observation data as new.

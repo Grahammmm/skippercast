@@ -18,6 +18,23 @@
       "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
       "status": "research-only",
       "limitations": "The original grid is not a chart: NAVD88 needs a reviewed local chart-datum transformation, per-cell uncertainty is absent, and rough terrain is inferred from bathymetry rather than confirmed rock. Redistribution rights, hazards, MPAs, local rules and species evidence remain unreviewed. No fishing target, score or export is supported."
+    },
+    {
+      "id": "csumb-bss-block13",
+      "survey_id": "BSS_Block13",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html",
+      "original_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "archive_sha256": "3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49",
+      "archive_bytes": 164289176,
+      "bathymetry_grid": "BSS_Block13/Bathymetry/ArcViewGrids/bss13_5mbathy",
+      "habitat_grid": "BSS_Block13/Habitat/ArcViewGrids/bss13_5mhab",
+      "acquisition_year": 2011,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+      "status": "research-only",
+      "limitations": "The original 5 m bathymetry grid has no valid elevation shallower than -78.32 m NAVD88, deeper than the 200 ft fishing cap even before a reviewed chart-datum conversion. No shallow-water target can be promoted from this source. The terrain class derives from the bathymetry and is not independent rock groundtruth. Native rights, chart hazards, MPAs and access remain unresolved."
     }
   ]
 }

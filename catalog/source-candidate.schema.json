@@ -162,6 +162,18 @@
             "inspected",
             "unknown"
           ]
+        },
+        "native_depth_screen": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["limit_ft", "shallowest_depth_m", "cells_within_limit", "datum", "basis"],
+          "properties": {
+            "limit_ft": {"type": "number", "exclusiveMinimum": 0},
+            "shallowest_depth_m": {"type": "number", "minimum": 0},
+            "cells_within_limit": {"type": "integer", "minimum": 0},
+            "datum": {"type": "string", "minLength": 1},
+            "basis": {"type": "string", "minLength": 1}
+          }
         }
       }
     },

@@ -25,6 +25,7 @@ def compile_readiness(root=REPO):
         if region['status'] == 'draft':
             drafts.append(region)
     fine_original_leads = {row['id']: [] for row in sectors}
+    depth_excluded_leads = {row['id']: [] for row in sectors}
     for path in sorted((root / 'catalog/candidates').glob('*.json')):
         candidate = read_json(path)
         spatial = candidate.get('spatial', {})
@@ -38,7 +39,11 @@ def compile_readiness(root=REPO):
         for sector_id in candidate.get('sector_ids', []):
             if sector_id not in fine_original_leads:
                 raise ValueError(f'Unknown sector for original-grid candidate: {sector_id}')
-            fine_original_leads[sector_id].append(candidate['id'])
+            screen = spatial.get('native_depth_screen')
+            if screen and screen['limit_ft'] == 200 and screen['cells_within_limit'] == 0:
+                depth_excluded_leads[sector_id].append(candidate['id'])
+            else:
+                fine_original_leads[sector_id].append(candidate['id'])
     native_by_id = {row['sector_id']: row for row in native['sectors']}
     variable_by_id = {row['sector_id']: row for row in variable_depth['sectors']}
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
@@ -119,6 +124,7 @@ def compile_readiness(root=REPO):
             'historical_noaa_seabed_samples': seabed_by_id[ident]['historical_sample_count'],
             'native_substrate_review_file_leads': candidate_files,
             'accessible_inspected_fine_source_candidate_ids': source_leads,
+            'native_depth_excluded_source_candidate_ids': sorted(depth_excluded_leads[ident]),
             'held_file_leads': held_files,
             'native_review_survey_ids': lead['screen_survey_ids'],
             'held_survey_ids': lead['held_survey_ids'],
