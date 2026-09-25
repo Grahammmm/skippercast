@@ -50,6 +50,13 @@
       "output": "var/review/enc-hazards-h11730-arena-bodega.geojson"
     },
     {
+      "id": "h11732-h11733-fort-ross-salt-point-context",
+      "region_id": "point-arena-bodega",
+      "bounds": [-123.39, 38.45, -123.18, 38.62],
+      "research_only": true,
+      "output": "var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson"
+    },
+    {
       "id": "cape-mendocino-hard-context",
       "region_id": "northern",
       "bounds": [-124.49, 40.37, -124.37, 40.53],

@@ -121,6 +121,17 @@ jobs:
           python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson
           python scripts/refresh_enc_hazards.py --scope bodega-original-north --output var/review/bodega-original-north-enc.geojson
           python scripts/refresh_enc_hazards.py --scope reyes-original-south --output var/review/reyes-original-south-enc.geojson
+      - name: Refresh Point Arena–northern Sonoma original-rock chart-danger scope
+        run: >-
+          python scripts/refresh_enc_hazards.py
+          --scope h11732-h11733-fort-ross-salt-point-context
+          --output var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
+      - name: Compare Point Arena–northern Sonoma historical outlines to current ENC dangers
+        run: >-
+          python scripts/audit_enc_context_overlap.py
+          --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
+          --context dist/data/sf-native-hard-context.geojson
+          --output var/review/arena-bodega-enc-context-review.json
       - name: Recheck all 74 original-grid Bodega research outlines
         env:
           PYTHONPATH: src:.
@@ -143,6 +154,8 @@ jobs:
             var/review/bodega-original-north-enc.geojson
             var/review/reyes-original-south-enc.geojson
             var/review/bodega-native-enc-scope-review.json
+            var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
+            var/review/arena-bodega-enc-context-review.json
           retention-days: 30
   bluetopo-source-leads:
     runs-on: ubuntu-latest

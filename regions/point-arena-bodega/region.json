@@ -4,7 +4,7 @@
   "name": "Point Arena to northern Sonoma",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · San Francisco Groundfish Management Area",
+  "jurisdiction": "California \u00b7 San Francisco Groundfish Management Area",
   "bounds": [
     -124.2,
     38.4,
@@ -23,14 +23,14 @@
       -123.55
     ],
     "zoom": 9,
-    "locality_method": "Point Arena–northern Sonoma outer-coast discovery and forecast extent; neither the rectangle nor the distant Bodega departure is a legal boundary, safe route or qualified fishing location.",
+    "locality_method": "Point Arena\u2013northern Sonoma outer-coast discovery and forecast extent; neither the rectangle nor the distant Bodega departure is a legal boundary, safe route or qualified fishing location.",
     "region_notice_ids": [
       "arena-bodega-mpas"
     ],
     "local_areas": [
       {
         "id": "arena-bodega-north-of-salmon-opening",
-        "name": "North of the reviewed 38°02′ N fall-salmon opening",
+        "name": "North of the reviewed 38\u00b002\u2032 N fall-salmon opening",
         "bounds": [
           -124.1,
           38.45,
@@ -40,7 +40,7 @@
         "hidden_targets": [
           {
             "id": "salmon",
-            "reason": "The reviewed September–October 2026 fall Chinook opening applies only from 38°02′ N to Pigeon Point, south of this package. Another opening requires fresh official review.",
+            "reason": "The reviewed September\u2013October 2026 fall Chinook opening applies only from 38\u00b002\u2032 N to Pigeon Point, south of this package. Another opening requires fresh official review.",
             "source_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco"
           }
         ]
@@ -56,7 +56,7 @@
     "unavailable_target_sources": {}
   },
   "harbor": {
-    "name": "Bodega Harbor · distant planning origin",
+    "name": "Bodega Harbor \u00b7 distant planning origin",
     "latitude": 38.33,
     "longitude": -123.05,
     "entrance_note": "Bodega Harbor is south of this coastal band. A 20 kt planning profile does not prove range, fuel reserve, sea state, safe refuge or entrance clearance for Point Arena; check the route and harbor locally.",
@@ -67,7 +67,7 @@
     ]
   },
   "boat": {
-    "name": "2019 Parker 23 · planning profile",
+    "name": "2019 Parker 23 \u00b7 planning profile",
     "cruise_knots": 20,
     "bottom_depth_limit_ft": 200
   },
@@ -101,15 +101,15 @@
   },
   "stations": {
     "tide": "9415625",
-    "tide_name": "Bodega Harbor entrance predictions · distant southern reference",
+    "tide_name": "Bodega Harbor entrance predictions \u00b7 distant southern reference",
     "tide_note": "NOAA Bodega Harbor water-level predictions are south of this band and do not predict Arena Cove or bottom drift.",
     "airport": "KSTS",
     "airport_name": "Santa Rosa inland weather reference",
     "nearshore_buoy": "46013",
-    "nearshore_buoy_name": "Bodega Bay offshore · south of the band",
+    "nearshore_buoy_name": "Bodega Bay offshore \u00b7 south of the band",
     "nearshore_buoy_note": "NDBC 46013 is an offshore southern reference, not a Sonoma cove or harbor entrance measurement.",
     "offshore_buoy": "46014",
-    "offshore_buoy_name": "Point Arena buoy · north of the band",
+    "offshore_buoy_name": "Point Arena buoy \u00b7 north of the band",
     "offshore_buoy_note": "NDBC 46014 is roughly 19 NM north of Point Arena and does not measure a fishing patch in this sector."
   },
   "mpa": {
@@ -224,19 +224,19 @@
   "coverage": {
     "bathymetry": {
       "status": "partial",
-      "reason": "The original NOAA/USGS statewide intersection contains 67 historical hard-bottom context fragments in this latitude band; exact package footprint, current chart and safe approach remain unqualified."
+      "reason": "56 historical H11732/H11733 research outlines intersect this regional package; 19 larger ones pass a dated original-cell terrain audit. They are not current charted fishing targets."
     },
     "substrate": {
       "status": "partial",
-      "reason": "Historical USGS class-3 raster intersects original NOAA BAG cells, but the 22 larger browse fragments are not proven individual boulders, current fish or exportable target areas."
+      "reason": "USGS original class-3 hard substrate intersects NOAA 2 m BAG measured cells in 19 displayed research outlines near Fort Ross\u2013Salt Point. It does not establish present fish, exact boulder sizes or navigable reef edges."
     },
     "groundtruth": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "kelp": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "protected-areas": {
       "status": "partial",
@@ -244,79 +244,79 @@
     },
     "regulations": {
       "status": "partial",
-      "reason": "San Francisco management-area rules and six Point Arena–Russian River official MPA pages are being hash-reviewed; status remains conservative until source checks pass."
+      "reason": "San Francisco management-area rules and six Point Arena\u2013Russian River official MPA pages were hash-reviewed; exact trip-time rule checks remain required."
     },
     "dynamic-closures": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "wind-forecast": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "wave-forecast": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "wave-observations": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "weather-observations": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "tides": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "surface-currents": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "subsurface-ocean": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "sea-temperature": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "chlorophyll": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "charter-identity": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "ais-history": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "harbor-access": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "wind-ensemble": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "wave-ensemble": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "forecast-verification": {
       "status": "research",
-      "reason": "Point Arena–Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     }
   },
   "assets": {
@@ -332,7 +332,7 @@
     "geology": null,
     "ecology": "regions/point-arena-bodega/ecology.json",
     "search_plans": "regions/point-arena-bodega/search-plans.json",
-    "survey_habitat": null
+    "survey_habitat": "regions/point-arena-bodega/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/point-arena-bodega/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-arena-bodega/latest.json",
@@ -343,7 +343,7 @@
     "Russian River",
     "Bodega Bay"
   ],
-  "coverage_note": "Point Arena–northern Sonoma research preview: original NOAA/USGS source leads are historical context; no fishing coordinates, drifts, routes or exports are qualified.",
+  "coverage_note": "Point Arena\u2013northern Sonoma research preview: 19 dated original NOAA/USGS hard-bottom outlines near Fort Ross\u2013Salt Point have measured-cell depth summaries and a bounded chart-danger screen. They are not qualified fishing coordinates, drifts, routes or exports.",
   "landing_note": "Bodega Harbor is a distant planning origin for the northern part of this band. Select a real departure port and verify range, weather, bar, access and local rules before any trip.",
   "jurisdiction_id": "california-san-francisco",
   "ecology_profile": "california-san-francisco",
@@ -364,10 +364,10 @@
         "airport": "KSTS",
         "airport_name": "Santa Rosa inland weather reference",
         "nearshore_buoy": "46013",
-        "nearshore_buoy_name": "Bodega Bay offshore · south of the band",
+        "nearshore_buoy_name": "Bodega Bay offshore \u00b7 south of the band",
         "nearshore_buoy_note": "NDBC 46013 is an offshore southern reference, not a Sonoma cove or harbor entrance measurement.",
         "offshore_buoy": "46014",
-        "offshore_buoy_name": "Point Arena buoy · north of the band",
+        "offshore_buoy_name": "Point Arena buoy \u00b7 north of the band",
         "offshore_buoy_note": "NDBC 46014 is roughly 19 NM north of Point Arena and does not measure a fishing patch in this sector."
       },
       "marine_zones": {
@@ -379,15 +379,15 @@
       "name": "Northern Sonoma outer coast",
       "stations": {
         "tide": "9415625",
-        "tide_name": "Bodega Harbor entrance predictions · distant southern reference",
+        "tide_name": "Bodega Harbor entrance predictions \u00b7 distant southern reference",
         "tide_note": "NOAA Bodega Harbor water-level predictions are south of this band and do not predict Arena Cove or bottom drift.",
         "airport": "KSTS",
         "airport_name": "Santa Rosa inland weather reference",
         "nearshore_buoy": "46013",
-        "nearshore_buoy_name": "Bodega Bay offshore · south of the band",
+        "nearshore_buoy_name": "Bodega Bay offshore \u00b7 south of the band",
         "nearshore_buoy_note": "NDBC 46013 is an offshore southern reference, not a Sonoma cove or harbor entrance measurement.",
         "offshore_buoy": "46014",
-        "offshore_buoy_name": "Point Arena buoy · north of the band",
+        "offshore_buoy_name": "Point Arena buoy \u00b7 north of the band",
         "offshore_buoy_note": "NDBC 46014 is roughly 19 NM north of Point Arena and does not measure a fishing patch in this sector."
       },
       "marine_zones": {
