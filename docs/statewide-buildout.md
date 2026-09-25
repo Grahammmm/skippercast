@@ -278,5 +278,7 @@ The Fort Bragg–Point Arena package advanced to a **limited preview** on Septem
 
 The Bodega Bay–Point Reyes [preview ledger](bodega-point-reyes-rollout.md) records a fresh regional daily/live rehearsal with all watched legal documents and distinct wind/wave models returned, but missing surface-radar current vectors. The preview keeps its 38°02′ N salmon split and has no fishing points, search footprints, drift lines or bottom imagery. It does not make the San Francisco coast or statewide atlas complete.
 
+The [bounded NOAA ENC source screen](../dist/data/bodega-native-enc-scope-review.json) now fully spans the 74 original-grid rock research outlines intersecting the Bodega package, using three hash-pinned 18-layer danger snapshots. One outline falls within the 100 m chart-danger review buffer. The other 73 lack a hit in those selected layers, which is not route, chart or legal clearance. None enters the atlas as a fishing position.
+
 
 The Crescent City / Del Norte [limited preview](northern-crescent-city-rollout.md) now links the Northern coast selector to local legal and forecast sources. A September 24 local daily rehearsal returned 65/66 sources; surface-radar currents remained unavailable. The preview has no fishing coordinates, search footprints, drifts or bottom images. Its H11985 and H12131 surveys remain source context or held by MPAs, so this does not make Northern California or the statewide atlas complete.

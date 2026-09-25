@@ -16,6 +16,20 @@
       "output": "dist/regions/bodega-point-reyes/enc-hazards-point-reyes-tomales.geojson"
     },
     {
+      "id": "bodega-original-north",
+      "region_id": "bodega-point-reyes",
+      "bounds": [-123.13, 38.25, -122.97, 38.38],
+      "research_only": true,
+      "output": "var/review/bodega-original-north-enc.geojson"
+    },
+    {
+      "id": "reyes-original-south",
+      "region_id": "bodega-point-reyes",
+      "bounds": [-123.08, 37.98, -123.01, 38.07],
+      "research_only": true,
+      "output": "var/review/reyes-original-south-enc.geojson"
+    },
+    {
       "id": "h11967-greenwood-tile",
       "region_id": "fort-bragg-point-arena",
       "bounds": [-123.84, 39.14, -123.74, 39.25],
