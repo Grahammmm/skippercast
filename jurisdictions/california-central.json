@@ -238,6 +238,14 @@
         "Asilomar",
         "632"
       ]
+    },
+    "mpa-big-creek": {
+      "name": "CDFW Big Creek SMR and SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Big-Creek",
+      "keywords": [
+        "Big Creek",
+        "632"
+      ]
     }
   },
   "authority_hosts": [

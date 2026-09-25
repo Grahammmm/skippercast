@@ -9,6 +9,7 @@ import unittest
 
 
 GIS_TEST_MODULES = {
+    'test_big_sur_region',
     'test_bluetopo_source',
     'test_bottom_targets',
     'test_camera_native_terrain',

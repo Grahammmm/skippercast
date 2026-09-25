@@ -123,16 +123,20 @@ def ndbc(body, station, spectral=False):
     return {"station": station, "sample_at": max(r["time"] for r in rows), "units": unit_map, "observations": rows}
 
 
-def tides(data):
+def tides(data, station, note):
+    if not isinstance(station, str) or not station.isdigit() or len(station) != 7:
+        raise ValueError("NOAA tide station identity missing")
+    if not isinstance(note, str) or not note.strip():
+        raise ValueError("Regional tide limitation note missing")
     if data.get("error") or not isinstance(data.get("predictions"), list) or not data["predictions"]:
         raise ValueError("NOAA tide predictions unavailable")
     rows = [{"time": iso_time(p["t"].replace(" ", "T") + "Z"), "height_ft": numeric(p["v"]),
              "type": p.get("type")} for p in data["predictions"]]
     if any(r["height_ft"] is None for r in rows):
         raise ValueError("Invalid tide height")
-    return {"station": "9412110", "datum": "MLLW", "units": "ft", "timezone": "UTC",
+    return {"station": station, "datum": "MLLW", "units": "ft", "timezone": "UTC",
             "coverage_start": rows[0]["time"], "coverage_end": rows[-1]["time"], "predictions": rows,
-            "note": "Port San Luis reference. Not Morro Bay bar current or slack-water predictions."}
+            "note": note}
 
 
 def alerts(data):

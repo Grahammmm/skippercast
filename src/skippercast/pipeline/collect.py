@@ -275,7 +275,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                    "begin_date": now.strftime("%Y%m%d"), "end_date": (now + timedelta(days=8)).strftime("%Y%m%d"),
                    "time_zone": "gmt", "units": "english", "interval": "hilo", "format": "json"}
     url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?" + urlencode(tide_params)
-    jobs.append(("tides", "NOAA " + stations["tide_name"] + " reference tide predictions", "prediction", url, 36, lambda c, u=url: parsers.tides(c.get(u, True))))
+    jobs.append(("tides", "NOAA " + stations["tide_name"] + " reference tide predictions", "prediction", url, 36, lambda c, u=url, s=stations["tide"], n=stations["tide_note"]: parsers.tides(c.get(u, True), s, n)))
     for zone in dict.fromkeys(region["marine_zones"].values()):
         url = f"https://api.weather.gov/alerts/active/zone/{zone}"
         jobs.append(("alerts-" + zone, "NWS " + zone + " advisories", "advisory", url, 36, lambda c, u=url: parsers.alerts(c.get(u, True))))

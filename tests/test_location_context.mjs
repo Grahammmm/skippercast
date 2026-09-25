@@ -18,7 +18,8 @@ test('map crossing loads the correct region, with deterministic overlap and unsu
  assert.equal(resolveLocation(point(35.3,-120.88),directory,south.id).regionId,central.id);
  for(const active of [central.id,'cambria-san-simeon'])assert.equal(resolveLocation(point(35.545,-121.1),directory,active).regionId,'cambria-san-simeon');
  assert.equal(resolveLocation(point(34.6,-120.7),directory,south.id).regionId,'point-arguello-conception');
- for(const p of [point(32.4,-117.3),point(36,-121.5)])assert.equal(resolveLocation(p,directory,south.id).coverage,'outside');
+ for(const p of [point(32.4,-117.3),point(36,-121.2)])assert.equal(resolveLocation(p,directory,south.id).coverage,'outside');
+ assert.equal(resolveLocation(point(36,-121.5),directory,south.id).regionId,'big-sur-coast');
  assert.equal(resolveLocation(point(34.45,-120.5),directory,south.id).coverage,'edge');
 });
 test('southern target list excludes Dungeness; island context excludes bay bass without claiming a legal ban',()=>{

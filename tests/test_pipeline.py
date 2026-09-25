@@ -141,12 +141,16 @@ class PipelineTests(unittest.TestCase):
             parsers.erddap_grid(grid, meta, ["chlorophyll"], "chlorophyll")
 
     def test_tides_have_datum_and_never_imply_current(self):
-        r = parsers.tides({"predictions": [{"t": "2026-09-22 01:00", "v": "4.2", "type": "H"}]})
+        sample = {"predictions": [{"t": "2026-09-22 01:00", "v": "4.2", "type": "H"}]}
+        r = parsers.tides(sample, "9412110", "Port San Luis reference. Not Morro Bay bar current or slack-water predictions.")
         self.assertEqual(r["datum"], "MLLW")
         self.assertEqual(r["predictions"][0]["time"], "2026-09-22T01:00:00Z")
         self.assertIn("Not Morro Bay", r["note"])
+        monterey = parsers.tides(sample, "9413450", "Monterey tide reference; no Big Sur current prediction.")
+        self.assertEqual(monterey["station"], "9413450")
+        self.assertIn("Big Sur", monterey["note"])
         with self.assertRaises(ValueError):
-            parsers.tides({"error": {"message": "outage"}})
+            parsers.tides({"error": {"message": "outage"}}, "9413450", "Monterey reference")
 
     def test_zero_alerts_requires_recognized_response(self):
         self.assertEqual(parsers.alerts({"type": "FeatureCollection", "features": []})["alerts"], [])

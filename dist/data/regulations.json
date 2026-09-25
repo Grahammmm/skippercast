@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-25-central-monterey-point-sur-area-review",
-  "reviewed_at": "2026-09-25T07:09:00Z",
+  "revision": "2026-09-25-central-big-sur-area-review",
+  "reviewed_at": "2026-09-25T07:21:00Z",
   "valid_from": "2026-09-21",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
@@ -14,7 +14,7 @@
       "name": "CDFW Central Region rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
       "approved_content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -22,7 +22,7 @@
       "name": "CDFW finfish gear and general rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
       "approved_content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -30,7 +30,7 @@
       "name": "CDFW invertebrate gear rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
       "approved_content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -38,7 +38,7 @@
       "name": "CDFW whale-safe crab restrictions",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
       "approved_content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -46,7 +46,7 @@
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "approved_content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -54,7 +54,7 @@
       "name": "CDFW official regulation index",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
       "approved_content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -62,7 +62,7 @@
       "name": "CDFW groundfish",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
       "approved_content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -70,7 +70,7 @@
       "name": "CDFW in-season changes",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
       "approved_content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -78,7 +78,7 @@
       "name": "CDFW salmon",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
       "approved_content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -86,7 +86,7 @@
       "name": "CDFW crab",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
       "approved_content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -94,7 +94,7 @@
       "name": "CDFW Point Buchon MPAs",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
       "approved_content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -102,7 +102,7 @@
       "name": "CDFW Cambria MPAs",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
       "approved_content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "text-and-links-v3",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -110,7 +110,7 @@
       "name": "CDFW 2026 ocean sport fishing booklet",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
       "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "normalization": "pdf-bytes-v1",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
@@ -119,7 +119,7 @@
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
       "approved_content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-tuna-federal": {
@@ -127,7 +127,7 @@
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "approved_content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "normalization": "ecfr-section-text-v1",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-salmon-pdf": {
@@ -135,7 +135,7 @@
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "approved_content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "rules-groundfish-pdf": {
@@ -143,7 +143,7 @@
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
       "approved_content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "mpa-piedras": {
@@ -151,7 +151,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
       "approved_content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Rechecked the already reviewed Central jurisdiction official source at the same normalized content hash during this geographic expansion; original legal review remains applicable and trip-time access is separate."
     },
     "mpa-vandenberg": {
@@ -159,7 +159,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Vandenberg",
       "approved_content_sha256": "8c944b71cfcf164abb33c1f71cd43d76e829cee4a41a1d2d92dae53e55ee80f6",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read the official CDFW Vandenberg SMR page and coordinates. It prohibits take and describes restricted public entry. Its 32.91 square miles are a reserve, not fishable reef habitat."
     },
     "mpa-point-conception": {
@@ -167,7 +167,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception",
       "approved_content_sha256": "94229a4fb98b2bca09328bed318ada36372ea9c4479c371c5142ae50c6b3f4cb",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read the official CDFW Point Conception SMR page and coordinates. It prohibits take in the mapped reserve; the regional 34°27 N management line does not erase this exclusion."
     },
     "access-vandenberg-maritime": {
@@ -175,7 +175,7 @@
       "url": "https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/",
       "approved_content_sha256": null,
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Held: this official Vandenberg maritime-update URL returned HTTP 403 from the scheduled collector. The public official page says Danger Zone 4 is always closed and launch zones change, but there is no fresh adapter receipt or live clearance."
     },
     "mpa-ano-greyhound": {
@@ -183,7 +183,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Ano-Nuevo-Greyhound-Rock",
       "approved_content_sha256": "93236ef6e66f716f825f9ddb70c1ceb439e76d593101dcdf8652b23509759228",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Inspected CDFW Año Nuevo SMR and Greyhound Rock SMCA page: Año Nuevo reserve prohibits take; Greyhound Rock has specified hook-and-line shoreline finfish, giant kelp, salmon and market squid exceptions. SkipperCast excludes both mapped areas from all fishing targets and exports."
     },
     "mpa-soquel-canyon": {
@@ -191,7 +191,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Soquel-Canyon",
       "approved_content_sha256": "955e36e12c5c9de0667db2d4b7d65563c9f34275e495646e73c5de0d6e550c92",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Inspected CDFW Soquel Canyon SMCA page and coordinates: pelagic finfish take is excepted, while other marine take is prohibited. The app conservatively excludes the mapped area from every target and export."
     },
     "mpa-portuguese-ledge": {
@@ -199,7 +199,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Portuguese-Ledge",
       "approved_content_sha256": "07f5b2b7b69a90358067a0ac0f4bb4bea65925e3967368ef6205586a70da042a",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Inspected CDFW Portuguese Ledge SMCA page and coordinates: pelagic finfish take is permitted and non-pelagic take is prohibited. The app conservatively excludes the mapped area from every target and export."
     },
     "mpa-carmel-pinnacles": {
@@ -207,7 +207,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Pinnacles",
       "approved_content_sha256": "a86e66dff82348a43b4838ca0b3053975b5912e2847769dc4efa4589be1e97a4",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Carmel Pinnacles SMR page and coordinates: no take is allowed. Granite spires are within the reserve and are not a fishing target."
     },
     "mpa-carmel-bay": {
@@ -215,7 +215,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Bay",
       "approved_content_sha256": "a2f4ba2627b1d6c3b2d8018512f06aad9a918378ee4bac92939128c472c43c16",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Carmel Bay SMCA page and coordinates: recreational finfish take may be allowed, subject to other limits. Exclude the polygon from all app targets conservatively."
     },
     "mpa-point-lobos": {
@@ -223,7 +223,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Lobos",
       "approved_content_sha256": "3aa2c0f123cc9075717f6a45505de27f50eb4d96eca4549c7ecaf42d18fe1549",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Point Lobos SMR and SMCA page: reserve prohibits take and conservation area has stated exceptions. Exclude both mapped polygons from targets."
     },
     "mpa-point-sur": {
@@ -231,7 +231,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Sur",
       "approved_content_sha256": "0d9e96fde5a3793268b582f4907470a7752f9dbbb0fe88f17f6d48acdfcada8d",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Point Sur SMR and SMCA page: reserve prohibits take; conservation area allows salmon and albacore only. Exclude both polygons."
     },
     "mpa-ricketts-lovers": {
@@ -239,7 +239,7 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Edward-F-Ricketts-Lovers-Point-Julia-Platt",
       "approved_content_sha256": "adc0443d36fcd0dcddff079f32641d40cbab044033b996ce7451ee66194b4bec",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Ricketts and Lovers Point page: reserve prohibits take; Ricketts SMCA has restricted hook-and-line finfish exception. Exclude both mapped polygons."
     },
     "mpa-asilomar": {
@@ -247,8 +247,16 @@
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pacific-Grove-Marine-Gardens-Asilomar",
       "approved_content_sha256": "632da53510794782c01d2a4746e8fdb0f87ac87bb9205aedd3e273bb31b20602",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T07:09:00Z",
+      "reviewed_at": "2026-09-25T07:21:00Z",
       "review_note": "Read CDFW Asilomar and Pacific Grove page: Asilomar reserve prohibits take; Pacific Grove SMCA permits finfish with other limits. Exclude all mapped polygon portions."
+    },
+    "mpa-big-creek": {
+      "name": "CDFW Big Creek SMR and SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Big-Creek",
+      "approved_content_sha256": "65d1e5cf8205c1cf00263f9cbe0ce0cd9db914187bbc3255001f5506c27b7e69",
+      "normalization": "text-and-links-v3",
+      "reviewed_at": "2026-09-25T07:21:00Z",
+      "review_note": "Read CDFW Big Creek SMR and SMCA page, coordinates and distinct permissions. SMR prohibits take and generally anchoring/mooring shallower than 10 fathoms except stated cases; SMCA permits salmon and albacore. Both polygons are excluded from app targets."
     }
   },
   "species": {
@@ -506,8 +514,8 @@
   "checks": {
     "rules-central": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:14Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:18Z",
       "content_sha256": "658a6d4344ddae6315d82f49b94bc949ba08fba7cb0736ba60ecbad68f845ce0",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
       "normalization": "text-and-links-v3",
@@ -515,8 +523,8 @@
     },
     "rules-gear": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:14Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:18Z",
       "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
       "normalization": "text-and-links-v3",
@@ -524,8 +532,8 @@
     },
     "rules-invertebrates": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:14Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:18Z",
       "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
       "normalization": "text-and-links-v3",
@@ -533,8 +541,8 @@
     },
     "rules-whales": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:14Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:18Z",
       "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
       "normalization": "text-and-links-v3",
@@ -542,8 +550,8 @@
     },
     "rules-health": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:19Z",
       "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "normalization": "text-and-links-v3",
@@ -551,8 +559,8 @@
     },
     "rules-ocean": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:19Z",
       "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
       "normalization": "text-and-links-v3",
@@ -560,8 +568,8 @@
     },
     "rules-groundfish": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:19Z",
       "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
       "normalization": "text-and-links-v3",
@@ -569,8 +577,8 @@
     },
     "rules-inseason": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:19Z",
       "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
       "normalization": "text-and-links-v3",
@@ -578,8 +586,8 @@
     },
     "rules-salmon": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:20Z",
       "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
       "normalization": "text-and-links-v3",
@@ -587,8 +595,8 @@
     },
     "rules-crab": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:15Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:20Z",
       "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
       "normalization": "text-and-links-v3",
@@ -596,8 +604,8 @@
     },
     "mpa-buchon": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:20Z",
       "content_sha256": "0fac9f714ff114701ba98c37619f35d29dc7c3a5118b85e517bccd0e1ffd319b",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Buchon",
       "normalization": "text-and-links-v3",
@@ -605,8 +613,8 @@
     },
     "mpa-cambria": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:20Z",
       "content_sha256": "16ee08ea0ec26ac3072ef89991b91c1bf262c626456037f9bc0a90d2d9597efe",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Cambria-White-Rock",
       "normalization": "text-and-links-v3",
@@ -614,8 +622,8 @@
     },
     "rules-book": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:20Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:24Z",
       "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
       "normalization": "pdf-bytes-v1",
@@ -623,8 +631,8 @@
     },
     "rules-proposals": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:20Z",
       "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
       "normalization": "text-and-links-v3",
@@ -632,8 +640,8 @@
     },
     "rules-tuna-federal": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:21Z",
       "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "normalization": "ecfr-section-text-v1",
@@ -641,8 +649,8 @@
     },
     "rules-salmon-pdf": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:21Z",
       "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "normalization": "pdf-bytes-v1",
@@ -650,8 +658,8 @@
     },
     "rules-groundfish-pdf": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:16Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:21Z",
       "content_sha256": "39f71e7ef92b505950b3a800a1e58f8702c7de6e5b3a0843576c94af9a10d78e",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=234713&inline=",
       "normalization": "pdf-bytes-v1",
@@ -659,8 +667,8 @@
     },
     "mpa-piedras": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:17Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:22Z",
       "content_sha256": "061671563564ea6e5a7b903f638a9be484363e11fcf07e7b75deae3697679d5a",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Piedras-Blancas",
       "normalization": "text-and-links-v3",
@@ -668,8 +676,8 @@
     },
     "mpa-vandenberg": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:17Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:22Z",
       "content_sha256": "8c944b71cfcf164abb33c1f71cd43d76e829cee4a41a1d2d92dae53e55ee80f6",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Vandenberg",
       "normalization": "text-and-links-v3",
@@ -677,8 +685,8 @@
     },
     "mpa-point-conception": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:17Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:22Z",
       "content_sha256": "94229a4fb98b2bca09328bed318ada36372ea9c4479c371c5142ae50c6b3f4cb",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception",
       "normalization": "text-and-links-v3",
@@ -686,7 +694,7 @@
     },
     "access-vandenberg-maritime": {
       "status": "unavailable",
-      "checked_at": "2026-09-25T07:08:13Z",
+      "checked_at": "2026-09-25T07:20:18Z",
       "data_retrieved_at": null,
       "content_sha256": null,
       "url": "https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/",
@@ -695,8 +703,8 @@
     },
     "mpa-ano-greyhound": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:18Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:23Z",
       "content_sha256": "93236ef6e66f716f825f9ddb70c1ceb439e76d593101dcdf8652b23509759228",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Ano-Nuevo-Greyhound-Rock",
       "normalization": "text-and-links-v3",
@@ -704,8 +712,8 @@
     },
     "mpa-soquel-canyon": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:19Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:23Z",
       "content_sha256": "955e36e12c5c9de0667db2d4b7d65563c9f34275e495646e73c5de0d6e550c92",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Soquel-Canyon",
       "normalization": "text-and-links-v3",
@@ -713,8 +721,8 @@
     },
     "mpa-portuguese-ledge": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:19Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:23Z",
       "content_sha256": "07f5b2b7b69a90358067a0ac0f4bb4bea65925e3967368ef6205586a70da042a",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Portuguese-Ledge",
       "normalization": "text-and-links-v3",
@@ -722,8 +730,8 @@
     },
     "mpa-carmel-pinnacles": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:19Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:24Z",
       "content_sha256": "a86e66dff82348a43b4838ca0b3053975b5912e2847769dc4efa4589be1e97a4",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Pinnacles",
       "normalization": "text-and-links-v3",
@@ -731,8 +739,8 @@
     },
     "mpa-carmel-bay": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:19Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:24Z",
       "content_sha256": "a2f4ba2627b1d6c3b2d8018512f06aad9a918378ee4bac92939128c472c43c16",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Bay",
       "normalization": "text-and-links-v3",
@@ -740,8 +748,8 @@
     },
     "mpa-point-lobos": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:20Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:24Z",
       "content_sha256": "3aa2c0f123cc9075717f6a45505de27f50eb4d96eca4549c7ecaf42d18fe1549",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Lobos",
       "normalization": "text-and-links-v3",
@@ -749,8 +757,8 @@
     },
     "mpa-point-sur": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:21Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:25Z",
       "content_sha256": "0d9e96fde5a3793268b582f4907470a7752f9dbbb0fe88f17f6d48acdfcada8d",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Sur",
       "normalization": "text-and-links-v3",
@@ -758,8 +766,8 @@
     },
     "mpa-ricketts-lovers": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:20Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:25Z",
       "content_sha256": "adc0443d36fcd0dcddff079f32641d40cbab044033b996ce7451ee66194b4bec",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Edward-F-Ricketts-Lovers-Point-Julia-Platt",
       "normalization": "text-and-links-v3",
@@ -767,15 +775,24 @@
     },
     "mpa-asilomar": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T07:08:13Z",
-      "data_retrieved_at": "2026-09-25T07:08:21Z",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:25Z",
       "content_sha256": "632da53510794782c01d2a4746e8fdb0f87ac87bb9205aedd3e273bb31b20602",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pacific-Grove-Marine-Gardens-Asilomar",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
+    },
+    "mpa-big-creek": {
+      "status": "unchanged",
+      "checked_at": "2026-09-25T07:20:18Z",
+      "data_retrieved_at": "2026-09-25T07:20:25Z",
+      "content_sha256": "65d1e5cf8205c1cf00263f9cbe0ce0cd9db914187bbc3255001f5506c27b7e69",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Big-Creek",
+      "normalization": "text-and-links-v3",
+      "source_status": "ok"
     }
   },
-  "checked_at": "2026-09-25T07:09:00Z",
+  "checked_at": "2026-09-25T07:21:00Z",
   "review_required": [
     "access-vandenberg-maritime"
   ],
@@ -842,6 +859,15 @@
         "mpa-ricketts-lovers",
         "mpa-asilomar"
       ]
+    },
+    {
+      "id": "big-sur-mpas",
+      "name": "Point Sur–Big Creek protected areas",
+      "note": "Point Sur and Big Creek each have a reserve and conservation area. Big Creek SMR prohibits take and generally prohibits anchoring or mooring shallower than 10 fathoms except under the stated federal/emergency exceptions; Big Creek SMCA allows salmon and albacore take. SkipperCast conservatively excludes all four mapped MPAs from fishing targets and exports; check exact current CDFW rules, location and method.",
+      "source_ids": [
+        "mpa-point-sur",
+        "mpa-big-creek"
+      ]
     }
   ],
   "reviewed_regions": [
@@ -889,9 +915,18 @@
         -121.66,
         36.624
       ]
+    },
+    {
+      "id": "big-sur-coast",
+      "fishing_bounds": [
+        -122.19,
+        35.901,
+        -121.46,
+        36.299
+      ]
     }
   ],
-  "review_record": "jurisdictions/reviews/2026-09-25-california-central-monterey-point-sur.json",
-  "approved_rules_content_sha256": "1d07af01aba95b9bb0282b93f11941bd8b350f0a991d6c57beb2ce84e4024855",
+  "review_record": "jurisdictions/reviews/2026-09-25-california-central-big-sur.json",
+  "approved_rules_content_sha256": "6ace186d345b518a65a2ca47681521b36127401cdc62d8300f5a9c3ce1157ecd",
   "rules_review_status": "reviewed"
 }
