@@ -35,6 +35,23 @@
       "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
       "status": "research-only",
       "limitations": "The original 5 m bathymetry grid has no valid elevation shallower than -78.32 m NAVD88, deeper than the 200 ft fishing cap even before a reviewed chart-datum conversion. No shallow-water target can be promoted from this source. The terrain class derives from the bathymetry and is not independent rock groundtruth. Native rights, chart hazards, MPAs and access remain unresolved."
+    },
+    {
+      "id": "csumb-bss-block01",
+      "survey_id": "BSS_Block01",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version2/products/BSS_Block01_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block01_mb.html",
+      "original_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "archive_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+      "archive_bytes": 137751332,
+      "bathymetry_grid": "BSS_Block01/Bathymetry/ArcViewGrids/bss01_2mbathy",
+      "habitat_grid": "BSS_Block01/Habitat/ArcViewGrids/bss01_2mhab",
+      "acquisition_year": 2011,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+      "status": "research-only",
+      "limitations": "The original 2 m NAVD88 grid contains shallow source-datum cells north of the Piedras Blancas MPAs, but the terrain class is derived from bathymetry rather than independent rock evidence. No chart-datum conversion, per-cell uncertainty, producer redistribution rights, chart hazards, approach, or fishing-date legal clearance has been established. No fishing target, score or export is supported."
     }
   ]
 }

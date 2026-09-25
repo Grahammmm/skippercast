@@ -15,7 +15,12 @@ class BigSurSouthNativeReviewTest(unittest.TestCase):
         report = json.loads((ROOT / 'dist/data/csumb-bss-native-source-review.json').read_text())
         self.assertEqual(report['publication_status'], 'source-evidence-only')
         by_id = {source['source_id']: source for source in report['sources']}
-        self.assertEqual(set(by_id), {'csumb-bss-block12', 'csumb-bss-block13'})
+        self.assertEqual(set(by_id), {'csumb-bss-block01', 'csumb-bss-block12', 'csumb-bss-block13'})
+        shallow = by_id['csumb-bss-block01']
+        self.assertEqual(shallow['bathymetry']['resolution_m'], [2.0, 2.0])
+        self.assertEqual(shallow['native_depth_screen']['cells_within_limit'], 3_773_386)
+        self.assertEqual(shallow['native_depth_screen']['derived_rough_class_cells_within_limit'], 166_433)
+        self.assertIn('no chart-datum conversion', shallow['native_depth_screen']['basis'])
         source = by_id['csumb-bss-block12']
         self.assertEqual(source['status'], 'held-from-fishing-targets')
         self.assertIn('unresolved', source['rights_status'])
@@ -28,11 +33,13 @@ class BigSurSouthNativeReviewTest(unittest.TestCase):
         self.assertEqual(deep['bathymetry']['resolution_m'], [5.0, 5.0])
         self.assertGreater(deep['bathymetry']['valid_cells'], 750_000)
         self.assertLess(deep['bathymetry']['maximum'], -78)
+        self.assertEqual(deep['native_depth_screen']['cells_within_limit'], 0)
         self.assertIn('No shallow-water target', deep['reason'])
         self.assertNotIn('targets', report)
 
     def test_changed_original_archive_fails_closed(self):
-        spec = json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources'][0]
+        spec = next(s for s in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
+                    if s['survey_id'] == 'BSS_Block12')
         with tempfile.TemporaryDirectory() as cache:
             (Path(cache) / 'BSS_Block12_additional_products.tar.gz').write_bytes(b'incomplete')
             with self.assertRaisesRegex(ValueError, 'pinned original'):

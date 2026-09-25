@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "csumb-bss-block01-native-candidate",
+  "name": "Big Sur South Block 01 original 2 m bathymetry and derived terrain class",
+  "sector_ids": [
+    "sur-san-simeon"
+  ],
+  "need_ids": [
+    "bathymetry",
+    "substrate"
+  ],
+  "producer": {
+    "name": "CSU Monterey Bay Seafloor Mapping Lab",
+    "url": "https://csumb.edu/undersea/sfml-data-library/"
+  },
+  "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block01_mb.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version2/products/BSS_Block01_additional_products.tar.gz",
+  "access_status": "accessible",
+  "variables": [
+    "bathymetry_elevation",
+    "derived_terrain_class"
+  ],
+  "units": {
+    "bathymetry_elevation": "m NAVD88 Geoid09 elevation",
+    "derived_terrain_class": "original categorical cells, rough/smooth and depth band"
+  },
+  "rights": {
+    "license": null,
+    "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [
+      -121.3929371741432,
+      35.73012963929342,
+      -121.32211131915221,
+      35.7709214117558
+    ],
+    "resolution_m": 2,
+    "horizontal_crs": "EPSG:26910",
+    "vertical_datum": "NAVD88 Geoid09",
+    "footprint_kind": "valid-cell-envelope",
+    "footprint_url": null,
+    "resolution_basis": "inspected",
+    "native_depth_screen": {
+      "limit_ft": 200,
+      "shallowest_depth_m": 7.1,
+      "cells_within_limit": 3773386,
+      "datum": "NAVD88 Geoid09",
+      "basis": "original native source-elevation cell screen; no chart-datum conversion, uncertainty or legal clearance"
+    }
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T08:40:24.663777+00:00",
+    "update_cadence": "Static 2011 acquisition; monthly archive integrity and catalog check",
+    "coverage_start": "2011-09-01",
+    "coverage_end": "2011-12-08"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI archive of original CSUMB survey; same source as the terrain class",
+    "raw_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+    "transformations": [
+      "Opened SHA-256-pinned 2 m original ArcInfo depth and terrain grids, checked alignment and counted native source-elevation and derived rough-class cells without chart-datum conversion or target generation."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block01_mb.html",
+      "supports": "Original Block 01 survey identity and products."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "supports": "Producer metadata specifies NAVD88 Geoid09 and unresolved original use constraints."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version2/products/BSS_Block01_additional_products.tar.gz",
+      "supports": "Original 6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548 archive; 5,001,340 valid 2 m cells, 3,773,386 within nominal 200 ft of source NAVD88 elevation and 166,433 derived rough cells in that subset. Exact audit: dist/data/csumb-bss-native-source-review.json."
+    }
+  ],
+  "limitations": [
+    "The original 2 m grid includes shallow source-datum cells, but NAVD88 elevation has not been converted to chart datum and per-cell uncertainty is not supplied by this exported DEM. Neither its 200 ft cell count nor its deepest/shallowest elevations clear a fishing spot.",
+    "The terrain rough class is calculated from bathymetric ruggedness, not an independent rock sample or fish observation.",
+    "The valid-cell envelope is not an exact surveyed footprint or safe route; a Piedras Blancas MPA snapshot lies to the south, but all current exclusions and the actual trip-date rules still require review.",
+    "Producer access and use constraints remain to be determined; redistribution rights, chart hazards and approach remain unresolved."
+  ]
+}

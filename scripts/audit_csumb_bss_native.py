@@ -104,6 +104,19 @@ def audit(spec, cache, fetch=False):
         tmp = Path(directory)
         bathy = inspect_grid(bundle, spec['bathymetry_grid'], 'bathymetry', tmp)
         habitat = inspect_grid(bundle, spec['habitat_grid'], 'habitat', tmp)
+        with rasterio.open(tmp / spec['bathymetry_grid']) as depth_grid, rasterio.open(tmp / spec['habitat_grid']) as terrain_grid:
+            depth = depth_grid.read(1, masked=True)
+            terrain = terrain_grid.read(1, masked=True)
+            if depth.shape != terrain.shape or depth_grid.transform != terrain_grid.transform:
+                raise ValueError('Original depth and terrain grids do not align cell for cell')
+            within_limit = (~np.ma.getmaskarray(depth) & (depth.data >= -60.96) & (depth.data < 0))
+            rough = (~np.ma.getmaskarray(terrain) & np.isin(terrain.data, [-1, -31, -101, -201]))
+            native_depth_screen = {
+                'limit_ft': 200,
+                'cells_within_limit': int(within_limit.sum()),
+                'derived_rough_class_cells_within_limit': int((within_limit & rough).sum()),
+                'basis': 'source NAVD88 elevation only; no chart-datum conversion or independent rock confirmation',
+            }
     if (bathy['crs'] != habitat['crs'] or bathy['bounds_native'] != habitat['bounds_native']
             or bathy['resolution_m'] != habitat['resolution_m']):
         raise ValueError('Original bathymetry and habitat grids do not align')
@@ -117,7 +130,8 @@ def audit(spec, cache, fetch=False):
             'documentation_url': spec['documentation_url'], 'archive_sha256': spec['archive_sha256'],
             'native_vertical_datum': spec['native_vertical_datum'], 'status': 'held-from-fishing-targets',
             'rights_status': spec['rights_status'], 'reason': spec['limitations'],
-            'bathymetry': bathy, 'terrain_habitat': habitat}
+            'bathymetry': bathy, 'terrain_habitat': habitat,
+            'native_depth_screen': native_depth_screen}
 
 
 def main():
