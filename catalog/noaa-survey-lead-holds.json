@@ -20,6 +20,22 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11965.html"
     },
     {
+      "survey_id": "F00834",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00834/DR/F00834_DR.pdf",
+      "report_sha256": "6fe32902bc3b6c658ece44ae54e3a6ee8eef1778a093ab1b3317202b315db9c3",
+      "reason": "The official NCEI survey catalog identifies the September 2021 F00834 locality as Richardson Bay, San Francisco Bay, and lists both original MLLW variable-resolution BAG parts under that survey. The reviewed native BAG metadata bounds for both parts are inside or at the San Francisco Bay entrance rather than an identified outer-coast reef. The 1of2 part contributes 1,584,287 preliminary depth-and-uncertainty-eligible native cells to the Point Reyes–Pigeon latitude-band inventory, but latitude assignment does not make them outer-coast fish habitat. Withhold the survey from fishing-target promotion and exports; a separate bay-fishing product would need its own geographic, legal, substrate, chart and access review.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00834.html"
+    },
+    {
+      "survey_id": "W00477",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00477/DR/W00477_DR.pdf",
+      "report_sha256": "a5cb20e44344a7c014b43b7ac59f5d2fad46f8cb17778f5d46f86df5f954d56d",
+      "reason": "The 2019 Greater Farallones survey spans several polygons and mostly deep water (report range 29.66–796.65 m). Its report states that the southeast limit of one polygon was not reached because of a charted Navy test-area transducer north of Point Reyes. The preliminary native audit finds only 12,639 depth-and-uncertainty-eligible cells in the Point Reyes–Pigeon sector and 27,926 in Bodega–Point Reyes; these are not classified substrate or cleared fishing locations. Hold both sector assignments until original cell positions are checked against the exact unacquired area, current charted transducer and other hazards, protected-area geometry, independent substrate, route and local rules. Do not extrapolate across the unsurveyed southeastern sheet limit.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/W00001-W02000/W00477.html"
+    },
+    {
       "survey_id": "H11971",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
