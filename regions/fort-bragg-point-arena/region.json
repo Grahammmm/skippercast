@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "fort-bragg-point-arena",
   "name": "Fort Bragg to Point Arena",
-  "status": "draft",
+  "status": "preview",
   "timezone": "America/Los_Angeles",
   "jurisdiction": "California \u00b7 Mendocino Groundfish Management Area",
   "bounds": [
@@ -23,7 +23,7 @@
       -123.87
     ],
     "zoom": 10,
-    "locality_method": "Draft outer-coast discovery envelope between Fort Bragg and the Point Arena management line. This is not a legal boundary or qualified fishing area.",
+    "locality_method": "Outer-coast discovery envelope between Fort Bragg and the Point Arena management line. This preview is not a legal boundary, qualified fishing area, or navigation clearance.",
     "region_notice_ids": [
       "mendocino-mpas"
     ],
@@ -203,12 +203,12 @@
       "reason": "Original NOAA H11967 variable-resolution BAG has screened native cells, but descriptive-report hazards and current chart remain unresolved; no target is qualified."
     },
     "substrate": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "One historical transect has 18 camera windows compared with NOAA 25 m induration cells: 14 hard, two mixed, two soft at source quality 6.2/10. These are not mapped reef footprints or independent fish evidence."
     },
     "groundtruth": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "Eighteen original USGS camera windows passed a research screen on one historical transect; no independent full-footprint fishing habitat or present fish evidence."
     },
     "kelp": {
       "status": "research",
@@ -220,27 +220,27 @@
     },
     "regulations": {
       "status": "partial",
-      "reason": "Seven 2026 Mendocino outer-coast species profiles and this draft footprint have a hash-bound 18-source review. No first regional daily rule-health feed, current closure clearance or qualified fishing target is published."
+      "reason": "Seven Mendocino species profiles passed a hash-bound 18-source review; the first daily regional rehearsal found official fingerprints unchanged. Current date, method, area notices and in-season changes still need a fresh feed and user check."
     },
     "dynamic-closures": {
       "status": "research",
       "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "wind-forecast": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NOAA GFS and ECMWF IFS local point feeds succeeded in the regional rehearsal. Runtime validity, grid match and official advisories still govern each trip."
     },
     "wave-forecast": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NOAA GFS Wave and ECMWF WAM feeds succeeded in regional rehearsal. Forecast horizon and current advisories govern each date."
     },
     "wave-observations": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NDBC 46014 returned a current offshore observation in rehearsal. This is a Point Arena reference, not a Noyo entrance sensor."
     },
     "weather-observations": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NDBC 46014 and NWS sources returned in rehearsal; no live Noyo entrance observation was established."
     },
     "tides": {
       "status": "partial",
@@ -248,19 +248,19 @@
     },
     "surface-currents": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "The regional 6 km HFR request returned 220 cells but zero usable vectors. Missing current data must not be read as zero current or bottom drift."
     },
     "subsurface-ocean": {
       "status": "research",
       "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "sea-temperature": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NOAA blended SST returned 146 populated of 264 requested regional cells in dated rehearsal. Unpopulated cells stay missing."
     },
     "chlorophyll": {
-      "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "partial",
+      "reason": "NOAA VIIRS chlorophyll returned 146 populated of 480 requested regional cells in dated rehearsal. This is surface context, not a fish location."
     },
     "species-occurrence": {
       "status": "research",
@@ -280,7 +280,7 @@
     },
     "harbor-access": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Noyo Harbor and NWS sources are monitored, but no live entrance clearance or safe route was established."
     },
     "wind-ensemble": {
       "status": "research",
@@ -316,7 +316,7 @@
     "Fort Bragg",
     "Point Arena"
   ],
-  "coverage_note": "Draft Mendocino package. Native bathymetry and historical camera windows are research leads only; no reviewed fishing target, season status or complete local forecast has been published.",
+  "coverage_note": "Mendocino preview with region-specific forecasts, buoy reference, tide predictions and reviewed rules. No qualified fishing spots or bottom images. Surface-current vectors were unavailable in the tested grid; historical H11967 bottom remains held for least-depth, chart and route review.",
   "landing_note": "Port landings and offshore buoy observations do not locate catches or clear Noyo entrance.",
   "jurisdiction_id": "california-mendocino",
   "ecology_profile": "california-northern",

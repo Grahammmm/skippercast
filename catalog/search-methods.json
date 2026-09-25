@@ -6,10 +6,10 @@
     "reef": {
       "name": "Lingcod & rockfish",
       "life_stage": "Adult lingcod and recreationally targeted rockfish; rockfish species occupy different niches.",
-      "habitat": "Rock relief, connected rough ground and sand\u2013reef edges are search leads. A high terrain score measures structure, not abundance.",
+      "habitat": "Rock relief, connected rough ground and sand–reef edges are search leads. A high terrain score measures structure, not abundance.",
       "method": "Sounder first, then a controlled bottom drift with your double-drop rig. For lingcod, investigate ledges and edges; for rockfish, also inspect suspended marks above the reef. Reset when bottom contact or boat control deteriorates.",
       "timing": "Seasonal nesting and species movements can change use of the reef. Do not turn a spawning season into an assumed bite window.",
-      "condition_response": "Wind, chop and opposing seas reduce rig control. Surface radar/model currents help plan a test drift; the boat\u2019s observed track and line angle determine the actual setup.",
+      "condition_response": "Wind, chop and opposing seas reduce rig control. Surface radar/model currents help plan a test drift; the boat’s observed track and line angle determine the actual setup.",
       "evidence_needed": [
         "Identified species, depth and fish marks on the day",
         "Measured drift, rig weight and bottom-contact time",
@@ -19,7 +19,7 @@
         "lingcod",
         "rockfish"
       ],
-      "search_for": "Search mapped rock relief and rock\u2013sediment boundaries; inspect both the bottom and schools suspended above it.",
+      "search_for": "Search mapped rock relief and rock–sediment boundaries; inspect both the bottom and schools suspended above it.",
       "presentation": "Use a controlled bottom drift for lingcod, and adjust the rig to the depth of identified rockfish marks. Reset when line angle prevents effective contact.",
       "caution": "Rockfish species have different niches and restrictions; a terrain grade is not a catch probability.",
       "required_to_confirm": [
@@ -40,11 +40,11 @@
       "tactics_basis": "Practical search and presentation guidance synthesized from the linked ecology; not a calibrated catch model.",
       "source_links": [
         {
-          "title": "Lingcod \u00b7 ecological evidence",
+          "title": "Lingcod · ecological evidence",
           "url": "https://www.fisheries.noaa.gov/species/lingcod"
         },
         {
-          "title": "Rockfish \u00b7 ecological evidence",
+          "title": "Rockfish · ecological evidence",
           "url": "https://www.fisheries.noaa.gov/west-coast/habitat-conservation/rocky-reef-west-coast"
         }
       ]
@@ -54,7 +54,7 @@
       "life_stage": "Adults; identify juveniles and the sexually distinct adult forms.",
       "habitat": "Rocky reef, kelp and benthic feeding habitat. Individual boulders and cavities require finer evidence than a general reef polygon.",
       "method": "Use a controlled near-bottom bait presentation along a verified reef edge. Log legal-sized fish and unsuccessful drifts so apparent reef quality can be tested.",
-      "timing": "The rod-and-reel boat season is March\u2013December in the reviewed 2026 rules; year-round diver/shore exceptions are different methods.",
+      "timing": "The rod-and-reel boat season is March–December in the reviewed 2026 rules; year-round diver/shore exceptions are different methods.",
       "condition_response": "Bottom contact and room to reset safely matter more than an assumed lunar bite. Reduce scope if surge and kelp make rig control poor.",
       "evidence_needed": [
         "Reef/kelp substrate confirmation",
@@ -69,7 +69,7 @@
         "kelp",
         "benthic-prey"
       ],
-      "depth_guidance": "CDFW lists a broad 0\u2013180 ft primary habitat range; this is not a local optimum or a guarantee that every patch is fishable.",
+      "depth_guidance": "CDFW lists a broad 0–180 ft primary habitat range; this is not a local optimum or a guarantee that every patch is fishable.",
       "regional_notes": "Appropriate at qualifying island and mainland reefs. Sheephead are part of the reef ecosystem; large males and juveniles are not interchangeable observations.",
       "source_links": [
         {
@@ -136,7 +136,7 @@
       "habitat_confidence": "Moderate at habitat-class scale; site occupancy and legal-size catch are unverified.",
       "local_catch_model_validated": false,
       "catch_probability": null,
-      "search_for": "Inspect rock\u2013sand transitions and the water immediately above the seabed.",
+      "search_for": "Inspect rock–sand transitions and the water immediately above the seabed.",
       "presentation": "Use a small bait presentation near observed marks and maintain reliable depth control; avoid assuming fish are tight to the highest rock.",
       "caution": "Depth and habitat preferences vary; not every sediment polygon is equally useful.",
       "required_to_confirm": [
@@ -229,7 +229,7 @@
         "sand-reef-interface",
         "mainland-shelf"
       ],
-      "depth_guidance": "The CDFW primary range is broadly 0\u2013120 ft; no claim is made that deeper is better or that the study\u2019s edge distance is universal.",
+      "depth_guidance": "The CDFW primary range is broadly 0–120 ft; no claim is made that deeper is better or that the study’s edge distance is universal.",
       "regional_notes": "Mainland shelf sand/structure is the main mapping context. Do not promote every Channel Islands rocky patch as equivalent sand-bass habitat.",
       "source_links": [
         {
@@ -319,7 +319,7 @@
     "halibut": {
       "name": "California halibut",
       "life_stage": "Coastal fish targeted by recreational anglers; nursery and trawl samples are distinct evidence.",
-      "habitat": "Work connected sediment habitat and its edges. The current map\u2019s shallow sediment areas are research candidates, not confirmed concentrations.",
+      "habitat": "Work connected sediment habitat and its edges. The current map’s shallow sediment areas are research candidates, not confirmed concentrations.",
       "method": "Search an area with a controlled drift and a presentation near the seabed. Use the sounder to check the edge and bait; move between comparable depth bands when an area produces no evidence.",
       "timing": "CDFW describes shallow spawning movements, but the calendar cannot locate fish. Local prey, visibility and present conditions remain important.",
       "condition_response": "Enough movement to cover ground can help searching, but excessive drift makes near-bottom presentation difficult. No universal current-speed optimum is assigned.",
@@ -351,7 +351,7 @@
       "tactics_basis": "Practical search and presentation guidance synthesized from the linked ecology; not a calibrated catch model.",
       "source_links": [
         {
-          "title": "California halibut \u00b7 ecological evidence",
+          "title": "California halibut · ecological evidence",
           "url": "https://wildlife.ca.gov/Conservation/Marine/Nearshore"
         }
       ]
@@ -361,7 +361,7 @@
       "life_stage": "Mobile adults; juvenile nursery records are not adult schools.",
       "habitat": "Kelp margins, rocky headlands and open-water feeding areas. A reef or squid report is a search clue only while it remains relevant and dated.",
       "method": "Check fresh bait and fish marks, then choose lawful live-bait, cast or other rod presentations at the observed depth. Do not drift blindly from a historical fleet dot.",
-      "timing": "Year-round permission has a reduced one-fish limit March 15\u2013June 15 south of Point Conception; presence changes with movement and forage.",
+      "timing": "Year-round permission has a reduced one-fish limit March 15–June 15 south of Point Conception; presence changes with movement and forage.",
       "condition_response": "The method needs stable boat control and a manageable return. A calm surface and favorable moon do not supply a catch probability.",
       "evidence_needed": [
         "Dated identified schools and actual depth",
@@ -414,7 +414,7 @@
       "habitat": "Island/reef edges, banks and offshore water with forage. Floating kelp and schools move; fixed bathymetric landmarks organize a search only.",
       "method": "Use recent bait, birds and sonar to select a rod-and-reel presentation; record the observed fish depth and whether schools were actually identified.",
       "timing": "California availability varies with seasonal migration and ocean conditions; warm water alone cannot establish an active school.",
-      "condition_response": "Review the exposed transit and return as well as fishing control. Do not confuse a bank\u2019s current-facing side with a modeled exact drift.",
+      "condition_response": "Review the exposed transit and return as well as fishing control. Do not confuse a bank’s current-facing side with a modeled exact drift.",
       "evidence_needed": [
         "Fresh school and bait observations",
         "Source timestamp, positional accuracy and fish depth",
@@ -468,7 +468,7 @@
       "name": "Pacific bonito",
       "life_stage": "Schooling Pacific bonito; identify species and size, not just surface activity.",
       "habitat": "Coastal, island and offshore upper-water forage schools, which can move away from bottom structure.",
-      "method": "Search active bait/birds and identified marks using a lawful cast, bait or trolling presentation. Keep an observation\u2019s age visible.",
+      "method": "Search active bait/birds and identified marks using a lawful cast, bait or trolling presentation. Keep an observation’s age visible.",
       "timing": "Historical seasonal/temperature associations do not define a present optimum or permanent hot spot.",
       "condition_response": "Keep boat control and other vessels in view during fast-moving schools; judge the return independently.",
       "evidence_needed": [
@@ -568,7 +568,7 @@
       "habitat": "Schools can move quickly and occupy different depths. A single SST band is not a universal optimum.",
       "method": "Treat offshore sectors as search references; use fresh school and bait evidence, appropriate equipment and lawful technique. Actual sonar marks should guide presentation depth.",
       "timing": "Dated sightings can lose value rapidly. A past fleet track or landing count does not establish a current school.",
-      "condition_response": "Use the full trip exposure and return forecast. Surface-current products cannot predict a school\u2019s movement or a deep jig\u2019s drift.",
+      "condition_response": "Use the full trip exposure and return forecast. Surface-current products cannot predict a school’s movement or a deep jig’s drift.",
       "evidence_needed": [
         "Recent identified school locations and observation method",
         "Depth, prey and fish size",
@@ -595,7 +595,7 @@
       "tactics_basis": "Practical search and presentation guidance synthesized from the linked ecology; not a calibrated catch model.",
       "source_links": [
         {
-          "title": "Pacific bluefin tuna \u00b7 ecological evidence",
+          "title": "Pacific bluefin tuna · ecological evidence",
           "url": "https://www.fisheries.noaa.gov/species/pacific-bluefin-tuna"
         }
       ]
@@ -605,8 +605,8 @@
       "life_stage": "Mobile pelagic fish; life stage and size affect depth and behavior.",
       "habitat": "Warm-water offshore schools with mobile forage; current fronts and floating material can organize a search.",
       "method": "Check recent quality-screened ocean context, then seek identified fish and bait with suitable rod gear. Plan fuel reserve and return exposure before committing to an offshore search.",
-      "timing": "Migration varies seasonally and annually. An old catch report, high dock total or a moon phase cannot locate today\u2019s school.",
-      "condition_response": "Score the entire outbound\u2013search\u2013return window. Surface-current products cannot predict a fish\u2019s path or the drift of a deep jig.",
+      "timing": "Migration varies seasonally and annually. An old catch report, high dock total or a moon phase cannot locate today’s school.",
+      "condition_response": "Score the entire outbound–search–return window. Surface-current products cannot predict a fish’s path or the drift of a deep jig.",
       "evidence_needed": [
         "Recent identified schools, depth and observation method",
         "Cloud/quality-screened SST/fronts with native pixel size",
@@ -657,8 +657,8 @@
       "life_stage": "Mobile pelagic fish; life stage and size affect depth and behavior.",
       "habitat": "Warm upper-water habitat and dated floating kelp/debris observations; neither a paddy nor a front guarantees fish.",
       "method": "Check recent quality-screened ocean context, then seek identified fish and bait with suitable rod gear. Plan fuel reserve and return exposure before committing to an offshore search.",
-      "timing": "Migration varies seasonally and annually. An old catch report, high dock total or a moon phase cannot locate today\u2019s school.",
-      "condition_response": "Score the entire outbound\u2013search\u2013return window. Surface-current products cannot predict a fish\u2019s path or the drift of a deep jig.",
+      "timing": "Migration varies seasonally and annually. An old catch report, high dock total or a moon phase cannot locate today’s school.",
+      "condition_response": "Score the entire outbound–search–return window. Surface-current products cannot predict a fish’s path or the drift of a deep jig.",
       "evidence_needed": [
         "Recent identified schools, depth and observation method",
         "Cloud/quality-screened SST/fronts with native pixel size",
@@ -740,7 +740,7 @@
       "thermal_note": "Broad juvenile eastern-Pacific tagged-fish envelope from the reviewed HMS synthesis, not an optimum.",
       "source_links": [
         {
-          "title": "Albacore tuna \u00b7 ecological evidence",
+          "title": "Albacore tuna · ecological evidence",
           "url": "https://www.fisheries.noaa.gov/species/pacific-albacore-tuna"
         },
         {
@@ -772,7 +772,7 @@
         "hoop-search"
       ],
       "depth_guidance": "Use site-specific retrieval and method limits. Off Anacapa nets/traps are prohibited shallower than 20 ft; deep water is not inherently better and a 200-ft limit does not authorize diving.",
-      "regional_notes": "Channel Islands MPAs and method-specific exceptions are complex; this app excludes all mapped MPAs from targets. West Anacapa\u2019s pelican closure also restricts access January\u2013October.",
+      "regional_notes": "Channel Islands MPAs and method-specific exceptions are complex; this app excludes all mapped MPAs from targets. West Anacapa’s pelican closure also restricts access January–October.",
       "source_links": [
         {
           "title": "NPS California spiny lobster habitat",
@@ -816,7 +816,7 @@
       "life_stage": "Ocean-feeding fish; species and stock identification affect legal access.",
       "habitat": "Mobile forage and water-column habitat matter more than a fixed reef pin. Coastal search sectors are geographic references.",
       "method": "Check the current local season, then use lawful gear to search observed bait and fish marks at their actual depth. Separate trolling presentation depth from seabed depth.",
-      "timing": "Run timing and prey vary among years. Old landing reports or a moon phase do not establish today\u2019s school position.",
+      "timing": "Run timing and prey vary among years. Old landing reports or a moon phase do not establish today’s school position.",
       "condition_response": "Evaluate the outbound and return sea directions, trolling control and fog. Temperature or chlorophyll can guide a search only when recent, quality-screened and supported by forage evidence.",
       "evidence_needed": [
         "Fresh forage and species observations",
@@ -844,7 +844,7 @@
       "tactics_basis": "Practical search and presentation guidance synthesized from the linked ecology; not a calibrated catch model.",
       "source_links": [
         {
-          "title": "Chinook salmon \u00b7 ecological evidence",
+          "title": "Chinook salmon · ecological evidence",
           "url": "https://www.fisheries.noaa.gov/feature-story/era-surprises-studying-climate-change-and-salmon-nate-mantua"
         }
       ]
@@ -855,7 +855,7 @@
       "habitat": "Broad, depth-qualified sediment areas are starting hypotheses. Crab distribution, predation, molt, bait and gear all affect results.",
       "method": "When the season and chosen gear are permitted, compare a small number of sediment locations with consistent bait, gear and soak effort. Record empty sets as well as catches. Check bottom type and retrieval conditions before setting.",
       "timing": "Season permission, health restrictions and trap permission are checked separately. Molt and local movement may change availability.",
-      "condition_response": "Longer/deeper sets increase handling, buoy-line and retrieval demands. The user\u2019s 200-ft ceiling stays in force. A deeper comparison requires new depth-qualified habitat, lawful gear and a suitable retrieval plan.",
+      "condition_response": "Longer/deeper sets increase handling, buoy-line and retrieval demands. The user’s 200-ft ceiling stays in force. A deeper comparison requires new depth-qualified habitat, lawful gear and a suitable retrieval plan.",
       "evidence_needed": [
         "Catch per trap-hour or hoop set by depth",
         "Bait, soak time, size, sex and empty sets",
@@ -884,8 +884,53 @@
       "tactics_basis": "Practical search and presentation guidance synthesized from the linked ecology; not a calibrated catch model.",
       "source_links": [
         {
-          "title": "Dungeness crab \u00b7 ecological evidence",
+          "title": "Dungeness crab · ecological evidence",
           "url": "https://marinespecies.wildlife.ca.gov/dungeness-crab/monitoring/"
+        }
+      ]
+    },
+    "pacific-halibut": {
+      "name": "Pacific halibut",
+      "life_stage": "Adult shelf-feeding fish; not California halibut or a local nursery observation.",
+      "habitat": "Continental-shelf soft or mixed-bottom lanes with prey are broad search leads. A sediment polygon for California halibut does not qualify this species.",
+      "method": "On a legal shelf lane, use sonar to confirm depth and bottom, then test a controlled near-bottom bait or jig drift. Record line angle and whether fish and prey are actually observed.",
+      "timing": "IPHC describes seasonal shelf feeding and deeper spawning movement; that broad cycle does not establish local presence or a catch window.",
+      "condition_response": "Wind, sea and flow affect bottom contact and safe return. A missing surface-current cell cannot be translated into bottom drift.",
+      "evidence_needed": [
+        "Verified shelf substrate and legal depth",
+        "Dated species and prey observations at the fishing location",
+        "Effort, including empty drifts and changing gear control"
+      ],
+      "source_species": [
+        "pacific-halibut"
+      ],
+      "search_for": "Review surveyed shelf sediment or mixed bottom within the trip depth and current legal area; confirm it with the sounder.",
+      "presentation": "Make a short near-bottom test drift with legal gear, adjust weight for measured line angle, and move only on observed habitat or prey evidence.",
+      "caution": "Do not reuse California-halibut points. Confirm quota, season, one-line/two-hook restriction and MPA access for the exact date.",
+      "required_to_confirm": [
+        "Current legal access, quota and method",
+        "Manageable fishing and return conditions",
+        "Verified shelf substrate and legal depth",
+        "Dated species and prey observations at the fishing location",
+        "Effort, including empty drifts and changing gear control"
+      ],
+      "habitat_kinds": [
+        "sediment",
+        "mixed"
+      ],
+      "kind": "soft",
+      "control_mode": "bottom",
+      "thermal_range_c": null,
+      "numeric_bite_model": false,
+      "tactics_basis": "General IPHC biology and reviewed CDFW rules, not a local catch model or qualified fishing location.",
+      "source_links": [
+        {
+          "title": "IPHC stock biology and seasonal shelf migration",
+          "url": "https://www.iphc.int/research/pacific-halibut-stock-status-biology/"
+        },
+        {
+          "title": "CDFW Pacific halibut rules and quota tracking",
+          "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut"
         }
       ]
     }

@@ -71,7 +71,7 @@
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185054&inline=",
-      "packages": [],
+      "packages": ["fort-bragg-point-arena"],
       "targets": [
         "reef",
         "salmon",

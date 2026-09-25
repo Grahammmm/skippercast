@@ -21,6 +21,15 @@ def candidate():
 
 
 class RegionalContracts(TestCase):
+    def test_mendocino_preview_withholds_unqualified_fishing_spots(self):
+        region = load_region("fort-bragg-point-arena")
+        atlas = read_json(REPO / "dist" / region["assets"]["atlas"])
+        search = read_json(REPO / "dist" / region["assets"]["search_plans"])
+        self.assertEqual(region["status"], "preview")
+        self.assertEqual(atlas["targets"], [])
+        self.assertEqual(search["features"], [])
+        self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
+
     def test_preview_cannot_claim_qualified_targets_exports_or_images(self):
         report=requirement_report(load_region("cambria-san-simeon"))
         for key in ("surveyed-bottom-targets","surveyed-bottom-images","fishing-exports","verified-charter-hotspots","calibrated-catch-model"):
