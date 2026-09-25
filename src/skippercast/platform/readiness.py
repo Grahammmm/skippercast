@@ -75,7 +75,10 @@ def compile_readiness(root=REPO):
                     for series in ('scc', 'bss')]
     usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
     usgs_metadata = read_json(root / 'catalog/usgs-ds781-metadata-review.json')
-    usgs_character = read_json(root / 'dist/data/usgs-ds781-native-character-review.json')
+    character_path = root / 'dist/data/usgs-ds781-native-character-review.json'
+    metadata_path = root / 'catalog/usgs-ds781-metadata-review.json'
+    usgs_character = read_json(character_path)
+    character_semantics = read_json(root / 'dist/data/usgs-ds781-character-semantics.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -129,6 +132,23 @@ def compile_readiness(root=REPO):
             or usgs_character.get('product_count') != len(usgs_character.get('products', []))
             or usgs_character.get('inspected_count') + usgs_character.get('held_count') != usgs_character['product_count']):
         raise ValueError('Statewide original USGS character-raster review is incomplete')
+    if (character_semantics.get('scope') != 'usgs-ds781-original-fgdc-class-semantics'
+            or character_semantics.get('source_native_audit_sha256') != file_sha(character_path)
+            or character_semantics.get('source_metadata_inventory_sha256') != file_sha(metadata_path)
+            or character_semantics.get('opened_metadata_count') != usgs_character['inspected_count']
+            or character_semantics.get('verified_product_count') != sum(
+                row['status'] == 'verified' for row in character_semantics.get('products', []))
+            or character_semantics.get('fishing_target') is not False
+            or character_semantics.get('exportable') is not False):
+        raise ValueError('Original USGS class meanings are missing or changed')
+    semantics_by_archive = {row['archive_url']: row for row in character_semantics['products']}
+    opened_character = {row['archive_url']: row for row in usgs_character['products'] if row['status'] == 'ok'}
+    if (len(semantics_by_archive) != len(character_semantics['products'])
+            or set(semantics_by_archive) != set(opened_character)
+            or any(semantics_by_archive[url]['archive_sha256'] != row['archive_sha256']
+                   or semantics_by_archive[url]['metadata_sha256'] != row['metadata_sha256']
+                   for url, row in opened_character.items())):
+        raise ValueError('USGS semantic source receipts do not match opened rasters')
     character_by_sector = {row['sector_id']: row for row in usgs_character['sectors']}
     if len(character_by_sector) != len(usgs_character['sectors']) or not set(character_by_sector) <= expected:
         raise ValueError('Original USGS character review has unknown or duplicate sector')
@@ -256,8 +276,10 @@ def compile_readiness(root=REPO):
             next_step += (' Broad catalog hits ' + ', '.join(excluded_deepwater) +
                           ' have zero original MLLW cells in 25–200 ft; search other nearshore sources.')
         character = character_by_sector.get(ident)
-        if character and character['verified_original_class_tables']:
-            next_step += (' Cross-screen the opened USGS character rasters and verified class tables against'
+        verified_semantics = sum(row['status'] == 'verified' and ident in opened_character[url]['planning_sector_ids']
+                                 for url, row in semantics_by_archive.items())
+        if verified_semantics:
+            next_step += (' Cross-screen the opened USGS character rasters and verified original class meanings against'
                           ' measured MLLW depth, MPAs and current charts; catalog area labels are not exact footprints.')
         footprint_tiles = {row['tile'] for row in footprint['tiles'] if ident in row['planning_sector_ids']}
         original_tiles = original_by_sector.get(ident, {})
@@ -289,6 +311,7 @@ def compile_readiness(root=REPO):
             'usgs_ds781_native_character_archive_leads': character['catalog_archive_leads'] if character else 0,
             'usgs_ds781_opened_native_character_rasters': character['opened_native_rasters'] if character else 0,
             'usgs_ds781_verified_original_class_tables': character['verified_original_class_tables'] if character else 0,
+            'usgs_ds781_verified_original_class_meanings': verified_semantics,
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
             'held_variable_depth_file_leads': len(held_variable_rows),
@@ -326,6 +349,7 @@ def compile_readiness(root=REPO):
         'survey_discovery_at': discovery['last_complete_scan_at'],
         'historical_seabed_samples_retrieved_at': seabed_samples['retrieved_at'],
         'nbs_hard_footprint_reviewed_at': footprint_original['reviewed_at'],
+        'usgs_original_class_semantics_reviewed_at': character_semantics['reviewed_at'],
         'limitations': [
             'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
@@ -336,6 +360,7 @@ def compile_readiness(root=REPO):
             'CSUMB catalog-report envelopes are discovery leads only; they are not measured-cell footprints or fishing areas.',
             'USGS DS 781 map-area associations follow broad place names, not inspected original grid footprints. Linked products are acquisition leads, not surveyed area or fishable marks.',
             'USGS FGDC metadata rights, spacing and datum values are source descriptions only; a public-domain statement does not validate raster coverage, chart depth or fishing use.',
+            'Original FGDC class meanings supplement incomplete raster value tables, but a historical class label does not confirm a discrete fishing rock or current fish.',
             'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
             'NBS original-hard overlap counts are tile-level historical source pixels, can repeat across tiles, and exclude smaller or undisplayed USGS hard patches. They are not unique reef area, catches or fishing points.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',

@@ -1137,7 +1137,7 @@ jobs:
       - name: Verify original raster audit and value-table aliases
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_usgs_native_vat tests.test_ds781_native_character -v
+        run: python -m unittest tests.test_usgs_native_vat tests.test_ds781_native_character tests.test_usgs_character_semantics -v
       - name: Reopen reviewed original seafloor-character archives across DS781 areas
         env:
           PYTHONPATH: src:.
@@ -1146,12 +1146,21 @@ jobs:
           --output var/review/usgs-ds781-native-character-review.json
           --verify dist/data/usgs-ds781-native-character-review.json
           --workers 4
+      - name: Verify original FGDC class meanings, including rasters without descriptive value tables
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_usgs_character_semantics.py
+          --output var/review/usgs-ds781-character-semantics.json
+          --verify dist/data/usgs-ds781-character-semantics.json
       - name: Upload unpublished source-change receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: usgs-ds781-native-character-review
-          path: var/review/usgs-ds781-native-character-review.json
+          path: |
+            var/review/usgs-ds781-native-character-review.json
+            var/review/usgs-ds781-character-semantics.json
           retention-days: 30
 
 # This workflow deliberately does not change public map files. Camera observations,
