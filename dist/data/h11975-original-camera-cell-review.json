@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "h11975-original-cells-vs-historical-camera-centers",
-  "reviewed_at": "2026-09-24T07:34:53+00:00",
+  "reviewed_at": "2026-09-25T02:13:40+00:00",
   "context_compiled_at": "2026-09-24T07:02:23.216332+00:00",
   "camera_archive_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
   "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
@@ -14,13 +14,50 @@
   "centers_on_qualified_original_cells": 5,
   "outlines": [
     {
+      "outline_id": "nbs-usgs-c54aeb6ce8",
+      "camera_windows": 2,
+      "centers_on_qualified_original_cells": 2,
+      "qualified_center_depths_ft": [
+        115.1,
+        127.0
+      ],
+      "qualified_original_cells": 150904,
+      "qualified_original_cell_area_m2": 655612.0
+    },
+    {
       "outline_id": "nbs-usgs-19ebda3140",
       "camera_windows": 4,
       "centers_on_qualified_original_cells": 2,
       "qualified_center_depths_ft": [
         169.9,
         170.4
-      ]
+      ],
+      "qualified_original_cells": 27741,
+      "qualified_original_cell_area_m2": 443856.0
+    },
+    {
+      "outline_id": "nbs-usgs-b0c6003bef",
+      "camera_windows": 1,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 18525,
+      "qualified_original_cell_area_m2": 296400.0
+    },
+    {
+      "outline_id": "nbs-usgs-0ff41ec863",
+      "camera_windows": 0,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 10384,
+      "qualified_original_cell_area_m2": 57292.0
+    },
+    {
+      "outline_id": "nbs-usgs-6b88da6e3e",
+      "camera_windows": 0,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 9245,
+      "qualified_original_cell_area_m2": 37616.0
     },
     {
       "outline_id": "nbs-usgs-918635e24d",
@@ -28,27 +65,46 @@
       "centers_on_qualified_original_cells": 1,
       "qualified_center_depths_ft": [
         106.7
-      ]
+      ],
+      "qualified_original_cells": 2778037,
+      "qualified_original_cell_area_m2": 10836844.0
     },
     {
-      "outline_id": "nbs-usgs-b0c6003bef",
-      "camera_windows": 1,
+      "outline_id": "nbs-usgs-28b86d840e",
+      "camera_windows": 0,
       "centers_on_qualified_original_cells": 0,
-      "qualified_center_depths_ft": []
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 100754,
+      "qualified_original_cell_area_m2": 282596.0
     },
     {
-      "outline_id": "nbs-usgs-c54aeb6ce8",
-      "camera_windows": 2,
-      "centers_on_qualified_original_cells": 2,
-      "qualified_center_depths_ft": [
-        115.1,
-        127.0
-      ]
+      "outline_id": "nbs-usgs-99b5838c44",
+      "camera_windows": 0,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 5126,
+      "qualified_original_cell_area_m2": 82016.0
+    },
+    {
+      "outline_id": "nbs-usgs-98728c6d41",
+      "camera_windows": 0,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 26001,
+      "qualified_original_cell_area_m2": 104004.0
+    },
+    {
+      "outline_id": "nbs-usgs-c940c29122",
+      "camera_windows": 0,
+      "centers_on_qualified_original_cells": 0,
+      "qualified_center_depths_ft": [],
+      "qualified_original_cells": 26662,
+      "qualified_original_cell_area_m2": 106648.0
     }
   ],
   "fishing_target": false,
   "exportable": false,
-  "method": "Historical camera center is tested against original H11975 <=4 m measured BAG refinement cells that pass original USGS class-3 two-cell inset, 25\u2013200 ft depth with 2 m margin and <=1 m uncertainty, and buffered current MPA/GEA plus original-report danger exclusions.",
+  "method": "Each research outline and historical camera center is tested against original H11975 <=4 m measured BAG refinement cells that pass original USGS class-3 two-cell inset, 25\u2013200 ft depth with 2 m margin and <=1 m uncertainty, and buffered current MPA/GEA plus original-report danger exclusions. Area is the sum of original qualified cell areas inside each outline, not a continuous mapped patch.",
   "limitations": [
     "Camera positions have highly variable accuracy near 10 m; a center-cell match does not verify the surrounding bottom.",
     "No present-day fish, catch, safe route, current navigation chart or local species and gear rules are established."

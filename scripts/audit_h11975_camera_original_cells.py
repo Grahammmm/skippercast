@@ -11,7 +11,8 @@ import json
 from pathlib import Path
 
 from pyproj import Transformer
-from shapely.geometry import Point, shape
+from rasterio.features import rasterize
+from shapely.geometry import Point, box, mapping, shape
 from shapely.ops import transform
 from shapely.strtree import STRtree
 
@@ -61,6 +62,11 @@ def reconcile(context, manifest, video_cache, bag_audit, usgs_audit, usgs_metada
     # Projection is the original BAG's horizontal NAD83 UTM 10 CRS.
     native = Transformer.from_crs(4326, 'EPSG:26910', always_xy=True)
     points = [(outline, *native.transform(lon, lat)) for outline, lon, lat in windows]
+    outlines = [transform(native.transform, shape(feature['geometry']))
+                for feature in context_data['features']]
+    outline_tree = STRtree(outlines)
+    outline_counts = defaultdict(lambda: {'qualified_original_cells': 0,
+                                           'qualified_original_cell_area_m2': 0.0})
     passing = set()
     depths = {}
 
@@ -69,6 +75,20 @@ def reconcile(context, manifest, video_cache, bag_audit, usgs_audit, usgs_metada
             raise ValueError('H11975 native projection changed')
         left, top = affine.c, affine.f
         dx, dy = affine.a, -affine.e
+        footprint = box(left, top - mask.shape[0] * dy,
+                        left + mask.shape[1] * dx, top)
+        for index in outline_tree.query(footprint):
+            index = int(index)
+            outline = outlines[index]
+            if not outline.intersects(footprint):
+                continue
+            inside = rasterize([(mapping(outline), 1)], out_shape=mask.shape,
+                               transform=affine, dtype='uint8').astype(bool)
+            count = int((mask & inside).sum())
+            if count:
+                ident = context_data['features'][index]['properties']['id']
+                outline_counts[ident]['qualified_original_cells'] += count
+                outline_counts[ident]['qualified_original_cell_area_m2'] += count * dx * dy
         for number, (_, x, y) in enumerate(points):
             col, row = int((x - left) // dx), int((top - y) // dy)
             if 0 <= row < mask.shape[0] and 0 <= col < mask.shape[1] and mask[row, col]:
@@ -96,9 +116,13 @@ def reconcile(context, manifest, video_cache, bag_audit, usgs_audit, usgs_metada
         'screened_federal_at': receipt['federal_areas_retrieved_at'],
         'minimum_display_interior_clearance_m': MIN_INTERIOR_M,
         'total_camera_windows': len(windows), 'centers_on_qualified_original_cells': len(passing),
-        'outlines': [{'outline_id': ident, **value} for ident, value in sorted(counts.items())],
+        'outlines': [{'outline_id': feature['properties']['id'],
+                      **counts[feature['properties']['id']],
+                      'qualified_original_cells': outline_counts[feature['properties']['id']]['qualified_original_cells'],
+                      'qualified_original_cell_area_m2': round(outline_counts[feature['properties']['id']]['qualified_original_cell_area_m2'], 1)}
+                     for feature in context_data['features']],
         'fishing_target': False, 'exportable': False,
-        'method': 'Historical camera center is tested against original H11975 <=4 m measured BAG refinement cells that pass original USGS class-3 two-cell inset, 25–200 ft depth with 2 m margin and <=1 m uncertainty, and buffered current MPA/GEA plus original-report danger exclusions.',
+        'method': 'Each research outline and historical camera center is tested against original H11975 <=4 m measured BAG refinement cells that pass original USGS class-3 two-cell inset, 25–200 ft depth with 2 m margin and <=1 m uncertainty, and buffered current MPA/GEA plus original-report danger exclusions. Area is the sum of original qualified cell areas inside each outline, not a continuous mapped patch.',
         'limitations': ['Camera positions have highly variable accuracy near 10 m; a center-cell match does not verify the surrounding bottom.',
                         'No present-day fish, catch, safe route, current navigation chart or local species and gear rules are established.'],
     }

@@ -65,9 +65,13 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
                          sum(row["interior_windows"] for row in cape["matched_outlines"]))
         self.assertEqual(original["centers_on_qualified_original_cells"],
                          sum(row["centers_on_qualified_original_cells"] for row in original["outlines"]))
+        self.assertEqual({row["outline_id"] for row in original["outlines"]},
+                         {feature["properties"]["id"] for feature in context["features"]})
         source = {row["outline_id"]: row for row in cape["matched_outlines"]}
         for row in original["outlines"]:
-            self.assertEqual(row["camera_windows"], source[row["outline_id"]]["interior_windows"])
+            self.assertEqual(row["camera_windows"], source.get(row["outline_id"], {}).get("interior_windows", 0))
+            self.assertGreater(row["qualified_original_cells"], 0)
+            self.assertGreater(row["qualified_original_cell_area_m2"], 0)
             self.assertLessEqual(row["centers_on_qualified_original_cells"], row["camera_windows"])
             self.assertEqual(len(row["qualified_center_depths_ft"]),
                              row["centers_on_qualified_original_cells"])
