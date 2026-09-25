@@ -1,1 +1,1 @@
-{"region_id":"santa-cruz-monterey-bay","generated_at":"2026-09-25T09:21:08Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":63,"sources_total":64,"issues":["currents"]}
+{"region_id":"santa-cruz-monterey-bay","generated_at":"2026-09-25T09:41:26Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":64,"issues":["sst","chlorophyll"]}

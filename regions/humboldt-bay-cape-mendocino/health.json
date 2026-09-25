@@ -1,1 +1,1 @@
-{"region_id":"humboldt-bay-cape-mendocino","generated_at":"2026-09-25T09:21:08Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":67,"sources_total":69,"issues":["currents","buoy-46244-swell"]}
+{"region_id":"humboldt-bay-cape-mendocino","generated_at":"2026-09-25T09:41:26Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":65,"sources_total":69,"issues":["sst","chlorophyll","currents","buoy-46244-swell"]}

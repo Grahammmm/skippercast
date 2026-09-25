@@ -1,1 +1,1 @@
-{"region_id":"shelter-cove-north-mendocino","generated_at":"2026-09-25T09:21:08Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":67,"sources_total":68,"issues":["currents"]}
+{"region_id":"shelter-cove-north-mendocino","generated_at":"2026-09-25T09:41:26Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":65,"sources_total":68,"issues":["sst","chlorophyll","currents"]}
