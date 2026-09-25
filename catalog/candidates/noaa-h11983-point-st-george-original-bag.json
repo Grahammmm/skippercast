@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h11983-point-st-george-original-bag",
+  "name": "NOAA H11983 original 1\u20134 m variable-resolution MLLW BAG near Point St. George",
+  "sector_ids": [
+    "crescent-city-humboldt",
+    "del-norte"
+  ],
+  "need_ids": [
+    "bathymetry",
+    "substrate",
+    "groundtruth"
+  ],
+  "producer": {
+    "name": "NOAA National Ocean Service, Office of Coast Survey",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "documentation_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11983.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/BAG/H11983_MB_VR_MLLW_1of1.bag",
+  "access_status": "accessible",
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11983.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [
+      -124.3843069,
+      41.6391935,
+      -124.0781916,
+      41.8684143
+    ],
+    "resolution_m": 4,
+    "resolution_basis": "inspected",
+    "horizontal_crs": "Original BAG compound CRS; see native audit metadata",
+    "vertical_datum": "MLLW depth",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/BAG/H11983_MB_VR_MLLW_1of1.bag"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T20:16:05.378432+00:00",
+    "update_cadence": "Historical 2008 survey; monthly source and chart review",
+    "coverage_start": "2008-09-08",
+    "coverage_end": "2008-11-21"
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11983.html",
+      "supports": "Original survey identity, 2008 dates, report and variable-resolution BAG link."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+      "supports": "Original report Appendix I lists eleven historical dangers, including seven underwater rocks; three starred rocks lack a known least depth. It says no bottom samples were assigned."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/BAG/H11983_MB_VR_MLLW_1of1.bag",
+      "supports": "Original e8882503208671ca5efea41bb191027ae31293faecacb3770f7b1d3eb7e65d24 BAG opened: 10,088 native grids at 1\u20134 m and 35,591,242 source-cell associations passing the nominal 25\u2013200 ft MLLW/uncertainty planning screen; see dist/data/noaa-h11983-native-source-review.json."
+    }
+  ],
+  "variables": [
+    "seafloor_depth",
+    "seafloor_product_uncertainty",
+    "historical_camera_substrate_observation"
+  ],
+  "units": {
+    "seafloor_depth": "m below MLLW",
+    "seafloor_product_uncertainty": "m",
+    "historical_camera_substrate_observation": "USGS categorical code"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original BAG; USGS 2009 c109nc camera archive",
+    "raw_sha256": "e8882503208671ca5efea41bb191027ae31293faecacb3770f7b1d3eb7e65d24",
+    "transformations": [
+      "Opened the original SHA-256-pinned variable-resolution BAG, inspected embedded MLLW and product uncertainty and screened every native <=4 m refinement cell.",
+      "Checked complete native supergrid footprints against a dated 155-feature CDFW MPA snapshot.",
+      "Cross-compared one NOAA NBS tile and the original BAG at 2009 camera observations; only three historical rocky windows passed both 25 m native-cell screens.",
+      "Compared those three private camera locations with 11 original report dangers and 18 bounded NOAA ENC Direct danger layers; published only aggregate distances."
+    ]
+  },
+  "limitations": [
+    "The rectangular raster envelope is not continuous measured coverage; native refinement cell masks, depth and uncertainty must be checked for each proposed site.",
+    "The three original-grid-qualified historical rocky camera windows are correlated 2009 observations, not three independent reefs, current fish locations or mapped rock footprints.",
+    "The 2008 report includes eleven dangers and three rocks without known least depth. The bounded ENC proximity check is not a certified present chart, complete route or safe access review.",
+    "MPA geometry is a dated snapshot, and federal-area rules, species/date/method restrictions, source rights and habitat footprint require separate review. No fishing target, score or export is approved."
+  ]
+}

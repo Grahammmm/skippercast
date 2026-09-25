@@ -4,12 +4,191 @@
   "reviewed_at": "2026-09-24",
   "surveys": [
     {
-      "survey_id": "H11971",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
-      "report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
-      "report_section": "Field report PDF pages 12, 17 and 20; final office-review endnotes 8, 10, 12 and 16; HCell report PDF pages 22–23",
-      "interpretation": "The field report says no new dangers, but final office review digitized a new submerged rock, retained older charted rocks because their actual positions may fall inshore of survey coverage, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The report supplies no exact new-rock position in its text. Its HCell rocky-seabed areas were generalized at 1:200,000 scale and cannot be used as precise reef edges. This is a survey-level hold until original HCell/current ENC feature geometry and survey gaps are reconciled, not an all-clear for historical camera windows or a navigation route.",
-      "hazards": []
+      "survey_id": "H11730",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+      "report_sha256": "7c41e6477025e9cacf9d7a4bcc8b4834c9d6375ef6f0bbb37413b31e64b28382",
+      "report_section": "Final office-review endnotes on PDF page 15 and HCell Survey Features on PDF page 18",
+      "interpretation": "The 2007 field section says no dangers, but the final HCell retains a rock with 18.7 m least depth. The final office endnotes also discuss two old AWOIS wreck positions without detected evidence in bounded multibeam coverage; their present chart status is unresolved. The rock and old wreck references are historical review leads, not current chart or route clearance.",
+      "hazards": [
+        {
+          "id": "H11730-hcell-rock-18p7m",
+          "kind": "historical-charted-rock-review-hold",
+          "latitude": 39.0048888889,
+          "longitude": -123.7170555556,
+          "reported_depth_ft": 61.3517,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "2007 HCell rock with 18.7 m least depth; historical habitat and chart review hold, not a navigation safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11731",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
+      "report_sha256": "b35b2ad0df860fb0c2cc106161791614fc90eef0c50fa120e005a0d04aab8711",
+      "report_section": "Final office-review endnotes on PDF page 15 and HCell Survey Features on PDF page 18",
+      "interpretation": "The 2007 field section says no new dangers, but the final office review moved two non-dangerous wreck symbols to conspicuous multibeam features about 1.3 and 2 km from their old chart positions. They were considered possible wrecks, not confirmed natural reef or verified current chart features. Keep their historical positions out of automatic hard-bottom fishing promotion and check the current ENC separately.",
+      "hazards": [
+        {
+          "id": "H11731-awois-50029-relocated-feature",
+          "kind": "historical-possible-wreck-review-hold",
+          "latitude": 38.7844527778,
+          "longitude": -123.6158083333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "2007 possible wreck/symbol relocation review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11731-awois-50095-relocated-feature",
+          "kind": "historical-possible-wreck-review-hold",
+          "latitude": 38.7161805556,
+          "longitude": -123.5456444444,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "2007 possible wreck/symbol relocation review hold, not a navigation safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11732",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+      "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
+      "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11\u201312",
+      "interpretation": "Three rocks were corrected from feet to fathoms in the final report. One has a survey hole over its top and an unknown least depth; retain a larger review hold. Check current ENC before any passage.",
+      "hazards": [
+        {
+          "id": "H11732-rock-two-fathoms-five-feet-or-shoaler",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.5718944444,
+          "longitude": -123.343925,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The reported sounding is 2 fathoms 5 feet or shoaler; the least depth is unknown because full coverage was not achieved. Historical review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11732-rock-four-fathoms-or-shoaler",
+          "kind": "historical-danger-to-navigation-with-survey-hole",
+          "latitude": 38.5436611111,
+          "longitude": -123.3102833333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Least depth was not determined; candidate-review hold only."
+        },
+        {
+          "id": "H11732-rock-four-fathoms-four-feet",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.5227333333,
+          "longitude": -123.2745638889,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11733",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
+      "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
+      "report_section": "Dangers to Navigation and final-tide correction, pages 11\u201312; north-border feature is documented by H11732",
+      "supporting_reports": [
+        {
+          "survey_id": "H11732",
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
+          "sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27"
+        }
+      ],
+      "interpretation": "One reported rock was corrected from feet to fathoms after final tides. A second feature on the northern survey border is screened from the neighboring H11732 report.",
+      "hazards": [
+        {
+          "id": "H11733-rock-four-fathoms-or-shoaler",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.4631472222,
+          "longitude": -123.1665388889,
+          "reported_depth_ft": 24,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11732-north-border-rock",
+          "kind": "historical-danger-to-navigation-neighboring-survey",
+          "latitude": 38.5227333333,
+          "longitude": -123.2745638889,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Neighboring survey reports a fully covered rock; this is a review hold, not navigation clearance."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11734",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
+      "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
+      "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19\u201321",
+      "interpretation": "The field narrative says no DTON; the final HCell review records one 16.457 m DTON. A charted wreck PA is just outside the surveyed area and is conservatively held where the BAG bbox overlaps it.",
+      "hazards": [
+        {
+          "id": "H11734-final-hcell-dton-16m",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.354025,
+          "longitude": -123.0937333333,
+          "reported_depth_ft": 54,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical feature review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11734-charted-wreck-pa",
+          "kind": "historical-wreck-position-approximate",
+          "latitude": 38.2672305556,
+          "longitude": -123.0163527778,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Uncertain charted position just outside survey coverage; verify current ENC before any navigation or fishing plan."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11735",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
+      "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
+      "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
+      "interpretation": "The field section says no DTON; final Pacific Hydrographic Branch HCell review identifies one 53-foot DTON. Use the final review. The report does not establish present chart status or a safe standoff distance.",
+      "hazards": [
+        {
+          "id": "H11735-final-hcell-dton-53ft",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 38.1757097222,
+          "longitude": -122.9748091667,
+          "reported_depth_ft": 53,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Conservative candidate-review hold around a historical sounding; not a navigational safety radius."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11738",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
+      "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
+      "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
+      "interpretation": "Two reported dangers: a 4-fathom-4-foot rock and a 4-fathom-5-foot shoal at the edge of multibeam coverage. The report recommends removal of an older charted wreck as disproved; that item is not treated as a measured reef or fishing target.",
+      "hazards": [
+        {
+          "id": "H11738-rock-four-fathoms-four-feet",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.9809277778,
+          "longitude": -122.9615027778,
+          "reported_depth_ft": 28,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H11738-shoal-four-fathoms-five-feet-at-coverage-edge",
+          "kind": "historical-danger-to-navigation-survey-edge",
+          "latitude": 37.9964166667,
+          "longitude": -123.0265277778,
+          "reported_depth_ft": 29,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Shoalest observed point lies at the multibeam edge; this is a review hold, not a safety distance."
+        }
+      ]
     },
     {
       "survey_id": "H11876",
@@ -17,6 +196,95 @@
       "report_sha256": "a34335c6bef67de0f1f4d1bb1d4782d2159719e5dbe933c9d8aab607795b0cfc",
       "report_section": "Final descriptive report D.1.1-D.1.4 and HCell report section 5, PDF pages 14 and 19",
       "interpretation": "The 2008 Pacific Beach survey and final-office review report no new dangers to navigation, but note historically displaced canyon soundings and one charted 20-fathom sounding recommended for removal after full coverage. The HCell generalized twelve survey rocky-seabed areas to four and retained two additional areas. The HCell rock features and 2011 camera windows are historical habitat evidence, not an exact present reef edge or safe route. No current ENC, MPA, date-specific fishing rule or fish-presence clearance follows from this report.",
+      "hazards": []
+    },
+    {
+      "survey_id": "H11951",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
+      "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
+      "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 19\u201320",
+      "interpretation": "The narrative says no dangers to navigation, but it identifies a new wreck, retains two charted well-head positions, and confirms mooring buoys and kelp. The final office review retains a wreck object. These are historical exclusion holds, not current chart clearance.",
+      "hazards": [
+        {
+          "id": "H11951-new-wreck",
+          "kind": "historical-wreck-review-hold",
+          "latitude": 34.4354805556,
+          "longitude": -120.3901055556,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Historical 61 by 11 m wreck-like feature; this buffer is a habitat review hold, not a navigation safety radius."
+        },
+        {
+          "id": "H11951-retained-wellheads-west",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4316666667,
+          "longitude": -120.3855555556,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Approximate charted well-head group retained despite no survey confirmation; review hold only."
+        },
+        {
+          "id": "H11951-retained-wellhead-east",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4315833333,
+          "longitude": -120.3592472222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Charted well head retained despite inconclusive survey hits; review hold only."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11952",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+      "report_section": "Descriptive report pages 14\u201315 and final HCell review pages 17 and 20",
+      "interpretation": "The field narrative says no dangers to navigation, but the final review includes an uncharted wreck and retains two charted well heads. The report also confirms Cojo Anchorage moorings. Exclude these historical observations from habitat screening; inspect the current ENC and local restrictions separately.",
+      "hazards": [
+        {
+          "id": "H11952-uncharted-wreck",
+          "kind": "historical-wreck-review-hold",
+          "latitude": 34.4451416667,
+          "longitude": -120.4471944444,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Historical wreck hold, not a navigational safety radius. The report describes a 78 by 13 m wreck-like feature with a shoaler north end."
+        },
+        {
+          "id": "H11952-retained-well-50656",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4256083333,
+          "longitude": -120.4691333333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
+        },
+        {
+          "id": "H11952-retained-well-50670",
+          "kind": "historical-wellhead-review-hold",
+          "latitude": 34.4441305556,
+          "longitude": -120.4698361111,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
+        },
+        {
+          "id": "H11952-cojo-anchorage-moorings",
+          "kind": "historical-mooring-review-hold",
+          "latitude": 34.4452777778,
+          "longitude": -120.4422222222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 300,
+          "radius_meaning": "Approximate reported mooring-buoy location; planning review hold only, not a surveyed perimeter."
+        }
+      ]
+    },
+    {
+      "survey_id": "H11953",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+      "report_section": "Descriptive report page 15 and final HCell review page 20",
+      "interpretation": "The report lists no assigned AWOIS features or dangers to navigation; its final review generalized 82 rocky seabed areas to four chart areas. An empty historical hazard list is not present-day chart or route clearance.",
       "hazards": []
     },
     {
@@ -74,329 +342,18 @@
       ]
     },
     {
-      "survey_id": "H11981",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
-      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
-      "report_section": "Descriptive report PDF pages 16 and 19–23; final office review notes 11 and 13 on page 22",
-      "interpretation": "Field section D.1 says no dangers to navigation, but the final office review notes additional holidays around charted rocks without established least depths. It also records visible offsets on some lines from use of NAD83-to-NAVD88 instead of NAD83-to-MLLW, judged within survey specifications. These are survey-quality and coverage holds, not point hazards; no exact geometry is supplied in the report. Do not infer that the historical rocky-camera transect is unaffected.",
+      "survey_id": "H11971",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
+      "report_section": "Field report PDF pages 12, 17 and 20; final office-review endnotes 8, 10, 12 and 16; HCell report PDF pages 22\u201323",
+      "interpretation": "The field report says no new dangers, but final office review digitized a new submerged rock, retained older charted rocks because their actual positions may fall inshore of survey coverage, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The report supplies no exact new-rock position in its text. Its HCell rocky-seabed areas were generalized at 1:200,000 scale and cannot be used as precise reef edges. This is a survey-level hold until original HCell/current ENC feature geometry and survey gaps are reconciled, not an all-clear for historical camera windows or a navigation route.",
       "hazards": []
-    },
-    {
-      "survey_id": "H11951",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/DR/H11951.pdf",
-      "report_sha256": "2bc3414f80ab62eae2fe2cc88bc6e2e901d6c4100766e9c32d82e552483ba641",
-      "report_section": "Descriptive report pages 14–15 and final HCell review pages 19–20",
-      "interpretation": "The narrative says no dangers to navigation, but it identifies a new wreck, retains two charted well-head positions, and confirms mooring buoys and kelp. The final office review retains a wreck object. These are historical exclusion holds, not current chart clearance.",
-      "hazards": [
-        {
-          "id": "H11951-new-wreck",
-          "kind": "historical-wreck-review-hold",
-          "latitude": 34.4354805556,
-          "longitude": -120.3901055556,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Historical 61 by 11 m wreck-like feature; this buffer is a habitat review hold, not a navigation safety radius."
-        },
-        {
-          "id": "H11951-retained-wellheads-west",
-          "kind": "historical-wellhead-review-hold",
-          "latitude": 34.4316666667,
-          "longitude": -120.3855555556,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Approximate charted well-head group retained despite no survey confirmation; review hold only."
-        },
-        {
-          "id": "H11951-retained-wellhead-east",
-          "kind": "historical-wellhead-review-hold",
-          "latitude": 34.4315833333,
-          "longitude": -120.3592472222,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Charted well head retained despite inconclusive survey hits; review hold only."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11953",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
-      "report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
-      "report_section": "Descriptive report page 15 and final HCell review page 20",
-      "interpretation": "The report lists no assigned AWOIS features or dangers to navigation; its final review generalized 82 rocky seabed areas to four chart areas. An empty historical hazard list is not present-day chart or route clearance.",
-      "hazards": []
-    },
-    {
-      "survey_id": "H11952",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
-      "report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
-      "report_section": "Descriptive report pages 14–15 and final HCell review pages 17 and 20",
-      "interpretation": "The field narrative says no dangers to navigation, but the final review includes an uncharted wreck and retains two charted well heads. The report also confirms Cojo Anchorage moorings. Exclude these historical observations from habitat screening; inspect the current ENC and local restrictions separately.",
-      "hazards": [
-        {
-          "id": "H11952-uncharted-wreck",
-          "kind": "historical-wreck-review-hold",
-          "latitude": 34.4451416667,
-          "longitude": -120.4471944444,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Historical wreck hold, not a navigational safety radius. The report describes a 78 by 13 m wreck-like feature with a shoaler north end."
-        },
-        {
-          "id": "H11952-retained-well-50656",
-          "kind": "historical-wellhead-review-hold",
-          "latitude": 34.4256083333,
-          "longitude": -120.4691333333,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
-        },
-        {
-          "id": "H11952-retained-well-50670",
-          "kind": "historical-wellhead-review-hold",
-          "latitude": 34.4441305556,
-          "longitude": -120.4698361111,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "The final office review retained this charted well head despite no multibeam detection; historical review hold only."
-        },
-        {
-          "id": "H11952-cojo-anchorage-moorings",
-          "kind": "historical-mooring-review-hold",
-          "latitude": 34.4452777778,
-          "longitude": -120.4422222222,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 300,
-          "radius_meaning": "Approximate reported mooring-buoy location; planning review hold only, not a surveyed perimeter."
-        }
-      ]
-    },
-    {
-      "survey_id": "H12111",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
-      "report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",
-      "report_section": "Final HCell revision 23 and Danger to Navigation report, PDF pages 24–29",
-      "interpretation": "The field narrative says no DTON, but the final Pacific Hydrographic Branch review records two submerged rocks and says both were applied to the chart. These historical observations are review holds, not current chart or fishing clearances.",
-      "hazards": [
-        {
-          "id": "H12111-final-hcell-rock-2m",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 37.8815555556,
-          "longitude": -122.698,
-          "reported_depth_ft": 6.55,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
-        },
-        {
-          "id": "H12111-final-hcell-rock-3m22",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 37.8660555556,
-          "longitude": -122.5968888889,
-          "reported_depth_ft": 10.55,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
-        }
-      ]
-    },
-    {
-      "survey_id": "H12109",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
-      "report_sha256": "b0f4610042d6931d713b9c9747f022610d73e00935300b60b5938c9383c31fd2",
-      "report_section": "Features, AWOIS investigations and final HCell revisions, PDF pages 17 and 20–22",
-      "interpretation": "The final review records no DTON. Two assigned historical AWOIS objects were not found under full multibeam coverage; neither is evidence of a fishable wreck or reef. Current ENC and routes still require independent screening.",
-      "hazards": []
-    },
-    {
-      "survey_id": "H11738",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11738/DR/H11738.pdf",
-      "report_sha256": "4ab1f9aa104a5460805cd5475df235ba21e9438066ba396bf44aa01498938e24",
-      "report_section": "Dangers to Navigation and HCell final review, pages 12, 14, 17 and Appendix I",
-      "interpretation": "Two reported dangers: a 4-fathom-4-foot rock and a 4-fathom-5-foot shoal at the edge of multibeam coverage. The report recommends removal of an older charted wreck as disproved; that item is not treated as a measured reef or fishing target.",
-      "hazards": [
-        {
-          "id": "H11738-rock-four-fathoms-four-feet",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 37.9809277778,
-          "longitude": -122.9615027778,
-          "reported_depth_ft": 28,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
-        },
-        {
-          "id": "H11738-shoal-four-fathoms-five-feet-at-coverage-edge",
-          "kind": "historical-danger-to-navigation-survey-edge",
-          "latitude": 37.9964166667,
-          "longitude": -123.0265277778,
-          "reported_depth_ft": 29,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Shoalest observed point lies at the multibeam edge; this is a review hold, not a safety distance."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11735",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11735/DR/H11735.pdf",
-      "report_sha256": "a66018482b4960bc78afcec35de23c0664c438f149c2bf9246b02618f41f52fe",
-      "report_section": "HCell approval endnote 18 and HCell Report section 5, pages 13 and 16",
-      "interpretation": "The field section says no DTON; final Pacific Hydrographic Branch HCell review identifies one 53-foot DTON. Use the final review. The report does not establish present chart status or a safe standoff distance.",
-      "hazards": [
-        {
-          "id": "H11735-final-hcell-dton-53ft",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 38.1757097222,
-          "longitude": -122.9748091667,
-          "reported_depth_ft": 53,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Conservative candidate-review hold around a historical sounding; not a navigational safety radius."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11734",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11734/DR/H11734.pdf",
-      "report_sha256": "10eaa7baeb51ae741dbdc5aeec2d6cb5ca8082d79209066ed913779b47e190c8",
-      "report_section": "Final HCell approval endnotes 11, 14 and section 5; original DTON report, pages 13, 16 and 19–21",
-      "interpretation": "The field narrative says no DTON; the final HCell review records one 16.457 m DTON. A charted wreck PA is just outside the surveyed area and is conservatively held where the BAG bbox overlaps it.",
-      "hazards": [
-        {
-          "id": "H11734-final-hcell-dton-16m",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 38.354025,
-          "longitude": -123.0937333333,
-          "reported_depth_ft": 54,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical feature review hold, not a navigational safety radius."
-        },
-        {
-          "id": "H11734-charted-wreck-pa",
-          "kind": "historical-wreck-position-approximate",
-          "latitude": 38.2672305556,
-          "longitude": -123.0163527778,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Uncertain charted position just outside survey coverage; verify current ENC before any navigation or fishing plan."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11733",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11733/DR/H11733.pdf",
-      "report_sha256": "7c338b5582615b49dc8bd0dd5a1f4cdd87ba7b74a40dd4e040a42e5965f49198",
-      "report_section": "Dangers to Navigation and final-tide correction, pages 11–12; north-border feature is documented by H11732",
-      "supporting_reports": [
-        {
-          "survey_id": "H11732",
-          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
-          "sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27"
-        }
-      ],
-      "interpretation": "One reported rock was corrected from feet to fathoms after final tides. A second feature on the northern survey border is screened from the neighboring H11732 report.",
-      "hazards": [
-        {
-          "id": "H11733-rock-four-fathoms-or-shoaler",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 38.4631472222,
-          "longitude": -123.1665388889,
-          "reported_depth_ft": 24,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
-        },
-        {
-          "id": "H11732-north-border-rock",
-          "kind": "historical-danger-to-navigation-neighboring-survey",
-          "latitude": 38.5227333333,
-          "longitude": -123.2745638889,
-          "reported_depth_ft": 28,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Neighboring survey reports a fully covered rock; this is a review hold, not navigation clearance."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11730",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
-      "report_sha256": "7c41e6477025e9cacf9d7a4bcc8b4834c9d6375ef6f0bbb37413b31e64b28382",
-      "report_section": "Final office-review endnotes on PDF page 15 and HCell Survey Features on PDF page 18",
-      "interpretation": "The 2007 field section says no dangers, but the final HCell retains a rock with 18.7 m least depth. The final office endnotes also discuss two old AWOIS wreck positions without detected evidence in bounded multibeam coverage; their present chart status is unresolved. The rock and old wreck references are historical review leads, not current chart or route clearance.",
-      "hazards": [
-        {
-          "id": "H11730-hcell-rock-18p7m",
-          "kind": "historical-charted-rock-review-hold",
-          "latitude": 39.0048888889,
-          "longitude": -123.7170555556,
-          "reported_depth_ft": 61.3517,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "2007 HCell rock with 18.7 m least depth; historical habitat and chart review hold, not a navigation safety radius."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11731",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11731/DR/H11731.pdf",
-      "report_sha256": "b35b2ad0df860fb0c2cc106161791614fc90eef0c50fa120e005a0d04aab8711",
-      "report_section": "Final office-review endnotes on PDF page 15 and HCell Survey Features on PDF page 18",
-      "interpretation": "The 2007 field section says no new dangers, but the final office review moved two non-dangerous wreck symbols to conspicuous multibeam features about 1.3 and 2 km from their old chart positions. They were considered possible wrecks, not confirmed natural reef or verified current chart features. Keep their historical positions out of automatic hard-bottom fishing promotion and check the current ENC separately.",
-      "hazards": [
-        {
-          "id": "H11731-awois-50029-relocated-feature",
-          "kind": "historical-possible-wreck-review-hold",
-          "latitude": 38.7844527778,
-          "longitude": -123.6158083333,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "2007 possible wreck/symbol relocation review hold, not a navigation safety radius."
-        },
-        {
-          "id": "H11731-awois-50095-relocated-feature",
-          "kind": "historical-possible-wreck-review-hold",
-          "latitude": 38.7161805556,
-          "longitude": -123.5456444444,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "2007 possible wreck/symbol relocation review hold, not a navigation safety radius."
-        }
-      ]
-    },
-    {
-      "survey_id": "H11732",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11732/DR/H11732.pdf",
-      "report_sha256": "7a460f017930e79200df1b5324939d756cc30d5fc80aadfc3d70f2686a90af27",
-      "report_section": "Dangers to Navigation and data-quality section, pages 7 and 11–12",
-      "interpretation": "Three rocks were corrected from feet to fathoms in the final report. One has a survey hole over its top and an unknown least depth; retain a larger review hold. Check current ENC before any passage.",
-      "hazards": [
-        {
-          "id": "H11732-rock-two-fathoms-five-feet-or-shoaler",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 38.5718944444,
-          "longitude": -123.343925,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "The reported sounding is 2 fathoms 5 feet or shoaler; the least depth is unknown because full coverage was not achieved. Historical review hold, not a navigational safety radius."
-        },
-        {
-          "id": "H11732-rock-four-fathoms-or-shoaler",
-          "kind": "historical-danger-to-navigation-with-survey-hole",
-          "latitude": 38.5436611111,
-          "longitude": -123.3102833333,
-          "reported_depth_ft": null,
-          "review_exclusion_radius_m": 250,
-          "radius_meaning": "Least depth was not determined; candidate-review hold only."
-        },
-        {
-          "id": "H11732-rock-four-fathoms-four-feet",
-          "kind": "historical-danger-to-navigation",
-          "latitude": 38.5227333333,
-          "longitude": -123.2745638889,
-          "reported_depth_ft": 28,
-          "review_exclusion_radius_m": 150,
-          "radius_meaning": "Historical rock review hold, not a navigational safety radius."
-        }
-      ]
     },
     {
       "survey_id": "H11975",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11975/DR/H11975.pdf",
       "report_sha256": "d003bdd92d6c72cf835fb1c9cceefc16bcbca892d5fb66d06ae0adcd58d8f7ab",
-      "report_section": "Descriptive report pages 19–22 and Appendix I page 23 (11 DTON rock coordinates)",
+      "report_section": "Descriptive report pages 19\u201322 and Appendix I page 23 (11 DTON rock coordinates)",
       "interpretation": "The final report describes more extensive subsurface rocks than charted in some areas, removes some unconfirmed charted rocks, and reports 11 rock dangers to navigation, one with unknown least depth. Exclude these original report positions from habitat candidate review; current ENC and route review remain separate.",
       "hazards": [
         {
@@ -501,10 +458,161 @@
       ]
     },
     {
+      "survey_id": "H11981",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
+      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
+      "report_section": "Descriptive report PDF pages 16 and 19\u201323; final office review notes 11 and 13 on page 22",
+      "interpretation": "Field section D.1 says no dangers to navigation, but the final office review notes additional holidays around charted rocks without established least depths. It also records visible offsets on some lines from use of NAD83-to-NAVD88 instead of NAD83-to-MLLW, judged within survey specifications. These are survey-quality and coverage holds, not point hazards; no exact geometry is supplied in the report. Do not infer that the historical rocky-camera transect is unaffected.",
+      "hazards": []
+    },
+    {
+      "survey_id": "H11983",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+      "report_sha256": "2dc998a75ccf2df5e79e4b68cb4bad8bd05b4cabdc0db92896fc4748ea3157c1",
+      "report_section": "Descriptive report PDF page 19 section D.1 and Appendix I PDF page 23; 11 listed dangers, including seven rocks and three asterisked unknown least depths",
+      "interpretation": "The original 2008 survey reports eleven dangers, including seven underwater rocks, and says older charted rocks should be modified to match this survey. Three starred rocks have no established least depth. These are historical report positions, not current chart clearance or fishing targets. Exclude conservative neighborhoods from habitat promotion until the present ENC, complete rock footprint, route and legal rules are reconciled. No bottom samples were assigned.",
+      "hazards": [
+        {
+          "id": "H11983-DTON-1",
+          "kind": "historical-danger-sounding",
+          "latitude": 41.6950305556,
+          "longitude": -124.1761666667,
+          "reported_depth_ft": 44,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-2",
+          "kind": "historical-danger-sounding",
+          "latitude": 41.6984388889,
+          "longitude": -124.1872,
+          "reported_depth_ft": 49,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-3",
+          "kind": "historical-danger-sounding",
+          "latitude": 41.6953444444,
+          "longitude": -124.1630305556,
+          "reported_depth_ft": 43,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-4",
+          "kind": "historical-danger-sounding",
+          "latitude": 41.735825,
+          "longitude": -124.1997888889,
+          "reported_depth_ft": 21,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-5",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7429722222,
+          "longitude": -124.2247,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Marked with an asterisk: least depth was not obtained, and the reported value was only the shoalest sounding."
+        },
+        {
+          "id": "H11983-DTON-6",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7518111111,
+          "longitude": -124.235375,
+          "reported_depth_ft": 8,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-7",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7538194444,
+          "longitude": -124.2311972222,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Marked with an asterisk: least depth was not obtained, and the reported value was only the shoalest sounding."
+        },
+        {
+          "id": "H11983-DTON-8",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7683472222,
+          "longitude": -124.2520722222,
+          "reported_depth_ft": 14,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-9",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7705638889,
+          "longitude": -124.2562083333,
+          "reported_depth_ft": 11,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        },
+        {
+          "id": "H11983-DTON-10",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7773055556,
+          "longitude": -124.2613583333,
+          "reported_depth_ft": null,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Marked with an asterisk: least depth was not obtained, and the reported value was only the shoalest sounding."
+        },
+        {
+          "id": "H11983-DTON-11",
+          "kind": "historical-underwater-rock-danger-to-navigation",
+          "latitude": 41.7821805556,
+          "longitude": -124.264175,
+          "reported_depth_ft": 18,
+          "review_exclusion_radius_m": 250,
+          "radius_meaning": "Original NOAA Appendix I danger-to-navigation feature; conservative habitat-review exclusion only, not a navigation safety radius. Reported depth is historical and must be reconciled to the current chart."
+        }
+      ]
+    },
+    {
+      "survey_id": "H12109",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12109/DR/H12109.pdf",
+      "report_sha256": "b0f4610042d6931d713b9c9747f022610d73e00935300b60b5938c9383c31fd2",
+      "report_section": "Features, AWOIS investigations and final HCell revisions, PDF pages 17 and 20\u201322",
+      "interpretation": "The final review records no DTON. Two assigned historical AWOIS objects were not found under full multibeam coverage; neither is evidence of a fishable wreck or reef. Current ENC and routes still require independent screening.",
+      "hazards": []
+    },
+    {
+      "survey_id": "H12111",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12111/DR/H12111.pdf",
+      "report_sha256": "546ea8fa3672d1fe89a6f8fdb08949f99d2442ec75b94eb5eba0f99ff35edb5e",
+      "report_section": "Final HCell revision 23 and Danger to Navigation report, PDF pages 24\u201329",
+      "interpretation": "The field narrative says no DTON, but the final Pacific Hydrographic Branch review records two submerged rocks and says both were applied to the chart. These historical observations are review holds, not current chart or fishing clearances.",
+      "hazards": [
+        {
+          "id": "H12111-final-hcell-rock-2m",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.8815555556,
+          "longitude": -122.698,
+          "reported_depth_ft": 6.55,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
+        },
+        {
+          "id": "H12111-final-hcell-rock-3m22",
+          "kind": "historical-danger-to-navigation",
+          "latitude": 37.8660555556,
+          "longitude": -122.5968888889,
+          "reported_depth_ft": 10.55,
+          "review_exclusion_radius_m": 150,
+          "radius_meaning": "Historical submerged-rock review hold, not a navigational safety radius."
+        }
+      ]
+    },
+    {
       "survey_id": "H13084",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/DR/H13084_DR.pdf",
       "report_sha256": "bfc666ac714718981604ff45bcf6f30a4cb9cd3fb819616938ada917e870673b",
-      "report_section": "Descriptive report pages 34, 36–42, and appended DTON report pages 53–56",
+      "report_section": "Descriptive report pages 34, 36\u201342, and appended DTON report pages 53\u201356",
       "interpretation": "The 2017 west San Miguel Passage survey reports chart-contour discrepancies, shoals and two critical soundings. Its body also says a subsequent DTON was pending approval. These three historical positions are local review holds; the report and old chart comparison cannot certify a present route or target. A sand spit and sand waves off eastern San Miguel make substrate interpretation time dependent.",
       "hazards": [
         {

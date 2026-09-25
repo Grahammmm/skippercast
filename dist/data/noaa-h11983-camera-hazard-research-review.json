@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "scope": "original-vr-camera-historical-and-enc-hazard-gate",
+  "reviewed_at": "2026-09-25T20:22:13+00:00",
+  "survey_id": "H11983",
+  "original_bag_sha256": "e8882503208671ca5efea41bb191027ae31293faecacb3770f7b1d3eb7e65d24",
+  "original_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+  "original_report_sha256": "2dc998a75ccf2df5e79e4b68cb4bad8bd05b4cabdc0db92896fc4748ea3157c1",
+  "private_context_sha256": "68f752f3a800c7efa70ac6190b252d775909a9279a0af31d25568b45d217db29",
+  "enc_source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "enc_checked_at": "2026-09-25T20:20:52.427234+00:00",
+  "enc_query_layers": 18,
+  "enc_features": 776,
+  "cdfw_mpa_retrieved_at": "2026-09-25T16:36:52Z",
+  "original_qualified_historical_camera_windows": 3,
+  "historical_report_dangers": 11,
+  "minimum_historical_danger_distance_m_range": [
+    4964.0,
+    5106.7
+  ],
+  "minimum_charted_danger_distance_m_range": [
+    4210.9,
+    4336.9
+  ],
+  "minimum_mpa_distance_m_range": [
+    4579.1,
+    4718.2
+  ],
+  "windows_within_250m_historical_danger": 0,
+  "windows_within_100m_charted_danger": 0,
+  "windows_within_100m_mpa": 0,
+  "report_danger_review_hold": true,
+  "present_chart_and_route_cleared": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Distances are research proximity checks to historical report and selected ENC Direct features, not navigational safety radii or complete chart clearance.",
+    "Camera windows are correlated historical observations with variable position accuracy; a point does not delineate a reef or show current fish.",
+    "The full survey holiday and rock extents, present certified chart, safe approach, all closures and trip-date rules remain separate gates.",
+    "Only aggregate distances are published; the original camera positions remain in the unpublished review cache."
+  ]
+}

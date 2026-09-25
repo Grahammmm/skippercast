@@ -4,52 +4,28 @@
   "reviewed_at": "2026-09-25",
   "holds": [
     {
+      "survey_id": "F00562",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00562/DR/F00562.pdf",
+      "report_sha256": "d3918c40678662bf91b52ecf05cdb364dd0e34a69132c37845e1cd8acdc036e5",
+      "reason": "This is a 2008 Crescent City harbor and approach survey. Its descriptive report identifies significant channel shoaling, numerous uncharted rocks along the southern offshore edge, and incomplete full-bottom coverage of the approach. The five eligible 4 m screen cells overlapping a predicted-hard polygon (about 80 square meters) cannot establish a natural fishing reef or a safe approach. Keep the survey for harbor-source review; do not promote it to a fishing target without a current chart, site-specific original-cell review and separate substrate evidence.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00562.html"
+    },
+    {
       "survey_id": "F00789",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00789/DR/F00789_DR.pdf",
       "report_sha256": "a55dfceb69ef14b37d12e9487a325a220082fcb7ddeb56c3acb06fd4c7f0642e",
-      "reason": "The original F00789 descriptive report identifies the entire October 2019 survey as a Pier 80C / Islais Creek Channel underkeel-clearance survey inside San Francisco Bay, bounded by 37°44'22.57\"–37°45'39.72\" N and 122°21'43.49\"–122°22'31.06\" W. Its 4,447,044 depth-and-uncertainty-eligible native cells were assigned to the broad Point Reyes–Pigeon latitude band by grid-center inventory, but they are harbor bathymetry, not outer-coast habitat or fishing coordinates. Exclude the entire survey from fishing-target promotion; do not infer rock from depth or backscatter alone.",
+      "reason": "The original F00789 descriptive report identifies the entire October 2019 survey as a Pier 80C / Islais Creek Channel underkeel-clearance survey inside San Francisco Bay, bounded by 37\u00b044'22.57\"\u201337\u00b045'39.72\" N and 122\u00b021'43.49\"\u2013122\u00b022'31.06\" W. Its 4,447,044 depth-and-uncertainty-eligible native cells were assigned to the broad Point Reyes\u2013Pigeon latitude band by grid-center inventory, but they are harbor bathymetry, not outer-coast habitat or fishing coordinates. Exclude the entire survey from fishing-target promotion; do not infer rock from depth or backscatter alone.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00789.html"
-    },
-    {
-      "survey_id": "H11965",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11965/DR/H11965.pdf",
-      "report_sha256": "071d57287600e0e5e609f682f1d48d97608a26c5e3a24fbc4b5205e85237a729",
-      "reason": "The 2009 Farallon Islands original variable-resolution BAG has 953,994 preliminary 25–200 ft depth-and-uncertainty-eligible native cells in the broad Point Reyes–Pigeon sector. The report notes steep rock outcrops with higher uncertainty, small holidays in irregular bottom, shoaler depths between old chart soundings, a roughly 51 m wreck-like feature near 37°40'11.69\"N 122°56'39.75\"W, and no retained bottom samples. The source survey does not establish a current safe route or fishable substrate. The Farallon reserve, conservation area and special-closure geometries also require exact original-cell exclusion, not a centroid screen. Withhold fishing targets and exports until wreck/chart hazards, full marine-area boundaries, independent substrate and dated rules pass exact-footprint review.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11965.html"
     },
     {
       "survey_id": "F00834",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00834/DR/F00834_DR.pdf",
       "report_sha256": "6fe32902bc3b6c658ece44ae54e3a6ee8eef1778a093ab1b3317202b315db9c3",
-      "reason": "The official NCEI survey catalog identifies the September 2021 F00834 locality as Richardson Bay, San Francisco Bay, and lists both original MLLW variable-resolution BAG parts under that survey. The reviewed native BAG metadata bounds for both parts are inside or at the San Francisco Bay entrance rather than an identified outer-coast reef. The 1of2 part contributes 1,584,287 preliminary depth-and-uncertainty-eligible native cells to the Point Reyes–Pigeon latitude-band inventory, but latitude assignment does not make them outer-coast fish habitat. Withhold the survey from fishing-target promotion and exports; a separate bay-fishing product would need its own geographic, legal, substrate, chart and access review.",
+      "reason": "The official NCEI survey catalog identifies the September 2021 F00834 locality as Richardson Bay, San Francisco Bay, and lists both original MLLW variable-resolution BAG parts under that survey. The reviewed native BAG metadata bounds for both parts are inside or at the San Francisco Bay entrance rather than an identified outer-coast reef. The 1of2 part contributes 1,584,287 preliminary depth-and-uncertainty-eligible native cells to the Point Reyes\u2013Pigeon latitude-band inventory, but latitude assignment does not make them outer-coast fish habitat. Withhold the survey from fishing-target promotion and exports; a separate bay-fishing product would need its own geographic, legal, substrate, chart and access review.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00834.html"
-    },
-    {
-      "survey_id": "W00477",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00477/DR/W00477_DR.pdf",
-      "report_sha256": "a5cb20e44344a7c014b43b7ac59f5d2fad46f8cb17778f5d46f86df5f954d56d",
-      "reason": "The 2019 Greater Farallones survey spans several polygons and mostly deep water (report range 29.66–796.65 m). Its report states that the southeast limit of one polygon was not reached because of a charted Navy test-area transducer north of Point Reyes. The preliminary native audit finds only 12,639 depth-and-uncertainty-eligible cells in the Point Reyes–Pigeon sector and 27,926 in Bodega–Point Reyes; these are not classified substrate or cleared fishing locations. Hold both sector assignments until original cell positions are checked against the exact unacquired area, current charted transducer and other hazards, protected-area geometry, independent substrate, route and local rules. Do not extrapolate across the unsurveyed southeastern sheet limit.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/W00001-W02000/W00477.html"
-    },
-    {
-      "survey_id": "H12112",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
-      "report_sha256": "b70f6a8a380b277219649a6c44e42696a11e2417e820379c3e217013acc7dab4",
-      "reason": "The 2009 Golden Gate vicinity original 2 m and 4 m MLLW BAGs are broad source-overlap leads, not verified fishing patches. H12112's final descriptive report records migrating sand waves and nearshore erosion, several rock and wreck chart discrepancies, two new wrecks, a charted dangerous wreck only partially surveyed, and 23 new bottom samples plus ten rocky-seabed areas. A field statement of no new Dangers to Navigation does not clear the unresolved features, traffic channel, original substrate boundaries or current chart. Hold both BAG parts from fishing-target promotion until exact native-cell hard-bottom footprints, current ENC features, approach/traffic, MPAs, local date-and-method rules and present safety are independently screened. This does not classify every H12112 cell as unsafe or fishless.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html"
-    },
-    {
-      "survey_id": "H11971",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
-      "report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
-      "reason": "The original 2 m MLLW BAG overlaps 13 historical rock/cobble camera windows on two July 31, 2010 transects at roughly 41.5–46.0 m MLLW. Nine windows have historical rockfish visual codes; none records lingcod. These correlated observations are not 13 reefs or a present catch estimate. Although the 2009 field report says no dangers, final office review added a submerged rock, retained charted rocks with uncertain inshore positions, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The text lacks exact new-rock geometry, and HCell rocky-seabed areas were generalized for a 1:200,000 chart. Hold fishing-target promotion until original HCell and current ENC features, actual substrate footprint, MPA/federal exclusions, route, Mendocino date/method rules and harbor access are checked for each candidate area.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11971.html"
     },
     {
       "survey_id": "H11876",
@@ -60,20 +36,12 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html"
     },
     {
-      "survey_id": "H11981",
+      "survey_id": "H11965",
       "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
-      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
-      "reason": "The original 1.5 m MLLW BAG and USGS c109nc camera log overlap in 29 measured 39.43\u201343.89 m windows on one July 28, 2009 transect, including five historical rockfish observations, but these are not 29 independent reefs. The final H11981 office review (PDF page 22, notes 11 and 13) says additional survey holidays surround charted rocks where least depth was not obtained and some survey lines used the wrong VDatum model (NAD83-to-NAVD88 rather than NAD83-to-MLLW), with visible offsets considered within specifications. The report does not identify those lines here, so the candidate cannot be assumed unaffected. Hold fishing promotion until exact affected-line and holiday footprints are checked against the original cells and current ENC, then local substrate, complete MPA/access geometry, Northern rules and route are reviewed.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11981.html"
-    },
-    {
-      "survey_id": "F00562",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00562/DR/F00562.pdf",
-      "report_sha256": "d3918c40678662bf91b52ecf05cdb364dd0e34a69132c37845e1cd8acdc036e5",
-      "reason": "This is a 2008 Crescent City harbor and approach survey. Its descriptive report identifies significant channel shoaling, numerous uncharted rocks along the southern offshore edge, and incomplete full-bottom coverage of the approach. The five eligible 4 m screen cells overlapping a predicted-hard polygon (about 80 square meters) cannot establish a natural fishing reef or a safe approach. Keep the survey for harbor-source review; do not promote it to a fishing target without a current chart, site-specific original-cell review and separate substrate evidence.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00562.html"
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11965/DR/H11965.pdf",
+      "report_sha256": "071d57287600e0e5e609f682f1d48d97608a26c5e3a24fbc4b5205e85237a729",
+      "reason": "The 2009 Farallon Islands original variable-resolution BAG has 953,994 preliminary 25\u2013200 ft depth-and-uncertainty-eligible native cells in the broad Point Reyes\u2013Pigeon sector. The report notes steep rock outcrops with higher uncertainty, small holidays in irregular bottom, shoaler depths between old chart soundings, a roughly 51 m wreck-like feature near 37\u00b040'11.69\"N 122\u00b056'39.75\"W, and no retained bottom samples. The source survey does not establish a current safe route or fishable substrate. The Farallon reserve, conservation area and special-closure geometries also require exact original-cell exclusion, not a centroid screen. Withhold fishing targets and exports until wreck/chart hazards, full marine-area boundaries, independent substrate and dated rules pass exact-footprint review.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11965.html"
     },
     {
       "survey_id": "H11967",
@@ -92,12 +60,44 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11970.html"
     },
     {
+      "survey_id": "H11971",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
+      "reason": "The original 2 m MLLW BAG overlaps 13 historical rock/cobble camera windows on two July 31, 2010 transects at roughly 41.5\u201346.0 m MLLW. Nine windows have historical rockfish visual codes; none records lingcod. These correlated observations are not 13 reefs or a present catch estimate. Although the 2009 field report says no dangers, final office review added a submerged rock, retained charted rocks with uncertain inshore positions, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The text lacks exact new-rock geometry, and HCell rocky-seabed areas were generalized for a 1:200,000 chart. Hold fishing-target promotion until original HCell and current ENC features, actual substrate footprint, MPA/federal exclusions, route, Mendocino date/method rules and harbor access are checked for each candidate area.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11971.html"
+    },
+    {
       "survey_id": "H11972",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11972/DR/H11972.pdf",
       "report_sha256": "06cbdbe11697666659a3465ec9161c19e36316825985df4f5844e9d45cc1cae7",
       "reason": "The 2008\u20132009 Point Delgada survey is the measured contributor behind a North Mendocino NOAA NBS test tile with 46 historically rocky camera windows passing the tile's 25 m screen, but only three also pass the original 242 MB BAG's fine-grid/depth/uncertainty neighborhood screen; 43 are held near original fine-grid edges. Its final descriptive report identifies seven dangers to navigation, two rocks of unknown depth over shallow shoal holidays, charted-islet corrections and dynamic sediment bottom. Withhold the survey from fishing-target promotion until current ENC hazards, exact substrate and MPA footprints, access and Mendocino rules are reconciled. The tile and 2010 camera records alone do not locate a present fishable reef.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11972.html"
+    },
+    {
+      "survey_id": "H11981",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11981/DR/H11981.pdf",
+      "report_sha256": "9f0191f43892a55ef31805d48444b02c7cc36915b6c1d1d080bea9068fe3ae8d",
+      "reason": "The original 1.5 m MLLW BAG and USGS c109nc camera log overlap in 29 measured 39.43\u201343.89 m windows on one July 28, 2009 transect, including five historical rockfish observations, but these are not 29 independent reefs. The final H11981 office review (PDF page 22, notes 11 and 13) says additional survey holidays surround charted rocks where least depth was not obtained and some survey lines used the wrong VDatum model (NAD83-to-NAVD88 rather than NAD83-to-MLLW), with visible offsets considered within specifications. The report does not identify those lines here, so the candidate cannot be assumed unaffected. Hold fishing promotion until exact affected-line and holiday footprints are checked against the original cells and current ENC, then local substrate, complete MPA/access geometry, Northern rules and route are reviewed.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11981.html"
+    },
+    {
+      "survey_id": "H11983",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+      "report_sha256": "2dc998a75ccf2df5e79e4b68cb4bad8bd05b4cabdc0db92896fc4748ea3157c1",
+      "reason": "The original 2008 Point St. George variable-resolution MLLW BAG contains fine measured depth cells, and 55 historical camera windows match MPA-clear native-grid interiors (19 labeled rock and eight boulder). In the selected NOAA NBS tile, 21 rocky windows pass the NBS depth/uncertainty neighborhood screen, but only three also pass the original BAG native-cell and 25 m neighborhood screen; these are correlated historical observations, not separate reefs. The original report lists eleven dangers to navigation, seven underwater rocks, three rocks without known least depth, and no bottom samples. Withhold all proposed sites until the three original-qualified windows are checked against report hazards, current ENC, precise substrate footprint, route, all closures and date/method rules.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11983.html"
+    },
+    {
+      "survey_id": "H12112",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
+      "report_sha256": "b70f6a8a380b277219649a6c44e42696a11e2417e820379c3e217013acc7dab4",
+      "reason": "The 2009 Golden Gate vicinity original 2 m and 4 m MLLW BAGs are broad source-overlap leads, not verified fishing patches. H12112's final descriptive report records migrating sand waves and nearshore erosion, several rock and wreck chart discrepancies, two new wrecks, a charted dangerous wreck only partially surveyed, and 23 new bottom samples plus ten rocky-seabed areas. A field statement of no new Dangers to Navigation does not clear the unresolved features, traffic channel, original substrate boundaries or current chart. Hold both BAG parts from fishing-target promotion until exact native-cell hard-bottom footprints, current ENC features, approach/traffic, MPAs, local date-and-method rules and present safety are independently screened. This does not classify every H12112 cell as unsafe or fishless.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html"
     },
     {
       "survey_id": "H13084",
@@ -140,14 +140,6 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13322.html"
     },
     {
-      "survey_id": "H13325",
-      "disposition": "withhold_from_fishing_promotion",
-      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13325/DR/H13325_DR.pdf",
-      "report_sha256": "e56210ea333b5d46a8e62ab9cdc7992cfc83fe7285ec905306df0f21a417cbdf",
-      "reason": "The 2019 Bowen Point to Posa Anchorage original MLLW variable-resolution BAG has millions of native fine cells passing the preliminary depth and product-uncertainty screen. The report's section D.2.9 says sea conditions and time limits prevented defining the navigable-area limit in the western half and that most mapped features there were not investigated. Keep the full survey on hold until the report's Figure 21 and feature positions are georeferenced, incomplete areas are excluded, current ENC and exact substrate are checked, and MPA, access and local fishing rules pass. A reported absence of shoals elsewhere does not resolve this coverage gap.",
-      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13325.html"
-    },
-    {
       "survey_id": "H13324",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13324/DR/H13324_DR.pdf",
@@ -156,12 +148,28 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13324.html"
     },
     {
+      "survey_id": "H13325",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13325/DR/H13325_DR.pdf",
+      "report_sha256": "e56210ea333b5d46a8e62ab9cdc7992cfc83fe7285ec905306df0f21a417cbdf",
+      "reason": "The 2019 Bowen Point to Posa Anchorage original MLLW variable-resolution BAG has millions of native fine cells passing the preliminary depth and product-uncertainty screen. The report's section D.2.9 says sea conditions and time limits prevented defining the navigable-area limit in the western half and that most mapped features there were not investigated. Keep the full survey on hold until the report's Figure 21 and feature positions are georeferenced, incomplete areas are excluded, current ENC and exact substrate are checked, and MPA, access and local fishing rules pass. A reported absence of shoals elsewhere does not resolve this coverage gap.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13325.html"
+    },
+    {
       "survey_id": "H13555",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13555/DR/H13555_DR.pdf",
       "report_sha256": "d2aea296e05e80a568c83d8ba2ab815f73b73475435d88dc858390309ff977da",
       "reason": "The November 2022 Santa Rosa original BAG has valid MLLW depth and product uncertainty and overlaps historical hard-substrate mapping outside current MPA/GEA snapshots. However, its two 25\u2013200 ft candidate patches score only 19 and 8 on the uncalibrated 100-point physical habitat rubric (both C): approximately 117\u2013125 ft, little measured relief, and no bottom samples or verified catch. Do not publish these flat patches as promising rockfish or lingcod grounds. Retain as a source lead pending stronger local substrate or catch evidence and current chart/access review.",
       "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13555.html"
+    },
+    {
+      "survey_id": "W00477",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00477/DR/W00477_DR.pdf",
+      "report_sha256": "a5cb20e44344a7c014b43b7ac59f5d2fad46f8cb17778f5d46f86df5f954d56d",
+      "reason": "The 2019 Greater Farallones survey spans several polygons and mostly deep water (report range 29.66\u2013796.65 m). Its report states that the southeast limit of one polygon was not reached because of a charted Navy test-area transducer north of Point Reyes. The preliminary native audit finds only 12,639 depth-and-uncertainty-eligible cells in the Point Reyes\u2013Pigeon sector and 27,926 in Bodega\u2013Point Reyes; these are not classified substrate or cleared fishing locations. Hold both sector assignments until original cell positions are checked against the exact unacquired area, current charted transducer and other hazards, protected-area geometry, independent substrate, route and local rules. Do not extrapolate across the unsurveyed southeastern sheet limit.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/W00001-W02000/W00477.html"
     },
     {
       "survey_id": "W00479",

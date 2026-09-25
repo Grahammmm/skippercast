@@ -6,104 +6,191 @@
     {
       "id": "santa-barbara-island",
       "region_id": "southern-california",
-      "bounds": [-119.12, 33.33, -118.98, 33.54],
+      "bounds": [
+        -119.12,
+        33.33,
+        -118.98,
+        33.54
+      ],
       "output": "dist/regions/southern-california/enc-hazards-santa-barbara.geojson"
     },
     {
       "id": "point-reyes-tomales",
       "region_id": "bodega-point-reyes",
-      "bounds": [-123.18, 38.02, -122.92, 38.26],
+      "bounds": [
+        -123.18,
+        38.02,
+        -122.92,
+        38.26
+      ],
       "output": "dist/regions/bodega-point-reyes/enc-hazards-point-reyes-tomales.geojson"
     },
     {
       "id": "bodega-original-north",
       "region_id": "bodega-point-reyes",
-      "bounds": [-123.13, 38.25, -122.97, 38.38],
+      "bounds": [
+        -123.13,
+        38.25,
+        -122.97,
+        38.38
+      ],
       "research_only": true,
       "output": "var/review/bodega-original-north-enc.geojson"
     },
     {
       "id": "reyes-original-south",
       "region_id": "bodega-point-reyes",
-      "bounds": [-123.08, 37.98, -123.01, 38.07],
+      "bounds": [
+        -123.08,
+        37.98,
+        -123.01,
+        38.07
+      ],
       "research_only": true,
       "output": "var/review/reyes-original-south-enc.geojson"
     },
     {
       "id": "h11967-greenwood-tile",
       "region_id": "fort-bragg-point-arena",
-      "bounds": [-123.84, 39.14, -123.74, 39.25],
+      "bounds": [
+        -123.84,
+        39.14,
+        -123.74,
+        39.25
+      ],
       "output": "dist/regions/fort-bragg-point-arena/enc-hazards-h11967-greenwood-tile.geojson"
     },
     {
       "id": "h11971-bear-landing-camera",
       "region_id": "north-mendocino",
-      "bounds": [-124.06, 39.81, -123.88, 39.96],
+      "bounds": [
+        -124.06,
+        39.81,
+        -123.88,
+        39.96
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-h11971-bear-landing.geojson"
     },
     {
       "id": "h11730-arena-bodega-camera",
       "region_id": "bodega-point-reyes",
-      "bounds": [-123.78, 38.84, -123.68, 39.03],
+      "bounds": [
+        -123.78,
+        38.84,
+        -123.68,
+        39.03
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-h11730-arena-bodega.geojson"
     },
     {
       "id": "h11732-h11733-fort-ross-salt-point-context",
       "region_id": "point-arena-bodega",
-      "bounds": [-123.39, 38.45, -123.18, 38.62],
+      "bounds": [
+        -123.39,
+        38.45,
+        -123.18,
+        38.62
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson"
     },
     {
       "id": "h12111-bolinas-native-hard-context",
       "region_id": "point-reyes-pigeon",
-      "bounds": [-122.71, 37.84, -122.65, 37.89],
+      "bounds": [
+        -122.71,
+        37.84,
+        -122.65,
+        37.89
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-h12111-bolinas-native-hard.geojson"
     },
     {
       "id": "cape-mendocino-hard-context",
       "region_id": "northern",
-      "bounds": [-124.49, 40.37, -124.37, 40.53],
+      "bounds": [
+        -124.49,
+        40.37,
+        -124.37,
+        40.53
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-cape-mendocino.geojson"
     },
     {
       "id": "point-conception-hard-context",
       "region_id": "southern-california",
-      "bounds": [-120.60, 34.43, -120.45, 34.56],
+      "bounds": [
+        -120.6,
+        34.43,
+        -120.45,
+        34.56
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-point-conception.geojson"
     },
     {
       "id": "gaviota-hard-context",
       "region_id": "southern-california",
-      "bounds": [-120.43, 34.41, -120.27, 34.47],
+      "bounds": [
+        -120.43,
+        34.41,
+        -120.27,
+        34.47
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-gaviota.geojson"
     },
     {
       "id": "san-miguel-h13084-usgs-habitat",
       "region_id": "southern-california",
-      "bounds": [-120.47, 33.96, -120.28, 34.04],
+      "bounds": [
+        -120.47,
+        33.96,
+        -120.28,
+        34.04
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-san-miguel-h13084.geojson"
     },
     {
       "id": "la-jolla-h11876-camera-context",
       "region_id": "southern-california",
-      "bounds": [-117.35, 32.77, -117.30, 32.85],
+      "bounds": [
+        -117.35,
+        32.77,
+        -117.3,
+        32.85
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-la-jolla-h11876.geojson"
     },
     {
       "id": "san-pedro-ds552-original-rock",
       "region_id": "southern-california",
-      "bounds": [-118.29, 33.60, -118.17, 33.71],
+      "bounds": [
+        -118.29,
+        33.6,
+        -118.17,
+        33.71
+      ],
       "research_only": true,
       "output": "var/review/enc-hazards-san-pedro-ds552.geojson"
+    },
+    {
+      "id": "h11983-point-st-george",
+      "region_id": "crescent-city",
+      "bounds": [
+        -124.36,
+        41.68,
+        -124.15,
+        41.82
+      ],
+      "research_only": true,
+      "output": "var/review/enc-hazards-h11983-point-st-george.geojson"
     }
   ]
 }

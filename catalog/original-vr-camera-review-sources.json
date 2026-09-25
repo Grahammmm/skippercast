@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "scope": "pinned-original-noaa-vr-camera-source-reviews",
+  "sources": [
+    {
+      "survey_id": "H11983",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/BAG/H11983_MB_VR_MLLW_1of1.bag",
+      "bag_bytes": 311162677,
+      "bag_sha256": "e8882503208671ca5efea41bb191027ae31293faecacb3770f7b1d3eb7e65d24",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+      "report_sha256": "2dc998a75ccf2df5e79e4b68cb4bad8bd05b4cabdc0db92896fc4748ea3157c1",
+      "camera_cruise": "c109nc",
+      "nbs_tile": "BH42J5G4",
+      "review_sector_id": "del-norte",
+      "review_region_id": "crescent-city",
+      "status": "research-only"
+    }
+  ]
+}

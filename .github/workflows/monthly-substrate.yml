@@ -945,5 +945,109 @@ jobs:
             var/review/csumb-bss-source-leads.json
           retention-days: 30
 
+  h11983-original-point-st-george:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load latest public MPA snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: var/published
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned original-grid reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify source gate regressions
+        run: python -m unittest tests.test_h11983_original_lead -v
+      - name: Reopen pinned H11983 original MLLW BAG and screen native cells
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/audit_pinned_original_vr_source.py --survey-id H11983 --output var/review/h11983-native-audit.json
+          python scripts/screen_vr_native_depth.py --audit var/review/h11983-native-audit.json --survey-id H11983 --output var/review/h11983-native-depth.json
+      - name: Recheck full native footprints against fresh CDFW MPAs
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_vr_region_protection.py
+          --audit var/review/h11983-native-audit.json
+          --survey-id H11983 --region regions/crescent-city/region.json
+          --mpas var/published/latest.json
+          --output var/review/h11983-mpa.json
+      - name: Download exact original USGS camera archive and NOAA report
+        run: |
+          mkdir -p var/usgs-video-cache var/noaa-report-cache
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/781/video_observations/data/c109nc_video_observations.zip --output var/usgs-video-cache/c109nc_video_observations.zip
+          curl --fail --location --silent --show-error --max-time 120 https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf --output var/noaa-report-cache/H11983.pdf
+      - name: Compare historical camera windows with original fine grids
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_vr_camera_overlap.py
+          --audit var/review/h11983-native-audit.json
+          --survey-id H11983 --region regions/crescent-city/region.json
+          --cruise c109nc --mpas var/published/latest.json
+          --output var/review/h11983-camera-overlap.json
+      - name: Verify NOAA NBS scheme and selected measured-depth tile
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/check_nbs_modeling_scheme.py --output var/review/h11983-nbs-scheme-health.json
+          python scripts/audit_nbs_modeling_tile.py --scheme var/nbs-cache/modeling-tile-scheme.gpkg --tile BH42J5G4 --cache var/nbs-cache --fetch --output var/review/h11983-nbs-tile.json
+      - name: Reconcile NBS camera leads with exact original BAG cells
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/reconcile_nbs_vr_bag_camera.py
+          --tile BH42J5G4 --survey-id H11983 --cruise c109nc --sector-id del-norte
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --bag-audit var/review/h11983-native-audit.json
+          --mpas var/published/latest.json
+          --output var/review/h11983-reconciliation.json
+          --candidate-context var/review/h11983-private-camera-context.geojson
+      - name: Refresh bounded NOAA ENC danger layers
+        run: >-
+          python scripts/refresh_enc_hazards.py
+          --scope h11983-point-st-george
+          --output var/review/h11983-enc-hazards.geojson
+      - name: Check original-qualified camera windows against report, ENC and MPA hazards
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_vr_camera_hazard_gate.py
+          --context var/review/h11983-private-camera-context.geojson
+          --reconciliation var/review/h11983-reconciliation.json
+          --enc var/review/h11983-enc-hazards.geojson
+          --mpas var/published/latest.json
+          --report var/noaa-report-cache/H11983.pdf
+          --output var/review/h11983-hazard-gate.json
+      - name: Verify coordinate-free source review has not changed
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/compile_original_vr_camera_lead.py
+          --audit var/review/h11983-native-audit.json
+          --native var/review/h11983-native-depth.json
+          --mpa var/review/h11983-mpa.json
+          --camera var/review/h11983-camera-overlap.json
+          --reconciliation var/review/h11983-reconciliation.json
+          --hazards var/review/h11983-hazard-gate.json
+          --output var/review/h11983-native-source-review.json
+          --verify dist/data/noaa-h11983-native-source-review.json
+      - name: Upload only coordinate-free review receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h11983-original-source-review
+          path: |
+            var/review/h11983-native-source-review.json
+            var/review/h11983-hazard-gate.json
+            var/review/h11983-reconciliation.json
+          retention-days: 30
+
 # This workflow deliberately does not change public map files. Camera observations,
 # source-class intersections and closures need a reviewed commit before deployment.

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "scope": "original-vr-camera-held-source-lead",
+  "compiled_at": "2026-09-25T20:24:38+00:00",
+  "survey_id": "H11983",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/BAG/H11983_MB_VR_MLLW_1of1.bag",
+  "original_bag_sha256": "e8882503208671ca5efea41bb191027ae31293faecacb3770f7b1d3eb7e65d24",
+  "original_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11983/DR/H11983.pdf",
+  "source_vertical_datum": "MLLW",
+  "source_uncertainty_type": "productUncert",
+  "native_resolution_m_range": [
+    1.0,
+    4.0
+  ],
+  "native_fine_grids": 10088,
+  "measured_native_cell_associations": 36117234,
+  "depth_uncertainty_eligible_cell_associations": 35591242,
+  "regional_mpa_grid_screen": {
+    "fine_grid_centers_in_region": 10088,
+    "fully_inside_mpa": 1,
+    "intersects_mpa": 24,
+    "outside_mpa": 10063
+  },
+  "historical_camera_window_screen": {
+    "camera_bottom_windows_outside_mpa_in_region": 532,
+    "outside_native_grid": 367,
+    "native_grid_interior": 55,
+    "native_grid_edge_held": 110
+  },
+  "historical_camera_interior_bottom_classes": {
+    "sand": 14,
+    "rock": 19,
+    "boulder": 8,
+    "mud": 14
+  },
+  "selected_nbs_tile": "BH42J5G4",
+  "selected_nbs_rocky_camera_windows": 64,
+  "nbs_and_original_bag_qualified_rocky_windows": 3,
+  "report_danger_count": 11,
+  "enc_danger_layers_queried": 18,
+  "enc_danger_features_in_scope": 776,
+  "minimum_historical_danger_distance_m_range": [
+    4964.0,
+    5106.7
+  ],
+  "minimum_charted_danger_distance_m_range": [
+    4210.9,
+    4336.9
+  ],
+  "minimum_mpa_distance_m_range": [
+    4579.1,
+    4718.2
+  ],
+  "cdfw_mpa_retrieved_at": "2026-09-25T16:36:52Z",
+  "report_danger_review_hold": true,
+  "present_chart_and_route_cleared": false,
+  "habitat_footprint_verified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Native cell totals are survey/sector workload associations and can overlap; they are not unique mapped seafloor area or complete fishing depth clearance.",
+    "Historical camera windows are correlated transect records, not separate reefs, present fish counts or exact hard-bottom polygons.",
+    "The bounded selected ENC danger classes, historical report positions and dated MPA geometry do not certify a present chart, safe route, every closure or trip-date legal take.",
+    "The original descriptive report has no bottom samples and lists historical dangers; independent substrate footprint and site review remain open."
+  ]
+}

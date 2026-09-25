@@ -172,6 +172,15 @@ def main():
     assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
     assert all('fgdc_metadata_reviewed' in lead for row in readiness['sectors']
                for lead in row['usgs_ds781_map_area_leads'])
+    original_lead = json.loads((WEB / 'data/noaa-h11983-native-source-review.json').read_text())
+    hazard_gate = json.loads((WEB / 'data/noaa-h11983-camera-hazard-research-review.json').read_text())
+    assert original_lead['survey_id'] == hazard_gate['survey_id'] == 'H11983'
+    assert original_lead['nbs_and_original_bag_qualified_rocky_windows'] == hazard_gate['original_qualified_historical_camera_windows'] == 3
+    assert original_lead['report_danger_count'] == hazard_gate['historical_report_dangers'] == 11
+    assert original_lead['enc_danger_layers_queried'] == hazard_gate['enc_query_layers'] == 18
+    assert all(packet['fishing_target'] is False and packet['exportable'] is False
+               for packet in (original_lead, hazard_gate))
+    assert 'coordinates' not in json.dumps(original_lead) and 'coordinates' not in json.dumps(hazard_gate)
     aptos = json.loads((WEB / 'data/usgs-offshore-aptos-native-audit.json').read_text())
     assert aptos['product_count'] == aptos['inspected_count'] == 4
     assert aptos['fishing_target'] is False and aptos['exportable'] is False
