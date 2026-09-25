@@ -1,1 +1,1 @@
-{"region_id":"bodega-point-reyes","generated_at":"2026-09-25T11:55:19Z","status":"ok","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":62,"issues":[]}
+{"region_id":"bodega-point-reyes","generated_at":"2026-09-25T12:26:02Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":60,"sources_total":62,"issues":["sst","chlorophyll"]}
