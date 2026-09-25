@@ -4,7 +4,7 @@
   "name": "Fort Bragg to Point Arena",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California \u00b7 Mendocino Groundfish Management Area",
+  "jurisdiction": "California · Mendocino Groundfish Management Area",
   "bounds": [
     -124.4,
     38.958333333333336,
@@ -49,7 +49,7 @@
     ]
   },
   "boat": {
-    "name": "2019 Parker 23 \u00b7 planning profile",
+    "name": "2019 Parker 23 · planning profile",
     "cruise_knots": 20,
     "bottom_depth_limit_ft": 200
   },
@@ -79,12 +79,12 @@
     "tide_name": "Noyo Harbor predictions",
     "tide_note": "NOAA tide predictions remain available, but the station was removed in 2011; no live water-level, entrance-current or bottom-drift observation.",
     "airport": "KLLR",
-    "airport_name": "Little River Airport \u00b7 inland/coastal reference",
+    "airport_name": "Little River Airport · inland/coastal reference",
     "nearshore_buoy": "46014",
-    "nearshore_buoy_name": "Point Arena \u00b7 offshore reference",
+    "nearshore_buoy_name": "Point Arena · offshore reference",
     "nearshore_buoy_note": "19 NM north of Point Arena; not a Noyo entrance sensor.",
     "offshore_buoy": "46014",
-    "offshore_buoy_name": "Point Arena \u00b7 same station, not independent",
+    "offshore_buoy_name": "Point Arena · same station, not independent",
     "offshore_buoy_note": "Same buoy identity as nearshore reference; do not count it as a second observation."
   },
   "mpa": {
@@ -212,7 +212,7 @@
     },
     "kelp": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "protected-areas": {
       "status": "partial",
@@ -224,7 +224,7 @@
     },
     "dynamic-closures": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "wind-forecast": {
       "status": "partial",
@@ -252,7 +252,7 @@
     },
     "subsurface-ocean": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "sea-temperature": {
       "status": "partial",
@@ -264,19 +264,19 @@
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "charter-identity": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "ais-history": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "harbor-access": {
       "status": "research",
@@ -284,15 +284,15 @@
     },
     "wind-ensemble": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "wave-ensemble": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "forecast-verification": {
       "status": "research",
-      "reason": "Fort Bragg\u2013Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     }
   },
   "assets": {
@@ -329,24 +329,57 @@
   "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/fort-bragg-point-arena/habitat-dynamics.json",
   "contexts": {
     "fort-bragg": {
-      "name": "Fort Bragg\u2013Point Arena outer coast",
+      "name": "Fort Bragg–Point Arena outer coast",
       "stations": {
         "tide": "9417426",
         "tide_name": "Noyo Harbor predictions",
         "tide_note": "NOAA tide predictions remain available, but the station was removed in 2011; no live water-level, entrance-current or bottom-drift observation.",
         "airport": "KLLR",
-        "airport_name": "Little River Airport \u00b7 inland/coastal reference",
+        "airport_name": "Little River Airport · inland/coastal reference",
         "nearshore_buoy": "46014",
-        "nearshore_buoy_name": "Point Arena \u00b7 offshore reference",
+        "nearshore_buoy_name": "Point Arena · offshore reference",
         "nearshore_buoy_note": "19 NM north of Point Arena; not a Noyo entrance sensor.",
         "offshore_buoy": "46014",
-        "offshore_buoy_name": "Point Arena \u00b7 same station, not independent",
+        "offshore_buoy_name": "Point Arena · same station, not independent",
         "offshore_buoy_note": "Same buoy identity as nearshore reference; do not count it as a second observation."
       },
       "marine_zones": {
         "coastal": "PZZ455",
         "offshore": "PZZ475"
       }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46014",
+        "latitude": 39.225,
+        "longitude": -123.98,
+        "name": "Point Arena offshore",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46014"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-northern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
     }
   }
 }

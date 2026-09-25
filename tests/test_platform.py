@@ -29,6 +29,7 @@ class RegionalContracts(TestCase):
         self.assertEqual(atlas["targets"], [])
         self.assertEqual(search["features"], [])
         self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
+        self.assertEqual(region["intelligence"]["verification_stations"][0]["id"], "46014")
 
     def test_preview_cannot_claim_qualified_targets_exports_or_images(self):
         report=requirement_report(load_region("cambria-san-simeon"))
