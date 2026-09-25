@@ -1,1 +1,1 @@
-{"region_id":"big-sur-coast","generated_at":"2026-09-25T15:16:32Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":61,"sources_total":62,"issues":["currents"]}
+{"region_id":"big-sur-coast","generated_at":"2026-09-25T15:34:59Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":60,"sources_total":62,"issues":["sst","chlorophyll"]}
