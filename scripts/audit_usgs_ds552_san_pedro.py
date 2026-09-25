@@ -1,0 +1,165 @@
+"""Audit original USGS DS 552 San Pedro rock classes against 2004 video.
+
+Produces an unpublished review queue. Historical substrate is neither a fish
+observation nor a depth-, access-, chart-, or regulations-qualified target.
+"""
+from __future__ import annotations
+
+import argparse
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+import hashlib
+from io import BytesIO
+import json
+from pathlib import Path
+import zipfile
+
+import numpy as np
+from pyproj import Transformer
+import rasterio
+from scipy.ndimage import find_objects, label
+import shapefile
+
+
+SOURCES = {
+    "inner": ("inner_shelf_character_tif.zip", "2b33541c5783476868894e66fdd7d834c69410d6962ac07afcaeefeef367382d",
+              "https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character_tif.zip"),
+    "outer": ("outer_shelf_character_tif.zip", "4dbb90f778459da4324c19df6df570d3c7013acf41d9c67613b49fd6483bd186",
+              "https://pubs.usgs.gov/ds/552/data/raster/outer_shelf_character_tif.zip"),
+    "video": ("videodes_shp.zip", "76797f9b029d50fffc363c4dd800aaae0940699a1a27a27432c3c02773db1af8",
+              "https://pubs.usgs.gov/ds/552/data/shp_files/videodes_shp.zip"),
+}
+CLASSES = {0: "undefined", 1: "rugose rock", 2: "sand", 3: "mixed rock and sand",
+           4: "muddy sand", 5: "coarse sand and shell"}
+
+
+def sha256(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def archive_member(archive: Path, suffix: str) -> bytes:
+    with zipfile.ZipFile(archive) as bundle:
+        names = [name for name in bundle.namelist() if name.lower().endswith(suffix)]
+        if len(names) != 1 or ".." in Path(names[0]).parts:
+            raise ValueError(f"Unexpected {suffix} member in {archive.name}")
+        return bundle.read(names[0])
+
+
+def validate_raster(ds, resolution: int) -> np.ndarray:
+    if (ds.crs is None or ds.crs.to_epsg() != 32611 or ds.count != 1
+            or ds.res != (resolution, resolution) or ds.dtypes[0] != "uint8"):
+        raise ValueError("USGS DS 552 raster grid identity changed")
+    array = ds.read(1)
+    if set(np.unique(array).tolist()) != set(CLASSES):
+        raise ValueError("USGS DS 552 character classes changed")
+    return array
+
+
+def review(cache: Path) -> dict:
+    archives = {key: cache / row[0] for key, row in SOURCES.items()}
+    for key, path in archives.items():
+        if sha256(path) != SOURCES[key][1]:
+            raise ValueError(f"USGS DS 552 {key} archive changed; manual source review required")
+    # pyshp can read original shapefile and DBF directly from their verified ZIP.
+    video_zip = archives["video"]
+    reader = shapefile.Reader(shp=BytesIO(archive_member(video_zip, ".shp")),
+                              shx=BytesIO(archive_member(video_zip, ".shx")),
+                              dbf=BytesIO(archive_member(video_zip, ".dbf")))
+    if reader.shapeTypeName != "POINT" or len(reader) != 5216:
+        raise ValueError("USGS camera observation table changed")
+    observations = []
+    for item in reader.iterShapeRecords():
+        fields = item.record.as_dict()
+        lon, lat = item.shape.points[0]
+        observations.append((lon, lat, any(fields[key] == 1 for key in ("rock", "boulder", "cobble"))))
+    rasters = {}
+    for key, resolution in (("inner", 4), ("outer", 16)):
+        data = archive_member(archives[key], ".tif")
+        with rasterio.io.MemoryFile(data) as memory, memory.open() as ds:
+            pixels = validate_raster(ds, resolution)
+            counts = np.bincount(pixels.ravel(), minlength=6)
+            transformer = Transformer.from_crs(4326, ds.crs, always_xy=True)
+            sampled, hard = Counter(), Counter()
+            positions = []
+            for lon, lat, observed_hard in observations:
+                row, col = ds.index(*transformer.transform(lon, lat))
+                if 0 <= row < ds.height and 0 <= col < ds.width:
+                    value = int(pixels[row, col])
+                    sampled[value] += 1
+                    if observed_hard:
+                        hard[value] += 1
+                    positions.append((row, col, observed_hard))
+            rasters[key] = {
+                "resolution_m": resolution, "crs": "EPSG:32611",
+                "counts": {CLASSES[i]: int(counts[i]) for i in CLASSES},
+                "video_samples_by_class": {CLASSES[i]: sampled[i] for i in CLASSES},
+                "hard_video_samples_by_class": {CLASSES[i]: hard[i] for i in CLASSES},
+                "bounds_utm11_m": [round(v, 3) for v in ds.bounds],
+            }
+            if key == "inner":
+                component, total = label(pixels == 1)
+                size = np.bincount(component.ravel(), minlength=total + 1)
+                video_by_component = defaultdict(lambda: {"hard": 0, "all": 0})
+                for row, col, observed_hard in positions:
+                    ident = int(component[row, col])
+                    if ident:
+                        video_by_component[ident]["all"] += 1
+                        video_by_component[ident]["hard"] += int(observed_hard)
+                windows = find_objects(component)
+                queue = []
+                for ident, counts_at in video_by_component.items():
+                    area = int(size[ident] * 16)
+                    if area < 2500 or counts_at["hard"] == 0:
+                        continue
+                    window = windows[ident - 1]
+                    center_row = (window[0].start + window[0].stop - 1) / 2
+                    center_col = (window[1].start + window[1].stop - 1) / 2
+                    x, y = ds.xy(center_row, center_col)
+                    lon, lat = Transformer.from_crs(ds.crs, 4326, always_xy=True).transform(x, y)
+                    queue.append({"component_id": ident, "rock_class_area_m2": area,
+                                  "video_hard_observations": counts_at["hard"],
+                                  "video_samples_on_component": counts_at["all"],
+                                  "bbox_center_lon_lat": [round(lon, 6), round(lat, 6)],
+                                  "fishing_target": False, "exportable": False})
+                queue.sort(key=lambda row: (-row["rock_class_area_m2"], row["component_id"]))
+                rasters[key]["rock_components_at_least_2500_m2"] = int(np.count_nonzero(size[1:] >= 157))
+                rasters[key]["video_supported_rock_components_at_least_2500_m2"] = len(queue)
+    return {
+        "schema_version": 1, "scope": "usgs-ds552-san-pedro-original-rock-camera-review",
+        "audited_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "publication_url": "https://pubs.usgs.gov/ds/552/",
+        "source_archives": {key: {"url": row[2], "sha256": row[1]} for key, row in SOURCES.items()},
+        "survey_period": "1998–2004; video observations from September 2004",
+        "historical_video_rows": len(observations),
+        "rasters": rasters,
+        "inner_rock_review_queue": queue,
+        "fishing_target": False, "exportable": False,
+        "required_next_gates": ["Original MLLW depth and uncertainty for every candidate cell",
+                                "Fresh CDFW MPA and federal area polygon exclusions",
+                                "Current NOAA charted hazards and safe route review",
+                                "Date/method/species-specific CDFW rules and local access",
+                                "Current conditions and independent habitat or catch validation"],
+        "limitations": ["Component centers are bounding-box references, not fishing waypoints or chart positions.",
+                        "Camera samples on a tow transect are correlated and do not imply independent confirmation or current fish presence.",
+                        "The categorical character raster has no measured depth or boulder-size field; rock-class area is historical mapped habitat, not a quality score.",
+                        "No research queue location may appear in the public target map or export before all required gates pass."],
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cache", type=Path, default=Path("var/review/usgs-ds552"))
+    parser.add_argument("--output", type=Path, default=Path("var/review/usgs-ds552-san-pedro-review.json"))
+    args = parser.parse_args()
+    result = review(args.cache)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    temp = args.output.with_suffix(".tmp")
+    temp.write_text(json.dumps(result, indent=2) + "\n")
+    temp.replace(args.output)
+    print(json.dumps({"video_supported_rock_components": len(result["inner_rock_review_queue"]),
+                      "fishing_targets": 0}))
+
+
+if __name__ == "__main__":
+    main()

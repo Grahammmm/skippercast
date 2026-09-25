@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "usgs-ds552-san-pedro",
+  "name": "USGS San Pedro Shelf original seafloor-character and 2004 video observations",
+  "sector_ids": ["los-angeles-orange"],
+  "need_ids": ["substrate", "groundtruth"],
+  "documentation_url": "https://pubs.usgs.gov/ds/552/",
+  "access_url": "https://pubs.usgs.gov/ds/552/catalog.html",
+  "access_status": "accessible",
+  "rights": {
+    "license": "U.S. federal public-domain source data; attribution and original metadata retained",
+    "terms_url": "https://pubs.usgs.gov/ds/552/",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-118.34, 33.54, -117.94, 33.73],
+    "resolution_m": 4,
+    "resolution_basis": "inspected",
+    "horizontal_crs": "EPSG:32611 (WGS 84 / UTM zone 11N)",
+    "vertical_datum": null,
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character_tif.zip"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T18:00:43Z",
+    "update_cadence": "historical static publication; monthly byte and availability check",
+    "coverage_start": "1998-01-01",
+    "coverage_end": "2004-12-31"
+  },
+  "evidence": [
+    {"url": "https://pubs.usgs.gov/ds/552/", "supports": "USGS Data Series 552 publication, methods, survey period and study area."},
+    {"url": "https://pubs.usgs.gov/ds/552/catalog.html", "supports": "Original inner/outer character rasters and video-observation shapefile."},
+    {"url": "https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character.tif.faq.html", "supports": "4 m categorical inner-shelf character map; code 1 means rugose rock and code 3 means mixed rock and sand."},
+    {"url": "https://pubs.usgs.gov/ds/552/data/shp_files/videodes.faq.html", "supports": "Historical camera descriptions and source metadata; correlated observations are not fish counts."}
+  ],
+  "producer": {"name": "U.S. Geological Survey", "url": "https://www.usgs.gov/"},
+  "variables": ["historical_seafloor_character", "historical_camera_observed_substrate"],
+  "units": {"historical_seafloor_character": "categorical class", "historical_camera_observed_substrate": "binary observation"},
+  "provenance": {
+    "access_service": "USGS Data Series 552 original ZIP archives",
+    "raw_sha256": "2b33541c5783476868894e66fdd7d834c69410d6962ac07afcaeefeef367382d",
+    "companion_archive_sha256": {
+      "outer_shelf_character_tif.zip": "4dbb90f778459da4324c19df6df570d3c7013acf41d9c67613b49fd6483bd186",
+      "videodes_shp.zip": "76797f9b029d50fffc363c4dd800aaae0940699a1a27a27432c3c02773db1af8"
+    },
+    "transformations": ["Original categorical pixels opened and counted in their native UTM grid.", "Original 2004 camera records sampled at native character pixels.", "Connected 4 m rugose-rock components of at least 2,500 square meters with an actual hard-bottom camera observation placed in an unpublished review queue."]
+  },
+  "limitations": [
+    "This is a historical habitat source, not a bathymetric depth surface or a current fish-abundance survey.",
+    "Twenty-four review-queue components are not fishing targets or exportable waypoints. Video records on a camera tow are correlated.",
+    "Each component still needs original MLLW depth/uncertainty, current MPA and federal area exclusions, chart hazards, legal rules and route/access review.",
+    "The outer-shelf class scheme must be read from metadata, not inferred from its color palette."
+  ]
+}

@@ -9,6 +9,33 @@ permissions:
   contents: read
 
 jobs:
+  san-pedro-original-character:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned original-raster audit dependencies
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify unreviewed raster changes fail closed
+        run: python -m unittest tests.test_usgs_ds552_san_pedro -v
+      - name: Download original USGS San Pedro character and camera archives
+        run: |
+          mkdir -p var/review/usgs-ds552
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character_tif.zip --output var/review/usgs-ds552/inner_shelf_character_tif.zip
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/552/data/raster/outer_shelf_character_tif.zip --output var/review/usgs-ds552/outer_shelf_character_tif.zip
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/552/data/shp_files/videodes_shp.zip --output var/review/usgs-ds552/videodes_shp.zip
+      - name: Audit source bytes and build unpublished rock review queue
+        run: python scripts/audit_usgs_ds552_san_pedro.py --cache var/review/usgs-ds552 --output var/review/usgs-ds552-san-pedro-review.json
+      - name: Upload unpublished source-change and candidate receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-ds552-san-pedro-review
+          path: var/review/usgs-ds552-san-pedro-review.json
+          retention-days: 30
   usgs-state-waters-catalog:
     runs-on: ubuntu-latest
     timeout-minutes: 15
