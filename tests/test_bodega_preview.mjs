@@ -14,7 +14,7 @@ test('Bodega original hard-bottom context stays separate from fishing targets', 
   assert.equal(atlas.targets.length, 0);
   assert.equal(habitat.features.length, 17);
   assert.equal(plans.features.length, 17);
-  assert.match(habitatDetails(habitat.features[0], region), /no polygon-specific depth|no complete native-depth|component-wide depth range/i);
+  assert.match(habitatDetails(habitat.features[0], region), /Original measured cells inside this outline/);
   for (const feature of habitat.features) {
     const p = feature.properties;
     assert.equal(p.fishing_target, false);
@@ -24,6 +24,8 @@ test('Bodega original hard-bottom context stays separate from fishing targets', 
     assert.equal(p.quality_grade, null);
     assert.equal(p.catch_evidence, false);
     assert.ok(p.qualified_original_cells > 0);
+    assert.ok(p.sampled_original_depth_ft.minimum >= 25);
+    assert.ok(p.sampled_original_depth_ft.maximum <= 200);
   }
   for (const feature of plans.features) {
     assert.equal(feature.properties.exportable, false);

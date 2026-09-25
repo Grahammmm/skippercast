@@ -28,6 +28,15 @@ class BodegaNativeHardTerrainTests(unittest.TestCase):
                 self.assertGreaterEqual(row['display_area_m2'], 2500)
                 self.assertGreater(row['qualified_native_cells'], 0)
                 self.assertIsNone(row['terrain']['catch_probability'])
+                depths = row['sampled_original_depth_ft']
+                self.assertLessEqual(25, depths['minimum'])
+                self.assertLessEqual(depths['minimum'], depths['p05'])
+                self.assertLessEqual(depths['p05'], depths['median'])
+                self.assertLessEqual(depths['median'], depths['p95'])
+                self.assertLessEqual(depths['p95'], depths['maximum'])
+                self.assertLessEqual(depths['maximum'], 200)
+            else:
+                self.assertIsNone(row['sampled_original_depth_ft'])
         self.assertEqual(atlas['targets'], [])
         self.assertEqual(atlas['areas'], [])
 

@@ -92,11 +92,13 @@ def audit(root=REPO):
             if area_m2 < 2500:
                 status = 'held-small-display'
                 result = None
+                depth_stats = None
             elif qualified.sum() < 20 or not qualified.all(where=inside):
                 # A displayed patch must remain wholly supported by qualified
                 # original measured cells; otherwise it stays a held research lead.
                 status = 'held-native-cell-gap'
                 result = None
+                depth_stats = None
             else:
                 yy, xx = np.where(qualified)
                 east = affine.c + (xx + .5) * affine.a
@@ -104,13 +106,22 @@ def audit(root=REPO):
                 result = terrain_metrics(east, north, depth[qualified],
                                          np.full(len(east), 2.0),
                                          hard_area_m2=area_m2)
+                sampled_ft = -depth[qualified].astype('float64') / .3048
+                if not np.isfinite(sampled_ft).all() or np.any((sampled_ft < 25) | (sampled_ft > 200)):
+                    raise ValueError('Original Bodega depth escaped the 25–200 ft cell screen')
+                depth_stats = {'minimum': round(float(sampled_ft.min()), 1),
+                               'p05': round(float(np.percentile(sampled_ft, 5)), 1),
+                               'median': round(float(np.median(sampled_ft)), 1),
+                               'p95': round(float(np.percentile(sampled_ft, 95)), 1),
+                               'maximum': round(float(sampled_ft.max()), 1)}
                 status = 'terrain-reviewed'
             metrics.append({'context_id': props['id'], 'survey_id': props['survey_id'],
                             'original_bag_sha256': props['noaa_bag_sha256'],
                             'display_area_m2': round(area_m2),
                             'native_cells_inside_display': int(inside.sum()),
                             'qualified_native_cells': int(qualified.sum()),
-                            'status': status, 'terrain': result})
+                            'status': status, 'terrain': result,
+                            'sampled_original_depth_ft': depth_stats})
     danger_ids = {row['context_id'] for row in enc['outlines_near_selected_charted_dangers']}
     if not danger_ids <= {row['context_id'] for row in metrics}:
         raise ValueError('Chart receipt references a missing research outline')

@@ -44,6 +44,13 @@ def build(source, raw, terrain, region):
                 row['survey_id'] != p['survey_id'] or row['original_bag_sha256'] != p['noaa_bag_sha256'] or
                 row['qualified_native_cells'] <= 0 or row['terrain']['habitat_grade'] != 'C'):
             raise ValueError('Bodega research outline has an unsupported claim or bounds')
+        depths = row.get('sampled_original_depth_ft')
+        if (not isinstance(depths, dict) or
+                not all(isinstance(depths.get(key), (int, float)) for key in
+                        ('minimum', 'p05', 'median', 'p95', 'maximum')) or
+                not (25 <= depths['minimum'] <= depths['p05'] <= depths['median'] <=
+                     depths['p95'] <= depths['maximum'] <= 200)):
+            raise ValueError('Bodega outline lacks ordered original-cell depths')
         point = geom.representative_point()
         output.append({'type': 'Feature', 'geometry': feature['geometry'], 'properties': {
             'id': p['id'], 'name': f'Point Reyes–Bodega · surveyed hard-bottom context {len(output)+1:02d}',
@@ -59,7 +66,8 @@ def build(source, raw, terrain, region):
             'survey_cell_m': max(p['native_resolution_m']),
             'vertical_datum': 'NOAA original BAG depth below MLLW',
             'depth_screened': True, 'depth_qualified': False,
-            'depth_note': 'Historical original cells passed the 25–200 ft planning screen. A component-wide depth range cannot establish the depth of each point in this display outline.',
+            'sampled_original_depth_ft': depths,
+            'depth_note': 'Historical 25–200 ft original cells inside the inset display outline; these sampled values do not establish a safe approach or every unsampled location.',
             'view_relief_m': row['terrain']['relief_90_percent_m'],
             'qualified_original_cells': row['qualified_native_cells'],
             'limitations': 'Historical original-grid hard-bottom research. The terrain grade is uncalibrated to fish or catch, so this outline has no fishing rank. Display edges are inset; selected chart-danger proximity was checked, but the current chart, route, harbor, exact legal access and fish presence are not cleared.',
