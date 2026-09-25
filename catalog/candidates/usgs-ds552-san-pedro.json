@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "id": "usgs-ds552-san-pedro",
-  "name": "USGS San Pedro Shelf original seafloor-character and 2004 video observations",
+  "name": "USGS San Pedro Shelf original seafloor-character, 2004 video and MLLW bathymetry",
   "sector_ids": ["los-angeles-orange"],
-  "need_ids": ["substrate", "groundtruth"],
+  "need_ids": ["bathymetry", "substrate", "groundtruth"],
   "documentation_url": "https://pubs.usgs.gov/ds/552/",
   "access_url": "https://pubs.usgs.gov/ds/552/catalog.html",
   "access_status": "accessible",
@@ -17,7 +17,7 @@
     "resolution_m": 4,
     "resolution_basis": "inspected",
     "horizontal_crs": "EPSG:32611 (WGS 84 / UTM zone 11N)",
-    "vertical_datum": null,
+    "vertical_datum": "MLLW on separate OF 2004-1221 bathymetry grids only",
     "footprint_kind": "native-raster-envelope-with-nodata",
     "footprint_url": "https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character_tif.zip"
   },
@@ -32,24 +32,28 @@
     {"url": "https://pubs.usgs.gov/ds/552/", "supports": "USGS Data Series 552 publication, methods, survey period and study area."},
     {"url": "https://pubs.usgs.gov/ds/552/catalog.html", "supports": "Original inner/outer character rasters and video-observation shapefile."},
     {"url": "https://pubs.usgs.gov/ds/552/data/raster/inner_shelf_character.tif.faq.html", "supports": "4 m categorical inner-shelf character map; code 1 means rugose rock and code 3 means mixed rock and sand."},
-    {"url": "https://pubs.usgs.gov/ds/552/data/shp_files/videodes.faq.html", "supports": "Historical camera descriptions and source metadata; correlated observations are not fish counts."}
+    {"url": "https://pubs.usgs.gov/ds/552/data/shp_files/videodes.faq.html", "supports": "Historical camera descriptions and source metadata; correlated observations are not fish counts."},
+    {"url": "https://pubs.usgs.gov/of/2004/1221/metadata/labathygrd.html", "supports": "Original San Pedro 4 m bathymetry metadata says soundings were corrected to MLLW and warns of survey artifacts."}
   ],
   "producer": {"name": "U.S. Geological Survey", "url": "https://www.usgs.gov/"},
-  "variables": ["historical_seafloor_character", "historical_camera_observed_substrate"],
-  "units": {"historical_seafloor_character": "categorical class", "historical_camera_observed_substrate": "binary observation"},
+  "variables": ["historical_seafloor_character", "historical_camera_observed_substrate", "historical_seafloor_depth"],
+  "units": {"historical_seafloor_character": "categorical class", "historical_camera_observed_substrate": "binary observation", "historical_seafloor_depth": "m below MLLW"},
   "provenance": {
     "access_service": "USGS Data Series 552 original ZIP archives",
     "raw_sha256": "2b33541c5783476868894e66fdd7d834c69410d6962ac07afcaeefeef367382d",
     "companion_archive_sha256": {
       "outer_shelf_character_tif.zip": "4dbb90f778459da4324c19df6df570d3c7013acf41d9c67613b49fd6483bd186",
-      "videodes_shp.zip": "76797f9b029d50fffc363c4dd800aaae0940699a1a27a27432c3c02773db1af8"
+      "videodes_shp.zip": "76797f9b029d50fffc363c4dd800aaae0940699a1a27a27432c3c02773db1af8",
+      "pvebat.tgz": "e4bf14283305843c4a965f7e1ecec3b22228b5e06560dc068ab26dd7fd1ad314",
+      "gabbat.tgz": "6db3fd2a3ebe33e3ccda1581a3e563c20a5207a4dea29c783ebffff15a91cc11",
+      "spbbat.tgz": "96c0e4743789f9bbdd9fdb0b68df2cdf5d25cdb20bb214f201152ef3625afd0b"
     },
-    "transformations": ["Original categorical pixels opened and counted in their native UTM grid.", "Original 2004 camera records sampled at native character pixels.", "Connected 4 m rugose-rock components of at least 2,500 square meters with an actual hard-bottom camera observation placed in an unpublished review queue."]
+    "transformations": ["Original categorical pixels opened and counted in their native UTM grid.", "Original 2004 camera records sampled at native character pixels.", "Connected 4 m rugose-rock components of at least 2,500 square meters with an actual hard-bottom camera observation placed in an unpublished review queue.", "Three original 4 m USGS MLLW bathymetry grids sampled at each component bounding-box center only; this cannot qualify the full footprint."]
   },
   "limitations": [
     "This is a historical habitat source, not a bathymetric depth surface or a current fish-abundance survey.",
     "Twenty-four review-queue components are not fishing targets or exportable waypoints. Video records on a camera tow are correlated.",
-    "Each component still needs original MLLW depth/uncertainty, current MPA and federal area exclusions, chart hazards, legal rules and route/access review.",
+    "All 24 component centers have an original 25–200 ft MLLW sample, but every footprint still needs a full depth/uncertainty screen, current MPA and federal area exclusions, chart hazards, legal rules and route/access review.",
     "The outer-shelf class scheme must be read from metadata, not inferred from its color palette."
   ]
 }

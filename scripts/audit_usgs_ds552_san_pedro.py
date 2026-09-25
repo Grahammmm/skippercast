@@ -12,6 +12,8 @@ import hashlib
 from io import BytesIO
 import json
 from pathlib import Path
+import tarfile
+import tempfile
 import zipfile
 
 import numpy as np
@@ -28,6 +30,14 @@ SOURCES = {
               "https://pubs.usgs.gov/ds/552/data/raster/outer_shelf_character_tif.zip"),
     "video": ("videodes_shp.zip", "76797f9b029d50fffc363c4dd800aaae0940699a1a27a27432c3c02773db1af8",
               "https://pubs.usgs.gov/ds/552/data/shp_files/videodes_shp.zip"),
+}
+DEPTH_SOURCES = {
+    "pvebat": ("e4bf14283305843c4a965f7e1ecec3b22228b5e06560dc068ab26dd7fd1ad314",
+               "https://pubs.usgs.gov/of/2004/1221/data/grid/pvebat.tgz"),
+    "gabbat": ("6db3fd2a3ebe33e3ccda1581a3e563c20a5207a4dea29c783ebffff15a91cc11",
+               "https://pubs.usgs.gov/of/2004/1221/data/grid/gabbat.tgz"),
+    "spbbat": ("96c0e4743789f9bbdd9fdb0b68df2cdf5d25cdb20bb214f201152ef3625afd0b",
+               "https://pubs.usgs.gov/of/2004/1221/data/grid/spbbat.tgz"),
 }
 CLASSES = {0: "undefined", 1: "rugose rock", 2: "sand", 3: "mixed rock and sand",
            4: "muddy sand", 5: "coarse sand and shell"}
@@ -56,7 +66,47 @@ def validate_raster(ds, resolution: int) -> np.ndarray:
     return array
 
 
-def review(cache: Path) -> dict:
+def center_depth_review(queue: list[dict], depth_cache: Path) -> dict:
+    """Sample original MLLW grids at references; never claim whole-patch depth."""
+    points = [tuple(row["bbox_center_lon_lat"]) for row in queue]
+    matched = defaultdict(list)
+    for name, (expected, _) in DEPTH_SOURCES.items():
+        archive = depth_cache / f"{name}.tgz"
+        if sha256(archive) != expected:
+            raise ValueError(f"USGS OF 2004-1221 {name} archive changed")
+        with tempfile.TemporaryDirectory(prefix=f"usgs-{name}-", dir=depth_cache) as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(archive) as outer:
+                if outer.namelist() != [f"{name}.tar"]:
+                    raise ValueError("USGS bathymetry package changed")
+                inner_bytes = outer.read(f"{name}.tar")
+            with tarfile.open(fileobj=BytesIO(inner_bytes), mode="r:") as inner:
+                if any(not (part.name == name or part.name.startswith(name + "/"))
+                       or part.issym() or part.islnk() for part in inner.getmembers()):
+                    raise ValueError("USGS bathymetry archive paths changed")
+                inner.extractall(root, filter="data")
+            with rasterio.open(root / name / f"{name}g") as ds:
+                if (ds.driver != "AIG" or ds.crs is None or ds.crs.to_epsg() != 32611
+                        or ds.res != (4.0, 4.0) or ds.count != 1):
+                    raise ValueError("USGS original MLLW bathymetry grid changed")
+                to_grid = Transformer.from_crs(4326, ds.crs, always_xy=True)
+                samples = ds.sample([to_grid.transform(*point) for point in points])
+                for row, sample in zip(queue, samples):
+                    value = float(sample[0])
+                    if np.isfinite(value) and value != ds.nodata and -200 * .3048 <= value <= -25 * .3048:
+                        matched[row["component_id"]].append({"grid": name,
+                            "center_depth_ft_below_mllw": round(-value / .3048, 1)})
+    for row in queue:
+        row["original_center_depth_samples"] = matched[row["component_id"]]
+    return {"original_grid_count": len(DEPTH_SOURCES),
+            "review_queue_centers_in_25_to_200_ft_mllw": sum(bool(matched[row["component_id"]]) for row in queue),
+            "depth_source_archives": {name: {"url": value[1], "sha256": value[0]}
+                                      for name, value in DEPTH_SOURCES.items()},
+            "depth_basis_url": "https://pubs.usgs.gov/of/2004/1221/metadata/labathygrd.html",
+            "depth_limitation": "One historical MLLW cell at each component bounding-box center only; does not qualify the whole rock polygon or supply per-cell uncertainty. Publisher warns of collection and processing artifacts."}
+
+
+def review(cache: Path, depth_cache: Path | None = None) -> dict:
     archives = {key: cache / row[0] for key, row in SOURCES.items()}
     for key, path in archives.items():
         if sha256(path) != SOURCES[key][1]:
@@ -125,6 +175,7 @@ def review(cache: Path) -> dict:
                 queue.sort(key=lambda row: (-row["rock_class_area_m2"], row["component_id"]))
                 rasters[key]["rock_components_at_least_2500_m2"] = int(np.count_nonzero(size[1:] >= 157))
                 rasters[key]["video_supported_rock_components_at_least_2500_m2"] = len(queue)
+    depth = center_depth_review(queue, depth_cache) if depth_cache else None
     return {
         "schema_version": 1, "scope": "usgs-ds552-san-pedro-original-rock-camera-review",
         "audited_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -134,8 +185,9 @@ def review(cache: Path) -> dict:
         "historical_video_rows": len(observations),
         "rasters": rasters,
         "inner_rock_review_queue": queue,
+        "center_depth_review": depth,
         "fishing_target": False, "exportable": False,
-        "required_next_gates": ["Original MLLW depth and uncertainty for every candidate cell",
+        "required_next_gates": ["Original MLLW depth and uncertainty for every candidate cell; a center sample is insufficient",
                                 "Fresh CDFW MPA and federal area polygon exclusions",
                                 "Current NOAA charted hazards and safe route review",
                                 "Date/method/species-specific CDFW rules and local access",
@@ -150,14 +202,17 @@ def review(cache: Path) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache", type=Path, default=Path("var/review/usgs-ds552"))
+    parser.add_argument("--depth-cache", type=Path)
     parser.add_argument("--output", type=Path, default=Path("var/review/usgs-ds552-san-pedro-review.json"))
     args = parser.parse_args()
-    result = review(args.cache)
+    result = review(args.cache, args.depth_cache)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temp = args.output.with_suffix(".tmp")
     temp.write_text(json.dumps(result, indent=2) + "\n")
     temp.replace(args.output)
     print(json.dumps({"video_supported_rock_components": len(result["inner_rock_review_queue"]),
+                      "center_depth_hits": (result["center_depth_review"] or {}).get(
+                          "review_queue_centers_in_25_to_200_ft_mllw"),
                       "fishing_targets": 0}))
 
 
