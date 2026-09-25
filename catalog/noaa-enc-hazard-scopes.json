@@ -57,6 +57,13 @@
       "output": "var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson"
     },
     {
+      "id": "h12111-bolinas-native-hard-context",
+      "region_id": "point-reyes-pigeon",
+      "bounds": [-122.71, 37.84, -122.65, 37.89],
+      "research_only": true,
+      "output": "var/review/enc-hazards-h12111-bolinas-native-hard.geojson"
+    },
+    {
       "id": "cape-mendocino-hard-context",
       "region_id": "northern",
       "bounds": [-124.49, 40.37, -124.37, 40.53],

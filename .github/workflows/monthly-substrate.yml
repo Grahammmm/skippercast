@@ -132,6 +132,11 @@ jobs:
           --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
           --context dist/data/sf-native-hard-context.geojson
           --output var/review/arena-bodega-enc-context-review.json
+      - name: Recheck the held Bolinas original-rock fragments against NOAA ENC
+        run: |
+          python scripts/refresh_enc_hazards.py --scope h12111-bolinas-native-hard-context --output var/review/enc-hazards-h12111-bolinas-native-hard.geojson
+          python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-h12111-bolinas-native-hard.geojson --context dist/data/sf-native-hard-context.geojson --output var/review/bolinas-enc-context-review.json
+          python -c 'import json; p=json.load(open("var/review/bolinas-enc-context-review.json")); assert p["context_outlines_in_scope_by_survey"] == {"H12111": 3}'
       - name: Recheck all 74 original-grid Bodega research outlines
         env:
           PYTHONPATH: src:.
@@ -156,6 +161,8 @@ jobs:
             var/review/bodega-native-enc-scope-review.json
             var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
             var/review/arena-bodega-enc-context-review.json
+            var/review/enc-hazards-h12111-bolinas-native-hard.geojson
+            var/review/bolinas-enc-context-review.json
           retention-days: 30
   bluetopo-source-leads:
     runs-on: ubuntu-latest

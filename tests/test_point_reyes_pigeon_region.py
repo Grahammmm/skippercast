@@ -1,5 +1,6 @@
 """Point Reyes preview keeps legal exclusions and uncertain terrain off exports."""
 import json
+import hashlib
 from pathlib import Path
 import unittest
 
@@ -49,6 +50,17 @@ class PointReyesPigeonTests(unittest.TestCase):
         self.assertEqual(atlas["targets"], [])
         self.assertEqual(atlas["areas"], [])
         self.assertEqual(atlas["drifts"], [])
+
+    def test_bolinas_native_fragments_are_held_after_original_cell_review(self):
+        report = json.loads((ROOT / "dist/data/bolinas-native-hard-terrain-review.json").read_text())
+        source = ROOT / "dist/data/sf-native-hard-context.geojson"
+        self.assertEqual(report["region_id"], RID)
+        self.assertEqual(report["source_context_sha256"], hashlib.sha256(source.read_bytes()).hexdigest())
+        self.assertEqual(report["reviewed_outlines"], 3)
+        self.assertEqual(report["terrain_reviewed"], 0)
+        self.assertEqual(report["holds"], {"held-small-display": 2,
+                                           "held-subcell-display": 1})
+        self.assertTrue(all(not row["terrain"] for row in report["rows"]))
 
     def test_local_rules_review_is_hash_bound(self):
         config = settings(RID)

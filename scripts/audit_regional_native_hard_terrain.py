@@ -97,7 +97,7 @@ def audit(region_id, enc_path, federal_path, *, root=REPO, now=None):
         raise ValueError("No bounded source context for region")
     expected = {p["noaa_bag_sha256"] for p, _ in candidates}
     cache = {}
-    for path in sorted((root / "var/noaa-native-cache").glob("H117*.bag")):
+    for path in sorted((root / "var/noaa-native-cache").glob("*.bag")):
         value = digest(path)
         if value in expected:
             if value in cache:
@@ -122,15 +122,22 @@ def audit(region_id, enc_path, federal_path, *, root=REPO, now=None):
                 raise ValueError("Original BAG resolution, MLLW datum or bands changed")
             local = transform(Transformer.from_crs("EPSG:4326", parts[0], always_xy=True).transform, geographic)
             window = from_bounds(*local.bounds, transform=ds.transform).round_offsets().round_lengths()
-            depth = ds.read(1, window=window)
-            uncertainty = ds.read(2, window=window)
-            affine = ds.window_transform(window)
-            inside = geometry_mask([local], out_shape=depth.shape, transform=affine, invert=True)
-            qualified = cells_qualified(depth, uncertainty, 2) & inside
             area_m2 = local.area
-            if area_m2 < 2500:
+            if window.width < 1 or window.height < 1:
+                inside = np.zeros((0, 0), dtype=bool)
+                qualified = inside
+                hold = hold or "held-subcell-display"
+            else:
+                depth = ds.read(1, window=window)
+                uncertainty = ds.read(2, window=window)
+                affine = ds.window_transform(window)
+                inside = geometry_mask([local], out_shape=depth.shape, transform=affine, invert=True)
+                qualified = cells_qualified(depth, uncertainty, 2) & inside
+                if not inside.any():
+                    hold = hold or "held-subcell-display"
+            if hold is None and area_m2 < 2500:
                 hold = hold or "held-small-display"
-            elif qualified.sum() < 20 or not qualified.all(where=inside):
+            elif hold is None and (qualified.sum() < 20 or not qualified.all(where=inside)):
                 hold = hold or "held-native-cell-gap"
             terrain = None
             depth_stats = None
