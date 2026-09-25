@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "series": "bss",
+  "checked_at": "2026-09-25T07:42:42.930683+00:00",
+  "producer": "CSU Monterey Bay Seafloor Mapping Lab; NOAA NCEI distribution",
+  "series_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+  "series_metadata_sha256": "a57a1c3f32287718a683f2ade9eb28e88c15af30dcebe27e1ce06632336ca0a1",
+  "survey_count": 13,
+  "surveys": [
+    {
+      "survey_id": "BSS_Block01",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block01_mb.html",
+      "report_sha256": "e25ba9dcee78b3046dd646b73cc3b6723bb121bcb32cabc330044369ca57a862",
+      "catalog_envelope": [
+        -121.39165,
+        35.731003,
+        -121.3234,
+        35.769993
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version2/products/BSS_Block01_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block02",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block02_mb.html",
+      "report_sha256": "8106b2cfde4c6b5f4d4df48c5c676264c5b4435dbafb7a8785626dc416ea90cb",
+      "catalog_envelope": [
+        -121.41652,
+        35.753925,
+        -121.33121,
+        35.796787
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version2/products/BSS_Block02_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block03",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block03_mb.html",
+      "report_sha256": "dbe95182f49a6a0c4daa12dc7a81d76125d10b74fbe4533d514ad9c38d7e10ce",
+      "catalog_envelope": [
+        -121.44165,
+        35.765396,
+        -121.35464,
+        35.821205
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/products/BSS_Block03_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block04",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block04_mb.html",
+      "report_sha256": "548cc227505c6f045b275513d3a5accd56d710dfc8d07fdc913b36150335d762",
+      "catalog_envelope": [
+        -121.46058,
+        35.793316,
+        -121.391266,
+        35.85612
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block04/multibeam/data/version2/products/BSS_Block04_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block04/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block05",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block05_mb.html",
+      "report_sha256": "8c2edb99124e7ac11128a1866ec3c6084ba6cb9d5eef5b350efc153cdba67ba7",
+      "catalog_envelope": [
+        -121.50566,
+        35.81501,
+        -121.42098,
+        35.87186
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block05/multibeam/data/version2/products/BSS_Block05_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block05/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block06",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block06_mb.html",
+      "report_sha256": "289fe42297e08e905b8935c3898523c08de5cc7ed677002a1e0a12069ec18c9f",
+      "catalog_envelope": [
+        -121.5395,
+        35.84189,
+        -121.45467,
+        35.909454
+      ],
+      "sector_ids": [
+        "big-sur",
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block06/multibeam/data/version2/products/BSS_Block06_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block06/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block07",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block07_mb.html",
+      "report_sha256": "b3bcfc81f86c56ee7f73ddee66675171760a88d81ea3c3dd90f9b8d3c0bf9488",
+      "catalog_envelope": [
+        -121.54404,
+        35.887173,
+        -121.47974,
+        35.941772
+      ],
+      "sector_ids": [
+        "big-sur",
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block07/multibeam/data/version2/products/BSS_Block07_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block07/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block08",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block08_mb.html",
+      "report_sha256": "eb47228d0846b65c1dda5f785a71919f77782daf96a184a9134004ad941db7ee",
+      "catalog_envelope": [
+        -121.55232,
+        35.91602,
+        -121.484726,
+        35.963905
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version2/products/BSS_Block08_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block09",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block09_mb.html",
+      "report_sha256": "9e033386eb2cfe7c67d69c69b4f439d99f343bd3a3a85a5af2f744d95271cdc1",
+      "catalog_envelope": [
+        -121.56507,
+        35.93624,
+        -121.49185,
+        35.98785
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block09/multibeam/data/version2/products/BSS_Block09_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block09/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block10",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block10_mb.html",
+      "report_sha256": "d2f4de4992c81bd7ace6029c2487cdc28c2c8bb874dbb04b15c402b9655c7228",
+      "catalog_envelope": [
+        -121.56969,
+        35.961926,
+        -121.50082,
+        36.00982
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block10/multibeam/data/version2/products/BSS_Block10_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block10/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block11",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block11_mb.html",
+      "report_sha256": "146107cd8b9bb2efe9c8d398a381ed6039b6d467352d1caea8bc4d075614d7a6",
+      "catalog_envelope": [
+        -121.6139,
+        35.965046,
+        -121.50395,
+        36.01394
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block11/multibeam/data/version2/products/BSS_Block11_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block11/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block12",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block12_mb.html",
+      "report_sha256": "9fe8e49b05790a91a2662121d6cb9c6fd7ed37331d82b6d058e2b745584677c9",
+      "catalog_envelope": [
+        -121.64598,
+        35.97999,
+        -121.57452,
+        36.020897
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version2/products/BSS_Block12_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "BSS_Block13",
+      "report_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html",
+      "report_sha256": "b7bbfe398167d960f2dece6a25c0b5f0a9aa5d176ca1e54ad813d7e50ec34b52",
+      "catalog_envelope": [
+        -121.91737,
+        36.11587,
+        -121.6772,
+        36.248127
+      ],
+      "sector_ids": [
+        "big-sur"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    }
+  ],
+  "limitations": [
+    "Survey-track envelopes overlap and do not establish measured-cell coverage or a reef boundary.",
+    "The original native archives, per-file XML, horizontal and vertical datums, uncertainty, substrate, rights and current chart hazards require review before any fishing target.",
+    "Blocks named for MPAs in the series metadata are not legal fishing areas; all blocks require current CDFW and federal closure screening.",
+    "No catalog lead is a fishing waypoint, drift, catch record, safe route or chartplotter export."
+  ]
+}

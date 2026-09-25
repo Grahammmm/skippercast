@@ -21,6 +21,16 @@ class CsumbSccDiscoveryTest(unittest.TestCase):
             self.assertNotIn("fishing_target", row)
             self.assertNotIn("geometry", row)
 
+    def test_big_sur_south_roster_is_bounded_and_unpromoted(self):
+        result = json.loads((ROOT / "catalog/csumb-bss-source-leads.json").read_text())
+        self.assertEqual(result["series"], "bss")
+        self.assertEqual(result["survey_count"], 13)
+        self.assertEqual([x["survey_id"] for x in result["surveys"]],
+                         [f"BSS_Block{i:02d}" for i in range(1, 14)])
+        self.assertIn("big-sur", result["surveys"][12]["sector_ids"])
+        self.assertLess(result["surveys"][12]["catalog_envelope"][3], 36.3)
+        self.assertTrue(all(x["status"] == "source-lead-only" for x in result["surveys"]))
+
     def test_changed_archive_or_metadata_fails_review_baseline(self):
         baseline = json.loads((ROOT / "catalog/csumb-scc-source-leads.json").read_text())
         current = json.loads(json.dumps(baseline))

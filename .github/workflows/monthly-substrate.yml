@@ -540,12 +540,20 @@ jobs:
           python scripts/discover_csumb_scc_blocks.py
           --baseline catalog/csumb-scc-source-leads.json
           --output var/review/csumb-scc-source-leads.json
+      - name: Recheck all 13 original CSUMB Big Sur South reports and metadata
+        run: >-
+          python scripts/discover_csumb_scc_blocks.py
+          --series bss
+          --baseline catalog/csumb-bss-source-leads.json
+          --output var/review/csumb-bss-source-leads.json
       - name: Upload unpublished survey-source receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: csumb-scc-source-leads
-          path: var/review/csumb-scc-source-leads.json
+          path: |
+            var/review/csumb-scc-source-leads.json
+            var/review/csumb-bss-source-leads.json
           retention-days: 30
 
 # This workflow deliberately does not change public map files. Camera observations,
