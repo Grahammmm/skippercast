@@ -53,7 +53,7 @@
   "limitations": [
     "This is a historical habitat source, not a bathymetric depth surface or a current fish-abundance survey.",
     "Twenty-four review-queue components are not fishing targets or exportable waypoints. Video records on a camera tow are correlated.",
-    "All 11,732 rock-class cells across 24 components have original 25–200 ft MLLW depth samples, but the source lacks per-cell uncertainty and has documented artifacts. A dated 2026-09-25 CDFW MPA/NOAA federal 100 m screen held none; it must be refreshed, and chart hazards, legal rules and route/access still require review.",
+    "All 11,732 rock-class cells across 24 components have original 25–200 ft MLLW depth samples, but the source lacks per-cell uncertainty and has documented artifacts. A dated 2026-09-25 CDFW MPA/NOAA federal 100 m screen held none; a bounded NOAA ENC danger screen held two; all 24 lie shoreward of NOAA's official 50-fathom coordinate line. Current seasonal rules, hazards and route/access still require trip-date review.",
     "The outer-shelf class scheme must be read from metadata, not inferred from its color palette."
   ]
 }

@@ -97,6 +97,13 @@
       "bounds": [-117.35, 32.77, -117.30, 32.85],
       "research_only": true,
       "output": "var/review/enc-hazards-la-jolla-h11876.geojson"
+    },
+    {
+      "id": "san-pedro-ds552-original-rock",
+      "region_id": "southern-california",
+      "bounds": [-118.29, 33.60, -118.17, 33.71],
+      "research_only": true,
+      "output": "var/review/enc-hazards-san-pedro-ds552.geojson"
     }
   ]
 }

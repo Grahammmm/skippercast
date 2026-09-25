@@ -32,7 +32,12 @@ class EncHazardRefreshTests(unittest.TestCase):
             {'id': 'old-dton', 'longitude': -122.98, 'latitude': 38.17}]}]}
         result = audit(enc, context, historical)
         self.assertEqual(result['outlines_near_charted_dangers'][0]['context_id'], 'outline-1')
+        self.assertTrue(result['outline_screen'][0]['within_danger_review_buffer'])
         self.assertFalse(result['historical_report_dangers'][0]['reconciled_with_current_chart'])
+        southern = audit(enc, context, historical, projected_crs='EPSG:32611')
+        self.assertEqual(southern['projected_crs'], 'EPSG:32611')
+        with self.assertRaisesRegex(ValueError, 'Unreviewed ENC distance projection'):
+            audit(enc, context, historical, projected_crs='EPSG:3857')
         enc['query_receipts'][0]['count'] = 0
         with self.assertRaisesRegex(ValueError, 'count does not match'):
             audit(enc, context, historical)

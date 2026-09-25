@@ -19,8 +19,8 @@ jobs:
           python-version: "3.12"
       - name: Install pinned original-raster audit dependencies
         run: python -m pip install -r requirements-survey.txt
-      - name: Verify unreviewed raster changes fail closed
-        run: python -m unittest tests.test_usgs_ds552_san_pedro -v
+      - name: Verify unreviewed source changes and line interpretation fail closed
+        run: python -m unittest tests.test_usgs_ds552_san_pedro tests.test_san_pedro_rca_line tests.test_enc_hazard_refresh -v
       - name: Download original USGS San Pedro character and camera archives
         run: |
           mkdir -p var/review/usgs-ds552
@@ -62,6 +62,29 @@ jobs:
           --coastal var/review/san-pedro-current/coastal/latest.json
           --federal var/review/san-pedro-current/noaa-federal-areas.json
           --output var/review/san-pedro-fresh-closure-audit.json
+      - name: Refresh bounded NOAA ENC danger features around San Pedro outlines
+        run: >-
+          python scripts/refresh_enc_hazards.py
+          --scope san-pedro-ds552-original-rock
+          --output var/review/san-pedro-enc-hazards.geojson
+      - name: Hold outlines near current charted danger features
+        run: >-
+          python scripts/audit_enc_context_overlap.py
+          --enc var/review/san-pedro-enc-hazards.geojson
+          --context var/review/san-pedro-rock-context.geojson
+          --projected-crs EPSG:32611
+          --output var/review/san-pedro-enc-context-review.json
+      - name: Download current official NOAA depth-boundary coordinates
+        run: >-
+          curl --fail --location --silent --show-error --max-time 120
+          https://www.fisheries.noaa.gov/s3/2026-09/rca-lines-latlongs-august-2026.zip
+          --output var/review/rca-lines-latlongs-august-2026.zip
+      - name: Screen exact rock outlines against reviewed 50-fathom RCA coordinate line
+        run: >-
+          python scripts/audit_san_pedro_rca_line.py
+          --archive var/review/rca-lines-latlongs-august-2026.zip
+          --context var/review/san-pedro-rock-context.geojson
+          --output var/review/san-pedro-rca-screen.json
       - name: Upload unpublished source-change and candidate receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,6 +93,8 @@ jobs:
           path: |
             var/review/usgs-ds552-san-pedro-review.json
             var/review/san-pedro-fresh-closure-audit.json
+            var/review/san-pedro-enc-context-review.json
+            var/review/san-pedro-rca-screen.json
           retention-days: 30
   usgs-state-waters-catalog:
     runs-on: ubuntu-latest

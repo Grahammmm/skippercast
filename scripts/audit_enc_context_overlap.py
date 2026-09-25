@@ -18,14 +18,16 @@ from shapely.ops import transform
 from shapely.strtree import STRtree
 
 
-def audit(enc, context, historical, *, buffer_m=100):
+def audit(enc, context, historical, *, buffer_m=100, projected_crs='EPSG:32610'):
     if not enc.get('scope_id') or len(enc.get('query_receipts', [])) != 18:
         raise ValueError('ENC snapshot must identify a scope and contain all 18 checked layers')
     if sum(row['count'] for row in enc['query_receipts']) != len(enc.get('features', [])):
         raise ValueError('ENC feature count does not match layer receipts')
     if buffer_m < 0:
         raise ValueError('Negative review buffer')
-    project = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True).transform
+    if projected_crs not in {'EPSG:32610', 'EPSG:32611'}:
+        raise ValueError('Unreviewed ENC distance projection')
+    project = Transformer.from_crs('EPSG:4326', projected_crs, always_xy=True).transform
     hazards = [transform(project, shape(f['geometry'])) for f in enc['features']]
     if not hazards:
         raise ValueError('Empty ENC danger snapshot needs manual review')
@@ -35,6 +37,7 @@ def audit(enc, context, historical, *, buffer_m=100):
     bounds = box(*enc['bounds'])
     by_survey = Counter()
     held = []
+    outline_screen = []
     for feature in context.get('features', []):
         props = feature['properties']
         footprint = shape(feature['geometry'])
@@ -45,6 +48,13 @@ def audit(enc, context, historical, *, buffer_m=100):
         projected = transform(project, footprint)
         nearby = [int(i) for i in tree.query(projected.buffer(buffer_m))
                   if projected.distance(hazards[int(i)]) <= buffer_m]
+        closest = int(tree.nearest(projected))
+        outline_screen.append({'context_id': props['id'], 'survey_id': survey,
+            'nearest_charted_danger_within_scope_m': round(projected.distance(hazards[closest]), 1),
+            'nearby_enc_layers': sorted({enc['features'][i].get('properties', {}).get('enc_layer', 'unknown')
+                                         for i in nearby}),
+            'within_danger_review_buffer': bool(nearby),
+            'fishing_target': False, 'exportable': False})
         if nearby:
             held.append({'context_id': props['id'], 'survey_id': survey,
                          'charted_dangers_within_buffer': len(nearby)})
@@ -60,9 +70,11 @@ def audit(enc, context, historical, *, buffer_m=100):
                 'nearest_enc_danger_m': round(min(point.distance(g) for g in hazards), 1),
                 'reconciled_with_current_chart': False})
     return {'schema_version': 1, 'scope_id': enc['scope_id'],
+        'projected_crs': projected_crs,
         'enc_checked_at': enc['checked_at'], 'source_url': enc['source_url'],
         'queried_layers': 18, 'charted_danger_features': len(hazards),
         'review_buffer_m': buffer_m, 'context_outlines_in_scope_by_survey': dict(by_survey),
+        'outline_screen': outline_screen,
         'outlines_near_charted_dangers': held,
         'historical_report_dangers': historical_distances,
         'status': 'research-screen-only',
@@ -74,10 +86,11 @@ def main():
     parser.add_argument('--enc', type=Path, required=True)
     parser.add_argument('--context', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))
     parser.add_argument('--historical', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
+    parser.add_argument('--projected-crs', choices=('EPSG:32610', 'EPSG:32611'), default='EPSG:32610')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     result = audit(*(json.loads(path.read_text()) for path in
-                     (args.enc, args.context, args.historical)))
+                     (args.enc, args.context, args.historical)), projected_crs=args.projected_crs)
     result['audited_at'] = datetime.now(timezone.utc).isoformat()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + '.tmp')
