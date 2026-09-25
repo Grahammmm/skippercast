@@ -9,6 +9,7 @@ import unittest
 
 
 GIS_TEST_MODULES = {
+    'test_bluetopo_source',
     'test_bottom_targets',
     'test_cdfw_substrate_pipeline',
     'test_central_sediment_context',
@@ -21,12 +22,19 @@ GIS_TEST_MODULES = {
     'test_nbs_modeling_tile',
     'test_nbs_scheme_check',
     'test_nbs_statewide_camera_tiles',
+    'test_noaa_induration_camera',
+    'test_noaa_sst',
+    'test_original_camera_chart_lead',
+    'test_original_class_nbs_tiles',
     'test_region_bag_coverage',
     'test_regular_bag_camera',
     'test_regular_native_depth',
     'test_regular_bag_hard',
     'test_sansimeon_bedrock_overlap',
     'test_search_plan_geometry',
+    'test_san_diego_substrate_lead',
+    'test_statewide_camera_dedup',
+    'test_statewide_regular_report_review',
     'test_usgs_context_pipeline',
     'test_usgs_caldig_v2',
     'test_usgs_csmp_sources',
@@ -37,6 +45,7 @@ GIS_TEST_MODULES = {
     'test_vr_hard_context',
     'test_vr_native_depth',
     'test_vr_region_protection',
+    'test_vdatum_samples',
 }
 
 

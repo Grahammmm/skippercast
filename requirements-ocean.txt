@@ -1,5 +1,5 @@
 # Optional scheduled ocean collectors; the core application remains dependency-free.
-numpy==2.4.3
+numpy==2.5.3
 netCDF4==1.7.4
 scipy==1.17.1
 eccodes==2.46.0

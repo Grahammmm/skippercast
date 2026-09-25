@@ -47,9 +47,11 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: requirements-ocean.txt
+          cache-dependency-path: |
+            requirements-ocean.txt
+            requirements-survey.txt
       - name: Install reviewed ocean data decoders
-        run: python -m pip install -r requirements-ocean.txt
+        run: python -m pip install -r requirements-ocean.txt -r requirements-survey.txt
       - name: Test observation parsing
         env:
           PYTHONPATH: src
