@@ -22,6 +22,7 @@ GIS_TEST_MODULES = {
     'test_nbs_bag_reconciliation',
     'test_nbs_modeling_tile',
     'test_nbs_scheme_check',
+    'test_monterey_point_sur_region',
     'test_nbs_statewide_camera_tiles',
     'test_noaa_induration_camera',
     'test_noaa_chlorophyll',

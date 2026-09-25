@@ -190,6 +190,54 @@
         "Portuguese Ledge",
         "pelagic finfishes"
       ]
+    },
+    "mpa-carmel-pinnacles": {
+      "name": "CDFW Carmel Pinnacles State Marine Reserve",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Pinnacles",
+      "keywords": [
+        "Carmel Pinnacles",
+        "632"
+      ]
+    },
+    "mpa-carmel-bay": {
+      "name": "CDFW Carmel Bay State Marine Conservation Area",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Carmel-Bay",
+      "keywords": [
+        "Carmel Bay",
+        "finfish"
+      ]
+    },
+    "mpa-point-lobos": {
+      "name": "CDFW Point Lobos SMR and SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Lobos",
+      "keywords": [
+        "Point Lobos",
+        "632"
+      ]
+    },
+    "mpa-point-sur": {
+      "name": "CDFW Point Sur SMR and SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Sur",
+      "keywords": [
+        "Point Sur",
+        "632"
+      ]
+    },
+    "mpa-ricketts-lovers": {
+      "name": "CDFW Edward F. Ricketts and Lovers Point–Julia Platt",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Edward-F-Ricketts-Lovers-Point-Julia-Platt",
+      "keywords": [
+        "Ricketts",
+        "Lovers Point"
+      ]
+    },
+    "mpa-asilomar": {
+      "name": "CDFW Asilomar State Marine Reserve",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pacific-Grove-Marine-Gardens-Asilomar",
+      "keywords": [
+        "Asilomar",
+        "632"
+      ]
     }
   },
   "authority_hosts": [

@@ -12,7 +12,7 @@ test('Central selector opens real grounds; panning a guide into a mapped area re
   assert.equal(mappedPackageAt({latitude:35.4,longitude:-121},packages,10).id,'morro-bay');
   assert.equal(mappedPackageAt({latitude:35.6,longitude:-121.15},packages,10).id,'cambria-san-simeon');
   assert.equal(mappedPackageAt({latitude:35.4,longitude:-121},packages,7),null);
-  assert.equal(mappedPackageAt({latitude:36.5,longitude:-122},packages,10),null);
+  assert.equal(mappedPackageAt({latitude:36.5,longitude:-122},packages,10).id,'monterey-point-sur');
 });
 test('closure cache reuses identical geometry but invalidates on changed data or freshness',()=>{
   let revision='fresh-1',calls=0,allowed=true;const cached=revisionCache(()=>revision,()=>{calls++;return allowed;});const polygon={};

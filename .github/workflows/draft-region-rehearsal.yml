@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region_id: [bodega-point-reyes, fort-bragg-point-arena, crescent-city, shelter-cove-north-mendocino, santa-cruz-monterey-bay]
+        region_id: [bodega-point-reyes, fort-bragg-point-arena, crescent-city, shelter-cove-north-mendocino, santa-cruz-monterey-bay, monterey-point-sur]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
