@@ -32,6 +32,8 @@ class AtlasReadinessTests(unittest.TestCase):
             root = Path(work)
             for relative in ('dist/data/coastal-sectors.json',
                              'dist/data/noaa-native-sector-review.json',
+                             'dist/data/noaa-vr-native-depth-review.json',
+                             'dist/data/noaa-regular-native-depth-review.json',
                              'dist/data/noaa-survey-discovery.json',
                              'dist/regions/index.json'):
                 target = root / relative
