@@ -140,6 +140,8 @@ def validate_region(region, needs, sources, root=REPO):
     ZoneInfo(region["timezone"])
     if region["status"] not in {"active", "preview", "draft"}:
         raise ValueError("Unknown region publication state")
+    if region["status"] != "draft" and not region.get("intelligence"):
+        raise ValueError("Published region needs intelligence configuration for the shared live workflow")
     if isinstance(region["boat"]["bottom_depth_limit_ft"], bool) or not 0 < region["boat"]["bottom_depth_limit_ft"] <= 2000:
         raise ValueError("Invalid regional depth limit")
     if isinstance(region["boat"]["cruise_knots"], bool) or not 0 < region["boat"]["cruise_knots"] <= 100:

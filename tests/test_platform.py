@@ -31,6 +31,13 @@ class RegionalContracts(TestCase):
         self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
         self.assertEqual(region["intelligence"]["verification_stations"][0]["id"], "46014")
 
+    def test_published_region_requires_live_intelligence_configuration(self):
+        from skippercast.platform.contracts import validate_region, load_catalogs
+        region = deepcopy(load_region("fort-bragg-point-arena"))
+        del region["intelligence"]
+        with self.assertRaisesRegex(ValueError, "intelligence configuration"):
+            validate_region(region, *load_catalogs(REPO), root=REPO)
+
     def test_preview_cannot_claim_qualified_targets_exports_or_images(self):
         report=requirement_report(load_region("cambria-san-simeon"))
         for key in ("surveyed-bottom-targets","surveyed-bottom-images","fishing-exports","verified-charter-hotspots","calibrated-catch-model"):
