@@ -230,8 +230,8 @@
       "reason": "Seven original NOAA BAG/USGS hard-substrate reviews support an optional historical context layer only; current charts, access and approach routes remain unverified."
     },
     "substrate": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "Seventeen larger original NOAA BAG/USGS class-3 hard-bottom polygons passed a bounded historical terrain and selected chart-danger screen. This is partial survey context only, not current fish, complete chart or fishing-target evidence."
     },
     "groundtruth": {
       "status": "research",
@@ -334,7 +334,8 @@
     "bottom_index": "regions/bodega-point-reyes/bottom/index.json",
     "geology": null,
     "ecology": "regions/bodega-point-reyes/ecology.json",
-    "search_plans": "regions/bodega-point-reyes/search-plans.json"
+    "search_plans": "regions/bodega-point-reyes/search-plans.json",
+    "survey_habitat": "regions/bodega-point-reyes/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/bodega-point-reyes/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/bodega-point-reyes/latest.json",
@@ -343,7 +344,7 @@
     "Tomales Bay",
     "Point Reyes"
   ],
-  "coverage_note": "Bodega\u2013Point Reyes preview with local forecast, offshore buoy references, tide predictions and reviewed outer-coast rules. No qualified fishing spots, bottom images or drift lines. Current-radar vectors were unavailable in the tested grid; original seabed context still needs exact chart, MPA, route and species-site review.",
+  "coverage_note": "Bodega\u2013Point Reyes preview with 17 historical original-grid hard-bottom research outlines, local forecasts, buoy references, tide predictions and reviewed outer-coast rules. No qualified fishing spots, bottom images or drift lines. Exact chart, MPA, route and species-site review remains pending.",
   "landing_note": "Bodega buoy observations and harbor tide predictions do not locate fish or clear the harbor approach.",
   "jurisdiction_id": "california-san-francisco",
   "ecology_profile": "california-northern",
