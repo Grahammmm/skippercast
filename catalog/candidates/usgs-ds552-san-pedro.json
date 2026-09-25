@@ -48,12 +48,12 @@
       "gabbat.tgz": "6db3fd2a3ebe33e3ccda1581a3e563c20a5207a4dea29c783ebffff15a91cc11",
       "spbbat.tgz": "96c0e4743789f9bbdd9fdb0b68df2cdf5d25cdb20bb214f201152ef3625afd0b"
     },
-    "transformations": ["Original categorical pixels opened and counted in their native UTM grid.", "Original 2004 camera records sampled at native character pixels.", "Connected 4 m rugose-rock components of at least 2,500 square meters with an actual hard-bottom camera observation placed in an unpublished review queue.", "Three original 4 m USGS MLLW bathymetry grids sampled at each component bounding-box center only; this cannot qualify the full footprint."]
+    "transformations": ["Original categorical pixels opened and counted in their native UTM grid.", "Original 2004 camera records sampled at native character pixels.", "Connected 4 m rugose-rock components of at least 2,500 square meters with an actual hard-bottom camera observation placed in an unpublished review queue.", "Three original 4 m USGS MLLW bathymetry grids sampled at every rugose-rock class cell in the review components; source-grid overlap differences recorded."]
   },
   "limitations": [
     "This is a historical habitat source, not a bathymetric depth surface or a current fish-abundance survey.",
     "Twenty-four review-queue components are not fishing targets or exportable waypoints. Video records on a camera tow are correlated.",
-    "All 24 component centers have an original 25–200 ft MLLW sample, but every footprint still needs a full depth/uncertainty screen, current MPA and federal area exclusions, chart hazards, legal rules and route/access review.",
+    "All 11,732 rock-class cells across 24 components have original 25–200 ft MLLW depth samples, but the source lacks per-cell uncertainty and has documented artifacts. A dated 2026-09-25 CDFW MPA/NOAA federal 100 m screen held none; it must be refreshed, and chart hazards, legal rules and route/access still require review.",
     "The outer-shelf class scheme must be read from metadata, not inferred from its color palette."
   ]
 }

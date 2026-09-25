@@ -33,14 +33,43 @@ jobs:
           curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/of/2004/1221/data/grid/pvebat.tgz --output var/review/usgs-of2004-1221/pvebat.tgz
           curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/of/2004/1221/data/grid/gabbat.tgz --output var/review/usgs-of2004-1221/gabbat.tgz
           curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/of/2004/1221/data/grid/spbbat.tgz --output var/review/usgs-of2004-1221/spbbat.tgz
-      - name: Audit source bytes, camera overlap and center-only MLLW depth
+      - name: Audit source bytes, camera overlap and full original-rock MLLW depth
         run: python scripts/audit_usgs_ds552_san_pedro.py --cache var/review/usgs-ds552 --depth-cache var/review/usgs-of2004-1221 --output var/review/usgs-ds552-san-pedro-review.json
+      - name: Build unpublished exact original-rock outlines for legal review
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/build_san_pedro_research_context.py
+          --audit var/review/usgs-ds552-san-pedro-review.json
+          --cache var/review/usgs-ds552
+          --context var/review/san-pedro-rock-context.geojson
+          --queue var/review/san-pedro-rock-queue.json
+      - name: Refresh official statewide MPA and federal-area geometries
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m skippercast.pipeline.coastal_watch --output var/review/san-pedro-current
+          python scripts/collect_noaa_groundfish_areas.py --output var/review/san-pedro-current/noaa-federal-areas.json
+      - name: Recheck original rock outlines against fresh closures
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_habitat_shortlist_closures.py
+          --queue var/review/san-pedro-rock-queue.json
+          --context var/review/san-pedro-rock-context.geojson
+          --context-scope usgs-ds552-san-pedro-rock-context
+          --projected-crs EPSG:32611
+          --coastal var/review/san-pedro-current/coastal/latest.json
+          --federal var/review/san-pedro-current/noaa-federal-areas.json
+          --output var/review/san-pedro-fresh-closure-audit.json
       - name: Upload unpublished source-change and candidate receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: usgs-ds552-san-pedro-review
-          path: var/review/usgs-ds552-san-pedro-review.json
+          path: |
+            var/review/usgs-ds552-san-pedro-review.json
+            var/review/san-pedro-fresh-closure-audit.json
           retention-days: 30
   usgs-state-waters-catalog:
     runs-on: ubuntu-latest

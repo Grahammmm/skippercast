@@ -66,9 +66,14 @@ def validate_raster(ds, resolution: int) -> np.ndarray:
     return array
 
 
-def center_depth_review(queue: list[dict], depth_cache: Path) -> dict:
-    """Sample original MLLW grids at references; never claim whole-patch depth."""
+def audit_depth_support(queue: list[dict], depth_cache: Path,
+                        native_cells: tuple[np.ndarray, list[tuple[float, float]]]) -> dict:
+    """Compare original MLLW grids at references and every mapped rock cell."""
     points = [tuple(row["bbox_center_lon_lat"]) for row in queue]
+    cell_ids, cell_points = native_cells
+    cell_depth = np.full(len(cell_points), np.nan)
+    cell_overlap = np.zeros(len(cell_points), dtype="uint8")
+    cell_max_disagreement = np.zeros(len(cell_points))
     matched = defaultdict(list)
     for name, (expected, _) in DEPTH_SOURCES.items():
         archive = depth_cache / f"{name}.tgz"
@@ -96,14 +101,52 @@ def center_depth_review(queue: list[dict], depth_cache: Path) -> dict:
                     if np.isfinite(value) and value != ds.nodata and -200 * .3048 <= value <= -25 * .3048:
                         matched[row["component_id"]].append({"grid": name,
                             "center_depth_ft_below_mllw": round(-value / .3048, 1)})
+                values = np.fromiter((float(sample[0]) for sample in ds.sample(cell_points)),
+                                     dtype="float64", count=len(cell_points))
+                valid = np.isfinite(values) & (values != ds.nodata) & (values < 0)
+                overlapping = valid & np.isfinite(cell_depth)
+                cell_max_disagreement[overlapping] = np.maximum(
+                    cell_max_disagreement[overlapping],
+                    np.abs(cell_depth[overlapping] - values[overlapping]))
+                cell_overlap[valid] += 1
+                new = valid & ~np.isfinite(cell_depth)
+                cell_depth[new] = values[new]
+    footprint = []
     for row in queue:
         row["original_center_depth_samples"] = matched[row["component_id"]]
+        selection = cell_ids == row["component_id"]
+        total = int(selection.sum())
+        if total * 16 != row["rock_class_area_m2"]:
+            raise ValueError("Rock component cell count changed during depth join")
+        values = cell_depth[selection]
+        observed = values[np.isfinite(values)]
+        feet = -observed / .3048
+        band = (feet >= 25) & (feet <= 200)
+        result = {"component_id": row["component_id"], "rock_cells": total,
+                  "depth_covered_cells": len(observed),
+                  "depth_cells_in_25_to_200_ft_mllw": int(band.sum()),
+                  "sampled_rock_depth_ft_range": [round(float(feet.min()), 1),
+                                                  round(float(feet.max()), 1)] if len(feet) else None,
+                  "overlapping_source_cells": int(np.count_nonzero(cell_overlap[selection] > 1)),
+                  "maximum_overlapping_grid_disagreement_m": round(
+                      float(cell_max_disagreement[selection].max()), 3),
+                  "whole_footprint_depth_band_supported": bool(len(observed) == total and band.all()),
+                  "fishing_target": False, "exportable": False}
+        row["original_full_rock_depth_review"] = result
+        footprint.append(result)
     return {"original_grid_count": len(DEPTH_SOURCES),
             "review_queue_centers_in_25_to_200_ft_mllw": sum(bool(matched[row["component_id"]]) for row in queue),
+            "rock_cells_reviewed": len(cell_points),
+            "fully_depth_covered_rock_components": sum(item["depth_covered_cells"] == item["rock_cells"]
+                                                        for item in footprint),
+            "whole_footprint_depth_band_supported_components": sum(item["whole_footprint_depth_band_supported"]
+                                                                    for item in footprint),
+            "maximum_overlapping_grid_disagreement_m": max(
+                item["maximum_overlapping_grid_disagreement_m"] for item in footprint),
             "depth_source_archives": {name: {"url": value[1], "sha256": value[0]}
                                       for name, value in DEPTH_SOURCES.items()},
             "depth_basis_url": "https://pubs.usgs.gov/of/2004/1221/metadata/labathygrd.html",
-            "depth_limitation": "One historical MLLW cell at each component bounding-box center only; does not qualify the whole rock polygon or supply per-cell uncertainty. Publisher warns of collection and processing artifacts."}
+            "depth_limitation": "Every historical 4 m rugose-rock class cell sampled against original MLLW grids, but grids do not supply per-cell uncertainty. Publisher warns of collection and processing artifacts. This is a depth-band research screen, not a current fishing or navigation clearance."}
 
 
 def review(cache: Path, depth_cache: Path | None = None) -> dict:
@@ -124,6 +167,7 @@ def review(cache: Path, depth_cache: Path | None = None) -> dict:
         lon, lat = item.shape.points[0]
         observations.append((lon, lat, any(fields[key] == 1 for key in ("rock", "boulder", "cobble"))))
     rasters = {}
+    native_cells = None
     for key, resolution in (("inner", 4), ("outer", 16)):
         data = archive_member(archives[key], ".tif")
         with rasterio.io.MemoryFile(data) as memory, memory.open() as ds:
@@ -173,9 +217,13 @@ def review(cache: Path, depth_cache: Path | None = None) -> dict:
                                   "bbox_center_lon_lat": [round(lon, 6), round(lat, 6)],
                                   "fishing_target": False, "exportable": False})
                 queue.sort(key=lambda row: (-row["rock_class_area_m2"], row["component_id"]))
+                chosen = np.array([row["component_id"] for row in queue])
+                yy, xx = np.where(np.isin(component, chosen))
+                east, north = rasterio.transform.xy(ds.transform, yy, xx)
+                native_cells = (component[yy, xx], list(zip(east, north)))
                 rasters[key]["rock_components_at_least_2500_m2"] = int(np.count_nonzero(size[1:] >= 157))
                 rasters[key]["video_supported_rock_components_at_least_2500_m2"] = len(queue)
-    depth = center_depth_review(queue, depth_cache) if depth_cache else None
+    depth = audit_depth_support(queue, depth_cache, native_cells) if depth_cache else None
     return {
         "schema_version": 1, "scope": "usgs-ds552-san-pedro-original-rock-camera-review",
         "audited_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -185,9 +233,9 @@ def review(cache: Path, depth_cache: Path | None = None) -> dict:
         "historical_video_rows": len(observations),
         "rasters": rasters,
         "inner_rock_review_queue": queue,
-        "center_depth_review": depth,
+        "original_depth_review": depth,
         "fishing_target": False, "exportable": False,
-        "required_next_gates": ["Original MLLW depth and uncertainty for every candidate cell; a center sample is insufficient",
+        "required_next_gates": ["Defensible original-bathymetry uncertainty and artifact review for every candidate component",
                                 "Fresh CDFW MPA and federal area polygon exclusions",
                                 "Current NOAA charted hazards and safe route review",
                                 "Date/method/species-specific CDFW rules and local access",
@@ -211,7 +259,7 @@ def main() -> None:
     temp.write_text(json.dumps(result, indent=2) + "\n")
     temp.replace(args.output)
     print(json.dumps({"video_supported_rock_components": len(result["inner_rock_review_queue"]),
-                      "center_depth_hits": (result["center_depth_review"] or {}).get(
+                      "center_depth_hits": (result["original_depth_review"] or {}).get(
                           "review_queue_centers_in_25_to_200_ft_mllw"),
                       "fishing_targets": 0}))
 
