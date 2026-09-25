@@ -59,6 +59,17 @@ jobs:
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-cape-mendocino.geojson --context dist/data/cape-mendocino-native-hard-context.geojson --output var/review/cape-mendocino-enc-context-review.json
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-point-conception.geojson --context dist/data/point-conception-native-hard-context.geojson --output var/review/point-conception-enc-context-review.json
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-gaviota.geojson --context dist/data/gaviota-native-hard-context.geojson --output var/review/gaviota-enc-context-review.json
+      - name: Refresh all three Bodega original-rock chart-danger scopes
+        run: |
+          python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson
+          python scripts/refresh_enc_hazards.py --scope bodega-original-north --output var/review/bodega-original-north-enc.geojson
+          python scripts/refresh_enc_hazards.py --scope reyes-original-south --output var/review/reyes-original-south-enc.geojson
+      - name: Recheck all 74 original-grid Bodega research outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_bodega_native_enc_scope.py
+          --output var/review/bodega-native-enc-scope-review.json
       - name: Upload unpublished chart-danger research receipts
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,6 +82,10 @@ jobs:
             var/review/cape-mendocino-enc-context-review.json
             var/review/point-conception-enc-context-review.json
             var/review/gaviota-enc-context-review.json
+            var/review/point-reyes-tomales-enc-current.geojson
+            var/review/bodega-original-north-enc.geojson
+            var/review/reyes-original-south-enc.geojson
+            var/review/bodega-native-enc-scope-review.json
           retention-days: 30
   bluetopo-source-leads:
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@ legal or fishing-site clearance. Raw NOAA responses remain under var/review/.
 """
 from __future__ import annotations
 
+import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -89,7 +90,11 @@ def audit(root=REPO, now=None):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=Path,
+                        default=REPO / 'dist/data/bodega-native-enc-scope-review.json')
+    args = parser.parse_args()
     result = audit()
-    atomic_json(REPO / 'dist/data/bodega-native-enc-scope-review.json', result)
+    atomic_json(args.output, result)
     print(json.dumps({'outlines': result['research_outlines_in_region'],
                       'near_charted_dangers': len(result['outlines_near_selected_charted_dangers'])}))
