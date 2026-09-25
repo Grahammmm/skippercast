@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scope": "original-camera-bag-chart-research-summary",
+  "survey_id": "H11730",
+  "reviewed_at": "2026-09-25T05:18:12.100155+00:00",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_2m_MLLW_2of4.bag",
+  "original_bag_sha256": "625881fc4e7ac378f0a5b265cef1f4d70ba87008d89f9358d858b3d41bb53325",
+  "original_camera_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+  "original_camera_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+  "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+  "survey_report_sha256": "7c41e6477025e9cacf9d7a4bcc8b4834c9d6375ef6f0bbb37413b31e64b28382",
+  "survey_report_interpretation": "The 2007 field section says no dangers, but the final HCell retains a rock with 18.7 m least depth. The final office endnotes also discuss two old AWOIS wreck positions without detected evidence in bounded multibeam coverage; their present chart status is unresolved. The rock and old wreck references are historical review leads, not current chart or route clearance.",
+  "survey_fishing_promotion_hold": null,
+  "enc_danger_receipt_checked_at": "2026-09-25T05:17:02.061190+00:00",
+  "enc_danger_queried_layers": 18,
+  "enc_danger_features_in_bounded_scope": 45,
+  "charted_seabed_point_count_by_nature": {
+    "sand": 18,
+    "mud": 3,
+    "rock": 15,
+    "gravel,shells": 3
+  },
+  "charted_seabed_area_count_by_nature": {},
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "historical_camera_windows": 40,
+  "transects": [
+    {
+      "date": "2008-09-07",
+      "line": "114",
+      "historical_rocky_camera_windows": 6,
+      "historical_rockfish_positive_windows": 1,
+      "bottom_classes": {
+        "rock": 3,
+        "boulder": 3
+      },
+      "measured_depth_m_mllw_range": [
+        36.07,
+        39.29
+      ],
+      "product_uncertainty_m_range": [
+        0.276,
+        0.332
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        2906.2,
+        2945.8
+      ],
+      "nearest_charted_danger_m_min": 1031.2,
+      "nearest_cdfw_mpa_boundary_m_min": 3663.7,
+      "within_100m_mpa_review_buffer": 0
+    },
+    {
+      "date": "2008-09-07",
+      "line": "115",
+      "historical_rocky_camera_windows": 34,
+      "historical_rockfish_positive_windows": 10,
+      "bottom_classes": {
+        "rock": 22,
+        "boulder": 12
+      },
+      "measured_depth_m_mllw_range": [
+        22.65,
+        38.52
+      ],
+      "product_uncertainty_m_range": [
+        0.23,
+        0.415
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        1001.2,
+        1526.6
+      ],
+      "nearest_charted_danger_m_min": 993.3,
+      "nearest_cdfw_mpa_boundary_m_min": 2010.9,
+      "within_100m_mpa_review_buffer": 0
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_checks": [
+    "Reconcile original HCell seabed and rock features with the current ENC; review every charted hazard and route.",
+    "Compare exact source habitat polygons and survey gaps with original BAG native cells and camera position uncertainty.",
+    "Refresh complete CDFW MPAs and federal restrictions, then verify the exact site, method and date under local rules.",
+    "Review approach route, harbor entrance and current conditions before any fishing-plan promotion."
+  ],
+  "limitations": [
+    "Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.",
+    "Selected ENC danger classes returning zero do not certify safe navigation or an approach route.",
+    "Historical camera rockfish codes are observations, not catch rates or present fish presence.",
+    "The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.",
+    "No fishing coordinate, rating, plan or export is approved by this source-lead review."
+  ]
+}

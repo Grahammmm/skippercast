@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h11730-arena-bodega-original-camera",
+  "name": "NOAA H11730 original 2 m BAG and USGS Arena–Bodega camera observations",
+  "sector_ids": ["arena-bodega", "fort-bragg-arena"],
+  "need_ids": ["bathymetry", "groundtruth", "species-occurrence"],
+  "producer": {
+    "name": "NOAA National Ocean Service and U.S. Geological Survey",
+    "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11730.html"
+  },
+  "documentation_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_2m_MLLW_2of4.bag",
+  "access_status": "accessible",
+  "variables": ["original_depth", "product_uncertainty", "historical_camera_bottom", "historical_rockfish_visual_code"],
+  "units": {
+    "original_depth": "m below MLLW",
+    "product_uncertainty": "m",
+    "historical_camera_bottom": "USGS rock/boulder category",
+    "historical_rockfish_visual_code": "USGS camera code; not a catch count"
+  },
+  "rights": {"license": null, "terms_url": null, "redistribution_reviewed": false},
+  "spatial": {
+    "bounds": [-123.8270053, 38.8097090, -123.6467581, 39.0223145],
+    "resolution_m": 2,
+    "horizontal_crs": "NAD83 UTM zone 10 (EPSG:26910 horizontal component); original camera positions have variable accuracy near 10 m",
+    "vertical_datum": "MLLW for BAG depths",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/BAG/H11730_MB_2m_MLLW_2of4.bag",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T05:17:02+00:00",
+    "update_cadence": "Static historical sources; recheck original hashes and current chart/closure feeds before review",
+    "coverage_start": "2007-03-26",
+    "coverage_end": "2010-08-02"
+  },
+  "provenance": {
+    "access_service": "Original NOAA NCEI BAG and original USGS DS 781 camera archives",
+    "raw_sha256": "625881fc4e7ac378f0a5b265cef1f4d70ba87008d89f9358d858b3d41bb53325",
+    "transformations": [
+      "Opened the original 2 m regular BAG, checked native MLLW depth, uncertainty and 25 m measured-neighborhood support around 54 historical rock/boulder camera windows on three transects.",
+      "Verified 2008 and 2010 USGS camera ZIP hashes and measured local detrended terrain relief; grouped correlated windows by transect rather than treating them as separate reefs.",
+      "Reconciled hash-pinned H11730 report with all 18 bounded NOAA ENC danger layers and a dated complete CDFW MPA snapshot; emitted only coordinate-free research receipts."
+    ]
+  },
+  "evidence": [
+    {"url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11730/DR/H11730.pdf", "supports": "Original survey report identifies MLLW 2 m BAG and a final HCell rock with 18.7 m least depth; report SHA-256 7c41e6477025e9cacf9d7a4bcc8b4834c9d6375ef6f0bbb37413b31e64b28382."},
+    {"url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip", "supports": "Original 2008 camera archive SHA-256 ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf; 40 measured rock/boulder windows on two historical transects, eleven with rockfish visual codes."},
+    {"url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip", "supports": "Original 2010 camera archive SHA-256 f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8; 14 measured rock windows on one historical transect, four with rockfish visual codes."},
+    {"url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect", "supports": "All 18 bounded charted-danger layers were queried on September 25, 2026; 45 charted features in the review envelope, without route or target clearance."}
+  ],
+  "limitations": [
+    "The BAG envelope is not a continuously measured or rocky footprint. The three camera transects are correlated historical observations, not 54 independent reefs or current catch data.",
+    "The 2010 transect has four windows within 100 m of the dated CDFW MPA boundary, the closest at 29.4 m. Do not promote this transect without exact current boundary and position-uncertainty review.",
+    "No charted seabed-area polygon was returned in the bounded ENC query, so camera windows and distant charted rock symbols cannot delineate an exact target area.",
+    "The historical HCell rock and other current chart hazards, federal and state restrictions, route, harbor, date/method rules and redistribution rights still require review. No fishing target or export follows from this record."
+  ]
+}

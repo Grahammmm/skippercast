@@ -15,11 +15,13 @@ def summarize(review: dict) -> dict:
     if (review.get('fishing_target') is not False
             or review.get('exportable') is not False
             or review.get('enc_danger_queried_layers') != 18
-            or not review.get('survey_fishing_promotion_hold')
+            or not review.get('survey_report_interpretation')
+            or not review.get('survey_report_sha256')
+            or not review.get('cdfw_mpa_retrieved_at')
             or not isinstance(transects, list) or not transects
             or sum(row['historical_rocky_camera_windows'] for row in transects)
                != review.get('historical_camera_windows')):
-        raise ValueError('An exact, held, complete research review is required')
+        raise ValueError('An exact, report-reviewed, complete research review is required')
     allowed = (
         'date', 'line', 'historical_rocky_camera_windows',
         'historical_rockfish_positive_windows', 'bottom_classes',
@@ -52,9 +54,9 @@ def summarize(review: dict) -> dict:
         'fishing_target': False,
         'exportable': False,
         'next_checks': [
-            'Obtain original HCell rocky-area and added submerged-rock geometry; reconcile older retained rocks with the current ENC.',
-            'Compare exact source habitat polygons and survey holes with original BAG native cells and camera position uncertainty.',
-            'Refresh complete CDFW MPAs and federal restrictions, then verify exact site, method and date under Mendocino rules.',
+            'Reconcile original HCell seabed and rock features with the current ENC; review every charted hazard and route.',
+            'Compare exact source habitat polygons and survey gaps with original BAG native cells and camera position uncertainty.',
+            'Refresh complete CDFW MPAs and federal restrictions, then verify the exact site, method and date under local rules.',
             'Review approach route, harbor entrance and current conditions before any fishing-plan promotion.',
         ],
         'limitations': review['limitations'],

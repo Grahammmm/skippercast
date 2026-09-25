@@ -43,6 +43,13 @@
       "output": "var/review/enc-hazards-h11971-bear-landing.geojson"
     },
     {
+      "id": "h11730-arena-bodega-camera",
+      "region_id": "bodega-point-reyes",
+      "bounds": [-123.78, 38.84, -123.68, 39.03],
+      "research_only": true,
+      "output": "var/review/enc-hazards-h11730-arena-bodega.geojson"
+    },
+    {
       "id": "cape-mendocino-hard-context",
       "region_id": "northern",
       "bounds": [-124.49, 40.37, -124.37, 40.53],

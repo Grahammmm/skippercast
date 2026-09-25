@@ -123,6 +123,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--survey-id', required=True)
     p.add_argument('--bag-url', required=True)
+    p.add_argument('--cruise', help='Select a camera archive when one BAG has multiple reviewed cruises')
     p.add_argument('--pairs', type=Path, default=Path('dist/data/noaa-statewide-regular-camera-review.json'))
     p.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
     p.add_argument('--enc', type=Path, required=True)
@@ -132,7 +133,8 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     pairs = json.loads(a.pairs.read_text())
-    matches = [r for r in pairs['pair_reviews'] if r['survey_id'] == a.survey_id and r['bag_url'] == a.bag_url]
+    matches = [r for r in pairs['pair_reviews'] if r['survey_id'] == a.survey_id
+               and r['bag_url'] == a.bag_url and (a.cruise is None or r['cruise'] == a.cruise)]
     reports = [r for r in json.loads(a.hazards.read_text())['surveys'] if r['survey_id'] == a.survey_id]
     if len(matches) != 1 or len(reports) != 1 or not matches[0]['transects']:
         raise ValueError('One reviewed original BAG/camera pair and report are required')

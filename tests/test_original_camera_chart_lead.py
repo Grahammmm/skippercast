@@ -39,6 +39,18 @@ class OriginalCameraChartLeadTests(unittest.TestCase):
                                       'source_url': 'https://encdirect.noaa.gov/arcgis/rest/services/encdirect',
                                       'features': []}, {}, report, b'report')
 
+    def test_unheld_arena_bodega_review_preserves_mpa_proximity(self):
+        root = Path(__file__).resolve().parents[1]
+        for year, count in ((2008, 40), (2010, 14)):
+            report = json.loads((root / f'dist/data/h11730-arena-bodega-{year}-research-review.json').read_text())
+            self.assertIsNone(report['survey_fishing_promotion_hold'])
+            self.assertEqual(report['historical_camera_windows'], count)
+            self.assertFalse(report['fishing_target'])
+            self.assertFalse(report['exportable'])
+            self.assertNotIn('camera_position_bounds', json.dumps(report))
+            self.assertNotIn('"latitude"', json.dumps(report))
+        self.assertEqual(report['transects'][0]['within_100m_mpa_review_buffer'], 4)
+
 
 if __name__ == '__main__':
     unittest.main()
