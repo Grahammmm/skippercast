@@ -105,7 +105,9 @@ jobs:
       - name: Install pinned geometry dependencies
         run: python -m pip install -r requirements-survey.txt
       - name: Verify research-only ENC outputs stay unpublished
-        run: python -m unittest tests.test_enc_hazard_refresh -v
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_enc_hazard_refresh tests.test_habitat_shortlist_closures -v
       - name: Refresh bounded Cape Mendocino, Point Conception and Gaviota chart-danger screens
         run: |
           python scripts/refresh_enc_hazards.py --scope cape-mendocino-hard-context --output var/review/enc-hazards-cape-mendocino.geojson
@@ -123,6 +125,17 @@ jobs:
           python scripts/triage_original_habitat_outlines.py
           --enc var/review/cape-mendocino-enc-context-review.json
           --output var/review/cape-mendocino-original-habitat-site-review-queue.json
+      - name: Recheck shortlisted outlines against fresh complete CDFW MPAs and NOAA GEAs
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m skippercast.pipeline.coastal_watch --output var/review/cape-current
+          python scripts/collect_noaa_groundfish_areas.py --output var/review/cape-current/noaa-federal-areas.json
+          python scripts/audit_habitat_shortlist_closures.py \
+            --queue var/review/cape-mendocino-original-habitat-site-review-queue.json \
+            --coastal var/review/cape-current/coastal/latest.json \
+            --federal var/review/cape-current/noaa-federal-areas.json \
+            --output var/review/cape-mendocino-fresh-closure-audit.json
       - name: Refresh all three Bodega original-rock chart-danger scopes
         run: |
           python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson
@@ -160,6 +173,8 @@ jobs:
             var/review/enc-hazards-point-conception.geojson
             var/review/enc-hazards-gaviota.geojson
             var/review/cape-mendocino-enc-context-review.json
+            var/review/cape-mendocino-original-habitat-site-review-queue.json
+            var/review/cape-mendocino-fresh-closure-audit.json
             var/review/point-conception-enc-context-review.json
             var/review/gaviota-enc-context-review.json
             var/review/point-reyes-tomales-enc-current.geojson
