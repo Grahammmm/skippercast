@@ -18,6 +18,8 @@ CDFW's current Mendocino page says the Fort Bragg ocean salmon fishery is closed
 
 The first [hosted draft source rehearsal](https://github.com/Grahammmm/skippercast/actions/runs/36041722547) found all 18 legal source fingerprints unchanged, with 61 of 62 requested sources healthy. Its 6 km surface-radar current request returned 220 grid cells with **zero** usable vectors; this is an observed coverage gap, not zero current or a reason to infer bottom drift. The rehearsal artifact is unpublished. Exact MPA, method, route and site geometry still require review before a public rule card or fishing point.
 
+The adjacent H11730 survey envelope also intersects this region, but the [exact-camera regional audit](../dist/data/h11730-fort-bragg-regional-camera-support.json) checked both original USGS camera archives against every reviewed regular-BAG pair and found **zero of 110 distinct historical camera windows inside the Fort Bragg–Point Arena fishing bounds**. Its rock/boulder and visual fish observations belong farther south. The survey remains a bathymetry source lead here, but those camera observations cannot validate a Fort Bragg fishing site. The monthly source job repeats the hash-pinned, coordinate-free check and fails if the result changes.
+
 ## Publication gate
 
 1. Use the first regional legal-health receipt as source evidence and keep monitoring it. Re-review any changed official source before an open badge; a source retrieval alone does not approve changed law.

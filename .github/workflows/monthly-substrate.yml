@@ -443,6 +443,15 @@ jobs:
           python scripts/audit_usgs_video_observations.py
           --download-missing
           --output var/review/usgs-video-observation-audit.json
+      - name: Recheck H11730 camera evidence against Fort Bragg package bounds
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_camera_region_support.py
+          --region fort-bragg-point-arena
+          --survey H11730
+          --output var/review/h11730-fort-bragg-regional-camera-support.json
+          --verify dist/data/h11730-fort-bragg-regional-camera-support.json
       - name: Reopen original H11876 side-scan mosaic and companion files
         run: |
           mkdir -p var/noaa-native-cache

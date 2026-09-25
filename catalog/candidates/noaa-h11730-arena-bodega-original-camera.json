@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "noaa-h11730-arena-bodega-original-camera",
   "name": "NOAA H11730 original 2 m BAG and USGS Arena–Bodega camera observations",
-  "sector_ids": ["arena-bodega", "fort-bragg-arena"],
+  "sector_ids": ["arena-bodega"],
   "need_ids": ["bathymetry", "groundtruth", "species-occurrence"],
   "producer": {
     "name": "NOAA National Ocean Service and U.S. Geological Survey",
@@ -51,6 +51,7 @@
     {"url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect", "supports": "All 18 bounded charted-danger layers were queried on September 25, 2026; 45 charted features in the review envelope, without route or target clearance."}
   ],
   "limitations": [
+    "All 110 distinct H11730 original-camera windows across its reviewed BAG/camera pairs fall outside the Fort Bragg–Point Arena fishing package. The broad H11730 survey envelope still intersects that region, but its camera substrate and fish observations cannot support a site there.",
     "The BAG envelope is not a continuously measured or rocky footprint. The three camera transects are correlated historical observations, not 54 independent reefs or current catch data.",
     "The 2010 transect has four windows within 100 m of the dated CDFW MPA boundary, the closest at 29.4 m. Do not promote this transect without exact current boundary and position-uncertainty review.",
     "No charted seabed-area polygon was returned in the bounded ENC query, so camera windows and distant charted rock symbols cannot delineate an exact target area.",
