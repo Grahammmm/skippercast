@@ -27,6 +27,8 @@ class AtlasReadinessTests(unittest.TestCase):
                          + by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'])
         self.assertEqual(by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'], 0)
         self.assertEqual(by_sector['reyes-pigeon']['native_substrate_review_file_leads'], 6)
+        self.assertEqual(by_sector['reyes-pigeon']['native_substrate_screen_files_with_eligible_sector_cells'], 3)
+        self.assertEqual(by_sector['reyes-pigeon']['substrate_screen_bbox_only_file_count'], 3)
         self.assertEqual(by_sector['reyes-pigeon']['held_file_leads'], 2)
         self.assertIn('H12112', by_sector['reyes-pigeon']['held_survey_ids'])
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
@@ -42,6 +44,12 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertTrue(any('instantaneous sea level' in a['bathymetry_datum_declarations']
                             for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
         self.assertEqual(by_sector['san-diego-border']['usgs_ds781_map_area_leads'], [])
+        self.assertEqual(by_sector['los-angeles-orange']['native_substrate_review_file_leads'], 2)
+        self.assertEqual(by_sector['los-angeles-orange']['native_substrate_screen_files_with_eligible_sector_cells'], 0)
+        self.assertEqual(by_sector['los-angeles-orange']['substrate_screen_bbox_only_survey_ids'], ['W00343'])
+        self.assertIn('eligible native cells do not', by_sector['los-angeles-orange']['next_source_step'])
+        self.assertEqual(by_sector['ventura-los-angeles']['native_substrate_screen_survey_ids_with_eligible_sector_cells'], ['H11891'])
+        self.assertIn('W00343', by_sector['ventura-los-angeles']['substrate_screen_bbox_only_survey_ids'])
         self.assertEqual(by_sector['big-sur']['published_candidate_points_in_band'], 0)
         self.assertIn('H13151', by_sector['sur-san-simeon']['native_depth_excluded_survey_ids'])
         self.assertEqual(by_sector['morro-conception']['native_depth_excluded_survey_ids'], ['H13089', 'H13151'])
@@ -57,6 +65,11 @@ class AtlasReadinessTests(unittest.TestCase):
                       by_sector['pigeon-monterey']['accessible_inspected_fine_source_candidate_ids'])
         for row in report['sectors']:
             self.assertIn(row['status'], {'source-review-only', 'partial-local-targets'})
+            self.assertEqual(row['native_substrate_review_file_leads'],
+                             row['native_substrate_screen_files_with_eligible_sector_cells']
+                             + row['substrate_screen_bbox_only_file_count'])
+            self.assertEqual(row['substrate_screen_bbox_only_file_count'],
+                             len(row['substrate_screen_bbox_only_bag_urls']))
             self.assertEqual(bool(row['published_candidate_points_in_band']),
                              row['status'] == 'partial-local-targets')
             self.assertGreaterEqual(len(row['remaining_promotion_gates']), 6)

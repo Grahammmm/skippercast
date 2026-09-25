@@ -138,6 +138,19 @@ def compile_readiness(root=REPO):
                                and draft['fishing_bounds'][1] < north and draft['fishing_bounds'][3] > south))
         points = sector['published_candidate_points']
         candidate_files = lead['eligible_for_native_substrate_review_bboxes']
+        eligible_urls = set(lead.get('eligible_substrate_review_bag_urls', []))
+        if len(eligible_urls) != candidate_files:
+            raise ValueError('Substrate-screen eligible file URLs do not match envelope count')
+        regular_by_url = {row['bag_url']: row for row in regular_depth['files']}
+        if len(regular_by_url) != len(regular_depth['files']) or not eligible_urls <= regular_by_url.keys():
+            raise ValueError('Substrate-screen files missing from original-cell audit')
+        screen_survey_ids = {regular_by_url[url]['survey_id'] for url in eligible_urls}
+        sector_cell_rows = [row for row in regular_depth['files']
+                            if row['bag_url'] in eligible_urls
+                            and row.get('sectors', {}).get(ident, {}).get('depth_uncertainty_eligible_cells', 0) > 0]
+        sector_cell_survey_ids = {row['survey_id'] for row in sector_cell_rows}
+        bbox_only_survey_ids = screen_survey_ids - sector_cell_survey_ids
+        bbox_only_urls = eligible_urls - {row['bag_url'] for row in sector_cell_rows}
         source_leads = sorted(fine_original_leads[ident])
         held_files = lead['held_substrate_overlap_screen_bboxes']
         variable_files = variable_by_id[ident]['source_files_with_eligible_cells']
@@ -158,8 +171,11 @@ def compile_readiness(root=REPO):
         # These are file-envelope leads, not a count of verified seabed cells.
         if min(points, candidate_files, held_files, variable_files, regular_files) < 0:
             raise ValueError('Negative coverage count')
-        if candidate_files:
+        if candidate_files and sector_cell_rows:
             next_step = 'Review original native cells, independent substrate, chart hazards and access for the in-sector file leads.'
+        elif candidate_files:
+            next_step = ('The substrate-screen file envelopes intersect this sector, but their inspected eligible native cells do not. '
+                         'Find another original nearshore depth and independent substrate source within the actual sector water.')
         elif unheld_variable_files or regular_files:
             next_step = 'Find independent original substrate overlap in the measured, depth-qualified native cells; do not infer reef from depth alone.'
         else:
@@ -197,6 +213,11 @@ def compile_readiness(root=REPO):
             'native_regular_depth_file_leads': regular_files,
             'historical_noaa_seabed_samples': seabed_by_id[ident]['historical_sample_count'],
             'native_substrate_review_file_leads': candidate_files,
+            'native_substrate_screen_files_with_eligible_sector_cells': len(sector_cell_rows),
+            'native_substrate_screen_survey_ids_with_eligible_sector_cells': sorted(sector_cell_survey_ids),
+            'substrate_screen_bbox_only_survey_ids': sorted(bbox_only_survey_ids),
+            'substrate_screen_bbox_only_file_count': len(bbox_only_urls),
+            'substrate_screen_bbox_only_bag_urls': sorted(bbox_only_urls),
             'accessible_inspected_fine_source_candidate_ids': source_leads,
             'native_depth_excluded_source_candidate_ids': sorted(depth_excluded_leads[ident]),
             'held_file_leads': held_files,
@@ -222,6 +243,7 @@ def compile_readiness(root=REPO):
         'limitations': [
             'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
+            'Substrate-screen envelope counts can include files whose actual eligible cells lie only in nearby islands or another sector. Use the separate eligible-sector-cell file count and bbox-only survey IDs before selecting a local original grid.',
             'Variable-depth source counts include reviewed held surveys for audit completeness; use the separate held and unheld counts before choosing a survey for further research.',
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',

@@ -64,6 +64,7 @@ def build(audit, discovery, sectors, overlap, holds=None):
                       and max(f['overview_resolution_m']) <= 4 and f['variable_refinement_records'] == 0]
         overlap_leads = [f for f in candidates if f['url'] in screened]
         withheld = [f for f in overlap_leads if f['survey_id'] in held]
+        eligible_overlap = [f for f in overlap_leads if f['survey_id'] not in held]
         refinement_leads = [f for f in georeferenced
                             if f['metadata_status'] == 'mllw-product-uncertainty-reviewed-by-adapter'
                             and f.get('refinement_grids_at_most_4m', 0) > 0]
@@ -77,6 +78,7 @@ def build(audit, discovery, sectors, overlap, holds=None):
             'held_substrate_overlap_screen_bboxes': len(withheld),
             'held_survey_ids': sorted({f['survey_id'] for f in withheld}),
             'eligible_for_native_substrate_review_bboxes': len(overlap_leads) - len(withheld),
+            'eligible_substrate_review_bag_urls': sorted(f['url'] for f in eligible_overlap),
             'variable_resolution_4m_refinement_bboxes': len(refinement_leads),
             'refinement_survey_ids': sorted({f['survey_id'] for f in refinement_leads}),
             'not_in_sector_bbox_count': sum(f['status'] == 'ok' for f in associated) - len(georeferenced),
