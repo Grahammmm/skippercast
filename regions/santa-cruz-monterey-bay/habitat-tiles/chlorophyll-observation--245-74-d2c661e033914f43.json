@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"santa-cruz-monterey-bay","layer_id":"chlorophyll-observation","bounds":[-122.5,37.0,-122.0,37.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790164800,"cells":[[37.10625,-122.30625,2.03289],[37.18125,-122.38125,1.66365]],"valid_cells":2}]}
