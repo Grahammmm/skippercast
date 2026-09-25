@@ -9,6 +9,28 @@ permissions:
   contents: read
 
 jobs:
+  usgs-state-waters-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify USGS map-area and source-link parser
+        run: python -m unittest tests.test_usgs_ds781_catalogs -v
+      - name: Recheck official USGS DS 781 index and linked original products
+        run: >-
+          python scripts/discover_usgs_ds781_catalogs.py
+          --output var/review/usgs-ds781-source-leads.json
+          --verify catalog/usgs-ds781-source-leads.json
+      - name: Upload unpublished catalog-change receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-ds781-source-leads
+          path: var/review/usgs-ds781-source-leads.json
+          retention-days: 30
   nos-historical-seabed-samples:
     runs-on: ubuntu-latest
     timeout-minutes: 15

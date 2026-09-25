@@ -151,11 +151,17 @@ def main():
     assert all('coordinates' not in row and 'longitude' not in row and 'latitude' not in row
                for row in induration['rows'])
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
+    usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
+    assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
+    assert len(usgs_leads['map_areas']) == 39
+    assert all(area['priority_product_status'] != 'linked' or area['products']
+               for area in usgs_leads['map_areas'])
     sectors = json.loads((WEB / 'data/coastal-sectors.json').read_text())['sectors']
     assert len(readiness['sectors']) == len(sectors) == 19
     assert {row['sector_id'] for row in readiness['sectors']} == {row['id'] for row in sectors}
     assert all(row['status'] in {'source-review-only', 'partial-local-targets'}
                and row['remaining_promotion_gates'] for row in readiness['sectors'])
+    assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name

@@ -27,6 +27,11 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertNotIn('csumb-bss-block13-native-candidate', by_sector['big-sur']['accessible_inspected_fine_source_candidate_ids'])
         self.assertIn('SCC_Block01', by_sector['sur-san-simeon']['csumb_catalog_survey_lead_ids'])
         self.assertIn('SCC_Block08', by_sector['cambria-morro']['csumb_catalog_survey_lead_ids'])
+        self.assertTrue(any(a['name'] == 'Offshore of Ventura'
+                            for a in by_sector['conception-ventura']['usgs_ds781_map_area_leads']))
+        self.assertTrue(any(a['priority_product_status'] == 'index-link-mismatch'
+                            for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
+        self.assertEqual(by_sector['san-diego-border']['usgs_ds781_map_area_leads'], [])
         self.assertEqual(by_sector['big-sur']['published_candidate_points_in_band'], 0)
         self.assertIn('noaa-h11971-bear-landing-original-camera',
                       by_sector['north-mendocino']['accessible_inspected_fine_source_candidate_ids'])
@@ -57,6 +62,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              'dist/data/noaa-seabed-samples-sector-review.json',
                              'catalog/csumb-scc-source-leads.json',
                              'catalog/csumb-bss-source-leads.json',
+                             'catalog/usgs-ds781-source-leads.json',
                              'dist/regions/index.json'):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,1835 @@
+{
+  "schema_version": 1,
+  "source": "USGS Data Series 781 California State Waters Map Series",
+  "index_url": "https://pubs.usgs.gov/ds/781/",
+  "index_sha256": "e4140381bdc43edff7d01b81a7b051299ad2fdd83bcdfcfbdac594306535cf2c",
+  "retrieved_at": "2026-09-25T09:06:16.053734+00:00",
+  "scope": "official map-area and product-link inventory; catalog rows are not measured seabed footprints",
+  "sector_association_basis": "Broad place-name association for original-source acquisition. These are planning leads, not measured grid footprints or verified overlap with every sector.",
+  "map_areas": [
+    {
+      "name": "Punta Gorda to Point Arena Region",
+      "catalog_url": "https://doi.org/10.5066/P9PNNI9H",
+      "report_url": "https://doi.org/10.3133/ofr20191072",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "north-mendocino",
+        "fort-bragg-arena"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/PuntaGordaToPointArena/data_catalog_PuntaGordaToPointArena.html",
+      "catalog_sha256": "82abae6bc288d355eba0a2b74d572563ba287ec36ec0ceea395100b92557d52b",
+      "resolved_kind": "html-data-catalog",
+      "products": [],
+      "priority_product_status": "none-in-this-release"
+    },
+    {
+      "name": "Salt Point to Drakes Bay Region",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/SaltPointToDrakesBay/data_catalog_SaltPointToDrakesBay.html",
+      "report_url": null,
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "arena-bodega",
+        "bodega-reyes"
+      ],
+      "catalog_sha256": "f3bf01dceff7605586a919a2bc5ac9b32fdad308838e86e911f40f249ee3c4c9",
+      "products": [],
+      "priority_product_status": "none-in-this-catalog"
+    },
+    {
+      "name": "Offshore of Arcata",
+      "catalog_url": "https://doi.org/10.5066/P9J1K4QX",
+      "report_url": "https://doi.org/10.3133/ofr20241047",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9J1K4QX/",
+      "catalog_sha256": "a9e386b98690e8cd9ff02ff59843c9e2c2c1feae0ae5641522f97adf2477c016",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshoreArcata",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/54e0ba16c35240adbee81945452f33a0/CMECS_OffshoreArcata.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/5a41e40ec0004e85870ad39c581ecb32/CMECS_OffshoreArcata_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshoreArcata",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/72aef2a69d2e4ac187284d4a90faa759/SeafloorCharacter_OffshoreArcata.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/270d32c8968e473eb0716fc6080d75b6/SeafloorCharacter_OffshoreArcata_metadata.xml"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshoreArcata",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/c5350089f8a641cda767c263d4df507c/Backscatter_OffshoreArcata.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/ac9936b3551b46caa6552c588d45ebe5/Backscatter_OffshoreArcata_metadata.xml"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshoreArcata",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/d2c8e95a281e4e8bb1af23676909a642/Bathymetry_OffshoreArcata.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9J1K4QX/75209e4ad72c448e8a5c60115e24706e/Bathymetry_OffshoreArcata_metadata.xml"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Eureka",
+      "catalog_url": "https://doi.org/10.5066/P9J1K4QX",
+      "report_url": "https://doi.org/10.3133/ofr20241047",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9J1K4QX/",
+      "catalog_sha256": "5e0087b3f2b9b5eafec0210c73c3bf0faeeedd6f20f15c7c5caf96352c0e10f4",
+      "resolved_kind": "data-release",
+      "products": [],
+      "priority_product_status": "index-link-mismatch"
+    },
+    {
+      "name": "Offshore of Eel River",
+      "catalog_url": "https://doi.org/10.5066/P902YIF5",
+      "report_url": "https://doi.org/10.3133/ofr20241047",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P902YIF5/",
+      "catalog_sha256": "118a736b802aff32e9cec5a3bce6422e251db151ef46f9309c8c943d966cd1c0",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshoreEelRiver",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P902YIF5/29a0e506a0c24755b4f1f773a2cebd32/SeafloorCharacter_OffshoreEelRiver.zip",
+          "metadata_url": null
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshoreEelRiver",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P902YIF5/7429fcecc9fc4a898521fd96d8c2d4dc/Bathymetry_OffshoreEelRiver.zip",
+          "metadata_url": null
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshoreEelRiver",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P902YIF5/db731d740f5f45d9a5440bf972ac3295/Backscatter_OffshoreEelRiver.zip",
+          "metadata_url": null
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshoreEelRiver",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P902YIF5/e0a217ae2a09425ba01e398f28097832/CMECS_OffshoreEelRiver.zip",
+          "metadata_url": null
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Cape Mendocino",
+      "catalog_url": "https://doi.org/10.5066/P9U0SUGL",
+      "report_url": "https://doi.org/10.3133/ofr20241047",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "humboldt-cape"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9U0SUGL/",
+      "catalog_sha256": "fbcc26a878beededc19ad8563e991e82b185977b08c4da20c1630c475a775515",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshoreCapeMendocino",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/0912f12a4f674672b52d825ed5421eab/Bathymetry_OffshoreCapeMendocino.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/5f247010dd40433989858d886d83c3ff/Bathymetry_OffshoreCapeMendocino_metadata.xml"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshoreCapeMendocino",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/a3bd190932ef4762b484957819f61df6/Backscatter_OffshoreCapeMendocino.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/c720a73c3af94ff9b2469c0767ed3438/Backscatter_OffshoreCapeMendocino_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshoreCapeMendocino",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/a532c27e657d4ffeb6a59f4393e520c8/SeafloorCharacter_OffshoreCapeMendocino.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/eadc62d03bd34cdca57a2793a290a02a/SeafloorCharacter_OffshoreCapeMendocino_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshoreCapeMendocino",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/d6080b83fe114f37b67b59225ca337cb/CMECS_OffshoreCapeMendocino.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/62d6f42300044a3db0b8db6ff895e3aa/CMECS_OffshoreCapeMendocino_metadata.xml"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Salt Point",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data_catalog_OffshoreSaltPoint.html",
+      "report_url": "https://pubs.usgs.gov/of/2015/1098",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "catalog_sha256": "23ece1a1ffa1e02533e03b92d21c06e1e994810e8079fe04f987ad15603d5437",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/BackscatterA_8101_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/BackscatterA_8101_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/BackscatterB_Swath_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/BackscatterB_Swath_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/BackscatterC_7125_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/BackscatterC_7125_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/Bathymetry_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/Bathymetry_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/Habitat_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/Habitat_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Salt Point and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/SeafloorCharacter_OffshoreSaltPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/metadata/SeafloorCharacter_OffshoreSaltPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise L908NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/l908nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Fort Ross",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data_catalog_OffshoreFortRoss.html",
+      "report_url": "https://doi.org/10.3133/ofr20151211",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "arena-bodega"
+      ],
+      "catalog_sha256": "643d28cf9856030b87e11390075e47e057bf6138d59cd26aaed14b76fbc55b33",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/BackscatterA_8101_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/BackscatterA_8101_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/BackscatterB_7125_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/BackscatterB_7125_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/BackscatterC_Swath_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/BackscatterC_Swath_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/Bathymetry_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/Bathymetry_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/Habitat_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/Habitat_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Fort Ross map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/SeafloorCharacter_OffshoreFortRoss.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/metadata/SeafloorCharacter_OffshoreFortRoss_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise L908NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/l908nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Bodega Head",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data_catalog_OffshoreBodegaHead.html",
+      "report_url": "https://doi.org/10.3133/ofr20151140",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "arena-bodega",
+        "bodega-reyes"
+      ],
+      "catalog_sha256": "c9df915a8563bbf13601c57f6e8e0beb8d1eccc6468c530952e1574c4bf4ff60",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/BackscatterA_8101_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/BackscatterA_8101_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/BackscatterB_7125_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/BackscatterB_7125_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/BackscatterC_Swath_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/BackscatterC_Swath_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/Bathymetry_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/Bathymetry_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/Habitat_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/Habitat_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Bodega Head map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/SeafloorCharacter_OffshoreBodegaHead.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/metadata/SeafloorCharacter_OffshoreBodegaHead_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise L908NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/l908nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Tomales Point",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data_catalog_OffshoreTomalesPoint.html",
+      "report_url": "https://pubs.usgs.gov/of/2015/1088",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "bodega-reyes"
+      ],
+      "catalog_sha256": "a4b7a18b28db2bcb21b9623af6859561dd7d313814cb5f662441eebd95efc787",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/BackscatterA_8101_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/BackscatterA_8101_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/BackscatterB_7125_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/BackscatterB_7125_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/BackscatterC_Swath_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/BackscatterC_Swath_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/BackscatterD_USGS_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/BackscatterC_Swath_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/Bathymetry_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/Bathymetry_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/Habitat_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/Habitat_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Tomales Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/SeafloorCharacter_OffshoreTomalesPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/metadata/SeafloorCharacter_OffshoreTomalesPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise L908NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/l908nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Point Reyes",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data_catalog_OffshorePointReyes.html",
+      "report_url": "https://pubs.usgs.gov/of/2015/1114",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "bodega-reyes",
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "234618030e3b4455ff4773a0746dcf2757e93d3192b85c31a1ab7cd43ef0dfed",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/BackscatterA_8101_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/BackscatterA_8101_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/BackscatterB_Swath_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/BackscatterB_Swath_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/BackscatterC_7125_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/BackscatterC_7125_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/Bathymetry_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/Bathymetry_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/Habitat_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/Habitat_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Point Reyes and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/SeafloorCharacter_OffshorePointReyes.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/metadata/SeafloorCharacter_OffshorePointReyes_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise L908NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/l908nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Drakes Bay and Vicinity",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data_catalog_DrakesBay.html",
+      "report_url": "https://pubs.usgs.gov/of/2015/1041/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "bodega-reyes",
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "356964dcbfe93f363406626e2f5baf7dd576d8ea0b95c2c8008809f89089df54",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/BackscatterA_8101_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/BackscatterA_8101_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/BackscatterB_Swath_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/BackscatterB_Swath_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/BackscatterC_7125_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/BackscatterC_7125_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/Bathymetry_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/Bathymetry_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/Habitat_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/Habitat_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Drakes Bay and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/SeafloorCharacter_DrakesBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/DrakesBay/metadata/SeafloorCharacter_DrakesBay_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Bolinas to Pescadero Region",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/BolinasToPescadero/data_catalog_BolinasToPescadero.html",
+      "report_url": null,
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "83244063296b9d613a5690f07f6a4da0b8e6526a3c963da7ac2f5685d384fd01",
+      "products": [],
+      "priority_product_status": "none-in-this-catalog"
+    },
+    {
+      "name": "Offshore of Bolinas",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data_catalog_OffshoreBolinas.html",
+      "report_url": "https://doi.org/10.3133/ofr20151135",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "8fa2193a2775f1c70c6b3ad727c883423112faef19f9436c00ac63898b126b6a",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/BackscatterA_8101_2004_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/BackscatterA_8101_2004_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/BackscatterB_8101_2007_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/BackscatterB_8101_2007_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/BackscatterC_7125_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/BackscatterC_7125_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/BackscatterD_Snippets_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/BackscatterD_Snippets_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/BackscatterE_Swath_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/BackscatterE_Swath_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/Bathymetry_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/Bathymetry_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/Habitat_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/Habitat_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Bolinas map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/SeafloorCharacter_OffshoreBolinas.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/metadata/SeafloorCharacter_OffshoreBolinas_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F208NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f208nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of San Francisco",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html",
+      "report_url": "https://pubs.usgs.gov/of/2015/1068/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "6d0f5623e46438819f4502f45fcc34050ad5181f19415ae9ccb10f8ae872fc0e",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/BackscatterA_8101_2004_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/BackscatterA_8101_2004_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/BackscatterB_8101_2007_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/BackscatterB_8101_2007_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/BackscatterC_8101_2008_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/BackscatterC_8101_2008_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/BackscatterD_7125_2006_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/BackscatterD_7125_2006_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/Bathymetry_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/Bathymetry_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/Habitat_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/Habitat_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of San Francisco map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/SeafloorCharacter_OffshoreSanFrancisco.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/metadata/SeafloorCharacter_OffshoreSanFrancisco_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F208NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f208nc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Pacifica",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data_catalog_OffshorePacifica.html",
+      "report_url": "https://pubs.usgs.gov/of/2014/1260/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "e4628ada246dddc05c6ff376d69106c1f605e30b075d323fbfe42aa5004d43af",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Pacifica map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/BackscatterA_8101_OffshorePacifica.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/BackscatterA_8101_OffshorePacifica_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Pacifica map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/BackscatterB_7125_OffshorePacifica.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/BackscatterB_7125_OffshorePacifica_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Pacifica map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/Bathymetry_OffshorePacifica.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/Bathymetry_OffshorePacifica_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Pacifica map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/Habitat_OffshorePacifica.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/Habitat_OffshorePacifica_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Pacifica map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/SeafloorCharacter_OffshorePacifica.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/metadata/SeafloorCharacter_OffshorePacifica_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Half Moon Bay",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data_catalog_OffshoreHalfMoonBay.html",
+      "report_url": "https://pubs.usgs.gov/of/2014/1214/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "246c0cf33e18ff3a2f6929b313394127505f8bcb4ac4055950890f0d369e0c8a",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Half Moon Bay map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/BackscatterA_8101_OffshoreHalfMoonBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/metadata/BackscatterA_8101_OffshoreHalfMoonBay_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Half Moon Bay map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/BackscatterB_7125_OffshoreHalfMoonBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/metadata/BackscatterB_7125_OffshoreHalfMoonBay_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Half Moon Bay map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/Bathymetry_OffshoreHalfMoonBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/metadata/Bathymetry_OffshoreHalfMoonBay_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Half Moon Bay map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/Habitat_OffshoreHalfMoonBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/metadata/Habitat_OffshoreHalfMoonBay_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Half Moon Bay map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/SeafloorCharacter_OffshoreHalfMoonBay.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/metadata/SeafloorCharacter_OffshoreHalfMoonBay_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of San Gregorio",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data_catalog_OffshoreSanGregorio.html",
+      "report_url": "https://pubs.usgs.gov/sim/3306/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "reyes-pigeon"
+      ],
+      "catalog_sha256": "bb21dd3c02479eed88173175bb804becd0dbff3e085deaf1e7c2e0e927e7a4ec",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Gregorio map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/BackscatterA_8101_OffshoreSanGregorio.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/metadata/BackscatterA_8101_OffshoreSanGregorio_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of San Gregorio map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/BackscatterB_7125_OffshoreSanGregorio.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/metadata/BackscatterB_7125_OffshoreSanGregorio_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of San Gregorio map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/Bathymetry_OffshoreSanGregorio.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/metadata/Bathymetry_OffshoreSanGregorio_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of San Gregorio map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/Habitat_OffshoreSanGregorio.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/metadata/Habitat_OffshoreSanGregorio_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of San Gregorio map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/SeafloorCharacter_OffshoreSanGregorio.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/metadata/SeafloorCharacter_OffshoreSanGregorio_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Pigeon Point to Monterey Region",
+      "catalog_url": "https://doi.org/10.5066/F7N29V0Z",
+      "report_url": null,
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/PigeonToMonterey/data_catalog_PigeonPointToMonterey.html",
+      "catalog_sha256": "654aa03c143a162303fa2b105f952b6f86a58bad373ad6ea328934cd26a5c5f7",
+      "resolved_kind": "html-data-catalog",
+      "products": [],
+      "priority_product_status": "none-in-this-release"
+    },
+    {
+      "name": "Offshore of Pigeon Point",
+      "catalog_url": "https://doi.org/10.5066/F7513W80",
+      "report_url": "http://pubs.er.usgs.gov/publication/ofr20151232",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "reyes-pigeon",
+        "pigeon-monterey"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data_catalog_OffshorePigeonPoint.html",
+      "catalog_sha256": "df0284810b8d5a9c74f750d4883652ef085a03e4412de4e15b5c6e5080832915",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/BackscatterA_8101_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/BackscatterA_8101_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/BackscatterB_7125_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/BackscatterB_7125_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/BackscatterC_Swath_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/BackscatterC_SWATH_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/Bathymetry_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/Bathymetry_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/Habitat_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/Habitat_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Of Pigeon Point map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/SeafloorCharacter_OffshorePigeonPoint.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/metadata/SeafloorCharacter_OffshorePigeonPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Scott Creek",
+      "catalog_url": "https://doi.org/10.5066/F7CJ8BJW",
+      "report_url": "https://doi.org/10.3133/ofr20151191",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data_catalog_OffshoreScottCreek.html",
+      "catalog_sha256": "8e1d5fca48862b66756ee153db19cea4498d4776ecfce02cb3608a2f2d2dcb4e",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/BackscatterA_8101_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/BackscatterA_8101_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/BackscatterB_7125_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/BackscatterB_7125_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/BackscatterC_Swath_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/BackscatterC_Swath_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/Bathymetry_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/Bathymetry_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/Habitat_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/Habitat_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Scott Creek map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/SeafloorCharacter_OffshoreScottCreek.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/metadata/SeafloorCharacter_OffshoreScottCreek_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise F307NC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/f307nc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S2210MB",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s2210mb_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Santa Cruz",
+      "catalog_url": "https://doi.org/10.5066/F7TM785G",
+      "report_url": "https://doi.org/10.3133/ofr20161024",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data_catalog_OffshoreSantaCruz.html",
+      "catalog_sha256": "3a8975b413cd76c5c3243b5c4e717b246f1e318bac5e8e1dc6234fd20131c96f",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Of Santa Cruz map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data/Backscatter_Swath_OffshoreSantaCruz.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/metadata/Backscatter_Swath_OffshoreSantaCruz_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Of Santa Cruz map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data/Bathymetry_OffshoreSantaCruz.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/metadata/Bathymetry_OffshoreSantaCruz_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Of Santa Cruz map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data/Habitat_OffshoreSantaCruz.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/metadata/Habitat_OffshoreSantaCruz_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Of Santa Cruz map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data/SeafloorCharacter_OffshoreSantaCruz.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/metadata/SeafloorCharacter_OffshoreSantaCruz_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S2210MB",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s2210mb_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Aptos",
+      "catalog_url": "https://doi.org/10.5066/F7K35RQB",
+      "report_url": "https://doi.org/10.3133/ofr20161025",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data_catalog_OffshoreAptos.html",
+      "catalog_sha256": "2db7faf3720a00e10d98959dc81b403e7c629e1e003aec011caae7f08781da2e",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BackscatterA_Swath_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BackscatterA_Swath_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (5m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BackscatterB_EM300_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BackscatterB_EM300_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BathymetryA_USGS_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BathymetryA_USGS_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (3m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BathymetryB_CSUMB_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BathymetryB_CSUMB_OffshoreAptos_metadata.xml"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/Habitat_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/Habitat_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/SeafloorCharacter_2m_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/SeafloorCharacter_2m_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (5m/pixel), Offshore of Aptos map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/SeafloorCharacter_5m_OffshoreAptos.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/SeafloorCharacter_5m_OffshoreAptos_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S2210MB",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s2210mb_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Monterey Canyon and Vicinity",
+      "catalog_url": "https://doi.org/10.5066/F7XD0ZQ4",
+      "report_url": "https://pubs.er.usgs.gov/publication/ofr20161072",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey",
+        "monterey-sur"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data_catalog_MontereyCanyon.html",
+      "catalog_sha256": "ba842e9da427b489295c228862a2ffc182513f441630ddb8f3ede8308908c495",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BackscatterA_USGS_Swath_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BackscatterA_USGS_Swath_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BackscatterB_EM300_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BackscatterB_EM300_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BackscatterC_7125_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BackscatterC_7125_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BackscatterD_CSUMB_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BackscatterD_CSUMB_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BathymetryA_2m_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BathymetryA_2m_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (5m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/BathymetryB_5m_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/BathymetryB_5m_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/Habitat_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/Habitat_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/SeafloorCharacter_2m_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/SeafloorCharacter_2m_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (5m/pixel), Monterey Canyon and Vicinity map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/SeafloorCharacter_5m_MontereyCanyon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/metadata/SeafloorCharacter_5m_MontereyCanyon_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S2210MB",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s2210mb_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Monterey",
+      "catalog_url": "https://doi.org/10.5066/F70Z71C8",
+      "report_url": "https://doi.org/10.3133/ofr20161110",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "pigeon-monterey",
+        "monterey-sur"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data_catalog_OffshoreMonterey.html",
+      "catalog_sha256": "955b789eb3982572386888af2494358325be2641ac6bd9f87e0b44f856e2ed3c",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (5m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Backscatter_5m_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Backscatter_5m_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Backscatter_7125_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Backscatter_7125_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Backscatter_8101_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Backscatter_8101_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Backscatter_Swath_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Backscatter_Swath_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (5m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_5m_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_5m_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Habitat_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Habitat_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_2m_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (5m/pixel), Offshore Monterey map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_5m_OffshoreMonterey.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_5m_OffshoreMonterey_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S2210MB",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s2210mb_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Point Estero",
+      "catalog_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "report_url": "https://doi.org/10.3133/ofr20231064",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "cambria-morro"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9ZSTUK1/",
+      "catalog_sha256": "f964b67f24cfcad834e1c90360e20cc59ab7d5c593080c052bbf1d222e11ff3e",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshorePointEstero",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/21f094ed21eb467289e333340b20dd90/CMECS_OffshorePointEstero.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/88171328f12a4876b6158d71ff8a4ad1/CMECS_OffshorePointEstero_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshorePointEstero",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/22adeb1ae71b4e28a5d38acdf66daec0/SeafloorCharacter_OffshorePointEstero.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/0f75d175cc2046f38c45b6ac26a9be92/SeafloorCharacter_OffshorePointEstero_metadata.xml"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshorePointEstero",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshorePointEstero",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/a7b21661ebef4ebc9c07ca6dbee975bc/Backscatter_OffshorePointEstero.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/20f070f8b8c24c168e73c2c30dbe5cd4/Backscatter_OffshorePointEstero_metadata.xml"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Morro Bay",
+      "catalog_url": "https://doi.org/10.5066/P9HEZNRO",
+      "report_url": "https://doi.org/10.3133/ofr20231064",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9HEZNRO/",
+      "catalog_sha256": "dbed1de47d8d3a6f763e263f2829c9c30d0e40e40c0c737413782a28e43e5ca8",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshoreMorroBay",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/0abf6339a0ce4077b5e58852345151a3/SeafloorCharacter_OffshoreMorroBay.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/99111880d0194352899672cd4d7690ac/SeafloorCharacter_OffshoreMorroBay_metadata.xml"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshoreMorroBay",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshoreMorroBay",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/affe85b2ef794c68928602a7084c0700/CMECS_OffshoreMorroBay.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/0eac5e868c4b477ab371eb96536ba6b7/CMECS_OffshoreMorroBay_metadata.xml"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshoreMorroBay",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/e6e20acf5069442eaa9ad60970fc710c/Backscatter_OffshoreMorroBay.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/ff61107167584d7893f33f4cf90cb1ad/Backscatter_OffshoreMorroBay_metadata.xml"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Point Buchon",
+      "catalog_url": "https://doi.org/10.5066/P9KBGELE",
+      "report_url": "https://doi.org/10.3133/ofr20231064",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "morro-conception"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9KBGELE/",
+      "catalog_sha256": "8dfe1124c471793b7914c32db961e8f01d09057038795f2babd33f410909d4f9",
+      "resolved_kind": "data-release",
+      "products": [
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry_OffshorePointBuchon",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/21b585e020ab4afba49b2754075826a7/Bathymetry_OffshorePointBuchon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "SeafloorCharacter_OffshorePointBuchon",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3963d3925b9841ecb9b6a743b92326d7/SeafloorCharacter_OffshorePointBuchon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ac4288bd38594e1fa6e89e139995ab73/SeafloorCharacter_OffshorePointBuchon_metadata.xml"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "CMECS_OffshorePointBuchon",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/58f7e9655c85408db68ce2ca1d8cd560/CMECS_OffshorePointBuchon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3bb89ac0e56a4c55a51e8faf88d5b6e1/CMECS_OffshorePointBuchon_metadata.xml"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter_OffshorePointBuchon",
+          "archive_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/9569e4d120e14a10846c7f776c6de656/Backscatter_OffshorePointBuchon.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ed2a47f14f23430992b4b529f6f1809f/Backscatter_OffshorePointBuchon_metadata.xml"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Point Conception to Hueneme Canyon Region",
+      "catalog_url": "https://doi.org/10.5066/F7891424",
+      "report_url": null,
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "conception-ventura",
+        "ventura-los-angeles"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/PointConceptionToHueneme/data_catalog_PointConceptionToHueneme.html",
+      "catalog_sha256": "16df969eaad93da21c67eed8bf9dabe53ad51a22644699bbfc92f986351132e6",
+      "resolved_kind": "html-data-catalog",
+      "products": [],
+      "priority_product_status": "none-in-this-release"
+    },
+    {
+      "name": "Offshore of Point Conception",
+      "catalog_url": "https://doi.org/10.5066/F7QN64XQ",
+      "report_url": "https://doi.org/10.3133/ofr20181024",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data_catalog_OffshorePointConception.html",
+      "catalog_sha256": "ed826fdae856149a907884476022caf81241c6137012a070be02434500ad99e8",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise SW109SC",
+          "archive_url": "http://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/sw109sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter, Offshore Of Point Conception map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/Backscatter_[Fugro]_OffshorePointConception.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/Backscatter_[Fugro]_OffshorePointConception_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry, Offshore Of Point Conception map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/Bathymetry_OffshorePointConception.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/Bathymetry_OffshorePointConception_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Of Point Conception map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/Habitat_OffshorePointConception.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/Habitat_OffshorePointConception_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character, Offshore Of Point Conception map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Gaviota",
+      "catalog_url": "https://doi.org/10.5066/F7TH8JWJ",
+      "report_url": "https://doi.org/10.3133/ofr20181023",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data_catalog_OffshoreGaviota.html",
+      "catalog_sha256": "22382bde81e996808bf86f3bd24fbabaeb8f01664cb0d793533409d280109e16",
+      "resolved_kind": "html-data-catalog",
+      "products": [
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z107SC",
+          "archive_url": "http://pubs.usgs.gov/ds/781/video_observations/data//z107sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z107sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise SW109SC",
+          "archive_url": "http://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/sw109sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (Fugro), Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/Backscatter_Fugro_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/Backscatter_Fugro_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (USGS07), Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/Backscatter_USGS07_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/Backscatter_USGS07_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (USGS08), Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/Backscatter_USGS08_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/Backscatter_USGS08_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry, Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/Bathymetry_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/Bathymetry_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/Habitat_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/Habitat_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore Of Gaviota map area",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/SeafloorCharacter_OffshoreGaviota.zip",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/SeafloorCharacter_OffshoreGaviota_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Point Sur to Point Arguello Region",
+      "catalog_url": "https://doi.org/10.5066/P97CZ0T7",
+      "report_url": "https://doi.org/10.3133/ofr20181158",
+      "catalog_kind": "external-release",
+      "planning_sector_ids": [
+        "big-sur",
+        "sur-san-simeon",
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "resolved_url": "https://cmgds.marine.usgs.gov/data/csmp/PointSurToPointArguello/data_catalog_PointSurToPointArguello.html",
+      "catalog_sha256": "2e5e671eaa2d9d298245cae386bd6f452d7ff793e8d64fc64bf527fbad2d9f45",
+      "resolved_kind": "html-data-catalog",
+      "products": [],
+      "priority_product_status": "none-in-this-release"
+    },
+    {
+      "name": "Santa Barbara Channel",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/SantaBarbaraChannel/data_catalog_SantaBarbaraChannel.html",
+      "report_url": null,
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura",
+        "ventura-los-angeles"
+      ],
+      "catalog_sha256": "c88bc11ca611af101c07005d719bc08b8c1feda614de43afce876f323ce4f821",
+      "products": [],
+      "priority_product_status": "none-in-this-catalog"
+    },
+    {
+      "name": "Offshore of Refugio Beach",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data_catalog_OffshoreRefugioBeach.html",
+      "report_url": "https://pubs.usgs.gov/sim/3319/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "catalog_sha256": "cdfc42b3a17b1b240be061d24593ba6f01afb8fc341ce8783ac5ff1ac8a389ef",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Refugio Beach map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data/Backscatter_OffshoreRefugioBeach.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/metadata/Backscatter_OffshoreRefugioBeach_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Refugio Beach map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data/Bathymetry_OffshoreRefugioBeach.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/metadata/Bathymetry_OffshoreRefugioBeach_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Refugio Beach map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data/Habitat_OffshoreRefugioBeach.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/metadata/Habitat_OffshoreRefugioBeach_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Refugio Beach map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data/SeafloorCharacter_OffshoreRefugioBeach.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/metadata/SeafloorCharacter_OffshoreRefugioBeach_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Coal Oil Point",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data_catalog_OffshoreCoalOilPoint.html",
+      "report_url": "https://pubs.usgs.gov/sim/3302/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "catalog_sha256": "c4cd1a8d7f355f2f1562c13669b75994925dccab2d8c49b8f3fcce7dfe934667",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter, CSUMB, (2m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/BackscatterA_CSUMB_OffshoreCoalOilPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/BackscatterA_CSUMB_OffshoreCoalOilPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter, USGS (2m/pixel, 5m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/BackscatterB_USGS_OffshoreCoalOilPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/BackscatterB_USGS_OffshoreCoalOilPoint_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter, Fugro (2m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/BackscatterC_Fugro_OffshoreCoalOilPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/BackscatterC_Fugro_OffshoreCoalOilPoint_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel, 5m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/Bathymetry_OffshoreCoalOilPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/Bathymetry_OffshoreCoalOilPoint_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/Habitat_OffshoreCoalOilPoint.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/Habitat_OffshoreCoalOilPoint_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/SeafloorCharacter_OffshoreCoalOilPoint_2m.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/SeafloorCharacter_OffshoreCoalOilPoint_2m_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (5m/pixel), Offshore of Coal Oil Point map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/SeafloorCharacter_OffshoreCoalOilPoint_5m.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/metadata/SeafloorCharacter_OffshoreCoalOilPoint_5m_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise SW109SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/sw109sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z107SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z107sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z206SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z206sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Santa Barbara",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data_catalog_OffshoreSantaBarbara.html",
+      "report_url": "https://pubs.usgs.gov/sim/3281/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "catalog_sha256": "6faa1a2b650418b6071b87b60b4301ce9acce184ad4c3e4320670eafd46d79a7",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Santa Barbara map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/BackscatterA_CSUMB_OffshoreSantaBarbara.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/metadata/BackscatterA_CSUMB_OffshoreSantaBarbara_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), Offshore of Santa Barbara map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/BackscatterB_USGS_OffshoreSantaBarbara.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/metadata/BackscatterB_USGS_OffshoreSantaBarbara_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Santa Barbara map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/Bathymetry_OffshoreSantaBarbara.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/metadata/Bathymetry_OffshoreSantaBarbara_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Santa Barbara map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/Habitat_OffshoreSantaBarbara.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/metadata/Habitat_OffshoreSantaBarbara_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Santa Barbara map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/SeafloorCharacter_OffshoreSantaBarbara.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/metadata/SeafloorCharacter_OffshoreSantaBarbara_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z206SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z206sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Carpinteria",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data_catalog_OffshoreCarpinteria.html",
+      "report_url": "https://pubs.usgs.gov/sim/3261/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "catalog_sha256": "415ffc12828b912c82dca53ba55fa942b4beea41672747a9f8c1ccdfd3d3de77",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected by CSUMB, reprocessed by USGS, Offshore of Carpinteria map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/BackscatterA_CSUMB_OffshoreCarpinteria.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/metadata/BackscatterA_CSUMB_OffshoreCarpinteria_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected and processed by USGS, Offshore of Carpinteria map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/BackscatterB_USGS_OffshoreCarpinteria.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/metadata/BackscatterB_USGS_OffshoreCarpinteria_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Carpinteria map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/Bathymetry_OffshoreCarpinteria.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/metadata/Bathymetry_OffshoreCarpinteria_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Carpinteria map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/Habitat_OffshoreCarpinteria.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/metadata/Habitat_OffshoreCarpinteria_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Carpinteria map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/SeafloorCharacter_OffshoreCarpinteria.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/metadata/SeafloorCharacter_OffshoreCarpinteria_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z206SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z206sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Offshore of Ventura",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data_catalog_OffshoreVentura.html",
+      "report_url": "https://pubs.usgs.gov/sim/3254/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura"
+      ],
+      "catalog_sha256": "409406c8a9144d83fc32664f684086f6e5743420e1eb96985d48481922ebeac2",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected by CSUMB, reprocessed by USGS, Offshore of Ventura map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/BackscatterA_CSUMB_OffshoreVentura.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/metadata/BackscatterA_CSUMB_OffshoreVentura_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected and processed by USGS, Offshore of Ventura map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/BackscatterB_USGS_OffshoreVentura.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/metadata/BackscatterB_USGS_OffshoreVentura_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Offshore of Ventura map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/Bathymetry_OffshoreVentura.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/metadata/Bathymetry_OffshoreVentura_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Offshore of Ventura map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/Habitat_OffshoreVentura.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/metadata/Habitat_OffshoreVentura_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Offshore of Ventura map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/SeafloorCharacter_OffshoreVentura.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/metadata/SeafloorCharacter_OffshoreVentura_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise SW109SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/sw109sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z206SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z206sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    },
+    {
+      "name": "Hueneme Canyon and Vicinity",
+      "catalog_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data_catalog_HuenemeCanyon.html",
+      "report_url": "https://pubs.usgs.gov/sim/3225/",
+      "catalog_kind": "ds781-html",
+      "planning_sector_ids": [
+        "conception-ventura",
+        "ventura-los-angeles"
+      ],
+      "catalog_sha256": "ea418803293d181973dbbe552eac895f333c247f263baafec06c4cbade1aabb3",
+      "products": [
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected by CSUMB, reprocessed by USGS, Hueneme Canyon and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/BackscatterA_CSUMB_HuenemeCanyon.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/metadata/BackscatterA_CSUMB_HuenemeCanyon_metadata.txt"
+        },
+        {
+          "kind": "backscatter",
+          "description": "Backscatter (2m/pixel), collected and processed by USGS, Hueneme Canyon and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/BackscatterB_USGS_HuenemeCanyon.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/metadata/BackscatterB_USGS_HuenemeCanyon_metadata.txt"
+        },
+        {
+          "kind": "bathymetry",
+          "description": "Bathymetry (2m/pixel), Hueneme Canyon and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/Bathymetry_HuenemeCanyon.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/metadata/Bathymetry_HuenemeCanyon_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Habitat, Hueneme Canyon and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/Habitat_HuenemeCanyon.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/metadata/Habitat_HuenemeCanyon_metadata.txt"
+        },
+        {
+          "kind": "seafloor-character",
+          "description": "Seafloor Character (2m/pixel), Hueneme Canyon and Vicinity map area",
+          "archive_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/SeafloorCharacter_HuenemeCanyon.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/metadata/SeafloorCharacter_HuenemeCanyon_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise S1C08SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/s1c08sc_video_observations_metadata.txt"
+        },
+        {
+          "kind": "habitat",
+          "description": "Visual observations of benthic habitat from video USGS Cruise Z107SC",
+          "archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+          "metadata_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/z107sc_video_observations_metadata.txt"
+        }
+      ],
+      "priority_product_status": "linked"
+    }
+  ]
+}

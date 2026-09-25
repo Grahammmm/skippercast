@@ -18,6 +18,7 @@ def compile_readiness(root=REPO):
     seabed_samples = read_json(root / 'dist/data/noaa-seabed-samples-sector-review.json')
     csumb_series = [read_json(root / f'catalog/csumb-{series}-source-leads.json')
                     for series in ('scc', 'bss')]
+    usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -51,6 +52,20 @@ def compile_readiness(root=REPO):
     seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
     expected = {row['id'] for row in sectors}
     csumb_by_sector = {ident: set() for ident in expected}
+    usgs_by_sector = {ident: [] for ident in expected}
+    if len(usgs_map_areas.get('map_areas', [])) < 35:
+        raise ValueError('USGS DS 781 map-area source inventory is incomplete')
+    for area in usgs_map_areas['map_areas']:
+        for sector_id in area['planning_sector_ids']:
+            if sector_id not in usgs_by_sector:
+                raise ValueError('USGS map-area lead has unknown planning sector')
+            usgs_by_sector[sector_id].append({
+                'name': area['name'], 'catalog_url': area['catalog_url'],
+                'priority_product_status': area['priority_product_status'],
+                'bathymetry_product_links': sum(p['kind'] == 'bathymetry' for p in area.get('products', [])),
+                'seafloor_character_product_links': sum(p['kind'] == 'seafloor-character' for p in area.get('products', [])),
+                'habitat_product_links': sum(p['kind'] == 'habitat' for p in area.get('products', [])),
+            })
     for series, packet in zip(('scc', 'bss'), csumb_series):
         if packet.get('series') != series or packet.get('survey_count') != len(packet.get('surveys', [])):
             raise ValueError(f'CSUMB {series} source-lead roster is incomplete')
@@ -108,6 +123,11 @@ def compile_readiness(root=REPO):
         if csumb_by_sector[ident] and not (source_leads or candidate_files or variable_files or regular_files):
             next_step = ('Inspect the original CSUMB survey archives, per-file metadata and measured-cell masks; '
                          'then reconcile chart datum, uncertainty, substrate, MPAs, hazards, route and rules before any target.')
+        if (not (source_leads or candidate_files or variable_files or regular_files or csumb_by_sector[ident])
+                and any(area['bathymetry_product_links'] or area['seafloor_character_product_links']
+                        for area in usgs_by_sector[ident])):
+            next_step = ('Open the linked USGS original grid and metadata for this planning area; verify measured-cell footprint, '
+                         'datum, uncertainty and class semantics before any seabed or fishing-target import.')
         if held_files:
             next_step += ' Reconcile held survey hazards before any target promotion.'
         rows.append({
@@ -118,6 +138,7 @@ def compile_readiness(root=REPO):
             'status': 'partial-local-targets' if points else 'source-review-only',
             'noaa_catalog_survey_leads': lead['catalog_survey_leads'],
             'csumb_catalog_survey_lead_ids': sorted(csumb_by_sector[ident]),
+            'usgs_ds781_map_area_leads': sorted(usgs_by_sector[ident], key=lambda area: area['name']),
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
             'native_regular_depth_file_leads': regular_files,
@@ -150,6 +171,7 @@ def compile_readiness(root=REPO):
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
             'CSUMB catalog-report envelopes are discovery leads only; they are not measured-cell footprints or fishing areas.',
+            'USGS DS 781 map-area associations follow broad place names, not inspected original grid footprints. Linked products are acquisition leads, not surveyed area or fishable marks.',
             'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',
         ],
