@@ -24,11 +24,13 @@ class FreshClosureAuditTests(unittest.TestCase):
                         for i in range(100)]
         coastal = {"sources": {"mpas": {"status": status, "data_retrieved_at": stamp,
                    "max_age_hours": 36, "data": {"feature_count": 100,
+                   "source_url": "https://wildlife.ca.gov/mpa-test",
                    "geojson": {"features": mpa_features}}}}}
         features = [{"geometry": square(federal_x, 40.4),
                      "properties": {"area_type": "GEA"}} for _ in range(10)]
         federal = {"scope": "noaa-west-coast-groundfish-conservation-areas",
                    "status": "ok", "retrieved_at": stamp, "feature_count": 10,
+                   "service_url": "https://maps.fisheries.noaa.gov/test",
                    "source_layers": [{} for _ in range(25)], "features": features}
         return queue, context, coastal, federal
 
