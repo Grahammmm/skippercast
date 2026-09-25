@@ -112,6 +112,11 @@ class RegionalContracts(TestCase):
         with self.assertRaisesRegex(ValueError, "Candidate fields"):
             validate_candidate(data)
 
+    def test_original_raster_envelope_preserves_nodata_caveat(self):
+        data = read_json(REPO / "catalog/candidates/usgs-offshore-aptos-original-grids.json")
+        self.assertEqual(data["spatial"]["footprint_kind"], "native-raster-envelope-with-nodata")
+        self.assertFalse(validate_candidate(data)["publication_approved"])
+
     def test_all_tiles_have_original_source_identity_and_measured_center(self):
         import base64, hashlib, struct
         index=read_json(REPO/"dist/regions/morro-bay/bottom/index.json")

@@ -72,7 +72,7 @@ def validate_candidate(data, root=REPO):
         raise ValueError("Resolution must be a positive number or null")
     for key in ("horizontal_crs", "vertical_datum"):
         text(spatial[key], key, nullable=True)
-    if spatial.get("footprint_kind", "unknown") not in {"catalog-envelope", "survey-track-envelope", "valid-cell-envelope", "valid-data-mask", "measured-geometry", "unknown"}:
+    if spatial.get("footprint_kind", "unknown") not in {"catalog-envelope", "survey-track-envelope", "native-raster-envelope-with-nodata", "valid-cell-envelope", "valid-data-mask", "measured-geometry", "unknown"}:
         raise ValueError("Unknown footprint interpretation")
     if spatial.get("resolution_basis", "unknown") not in {"advertised", "inspected", "unknown"}:
         raise ValueError("Unknown resolution basis")

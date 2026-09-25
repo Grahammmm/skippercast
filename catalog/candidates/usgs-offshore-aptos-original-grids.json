@@ -42,6 +42,7 @@
     "All four original archives and their actual GeoTIFF masks were opened and SHA-256 pinned, but a raster envelope is not continuously measured seafloor.",
     "The original 2 m value table identifies 156,741 pixels as video-supervised rugose rock/boulder class across several depth and slope zones. These pixels are correlated modeled substrate, not 156,741 reefs or fishing spots.",
     "NAVD88 source elevation cannot be compared directly to the 200-foot MLLW fishing limit. Product uncertainty and exact chart-datum transformation have not been reviewed.",
+    "All nine intersecting NOAA Modeling tiles were hash-checked; none has a pixel that passes the configured measured MLLW depth, age and uncertainty screen. This bounded negative result does not prove that no other original survey covers Aptos.",
     "Current MPAs, federal closures, charted hazards, approach, species-specific rules, fish evidence and safe route remain separate target-promotion gates. Do not score or export this source as fishing marks."
   ],
   "producer": {
@@ -51,7 +52,8 @@
   "variables": ["NAVD88 bathymetry elevation", "video-supervised categorical substrate", "original slope and depth zones"],
   "units": {
     "NAVD88 bathymetry elevation": "m source elevation",
-    "video-supervised categorical substrate": "original VALUE plus VAT SUBSTRATE and SUBST_DESC fields"
+    "video-supervised categorical substrate": "original VALUE plus VAT SUBSTRATE and SUBST_DESC fields",
+    "original slope and depth zones": "categorical original raster value codes"
   },
   "provenance": {
     "access_service": "USGS California State Waters original data catalog",
@@ -59,6 +61,7 @@
     "transformations": [
       "Downloaded four original USGS archives and inspected every valid native GeoTIFF pixel without filling nodata.",
       "Read and SHA-256-pinned original raster value tables; required each class-table count to equal the actual native class-pixel count.",
+      "Nearest-neighbor screened the explicit original rugose-rock values 3, 13 and 53 against all nine intersecting NOAA MLLW Modeling tiles; zero pixels passed the measured-depth and uncertainty screen.",
       "Published only a source review, not class-pixel coordinates or derivative fishing geometry."
     ]
   }

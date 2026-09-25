@@ -434,6 +434,30 @@ jobs:
           --block-id OffshoreAptos
           --output var/review/usgs-offshore-aptos-native-audit.json
           --verify dist/data/usgs-offshore-aptos-native-audit.json
+      - name: Recheck Aptos original rock against all nine intersecting NOAA MLLW tiles
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/screen_usgs_map_nbs_overlap.py
+          --audit var/review/usgs-offshore-aptos-native-audit.json
+          --metadata var/review/usgs-map-metadata.json
+          --block-id OffshoreAptos
+          --archive-sha256 9fcab31d296bcf75c26c3aa937fe7fff190f0365299b6a287f76e93694dbcead
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --nbs-cache var/nbs-cache
+          --usgs-cache var/usgs-native-cache
+          --fetch
+          --output var/review/usgs-offshore-aptos-noaa-mllw-overlap-review.json
+          --verify dist/data/usgs-offshore-aptos-noaa-mllw-overlap-review.json
+      - name: Upload unpublished Aptos native and measured-depth receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-aptos-original-and-noaa-depth-review
+          path: |
+            var/review/usgs-offshore-aptos-native-audit.json
+            var/review/usgs-offshore-aptos-noaa-mllw-overlap-review.json
+          retention-days: 30
       - name: Discover newer USGS DOI source links
         run: python scripts/discover_usgs_doi_releases.py --output var/review/usgs-doi-releases.json
       - name: Review newer USGS original metadata

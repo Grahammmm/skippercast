@@ -143,9 +143,10 @@
         "footprint_kind": {
           "enum": [
             "catalog-envelope",
-          "survey-track-envelope",
-          "valid-cell-envelope",
-          "valid-data-mask",
+            "survey-track-envelope",
+            "native-raster-envelope-with-nodata",
+            "valid-cell-envelope",
+            "valid-data-mask",
             "measured-geometry",
             "unknown"
           ]

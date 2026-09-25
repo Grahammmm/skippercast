@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "scope": "usgs-map-original-rock-versus-noaa-measured-mllw",
+  "reviewed_at": "2026-09-25T10:06:47.705866+00:00",
+  "block_id": "OffshoreAptos",
+  "original_archive_sha256": "9fcab31d296bcf75c26c3aa937fe7fff190f0365299b6a287f76e93694dbcead",
+  "original_metadata_sha256": "bee0fe7a6c2b007d4b3111c58870f973f9164a45d331c5816ca3294bd3ad1eb1",
+  "original_class_table_sha256": "2f4ce117fb3cd7def343884d0a20ac00d3003b7122933a88776904b611b2c447",
+  "original_rugose_rock_values": [
+    3,
+    13,
+    53
+  ],
+  "noaa_scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "original_raster_envelope_wgs84": [
+    -122.0054874,
+    36.8392865,
+    -121.7988012,
+    37.0042721
+  ],
+  "tile_count": 9,
+  "tiles": [
+    {
+      "tile": "BH44N5CN",
+      "raster_sha256": "f44f534b255e91cc1d8f677f68f3a9ba47c03d8eb1dcd53b1ed74f0d22b992eb",
+      "rat_sha256": "dbe25418cb7ae7f36565417d4d7874b41b148d517f668347ff413ef932aad156",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 1361,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44N5CP",
+      "raster_sha256": "55d8c13b4f1fe1f598e7980524e396d44d881fb10ca43275f34eb2aa867b8d25",
+      "rat_sha256": "06a6a924d846c7b39de43cebab676efafbc0f6f4a910df93cc620c34abe45eda",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 32018,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44N5CQ",
+      "raster_sha256": "2b37d39f7cf0e5ca316d6905edc8cb04ddca48d89f174635a321690b367100ff",
+      "rat_sha256": "82b4043b8cc911d54aba6dda58f5626aaa94992f3243b187ce15890636af065e",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 0,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44P5CN",
+      "raster_sha256": "1ad34484d775f051ad10e27a0886ad6384d079329b03238c88cefc99f516c994",
+      "rat_sha256": "fc13e7b5fc203e35142a069e5620437c1b27be2b9da220ec1dc773408466c9f1",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 50,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44P5CP",
+      "raster_sha256": "6460ce4bbb39f2fb6d244a097f1c51f330c794458489fe0c54c84eae1249e0da",
+      "rat_sha256": "3665189fcb48b69114e66797764c3ca5e52f2b775458ba5082946028510a4952",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 3729,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44P5CQ",
+      "raster_sha256": "daab8198c8bcc58ed78eb2798983633654392fc44bfdd812c4c0f5b971fb8915",
+      "rat_sha256": "c7865d90f9e790270ab0566548cd32b8d1126f7be9d83179f536c57956180607",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 133,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44Q5CN",
+      "raster_sha256": "1623d9bd20d5854cffdd20078beef5ffa1686d69c79428d2a32dd01a6c4405bb",
+      "rat_sha256": "70698b0bab7b7da6f7966bac4a9294364426cc4198a5fb6251bf70228d5a0170",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 210,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44Q5CP",
+      "raster_sha256": "f338f2db578706441e05c69019f0e250d82aac215b1d9fc9a437465137a8cc81",
+      "rat_sha256": "a90be9b8a546df4fdc5cd5936c24d31adb0d3a3d04a16883813c69af5e5b4b75",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 2291,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    },
+    {
+      "tile": "BH44R5CN",
+      "raster_sha256": "9358e200aff4cc043ce5b88305125464fe4a65755ac1a14841ccc0ac4c32f5ef",
+      "rat_sha256": "43958785edc30f5449462bb2ebec3fd26eded0be3967084780efc170d7cf8b74",
+      "qualified_measured_mllw_pixels": 0,
+      "original_rock_class_pixels_at_tile_centers": 0,
+      "strict_measured_rock_overlap_pixels": 0,
+      "source_survey_contributors": []
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Original video-supervised substrate classes are historical and correlated with their source sonar; rock-class pixels are not distinct reefs.",
+    "NOAA Modeling is a test-and-evaluation product; only measured MLLW contributors with product uncertainty and the configured depth margin pass the screen.",
+    "Tiles and source envelopes overlap and contain masked water. Pixel counts are not unique fishable acreage or a catch score.",
+    "This screen does not check current MPAs, federal restrictions, chart hazards, routes, access, species rules or fish presence."
+  ]
+}

@@ -171,6 +171,11 @@ def main():
     assert aptos['product_count'] == aptos['inspected_count'] == 4
     assert aptos['fishing_target'] is False and aptos['exportable'] is False
     assert all(row['status'] == 'ok' for row in aptos['products'])
+    aptos_depth = json.loads((WEB / 'data/usgs-offshore-aptos-noaa-mllw-overlap-review.json').read_text())
+    assert aptos_depth['tile_count'] == len(aptos_depth['tiles']) == 9
+    assert aptos_depth['fishing_target'] is False and aptos_depth['exportable'] is False
+    assert all(tile['qualified_measured_mllw_pixels'] == 0 and
+               tile['strict_measured_rock_overlap_pixels'] == 0 for tile in aptos_depth['tiles'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
