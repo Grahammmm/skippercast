@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "cape-mendocino-h11975",
+      "survey_id": "H11975",
+      "context_scope": "northern-native-noaa-usgs-hard-bottom-context",
+      "depth_scope": "h11975-research-outline-original-depth-distributions",
+      "enc_scope": "cape-mendocino-hard-context",
+      "expected_outlines": 121,
+      "expected_joined_cells_after_exclusions": 12433583,
+      "review_buffer_m": 100,
+      "minimum_display_area_m2": 4000,
+      "minimum_sampled_relief_5_95_m": 2,
+      "minimum_sampled_median_depth_ft": 40,
+      "maximum_screened_depth_ft": 200,
+      "species_context": ["rockfish", "lingcod"],
+      "status": "research-priority-only"
+    }
+  ]
+}

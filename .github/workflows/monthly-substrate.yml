@@ -116,6 +116,13 @@ jobs:
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-cape-mendocino.geojson --context dist/data/cape-mendocino-native-hard-context.geojson --output var/review/cape-mendocino-enc-context-review.json
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-point-conception.geojson --context dist/data/point-conception-native-hard-context.geojson --output var/review/point-conception-enc-context-review.json
           python scripts/audit_enc_context_overlap.py --enc var/review/enc-hazards-gaviota.geojson --context dist/data/gaviota-native-hard-context.geojson --output var/review/gaviota-enc-context-review.json
+      - name: Rebuild unpublished Cape Mendocino original-habitat site-review queue
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/triage_original_habitat_outlines.py
+          --enc var/review/cape-mendocino-enc-context-review.json
+          --output var/review/cape-mendocino-original-habitat-site-review-queue.json
       - name: Refresh all three Bodega original-rock chart-danger scopes
         run: |
           python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/review/point-reyes-tomales-enc-current.geojson

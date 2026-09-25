@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope_id": "cape-mendocino-hard-context",
-  "enc_checked_at": "2026-09-24T21:46:28.086555+00:00",
+  "enc_checked_at": "2026-09-25T15:42:13.104474+00:00",
   "source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
   "queried_layers": 18,
   "charted_danger_features": 890,
@@ -216,5 +216,5 @@
   ],
   "status": "research-screen-only",
   "limitations": "No target or route is cleared. ENC Direct is not certified for navigation. The nearest charted feature need not be the same object as a historical DTON. Scope clips and incomplete danger classes cannot certify an area free of hazards. Separate current MPA/special-closure, fishing-rule, source-rights and original-cell review remain required.",
-  "audited_at": "2026-09-24T21:46:44.818683+00:00"
+  "audited_at": "2026-09-25T15:43:29.173931+00:00"
 }
