@@ -10,7 +10,7 @@ def settings(region_id="morro-bay", root=REPO):
     needs={"sst":"sea-temperature","chlorophyll":"chlorophyll","currents":"surface-currents"}
     for kind, ident in region["pipeline_sources"].items():
         source=sources[ident]
-        adapters = {"sst": {"erddap-grid", "noaa-ncss-sst"}, "chlorophyll": {"erddap-grid", "noaa-ncss-chlorophyll"}, "currents": {"erddap-grid"}}
+        adapters = {"sst": {"erddap-grid", "noaa-ncss-sst"}, "chlorophyll": {"erddap-grid", "noaa-ncss-chlorophyll"}, "currents": {"erddap-grid", "noaa-ncss-hfr"}}
         if ident not in region["source_bindings"][needs[kind]] or source["review_status"]!="approved" or source["adapter"] not in adapters[kind]:
             raise ValueError("Scheduled grid requires a reviewed, compatible regional binding")
         request=source["request"]

@@ -175,6 +175,7 @@
       "noaa-tides"
     ],
     "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
       "noaa-hfr-thredds",
       "noaa-wcofs",
       "ioos-hfr"
@@ -349,7 +350,7 @@
   "pipeline_sources": {
     "sst": "noaa-blended-sst",
     "chlorophyll": "noaa-viirs-merged-chlorophyll",
-    "currents": "ioos-hfr"
+    "currents": "noaa-ndbc-hfr-uswc-6km"
   },
   "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/bodega-point-reyes/intelligence.json",
   "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/bodega-point-reyes/habitat-dynamics.json",

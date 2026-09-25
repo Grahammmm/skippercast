@@ -194,6 +194,10 @@ def grid_loader(kind, bounds=None, config=None):
         if kind != "chlorophyll": raise ValueError("NOAA NCSS chlorophyll adapter only supports chlorophyll")
         from .noaa_chlorophyll import fetch
         return lambda client: fetch(client, bounds)
+    if config and config.get("adapter") == "noaa-ncss-hfr":
+        if kind != "currents": raise ValueError("NOAA NCSS HFR adapter only supports currents")
+        from .noaa_hfr import fetch
+        return lambda client: fetch(client, bounds)
     dataset, variables, stride, _ = DATASETS[kind]
     base_url = ERDDAP
     if config:

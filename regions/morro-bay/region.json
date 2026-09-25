@@ -288,6 +288,7 @@
       "noaa-tides"
     ],
     "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
       "noaa-hfr-thredds",
       "noaa-wcofs",
       "ioos-hfr"
@@ -465,7 +466,7 @@
   "pipeline_sources": {
     "sst": "noaa-blended-sst",
     "chlorophyll": "noaa-viirs-merged-chlorophyll",
-    "currents": "ioos-hfr"
+    "currents": "noaa-ndbc-hfr-uswc-6km"
   },
   "intelligence": {
     "hfr_resolutions_km": [

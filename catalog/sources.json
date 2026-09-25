@@ -1682,6 +1682,42 @@
         "dataset": "chlociVIIRSnpp-n20GlobalDailyWW00",
         "max_age_hours": 96
       }
+    },
+    {
+      "id": "noaa-ndbc-hfr-uswc-6km",
+      "name": "NOAA NDBC HFRNet US West Coast hourly 6 km surface currents",
+      "provider": "NOAA IOOS Surface Currents Program / NDBC",
+      "needs": [
+        "surface-currents"
+      ],
+      "documentation_url": "https://ioos.noaa.gov/project/hf-radar/",
+      "adapter": "noaa-ncss-hfr",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-24",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA IOOS Surface Currents Program / NDBC",
+        "terms_url": "https://ioos.noaa.gov/project/hf-radar/"
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Hourly West Coast 6 km near-surface HF-radar vectors; require at least two contributing radars per valid cell.",
+      "limitations": [
+        "Nominal near-surface depth; not bottom current, drift at a reef or harbor bar current.",
+        "Coverage depends on functioning coastal radars and geometry; missing cells stay missing."
+      ],
+      "dataset_id": "hfradar_uswc_6km",
+      "allowed_hosts": [
+        "dods.ndbc.noaa.gov"
+      ],
+      "max_age_hours": 12,
+      "request": {
+        "base_url": "https://dods.ndbc.noaa.gov/thredds",
+        "dataset": "hfradar_uswc_6km",
+        "max_age_hours": 12
+      }
     }
   ]
 }

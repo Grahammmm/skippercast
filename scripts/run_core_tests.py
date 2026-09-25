@@ -24,6 +24,7 @@ GIS_TEST_MODULES = {
     'test_nbs_statewide_camera_tiles',
     'test_noaa_induration_camera',
     'test_noaa_chlorophyll',
+    'test_noaa_hfr',
     'test_noaa_sst',
     'test_original_camera_chart_lead',
     'test_original_class_nbs_tiles',
