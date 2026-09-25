@@ -1,1 +1,1 @@
-{"region_id":"point-arena-bodega","generated_at":"2026-09-25T14:55:36Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":66,"sources_total":67,"issues":["currents"]}
+{"region_id":"point-arena-bodega","generated_at":"2026-09-25T15:16:32Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":64,"sources_total":67,"issues":["sst","chlorophyll","currents"]}
