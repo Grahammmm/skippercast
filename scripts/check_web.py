@@ -72,6 +72,16 @@ def check_central_sediment_context():
 
 def main():
     assert (WEB / "index.html").is_file()
+    induration = json.loads((WEB / 'data/h11967-noaa-induration-camera-review.json').read_text())
+    chart = json.loads((WEB / 'data/h11967-enc-camera-research-screen.json').read_text())
+    assert induration['scope'] == 'original-bag-camera-versus-noaa-2017-induration-research'
+    assert induration['survey_id'] == 'H11967' and induration['camera_windows_checked'] == 18
+    assert induration['source_context_sha256'] == chart['candidate_research_context_sha256']
+    assert sum(induration['class_counts'].values()) == len(induration['rows']) == 18
+    assert sum(induration['quality_counts'].values()) == 18
+    assert induration['fishing_target'] is False and induration['exportable'] is False
+    assert all('coordinates' not in row and 'longitude' not in row and 'latitude' not in row
+               for row in induration['rows'])
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     sectors = json.loads((WEB / 'data/coastal-sectors.json').read_text())['sectors']
     assert len(readiness['sectors']) == len(sectors) == 19

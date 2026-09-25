@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "scope": "original-bag-camera-versus-noaa-2017-induration-research",
+  "checked_at": "2026-09-25T00:52:01+00:00",
+  "survey_id": "H11967",
+  "source_context_sha256": "7623f045b24c61df68de325c223184478fede1e983fd6863bbf3871c33ab2780",
+  "source_reconciliation_sha256": "023bc0f44f4341754116eb48a5e5e73021a64fbb97df6a9123338244e03dbf10",
+  "service_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer",
+  "service_metadata_sha256": "1f2b0823a4919fd1a0c399a353fd172a319cd42a5ec0261446558d2b741892a9",
+  "service_legend_sha256": "2a7a6c1a73a85e897542750aca0dbcbb6358f70b153b591fdeb003d4fe49fdc5",
+  "class_code_probe_receipts": [
+    {
+      "expected_class": "hard",
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "expected_class": "mixed",
+      "response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158"
+    },
+    {
+      "expected_class": "soft",
+      "response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652"
+    }
+  ],
+  "camera_windows_checked": 18,
+  "source_2017_cell_m": 25,
+  "class_counts": {
+    "soft": 2,
+    "hard": 14,
+    "mixed": 2
+  },
+  "quality_counts": {
+    "6.2": 18
+  },
+  "rows": [
+    {
+      "source_window_id": "H11967-camera-window-1",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652"
+    },
+    {
+      "source_window_id": "H11967-camera-window-2",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-3",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-4",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-5",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-6",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-7",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-8",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-9",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-10",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-11",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158"
+    },
+    {
+      "source_window_id": "H11967-camera-window-12",
+      "sample": {
+        "induration_code": 2,
+        "induration": "mixed",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "92af19b28cc9112168f1febbd3c80b3ba58e62fc3c956e13120ff030873bc158"
+    },
+    {
+      "source_window_id": "H11967-camera-window-13",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-14",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-15",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-16",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-17",
+      "sample": {
+        "induration_code": 1,
+        "induration": "hard",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "1622e8b75c608636c7169c32cd40e0f191c69b23685cdd87e2fb1d6f9b49e3c1"
+    },
+    {
+      "source_window_id": "H11967-camera-window-18",
+      "sample": {
+        "induration_code": 3,
+        "induration": "soft",
+        "data_quality_code": 62,
+        "data_quality_of_10": 6.2
+      },
+      "response_sha256": "04391e523e56cdd837bb21f913158cd8e0f0d15fd3608252edf627ebd76bb652"
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Camera windows on one historical transect are correlated observations, not separate fishing spots.",
+    "The 2017 25 m composite may reuse the same sonar or video source and is not necessarily independent measurement.",
+    "NOAA source quality is not SkipperCast fishing quality, fish presence or catch probability.",
+    "Cell boundaries and historical camera position error can change a point classification.",
+    "Original survey holidays, charted and uncharted hazards, complete closures, local rules and approach remain unqualified."
+  ]
+}

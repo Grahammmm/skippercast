@@ -160,6 +160,66 @@ def audit_samples(source, manifest, cache, sectors, *, fetch=fetch_json):
             "fishing_target": False, "exportable": False}
 
 
+def audit_qualified_context(context, context_bytes, reconciliation, chart_screen, *, fetch=fetch_json):
+    """Cross-check original-grid-screened camera windows against NOAA classes.
+
+    Keep input coordinates in the private review cache. The public result has
+    only evidence IDs and aggregate classes, never new fishing coordinates.
+    """
+    expected = next((row['historical_camera_windows'] for row in reconciliation['comparison']
+                     if row['nbs_status'] == 'locally_qualified_90pct'
+                     and row['original_bag_status'] == 'original_locally_qualified_90pct'), None)
+    survey = reconciliation['original_survey_id']
+    features = context.get('features', [])
+    if (context.get('scope') != 'unpublished-historical-camera-window-research'
+            or context.get('fishing_target') is not False or context.get('exportable') is not False
+            or reconciliation.get('fishing_target') is not False
+            or chart_screen.get('survey_id') != survey
+            or chart_screen.get('candidate_research_context_sha256') != hashlib.sha256(context_bytes).hexdigest()
+            or chart_screen.get('original_grid_qualified_historical_camera_windows_checked') != expected
+            or not isinstance(expected, int) or expected < 1 or len(features) != expected):
+        raise ValueError('Original-grid camera context or pinned chart receipt changed')
+    metadata, metadata_sha = fetch(SERVICE + '?f=pjson')
+    legend, legend_sha = fetch(SERVICE + '/legend?f=pjson')
+    validate_service(metadata, legend)
+    probes = verify_class_codes(fetch)
+    rows = []
+    for feature in features:
+        props = feature.get('properties', {})
+        if (feature.get('geometry', {}).get('type') != 'Point' or props.get('survey_id') != survey
+                or props.get('fishing_target') is not False or props.get('exportable') is not False):
+            raise ValueError('Unreviewed camera research feature')
+        lon, lat = feature['geometry']['coordinates']
+        response, digest = fetch(identify_url(lon, lat))
+        sample = parse_identify(response)
+        if sample is None:
+            raise ValueError('A qualified camera window has no NOAA substrate value')
+        rows.append({'source_window_id': props['id'], 'sample': sample,
+                     'response_sha256': digest})
+    if len({row['source_window_id'] for row in rows}) != expected:
+        raise ValueError('Duplicate camera research window')
+    classes = Counter(row['sample']['induration'] for row in rows)
+    qualities = Counter(str(row['sample']['data_quality_of_10']) for row in rows)
+    return {'schema_version': 1,
+            'scope': 'original-bag-camera-versus-noaa-2017-induration-research',
+            'checked_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'survey_id': survey, 'source_context_sha256': hashlib.sha256(context_bytes).hexdigest(),
+            'source_reconciliation_sha256': hashlib.sha256(json.dumps(reconciliation, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
+            'service_url': SERVICE, 'service_metadata_sha256': metadata_sha,
+            'service_legend_sha256': legend_sha, 'class_code_probe_receipts': probes,
+            'camera_windows_checked': expected, 'source_2017_cell_m': 25,
+            'class_counts': dict(classes),
+            'quality_counts': dict(sorted(qualities.items(), key=lambda item: float(item[0]))),
+            'rows': rows, 'fishing_target': False, 'exportable': False,
+            'limitations': [
+                'Camera windows on one historical transect are correlated observations, not separate fishing spots.',
+                'The 2017 25 m composite may reuse the same sonar or video source and is not necessarily independent measurement.',
+                'NOAA source quality is not SkipperCast fishing quality, fish presence or catch probability.',
+                'Cell boundaries and historical camera position error can change a point classification.',
+                'Original survey holidays, charted and uncharted hazards, complete closures, local rules and approach remain unqualified.'
+            ]}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--review", type=Path, default=Path("dist/data/noaa-statewide-regular-camera-review.json"))
@@ -167,12 +227,26 @@ def main():
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     parser.add_argument("--camera-cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--output", type=Path, default=Path("dist/data/noaa-induration-camera-review.json"))
+    parser.add_argument("--qualified-context", type=Path,
+                        help="Private original-grid-qualified camera GeoJSON for a bounded source review")
+    parser.add_argument("--reconciliation", type=Path)
+    parser.add_argument("--chart-screen", type=Path)
     args = parser.parse_args()
-    result = audit_samples(json.loads(args.review.read_text()), json.loads(args.manifest.read_text()),
-                           args.camera_cache, json.loads(args.sectors.read_text())["sectors"])
+    if args.qualified_context:
+        if not args.reconciliation or not args.chart_screen:
+            raise ValueError('Qualified context needs reconciliation and chart receipts')
+        raw = args.qualified_context.read_bytes()
+        result = audit_qualified_context(json.loads(raw), raw,
+                   json.loads(args.reconciliation.read_text()), json.loads(args.chart_screen.read_text()))
+    else:
+        if args.reconciliation or args.chart_screen:
+            raise ValueError('Reconciliation and chart receipts require a qualified context')
+        result = audit_samples(json.loads(args.review.read_text()), json.loads(args.manifest.read_text()),
+                               args.camera_cache, json.loads(args.sectors.read_text())["sectors"])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(result["sampled_transects"], "historical camera transects sampled;", result["class_counts"])
+    print(result.get("sampled_transects", result.get("camera_windows_checked")),
+          "historical camera records sampled;", result["class_counts"])
 
 
 if __name__ == "__main__":
