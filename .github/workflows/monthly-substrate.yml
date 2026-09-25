@@ -425,6 +425,15 @@ jobs:
           --metadata var/review/usgs-map-metadata.json
           --cache var/usgs-native-cache
           --output var/review/usgs-native-audit.json
+      - name: Recheck exact Aptos native-grid and raster-value-table receipt
+        run: >-
+          python scripts/inspect_usgs_native_grids.py
+          --blocks var/review/usgs-map-blocks.json
+          --metadata var/review/usgs-map-metadata.json
+          --cache var/usgs-native-cache
+          --block-id OffshoreAptos
+          --output var/review/usgs-offshore-aptos-native-audit.json
+          --verify dist/data/usgs-offshore-aptos-native-audit.json
       - name: Discover newer USGS DOI source links
         run: python scripts/discover_usgs_doi_releases.py --output var/review/usgs-doi-releases.json
       - name: Review newer USGS original metadata

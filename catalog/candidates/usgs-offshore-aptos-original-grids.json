@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "usgs-offshore-aptos-original-grids",
+  "name": "Offshore Aptos original 2–5 m bathymetry and video-supervised seafloor character",
+  "sector_ids": ["pigeon-monterey"],
+  "need_ids": ["bathymetry", "substrate"],
+  "documentation_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data_catalog_OffshoreAptos.html",
+  "access_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BathymetryA_USGS_OffshoreAptos.zip",
+  "access_status": "accessible",
+  "rights": {
+    "license": "Original product metadata explicitly says USGS public-domain and freely redistributable with attribution",
+    "terms_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BathymetryA_USGS_OffshoreAptos_metadata.xml",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-122.0054877, 36.8392594, -121.7988012, 37.0042721],
+    "resolution_m": 2,
+    "resolution_basis": "inspected",
+    "horizontal_crs": "Original GeoTIFF projected CRS; see per-product native audit",
+    "vertical_datum": "NAVD88 declared in original FGDC metadata; not converted to MLLW",
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/BathymetryA_USGS_OffshoreAptos.zip"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T09:50:42.443340+00:00",
+    "update_cadence": "Historical original products; monthly source, metadata and class-table review",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/BathymetryA_USGS_OffshoreAptos_metadata.xml",
+      "supports": "Original FGDC XML declares 2 m horizontal spacing, NAVD88 vertical datum and explicit public-domain redistribution with attribution."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/metadata/SeafloorCharacter_2m_OffshoreAptos_metadata.xml",
+      "supports": "Original FGDC XML defines video-supervised seafloor-character classes and separately declares original product reuse terms."
+    }
+  ],
+  "limitations": [
+    "All four original archives and their actual GeoTIFF masks were opened and SHA-256 pinned, but a raster envelope is not continuously measured seafloor.",
+    "The original 2 m value table identifies 156,741 pixels as video-supervised rugose rock/boulder class across several depth and slope zones. These pixels are correlated modeled substrate, not 156,741 reefs or fishing spots.",
+    "NAVD88 source elevation cannot be compared directly to the 200-foot MLLW fishing limit. Product uncertainty and exact chart-datum transformation have not been reviewed.",
+    "Current MPAs, federal closures, charted hazards, approach, species-specific rules, fish evidence and safe route remain separate target-promotion gates. Do not score or export this source as fishing marks."
+  ],
+  "producer": {
+    "name": "U.S. Geological Survey California Seafloor Mapping Program",
+    "url": "https://pubs.usgs.gov/ds/781/"
+  },
+  "variables": ["NAVD88 bathymetry elevation", "video-supervised categorical substrate", "original slope and depth zones"],
+  "units": {
+    "NAVD88 bathymetry elevation": "m source elevation",
+    "video-supervised categorical substrate": "original VALUE plus VAT SUBSTRATE and SUBST_DESC fields"
+  },
+  "provenance": {
+    "access_service": "USGS California State Waters original data catalog",
+    "raw_sha256": "307c13ac6c827f0367f99557f01aa4c5b047cb2ec3543f774b2124e580a99e15",
+    "transformations": [
+      "Downloaded four original USGS archives and inspected every valid native GeoTIFF pixel without filling nodata.",
+      "Read and SHA-256-pinned original raster value tables; required each class-table count to equal the actual native class-pixel count.",
+      "Published only a source review, not class-pixel coordinates or derivative fishing geometry."
+    ]
+  }
+}

@@ -43,6 +43,8 @@ class AtlasReadinessTests(unittest.TestCase):
                           row['accessible_inspected_fine_source_candidate_ids'])
             self.assertEqual(row['published_candidate_points_in_band'], 0)
             self.assertIn('chart datum and uncertainty', row['next_source_step'])
+        self.assertIn('usgs-offshore-aptos-original-grids',
+                      by_sector['pigeon-monterey']['accessible_inspected_fine_source_candidate_ids'])
         for row in report['sectors']:
             self.assertIn(row['status'], {'source-review-only', 'partial-local-targets'})
             self.assertEqual(bool(row['published_candidate_points_in_band']),

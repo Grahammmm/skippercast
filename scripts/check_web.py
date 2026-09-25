@@ -167,6 +167,10 @@ def main():
     assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
     assert all('fgdc_metadata_reviewed' in lead for row in readiness['sectors']
                for lead in row['usgs_ds781_map_area_leads'])
+    aptos = json.loads((WEB / 'data/usgs-offshore-aptos-native-audit.json').read_text())
+    assert aptos['product_count'] == aptos['inspected_count'] == 4
+    assert aptos['fishing_target'] is False and aptos['exportable'] is False
+    assert all(row['status'] == 'ok' for row in aptos['products'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
