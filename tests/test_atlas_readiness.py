@@ -17,6 +17,9 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertEqual({row['sector_id'] for row in report['sectors']},
                          {row['id'] for row in source['sectors']})
         self.assertEqual(len(report['sectors']), 19)
+        by_sector = {row['sector_id']: row for row in report['sectors']}
+        self.assertEqual(by_sector['del-norte']['native_variable_depth_file_leads'], 2)
+        self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
         for row in report['sectors']:
             self.assertIn(row['status'], {'source-review-only', 'partial-local-targets'})
             self.assertEqual(bool(row['published_candidate_points_in_band']),
@@ -32,7 +35,7 @@ class AtlasReadinessTests(unittest.TestCase):
             root = Path(work)
             for relative in ('dist/data/coastal-sectors.json',
                              'dist/data/noaa-native-sector-review.json',
-                             'dist/data/noaa-vr-native-depth-review.json',
+                             'dist/data/noaa-vr-native-depth-expanded-review.json',
                              'dist/data/noaa-regular-native-depth-review.json',
                              'dist/data/noaa-survey-discovery.json',
                              'dist/regions/index.json'):

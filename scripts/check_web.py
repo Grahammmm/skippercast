@@ -51,6 +51,32 @@ def check_native_depth_review(name, scope):
             assert row[key] == value, (name, row['sector_id'], key)
 
 
+def check_expanded_native_depth_inventory():
+    name = 'noaa-vr-native-depth-expanded-review.json'
+    data = json.loads((WEB / 'data' / name).read_text())
+    manifest = json.loads((ROOT / 'catalog/noaa-vr-native-review-sources.json').read_text())
+    assert manifest['scope'] == 'california-original-vr-depth-review-inputs'
+    reviews = [json.loads((ROOT / path).read_text()) for path in manifest['review_files']]
+    sectors = json.loads((WEB / 'data/coastal-sectors.json').read_text())['sectors']
+    assert data['scope'] == 'california-expanded-original-vr-depth-inventory'
+    assert data['source_review_count'] == len(reviews)
+    assert data['survey_file_count'] == len(data['files']) == sum(r['survey_file_count'] for r in reviews)
+    assert data['fishing_target'] is False and data['exportable'] is False
+    assert {row['sector_id'] for row in data['sectors']} == {row['id'] for row in sectors}
+    assert len({row['bag_url'] for row in data['files']}) == len(data['files'])
+    assert {row['bag_url'] for row in data['files']} == {
+        file['bag_url'] for review in reviews for file in review['files']}
+    for row in data['sectors']:
+        contributors = [source for source in data['files'] if source['sectors'].get(
+            row['sector_id'], {}).get('depth_uncertainty_eligible_cells', 0) > 0]
+        assert row['survey_ids_with_eligible_cells'] == sorted({s['survey_id'] for s in contributors})
+        assert row['source_files_with_eligible_cells'] == len(contributors)
+        for key in ('fine_native_grids', 'measured_native_cells',
+                    'depth_uncertainty_eligible_cells'):
+            assert row[key] == sum(source['sectors'].get(row['sector_id'], {}).get(key, 0)
+                                   for source in data['files'])
+
+
 def check_central_sediment_context():
     manifest = json.loads((ROOT / 'catalog/usgs-central-sediment-source.json').read_text())
     data = json.loads((WEB / 'data/usgs-central-thin-sediment-context.geojson').read_text())
@@ -117,6 +143,7 @@ def main():
         assert ET.parse(path).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx"
     check_native_depth_review('noaa-vr-native-depth-review.json',
                               'california-original-vr-native-depth-review')
+    check_expanded_native_depth_inventory()
     check_native_depth_review('noaa-regular-native-depth-review.json',
                               'california-original-regular-native-depth-review')
     check_central_sediment_context()

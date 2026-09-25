@@ -12,7 +12,7 @@ def compile_readiness(root=REPO):
     root = Path(root)
     sectors = read_json(root / 'dist/data/coastal-sectors.json')['sectors']
     native = read_json(root / 'dist/data/noaa-native-sector-review.json')
-    variable_depth = read_json(root / 'dist/data/noaa-vr-native-depth-review.json')
+    variable_depth = read_json(root / 'dist/data/noaa-vr-native-depth-expanded-review.json')
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
     discovery = read_json(root / 'dist/data/noaa-survey-discovery.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
@@ -26,7 +26,9 @@ def compile_readiness(root=REPO):
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
     expected = {row['id'] for row in sectors}
-    if (len(sectors) != 19 or variable_depth['status'] != 'ok' or regular_depth['status'] != 'ok'
+    if (len(sectors) != 19 or variable_depth['scope'] != 'california-expanded-original-vr-depth-inventory'
+            or variable_depth['survey_file_count'] != len(variable_depth['files'])
+            or regular_depth['status'] != 'ok'
             or len(native_by_id) != len(native['sectors'])
             or len(variable_by_id) != len(variable_depth['sectors'])
             or len(regular_by_id) != len(regular_depth['sectors'])
@@ -96,7 +98,7 @@ def compile_readiness(root=REPO):
         'source_audit_at': native['audit_collected_at'],
         'survey_discovery_at': discovery['last_complete_scan_at'],
         'limitations': [
-            'BAG counts are intersecting file envelopes from a bounded <=100 MB audit, not unique surveyed area or eligible fishing spots.',
+            'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
