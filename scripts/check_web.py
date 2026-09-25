@@ -96,6 +96,19 @@ def check_central_sediment_context():
                    ('fishing_target', 'exportable', 'depth_qualified', 'fish_confirmed'))
 
 
+def check_usgs_morro_report_datum():
+    manifest = json.loads((ROOT / 'catalog/usgs-morro-report-datum-source.json').read_text())
+    review = json.loads((WEB / 'data/usgs-morro-report-datum-review.json').read_text())
+    assert review['scope'] == manifest['scope']
+    assert review['report_sha256'] == manifest['report_sha256']
+    assert review['report_url'] == manifest['report_url']
+    assert review['report_depth_reference'] == 'MLLW'
+    assert {row['release_id'] for row in review['sources']} == set(manifest['release_ids'])
+    assert all(row['depth_qualified_for_fishing'] is False and
+               row['has_per_cell_product_uncertainty'] is False for row in review['sources'])
+    assert review['fishing_target'] is False and review['exportable'] is False
+
+
 def main():
     assert (WEB / "index.html").is_file()
     induration = json.loads((WEB / 'data/h11967-noaa-induration-camera-review.json').read_text())
@@ -147,6 +160,7 @@ def main():
     check_native_depth_review('noaa-regular-native-depth-review.json',
                               'california-original-regular-native-depth-review')
     check_central_sediment_context()
+    check_usgs_morro_report_datum()
     print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
 
 

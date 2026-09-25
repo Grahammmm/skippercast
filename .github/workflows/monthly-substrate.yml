@@ -243,6 +243,11 @@ jobs:
             california-original-rasters-v1-
       - name: Verify substrate adapter and class safeguards
         run: python -m unittest tests.test_cdfw_substrate_pipeline -v
+      - name: Recheck Morro Bay USGS report depth-reference evidence
+        run: >-
+          python scripts/audit_usgs_morro_report_datum.py
+          --fetch
+          --output var/review/usgs-morro-report-datum-review.json
       - name: Audit pinned USGS camera observations statewide
         run: >-
           python scripts/audit_usgs_video_observations.py
