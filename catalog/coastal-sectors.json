@@ -14,7 +14,7 @@
     {"id": "humboldt-cape", "coast": "northern", "name": "Humboldt Bay to Cape Mendocino", "latitude": [40.166666666666664, 40.95]},
     {"id": "north-mendocino", "coast": "mendocino", "name": "North Mendocino coast", "latitude": [39.45, 40.166666666666664]},
     {"id": "fort-bragg-arena", "coast": "mendocino", "name": "Fort Bragg to Point Arena", "latitude": [38.958333333333336, 39.45]},
-    {"id": "arena-bodega", "coast": "san-francisco", "name": "Point Arena to Bodega Bay", "latitude": [38.3, 38.958333333333336]},
+    {"id": "arena-bodega", "coast": "san-francisco", "name": "Point Arena to Bodega Bay", "latitude": [38.3, 38.958333333333336], "partial_package_ids": ["point-arena-bodega"]},
     {"id": "bodega-reyes", "coast": "san-francisco", "name": "Bodega Bay to Point Reyes", "latitude": [37.95, 38.3]},
     {"id": "reyes-pigeon", "coast": "san-francisco", "name": "Point Reyes to Pigeon Point", "latitude": [37.18333333333333, 37.95]},
     {"id": "pigeon-monterey", "coast": "central", "name": "Pigeon Point to Monterey Bay", "latitude": [36.6, 37.18333333333333]},

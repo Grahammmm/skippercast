@@ -58,7 +58,7 @@ class PointReyesPigeonTests(unittest.TestCase):
                          rules["approved_rules_content_sha256"])
         self.assertEqual(set(decision["reviewed_species"]),
                          {"lingcod", "rockfish", "halibut", "salmon", "dungeness", "albacore"})
-        self.assertEqual(len(decision["sources"]), 24)
+        self.assertEqual(len(decision["sources"]), 30)
         self.assertIn("mpa-montara-pillar", config["watches"])
         self.assertIn("mpa-north-farallon", config["watches"])
         self.assertNotIn("access-vandenberg-maritime", config["watches"])

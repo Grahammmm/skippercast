@@ -26,6 +26,9 @@ class AtlasReadinessTests(unittest.TestCase):
                          by_sector['reyes-pigeon']['held_variable_depth_file_leads']
                          + by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'])
         self.assertEqual(by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'], 0)
+        self.assertEqual(by_sector['reyes-pigeon']['native_substrate_review_file_leads'], 6)
+        self.assertEqual(by_sector['reyes-pigeon']['held_file_leads'], 2)
+        self.assertIn('H12112', by_sector['reyes-pigeon']['held_survey_ids'])
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
         self.assertIn('BSS_Block13', by_sector['big-sur']['csumb_catalog_survey_lead_ids'])
         self.assertIn('csumb-bss-block13-native-candidate', by_sector['big-sur']['native_depth_excluded_source_candidate_ids'])

@@ -191,6 +191,36 @@
         "Southeast Farallon",
         "Special Closure"
       ]
+    },
+    "mpa-point-arena-sea-lion": {
+      "name": "CDFW Point Arena and Sea Lion Cove marine areas",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Arena-Sea-Lion-Cove",
+      "keywords": ["Point Arena", "Sea Lion Cove"]
+    },
+    "mpa-saunders": {
+      "name": "CDFW Saunders Reef SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Saunders-Reef",
+      "keywords": ["Saunders Reef", "Regulations"]
+    },
+    "mpa-del-mar": {
+      "name": "CDFW Del Mar Landing SMR",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Del-Mar-Landing",
+      "keywords": ["Del Mar Landing", "Regulations"]
+    },
+    "mpa-stewarts": {
+      "name": "CDFW Stewarts Point marine areas",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Stewarts-Point",
+      "keywords": ["Stewarts Point", "Regulations"]
+    },
+    "mpa-salt-gerstle": {
+      "name": "CDFW Salt Point and Gerstle Cove marine areas",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Salt-Point-Gerstle-Cove",
+      "keywords": ["Salt Point", "Gerstle Cove"]
+    },
+    "mpa-russian-river": {
+      "name": "CDFW Russian River marine areas",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Russian-River",
+      "keywords": ["Russian River", "Regulations"]
     }
   },
   "authority_hosts": [

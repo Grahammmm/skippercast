@@ -124,6 +124,7 @@
         }
       ],
       "packages": [
+        "point-arena-bodega",
         "bodega-point-reyes",
         "point-reyes-pigeon"
       ],

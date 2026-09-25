@@ -36,6 +36,14 @@
       "evidence_url": "https://www.ngdc.noaa.gov/nos/W00001-W02000/W00477.html"
     },
     {
+      "survey_id": "H12112",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H12112/DR/H12112.pdf",
+      "report_sha256": "b70f6a8a380b277219649a6c44e42696a11e2417e820379c3e217013acc7dab4",
+      "reason": "The 2009 Golden Gate vicinity original 2 m and 4 m MLLW BAGs are broad source-overlap leads, not verified fishing patches. H12112's final descriptive report records migrating sand waves and nearshore erosion, several rock and wreck chart discrepancies, two new wrecks, a charted dangerous wreck only partially surveyed, and 23 new bottom samples plus ten rocky-seabed areas. A field statement of no new Dangers to Navigation does not clear the unresolved features, traffic channel, original substrate boundaries or current chart. Hold both BAG parts from fishing-target promotion until exact native-cell hard-bottom footprints, current ENC features, approach/traffic, MPAs, local date-and-method rules and present safety are independently screened. This does not classify every H12112 cell as unsafe or fishless.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H12112.html"
+    },
+    {
       "survey_id": "H11971",
       "disposition": "withhold_from_fishing_promotion",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
