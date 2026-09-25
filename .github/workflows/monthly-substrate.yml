@@ -355,6 +355,12 @@ jobs:
           python scripts/collect_noaa_groundfish_areas.py --output var/san-miguel-review-fresh/federal.json
           python scripts/refresh_enc_hazards.py --scope san-miguel-h13084-usgs-habitat \
             --output var/review/enc-hazards-san-miguel-h13084.geojson
+      - name: Recheck current San Miguel naval danger-zone section
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_san_miguel_naval_zone.py
+          --output var/review/san-miguel-naval-zone.json
       - name: Recheck original variable-depth hard habitat overlap
         env:
           PYTHONPATH: src:.
@@ -370,6 +376,7 @@ jobs:
           path: |
             var/review/san-miguel-regular-recheck.json
             var/review/san-miguel-vr-recheck.json
+            var/review/san-miguel-naval-zone.json
             var/review/enc-hazards-san-miguel-h13084.geojson
           retention-days: 30
   audit:

@@ -17,12 +17,14 @@ from shapely.ops import transform, unary_union
 from shapely.strtree import STRtree
 
 from scripts.audit_san_miguel_original_habitat import read_usgs
+from scripts.audit_san_miguel_naval_zone import danger_polygon
 from scripts.screen_vr_native_depth import fine_grid_rows
 from scripts.screen_vr_original_hard import exclusions
 from skippercast.platform.bottom_targets import bag_metadata, cells_qualified, sha256, vr_transform
 
 
-def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache, enc):
+def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache, enc,
+           naval_manifest, naval_receipt):
     source = manifest['usgs']
     noaa = manifest['noaa_variable']
     groups, usgs = read_usgs(usgs_cache / 'smighab.tgz', source)
@@ -37,7 +39,8 @@ def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache
               'hard_eligible_cells': 0, 'mixed_eligible_cells': 0,
               'fine_supergrids_with_hard_eligible_cells': 0,
               'hard_cells_after_exclusions': 0, 'mixed_cells_after_exclusions': 0,
-              'hard_cells_after_enc_buffer': 0, 'mixed_cells_after_enc_buffer': 0}
+              'hard_cells_after_enc_buffer': 0, 'mixed_cells_after_enc_buffer': 0,
+              'hard_cells_after_naval_hold': 0, 'mixed_cells_after_naval_hold': 0}
     with rasterio.open(path) as bag, h5py.File(path, 'r') as handle:
         root = handle['BAG_root']
         metadata = bag_metadata(root['metadata'][:].tobytes().decode().rstrip('\0'), 'H13084')
@@ -55,12 +58,19 @@ def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache
         age = (datetime.now(timezone.utc) - datetime.fromisoformat(enc['checked_at'])).total_seconds()
         if not 0 <= age <= 36 * 3600:
             raise ValueError('San Miguel ENC danger source is stale')
+        naval_age = (datetime.now(timezone.utc) - datetime.fromisoformat(naval_receipt['checked_at'])).total_seconds()
+        if (not 0 <= naval_age <= 36 * 3600
+                or naval_receipt.get('id') != naval_manifest['id']
+                or naval_receipt.get('source_content_sha256') != naval_manifest['reviewed_content_sha256']
+                or naval_receipt.get('operational_status_checked') is not False):
+            raise ValueError('San Miguel naval danger-zone source is stale or changed')
         excluded, hazard_review = exclusions(
             {'survey_id': 'H13084', 'source_report_url': noaa['source_report_url']},
             horizontal, usgs['bbox'], mpas, federal, hazards, report_cache)
         to_chart = Transformer.from_crs('EPSG:4326', horizontal, always_xy=True).transform
         chart_danger = unary_union([transform(to_chart, shape(item['geometry']))
                                     for item in enc['features']]).buffer(100)
+        naval_hold = transform(to_chart, danger_polygon(naval_manifest)).buffer(100)
         native_groups = {key: [transform(to_native, geometry) for geometry in groups[key]]
                          for key in ('h', 'm')}
         trees = {key: STRtree(native_groups[key]) for key in ('h', 'm')}
@@ -118,6 +128,12 @@ def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache
                                               transform=affine, dtype='uint8').astype(bool)
                     retained &= ~chart_blocked
                 totals[f'{label}_cells_after_enc_buffer'] += int(retained.sum())
+                if retained.any() and naval_hold.intersects(cell):
+                    local = naval_hold.intersection(cell.buffer(max(dx, dy)))
+                    naval_blocked = rasterize([(mapping(local), 1)], out_shape=(ny, nx),
+                                              transform=affine, dtype='uint8').astype(bool)
+                    retained &= ~naval_blocked
+                totals[f'{label}_cells_after_naval_hold'] += int(retained.sum())
                 if code == 'h':
                     totals['fine_supergrids_with_hard_eligible_cells'] += count > 0
     return {'schema_version': 1,
@@ -135,12 +151,17 @@ def review(manifest, usgs_cache, bag_cache, mpas, federal, hazards, report_cache
             'noaa_federal_areas_retrieved_at': federal['retrieved_at'],
             'enc_danger_checked_at': enc['checked_at'],
             'enc_danger_features': len(enc['features']),
+            'naval_danger_zone_source_url': naval_manifest['source_url'],
+            'naval_danger_zone_source_sha256': naval_receipt['source_content_sha256'],
+            'naval_danger_zone_checked_at': naval_receipt['checked_at'],
+            'naval_operational_status_checked': False,
             'source_position_accuracy_m_order': source['reported_horizontal_accuracy_m_order'],
             'counts': totals, 'fishing_target': False, 'exportable': False,
             'limitations': [
                 'Historical USGS habitat interpretations have approximately 10 m positional accuracy; no boulder size or present fish presence follows.',
                 'Current complete CDFW MPA and NOAA federal GEA geometry plus pinned historical report hazards have 100 m screening buffers; these do not certify exact legal boundaries or chart clearance.',
                 'Fresh NOAA ENC Direct danger features from 18 bounded queries have a 100 m research buffer; this is not chart completeness or navigation clearance.',
+                'The full 33 CFR 334.1140 San Miguel naval danger zone has a 100 m conservative research hold. It is not a permanent no-fishing closure: scheduled firing/drop status requires a current Local Notice to Mariners or radio confirmation.',
                 'Routes, protected-species, island-access and species-method restrictions remain unreviewed for exact positions.',
                 'No fishing coordinates, drift lines or export geometry are published from this source review.'
             ]}
@@ -156,6 +177,8 @@ def main():
     parser.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
     parser.add_argument('--report-cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--enc', type=Path, default=Path('var/review/enc-hazards-san-miguel-h13084.geojson'))
+    parser.add_argument('--naval-manifest', type=Path, default=Path('catalog/san-miguel-naval-danger-zone.json'))
+    parser.add_argument('--naval-receipt', type=Path, default=Path('var/review/san-miguel-naval-zone.json'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
@@ -163,7 +186,9 @@ def main():
     result = review(manifest, args.usgs_cache, args.bag_cache,
                     json.loads(args.mpas.read_text()), json.loads(args.federal.read_text()),
                     json.loads(args.hazards.read_text()), args.report_cache,
-                    json.loads(args.enc.read_text()))
+                    json.loads(args.enc.read_text()),
+                    json.loads(args.naval_manifest.read_text()),
+                    json.loads(args.naval_receipt.read_text()))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     if args.verify:
@@ -175,7 +200,7 @@ def main():
 
 def stable(value):
     dynamic = {'reviewed_at', 'cdfw_mpa_retrieved_at', 'noaa_federal_areas_retrieved_at',
-               'enc_danger_checked_at'}
+               'enc_danger_checked_at', 'naval_danger_zone_checked_at'}
     return {key: row for key, row in value.items() if key not in dynamic}
 
 

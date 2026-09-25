@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "san-miguel-original-usgs-habitat-noaa-vr-source-review",
-  "reviewed_at": "2026-09-25T11:28:10.199077+00:00",
+  "reviewed_at": "2026-09-25T11:51:47.162161+00:00",
   "usgs_archive_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
   "usgs_archive_sha256": "df88f59542756f654381ec946377cac65ed0649052b6c5d88aeb8b28fb218e17",
   "usgs_original": {
@@ -35,6 +35,10 @@
   "noaa_federal_areas_retrieved_at": "2026-09-25T11:21:48.431993+00:00",
   "enc_danger_checked_at": "2026-09-25T11:27:11.385585+00:00",
   "enc_danger_features": 201,
+  "naval_danger_zone_source_url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1140",
+  "naval_danger_zone_source_sha256": "4e6dbad97954239dd0863c8ff4577ed1065984809b21779eda9a339ba1bc81ea",
+  "naval_danger_zone_checked_at": "2026-09-25T11:50:51.637942+00:00",
+  "naval_operational_status_checked": false,
   "source_position_accuracy_m_order": 10,
   "counts": {
     "fine_supergrids_in_usgs_bbox": 5058,
@@ -46,7 +50,9 @@
     "hard_cells_after_exclusions": 605245,
     "mixed_cells_after_exclusions": 9739,
     "hard_cells_after_enc_buffer": 601603,
-    "mixed_cells_after_enc_buffer": 9739
+    "mixed_cells_after_enc_buffer": 9739,
+    "hard_cells_after_naval_hold": 666,
+    "mixed_cells_after_naval_hold": 0
   },
   "fishing_target": false,
   "exportable": false,
@@ -54,6 +60,7 @@
     "Historical USGS habitat interpretations have approximately 10 m positional accuracy; no boulder size or present fish presence follows.",
     "Current complete CDFW MPA and NOAA federal GEA geometry plus pinned historical report hazards have 100 m screening buffers; these do not certify exact legal boundaries or chart clearance.",
     "Fresh NOAA ENC Direct danger features from 18 bounded queries have a 100 m research buffer; this is not chart completeness or navigation clearance.",
+    "The full 33 CFR 334.1140 San Miguel naval danger zone has a 100 m conservative research hold. It is not a permanent no-fishing closure: scheduled firing/drop status requires a current Local Notice to Mariners or radio confirmation.",
     "Routes, protected-species, island-access and species-method restrictions remain unreviewed for exact positions.",
     "No fishing coordinates, drift lines or export geometry are published from this source review."
   ]
