@@ -75,7 +75,8 @@
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185054&inline=",
       "packages": [
-        "fort-bragg-point-arena"
+        "fort-bragg-point-arena",
+        "shelter-cove-north-mendocino"
       ],
       "targets": [
         "reef",

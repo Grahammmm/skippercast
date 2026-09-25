@@ -143,6 +143,31 @@
         "Point Arena",
         "Sea Lion Cove"
       ]
+    },
+    "mpa-big-flat": {
+      "name": "CDFW Big Flat SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Big-Flat",
+      "keywords": ["Big Flat", "Dungeness"]
+    },
+    "mpa-ten-mile": {
+      "name": "CDFW Ten Mile SMR and SMCAs",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Ten-Mile",
+      "keywords": ["Ten Mile", "Dungeness"]
+    },
+    "mpa-double-cone": {
+      "name": "CDFW Double Cone Rock SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Double-Cone-Rock",
+      "keywords": ["Double Cone Rock", "Dungeness"]
+    },
+    "closure-vizcaino-rock": {
+      "name": "CDFW Vizcaino Rock seasonal special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Vizcaino-Rock",
+      "keywords": ["Vizcaino Rock", "March", "August"]
+    },
+    "mpa-mackerricher": {
+      "name": "CDFW MacKerricher SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/MacKerricher",
+      "keywords": ["MacKerricher", "recreational take"]
     }
   },
   "authority_hosts": [

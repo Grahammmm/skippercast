@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region_id: [bodega-point-reyes, fort-bragg-point-arena, crescent-city]
+        region_id: [bodega-point-reyes, fort-bragg-point-arena, crescent-city, shelter-cove-north-mendocino]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,8 +40,8 @@ jobs:
           import os
           from skippercast.platform.contracts import load_region
           region = load_region(os.environ['REGION_ID'])
-          if region['status'] != 'draft':
-              raise SystemExit('This workflow accepts draft regions only')
+          if region['status'] not in ('draft', 'preview'):
+              raise SystemExit('This workflow accepts draft or preview regions only')
           print(region['id'], region['name'])
           PY
           python scripts/refresh_regions.py daily \
