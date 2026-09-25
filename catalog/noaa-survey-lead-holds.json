@@ -1,8 +1,24 @@
 {
   "schema_version": 1,
   "scope": "reviewed-noaa-survey-fishing-lead-holds",
-  "reviewed_at": "2026-09-24",
+  "reviewed_at": "2026-09-25",
   "holds": [
+    {
+      "survey_id": "F00789",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00789/DR/F00789_DR.pdf",
+      "report_sha256": "a55dfceb69ef14b37d12e9487a325a220082fcb7ddeb56c3acb06fd4c7f0642e",
+      "reason": "The original F00789 descriptive report identifies the entire October 2019 survey as a Pier 80C / Islais Creek Channel underkeel-clearance survey inside San Francisco Bay, bounded by 37°44'22.57\"–37°45'39.72\" N and 122°21'43.49\"–122°22'31.06\" W. Its 4,447,044 depth-and-uncertainty-eligible native cells were assigned to the broad Point Reyes–Pigeon latitude band by grid-center inventory, but they are harbor bathymetry, not outer-coast habitat or fishing coordinates. Exclude the entire survey from fishing-target promotion; do not infer rock from depth or backscatter alone.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/F00001-F02000/F00789.html"
+    },
+    {
+      "survey_id": "H11965",
+      "disposition": "withhold_from_fishing_promotion",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11965/DR/H11965.pdf",
+      "report_sha256": "071d57287600e0e5e609f682f1d48d97608a26c5e3a24fbc4b5205e85237a729",
+      "reason": "The 2009 Farallon Islands original variable-resolution BAG has 953,994 preliminary 25–200 ft depth-and-uncertainty-eligible native cells in the broad Point Reyes–Pigeon sector. The report notes steep rock outcrops with higher uncertainty, small holidays in irregular bottom, shoaler depths between old chart soundings, a roughly 51 m wreck-like feature near 37°40'11.69\"N 122°56'39.75\"W, and no retained bottom samples. The source survey does not establish a current safe route or fishable substrate. The Farallon reserve, conservation area and special-closure geometries also require exact original-cell exclusion, not a centroid screen. Withhold fishing targets and exports until wreck/chart hazards, full marine-area boundaries, independent substrate and dated rules pass exact-footprint review.",
+      "evidence_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11965.html"
+    },
     {
       "survey_id": "H11971",
       "disposition": "withhold_from_fishing_promotion",

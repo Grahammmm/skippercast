@@ -21,6 +21,10 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertEqual(by_sector['del-norte']['native_variable_depth_file_leads'], 2)
         self.assertEqual(by_sector['del-norte']['historical_noaa_seabed_samples'], 0)
         self.assertEqual(by_sector['reyes-pigeon']['historical_noaa_seabed_samples'], 881)
+        self.assertIn('F00789', by_sector['reyes-pigeon']['held_variable_depth_survey_ids'])
+        self.assertEqual(by_sector['reyes-pigeon']['native_variable_depth_file_leads'],
+                         by_sector['reyes-pigeon']['held_variable_depth_file_leads']
+                         + by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'])
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
         self.assertIn('BSS_Block13', by_sector['big-sur']['csumb_catalog_survey_lead_ids'])
         self.assertIn('csumb-bss-block13-native-candidate', by_sector['big-sur']['native_depth_excluded_source_candidate_ids'])
@@ -71,6 +75,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              'catalog/csumb-bss-source-leads.json',
                              'catalog/usgs-ds781-source-leads.json',
                              'catalog/usgs-ds781-metadata-review.json',
+                             'catalog/noaa-survey-lead-holds.json',
                              'dist/regions/index.json'):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

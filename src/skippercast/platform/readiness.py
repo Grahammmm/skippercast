@@ -25,6 +25,13 @@ def compile_readiness(root=REPO):
                    for row in deepwater['sources'])):
         raise ValueError('The bounded central deepwater exclusion changed')
     deepwater_ids = {row['survey_id'] for row in deepwater['sources']}
+    survey_holds = read_json(root / 'catalog/noaa-survey-lead-holds.json')
+    if (survey_holds.get('scope') != 'reviewed-noaa-survey-fishing-lead-holds'
+            or survey_holds.get('schema_version') != 1):
+        raise ValueError('Reviewed NOAA survey holds are missing')
+    held_by_id = {row['survey_id']: row for row in survey_holds['holds']}
+    if len(held_by_id) != len(survey_holds['holds']):
+        raise ValueError('Duplicate NOAA survey hold')
     csumb_series = [read_json(root / f'catalog/csumb-{series}-source-leads.json')
                     for series in ('scc', 'bss')]
     usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
@@ -135,12 +142,25 @@ def compile_readiness(root=REPO):
         held_files = lead['held_substrate_overlap_screen_bboxes']
         variable_files = variable_by_id[ident]['source_files_with_eligible_cells']
         regular_files = regular_by_id[ident]['source_files_with_eligible_cells']
+        variable_file_rows = [row for row in variable_depth['files']
+                              if row.get('sectors', {}).get(ident, {}).get('depth_uncertainty_eligible_cells', 0) > 0]
+        if len(variable_file_rows) != variable_files:
+            raise ValueError('Variable-depth sector file count does not match source rows')
+        held_variable_rows = []
+        for row in variable_file_rows:
+            hold = held_by_id.get(row['survey_id'])
+            if hold:
+                if (hold.get('disposition') != 'withhold_from_fishing_promotion'
+                        or row['source_report_url'] != hold['report_url']):
+                    raise ValueError('Variable-depth survey hold source mismatch')
+                held_variable_rows.append(row)
+        unheld_variable_files = variable_files - len(held_variable_rows)
         # These are file-envelope leads, not a count of verified seabed cells.
         if min(points, candidate_files, held_files, variable_files, regular_files) < 0:
             raise ValueError('Negative coverage count')
         if candidate_files:
             next_step = 'Review original native cells, independent substrate, chart hazards and access for the in-sector file leads.'
-        elif variable_files or regular_files:
+        elif unheld_variable_files or regular_files:
             next_step = 'Find independent original substrate overlap in the measured, depth-qualified native cells; do not infer reef from depth alone.'
         else:
             next_step = 'Find original fine-resolution depth and independent substrate within the actual sector water; sampled files yielded no eligible cells.'
@@ -155,7 +175,7 @@ def compile_readiness(root=REPO):
                         for area in usgs_by_sector[ident])):
             next_step = ('Open the linked USGS original grid and metadata for this planning area; verify measured-cell footprint, '
                          'datum, uncertainty and class semantics before any seabed or fishing-target import.')
-        if held_files:
+        if held_files or held_variable_rows:
             next_step += ' Reconcile held survey hazards before any target promotion.'
         if excluded_deepwater:
             next_step += (' Broad catalog hits ' + ', '.join(excluded_deepwater) +
@@ -171,6 +191,9 @@ def compile_readiness(root=REPO):
             'usgs_ds781_map_area_leads': sorted(usgs_by_sector[ident], key=lambda area: area['name']),
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
+            'held_variable_depth_file_leads': len(held_variable_rows),
+            'held_variable_depth_survey_ids': sorted({row['survey_id'] for row in held_variable_rows}),
+            'unheld_variable_depth_file_leads': unheld_variable_files,
             'native_regular_depth_file_leads': regular_files,
             'historical_noaa_seabed_samples': seabed_by_id[ident]['historical_sample_count'],
             'native_substrate_review_file_leads': candidate_files,
@@ -199,6 +222,7 @@ def compile_readiness(root=REPO):
         'limitations': [
             'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
+            'Variable-depth source counts include reviewed held surveys for audit completeness; use the separate held and unheld counts before choosing a survey for further research.',
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
             'CSUMB catalog-report envelopes are discovery leads only; they are not measured-cell footprints or fishing areas.',
