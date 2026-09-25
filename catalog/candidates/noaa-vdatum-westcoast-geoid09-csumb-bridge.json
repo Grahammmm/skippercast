@@ -49,7 +49,7 @@
     }
   ],
   "limitations": [
-    "Seven South Central Coast and Big Sur South raster-envelope midpoint requests returned offsets and conversion uncertainty, but those points are not verified native measured cells and do not define a full grid transformation.",
+    "Eight South Central Coast and Big Sur South raster-envelope midpoint requests returned offsets and conversion uncertainty, but those points are not verified native measured cells and do not define a full grid transformation.",
     "The original CSUMB grid identifies NAD83 / UTM zone 10 but not its horizontal realization or coordinate epoch. The API rejected NAD83_1986 and accepted NAD83_2011; treating those frames as equivalent would be an unsupported source transformation.",
     "VDatum conversion uncertainty is separate from original grid vertical error; this source lacks a per-cell product uncertainty band.",
     "Original substrate, current MPAs and other closures, hazards, route, species/date/method rules and fish evidence remain independent promotion gates. No fishing target or export is supported."
@@ -70,7 +70,7 @@
     "access_service": "Official NOAA VDatum West Coast JSON API",
     "raw_sha256": null,
     "transformations": [
-      "Queried GEOID09 NAVD88 zero-height points at seven inspected SCC/BSS raster-envelope midpoints; recorded exact request URL and response SHA-256 for each.",
+      "Queried GEOID09 NAVD88 zero-height points at eight inspected SCC/BSS raster-envelope midpoints; recorded exact request URL and response SHA-256 for each.",
       "Probed NAD83_1986 source frame separately; official API returned error 412 requiring NAD83_2011.",
       "Preserved source-frame and missing raster-product uncertainty holds; produced no converted raster, spot or export."
     ]

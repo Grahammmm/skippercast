@@ -23,6 +23,7 @@ SCC = ("https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/"
 ARCHIVES = {
     "csumb-bss-block01-native-candidate": "BSS",
     "csumb-bss-block02-native-candidate": "BSS",
+    "csumb-bss-block03-native-candidate": "BSS",
     "csumb-bss-block12-native-candidate": "BSS",
     "csumb-bss-block13-native-candidate": "BSS",
     "csumb-scc-block04-native-candidate": "SCC",

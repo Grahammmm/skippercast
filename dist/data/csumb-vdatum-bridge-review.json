@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "csumb-original-navd88-geoid09-vdatum-bridge-review",
-  "checked_at": "2026-09-25T19:45:12.831641+00:00",
+  "checked_at": "2026-09-25T20:04:51.527584+00:00",
   "source_reviews": [
     "data/csumb-scc-native-source-review.json",
     "data/csumb-bss-native-source-review.json"
@@ -34,6 +34,18 @@
       "response_sha256": "9f8bef54db12f8af9c15a83030e2c033dc904ddf808fc43cc1bfbe5f741ba4ba",
       "status": "sample_available",
       "offset_m": -0.008,
+      "vdatum_uncertainty_m": 0.097
+    },
+    {
+      "source_id": "csumb-bss-block03",
+      "archive_sha256": "0414c642e74e52773ebe4c36d01220cfef5bf7f5f71d8cb2627a399863e64e83",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.3968472,
+      "latitude": 35.7928032,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.3968472&s_y=35.7928032&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "ca77623289b715ba4bd06009bc54683ae3f0a7931ec224b6d80411a8ab25cf66",
+      "status": "sample_available",
+      "offset_m": -0.019,
       "vdatum_uncertainty_m": 0.097
     },
     {

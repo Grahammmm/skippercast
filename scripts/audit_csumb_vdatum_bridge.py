@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 API = 'https://vdatum.noaa.gov/vdatumweb/api/convert'
 EXPECTED_IDS = {'csumb-scc-block04', 'csumb-scc-block05', 'csumb-scc-block06',
-                'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block12', 'csumb-bss-block13'}
+                'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block03', 'csumb-bss-block12', 'csumb-bss-block13'}
 
 
 def request(lon, lat, frame, get=None):
