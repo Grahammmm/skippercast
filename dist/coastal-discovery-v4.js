@@ -308,22 +308,49 @@ export async function initCoastalDiscovery(catalog,coast) {
           &&overlap.fishing_target===false&&overlap.exportable===false&&overlap.minimum_interior_clearance_m===25
           ?overlap.layers?.find(layer=>layer.context_file===nativeFile&&layer.outline_count===data.features.length):null;
         const cameraById=new Map((reviewedOverlap?.matched_outlines||[]).map(item=>[item.outline_id,item]));
+        let priorityById=new Map(),priorityClosureDate='';
+        if(northern||pointConception){
+          const priorityStem=northern?'cape-mendocino':'point-conception';
+          const priorityCount=northern?32:4;
+          const queueName=northern?'cape-mendocino-original-habitat-site-review-queue.json':'point-conception-regular-site-review-queue.json';
+          const [queue,closures]=await Promise.all([
+            fetch(`data/${queueName}`,{signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+            fetch(`data/${priorityStem}-shortlist-closure-review.json`,{signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).catch(()=>null)
+          ]);
+          const ids=new Set(data.features.map(f=>f.properties.id));
+          if(queue?.scope==='original-habitat-site-review-queue'&&queue.fishing_target===false&&queue.exportable===false
+            &&queue.source_context_outlines===data.features.length&&queue.research_shortlist_count===priorityCount
+            &&new Set(queue.research_shortlist.map(row=>row.context_id)).size===priorityCount
+            &&queue.research_shortlist.every(row=>ids.has(row.context_id)&&row.fishing_target===false)
+            &&closures?.scope==='original-habitat-shortlist-fresh-closure-audit'&&closures.fishing_target===false
+            &&closures.exportable===false&&closures.shortlist_count===priorityCount&&closures.held_count===0&&closures.buffer_m===100
+            &&closures.outlines.length===priorityCount&&new Set(closures.outlines.map(row=>row.context_id)).size===priorityCount
+            &&closures.outlines.every(row=>ids.has(row.context_id)
+              &&queue.research_shortlist.some(item=>item.context_id===row.context_id)&&row.fishing_target===false
+              &&row.within_closure_review_buffer===false)){
+            const cleared=new Map(closures.outlines.map(row=>[row.context_id,row]));
+            priorityById=new Map(queue.research_shortlist.map((row,index)=>[row.context_id,{...row,rank:index+1,closure:cleared.get(row.context_id)}]));
+            priorityClosureDate=closures.audited_at.slice(0,10);
+          }
+        }
         nativeShapes=data.features.map(f=>{
           const p=f.properties;
           const camera=cameraById.get(p.id);
           const chartedDangers=dangerById.get(p.id);
+          const priority=priorityById.get(p.id);
           const depthText=northern?`original cells screened to ${esc(p.depth_screen_ft.join('–'))} ft MLLW planning range; no polygon-specific depth claim`:`source depth ${esc(p.depth_ft_range.join('–'))} ft MLLW`;
           const structureText=northern?`<p>Approximate displayed patch ${esc(p.approx_display_area_m2.toLocaleString())} m²; sampled 5–95% bottom relief ${esc(p.sampled_relief_5_95_m)} m. These describe historical physical structure, not a fish or bite rating.</p>`:'';
           const cameraText=camera?.interior_windows?`<p>USGS camera, ${esc(camera.observation_dates.join(', '))}: ${camera.interior_windows} annotated windows on ${camera.distinct_transects} historical transect(s) at least 25 m inside this displayed outline. ${camera.rock_boulder_cobble_windows} labeled rock/boulder/cobble; ${camera.sand_mud_windows} sand/mud. This supports mixed bottom along the camera path, not fish presence or the whole patch. <a href="${esc(camera.source_urls[0])}" target="_blank" rel="noopener">Original camera log ↗</a></p>`:'';
           const dangerText=chartedDangers?`<p><strong>Charted danger nearby:</strong> ${esc(chartedDangers)} feature(s) within 100 m in a limited NOAA ENC Direct screen dated ${esc(reviewedChart.enc_checked_at.slice(0,10))}. Do not use this outline for navigation or as a fishing waypoint.</p>`:
             reviewedChart?`<p>No nearby feature in the selected chart-danger classes as of ${esc(reviewedChart.enc_checked_at.slice(0,10))}; this does not clear the site or route.</p>`:
             '<p>Current charted hazards have not been matched to this displayed outline.</p>';
-          const shape=L.geoJSON(f,{pane:nativePane,style:{color:chartedDangers?'#a56a1e':'#396a75',weight:chartedDangers?2.2:1.4,fillColor:chartedDangers?'#e4af58':'#70aab4',fillOpacity:.22}})
-            .bindPopup(`<strong>Historical surveyed hard bottom</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · ${depthText} · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p>${dangerText}${structureText}${cameraText}<p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
+          const priorityText=priority?`<p><strong>Physical habitat research priority ${priority.rank} of ${priorityById.size}.</strong> This patch passed the project's area, relief and sampled-depth triage. A ${esc(priorityClosureDate)} GIS screen found the outline ${esc(priority.closure.nearest_cdfw_mpa_m)} m from the nearest CDFW MPA and ${esc(priority.closure.nearest_noaa_gea_m)} m from the nearest federal GEA. The screen may be stale; exact rules, current chart, safe approach and fish presence remain unverified. It is not a fishing score or waypoint.</p>`:'';
+          const shape=L.geoJSON(f,{pane:nativePane,style:{color:chartedDangers?'#a56a1e':priority?'#126f68':'#396a75',weight:chartedDangers?2.2:priority?2.4:1.4,fillColor:chartedDangers?'#e4af58':priority?'#5fa79b':'#70aab4',fillOpacity:priority?.28:.22}})
+            .bindPopup(`<strong>${priority?'Historical hard-bottom research priority':'Historical surveyed hard bottom'}</strong><p>NOAA ${esc(p.survey_id)} · ${esc(p.survey_dates[0].slice(0,4))} survey · ${depthText} · USGS hard-seabed class. This is not a fish location, legal clearance or navigation chart.</p>${priorityText}${dangerText}${structureText}${cameraText}<p>MPA/GEA screen compiled ${esc(data.mpa_screened_at.slice(0,10))}; recheck current rules and charts.${pointConception?' Check <a href="https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/" target="_blank" rel="noopener">Vandenberg maritime status ↗</a> before travel.':''}</p><a href="${esc(p.noaa_bag_url)}" target="_blank" rel="noopener">Original NOAA depth grid ↗</a> · <a href="${esc(p.usgs_metadata_urls[0])}" target="_blank" rel="noopener">USGS class metadata ↗</a>`);
           return {shape,bounds:shape.getBounds()};
         });
         nativeLoaded=true;nativeLayer.addTo(map);drawNative();
-        nativeNote.textContent=`${data.features.length} historical hard-bottom outlines.${reviewedChart?` ${dangerById.size} amber outlines have nearby charted danger features in a limited ${reviewedChart.enc_checked_at.slice(0,10)} screen.`:' Current chart-danger matching is unavailable for this layer.'} Current fishing permission, charts, YRCA rules, depth changes and catch presence still need review.${pointConception?' Vandenberg danger-zone status must be checked before travel.':''} No points enter plans or exports.`;
+        nativeNote.textContent=`${data.features.length} historical hard-bottom outlines.${priorityById.size?` ${priorityById.size} stronger physical research priorities are outlined in teal, with a dated ${priorityClosureDate} MPA/GEA distance check.`:''}${reviewedChart?` ${dangerById.size} amber outlines have nearby charted danger features in a limited ${reviewedChart.enc_checked_at.slice(0,10)} screen.`:' Current chart-danger matching is unavailable for this layer.'} Current fishing permission, charts, YRCA rules, depth changes and catch presence still need review.${pointConception?' Vandenberg danger-zone status must be checked before travel.':''} No points enter plans or exports.`;
       }catch(error){nativeCheck.checked=false;nativeNote.textContent=error.message+' · use original NOAA and USGS sources.';}
     });
   }

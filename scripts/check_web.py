@@ -178,6 +178,35 @@ def main():
     assert sum(row.get('class_table_status') == 'verified' for row in character['products']) == 10
     assert character['fishing_target'] is False and character['exportable'] is False
     assert all('usgs_ds781_opened_native_character_rasters' in row for row in readiness['sectors'])
+    cape_queue = json.loads((WEB / 'data/cape-mendocino-original-habitat-site-review-queue.json').read_text())
+    cape_closures = json.loads((WEB / 'data/cape-mendocino-shortlist-closure-review.json').read_text())
+    cape_context = json.loads((WEB / 'data/cape-mendocino-native-hard-context.geojson').read_text())
+    assert cape_queue['research_shortlist_count'] == cape_closures['shortlist_count'] == 32
+    assert cape_closures['held_count'] == 0 and cape_closures['buffer_m'] == 100
+    assert cape_closures['fishing_target'] is False and cape_closures['exportable'] is False
+    assert {row['context_id'] for row in cape_queue['research_shortlist']} == {
+        row['context_id'] for row in cape_closures['outlines']}
+    assert {row['context_id'] for row in cape_closures['outlines']} <= {
+        feature['properties']['id'] for feature in cape_context['features']}
+    assert cape_closures['input_sha256']['queue'] == hashlib.sha256(
+        (WEB / 'data/cape-mendocino-original-habitat-site-review-queue.json').read_bytes()).hexdigest()
+    assert cape_closures['input_sha256']['context'] == hashlib.sha256(
+        (WEB / 'data/cape-mendocino-native-hard-context.geojson').read_bytes()).hexdigest()
+    assert all(row['within_closure_review_buffer'] is False for row in cape_closures['outlines'])
+    conception_queue = json.loads((WEB / 'data/point-conception-regular-site-review-queue.json').read_text())
+    conception_closures = json.loads((WEB / 'data/point-conception-shortlist-closure-review.json').read_text())
+    conception_context = json.loads((WEB / 'data/point-conception-native-hard-context.geojson').read_text())
+    assert conception_queue['research_shortlist_count'] == conception_closures['shortlist_count'] == 4
+    assert conception_closures['held_count'] == 0 and conception_closures['buffer_m'] == 100
+    assert conception_closures['fishing_target'] is False and conception_closures['exportable'] is False
+    assert {row['context_id'] for row in conception_queue['research_shortlist']} == {
+        row['context_id'] for row in conception_closures['outlines']}
+    assert {row['context_id'] for row in conception_closures['outlines']} <= {
+        feature['properties']['id'] for feature in conception_context['features']}
+    assert conception_closures['input_sha256']['queue'] == hashlib.sha256(
+        (WEB / 'data/point-conception-regular-site-review-queue.json').read_bytes()).hexdigest()
+    assert conception_closures['input_sha256']['context'] == hashlib.sha256(
+        (WEB / 'data/point-conception-native-hard-context.geojson').read_bytes()).hexdigest()
     original_lead = json.loads((WEB / 'data/noaa-h11983-native-source-review.json').read_text())
     hazard_gate = json.loads((WEB / 'data/noaa-h11983-camera-hazard-research-review.json').read_text())
     assert original_lead['survey_id'] == hazard_gate['survey_id'] == 'H11983'
