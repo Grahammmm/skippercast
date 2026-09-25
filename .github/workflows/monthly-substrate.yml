@@ -258,6 +258,21 @@ jobs:
           python scripts/audit_usgs_video_observations.py
           --download-missing
           --output var/review/usgs-video-observation-audit.json
+      - name: Reopen original H11876 side-scan mosaic and companion files
+        run: |
+          mkdir -p var/noaa-native-cache
+          for extension in tif csproj tfw; do
+            curl --fail --location --silent --show-error --max-time 120 \
+              "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/TIFF/H11876_NGDC_SSS_1m.${extension}.gz" \
+              --output "var/noaa-native-cache/H11876_NGDC_SSS_1m.${extension}.gz"
+          done
+          gzip -dc var/noaa-native-cache/H11876_NGDC_SSS_1m.tif.gz > var/noaa-native-cache/H11876_NGDC_SSS_1m.tif
+      - name: Recheck La Jolla side-scan and camera source context
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_h11876_sidescan_context.py
+          --output var/review/h11876-original-sidescan-review.json
       - name: Refresh bounded La Jolla chart-danger evidence
         run: >-
           python scripts/refresh_enc_hazards.py

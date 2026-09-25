@@ -126,6 +126,18 @@ def check_usgs_bathy_accuracy_statewide():
     assert review['fishing_target'] is False and review['exportable'] is False
 
 
+def check_h11876_sidescan_context():
+    review = json.loads((WEB / 'data/h11876-original-sidescan-review.json').read_text())
+    assert review['scope'] == 'h11876-original-sidescan-camera-context'
+    assert review['source_sha256'] == 'fea036f596158b4f549ad86b83a8f66068637c24f848b867f3e772b8cf5f09e0'
+    assert review['actual_raster_pixel_size_m'] == [1.5, 1.5]
+    assert review['reviewed_rocky_windows_with_sidescan_coverage'] == review['reviewed_rocky_window_count'] == 11
+    assert sum(row['patch_count'] for row in review['transects']) == 44
+    assert review['fishing_target'] is False and review['exportable'] is False
+    assert all('latitude' not in row and 'longitude' not in row and 'coordinates' not in row
+               for row in review['transects'])
+
+
 def main():
     assert (WEB / "index.html").is_file()
     induration = json.loads((WEB / 'data/h11967-noaa-induration-camera-review.json').read_text())
@@ -179,6 +191,7 @@ def main():
     check_central_sediment_context()
     check_usgs_morro_report_datum()
     check_usgs_bathy_accuracy_statewide()
+    check_h11876_sidescan_context()
     print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
 
 

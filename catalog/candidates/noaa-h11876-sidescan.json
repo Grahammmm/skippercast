@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h11876-sidescan",
+  "name": "NOAA H11876 original side-scan mosaic near La Jolla",
+  "sector_ids": [
+    "orange-san-diego",
+    "san-diego-border"
+  ],
+  "need_ids": [
+    "substrate",
+    "groundtruth"
+  ],
+  "documentation_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/TIFF/H11876_NGDC_SSS_1m.tif.gz",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC0-1.0 (NOAA survey record; original-file terms should be reconfirmed before raw redistribution)",
+    "terms_url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [
+      -117.352313,
+      32.767041,
+      -117.273841,
+      32.929036
+    ],
+    "resolution_m": 1.5,
+    "resolution_basis": "inspected",
+    "horizontal_crs": "NAD83 / UTM zone 11N (EPSG:26911 companion projection file)",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/TIFF/H11876_NGDC_SSS_1m.tif.gz"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T03:09:39+00:00",
+    "update_cadence": "Historical survey; monthly original-file availability review",
+    "coverage_start": "2008-05-07",
+    "coverage_end": "2008-07-15"
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11876.html",
+      "supports": "Original NOAA survey catalog links the side-scan GeoTIFF and 2008 survey dates."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/TIFF/H11876_NGDC_SSS_1m.csproj.gz",
+      "supports": "Companion projection specifies NAD83 UTM zone 11N; original bytes hash-pinned in the audit."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/TIFF/H11876_NGDC_SSS_1m.tfw.gz",
+      "supports": "Companion world file specifies 1.5 m pixel dimensions despite the 1m filename."
+    }
+  ],
+  "limitations": [
+    "This is a gray-scale acoustic mosaic, not a classified hard-bottom footprint or bathymetry grid; its rectangular extent includes no-data pixels.",
+    "The two USGS camera transects are a small correlated 2011 sample; local image brightness does not consistently separate rock from sand and cannot justify automatically mapped reef boundaries.",
+    "No fishing marks, ratings, bottom illustrations, drifts or exports may be derived from this lead without original substrate interpretation, current chart, MPA and legal access review."
+  ],
+  "producer": {
+    "name": "NOAA National Ocean Service, Office of Coast Survey",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "variables": [
+    "side_scan_gray_value",
+    "historical_camera_substrate_observation"
+  ],
+  "units": {
+    "side_scan_gray_value": "uncalibrated 8-bit display value",
+    "historical_camera_substrate_observation": "USGS categorical code"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original-file archive; USGS Data Series 781 camera archive",
+    "raw_sha256": "fea036f596158b4f549ad86b83a8f66068637c24f848b867f3e772b8cf5f09e0",
+    "transformations": [
+      "Original compressed GeoTIFF checked at SHA-256 and opened at native 1.5 m pixels; projection/world-file sidecars inspected.",
+      "Small 24 m-radius image patches compared with 2011 camera substrate labels on two transects for exploratory source screening only.",
+      "No original image pixel, camera coordinate, target geometry or fish score is republished."
+    ]
+  }
+}
