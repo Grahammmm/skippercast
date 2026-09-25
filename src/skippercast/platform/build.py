@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from .qualified_scope import validate_qualified_scope, qualified_subset_satisfies
 from .coasts import compile_coasts
 from .sectors import compile_sectors
+from .readiness import compile_readiness
 
 
 def target_options(region, targets):
@@ -106,6 +107,7 @@ def build(root=REPO):
         shutil.copyfile(root / "catalog/species.json", root / "dist/data/species-evidence.json")
     compile_coasts(root)
     compile_sectors(root)
+    compile_readiness(root)
     return entries
 
 
