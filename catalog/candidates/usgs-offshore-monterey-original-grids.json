@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "usgs-offshore-monterey-original-grids",
+  "name": "USGS Offshore Monterey original 2 m seafloor character and bathymetry",
+  "sector_ids": ["pigeon-monterey", "monterey-sur"],
+  "need_ids": ["bathymetry", "substrate"],
+  "producer": {
+    "name": "U.S. Geological Survey and California State University Monterey Bay Seafloor Mapping Lab",
+    "url": "https://www.usgs.gov/"
+  },
+  "documentation_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data_catalog_OffshoreMonterey.html",
+  "access_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_2m_OffshoreMonterey.zip",
+  "access_status": "accessible",
+  "variables": ["seafloor_character_class", "bathymetry_elevation"],
+  "units": {
+    "seafloor_character_class": "USGS coded substrate/depth/slope class",
+    "bathymetry_elevation": "m NAVD88"
+  },
+  "rights": {
+    "license": "CC0-1.0; credit USGS and CSU Monterey Bay Seafloor Mapping Lab",
+    "terms_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-121.9935165, 36.5316102, -121.8078807, 36.6922072],
+    "resolution_m": 2,
+    "horizontal_crs": "EPSG:32610 character grid; EPSG:26910 bathymetry grid",
+    "vertical_datum": "NAVD88 for bathymetry; character class has no vertical coordinate",
+    "footprint_kind": "valid-cell-envelope",
+    "footprint_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data_catalog_OffshoreMonterey.html",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-24T12:08:14+00:00",
+    "update_cadence": "Static historical grids; monthly catalog and source-integrity check",
+    "coverage_start": "1998-01-01",
+    "coverage_end": "2014-12-31"
+  },
+  "provenance": {
+    "access_service": "Original USGS Coastal and Marine Geoscience Data System ZIP and FGDC XML downloads",
+    "raw_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+    "transformations": [
+      "Verified exact original archive and metadata hashes for both products; opened native GeoTIFFs and counted valid class cells.",
+      "Derived 88 generalized, MPA-screened hard-bottom context outlines for research only, with five overlapping historical video observations.",
+      "Compared original NAVD88 bathymetry under the historical context outlines without promoting any fishing target."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+      "supports": "Original 1998–2014 video-supervised seafloor classification explains class 3 rock/boulder, the 2 m grid, CC0 terms and research limitations."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+      "supports": "Original 1998–2012 bathymetry metadata identifies NAVD88 vertical datum and mixed acoustic/lidar sources."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+      "supports": "Original 223,411,714-byte bathymetry archive opened; SHA-256 2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_2m_OffshoreMonterey.zip",
+      "supports": "Original 1,744,935-byte character archive opened; SHA-256 8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08."
+    }
+  ],
+  "limitations": [
+    "The mapped class is historical habitat evidence, not a fish observation or proof of catch success; class and bathymetry share underlying survey evidence.",
+    "The source depth grid is NAVD88 and has no per-cell uncertainty companion; it cannot qualify a 200-foot MLLW fishing-depth limit without reviewed conversion and uncertainty.",
+    "The cited bounds are the valid character-cell envelope, not continuously surveyed water or a charted reef boundary.",
+    "The existing 88 generalized context outlines are not fishing waypoints or chartplotter exports. Current MPAs, federal restrictions, chart hazards, routes and species-specific rules remain independent promotion gates.",
+    "Historical video overlap is sparse and not an independent catch record. The products are not for navigation."
+  ]
+}
