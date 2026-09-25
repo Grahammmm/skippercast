@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "scope": "nos-rock-description-versus-original-noaa-depth-triage",
+  "sample_page_sha256": [
+    "a2ce6470668e6b21294de336025cbdbf8a0650e1bd15c574decb0b54b74211ed",
+    "ffc921a0bdfb8f2b5a540277fb4db3102c9c8ff2b5bb2ee320a8426dfc55154c"
+  ],
+  "regular_bag_review_scope": "california-original-regular-native-depth-review",
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "source_files_with_envelope_hits": 20,
+  "file_envelope_hits": 25,
+  "measured_file_cell_hits": 2,
+  "qualified_file_cell_hits": 2,
+  "sectors": [
+    {
+      "sector_id": "humboldt-cape",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "del-norte",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "north-mendocino",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "uncurated_rock_word_samples": 1,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 1,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "uncurated_rock_word_samples": 1,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 1,
+      "on_measured_native_cell": 1,
+      "on_25_to_200ft_qualified_native_cell": 1,
+      "qualified_outside_mpa_buffer": 1,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": 1100
+    },
+    {
+      "sector_id": "arena-bodega",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "morro-conception",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "cambria-morro",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "big-sur",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "monterey-sur",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "san-diego-border",
+      "uncurated_rock_word_samples": 5,
+      "inside_mpa_or_100m_buffer": 1,
+      "within_audited_regular_bag_envelope": 4,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "uncurated_rock_word_samples": 7,
+      "inside_mpa_or_100m_buffer": 3,
+      "within_audited_regular_bag_envelope": 2,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "uncurated_rock_word_samples": 3,
+      "inside_mpa_or_100m_buffer": 1,
+      "within_audited_regular_bag_envelope": 2,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "uncurated_rock_word_samples": 1,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 1,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    },
+    {
+      "sector_id": "conception-ventura",
+      "uncurated_rock_word_samples": 0,
+      "inside_mpa_or_100m_buffer": 0,
+      "within_audited_regular_bag_envelope": 0,
+      "on_measured_native_cell": 0,
+      "on_25_to_200ft_qualified_native_cell": 0,
+      "qualified_outside_mpa_buffer": 0,
+      "qualified_inside_reviewed_bodega_hard_outline": 0,
+      "nearest_reviewed_bodega_hard_outline_m_rounded_100": null
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Free-text rock words are uncurated historical point descriptions, not mapped hard-bottom polygons or present fish.",
+    "NOS sample positions have unresolved accuracy; an exact raster-cell join cannot validate the sample location or its original source method.",
+    "Overlapping NOAA BAG files and resolutions are correlated; counts of file hits are not distinct seabed sites.",
+    "A qualifying cell does not qualify surrounding water, chart hazards, legal access, a route, a fishery or a fishing waypoint.",
+    "Only the existing reviewed Bodega original hard-class outlines are checked for footprint corroboration here; zero does not exclude other independent rock mapping."
+  ],
+  "regular_bag_review_sha256": "f2e41aea8f47e6f547f0c00d0edb7e1bb699cb662f000d2944e123977bee3266",
+  "bodega_original_hard_context_sha256": "f89d7e97d34159a49fdc30cf7a529eef6d2615a522966f8f8ad79780b515797b"
+}

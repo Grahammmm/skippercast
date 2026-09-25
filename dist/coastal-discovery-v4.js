@@ -6,6 +6,7 @@ import {mappedPackageAt} from './map-response.js?v=8.11';
 import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions,localTargetAdvisory} from './coasts.js?v=8.34';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
 import {updateCoastalForecast} from './coastal-forecast-v2.js?v=8.16';
+import {matchMontereyToStatewide,montereyResearchPopup} from './coastal-research-context.js?v=2';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
@@ -55,7 +56,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     islandNote.innerHTML='<summary>Offshore island seabed review</summary><div id="island-native-review" class="small">Loading original-grid screening…</div>';
     panel.querySelector('#sector-survey-details').after(islandNote);
   }
-  let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null,regularDepthData=null,usgsDatumData=null,videoAuditData=null,reefcheckData=null,crfsData=null,readinessData=null;
+  let selectedSector=null,surveyData=null,productData=null,nativeDepthData=null,regularDepthData=null,usgsDatumData=null,videoAuditData=null,reefcheckData=null,crfsData=null,readinessData=null,nosOverlapData=null;
   function showIslandReview(){
     const box=panel.querySelector('#island-native-review');if(!box)return;
     const names={'anacapa':'Anacapa','santa-cruz':'Santa Cruz','santa-rosa':'Santa Rosa','san-miguel':'San Miguel',
@@ -79,6 +80,8 @@ export async function initCoastalDiscovery(catalog,coast) {
     const readiness=readinessData?.sectors.find(item=>item.sector_id===selectedSector.id);
     const readinessSummary=readiness?`<p class="small"><strong>Atlas build status:</strong> ${readiness.status==='partial-local-targets'?'Some local point candidates published; the full sector is not mapped.':'Source review only; no qualified fishing points published for this sector.'} ${readiness.native_variable_depth_file_leads} variable-grid and ${readiness.native_regular_depth_file_leads} regular-grid original survey file(s) have some depth-screened cells; ${readiness.native_substrate_review_file_leads} intersecting file envelope(s) await seabed review${readiness.held_file_leads?`; ${readiness.held_file_leads} file lead(s) remain on hold`:''}. These are source counts, not reef or target counts. ${esc(readiness.next_source_step)} <a href="data/california-atlas-readiness.json" target="_blank" rel="noopener">Review all 19 sectors ↗</a></p>`:'';
     const seabedSummary=readiness?`<p class="small">NOAA historical bottom descriptions: ${readiness.historical_noaa_seabed_samples} sparse sample point(s) in this broad sector. The statewide source spans 1968–2016 and has missing codes; zero here means no service sample, not no habitat. These are not reef outlines or fishing pins. <a href="data/noaa-seabed-samples-sector-review.json" target="_blank" rel="noopener">Source audit ↗</a></p>`:'';
+    const nos=nosOverlapData?.sectors.find(item=>item.sector_id===selectedSector.id);
+    const nosSummary=nos?.uncurated_rock_word_samples?`<p class="small">Rock-description check: ${nos.uncurated_rock_word_samples} historical free-text sample(s); ${nos.qualified_outside_mpa_buffer} land on an audited 25–200 ft original MLLW cell outside the 100 m MPA review buffer. ${selectedSector.id==='bodega-reyes'?`${nos.qualified_inside_reviewed_bodega_hard_outline} also fall within the separately mapped Bodega hard-bottom outlines.`:'An independent hard-class footprint has not been joined for this sector.'} A sample cannot establish a reef edge or fishing spot. <a href="data/noaa-seabed-samples-native-overlap-review.json" target="_blank" rel="noopener">Native-cell review ↗</a></p>`:'';
     const reef=reefcheckData?.sectors.find(item=>item.sector_id===selectedSector.id);
     const reefSummary=reef?`<p class="small">Historical Reef Check scuba transects (2006–2019): ${reef.events} at ${reef.distinct_site_labels_and_coordinates} site label/coordinate combination(s); lingcod observed on ${reef.events_with_lingcod_present} transects and some rockfish on ${reef.events_with_any_rockfish_present}. Zero means no transects in this archive, not no fish. These selected shallow reefs include protected sites and have at least 250 m position uncertainty. Counts are not fish abundance, a present-day bite forecast, or fishing pins. <a href="data/reefcheck-statewide-observation-review.json" target="_blank" rel="noopener">Statewide source review ↗</a></p>`:'';
     const crfs=crfsData?.sectors.find(item=>item.sector_id===selectedSector.id);
@@ -86,7 +89,7 @@ export async function initCoastalDiscovery(catalog,coast) {
     const row=surveyData?.sectors.find(x=>x.sector_id===selectedSector.id);
     if(!row){
       const video=videoAuditData?.sectors.find(item=>item.id===selectedSector.id);
-      list.innerHTML=`<p>${esc(selectedSector.name)}: NOAA survey catalog unavailable. No seabed coverage inferred.</p>${readinessSummary}${seabedSummary}${crfsSummary}${reefSummary}${video?`<p class="small">USGS historical camera transects: ${video.bottom_observations||0} bottom observations in this latitude band. These are not fishing spots or current fish abundance. <a href="data/usgs-video-observation-audit.json" target="_blank" rel="noopener">Original archive receipts ↗</a></p>`:''}`;
+      list.innerHTML=`<p>${esc(selectedSector.name)}: NOAA survey catalog unavailable. No seabed coverage inferred.</p>${readinessSummary}${seabedSummary}${nosSummary}${crfsSummary}${reefSummary}${video?`<p class="small">USGS historical camera transects: ${video.bottom_observations||0} bottom observations in this latitude band. These are not fishing spots or current fish abundance. <a href="data/usgs-video-observation-audit.json" target="_blank" rel="noopener">Original archive receipts ↗</a></p>`:''}`;
       return;
     }
     const products=new Map((productData?.surveys||[]).map(item=>[item.id,item]));
@@ -105,9 +108,18 @@ export async function initCoastalDiscovery(catalog,coast) {
     const sorted=[...row.surveys].sort((a,b)=>(b.year||0)-(a.year||0)||a.id.localeCompare(b.id));
     const entry=lead=>{const p=products.get(lead.id),bag=p?.products?.bag?.[0],report=p?.products?.report?.[0];
       return `<li><strong>${esc(lead.id)}</strong> · ${esc(lead.year||'date unknown')} · ${esc(lead.locality||'locality not recorded')}<br><a href="${esc(lead.catalog_url)}" target="_blank" rel="noopener">NOAA catalog ↗</a>${bag?` · <a href="${esc(bag)}" target="_blank" rel="noopener">BAG grid ↗</a>`:''}${report?` · <a href="${esc(report)}" target="_blank" rel="noopener">Survey report ↗</a>`:''}${p?.status==='retained'?' · product links retained from an earlier check':''}</li>`;};
-    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${readinessSummary}${seabedSummary}${crfsSummary}${regularSummary}${nativeSummary}${usgsSummary}${reefSummary}${videoSummary}${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
+    list.innerHTML=`<p><strong>${esc(selectedSector.name)}</strong> · ${sorted.length} intersecting NOAA survey leads. Catalog footprints and product links are not verified fishing grounds or continuous bottom coverage.</p>${readinessSummary}${seabedSummary}${nosSummary}${crfsSummary}${regularSummary}${nativeSummary}${usgsSummary}${reefSummary}${videoSummary}${productData?`<p class="small">Product pages checked ${esc(productData.collected_at.slice(0,10))} · ${esc(productData.health.status)}.</p>`:'<p class="small">Original product-link inventory unavailable; use each NOAA catalog.</p>'}<ul class="survey-source-list">${sorted.slice(0,20).map(entry).join('')}</ul>${sorted.length>20?`<details><summary>Show ${sorted.length-20} more surveys</summary><ul class="survey-source-list">${sorted.slice(20).map(entry).join('')}</ul></details>`:''}`;
   }
   void fetch('data/california-atlas-readiness.json',{signal:AbortSignal.timeout(10000)}).then(r=>{if(!r.ok)throw Error('Atlas queue unavailable');return r.json();}).then(data=>{readinessData=data;showSurveySources();}).catch(()=>{});
+  void fetch('data/noaa-seabed-samples-native-overlap-review.json',{signal:AbortSignal.timeout(10000)}).then(async r=>{
+    if(!r.ok)throw Error('NOAA native-sample review unavailable');
+    const data=await r.json();
+    if(data.scope!=='nos-rock-description-versus-original-noaa-depth-triage'||data.fishing_target!==false||data.exportable!==false
+      ||data.sectors?.length!==sectorPacket.sectors.length
+      ||data.sectors.reduce((sum,item)=>sum+item.uncurated_rock_word_samples,0)!==18
+      ||data.sectors.reduce((sum,item)=>sum+item.qualified_outside_mpa_buffer,0)!==1)throw Error('Incomplete NOAA native-sample review');
+    nosOverlapData=data;showSurveySources();
+  }).catch(()=>{/* Older source summary remains usable without this optional native-cell cross-check. */});
   sourceSelector.addEventListener('change',()=>{selectedSector=sectors.find(s=>s.id===sourceSelector.value)||null;showSurveySources();});
   panel.addEventListener('click',event=>{const button=event.target.closest('[data-sector]');if(!button)return;const sector=sectors.find(s=>s.id===button.dataset.sector);if(!sector)return;selectedSector=sector;sourceSelector.value=sector.id;panel.querySelector('#sector-survey-details').open=true;showSurveySources();navigation.showView('map');requestAnimationFrame(()=>{map.invalidateSize();map.fitBounds([[sector.bounds[1],sector.bounds[0]],[sector.bounds[3],sector.bounds[2]]],{padding:[20,20],maxZoom:10});});});
   void loadSurveyDiscovery(sectorPacket).then(data=>{
@@ -217,15 +229,25 @@ export async function initCoastalDiscovery(catalog,coast) {
       const data=await response.json();
       if(data.type!=='FeatureCollection'||data.scope!=='generalized-statewide-usgs-hard-bottom-context'||data.coast_id!==coast.id||!Array.isArray(data.features)
         ||data.features.some(f=>f.properties?.fishing_target!==false||f.properties?.exportable!==false||f.properties?.depth_qualified!==false||!f.properties?.metadata_url))throw Error('Unreviewed USGS context');
+      let monterey=new Map(),montereyDetailUnavailable=false;
+      if(coast.id==='central'){
+        try{
+          const [originalResponse,depthResponse]=await Promise.all([
+            fetch('data/usgs-offshore-monterey-hard-context.geojson',{signal:AbortSignal.timeout(15000)}),
+            fetch('data/usgs-offshore-monterey-bathy-context-review.json',{signal:AbortSignal.timeout(15000)})]);
+          if(!originalResponse.ok||!depthResponse.ok)throw Error('Monterey original-depth review unavailable');
+          monterey=matchMontereyToStatewide(data,await originalResponse.json(),await depthResponse.json());
+        }catch{montereyDetailUnavailable=true;}
+      }
       statewideShapes=data.features.map(f=>{
         const p=f.properties;
         const shape=L.geoJSON(f,{pane:'statewideHistoricalSeabed',style:{color:'#8b612e',weight:1,fillColor:'#d7a35e',fillOpacity:.24}})
-          .bindPopup(`<strong>Historical hard, rugged seabed</strong><p>${esc(p.block_id||p.release_id)} · USGS ${esc(p.source_year)} · generalized 20 m view. No fishing target, legal-depth clearance, catch report or navigation accuracy.</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original USGS metadata ↗</a>`);
+          .bindPopup(monterey.has(p.id)?montereyResearchPopup(f,monterey.get(p.id)):`<strong>Historical hard, rugged seabed</strong><p>${esc(p.block_id||p.release_id)} · USGS ${esc(p.source_year)} · generalized 20 m view. No fishing target, legal-depth clearance, catch report or navigation accuracy.</p><a href="${esc(p.metadata_url)}" target="_blank" rel="noopener">Original USGS metadata ↗</a>`);
         return {shape,bounds:shape.getBounds()};
       });
       statewideLoaded=true;statewideContext.addTo(map);drawStatewideContext();
       const sources=new Set(data.features.map(f=>f.properties.block_id||f.properties.release_id));
-      statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
+      statewideNote.textContent=data.features.length?`${data.features.length} historical outlines from ${sources.size} USGS source areas on this coast. Smaller patches and unmapped stretches are absent; MPAs remain visible. No fishing spot or legal depth is implied.${montereyDetailUnavailable?' Monterey original-depth details unavailable.':''}`:'No reviewed USGS hard-bottom outlines are available on this coast yet. NOAA survey grids still require native substrate and depth review.';
     }catch(error){statewideCheck.checked=false;statewideNote.textContent=error.message+' · consult the original USGS catalog.';}
   });
   if(['northern','san-francisco','central','southern'].includes(coast.id)){

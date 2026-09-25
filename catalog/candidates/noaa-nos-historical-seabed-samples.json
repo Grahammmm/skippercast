@@ -43,7 +43,8 @@
     "transformations": [
       "Checked official service name, point geometry, required fields, 2,000-record pagination capability, complete bounded count and distinct OBJECTIDs.",
       "Pinned the two direct original response SHA-256 values a2ce6470668e6b21294de336025cbdbf8a0650e1bd15c574decb0b54b74211ed and ffc921a0bdfb8f2b5a540277fb4db3102c9c8ff2b5bb2ee320a8426dfc55154c.",
-      "Assigned actual WGS84 points to 19 approximate browse sectors; published only source-code and sparse substrate-description counts, with one implausible future date excluded."
+      "Assigned actual WGS84 points to 19 approximate browse sectors; published only source-code and sparse substrate-description counts, with one implausible future date excluded.",
+      "Cross-checked all 18 uncurated rock-word samples against the 127 audited fine regular NOAA BAG grids at original MLLW cell centers and a fresh 100 m CDFW MPA review buffer; published only coordinate-free sector counts. One distinct sample passes the 25–200 ft native-depth policy outside the buffer, but it lies about 1,100 m from the nearest separately reviewed Bodega hard-class outline."
     ]
   },
   "evidence": [
@@ -55,6 +56,7 @@
     "Observed dates with usable values span 1968–2016, and one source value implies 2080; that implausible date is excluded rather than treated as a current sample.",
     "Most original NATSUR codes are missing. Free-text rock/boulder/cobble word counts are uncurated and must not be treated as independently verified rock habitat.",
     "Sample coordinate uncertainty and source provenance vary. The original raw point records remain unpublished while rights and individual-survey accuracy are unresolved.",
-    "No date-specific rules, MPA clearance, depth, safe approach, fishing score or chartplotter export follows from these aggregates."
+    "One sample landing on a qualifying historical bathymetry cell does not confirm a continuous rock footprint, fish or safe access; the older sample coordinates and method retain unresolved accuracy.",
+    "No date-specific rules, MPA clearance, safe approach, fishing score or chartplotter export follows from these aggregates."
   ]
 }

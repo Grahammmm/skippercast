@@ -6,7 +6,6 @@ import {mappedPackageAt} from './map-response.js?v=8.11';
 import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.11';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
 import {updateCoastalForecast} from './coastal-forecast.js?v=8.15';
-import {addMontereyResearchOption} from './coastal-research-context.js?v=1';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
@@ -38,11 +37,6 @@ export async function initCoastalDiscovery(catalog,coast) {
   if(coast.id==='northern'){
     const note=document.createElement('p');note.className='small';
     note.innerHTML='Off Cape Mendocino, an optional <a href="https://doi.org/10.5066/P9U0SUGL" target="_blank" rel="noopener">USGS hard-seabed context layer ↗</a> is available in Map Options. Historical substrate is not a verified fish location or legal-depth clearance.';
-    panel.append(note);
-  }
-  if(coast.id==='central'){
-    const note=document.createElement('p');note.className='small';
-    note.textContent='Monterey Bay has an optional map layer of historical USGS hard-bottom outlines. Original sampled depths use NAVD88 and are not qualified fishing depths or charted rock edges.';
     panel.append(note);
   }
   let selectedSector=null,surveyData=null,productData=null;
@@ -106,7 +100,6 @@ export async function initCoastalDiscovery(catalog,coast) {
       }catch(error){check.checked=false;note.textContent=error.message+' · consult the original USGS release.';}
     });
   }
-  if(coast.id==='central')addMontereyResearchOption(map,body,select);
   document.getElementById('open-map-options').addEventListener('click',()=>options.showModal());document.getElementById('close-map-options').addEventListener('click',()=>options.close());
   const note=document.getElementById('region-note');note.hidden=true;
   const empty=document.getElementById('map-empty');empty.hidden=false;empty.classList.add('coverage-message');

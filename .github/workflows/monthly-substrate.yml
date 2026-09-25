@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify statewide historical-sample audit safeguards
-        run: python -m unittest tests.test_noaa_seabed_samples -v
+        run: python -m unittest tests.test_noaa_seabed_samples tests.test_noaa_seabed_native_overlap -v
       - name: Recheck complete original NOAA seabed sample pages
         run: >-
           python scripts/audit_noaa_seabed_samples.py
