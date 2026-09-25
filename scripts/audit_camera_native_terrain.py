@@ -67,8 +67,10 @@ def sample(raster, lon: float, lat: float, projector: Transformer, *, radius_m=2
 
 def audit(pair: dict, bag_audit: dict, bag_cache: Path, camera_cache: Path,
           *, source_review: str | None = None) -> dict:
-    if not pair.get('survey_hold') or not pair.get('transects') or not pair.get('survey_id'):
-        raise ValueError('Exact held original-camera review is required')
+    if (not pair.get('report_hazard_review_complete') or
+            not pair.get('historical_hazard_review', {}).get('report_sha256') or
+            not pair.get('transects') or not pair.get('survey_id')):
+        raise ValueError('Exact report-reviewed original-camera pair is required')
     bag_record, bag_path = reviewed_archive(bag_audit, pair['survey_id'], bag_cache,
                                              bag_url=pair['bag_url'])
     if bag_record['file_sha256'] != pair['bag_sha256']:
@@ -116,7 +118,8 @@ def audit(pair: dict, bag_audit: dict, bag_cache: Path, camera_cache: Path,
             })
     return {
         'schema_version': 1,
-        'scope': 'held-original-camera-native-terrain-research',
+        'scope': ('held-original-camera-native-terrain-research' if pair.get('survey_hold')
+                  else 'reviewed-original-camera-native-terrain-research'),
         'reviewed_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'survey_id': pair['survey_id'],
         'bag_url': pair['bag_url'], 'bag_sha256': pair['bag_sha256'],
@@ -141,6 +144,7 @@ def main() -> None:
     p.add_argument('--pairs', required=True, type=Path)
     p.add_argument('--survey-id', required=True)
     p.add_argument('--bag-url', required=True)
+    p.add_argument('--cruise', help='Required when more than one camera archive overlaps the BAG')
     p.add_argument('--source-review', help='Optional public coordinate-free review reference')
     p.add_argument('--audit', type=Path, default=Path('var/noaa-native-audit-100mb-refined.json'))
     p.add_argument('--bag-cache', type=Path, default=Path('var/noaa-native-cache'))
@@ -149,7 +153,8 @@ def main() -> None:
     a = p.parse_args()
     packet = json.loads(a.pairs.read_text())
     matching = [row for row in packet['pair_reviews']
-                if row['survey_id'] == a.survey_id and row['bag_url'] == a.bag_url]
+                if row['survey_id'] == a.survey_id and row['bag_url'] == a.bag_url
+                and (a.cruise is None or row['cruise'] == a.cruise)]
     if len(matching) != 1:
         raise ValueError('Expected one exact original BAG/camera pair')
     result = audit(matching[0], json.loads(a.audit.read_text()), a.bag_cache, a.camera_cache,

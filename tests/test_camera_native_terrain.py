@@ -50,6 +50,21 @@ class CameraNativeTerrainTests(unittest.TestCase):
         self.assertLess(south['transects'][0]['detrended_p95_p05_relief_m_range'][0],
                         north['transects'][0]['detrended_p95_p05_relief_m_range'][1])
 
+    def test_h11730_unheld_report_review_stays_research_only(self):
+        pairs = json.loads((ROOT / 'dist/data/noaa-statewide-regular-camera-review.json').read_text())['pair_reviews']
+        for cruise, suffix, count in (
+            ('f208nc', '2008', 40), ('c210nc', '2010', 14)):
+            report = json.loads((ROOT / f'dist/data/h11730-arena-bodega-{suffix}-native-terrain.json').read_text())
+            pair = next(row for row in pairs if row['survey_id'] == 'H11730'
+                        and row['cruise'] == cruise and row['bag_url'] == report['bag_url'])
+            self.assertTrue(pair['report_hazard_review_complete'])
+            self.assertIsNone(pair['survey_hold'])
+            self.assertEqual(report['camera_archive_sha256'], pair['camera_archive_sha256'])
+            self.assertEqual(sum(row['historical_camera_windows'] for row in report['transects']), count)
+            self.assertFalse(report['fishing_target'])
+            self.assertFalse(report['exportable'])
+            self.assertNotIn('camera_position_bounds', json.dumps(report))
+
 
 if __name__ == '__main__':
     unittest.main()
