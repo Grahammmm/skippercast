@@ -22,6 +22,10 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertEqual(by_sector['del-norte']['historical_noaa_seabed_samples'], 0)
         self.assertEqual(by_sector['reyes-pigeon']['historical_noaa_seabed_samples'], 881)
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
+        self.assertIn('BSS_Block13', by_sector['big-sur']['csumb_catalog_survey_lead_ids'])
+        self.assertIn('SCC_Block01', by_sector['sur-san-simeon']['csumb_catalog_survey_lead_ids'])
+        self.assertIn('SCC_Block08', by_sector['cambria-morro']['csumb_catalog_survey_lead_ids'])
+        self.assertEqual(by_sector['big-sur']['published_candidate_points_in_band'], 0)
         self.assertIn('noaa-h11971-bear-landing-original-camera',
                       by_sector['north-mendocino']['accessible_inspected_fine_source_candidate_ids'])
         for sector_id in ('pigeon-monterey', 'monterey-sur'):
@@ -49,6 +53,8 @@ class AtlasReadinessTests(unittest.TestCase):
                              'dist/data/noaa-regular-native-depth-review.json',
                              'dist/data/noaa-survey-discovery.json',
                              'dist/data/noaa-seabed-samples-sector-review.json',
+                             'catalog/csumb-scc-source-leads.json',
+                             'catalog/csumb-bss-source-leads.json',
                              'dist/regions/index.json'):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

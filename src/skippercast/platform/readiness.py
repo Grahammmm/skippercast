@@ -16,6 +16,8 @@ def compile_readiness(root=REPO):
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
     discovery = read_json(root / 'dist/data/noaa-survey-discovery.json')
     seabed_samples = read_json(root / 'dist/data/noaa-seabed-samples-sector-review.json')
+    csumb_series = [read_json(root / f'catalog/csumb-{series}-source-leads.json')
+                    for series in ('scc', 'bss')]
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -43,6 +45,15 @@ def compile_readiness(root=REPO):
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
     seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
     expected = {row['id'] for row in sectors}
+    csumb_by_sector = {ident: set() for ident in expected}
+    for series, packet in zip(('scc', 'bss'), csumb_series):
+        if packet.get('series') != series or packet.get('survey_count') != len(packet.get('surveys', [])):
+            raise ValueError(f'CSUMB {series} source-lead roster is incomplete')
+        for survey in packet['surveys']:
+            if survey.get('status') != 'source-lead-only' or not set(survey['sector_ids']) <= expected:
+                raise ValueError('CSUMB survey lead has unknown sector or promotion status')
+            for sector_id in survey['sector_ids']:
+                csumb_by_sector[sector_id].add(survey['survey_id'])
     if (len(sectors) != 19 or variable_depth['scope'] != 'california-expanded-original-vr-depth-inventory'
             or variable_depth['survey_file_count'] != len(variable_depth['files'])
             or regular_depth['status'] != 'ok'
@@ -89,6 +100,9 @@ def compile_readiness(root=REPO):
         if source_leads and not (candidate_files or variable_files or regular_files):
             next_step = ('Audit the listed original fine-resolution source leads at native cells, reconcile chart datum and uncertainty, '
                          'then screen substrate, MPAs, hazards and local rules; the bounded NOAA sample yielded no qualified depth cells.')
+        if csumb_by_sector[ident] and not (source_leads or candidate_files or variable_files or regular_files):
+            next_step = ('Inspect the original CSUMB survey archives, per-file metadata and measured-cell masks; '
+                         'then reconcile chart datum, uncertainty, substrate, MPAs, hazards, route and rules before any target.')
         if held_files:
             next_step += ' Reconcile held survey hazards before any target promotion.'
         rows.append({
@@ -98,6 +112,7 @@ def compile_readiness(root=REPO):
             'published_candidate_points_in_band': points,
             'status': 'partial-local-targets' if points else 'source-review-only',
             'noaa_catalog_survey_leads': lead['catalog_survey_leads'],
+            'csumb_catalog_survey_lead_ids': sorted(csumb_by_sector[ident]),
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
             'native_regular_depth_file_leads': regular_files,
@@ -128,6 +143,7 @@ def compile_readiness(root=REPO):
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
+            'CSUMB catalog-report envelopes are discovery leads only; they are not measured-cell footprints or fishing areas.',
             'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',
         ],

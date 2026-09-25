@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-09-25T07:34:50.333268+00:00",
+  "series": "scc",
+  "checked_at": "2026-09-25T07:47:21.962387+00:00",
   "producer": "CSU Monterey Bay Seafloor Mapping Lab; NOAA NCEI distribution",
   "series_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
   "series_metadata_sha256": "34b0ccb72fa4f2f60f34519ebada47bbd7c34a06f584da3e5221f6b58d933a1d",
