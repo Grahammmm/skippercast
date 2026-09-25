@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "noaa-nos-historical-seabed-samples",
+  "name": "NOAA/NOS historical California seabed-description points",
+  "sector_ids": ["del-norte", "crescent-city-humboldt", "humboldt-cape", "north-mendocino", "fort-bragg-arena", "arena-bodega", "bodega-reyes", "reyes-pigeon", "pigeon-monterey", "monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception", "conception-ventura", "ventura-los-angeles", "los-angeles-orange", "orange-san-diego", "san-diego-border"],
+  "need_ids": ["groundtruth"],
+  "producer": {
+    "name": "NOAA National Centers for Environmental Information, National Ocean Service hydrographic seabed descriptions",
+    "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey"
+  },
+  "documentation_url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.geology%3AG10163",
+  "access_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0",
+  "access_status": "accessible",
+  "variables": ["survey_id", "sample_id", "observation_time_if_present", "original_description", "coded_nature_if_present", "source_code"],
+  "units": {
+    "survey_id": null,
+    "sample_id": null,
+    "observation_time_if_present": "Unix milliseconds in ArcGIS response; source meaning needs per-survey review",
+    "original_description": "original free text",
+    "coded_nature_if_present": "IHO S-57 nature-of-surface codes, sometimes absent or malformed",
+    "source_code": null
+  },
+  "rights": {"license": null, "terms_url": null, "redistribution_reviewed": false},
+  "spatial": {
+    "bounds": [-125.4, 32.5343, -116.95, 42.0],
+    "resolution_m": null,
+    "horizontal_crs": "Original ArcGIS service point geometry requested in WGS84; coordinate uncertainty varies by source and is not resolved",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T05:27:50+00:00",
+    "update_cadence": "Monthly complete-page audit; review any changed source before replacing public aggregates",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Original NOAA NCEI ArcGIS MapServer point layer, all 3,591 California-envelope records via two OBJECTID-ordered pages",
+    "raw_sha256": null,
+    "transformations": [
+      "Checked official service name, point geometry, required fields, 2,000-record pagination capability, complete bounded count and distinct OBJECTIDs.",
+      "Pinned the two direct original response SHA-256 values a2ce6470668e6b21294de336025cbdbf8a0650e1bd15c574decb0b54b74211ed and ffc921a0bdfb8f2b5a540277fb4db3102c9c8ff2b5bb2ee320a8426dfc55154c.",
+      "Assigned actual WGS84 points to 19 approximate browse sectors; published only source-code and sparse substrate-description counts, with one implausible future date excluded."
+    ]
+  },
+  "evidence": [
+    {"url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.geology%3AG10163", "supports": "NOAA describes the compiled NOS/USCGS seabed-description collection, its mixed sources, free-text sediment descriptions and later S-57 nature-of-surface coding."},
+    {"url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0", "supports": "Direct point layer returned 3,591 California-envelope records in two complete pages; 14 of 19 browse sectors contain one or more samples."}
+  ],
+  "limitations": [
+    "Sparse historical samples are not continuous substrate coverage, a reef boundary, fish observation or navigational sounding. Five browse sectors have zero sampled points in this bounded service audit.",
+    "Observed dates with usable values span 1968–2016, and one source value implies 2080; that implausible date is excluded rather than treated as a current sample.",
+    "Most original NATSUR codes are missing. Free-text rock/boulder/cobble word counts are uncurated and must not be treated as independently verified rock habitat.",
+    "Sample coordinate uncertainty and source provenance vary. The original raw point records remain unpublished while rights and individual-survey accuracy are unresolved.",
+    "No date-specific rules, MPA clearance, depth, safe approach, fishing score or chartplotter export follows from these aggregates."
+  ]
+}

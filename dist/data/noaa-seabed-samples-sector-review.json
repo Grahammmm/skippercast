@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "scope": "california-historical-nos-seabed-sample-sector-audit",
+  "source_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0",
+  "metadata_url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.geology%3AG10163",
+  "retrieved_at": "2026-09-25T05:27:50+00:00",
+  "service_metadata_sha256": "ff296d83afd6ed231265b95c50b4c9be59be5263927b61867e95078980b907f2",
+  "bounded_count_sha256": "4bae25a6ff79cc179764d233ad9c60f83e490542c158963143ddf9ecd44d7714",
+  "page_sha256": [
+    "a2ce6470668e6b21294de336025cbdbf8a0650e1bd15c574decb0b54b74211ed",
+    "ffc921a0bdfb8f2b5a540277fb4db3102c9c8ff2b5bb2ee320a8426dfc55154c"
+  ],
+  "bounded_original_sample_count": 3591,
+  "assigned_to_browse_sector_count": 3591,
+  "outside_browse_sectors_count": 0,
+  "sectors": [
+    {
+      "sector_id": "humboldt-cape",
+      "historical_sample_count": 10,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 10,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1984,
+        1984
+      ],
+      "source_record_counts": {
+        "NMNH": 10
+      }
+    },
+    {
+      "sector_id": "crescent-city-humboldt",
+      "historical_sample_count": 0,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 0,
+      "implausible_date_count": 0,
+      "observation_year_range": null,
+      "source_record_counts": {}
+    },
+    {
+      "sector_id": "del-norte",
+      "historical_sample_count": 0,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 0,
+      "implausible_date_count": 0,
+      "observation_year_range": null,
+      "source_record_counts": {}
+    },
+    {
+      "sector_id": "fort-bragg-arena",
+      "historical_sample_count": 3,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 3,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1984,
+        1984
+      ],
+      "source_record_counts": {
+        "NMNH": 3
+      }
+    },
+    {
+      "sector_id": "north-mendocino",
+      "historical_sample_count": 28,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 28,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1984,
+        1984
+      ],
+      "source_record_counts": {
+        "NMNH": 28
+      }
+    },
+    {
+      "sector_id": "reyes-pigeon",
+      "historical_sample_count": 881,
+      "nature_code_counts": {
+        "1": 26,
+        "1,  17": 1,
+        "1, 17": 23,
+        "1, 2": 3,
+        "1, 2, 17": 11,
+        "1, 4": 4,
+        "1,,": 11,
+        "1,17,": 7,
+        "1,4,": 1,
+        "1,4,17": 3,
+        "17, 1": 2,
+        "2, 17": 1,
+        "4, 1, 2, 17": 4,
+        "4,17,": 4
+      },
+      "uncurated_description_rock_word_count": 1,
+      "dated_sample_count": 865,
+      "implausible_date_count": 1,
+      "observation_year_range": [
+        1978,
+        2011
+      ],
+      "source_record_counts": {
+        "NMNH": 764,
+        "NOS": 26,
+        "digitized": 1,
+        "log sheet m": 76,
+        "unknown": 14
+      }
+    },
+    {
+      "sector_id": "bodega-reyes",
+      "historical_sample_count": 527,
+      "nature_code_counts": {
+        "1,,": 4,
+        "1,17,": 1,
+        "4,,": 1,
+        "4,17,": 1
+      },
+      "uncurated_description_rock_word_count": 1,
+      "dated_sample_count": 498,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1979,
+        2016
+      ],
+      "source_record_counts": {
+        "NMNH": 491,
+        "NOS": 7,
+        "digitized": 29
+      }
+    },
+    {
+      "sector_id": "arena-bodega",
+      "historical_sample_count": 11,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 9,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1985,
+        1985
+      ],
+      "source_record_counts": {
+        "NMNH": 9,
+        "digitized": 2
+      }
+    },
+    {
+      "sector_id": "morro-conception",
+      "historical_sample_count": 48,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 48,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1978,
+        1994
+      ],
+      "source_record_counts": {
+        "NMNH": 48
+      }
+    },
+    {
+      "sector_id": "cambria-morro",
+      "historical_sample_count": 106,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 106,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1978,
+        1994
+      ],
+      "source_record_counts": {
+        "NMNH": 106
+      }
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "historical_sample_count": 0,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 0,
+      "implausible_date_count": 0,
+      "observation_year_range": null,
+      "source_record_counts": {}
+    },
+    {
+      "sector_id": "big-sur",
+      "historical_sample_count": 0,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 0,
+      "implausible_date_count": 0,
+      "observation_year_range": null,
+      "source_record_counts": {}
+    },
+    {
+      "sector_id": "monterey-sur",
+      "historical_sample_count": 0,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 0,
+      "implausible_date_count": 0,
+      "observation_year_range": null,
+      "source_record_counts": {}
+    },
+    {
+      "sector_id": "pigeon-monterey",
+      "historical_sample_count": 26,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 26,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1979,
+        1985
+      ],
+      "source_record_counts": {
+        "NMNH": 26
+      }
+    },
+    {
+      "sector_id": "san-diego-border",
+      "historical_sample_count": 264,
+      "nature_code_counts": {
+        "1, 4": 1,
+        "4": 1
+      },
+      "uncurated_description_rock_word_count": 5,
+      "dated_sample_count": 264,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1968,
+        1974
+      ],
+      "source_record_counts": {
+        "NMNH": 261,
+        "log sheet m": 3
+      }
+    },
+    {
+      "sector_id": "orange-san-diego",
+      "historical_sample_count": 526,
+      "nature_code_counts": {
+        "1": 1,
+        "4, 1": 1
+      },
+      "uncurated_description_rock_word_count": 7,
+      "dated_sample_count": 526,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1969,
+        1978
+      ],
+      "source_record_counts": {
+        "NMNH": 524,
+        "log sheet m": 2
+      }
+    },
+    {
+      "sector_id": "los-angeles-orange",
+      "historical_sample_count": 426,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 3,
+      "dated_sample_count": 418,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1972,
+        1978
+      ],
+      "source_record_counts": {
+        "NMNH": 418,
+        "survey rep": 8
+      }
+    },
+    {
+      "sector_id": "ventura-los-angeles",
+      "historical_sample_count": 95,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 1,
+      "dated_sample_count": 95,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1976,
+        1977
+      ],
+      "source_record_counts": {
+        "NMNH": 95
+      }
+    },
+    {
+      "sector_id": "conception-ventura",
+      "historical_sample_count": 640,
+      "nature_code_counts": {},
+      "uncurated_description_rock_word_count": 0,
+      "dated_sample_count": 640,
+      "implausible_date_count": 0,
+      "observation_year_range": [
+        1976,
+        1985
+      ],
+      "source_record_counts": {
+        "NMNH": 640
+      }
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "These are sparse historical point descriptions from varied source surveys, not complete substrate coverage or reef polygons.",
+    "NATSUR codes and uncurated description words are reported separately; a word match is not an independently reviewed bottom class.",
+    "A browse-sector latitude band may include harbors, bays or offshore water; counts do not establish local fishing habitat or fish presence.",
+    "Service retrieval time is not observation time or a scientific issue time. Missing dates and codes stay missing.",
+    "Future or otherwise implausible source dates are excluded from year ranges and counted separately.",
+    "No fishing coordinate, depth, MPA or route clearance, species rating or export follows from this audit."
+  ]
+}

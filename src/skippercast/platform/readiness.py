@@ -15,6 +15,7 @@ def compile_readiness(root=REPO):
     variable_depth = read_json(root / 'dist/data/noaa-vr-native-depth-expanded-review.json')
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
     discovery = read_json(root / 'dist/data/noaa-survey-discovery.json')
+    seabed_samples = read_json(root / 'dist/data/noaa-seabed-samples-sector-review.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -40,6 +41,7 @@ def compile_readiness(root=REPO):
     variable_by_id = {row['sector_id']: row for row in variable_depth['sectors']}
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
+    seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
     expected = {row['id'] for row in sectors}
     if (len(sectors) != 19 or variable_depth['scope'] != 'california-expanded-original-vr-depth-inventory'
             or variable_depth['survey_file_count'] != len(variable_depth['files'])
@@ -48,8 +50,10 @@ def compile_readiness(root=REPO):
             or len(variable_by_id) != len(variable_depth['sectors'])
             or len(regular_by_id) != len(regular_depth['sectors'])
             or len(discovery_by_id) != len(discovery['sectors'])
+            or seabed_samples['scope'] != 'california-historical-nos-seabed-sample-sector-audit'
+            or len(seabed_by_id) != len(seabed_samples['sectors'])
             or any(set(rows) != expected for rows in
-                   (native_by_id, variable_by_id, regular_by_id, discovery_by_id))):
+                   (native_by_id, variable_by_id, regular_by_id, discovery_by_id, seabed_by_id))):
         raise ValueError('A statewide readiness input is missing or has duplicate sectors')
     rows = []
     for sector in sectors:
@@ -97,6 +101,7 @@ def compile_readiness(root=REPO):
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
             'native_regular_depth_file_leads': regular_files,
+            'historical_noaa_seabed_samples': seabed_by_id[ident]['historical_sample_count'],
             'native_substrate_review_file_leads': candidate_files,
             'accessible_inspected_fine_source_candidate_ids': source_leads,
             'held_file_leads': held_files,
@@ -117,11 +122,13 @@ def compile_readiness(root=REPO):
         'scope': 'California outer-coast source promotion queue; latitude bands are discovery partitions, not fishing or regulation boundaries.',
         'source_audit_at': native['audit_collected_at'],
         'survey_discovery_at': discovery['last_complete_scan_at'],
+        'historical_seabed_samples_retrieved_at': seabed_samples['retrieved_at'],
         'limitations': [
             'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
             'Points in a latitude band do not establish complete sector coverage; islands and bays require separate local review.',
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
+            'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',
         ],
         'sectors': rows,

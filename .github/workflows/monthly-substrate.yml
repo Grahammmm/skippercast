@@ -9,6 +9,28 @@ permissions:
   contents: read
 
 jobs:
+  nos-historical-seabed-samples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify statewide historical-sample audit safeguards
+        run: python -m unittest tests.test_noaa_seabed_samples -v
+      - name: Recheck complete original NOAA seabed sample pages
+        run: >-
+          python scripts/audit_noaa_seabed_samples.py
+          --baseline dist/data/noaa-seabed-samples-sector-review.json
+          --output var/review/noaa-seabed-samples-sector-review.json
+      - name: Upload aggregate source-change receipt without original point locations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nos-historical-seabed-samples
+          path: var/review/noaa-seabed-samples-sector-review.json
+          retention-days: 30
   reefcheck-historical-observations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
