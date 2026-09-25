@@ -31,6 +31,8 @@ class AtlasReadinessTests(unittest.TestCase):
                             for a in by_sector['conception-ventura']['usgs_ds781_map_area_leads']))
         self.assertTrue(any(a['priority_product_status'] == 'index-link-mismatch'
                             for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
+        self.assertTrue(any('instantaneous sea level' in a['bathymetry_datum_declarations']
+                            for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
         self.assertEqual(by_sector['san-diego-border']['usgs_ds781_map_area_leads'], [])
         self.assertEqual(by_sector['big-sur']['published_candidate_points_in_band'], 0)
         self.assertIn('noaa-h11971-bear-landing-original-camera',
@@ -63,6 +65,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              'catalog/csumb-scc-source-leads.json',
                              'catalog/csumb-bss-source-leads.json',
                              'catalog/usgs-ds781-source-leads.json',
+                             'catalog/usgs-ds781-metadata-review.json',
                              'dist/regions/index.json'):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

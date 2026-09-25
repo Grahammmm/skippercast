@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify USGS map-area and source-link parser
-        run: python -m unittest tests.test_usgs_ds781_catalogs -v
+        run: python -m unittest tests.test_usgs_ds781_catalogs tests.test_usgs_ds781_metadata -v
       - name: Recheck official USGS DS 781 index and linked original products
         run: >-
           python scripts/discover_usgs_ds781_catalogs.py
@@ -30,6 +30,19 @@ jobs:
         with:
           name: usgs-ds781-source-leads
           path: var/review/usgs-ds781-source-leads.json
+          retention-days: 30
+      - name: Recheck original bathymetry and seafloor-character FGDC metadata
+        run: >-
+          python scripts/audit_usgs_ds781_metadata.py
+          --inventory catalog/usgs-ds781-source-leads.json
+          --output var/review/usgs-ds781-metadata-review.json
+          --verify catalog/usgs-ds781-metadata-review.json
+      - name: Upload unpublished FGDC metadata-change receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-ds781-fgdc-metadata
+          path: var/review/usgs-ds781-metadata-review.json
           retention-days: 30
   nos-historical-seabed-samples:
     runs-on: ubuntu-latest

@@ -19,6 +19,7 @@ def compile_readiness(root=REPO):
     csumb_series = [read_json(root / f'catalog/csumb-{series}-source-leads.json')
                     for series in ('scc', 'bss')]
     usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
+    usgs_metadata = read_json(root / 'catalog/usgs-ds781-metadata-review.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -55,7 +56,17 @@ def compile_readiness(root=REPO):
     usgs_by_sector = {ident: [] for ident in expected}
     if len(usgs_map_areas.get('map_areas', [])) < 35:
         raise ValueError('USGS DS 781 map-area source inventory is incomplete')
+    metadata_by_archive = {row['archive_url']: row for row in usgs_metadata.get('records', [])}
+    priority_archives = [product['archive_url'] for area in usgs_map_areas['map_areas']
+                         for product in area.get('products', [])
+                         if product['kind'] in {'bathymetry', 'seafloor-character'}]
+    if (usgs_metadata.get('scope') != 'usgs-ds781-original-fgdc-metadata-triage'
+            or len(priority_archives) != len(metadata_by_archive)
+            or set(priority_archives) != set(metadata_by_archive)):
+        raise ValueError('USGS DS 781 metadata triage does not match catalog priority products')
     for area in usgs_map_areas['map_areas']:
+        reviewed = [metadata_by_archive[p['archive_url']] for p in area.get('products', [])
+                    if p['kind'] in {'bathymetry', 'seafloor-character'}]
         for sector_id in area['planning_sector_ids']:
             if sector_id not in usgs_by_sector:
                 raise ValueError('USGS map-area lead has unknown planning sector')
@@ -65,6 +76,12 @@ def compile_readiness(root=REPO):
                 'bathymetry_product_links': sum(p['kind'] == 'bathymetry' for p in area.get('products', [])),
                 'seafloor_character_product_links': sum(p['kind'] == 'seafloor-character' for p in area.get('products', [])),
                 'habitat_product_links': sum(p['kind'] == 'habitat' for p in area.get('products', [])),
+                'fgdc_metadata_reviewed': sum(p['status'] == 'reviewed' for p in reviewed),
+                'fgdc_metadata_unavailable': sum(p['status'] != 'reviewed' for p in reviewed),
+                'explicit_public_domain_metadata': sum(p.get('rights_evidence') == 'explicit-public-domain-redistribution'
+                                                       for p in reviewed),
+                'bathymetry_datum_declarations': sorted({p['vertical_datum_declared'] or 'not declared'
+                    for p in reviewed if p['kind'] == 'bathymetry' and p['status'] == 'reviewed'}),
             })
     for series, packet in zip(('scc', 'bss'), csumb_series):
         if packet.get('series') != series or packet.get('survey_count') != len(packet.get('surveys', [])):
@@ -172,6 +189,7 @@ def compile_readiness(root=REPO):
             'A zero source lead means no qualifying file in this bounded audit, not no reef or fish.',
             'CSUMB catalog-report envelopes are discovery leads only; they are not measured-cell footprints or fishing areas.',
             'USGS DS 781 map-area associations follow broad place names, not inspected original grid footprints. Linked products are acquisition leads, not surveyed area or fishable marks.',
+            'USGS FGDC metadata rights, spacing and datum values are source descriptions only; a public-domain statement does not validate raster coverage, chart depth or fishing use.',
             'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',
         ],

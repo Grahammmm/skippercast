@@ -153,6 +153,9 @@ def main():
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
     assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
+    assert (WEB / 'data/usgs-ds781-metadata-review.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-metadata-review.json').read_bytes()
+    usgs_metadata = json.loads((WEB / 'data/usgs-ds781-metadata-review.json').read_text())
+    assert usgs_metadata['record_count'] == len(usgs_metadata['records']) == 75
     assert len(usgs_leads['map_areas']) == 39
     assert all(area['priority_product_status'] != 'linked' or area['products']
                for area in usgs_leads['map_areas'])
@@ -162,6 +165,8 @@ def main():
     assert all(row['status'] in {'source-review-only', 'partial-local-targets'}
                and row['remaining_promotion_gates'] for row in readiness['sectors'])
     assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
+    assert all('fgdc_metadata_reviewed' in lead for row in readiness['sectors']
+               for lead in row['usgs_ds781_map_area_leads'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
