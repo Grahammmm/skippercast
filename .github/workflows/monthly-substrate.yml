@@ -440,5 +440,28 @@ jobs:
           path: var/review/
           retention-days: 30
 
+  usgs-sur-arguello-sediment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned original-grid reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Recheck USGS Point Sur–Point Arguello source and five browse bands
+        run: >-
+          python scripts/audit_usgs_sur_arguello_sediment.py
+          --fetch
+          --output var/review/usgs-sur-arguello-sediment-audit.json
+      - name: Upload unpublished geologic-context source audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-sur-arguello-sediment-source
+          path: var/review/usgs-sur-arguello-sediment-audit.json
+          retention-days: 30
+
 # This workflow deliberately does not change public map files. Camera observations,
 # source-class intersections and closures need a reviewed commit before deployment.

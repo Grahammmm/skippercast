@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "usgs-point-sur-arguello-sediment-context",
+  "name": "USGS Point Sur–Point Arguello interpolated sediment thickness",
+  "sector_ids": ["big-sur", "sur-san-simeon", "cambria-morro", "morro-conception"],
+  "need_ids": ["substrate"],
+  "producer": {
+    "name": "U.S. Geological Survey",
+    "url": "https://www.usgs.gov/centers/pcmsc"
+  },
+  "documentation_url": "https://pubs.usgs.gov/of/2018/1158/data_catalog_PointSurToPointArguello.html",
+  "access_url": "https://www.sciencebase.gov/catalog/file/get/5c913811e4b09388245480d2?facet=SedimentThickness_PointSurToPointArguello",
+  "access_status": "accessible",
+  "variables": ["sediment_thickness_above_transgressive_surface"],
+  "units": {"sediment_thickness_above_transgressive_surface": "m, interpolated estimate"},
+  "rights": {
+    "license": "USGS public domain",
+    "terms_url": "https://www.sciencebase.gov/catalog/file/get/5c913811e4b09388245480d2?allowOpen=true&name=SedimentThickness_PointSurToPointArguello_metadata.xml",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-121.98697099978004, 34.3530939635132, -120.06293410384107, 36.36361651379383],
+    "resolution_m": 50,
+    "horizontal_crs": "EPSG:32610",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": null,
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T01:47:14Z",
+    "update_cadence": "Static 2008–2014 seismic survey interpretation; monthly original-source integrity check.",
+    "coverage_start": "2008-01-01",
+    "coverage_end": "2014-12-31"
+  },
+  "provenance": {
+    "access_service": "USGS ScienceBase original DS 781 / OFR 2018-1158 GeoTIFF archive",
+    "raw_sha256": "d0ca4195ae69303216dc41a2f7a9e7f6cc9458564f45622d73547dad5fc2a6e7",
+    "transformations": [
+      "Opened the exact original 50 m GeoTIFF, verified EPSG:32610 and raster/XML hashes, counted 824,580 valid cells and assigned their centers to approximate coast browse latitude bands. The download ZIP is dynamically repacked by ScienceBase, so its transport hash is recorded but not pinned. No cell became a fishing position or polygon."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://pubs.usgs.gov/of/2018/1158/data_catalog_PointSurToPointArguello.html",
+      "supports": "USGS catalog identifies the sediment-thickness GeoTIFF and original download."
+    },
+    {
+      "url": "https://www.sciencebase.gov/catalog/file/get/5c913811e4b09388245480d2?allowOpen=true&name=SedimentThickness_PointSurToPointArguello_metadata.xml",
+      "supports": "USGS metadata states 50 m interpolation, seismic line spacing of 800–1,000 m, survey dates and public-domain attribution terms."
+    }
+  ],
+  "limitations": [
+    "The grid estimates sediment above the last-glacial-maximum transgressive surface, not bottom depth, exposed rock, fish habitat or fish presence.",
+    "Seismic tracklines are generally 800–1,000 m apart. Raster interpolation at 50 m is not a 50 m seabed observation.",
+    "Near-zero and negative interpolated thickness cells cannot be treated as rock-pile locations or seabed clearance.",
+    "The broad catalog envelope includes many unsurveyed cells; actual valid-cell counts are in dist/data/usgs-sur-arguello-sediment-review.json.",
+    "Current chart, MPA, local rules, routes, species and original depth measurements are separate gates before a fishing target could be considered."
+  ]
+}
