@@ -1,1 +1,1 @@
-{"region_id":"point-arguello-conception","generated_at":"2026-09-25T09:41:26Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":60,"sources_total":64,"issues":["sst","chlorophyll","access-vandenberg-maritime","harbor"]}
+{"region_id":"point-arguello-conception","generated_at":"2026-09-25T09:56:55Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":64,"issues":["access-vandenberg-maritime","harbor"]}
