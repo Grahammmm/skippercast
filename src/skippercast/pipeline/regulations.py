@@ -91,6 +91,24 @@ def validate_region_binding(jurisdiction, registry, region):
         raise ValueError('Regional target species need matching reviewed regulation records')
 
 
+def regional_source_ids(jurisdiction, registry, region):
+    """Watch shared rules plus only the species and access notices for this region."""
+    validate_region_binding(jurisdiction, registry, region)
+    active = {species for target in region['species']
+              for species in (('lingcod', 'rockfish') if target == 'reef' else (target,))}
+    identifiers = set(jurisdiction.get('required_source_ids', []))
+    for species in active:
+        identifiers.update(registry['species'][species]['source_ids'])
+    notices = {notice['id']: notice for notice in registry.get('area_notices', [])}
+    for notice_id in region.get('map', {}).get('region_notice_ids', []):
+        if notice_id not in notices:
+            raise ValueError(f'Unknown regional legal notice: {notice_id}')
+        identifiers.update(notices[notice_id]['source_ids'])
+    if not identifiers <= registry['sources'].keys():
+        raise ValueError('Regional legal source is not in the reviewed registry')
+    return sorted(identifiers)
+
+
 def ecfr_section(client, spec):
     # The supported API is rate-limited. Share title metadata only within a run;
     # retain the original retrieval receipt and serialize section requests.
@@ -166,7 +184,7 @@ def valid_window(window, timezone='America/Los_Angeles'):
         return False
 
 
-def regulatory_snapshot(sources, now, registry=None):
+def regulatory_snapshot(sources, now, registry=None, source_scope_ids=None):
     data = deepcopy(registry if registry is not None else json.loads(REGISTRY.read_text()))
     species = data.get('species', {})
     if data.get("schema_version") != 1 or not species or not all(
@@ -177,8 +195,17 @@ def regulatory_snapshot(sources, now, registry=None):
         for p in species.values()
     ):
         raise ValueError("Regulations registry is incomplete")
+    scope = set(source_scope_ids) if source_scope_ids is not None else None
+    if scope is not None and not scope <= data['sources'].keys():
+        raise ValueError('Unknown regional legal source scope')
     checks = {}
     for ident, expected in data["sources"].items():
+        if scope is not None and ident not in scope:
+            checks[ident] = {'status': 'out-of-scope', 'checked_at': None,
+                             'data_retrieved_at': None, 'content_sha256': None,
+                             'url': expected.get('url'), 'normalization': None,
+                             'source_status': 'not-requested'}
+            continue
         source = sources.get(ident, {})
         checked = source.get("data_retrieved_at")
         try:
@@ -207,5 +234,8 @@ def regulatory_snapshot(sources, now, registry=None):
     data["checks"] = checks
     data['rules_review_status'] = 'reviewed' if data.get('approved_rules_content_sha256') == content_hash(data) else 'content-needs-review'
     data["checked_at"] = now.isoformat(timespec="seconds").replace("+00:00", "Z")
-    data["review_required"] = [ident for ident, check in checks.items() if check["status"] != "unchanged"]
+    if scope is not None:
+        data['source_scope_ids'] = sorted(scope)
+    data["review_required"] = [ident for ident, check in checks.items()
+                               if check["status"] not in ("unchanged", "out-of-scope")]
     return data

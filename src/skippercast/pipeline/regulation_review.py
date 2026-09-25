@@ -66,12 +66,13 @@ def collect_packet(ident, output, root=REPO, now=None):
     return packet
 
 
-def coverage(registry, sources, now):
-    snapshot = regulatory_snapshot(sources, now, registry)
+def coverage(registry, sources, now, source_scope_ids=None):
+    snapshot = regulatory_snapshot(sources, now, registry, source_scope_ids)
     local_date = now.astimezone(ZoneInfo(registry['timezone'])).date().isoformat()
     return {'jurisdiction_id': registry['jurisdiction_id'], 'revision': registry['revision'],
             'reviewed_at': registry['reviewed_at'], 'valid_through': registry['valid_through'],
             'rules_review_status': snapshot['rules_review_status'],
+            'source_scope_ids': snapshot.get('source_scope_ids'),
             'valid_for_current_date': registry['valid_from'] <= local_date <= registry['valid_through'],
             'checked_at': snapshot['checked_at'], 'review_required': snapshot['review_required'],
             'checks': snapshot['checks'],

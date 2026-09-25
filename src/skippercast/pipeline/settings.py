@@ -1,6 +1,6 @@
 """Resolve provider bindings and jurisdictions before starting network jobs."""
 from ..platform.contracts import REPO, ID, load_region, load_catalogs, read_json, within, public_url
-from .regulations import validate_bindings, validate_region_binding
+from .regulations import validate_bindings, validate_region_binding, regional_source_ids
 
 
 def settings(region_id="morro-bay", root=REPO):
@@ -21,10 +21,6 @@ def settings(region_id="morro-bay", root=REPO):
     jurisdiction=read_json(within(root,f"jurisdictions/{jurisdiction_id}.json"))
     if jurisdiction["id"]!=jurisdiction_id or jurisdiction["schema_version"]!=1:
         raise ValueError("Jurisdiction mismatch")
-    watches={k:dict(v) for k,v in jurisdiction["watches"].items()}
-    for watch in watches.values(): public_url(watch['url'])
-    harbor=region["harbor"]
-    watches['harbor']={'name':harbor['name']+' harbor information','url':public_url(harbor['information_url']),'keywords':harbor['watch_keywords']}
     model_ids=[]
     for need in ("wind-forecast","wave-forecast"):
         for ident in region["source_bindings"][need]:
@@ -34,9 +30,14 @@ def settings(region_id="morro-bay", root=REPO):
     regulations=read_json(within(root/"dist",jurisdiction["regulations_asset"]))
     validate_bindings(jurisdiction, regulations)
     validate_region_binding(jurisdiction, regulations, region)
+    legal_source_ids=regional_source_ids(jurisdiction, regulations, region)
+    watches={k:dict(jurisdiction['watches'][k]) for k in legal_source_ids}
+    for watch in watches.values(): public_url(watch['url'])
+    harbor=region["harbor"]
+    watches['harbor']={'name':harbor['name']+' harbor information','url':public_url(harbor['information_url']),'keywords':harbor['watch_keywords']}
     regulations["area"]=region["name"]+" · "+region["jurisdiction"]
     return {"region":region,"grids":grids,"watches":watches,"jurisdiction":jurisdiction,
-            "regulations":regulations,"model_ids":model_ids}
+            "regulations":regulations,"legal_source_ids":legal_source_ids,"model_ids":model_ids}
 
 
 def previous_for_region(previous, region_id):

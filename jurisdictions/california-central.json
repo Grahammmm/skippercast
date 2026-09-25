@@ -166,6 +166,30 @@
         "Danger Zone 4",
         "Vessel Safety Areas"
       ]
+    },
+    "mpa-ano-greyhound": {
+      "name": "CDFW Año Nuevo SMR and Greyhound Rock SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Ano-Nuevo-Greyhound-Rock",
+      "keywords": [
+        "Greyhound Rock",
+        "Año Nuevo"
+      ]
+    },
+    "mpa-soquel-canyon": {
+      "name": "CDFW Soquel Canyon SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Soquel-Canyon",
+      "keywords": [
+        "Soquel Canyon",
+        "pelagic finfish"
+      ]
+    },
+    "mpa-portuguese-ledge": {
+      "name": "CDFW Portuguese Ledge SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Portuguese-Ledge",
+      "keywords": [
+        "Portuguese Ledge",
+        "pelagic finfishes"
+      ]
     }
   },
   "authority_hosts": [
@@ -182,7 +206,6 @@
     "rules-inseason",
     "rules-health",
     "rules-book",
-    "rules-proposals",
-    "mpa-piedras"
+    "rules-proposals"
   ]
 }

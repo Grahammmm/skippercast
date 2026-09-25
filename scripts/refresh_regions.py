@@ -38,7 +38,8 @@ def refresh(kind, output, previous_root=None, *, only_region=None, include_draft
         atomic_json(target/"latest.json",data)
         atomic_json(target/"health.json",{"region_id":ident,"generated_at":data["generated_at"],**data["health"]})
         if kind=="daily":
-            rules_health = coverage(data['regulations'], data['sources'], now)
+            rules_health = coverage(data['regulations'], data['sources'], now,
+                                    data['regulations'].get('source_scope_ids'))
             rules_health['region_id'] = ident
             active = {s for target in region['species'] for s in (['lingcod', 'rockfish'] if target == 'reef' else [target])}
             rules_health['species'] = {k: v for k, v in rules_health['species'].items() if k in active}

@@ -162,7 +162,8 @@
       "packages": [
         "morro-bay",
         "cambria-san-simeon",
-        "point-arguello-conception"
+        "point-arguello-conception",
+        "santa-cruz-monterey-bay"
       ],
       "targets": [
         "reef",

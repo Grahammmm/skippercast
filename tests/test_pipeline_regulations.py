@@ -53,6 +53,28 @@ class RegulationChecks(unittest.TestCase):
         for profile in result['species'].values():
             self.assertTrue(set(profile['source_ids']).issubset(result['sources']))
 
+    def test_regional_scope_excludes_unrelated_access_failure(self):
+        from skippercast.pipeline.settings import settings
+        monterey = settings('santa-cruz-monterey-bay')
+        vandenberg = settings('point-arguello-conception')
+        cambria = settings('cambria-san-simeon')
+        morro = settings('morro-bay')
+        self.assertNotIn('access-vandenberg-maritime', monterey['watches'])
+        self.assertNotIn('mpa-piedras', monterey['watches'])
+        self.assertIn('access-vandenberg-maritime', vandenberg['watches'])
+        self.assertIn('mpa-piedras', cambria['watches'])
+        self.assertIn('mpa-buchon', morro['watches'])
+        self.assertIn('mpa-soquel-canyon', monterey['watches'])
+        source_ids = monterey['legal_source_ids']
+        subset = {key: self.sources[key] for key in source_ids}
+        result = regulatory_snapshot(subset, self.now, self.registry, source_ids)
+        self.assertEqual(result['checks']['access-vandenberg-maritime']['status'], 'out-of-scope')
+        self.assertNotIn('access-vandenberg-maritime', result['review_required'])
+        self.assertEqual(result['review_required'], [])
+        del subset['mpa-soquel-canyon']
+        result = regulatory_snapshot(subset, self.now, self.registry, source_ids)
+        self.assertIn('mpa-soquel-canyon', result['review_required'])
+
     def test_spatial_season_requires_bounded_latitudes_and_a_dependency(self):
         window=self.registry['species']['salmon']['windows'][0]
         window['geography']={'kind':'latitude-band','south':35.0,'north':35.4,

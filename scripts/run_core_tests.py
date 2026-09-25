@@ -34,6 +34,7 @@ GIS_TEST_MODULES = {
     'test_regular_native_depth',
     'test_regular_bag_hard',
     'test_sansimeon_bedrock_overlap',
+    'test_santa_cruz_region',
     'test_search_plan_geometry',
     'test_shelter_cove_region',
     'test_san_diego_substrate_lead',

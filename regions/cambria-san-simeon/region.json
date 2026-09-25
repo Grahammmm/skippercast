@@ -24,7 +24,9 @@
     ],
     "zoom": 12,
     "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
-    "region_notice_ids": [],
+    "region_notice_ids": [
+      "san-simeon"
+    ],
     "unavailable_targets": {
       "lobster": "Spiny lobster is not in this region\u2019s researched target list. This is target coverage, not a legal prohibition."
     },

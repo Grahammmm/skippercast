@@ -1,5 +1,7 @@
 # California coast buildout ledger
 
+The [Pigeon Point–Monterey Bay limited preview](santa-cruz-monterey-bay-rollout.md) adds a region-specific Santa Cruz launch, NOAA/NWS conditions, 12 bounded CDFW protected-area geometries and a hash-bound Central legal review. Regional legal checks now collect only the active species and local notice dependencies, so an inaccessible Vandenberg source does not degrade Monterey Bay. Original Offshore Monterey class and bathymetry are research context until chart-datum, uncertainty, hazard and route gates pass. This preview has zero qualified fishing positions.
+
 The [Shelter Cove–Fort Bragg limited preview](shelter-cove-north-mendocino-rollout.md) now records the North Mendocino sector's actual NOAA H11971 measured-depth and historical-camera lead, the exposed public launch, distant observation stations, seven locally queried CDFW protected-area/special-closure geometries and a new hash-bound Mendocino rule review for this exact footprint. Its first local source rehearsal retrieved the four forecast models, official rules, buoy references, SST and chlorophyll but found no usable HFR surface-current vectors or live launch clearance. The preview has zero fishing targets and cannot convert correlated 2010 camera sightings into current fish locations.
 
 ## NOAA historical seabed descriptions across all sectors
