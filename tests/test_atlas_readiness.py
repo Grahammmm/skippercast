@@ -44,6 +44,8 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertTrue(any('instantaneous sea level' in a['bathymetry_datum_declarations']
                             for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
         self.assertEqual(by_sector['san-diego-border']['usgs_ds781_map_area_leads'], [])
+        self.assertEqual(by_sector['pigeon-monterey']['usgs_ds781_verified_original_class_tables'], 7)
+        self.assertEqual(by_sector['san-diego-border']['usgs_ds781_opened_native_character_rasters'], 0)
         self.assertEqual(by_sector['los-angeles-orange']['native_substrate_review_file_leads'], 2)
         self.assertEqual(by_sector['los-angeles-orange']['native_substrate_screen_files_with_eligible_sector_cells'], 0)
         self.assertEqual(by_sector['los-angeles-orange']['substrate_screen_bbox_only_survey_ids'], ['W00343'])
@@ -92,6 +94,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              'catalog/csumb-bss-source-leads.json',
                              'catalog/usgs-ds781-source-leads.json',
                              'catalog/usgs-ds781-metadata-review.json',
+                             'dist/data/usgs-ds781-native-character-review.json',
                              'catalog/noaa-survey-lead-holds.json',
                              'dist/regions/index.json'):
                 target = root / relative

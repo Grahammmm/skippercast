@@ -12,11 +12,11 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 from scripts.inspect_usgs_native_grids import parse_vat
 
 
-def original_style_dbf():
+def original_style_dbf(description_field='SUBST_DESC'):
     shp, shx, dbf = BytesIO(), BytesIO(), BytesIO()
     writer = shapefile.Writer(shp=shp, shx=shx, dbf=dbf, shapeType=shapefile.NULL)
     for name, kind, width in [('VALUE', 'N', 5), ('COUNT', 'N', 12),
-                              ('SUBSTRATE', 'N', 2), ('SUBST_DESC', 'C', 60)]:
+                              ('SUBSTRATE', 'N', 2), (description_field, 'C', 60)]:
         writer.field(name, kind, width, 0 if kind == 'N' else 0)
     writer.null()
     writer.record(3, 4, 3, 'Rock and boulders, rugose')
@@ -30,6 +30,12 @@ class UsgsNativeVatTests(unittest.TestCase):
         self.assertEqual(parse_vat(raw, {'3': 4})[0]['substrate_class'], 3)
         with self.assertRaisesRegex(ValueError, 'counts do not match'):
             parse_vat(raw, {'3': 5})
+
+    def test_reviewed_usgs_field_aliases_preserve_the_original_description(self):
+        for field in ('SUBSTR_DES', 'SUBSTRATE_', 'SUBSTR_DEC'):
+            with self.subTest(field=field):
+                rows = parse_vat(original_style_dbf(field), {'3': 4})
+                self.assertEqual(rows[0]['substrate_description'], 'Rock and boulders, rugose')
 
     def test_aptos_receipt_is_actual_grid_review_and_not_a_target(self):
         data = json.loads((ROOT / 'dist/data/usgs-offshore-aptos-native-audit.json').read_text())

@@ -1049,5 +1049,35 @@ jobs:
             var/review/h11983-reconciliation.json
           retention-days: 30
 
+  usgs-ds781-native-character:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install native raster reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify original raster audit and value-table aliases
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_usgs_native_vat tests.test_ds781_native_character -v
+      - name: Reopen reviewed original seafloor-character archives across DS781 areas
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_usgs_ds781_native_character.py
+          --output var/review/usgs-ds781-native-character-review.json
+          --verify dist/data/usgs-ds781-native-character-review.json
+          --workers 4
+      - name: Upload unpublished source-change receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usgs-ds781-native-character-review
+          path: var/review/usgs-ds781-native-character-review.json
+          retention-days: 30
+
 # This workflow deliberately does not change public map files. Camera observations,
 # source-class intersections and closures need a reviewed commit before deployment.

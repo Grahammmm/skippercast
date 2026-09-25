@@ -36,6 +36,7 @@ def compile_readiness(root=REPO):
                     for series in ('scc', 'bss')]
     usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
     usgs_metadata = read_json(root / 'catalog/usgs-ds781-metadata-review.json')
+    usgs_character = read_json(root / 'dist/data/usgs-ds781-native-character-review.json')
     packages = {row['id']: row for row in read_json(root / 'dist/regions/index.json')['regions']}
     drafts = []
     for path in sorted((root / 'regions').glob('*/region.json')):
@@ -80,6 +81,23 @@ def compile_readiness(root=REPO):
             or len(priority_archives) != len(metadata_by_archive)
             or set(priority_archives) != set(metadata_by_archive)):
         raise ValueError('USGS DS 781 metadata triage does not match catalog priority products')
+    if (usgs_character.get('scope') != 'usgs-ds781-statewide-original-character-raster-audit'
+            or usgs_character.get('failed_count') != 0
+            or usgs_character.get('fishing_target') is not False
+            or usgs_character.get('exportable') is not False
+            or usgs_character.get('product_count') != len(usgs_character.get('products', []))
+            or usgs_character.get('inspected_count') + usgs_character.get('held_count') != usgs_character['product_count']):
+        raise ValueError('Statewide original USGS character-raster review is incomplete')
+    character_by_sector = {row['sector_id']: row for row in usgs_character['sectors']}
+    if len(character_by_sector) != len(usgs_character['sectors']) or not set(character_by_sector) <= expected:
+        raise ValueError('Original USGS character review has unknown or duplicate sector')
+    for sector_id, summary in character_by_sector.items():
+        products = [row for row in usgs_character['products'] if sector_id in row['planning_sector_ids']]
+        if (summary['catalog_archive_leads'] != len(products)
+                or summary['opened_native_rasters'] != sum(row['status'] == 'ok' for row in products)
+                or summary['verified_original_class_tables'] != sum(
+                    row.get('class_table_status') == 'verified' for row in products)):
+            raise ValueError('Original USGS character sector summary does not match products')
     for area in usgs_map_areas['map_areas']:
         reviewed = [metadata_by_archive[p['archive_url']] for p in area.get('products', [])
                     if p['kind'] in {'bathymetry', 'seafloor-character'}]
@@ -196,6 +214,10 @@ def compile_readiness(root=REPO):
         if excluded_deepwater:
             next_step += (' Broad catalog hits ' + ', '.join(excluded_deepwater) +
                           ' have zero original MLLW cells in 25–200 ft; search other nearshore sources.')
+        character = character_by_sector.get(ident)
+        if character and character['verified_original_class_tables']:
+            next_step += (' Cross-screen the opened USGS character rasters and verified class tables against'
+                          ' measured MLLW depth, MPAs and current charts; catalog area labels are not exact footprints.')
         rows.append({
             'sector_id': ident, 'coast': sector['coast'], 'name': sector['name'],
             'bounds': sector['bounds'], 'package_overlaps': package_rows,
@@ -205,6 +227,9 @@ def compile_readiness(root=REPO):
             'noaa_catalog_survey_leads': lead['catalog_survey_leads'],
             'csumb_catalog_survey_lead_ids': sorted(csumb_by_sector[ident]),
             'usgs_ds781_map_area_leads': sorted(usgs_by_sector[ident], key=lambda area: area['name']),
+            'usgs_ds781_native_character_archive_leads': character['catalog_archive_leads'] if character else 0,
+            'usgs_ds781_opened_native_character_rasters': character['opened_native_rasters'] if character else 0,
+            'usgs_ds781_verified_original_class_tables': character['verified_original_class_tables'] if character else 0,
             'original_bag_bbox_leads': lead['georeferenced_bag_bboxes_intersecting_sector'],
             'native_variable_depth_file_leads': variable_files,
             'held_variable_depth_file_leads': len(held_variable_rows),

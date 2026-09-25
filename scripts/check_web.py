@@ -172,6 +172,12 @@ def main():
     assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
     assert all('fgdc_metadata_reviewed' in lead for row in readiness['sectors']
                for lead in row['usgs_ds781_map_area_leads'])
+    character = json.loads((WEB / 'data/usgs-ds781-native-character-review.json').read_text())
+    assert character['scope'] == 'usgs-ds781-statewide-original-character-raster-audit'
+    assert (character['product_count'], character['inspected_count'], character['held_count'], character['failed_count']) == (35, 17, 18, 0)
+    assert sum(row.get('class_table_status') == 'verified' for row in character['products']) == 10
+    assert character['fishing_target'] is False and character['exportable'] is False
+    assert all('usgs_ds781_opened_native_character_rasters' in row for row in readiness['sectors'])
     original_lead = json.loads((WEB / 'data/noaa-h11983-native-source-review.json').read_text())
     hazard_gate = json.loads((WEB / 'data/noaa-h11983-camera-hazard-research-review.json').read_text())
     assert original_lead['survey_id'] == hazard_gate['survey_id'] == 'H11983'

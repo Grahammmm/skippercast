@@ -20,7 +20,7 @@ import rasterio
 from rasterio.warp import transform_bounds
 import shapefile
 
-from discover_usgs_map_blocks import approved
+from scripts.discover_usgs_map_blocks import approved
 
 MAX_ARCHIVE_BYTES = 300_000_000
 MAX_TIFF_BYTES = 600_000_000
@@ -33,7 +33,9 @@ def parse_vat(raw, observed):
         raise ValueError('Original raster value table is empty or oversized')
     reader = shapefile.Reader(dbf=BytesIO(raw))
     fields = [field[0].upper() for field in reader.fields[1:]]
-    if not {'VALUE', 'COUNT', 'SUBSTRATE', 'SUBST_DESC'} <= set(fields):
+    description_field = next((name for name in ('SUBST_DESC', 'SUBSTR_DES', 'SUBSTRATE_', 'SUBSTR_DEC')
+                              if name in fields), None)
+    if not {'VALUE', 'COUNT', 'SUBSTRATE'} <= set(fields) or description_field is None:
         raise ValueError('Original raster value table lacks substrate definition columns')
     rows = {}
     for values in reader.records():
@@ -44,7 +46,7 @@ def parse_vat(raw, observed):
         if (code in rows or count < 0 or not 1 <= substrate <= 5):
             raise ValueError('Original raster value table has duplicate or invalid class')
         rows[code] = {'value': int(code), 'count': count, 'substrate_class': substrate,
-                      'substrate_description': str(item['SUBST_DESC']).strip()[:180]}
+                      'substrate_description': str(item[description_field]).strip()[:180]}
     if {key: row['count'] for key, row in rows.items()} != observed:
         raise ValueError('Original raster value table counts do not match native pixels')
     return sorted(rows.values(), key=lambda row: row['value'])
