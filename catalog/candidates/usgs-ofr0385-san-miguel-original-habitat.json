@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "usgs-ofr0385-san-miguel-original-habitat",
+  "name": "USGS OFR 03-85 original south San Miguel habitat polygons",
+  "region_ids": ["southern-california"],
+  "need_ids": ["substrate"],
+  "producer": {
+    "name": "U.S. Geological Survey",
+    "url": "https://www.usgs.gov/"
+  },
+  "documentation_url": "https://pubs.usgs.gov/of/2003/0085/4_catalog.html",
+  "access_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+  "access_status": "accessible",
+  "variables": ["historical_hard_mixed_soft_habitat_polygons"],
+  "units": {"historical_hard_mixed_soft_habitat_polygons": "categorical BOTTOM_ID h/m/s"},
+  "rights": {
+    "license": "U.S. Geological Survey public-domain work; source attribution requested in original metadata",
+    "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-120.4551518, 33.972191, -120.2952004, 34.0246432],
+    "resolution_m": null,
+    "horizontal_crs": "NAD83 geographic",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T11:00:33Z",
+    "update_cadence": "Static source; monthly original-archive and independent-closure review",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Original USGS publication archive; independent of NOAA H13084 multibeam acquisition",
+    "raw_sha256": "df88f59542756f654381ec946377cac65ed0649052b6c5d88aeb8b28fb218e17",
+    "transformations": [
+      "Read original shapefile and metadata from hash-pinned tarball; repair three invalid polygons only for research overlap counts.",
+      "Project NAD83 habitat polygons onto original NOAA MLLW native refinement cells and count hard/mixed intersections without interpolation."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://pubs.usgs.gov/of/2003/0085/4_catalog.html",
+      "supports": "Original USGS catalog lists San Miguel habitat shapefile and downloadable tar archive."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+      "supports": "Original 703,280-byte archive was opened and SHA-256 pinned; 2,238 hard, 621 mixed and 12 soft polygons. Metadata reports roughly 10 m horizontal accuracy and says not suitable for navigation."
+    },
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13084.html",
+      "supports": "Separate original NOAA MLLW multibeam survey used only for native depth and uncertainty intersection."
+    }
+  ],
+  "limitations": [
+    "Historical hand-interpreted substrate is not a current rock or boulder inventory or verified catch location.",
+    "Native depth, MPA, federal area, historical hazard and ENC danger screens are research gates, not chart or legal clearance.",
+    "H13084 remains held from target publication; original source overlap counts contain no fishing coordinates or export geometry."
+  ]
+}

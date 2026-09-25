@@ -315,6 +315,63 @@ jobs:
           name: noaa-central-deepwater-native-depth-screen
           path: var/review/noaa-central-deepwater-native-depth-screen.json
           retention-days: 30
+  san-miguel-original-habitat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned native GIS readers
+        run: python -m pip install -r requirements-survey.txt
+      - name: Fetch bounded original USGS and NOAA inputs
+        run: |
+          mkdir -p var/usgs-ofr0385 var/noaa-native-cache
+          curl --fail --location --silent --show-error --retry 2 --max-time 180 \
+            'https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz' \
+            --output var/usgs-ofr0385/smighab.tgz
+          curl --fail --location --silent --show-error --retry 2 --max-time 240 \
+            'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00320/BAG/W00320_MB_4m_MLLW_1of3.bag' \
+            --output var/noaa-native-cache/W00320-7ff5160ded3c0086.bag
+          curl --fail --location --silent --show-error --retry 2 --max-time 300 \
+            'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/BAG/H13084_MB_VR_MLLW.bag' \
+            --output var/noaa-native-cache/H13084-cab6d43a6e6c3a0b.bag
+          curl --fail --location --silent --show-error --retry 2 --max-time 180 \
+            'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/DR/H13084_DR.pdf' \
+            --output var/noaa-native-cache/H13084.pdf
+      - name: Recheck original regular-depth false lead
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_san_miguel_original_habitat.py
+          --output var/review/san-miguel-regular-recheck.json
+          --verify dist/data/san-miguel-original-habitat-depth-review.json
+      - name: Collect current exclusion and chart-danger evidence
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m skippercast.pipeline.coastal_watch --output var/san-miguel-review-fresh
+          python scripts/collect_noaa_groundfish_areas.py --output var/san-miguel-review-fresh/federal.json
+          python scripts/refresh_enc_hazards.py --scope san-miguel-h13084-usgs-habitat \
+            --output var/review/enc-hazards-san-miguel-h13084.geojson
+      - name: Recheck original variable-depth hard habitat overlap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_san_miguel_vr_habitat.py
+          --output var/review/san-miguel-vr-recheck.json
+          --verify dist/data/san-miguel-original-habitat-vr-review.json
+      - name: Upload unpublished source review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: san-miguel-original-habitat-review
+          path: |
+            var/review/san-miguel-regular-recheck.json
+            var/review/san-miguel-vr-recheck.json
+            var/review/enc-hazards-san-miguel-h13084.geojson
+          retention-days: 30
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest

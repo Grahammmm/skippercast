@@ -71,6 +71,13 @@
       "output": "var/review/enc-hazards-gaviota.geojson"
     },
     {
+      "id": "san-miguel-h13084-usgs-habitat",
+      "region_id": "southern-california",
+      "bounds": [-120.47, 33.96, -120.28, 34.04],
+      "research_only": true,
+      "output": "var/review/enc-hazards-san-miguel-h13084.geojson"
+    },
+    {
       "id": "la-jolla-h11876-camera-context",
       "region_id": "southern-california",
       "bounds": [-117.35, 32.77, -117.30, 32.85],

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "scope": "san-miguel-original-usgs-habitat-noaa-vr-source-review",
+  "reviewed_at": "2026-09-25T11:28:10.199077+00:00",
+  "usgs_archive_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+  "usgs_archive_sha256": "df88f59542756f654381ec946377cac65ed0649052b6c5d88aeb8b28fb218e17",
+  "usgs_original": {
+    "polygon_count": 2871,
+    "bbox": [
+      -120.45515175780943,
+      33.97219095245575,
+      -120.2952004385382,
+      34.02464323819353
+    ],
+    "metadata_sha256": "fb9e25c58702309b7ce8b8605124b2497ab6828055b211c8ab4add1db9c8b4a1",
+    "invalid_source_polygons_repaired_for_review": {
+      "h": 0,
+      "m": 2,
+      "s": 1
+    }
+  },
+  "usgs_source_year": 2002,
+  "noaa_survey_id": "H13084",
+  "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/BAG/H13084_MB_VR_MLLW.bag",
+  "noaa_bag_sha256": "7d4439bcf3c06f7db633137f209e217936a5fc745eaf94a7feb091edf6ac58d0",
+  "noaa_metadata_sha256": "1064c72c448510daf7da521638343e2be7cfa5512559593ea9dbdb035d6f568f",
+  "noaa_survey_dates": [
+    "2017-10-07T16:15:34",
+    "2017-11-05T17:57:56"
+  ],
+  "noaa_source_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/DR/H13084_DR.pdf",
+  "noaa_source_report_sha256": "bfc666ac714718981604ff45bcf6f30a4cb9cd3fb819616938ada917e870673b",
+  "historical_hazards_screened": 3,
+  "cdfw_mpa_retrieved_at": "2026-09-25T11:21:49Z",
+  "noaa_federal_areas_retrieved_at": "2026-09-25T11:21:48.431993+00:00",
+  "enc_danger_checked_at": "2026-09-25T11:27:11.385585+00:00",
+  "enc_danger_features": 201,
+  "source_position_accuracy_m_order": 10,
+  "counts": {
+    "fine_supergrids_in_usgs_bbox": 5058,
+    "measured_cells_in_bbox_grids": 6283844,
+    "depth_uncertainty_eligible_cells_in_bbox_grids": 5574288,
+    "hard_eligible_cells": 648740,
+    "mixed_eligible_cells": 9739,
+    "fine_supergrids_with_hard_eligible_cells": 1091,
+    "hard_cells_after_exclusions": 605245,
+    "mixed_cells_after_exclusions": 9739,
+    "hard_cells_after_enc_buffer": 601603,
+    "mixed_cells_after_enc_buffer": 9739
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Historical USGS habitat interpretations have approximately 10 m positional accuracy; no boulder size or present fish presence follows.",
+    "Current complete CDFW MPA and NOAA federal GEA geometry plus pinned historical report hazards have 100 m screening buffers; these do not certify exact legal boundaries or chart clearance.",
+    "Fresh NOAA ENC Direct danger features from 18 bounded queries have a 100 m research buffer; this is not chart completeness or navigation clearance.",
+    "Routes, protected-species, island-access and species-method restrictions remain unreviewed for exact positions.",
+    "No fishing coordinates, drift lines or export geometry are published from this source review."
+  ]
+}

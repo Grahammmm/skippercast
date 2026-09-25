@@ -198,6 +198,15 @@ def main():
     assert central_deep['fishing_target'] is False and central_deep['exportable'] is False
     assert all(row['raw_cells_in_25_to_200_ft_mllw_band'] == 0 and
                row['nearshore_depth_lead'] is False for row in central_deep['sources'])
+    san_miguel_regular = json.loads((WEB / 'data/san-miguel-original-habitat-depth-review.json').read_text())
+    san_miguel_vr = json.loads((WEB / 'data/san-miguel-original-habitat-vr-review.json').read_text())
+    assert san_miguel_regular['noaa_measured_cells_in_window'] == 257
+    assert san_miguel_regular['substrate_classes']['h']['depth_uncertainty_eligible_cells'] == 0
+    assert san_miguel_vr['counts']['hard_eligible_cells'] == 648740
+    assert san_miguel_vr['counts']['hard_cells_after_enc_buffer'] == 601603
+    assert san_miguel_vr['enc_danger_features'] == 201
+    assert all(packet['fishing_target'] is False and packet['exportable'] is False
+               for packet in (san_miguel_regular, san_miguel_vr))
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name

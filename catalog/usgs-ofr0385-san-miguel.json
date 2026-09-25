@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scope": "original-san-miguel-historical-habitat-native-depth-review-inputs",
+  "usgs": {
+    "publication_url": "https://pubs.usgs.gov/of/2003/0085/4_catalog.html",
+    "archive_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+    "archive_sha256": "df88f59542756f654381ec946377cac65ed0649052b6c5d88aeb8b28fb218e17",
+    "archive_bytes": 703280,
+    "member_prefix": "s_mig/smighab",
+    "source_year": 2002,
+    "release_year": 2003,
+    "horizontal_reference": "NAD83 geographic",
+    "reported_horizontal_accuracy_m_order": 10,
+    "class_field": "BOTTOM_ID",
+    "hard_code": "h",
+    "mixed_code": "m"
+  },
+  "noaa_regular": {
+    "survey_id": "W00320",
+    "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00320/BAG/W00320_MB_4m_MLLW_1of3.bag",
+    "bag_sha256": "25df1256cd980ddaed68b858a3731e37f1493144b0728ad51186cfef4a032bcf",
+    "bag_bytes": 46631471,
+    "metadata_sha256": "7b76c2edec59fc5b20ba5ebde4b6fb63097347bc3f6aa2a6b1a16eafc3ea6"
+  },
+  "noaa_variable": {
+    "survey_id": "H13084",
+    "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/BAG/H13084_MB_VR_MLLW.bag",
+    "bag_sha256": "7d4439bcf3c06f7db633137f209e217936a5fc745eaf94a7feb091edf6ac58d0",
+    "bag_bytes": 93117886,
+    "metadata_sha256": "1064c72c448510daf7da521638343e2be7cfa5512559593ea9dbdb035d6f568f",
+    "source_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13084/DR/H13084_DR.pdf",
+    "survey_start": "2017-10-07T16:15:34",
+    "survey_end": "2017-11-05T17:57:56"
+  }
+}

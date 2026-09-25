@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "scope": "san-miguel-original-usgs-habitat-noaa-depth-source-review",
+  "reviewed_at": "2026-09-25T11:15:33.621634+00:00",
+  "usgs_archive_url": "https://pubs.usgs.gov/of/2003/0085/s_mig/smighab.tgz",
+  "usgs_archive_sha256": "df88f59542756f654381ec946377cac65ed0649052b6c5d88aeb8b28fb218e17",
+  "usgs_source_year": 2002,
+  "usgs_release_year": 2003,
+  "usgs_reported_horizontal_accuracy_m_order": 10,
+  "usgs_original": {
+    "polygon_count": 2871,
+    "bbox": [
+      -120.45515175780943,
+      33.97219095245575,
+      -120.2952004385382,
+      34.02464323819353
+    ],
+    "metadata_sha256": "fb9e25c58702309b7ce8b8605124b2497ab6828055b211c8ab4add1db9c8b4a1",
+    "invalid_source_polygons_repaired_for_review": {
+      "h": 0,
+      "m": 2,
+      "s": 1
+    }
+  },
+  "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00320/BAG/W00320_MB_4m_MLLW_1of3.bag",
+  "noaa_bag_sha256": "25df1256cd980ddaed68b858a3731e37f1493144b0728ad51186cfef4a032bcf",
+  "noaa_mllw_resolution_m": 4,
+  "overlap_window_cells": 5780868,
+  "noaa_measured_cells_in_window": 257,
+  "noaa_shallowest_measured_elevation_m_mllw": -76.993,
+  "noaa_depth_uncertainty_eligible_cells_in_window": 0,
+  "substrate_classes": {
+    "h": {
+      "source_polygons": 2238,
+      "rasterized_noaa_cells": 203160,
+      "measured_noaa_cells": 0,
+      "depth_uncertainty_eligible_cells": 0
+    },
+    "m": {
+      "source_polygons": 621,
+      "rasterized_noaa_cells": 132134,
+      "measured_noaa_cells": 0,
+      "depth_uncertainty_eligible_cells": 0
+    },
+    "s": {
+      "source_polygons": 12,
+      "rasterized_noaa_cells": 2631295,
+      "measured_noaa_cells": 144,
+      "depth_uncertainty_eligible_cells": 0
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The USGS polygons are historical hand interpretations of sidescan imagery with approximately 10 m positional accuracy, not current boulder measurements.",
+    "The later NOAA MLLW depths do not validate the older substrate classes.",
+    "Three original USGS polygons are topologically invalid; minimal geometry repair is applied only to count research overlap.",
+    "Current MPAs, federal closures, chart hazards, navigation and method-specific access remain unscreened."
+  ]
+}
