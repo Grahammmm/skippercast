@@ -143,6 +143,54 @@
         "Cordell Bank",
         "groundfish"
       ]
+    },
+    "mpa-duxbury": {
+      "name": "CDFW Duxbury Reef SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Duxbury-Reef",
+      "keywords": [
+        "Duxbury Reef",
+        "from shore only"
+      ]
+    },
+    "mpa-double-point": {
+      "name": "CDFW Double Point/Stormy Stack Rock special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Double-Point",
+      "keywords": [
+        "Double Point",
+        "Special Closure"
+      ]
+    },
+    "mpa-montara-pillar": {
+      "name": "CDFW Montara SMR and Pillar Point SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Montara-Pillar-Point",
+      "keywords": [
+        "Montara",
+        "Pillar Point"
+      ]
+    },
+    "mpa-egg-rock": {
+      "name": "CDFW Egg Rock to Devils Slide special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Egg-Rock-To-Devils-Slide",
+      "keywords": [
+        "Egg",
+        "Special Closure"
+      ]
+    },
+    "mpa-north-farallon": {
+      "name": "CDFW North Farallon Islands SMR and special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/North-Farallon-Islands",
+      "keywords": [
+        "North Farallon",
+        "Special Closure"
+      ]
+    },
+    "mpa-southeast-farallon": {
+      "name": "CDFW Southeast Farallon Island SMR, SMCA and special closure",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Southeast-Farallon-Island",
+      "keywords": [
+        "Southeast Farallon",
+        "Special Closure"
+      ]
     }
   },
   "authority_hosts": [

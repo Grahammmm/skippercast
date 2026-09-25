@@ -124,7 +124,8 @@
         }
       ],
       "packages": [
-        "bodega-point-reyes"
+        "bodega-point-reyes",
+        "point-reyes-pigeon"
       ],
       "targets": [
         "reef",

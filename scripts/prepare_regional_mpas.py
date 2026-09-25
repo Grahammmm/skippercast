@@ -15,7 +15,8 @@ import re
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from shapely.geometry import box, shape
+from shapely.geometry import box, mapping, shape
+from shapely.ops import unary_union
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,7 +37,8 @@ def source_url(bounds: list[float]) -> str:
     })
 
 
-def validate_response(data: dict, bounds: list[float], minimum: int) -> list[dict]:
+def validate_response(data: dict, bounds: list[float], minimum: int,
+                      allowed_repairs: tuple[str, ...] = ()) -> list[dict]:
     if data.get("type") != "FeatureCollection" or data.get("exceededTransferLimit"):
         raise ValueError("CDFW MPA response is incomplete or not GeoJSON")
     features = data.get("features")
@@ -50,6 +52,23 @@ def validate_response(data: dict, bounds: list[float], minimum: int) -> list[dic
         geom = shape(feature.get("geometry"))
         if not isinstance(name, str) or not name.strip() or name in seen:
             raise ValueError("CDFW MPA identity missing or duplicated")
+        if not geom.is_valid and name in allowed_repairs and geom.geom_type == "MultiPolygon":
+            # Some CDFW GeoJSON exports serialize nested polygon shells as
+            # overlapping MultiPolygon members. Unioning every original member
+            # retains its entire prohibited footprint, including the nested
+            # member, rather than turning it into a hole or dropping it.
+            members = list(geom.geoms)
+            if not members or any(not member.is_valid or member.is_empty for member in members):
+                raise ValueError("CDFW MPA repair has invalid original components")
+            repaired = unary_union(members)
+            if (not repaired.is_valid or repaired.is_empty
+                    or repaired.geom_type not in ("Polygon", "MultiPolygon")
+                    or any(not repaired.covers(member) for member in members)):
+                raise ValueError("CDFW MPA conservative union did not preserve every component")
+            feature["geometry"] = mapping(repaired)
+            feature["properties"]["geometry_repair"] = "conservative_union_of_original_components"
+            feature["properties"]["original_component_count"] = len(members)
+            geom = repaired
         if geom.geom_type not in ("Polygon", "MultiPolygon") or not geom.is_valid or geom.is_empty:
             raise ValueError("CDFW MPA polygon invalid")
         if not geom.intersects(region):
@@ -80,7 +99,8 @@ def prepare(region_id: str, *, replace_after_review: bool = False) -> dict:
     if not raw or len(raw) > 6_000_000:
         raise ValueError("CDFW MPA source empty or oversized")
     data = json.loads(raw)
-    features = validate_response(data, bounds, minimum)
+    features = validate_response(data, bounds, minimum,
+                                 tuple(config["mpa"].get("conservative_union_invalid_names", [])))
     data.update({
         "region_id": region_id,
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),

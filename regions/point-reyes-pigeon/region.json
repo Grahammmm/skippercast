@@ -1,0 +1,428 @@
+{
+  "schema_version": 1,
+  "id": "point-reyes-pigeon",
+  "name": "Point Reyes to Pigeon Point",
+  "status": "preview",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California · San Francisco Groundfish Management Area",
+  "bounds": [
+    -123.3,
+    37.18333333333333,
+    -122.28,
+    37.95
+  ],
+  "fishing_bounds": [
+    -123.22,
+    37.18333333333333,
+    -122.36,
+    37.95
+  ],
+  "map": {
+    "center": [
+      37.55,
+      -122.72
+    ],
+    "zoom": 9,
+    "locality_method": "Point Reyes to Pigeon Point outer-coast discovery extent. It is not an exact legal boundary, fishable bottom polygon or navigation clearance.",
+    "region_notice_ids": [
+      "reyes-pigeon-mpas"
+    ],
+    "local_areas": [],
+    "discovery_bounds": [
+      -123.3,
+      37.18333333333333,
+      -122.28,
+      37.95
+    ],
+    "unavailable_targets": {},
+    "unavailable_target_sources": {}
+  },
+  "harbor": {
+    "name": "Pillar Point Harbor",
+    "latitude": 37.5025,
+    "longitude": -122.482167,
+    "entrance_note": "Pillar Point surf, shoaling and harbor approach need current chart and Harbor Patrol/official notices. Tide predictions do not clear the entrance.",
+    "information_url": "https://www.smharbor.com/pillar-point-harbor",
+    "watch_keywords": [
+      "Pillar Point Harbor",
+      "Harbor Patrol"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23 · planning profile",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "reyes-south",
+      "name": "Point Reyes south outer coast",
+      "latitude": 37.87,
+      "longitude": -123.02,
+      "context": "north"
+    },
+    {
+      "id": "half-moon-bay",
+      "name": "Half Moon Bay outer coast",
+      "latitude": 37.48,
+      "longitude": -122.67,
+      "context": "half-moon"
+    },
+    {
+      "id": "pigeon-north",
+      "name": "Pigeon Point north outer coast",
+      "latitude": 37.23,
+      "longitude": -122.58,
+      "context": "half-moon"
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ545",
+    "offshore": "PZZ571"
+  },
+  "stations": {
+    "tide": "9414131",
+    "tide_name": "Pillar Point Harbor tide predictions",
+    "tide_note": "NOAA Pillar Point predictions measure water level at the harbor reference, not bar current or bottom drift.",
+    "airport": "KSQL",
+    "airport_name": "San Carlos Airport · inland reference",
+    "nearshore_buoy": "46012",
+    "nearshore_buoy_name": "Half Moon Bay offshore reference · mobile USV at nominal station",
+    "nearshore_buoy_note": "NDBC 46012 is about 24 NM SSW of San Francisco in 209 m water; its mobile USV sensor and large watch circle do not measure a fishing patch or entrance.",
+    "offshore_buoy": "46026",
+    "offshore_buoy_name": "San Francisco offshore reference",
+    "offshore_buoy_note": "NDBC 46026 is about 18 NM west of San Francisco, a separate distant reference from 46012."
+  },
+  "mpa": {
+    "bounds": [
+      -123.3,
+      37.18333333333333,
+      -122.28,
+      37.95
+    ],
+    "minimum_features": 5,
+    "conservative_union_invalid_names": [
+      "North Farallon Islands Special Closure",
+      "Southeast Farallon Island Special Closure"
+    ]
+  },
+  "species": [
+    "reef",
+    "halibut",
+    "salmon",
+    "dungeness",
+    "albacore"
+  ],
+  "source_names": {},
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "usgs-camera-samples",
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin"
+    ],
+    "charter-identity": [],
+    "ais-history": [
+      "noaa-ais"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "The statewide queue has 27 unheld 4 m-or-finer original-BAG bounding-box leads and 8 source-overlap leads; actual measured pixels and exact substrate footprints remain unqualified."
+    },
+    "substrate": {
+      "status": "research",
+      "reason": "USGS DS 781 links identify nine nearby map areas, but original classification, current chart datum and native overlap are unreviewed for a fishing area."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "protected-areas": {
+      "status": "partial",
+      "reason": "The bounded CDFW query returned 14 features, including two Farallon special closures whose nested shells were conservatively unioned; exact current boundaries and methods remain a trip-time gate."
+    },
+    "regulations": {
+      "status": "partial",
+      "reason": "All 24 exact San Francisco jurisdiction sources, including six new local MPA pages, passed the September 25 hash-bound review and first daily check; current date, position and method still control."
+    },
+    "dynamic-closures": {
+      "status": "partial",
+      "reason": "Seven local CDFW marine-area pages are watched with the current MPA inventory; live access and any extraordinary closure need a trip-time check."
+    },
+    "wind-forecast": {
+      "status": "partial",
+      "reason": "Both GFS and ECMWF IFS returned three Point Reyes–Pigeon samples at the first local collection; these model grids do not resolve harbor or reef-scale wind."
+    },
+    "wave-forecast": {
+      "status": "partial",
+      "reason": "Both GFS Wave and ECMWF WAM returned three Point Reyes–Pigeon samples; nearshore surf, cross sea and return route require further assessment."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "NDBC 46012 and 46026 returned current observations. 46012 is a mobile USV at a nominal offshore location with a large watch circle; neither station measures Pillar Point entrance."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "Offshore NDBC 46012/46026 and KSQL inland are references with different exposure and sensor heights; no reef-local wind observation is established."
+    },
+    "tides": {
+      "status": "partial",
+      "reason": "NOAA Pillar Point station 9414131 returned 35 predictions in the first daily run. Harbor water level is not entrance-current or bottom-drift clearance."
+    },
+    "surface-currents": {
+      "status": "partial",
+      "reason": "The 6 km HFR surface-current field populated 200 of 255 requested cells; it does not measure bottom drift or resolve surf at the harbor."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "sea-temperature": {
+      "status": "partial",
+      "reason": "NOAA blended SST populated 312 of 357 requested regional cells in the first run; missing cells remain unavailable and the analysis is not a direct fish observation."
+    },
+    "chlorophyll": {
+      "status": "partial",
+      "reason": "NOAA merged chlorophyll populated only 44 of 638 requested cells; cloud and product gaps preclude a complete productivity map."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "charter-identity": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "harbor-access": {
+      "status": "research",
+      "reason": "Pillar Point Harbor official contact page is not live entrance clearance; notices, surf and approach require a trip-time check."
+    },
+    "wind-ensemble": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "wave-ensemble": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    },
+    "forecast-verification": {
+      "status": "research",
+      "reason": "Point Reyes–Pigeon Point source and live coverage require exact-footprint review; this binding is a discovery lead, not a verified local fishing observation or target."
+    }
+  },
+  "assets": {
+    "atlas": "regions/point-reyes-pigeon/atlas.json",
+    "habitats": "regions/point-reyes-pigeon/habitats.json",
+    "protected_areas": "regions/point-reyes-pigeon/protected-areas.geojson",
+    "regulations": "data/regulations-san-francisco.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/point-reyes-pigeon/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/point-reyes-pigeon/ecology.json",
+    "search_plans": "regions/point-reyes-pigeon/search-plans.json",
+    "survey_habitat": null
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/point-reyes-pigeon/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-reyes-pigeon/latest.json",
+  "landing_names": [
+    "Pillar Point",
+    "Half Moon Bay",
+    "Point Reyes",
+    "Pigeon Point"
+  ],
+  "coverage_note": "Point Reyes–Pigeon Point source-review preview: 14 bounded CDFW marine-area features, 24 reviewed local legal sources, populated regional forecast and partial ocean tiles. Zero qualified fishing positions, bottom images, drift lines or exports pending original-grid, substrate, chart, route and species-site review.",
+  "landing_note": "Pillar Point tide predictions and offshore buoys are references; they do not clear the harbor approach or locate fish.",
+  "jurisdiction_id": "california-san-francisco",
+  "ecology_profile": "california-san-francisco",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-reyes-pigeon/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/point-reyes-pigeon/habitat-dynamics.json",
+  "contexts": {
+    "north": {
+      "name": "Point Reyes south outer coast",
+      "stations": {
+        "tide": "9415020",
+        "tide_name": "Point Reyes, Drakes Bay tide predictions",
+        "tide_note": "NOAA Drakes Bay water-level predictions are a northern reference only; they do not clear Pillar Point Harbor or predict bottom drift.",
+        "airport": "KSQL",
+        "airport_name": "San Carlos Airport · inland reference",
+        "nearshore_buoy": "46012",
+        "nearshore_buoy_name": "Half Moon Bay offshore reference · mobile USV at nominal station",
+        "nearshore_buoy_note": "NDBC 46012 is about 24 NM SSW of San Francisco in 209 m water; its mobile USV sensor and large watch circle do not measure a fishing patch or entrance.",
+        "offshore_buoy": "46026",
+        "offshore_buoy_name": "San Francisco offshore reference",
+        "offshore_buoy_note": "NDBC 46026 is about 18 NM west of San Francisco, a separate distant reference from 46012."
+      },
+      "marine_zones": {
+        "coastal": "PZZ545",
+        "offshore": "PZZ571"
+      }
+    },
+    "half-moon": {
+      "name": "Half Moon Bay to Pigeon Point outer coast",
+      "stations": {
+        "tide": "9414131",
+        "tide_name": "Pillar Point Harbor tide predictions",
+        "tide_note": "NOAA Pillar Point predictions measure water level at the harbor reference, not bar current or bottom drift.",
+        "airport": "KSQL",
+        "airport_name": "San Carlos Airport · inland reference",
+        "nearshore_buoy": "46012",
+        "nearshore_buoy_name": "Half Moon Bay offshore reference · mobile USV at nominal station",
+        "nearshore_buoy_note": "NDBC 46012 is about 24 NM SSW of San Francisco in 209 m water; its mobile USV sensor and large watch circle do not measure a fishing patch or entrance.",
+        "offshore_buoy": "46026",
+        "offshore_buoy_name": "San Francisco offshore reference",
+        "offshore_buoy_note": "NDBC 46026 is about 18 NM west of San Francisco, a separate distant reference from 46012."
+      },
+      "marine_zones": {
+        "coastal": "PZZ545",
+        "offshore": "PZZ571"
+      }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46012",
+        "latitude": 37.356,
+        "longitude": -122.881,
+        "name": "Half Moon Bay nominal offshore mobile-USV station",
+        "variables": [
+          "wave_height",
+          "wind_speed"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46012"
+      },
+      {
+        "id": "46026",
+        "latitude": 37.75,
+        "longitude": -122.838,
+        "name": "San Francisco offshore reference",
+        "variables": [
+          "wave_height",
+          "wind_speed"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46026"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-san-francisco",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  }
+}
