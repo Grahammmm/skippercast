@@ -1,1 +1,1 @@
-{"region_id":"monterey-point-sur","generated_at":"2026-09-25T21:01:56Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":65,"sources_total":67,"issues":["currents","rules-tuna-federal"]}
+{"region_id":"monterey-point-sur","generated_at":"2026-09-25T21:55:24Z","status":"ok","critical_available":true,"recent_report_days_ok":7,"sources_ok":67,"sources_total":67,"issues":[]}
