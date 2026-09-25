@@ -20,6 +20,8 @@ class AtlasReadinessTests(unittest.TestCase):
         by_sector = {row['sector_id']: row for row in report['sectors']}
         self.assertEqual(by_sector['del-norte']['native_variable_depth_file_leads'], 2)
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
+        self.assertIn('noaa-h11971-bear-landing-original-camera',
+                      by_sector['north-mendocino']['accessible_inspected_fine_source_candidate_ids'])
         for sector_id in ('pigeon-monterey', 'monterey-sur'):
             row = by_sector[sector_id]
             self.assertIn('usgs-offshore-monterey-original-grids',

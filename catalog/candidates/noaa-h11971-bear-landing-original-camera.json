@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "noaa-h11971-bear-landing-original-camera",
+  "name": "NOAA H11971 Bear Landing 2 m BAG with original USGS camera observations",
+  "sector_ids": ["north-mendocino"],
+  "need_ids": ["bathymetry", "groundtruth", "species-occurrence"],
+  "producer": {
+    "name": "NOAA National Ocean Service and U.S. Geological Survey",
+    "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11971.html"
+  },
+  "documentation_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/BAG/H11971_MB_2m_MLLW_5of5.bag",
+  "access_status": "accessible",
+  "variables": ["original_depth", "product_uncertainty", "historical_camera_bottom", "historical_rockfish_visual_code"],
+  "units": {
+    "original_depth": "m below MLLW",
+    "product_uncertainty": "m",
+    "historical_camera_bottom": "USGS rock/cobble category",
+    "historical_rockfish_visual_code": "USGS camera code; not a catch count"
+  },
+  "rights": {
+    "license": null,
+    "terms_url": null,
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-124.087813, 39.8062575, -123.8897181, 39.9908707],
+    "resolution_m": 2,
+    "horizontal_crs": "NAD83 UTM zone 10 (EPSG:26910 horizontal component); original camera positions use WGS84 with variable accuracy near 10 m",
+    "vertical_datum": "MLLW for BAG depths",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/BAG/H11971_MB_2m_MLLW_5of5.bag",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-25T04:48:24+00:00",
+    "update_cadence": "Static historical sources; recheck original hashes and current chart/closure feeds before review",
+    "coverage_start": "2008-12-09",
+    "coverage_end": "2010-07-31"
+  },
+  "provenance": {
+    "access_service": "Original NOAA NCEI BAG and original USGS DS 781 camera archive",
+    "raw_sha256": "ccb11fa7bae8c7be4f428bf88b57ab5fa9ac51d2a1da5dbd76694d30093eaa41",
+    "transformations": [
+      "Opened original regular BAG at 2 m and checked native depth, product uncertainty and 25 m measured-neighborhood support around original camera records.",
+      "Matched original USGS camera ZIP by SHA-256 f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8 and grouped 13 qualified records into two historical transects.",
+      "Reconciled the original NOAA descriptive-report hash with an 18-layer bounded ENC danger query and fresh complete CDFW MPA snapshot; emitted only a coordinate-free research receipt."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "supports": "Original survey report identifies MLLW sounding datum, 2 m depth surface, rocky bottom and office-added submerged rock; exact PDF SHA-256 46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad."
+    },
+    {
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "supports": "Original camera archive opened and pinned; 13 reviewed depth-qualified historical rock/cobble windows on two July 31, 2010 transects, nine with rockfish visual codes and none with lingcod codes."
+    },
+    {
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+      "supports": "All 18 bounded ENC danger layers were queried on September 25, 2026; 60 charted features in the review envelope, but no route or target clearance."
+    }
+  ],
+  "limitations": [
+    "The raster envelope includes masked cells; exact measurable footprint and survey holidays must be reviewed for each proposed area.",
+    "Original camera positions vary by about 10 m and 13 correlated observations on two transects are not 13 independent reefs or current catch evidence.",
+    "The original report's final office review added a submerged rock and retained older rocks with uncertain positions; exact HCell and current ENC feature geometry must be reconciled.",
+    "No charted seabed-area polygon was returned in the bounded current ENC query; a camera line cannot define a continuous rock boundary.",
+    "The source is held from fishing-target promotion and export until exact substrate, federal and state closure geometry, Mendocino species/method/date rules, route, harbor and rights review pass."
+  ]
+}
