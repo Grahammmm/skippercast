@@ -525,5 +525,28 @@ jobs:
           path: var/review/usgs-sur-arguello-sediment-audit.json
           retention-days: 30
 
+  csumb-scc-source-leads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify source-lead contract
+        run: python -m unittest tests.test_csumb_scc_discovery -v
+      - name: Recheck all 28 original CSUMB survey reports and series metadata
+        run: >-
+          python scripts/discover_csumb_scc_blocks.py
+          --baseline catalog/csumb-scc-source-leads.json
+          --output var/review/csumb-scc-source-leads.json
+      - name: Upload unpublished survey-source receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csumb-scc-source-leads
+          path: var/review/csumb-scc-source-leads.json
+          retention-days: 30
+
 # This workflow deliberately does not change public map files. Camera observations,
 # source-class intersections and closures need a reviewed commit before deployment.

@@ -1,0 +1,523 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-09-25T07:34:50.333268+00:00",
+  "producer": "CSU Monterey Bay Seafloor Mapping Lab; NOAA NCEI distribution",
+  "series_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+  "series_metadata_sha256": "34b0ccb72fa4f2f60f34519ebada47bbd7c34a06f584da3e5221f6b58d933a1d",
+  "survey_count": 28,
+  "surveys": [
+    {
+      "survey_id": "SCC_Block01",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block01_mb.html",
+      "report_sha256": "e72546e88a8340903607b1e1e391b848201062a4844a7144e071e8c51490f0e1",
+      "catalog_envelope": [
+        -121.381195,
+        35.690495,
+        -121.304634,
+        35.734398
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version2/products/SCC_Block01_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block02",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block02_mb.html",
+      "report_sha256": "c700fc16272a68c9dc149a6a30d1550a58b237a4ed604004c9fb2a577f1fb765",
+      "catalog_envelope": [
+        -121.37452,
+        35.659286,
+        -121.28594,
+        35.696022
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block02/multibeam/data/version2/products/SCC_Block02_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block02/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block03",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block03_mb.html",
+      "report_sha256": "54070b8bb7731791ac04a6f5162a6275c944e36ebd5c5b780dd9340d93f34da6",
+      "catalog_envelope": [
+        -121.35527,
+        35.632774,
+        -121.19814,
+        35.665813
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block03/multibeam/data/version2/products/SCC_Block03_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block03/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block04",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "report_sha256": "76efcc63bab30afc4197f5b91ccb760333bef4ab2be9585dd4049adf61700e9b",
+      "catalog_envelope": [
+        -121.34401,
+        35.60686,
+        -121.154816,
+        35.640934
+      ],
+      "sector_ids": [
+        "sur-san-simeon"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block05",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
+      "report_sha256": "b29221c2ab49802f5b72deddabaa1a824cafc588576005b3ad63925a1b074c8a",
+      "catalog_envelope": [
+        -121.279526,
+        35.58132,
+        -121.12977,
+        35.617115
+      ],
+      "sector_ids": [
+        "sur-san-simeon",
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block05/multibeam/data/version2/products/SCC_Block05_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block05/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block06",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block06_mb.html",
+      "report_sha256": "91acd87ad50306c36629640d835fe377b7042ba713e0b2efc7a06ea0ff1c6888",
+      "catalog_envelope": [
+        -121.201996,
+        35.551113,
+        -121.10809,
+        35.59481
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block06/multibeam/data/version2/products/SCC_Block06_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block06/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block07",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block07_mb.html",
+      "report_sha256": "f03143491884cc13a6a9c5986661d7488ccc2c247ba40b7581ad650233563683",
+      "catalog_envelope": [
+        -121.182945,
+        35.512726,
+        -121.079094,
+        35.563343
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block07/multibeam/data/version2/products/SCC_Block07_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block07/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block08",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block08_mb.html",
+      "report_sha256": "a53c66397a8e46748331854d6eb0da15ea7d55cb03dc938c49156a45af6dec21",
+      "catalog_envelope": [
+        -121.15157,
+        35.44279,
+        -121.0302,
+        35.525715
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block08/multibeam/data/version2/products/SCC_Block08_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block08/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block09",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block09_mb.html",
+      "report_sha256": "9b2ef2eafaede25406e02a1d632e232f1164ed1fc3fe8abb8f4c8271f6af1254",
+      "catalog_envelope": [
+        -121.12262,
+        35.44279,
+        -121.005005,
+        35.490524
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block10",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block10_mb.html",
+      "report_sha256": "7a69b1f01148cbc34c168d9680a4cd0921844b0eba76d0aa81c108496577fe46",
+      "catalog_envelope": [
+        -121.07887,
+        35.41787,
+        -120.96081,
+        35.460976
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version2/products/SCC_Block10_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block11",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block11_mb.html",
+      "report_sha256": "017d4a89270116dfbb4e4de554362cb20ffc5e400aa4c4d6394838f0d33d2e69",
+      "catalog_envelope": [
+        -121.04247,
+        35.396957,
+        -120.91138,
+        35.44797
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version2/products/SCC_Block11_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block12",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block12_mb.html",
+      "report_sha256": "b583dcdd668ac965768517b96a892255c2923f4ac7e972b6c9ea3dc5faff26f8",
+      "catalog_envelope": [
+        -120.96697,
+        35.38019,
+        -120.87572,
+        35.44409
+      ],
+      "sector_ids": [
+        "cambria-morro"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block12/multibeam/data/version2/products/SCC_Block12_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block12/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block13",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block13_mb.html",
+      "report_sha256": "417ab83c321259018f8b7713013abe136d7ce3c0439821dd358ba364e39b0bc8",
+      "catalog_envelope": [
+        -120.99148,
+        35.33739,
+        -120.8692,
+        35.406563
+      ],
+      "sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block13/multibeam/data/version2/products/SCC_Block13_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block13/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block14",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block14_mb.html",
+      "report_sha256": "e5d547af2eedc958bea6a5806b47da01786f9b583c61511364662d10867976d4",
+      "catalog_envelope": [
+        -120.93236,
+        35.322395,
+        -120.86644,
+        35.37006
+      ],
+      "sector_ids": [
+        "cambria-morro",
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block14/multibeam/data/version2/products/SCC_Block14_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block14/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block15",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block15_mb.html",
+      "report_sha256": "8d6c5e2891e56f961b354da5e29a20acea381e200b72a7bfde7982590a67b3c1",
+      "catalog_envelope": [
+        -120.8902,
+        35.285484,
+        -120.87056,
+        35.323696
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block15/multibeam/data/version2/products/SCC_Block15_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block15/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block16",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block16_mb.html",
+      "report_sha256": "2eba16fe770bedf950aade06b2ffba9237e306faf7997f64ff1efe757d4428e5",
+      "catalog_envelope": [
+        -120.71101,
+        34.9768,
+        -120.64016,
+        35.03185
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block16/multibeam/data/version2/products/SCC_Block16_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block16/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block17",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block17_mb.html",
+      "report_sha256": "b28e924cbad917911a9ab6a4b8d9279f25ac9756edec480904312ce77f86533a",
+      "catalog_envelope": [
+        -120.72899,
+        34.936417,
+        -120.65357,
+        34.983845
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block17/multibeam/data/version2/products/SCC_Block17_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block17/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block18",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block18_mb.html",
+      "report_sha256": "19bd4a8bae9d2b8650c5f3a72b48d33cfb1317cb603482e5c4b8a3fc7e73eab4",
+      "catalog_envelope": [
+        -120.7367,
+        34.89966,
+        -120.66551,
+        34.941666
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block18/multibeam/data/version2/products/SCC_Block18_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block18/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block19",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block19_mb.html",
+      "report_sha256": "42db38fdb7b56a39c24e6082683abd6e85857b6581df01a2e8aeae09b21200a4",
+      "catalog_envelope": [
+        -120.73754,
+        34.85838,
+        -120.64132,
+        34.904587
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block19/multibeam/data/version2/products/SCC_Block19_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block19/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block20",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block20_mb.html",
+      "report_sha256": "a93fff9603ec8fac320d18379e8e91d7fab5827c42c282d6a9e0d2d1cfbb7949",
+      "catalog_envelope": [
+        -120.71458,
+        34.831,
+        -120.61843,
+        34.880383
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block20/multibeam/data/version2/products/SCC_Block20_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block20/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block21",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block21_mb.html",
+      "report_sha256": "4e7dfe2e7e2083fe3a2ff4c0dc7fb767aad7b2ba8af28373cce39059f03863fd",
+      "catalog_envelope": [
+        -120.67884,
+        34.81981,
+        -120.61866,
+        34.855053
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block21/multibeam/data/version2/products/SCC_Block21_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block21/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block22",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block22_mb.html",
+      "report_sha256": "d8c1d65e5a789bbf1c2a7e3eb9cff2d7827b5d5c38b9f0c9b4ac710264f67ca1",
+      "catalog_envelope": [
+        -120.69319,
+        34.783775,
+        -120.62005,
+        34.825985
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block22/multibeam/data/version2/products/SCC_Block22_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block22/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block23",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block23_mb.html",
+      "report_sha256": "addfbe41a8ffe0b6d835691bd662baa891a2b67cc6e6211a12b8be8ee2977edd",
+      "catalog_envelope": [
+        -120.704735,
+        34.753754,
+        -120.63155,
+        34.789677
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block23/multibeam/data/version2/products/SCC_Block23_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block23/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block24",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block24_mb.html",
+      "report_sha256": "f52201f749c3a2b1028be0df374c15d8dc21d0da557131e57fcea71530af2ebd",
+      "catalog_envelope": [
+        -120.7035,
+        34.709557,
+        -120.60877,
+        34.758553
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block24/multibeam/data/version2/products/SCC_Block24_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block24/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block25",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block25_mb.html",
+      "report_sha256": "d50ec755ba2ba610f27e289a588eb992b85d318fa81361628911bf9685f561f8",
+      "catalog_envelope": [
+        -120.68167,
+        34.664917,
+        -120.6062,
+        34.713314
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block25/multibeam/data/version2/products/SCC_Block25_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block25/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block26",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block26_mb.html",
+      "report_sha256": "94d5255dff7d5642aa956142a7e5b2b0f22a5d7ce31c1968179bcb0f9e293e5b",
+      "catalog_envelope": [
+        -120.69622,
+        34.633545,
+        -120.61798,
+        34.66856
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version2/products/SCC_Block26_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block27",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block27_mb.html",
+      "report_sha256": "4deafc58941cbe405f914ce0b5b253ed4f58504baa196349cf0b70226a1b1281",
+      "catalog_envelope": [
+        -120.670425,
+        34.586227,
+        -120.6299,
+        34.638115
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block27/multibeam/data/version2/products/SCC_Block27_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block27/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    },
+    {
+      "survey_id": "SCC_Block28",
+      "report_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block28_mb.html",
+      "report_sha256": "3bf530bd1e89a0ef2518f8928ee9eb1bf44ff784adb944434ca15c0a97881d06",
+      "catalog_envelope": [
+        -120.66885,
+        34.553535,
+        -120.630585,
+        34.588768
+      ],
+      "sector_ids": [
+        "morro-conception"
+      ],
+      "original_products_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block28/multibeam/data/version2/products/SCC_Block28_additional_products.tar.gz",
+      "metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block28/multibeam/data/version1/metadata/SCC_CSMP_Metadata.txt",
+      "footprint_kind": "survey-track-envelope",
+      "status": "source-lead-only"
+    }
+  ],
+  "limitations": [
+    "Survey-track envelopes overlap and do not establish measured-cell coverage or a reef boundary.",
+    "The original native archives, per-file XML, horizontal and vertical datums, uncertainty, substrate, rights and current chart hazards require review before any fishing target.",
+    "Blocks named for MPAs in the series metadata are not legal fishing areas; all blocks require current CDFW and federal closure screening.",
+    "No catalog lead is a fishing waypoint, drift, catch record, safe route or chartplotter export."
+  ]
+}
