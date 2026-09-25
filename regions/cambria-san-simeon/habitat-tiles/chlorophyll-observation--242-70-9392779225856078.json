@@ -1,1 +1,0 @@
-{"schema_version":1,"region_id":"cambria-san-simeon","layer_id":"chlorophyll-observation","bounds":[-121.0,35.0,-120.5,35.5],"resolution_degrees":[0.04166666589488307,0.041666674383609215],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790078400,"cells":[[35.4375,-120.97916,1.93563],[35.4375,-120.9375,3.4887]],"valid_cells":2}]}
