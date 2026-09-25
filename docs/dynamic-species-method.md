@@ -2,6 +2,8 @@
 
 The dynamic habitat pipeline adds dated water-mass information to the species map. It answers where measured or modeled conditions differ, not where a fish is certain to bite. Weather comfort, lawful access, static seabed evidence, environmental support and actual catch observations remain separate claims.
 
+On September 24, 2026, the current regional bindings switched to NOAA CoastWatch's official THREDDS NetCDF subsets: night-only Geo-Polar Blended SST at 0.05° and near-real-time merged NPP/NOAA-20 VIIRS OCI chlorophyll at 0.0375°. The exact source file, sample time, request URL and response hash are recorded. A Morro Bay test subset of the VIIRS product dated September 22 12:00 UTC contained 114 valid cells in 735 requested cells; the other cells stayed missing. These products replace the failing West Coast ERDDAP delivery routes for current collection, but are different analyses and sensors from MUR and MODIS. Historical measurements and method notes below describe the initial September 22 review, not the current binding.
+
 ## Sources and first access review
 
 On September 22, 2026, direct public reads returned NOAA CoastWatch MUR and MODIS metadata and the NOAA WCOFS September 22 03Z catalog, variable attributes and source files. HTTP retrieval time is recorded separately from the source clocks. No account or paid service is required.

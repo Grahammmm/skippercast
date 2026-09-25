@@ -302,6 +302,7 @@
       "noaa-wcofs"
     ],
     "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
       "modis-chlorophyll"
     ],
     "species-occurrence": [
@@ -463,7 +464,7 @@
   "jurisdiction_id": "california-central",
   "pipeline_sources": {
     "sst": "noaa-blended-sst",
-    "chlorophyll": "modis-chlorophyll",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
     "currents": "ioos-hfr"
   },
   "intelligence": {

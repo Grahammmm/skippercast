@@ -1646,6 +1646,42 @@
         "dataset": "Blended/SST5km/Night/GHRSSTOSPO",
         "max_age_hours": 72
       }
+    },
+    {
+      "id": "noaa-viirs-merged-chlorophyll",
+      "name": "NOAA NPP/NOAA-20 merged OCI chlorophyll, near real time",
+      "provider": "NOAA NESDIS STAR / CoastWatch",
+      "needs": [
+        "chlorophyll"
+      ],
+      "documentation_url": "https://coastwatch.noaa.gov/cwn/products/noaa-msl12-ocean-color-near-real-time-viirs-single-sensor-snpp-and-noaa-20.html",
+      "adapter": "noaa-ncss-chlorophyll",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-24",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA NESDIS STAR / CoastWatch",
+        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-msl12-ocean-color-near-real-time-viirs-single-sensor-snpp-and-noaa-20.html"
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Near-real-time daily two-sensor merged Level 3 global OCI chlorophyll at 0.0375 degree (~4 km); cloud and quality gaps stay missing.",
+      "limitations": [
+        "Surface chlorophyll proxy, not bait abundance or fish presence.",
+        "Cloud, algorithm and quality gaps remain unfilled; valid-cell density varies by region and date."
+      ],
+      "dataset_id": "chlociVIIRSnpp-n20GlobalDailyWW00",
+      "allowed_hosts": [
+        "coastwatch.noaa.gov"
+      ],
+      "max_age_hours": 96,
+      "request": {
+        "base_url": "https://coastwatch.noaa.gov/thredds",
+        "dataset": "chlociVIIRSnpp-n20GlobalDailyWW00",
+        "max_age_hours": 96
+      }
     }
   ]
 }

@@ -186,6 +186,7 @@
       "noaa-wcofs"
     ],
     "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
       "modis-chlorophyll"
     ],
     "species-occurrence": [
@@ -342,7 +343,7 @@
   "ecology_profile": "california-northern",
   "pipeline_sources": {
     "sst": "noaa-blended-sst",
-    "chlorophyll": "modis-chlorophyll",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
     "currents": "ioos-hfr"
   },
   "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/crescent-city/intelligence.json",

@@ -152,6 +152,16 @@ def satellite(client, region, request, kind):
         metadata_url = grid["catalog_url"]
         dataset = grid["dataset"]
         meta = {"attrs": {"NC_GLOBAL": {"license": grid["license"]}}}
+    elif request.get("adapter") == "noaa-ncss-chlorophyll":
+        from .noaa_chlorophyll import fetch
+        west, south, east, north = _bounds(region)
+        grid = fetch(client, {"latitude": [south, north], "longitude": [west, east]})
+        samples = {(r["latitude"], r["longitude"]): r for r in grid["samples"]}
+        resolution = [.0375, .0375]
+        times = {grid["sample_at"]}
+        metadata_url = grid["catalog_url"]
+        dataset = grid["dataset"]
+        meta = {"attrs": {"NC_GLOBAL": {"license": grid["license"]}}}
     else:
         samples, resolution, times, metadata_url, dataset, meta = _erddap_satellite(client, region, request, kind)
     return _satellite_layer(samples, resolution, times, metadata_url, dataset, meta, kind, _bounds(region))
@@ -352,7 +362,8 @@ def run(region_id, output, previous_root=None, now=None):
     for kind, ident in (("sst", "sst-analysis"), ("chlorophyll", "chlorophyll-observation")):
         source_id = region["pipeline_sources"].get(kind); cfg = catalog[source_id]
         need = "sea-temperature" if kind == "sst" else "chlorophyll"
-        if cfg["review_status"] != "approved" or cfg["adapter"] not in ({"erddap-grid", "noaa-ncss-sst"} if kind == "sst" else {"erddap-grid"}) or source_id not in region["source_bindings"][need]:
+        compatible = {"sst": {"erddap-grid", "noaa-ncss-sst"}, "chlorophyll": {"erddap-grid", "noaa-ncss-chlorophyll"}}
+        if cfg["review_status"] != "approved" or cfg["adapter"] not in compatible[kind] or source_id not in region["source_bindings"][need]:
             raise ValueError("Habitat collection requires reviewed regional satellite bindings")
         request = cfg["request"]
         if urlparse(request["base_url"]).hostname not in cfg["allowed_hosts"]: raise ValueError("Unreviewed satellite host")
