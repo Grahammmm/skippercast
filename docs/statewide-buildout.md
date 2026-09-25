@@ -193,7 +193,7 @@ Across the browsing boundary, [NOAA H11951](https://www.ngdc.noaa.gov/nos/H10001
 
 [CDFW's Point Conception SMR](https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-Conception) prohibits take inside its legal boundary. [NOAA Coast Pilot 7](https://nauticalcharts.noaa.gov/publications/coast-pilot/files/cp7/CPB7_WEB.pdf) identifies Vandenberg danger zones from Point Conception toward Point Sal; [Vandenberg's maritime updates](https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/) provide current operational status. The compiled MPA/GEA snapshot and old survey cannot clear a route, date-specific danger zone, chart hazard, fishing method, or current fish presence. The layer stays context only while those gates remain open.
 
-The [Crescent City / Del Norte rollout](northern-crescent-city-rollout.md) has a draft region contract and a September 24 hash-bound review of 19 Northern legal sources. It is not in the live selector or scheduled region feeds until local observations, current hazards and native target geometry pass their gates.
+The [Crescent City / Del Norte rollout](northern-crescent-city-rollout.md) has a limited preview region contract and a September 24 hash-bound review of 19 Northern legal sources. It joins the live selector and scheduled feeds with zero fishing targets; local observations, current hazards and native target geometry still gate a qualified point.
 
 ### The second official CSMP catalog closes a Monterey source-discovery gap
 
@@ -277,3 +277,6 @@ The Fort Bragg–Point Arena package advanced to a **limited preview** on Septem
 
 
 The Bodega Bay–Point Reyes [preview ledger](bodega-point-reyes-rollout.md) records a fresh regional daily/live rehearsal with all watched legal documents and distinct wind/wave models returned, but missing surface-radar current vectors. The preview keeps its 38°02′ N salmon split and has no fishing points, search footprints, drift lines or bottom imagery. It does not make the San Francisco coast or statewide atlas complete.
+
+
+The Crescent City / Del Norte [limited preview](northern-crescent-city-rollout.md) now links the Northern coast selector to local legal and forecast sources. A September 24 local daily rehearsal returned 65/66 sources; surface-radar currents remained unavailable. The preview has no fishing coordinates, search footprints, drifts or bottom images. Its H11985 and H12131 surveys remain source context or held by MPAs, so this does not make Northern California or the statewide atlas complete.

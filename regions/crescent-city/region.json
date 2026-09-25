@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "crescent-city",
   "name": "Crescent City & Del Norte",
-  "status": "draft",
+  "status": "preview",
   "timezone": "America/Los_Angeles",
   "jurisdiction": "California \u00b7 Northern Groundfish Management Area",
   "bounds": [
@@ -23,7 +23,7 @@
       -124.27
     ],
     "zoom": 10,
-    "locality_method": "Draft discovery footprint for Del Norte. No fishing target, season status or route is published until native bottom, legal and forecast sources pass regional review. Geographic discovery extents are not legal boundaries.",
+    "locality_method": "Northern outer-coast discovery extent around Crescent City and Point St. George. This preview rectangle is not a legal fishing boundary, qualified spot or navigation clearance.",
     "region_notice_ids": [
       "northern-mpas"
     ],
@@ -243,8 +243,8 @@
       "reason": "Statewide CDFW MPA polygons are available for screening; exact Northern source and freshness must be verified in this package."
     },
     "regulations": {
-      "status": "research",
-      "reason": "Northern rules draft and source watches exist but legal documents have not passed the hash-bound review gate."
+      "status": "partial",
+      "reason": "Northern species and this footprint passed a hash-bound 19-source review; a fresh local daily rehearsal returned the watched official pages unchanged. Exact date, method, salmon/crab in-season updates, tribal and MPA rules still need fresh access checks."
     },
     "dynamic-closures": {
       "status": "research",
@@ -252,19 +252,19 @@
     },
     "wind-forecast": {
       "status": "partial",
-      "reason": "Independent NOAA GFS and ECMWF IFS adapters exist; grid coverage and local context need first regional receipt."
+      "reason": "NOAA GFS and ECMWF IFS returned local grids for the split Northern forecast contexts in rehearsal; runtime freshness and official PZZ450/PZZ470/PZZ356/PZZ376 advisories still govern each trip."
     },
     "wave-forecast": {
       "status": "partial",
-      "reason": "Independent NOAA GFS Wave and ECMWF WAM adapters exist; local reception and issue times need first regional receipt."
+      "reason": "NOAA GFS Wave and ECMWF WAM returned regional grids in rehearsal; actual issue, horizon and local advisories still govern each date."
     },
     "wave-observations": {
-      "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "status": "partial",
+      "reason": "NDBC 46027 St Georges and distant 46015 Port Orford were available in rehearsal; neither measures the harbor entrance."
     },
     "weather-observations": {
-      "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "status": "partial",
+      "reason": "NDBC 46027 returned current offshore weather; no live Crescent City harbor-bar measurement was established."
     },
     "tides": {
       "status": "partial",
@@ -272,19 +272,19 @@
     },
     "surface-currents": {
       "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "reason": "The tested 6 km surface-radar grid had no usable vectors. WCOFS surface forecast is separate and cannot be relabeled as observed bottom drift."
     },
     "subsurface-ocean": {
       "status": "research",
       "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
     },
     "sea-temperature": {
-      "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "status": "partial",
+      "reason": "NOAA SST returned regional cells in the fresh rehearsal; this is dated surface context, not fish presence or bottom temperature."
     },
     "chlorophyll": {
-      "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "status": "partial",
+      "reason": "NOAA VIIRS chlorophyll returned regional cells in the fresh rehearsal; unpopulated pixels and dates remain missing."
     },
     "species-occurrence": {
       "status": "research",
@@ -304,7 +304,7 @@
     },
     "harbor-access": {
       "status": "research",
-      "reason": "Del Norte-specific coverage and source precision remain under review; no source name or neighboring station is accepted as proof of local coverage."
+      "reason": "Harbor District and NWS pages are checked for identity and notices, but neither provides live bar clearance or a safe route."
     },
     "wind-ensemble": {
       "status": "research",
@@ -338,7 +338,7 @@
   "landing_names": [
     "Crescent City"
   ],
-  "coverage_note": "Draft Del Norte package. Historical depth and predicted substrate leads exist, but no reviewed fishing target, current legal clearance or complete regional forecast has been published.",
+  "coverage_note": "Del Norte preview with local forecasts, St Georges buoy, tide predictions and reviewed Northern rules. No qualified fishing spots, bottom images or drift lines. Surface-radar vectors were unavailable in the tested grid; H11985 and H12131 original surveys remain research or MPA-held context.",
   "landing_note": "Port landings do not locate catches on Del Norte grounds.",
   "jurisdiction_id": "california-northern",
   "ecology_profile": "california-northern",
@@ -387,6 +387,39 @@
         "coastal": "PZZ356",
         "offshore": "PZZ376"
       }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46027",
+        "latitude": 41.84,
+        "longitude": -124.382,
+        "name": "St Georges offshore",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46027"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-northern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
     }
   }
 }

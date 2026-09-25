@@ -36,7 +36,9 @@
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185055&inline=",
-      "packages": [],
+      "packages": [
+        "crescent-city"
+      ],
       "targets": [
         "reef",
         "pacific-halibut",

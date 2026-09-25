@@ -48,6 +48,15 @@ class RegionalContracts(TestCase):
         self.assertIn("salmon", [item["id"] for item in region["map"]["local_areas"][0]["hidden_targets"]])
         self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
 
+    def test_crescent_preview_keeps_mpa_held_survey_out_of_fishing_exports(self):
+        region = load_region("crescent-city")
+        atlas = read_json(REPO / "dist" / region["assets"]["atlas"])
+        search = read_json(REPO / "dist" / region["assets"]["search_plans"])
+        self.assertEqual(region["status"], "preview")
+        self.assertEqual(atlas["targets"], [])
+        self.assertEqual(search["features"], [])
+        self.assertNotEqual(region["coverage"]["surface-currents"]["status"], "ready")
+
     def test_preview_cannot_claim_qualified_targets_exports_or_images(self):
         report=requirement_report(load_region("cambria-san-simeon"))
         for key in ("surveyed-bottom-targets","surveyed-bottom-images","fishing-exports","verified-charter-hotspots","calibrated-catch-model"):

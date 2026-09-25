@@ -34,6 +34,15 @@ class CoastalSectorTests(TestCase):
             (root / 'dist/regions').mkdir(parents=True)
             shutil.copy(ROOT / 'catalog/coasts.json', root / 'catalog/coasts.json')
             shutil.copy(ROOT / 'dist/regions/index.json', root / 'dist/regions/index.json')
+            for entry in json.loads((ROOT / 'dist/regions/index.json').read_text())['regions']:
+                config = ROOT / 'regions' / entry['id'] / 'region.json'
+                target = root / 'regions' / entry['id'] / 'region.json'
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(config, target)
+                atlas = json.loads(config.read_text())['assets']['atlas']
+                output = root / 'dist' / atlas
+                output.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(ROOT / 'dist' / atlas, output)
             source = json.loads((ROOT / 'catalog/coastal-sectors.json').read_text())
             source['sectors'][0]['latitude'][0] = 41.71
             (root / 'catalog/coastal-sectors.json').write_text(json.dumps(source))
