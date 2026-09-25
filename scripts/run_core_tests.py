@@ -11,6 +11,7 @@ import unittest
 GIS_TEST_MODULES = {
     'test_bluetopo_source',
     'test_bottom_targets',
+    'test_camera_native_terrain',
     'test_cdfw_substrate_pipeline',
     'test_central_sediment_context',
     'test_csumb_bss_native',
@@ -34,6 +35,7 @@ GIS_TEST_MODULES = {
     'test_regular_bag_hard',
     'test_sansimeon_bedrock_overlap',
     'test_search_plan_geometry',
+    'test_shelter_cove_region',
     'test_san_diego_substrate_lead',
     'test_statewide_camera_dedup',
     'test_statewide_regular_report_review',
