@@ -841,6 +841,40 @@ jobs:
             --output var/review/eel-river-class3-measured-depth-screen.json
       - name: Refresh NOAA federal groundfish exclusions
         run: python scripts/collect_noaa_groundfish_areas.py --output var/review/noaa-federal-areas.json
+      - name: Inventory all exact NOAA tiles under displayed original USGS hard context
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/inventory_nbs_hard_footprint_tiles.py
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --output var/review/nbs-hard-footprint-tile-inventory.json
+      - name: Audit the complete displayed-hard NOAA tile inventory
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_nbs_hard_footprint_tiles.py
+          --inventory var/review/nbs-hard-footprint-tile-inventory.json
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --fetch --workers 4
+          --output var/review/nbs-hard-footprint-depth-audit.json
+      - name: Fetch hash-pinned original USGS class archives for the expanded overlap
+        run: >-
+          python scripts/fetch_hard_footprint_usgs_class.py
+          --inventory var/review/nbs-hard-footprint-tile-inventory.json
+          --usgs-audit var/review/usgs-doi-native-audit.json
+          --map-audit var/review/usgs-native-audit.json
+          --output var/review/nbs-hard-footprint-usgs-class-fetch.json
+      - name: Join measured NOAA depths to original hard classes outside current closures
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/review_nbs_hard_footprint_overlap.py
+          --inventory var/review/nbs-hard-footprint-tile-inventory.json
+          --depth var/review/nbs-hard-footprint-depth-audit.json
+          --scheme var/nbs-cache/modeling-tile-scheme.gpkg
+          --mpas var/published/latest.json
+          --federal var/review/noaa-federal-areas.json
+          --output var/review/nbs-hard-footprint-original-class-overlap.json
       - name: Check NOAA coastwide species-habitat source granularity
         run: python scripts/audit_noaa_efh_source.py --output var/review/noaa-efh-source-review.json
       - name: Cross-check original hard class against measured NOAA cells statewide

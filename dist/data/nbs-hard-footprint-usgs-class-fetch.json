@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "scope": "original-usgs-hard-footprint-class-archive-fetch",
+  "requested": 34,
+  "verified": 34,
+  "failed": 0,
+  "status": "complete",
+  "fishing_target": false,
+  "exportable": false,
+  "archives": [
+    {
+      "release_id": "DrakesBay",
+      "archive_sha256": "6b0ef47d0267afb4d6c14b384fc97aad7ceccfc97c2337f433211f0f1203a8b3",
+      "archive_bytes": 1370017,
+      "source_url": "https://pubs.usgs.gov/ds/781/DrakesBay/data/SeafloorCharacter_DrakesBay.zip"
+    },
+    {
+      "release_id": "F70Z71C8",
+      "archive_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "archive_bytes": 1744935,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_2m_OffshoreMonterey.zip"
+    },
+    {
+      "release_id": "F70Z71C8",
+      "archive_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "archive_bytes": 901050,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/SeafloorCharacter_5m_OffshoreMonterey.zip"
+    },
+    {
+      "release_id": "F7513W80",
+      "archive_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+      "archive_bytes": 2139449,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/SeafloorCharacter_OffshorePigeonPoint.zip"
+    },
+    {
+      "release_id": "F7CJ8BJW",
+      "archive_sha256": "e9e75bd02c36f2f9ce3374009cfaff3ccc3e8d29875d107ab764c3fc8fa89134",
+      "archive_bytes": 2084510,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data/SeafloorCharacter_OffshoreScottCreek.zip"
+    },
+    {
+      "release_id": "F7K35RQB",
+      "archive_sha256": "925ff387a48ca3a903609fac664db9fb685252d4be994107095746331e5854cd",
+      "archive_bytes": 86458,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/SeafloorCharacter_5m_OffshoreAptos.zip"
+    },
+    {
+      "release_id": "F7K35RQB",
+      "archive_sha256": "9fcab31d296bcf75c26c3aa937fe7fff190f0365299b6a287f76e93694dbcead",
+      "archive_bytes": 853596,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data/SeafloorCharacter_2m_OffshoreAptos.zip"
+    },
+    {
+      "release_id": "F7QN64XQ",
+      "archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+      "archive_bytes": 1232378,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip"
+    },
+    {
+      "release_id": "F7TH8JWJ",
+      "archive_sha256": "f8605263b06aeff232f48e5bd21b306d18d75511772a007ce5de1534a646a0fa",
+      "archive_bytes": 1205996,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/SeafloorCharacter_OffshoreGaviota.zip"
+    },
+    {
+      "release_id": "F7TM785G",
+      "archive_sha256": "b6e86d2d518619cb7760f8f2331b2eb768e054a89ab74498e42634c414471cd3",
+      "archive_bytes": 1535487,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data/SeafloorCharacter_OffshoreSantaCruz.zip"
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "archive_sha256": "05d3c11229ca3a33f45d22da49970c0a84efbffd5fdd718036ed29d25059eeb1",
+      "archive_bytes": 1811149,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/SeafloorCharacter_5m_MontereyCanyon.zip"
+    },
+    {
+      "release_id": "F7XD0ZQ4",
+      "archive_sha256": "d1c9ccc9b0c686d9461107dfd4ae9bfacd713b132560c5f8c7710b4798db7363",
+      "archive_bytes": 1465134,
+      "source_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data/SeafloorCharacter_2m_MontereyCanyon.zip"
+    },
+    {
+      "release_id": "HuenemeCanyon",
+      "archive_sha256": "80742cb6e130b46aeb74ffafa6cfede9efdfcbbbef760ce9bdf1779374c385dd",
+      "archive_bytes": 1505968,
+      "source_url": "https://pubs.usgs.gov/ds/781/HuenemeCanyon/data/SeafloorCharacter_HuenemeCanyon.zip"
+    },
+    {
+      "release_id": "OffshoreBodegaHead",
+      "archive_sha256": "eb4868872e954b883d74e39fed53e5baf5dc698324896fc1f314671a3e1116f0",
+      "archive_bytes": 2184077,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreBodegaHead/data/SeafloorCharacter_OffshoreBodegaHead.zip"
+    },
+    {
+      "release_id": "OffshoreBolinas",
+      "archive_sha256": "f9a9ee60f4997311b8b16e5051a33f9e7977f9b7131c64554b9d078e7b0250a3",
+      "archive_bytes": 2156692,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreBolinas/data/SeafloorCharacter_OffshoreBolinas.zip"
+    },
+    {
+      "release_id": "OffshoreCarpinteria",
+      "archive_sha256": "ec65269f1517f41064466bc892a23974436c444bbaf56558ed7f8d43bf9a0844",
+      "archive_bytes": 691122,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreCarpinteria/data/SeafloorCharacter_OffshoreCarpinteria.zip"
+    },
+    {
+      "release_id": "OffshoreCoalOilPoint",
+      "archive_sha256": "69661976bf4d8b0b8deeec1081eb71f26351d1b98d077c79ca10fe4afa214112",
+      "archive_bytes": 603345,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/SeafloorCharacter_OffshoreCoalOilPoint_2m.zip"
+    },
+    {
+      "release_id": "OffshoreCoalOilPoint",
+      "archive_sha256": "70b6a0721b143cc4a37acb36bff33c8c16402b401d94f5acc3ad7ba9e1961c0c",
+      "archive_bytes": 103642,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreCoalOilPoint/data/SeafloorCharacter_OffshoreCoalOilPoint_5m.zip"
+    },
+    {
+      "release_id": "OffshoreFortRoss",
+      "archive_sha256": "439f8012d7401d55b5f4370b53aa1657159021b2f753e57494b3af05279b6602",
+      "archive_bytes": 1006711,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreFortRoss/data/SeafloorCharacter_OffshoreFortRoss.zip"
+    },
+    {
+      "release_id": "OffshoreHalfMoonBay",
+      "archive_sha256": "eb90a9b78b60d9ae11f1c464e37659360a45e19c52fb655983d21f63ab351025",
+      "archive_bytes": 3393850,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreHalfMoonBay/data/SeafloorCharacter_OffshoreHalfMoonBay.zip"
+    },
+    {
+      "release_id": "OffshorePacifica",
+      "archive_sha256": "7376c8167816c7e0ac2567265dcfce95842c2e7c4fc58d41249b7c550cfa3873",
+      "archive_bytes": 606304,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshorePacifica/data/SeafloorCharacter_OffshorePacifica.zip"
+    },
+    {
+      "release_id": "OffshorePointReyes",
+      "archive_sha256": "e5cf72fbb7e10434fdaa15dcc11ac3aab7e0c0c753b7a68fa37847ba92241ed4",
+      "archive_bytes": 2301029,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshorePointReyes/data/SeafloorCharacter_OffshorePointReyes.zip"
+    },
+    {
+      "release_id": "OffshoreRefugioBeach",
+      "archive_sha256": "7e322f9543d73ed2e64f392e31beb7e0c43a4a17da03f23830aa9192f4da48f3",
+      "archive_bytes": 500350,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreRefugioBeach/data/SeafloorCharacter_OffshoreRefugioBeach.zip"
+    },
+    {
+      "release_id": "OffshoreSaltPoint",
+      "archive_sha256": "b995eff0f3d825ad659ba38f9f72d7568613f7e4cfbe2984f8e8e724995c9fa7",
+      "archive_bytes": 884766,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreSaltPoint/data/SeafloorCharacter_OffshoreSaltPoint.zip"
+    },
+    {
+      "release_id": "OffshoreSanFrancisco",
+      "archive_sha256": "a826cca8611ff4b5445ae398f1ad419813435876db2aa5810e76a73c83225c3b",
+      "archive_bytes": 3264114,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/SeafloorCharacter_OffshoreSanFrancisco.zip"
+    },
+    {
+      "release_id": "OffshoreSanGregorio",
+      "archive_sha256": "d4f97c05c2cddefd8be555d7daa098480d15f108f54828f632d3fec8ba236d4e",
+      "archive_bytes": 1471068,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreSanGregorio/data/SeafloorCharacter_OffshoreSanGregorio.zip"
+    },
+    {
+      "release_id": "OffshoreSantaBarbara",
+      "archive_sha256": "0c9019c7b1e9c7f9821bd7f45a8442674d0b5c5a641b57da41bc7a6f8ba5e26f",
+      "archive_bytes": 614637,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data/SeafloorCharacter_OffshoreSantaBarbara.zip"
+    },
+    {
+      "release_id": "OffshoreTomalesPoint",
+      "archive_sha256": "a46c7f5fe9eff6b7c517e600d850ab7d31e6e6bcd48d729a2a2e20389490af96",
+      "archive_bytes": 2674091,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreTomalesPoint/data/SeafloorCharacter_OffshoreTomalesPoint.zip"
+    },
+    {
+      "release_id": "OffshoreVentura",
+      "archive_sha256": "a5f065b60fa4eaa3bf7448989f40e1dbc6aaead61d397ebb8ee1e748b0208f5c",
+      "archive_bytes": 296728,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreVentura/data/SeafloorCharacter_OffshoreVentura.zip"
+    },
+    {
+      "release_id": "P902YIF5",
+      "archive_sha256": "f7b2c5847e12ba463a71287ce0d410b32aafa4ee05169be14825727583756821",
+      "archive_bytes": 196717,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P902YIF5/29a0e506a0c24755b4f1f773a2cebd32/SeafloorCharacter_OffshoreEelRiver.zip"
+    },
+    {
+      "release_id": "P9HEZNRO",
+      "archive_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+      "archive_bytes": 1188216,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/0abf6339a0ce4077b5e58852345151a3/SeafloorCharacter_OffshoreMorroBay.zip"
+    },
+    {
+      "release_id": "P9KBGELE",
+      "archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "archive_bytes": 1872472,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3963d3925b9841ecb9b6a743b92326d7/SeafloorCharacter_OffshorePointBuchon.zip"
+    },
+    {
+      "release_id": "P9U0SUGL",
+      "archive_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+      "archive_bytes": 2714114,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2023/10.5066-P9U0SUGL/a532c27e657d4ffeb6a59f4393e520c8/SeafloorCharacter_OffshoreCapeMendocino.zip"
+    },
+    {
+      "release_id": "P9ZSTUK1",
+      "archive_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+      "archive_bytes": 1791397,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/22adeb1ae71b4e28a5d38acdf66daec0/SeafloorCharacter_OffshorePointEstero.zip"
+    }
+  ],
+  "failures": []
+}

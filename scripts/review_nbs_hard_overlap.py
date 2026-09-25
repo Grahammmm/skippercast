@@ -68,7 +68,8 @@ def original_usgs_class(release_id, raster, bounds_wgs84, audit_rows, usgs_cache
         if path is None:
             raise ValueError("Original USGS class archive absent or changed: " + release_id)
         with ZipFile(path) as archive:
-            members = [name for name in archive.namelist() if name.lower().endswith(".tif")]
+            members = [name for name in archive.namelist() if name.lower().endswith(".tif")
+                       and not name.startswith('__MACOSX/') and not Path(name).name.startswith('._')]
         if len(members) != 1:
             raise ValueError("Original USGS class archive is ambiguous: " + release_id)
         with rasterio.open(f"/vsizip/{path.resolve()}/{members[0]}") as original:
@@ -89,7 +90,8 @@ def original_usgs_class(release_id, raster, bounds_wgs84, audit_rows, usgs_cache
 
 def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit_path, usgs_cache, mpas, federal,
           *, map_audit=None, map_audit_path=None, map_cache=None):
-    if review.get("scope") != "coast-nbs-multiple-rocky-camera-tile-source-review":
+    if review.get("scope") not in ("coast-nbs-multiple-rocky-camera-tile-source-review",
+                                   "coast-nbs-hard-footprint-depth-source-audit"):
         raise ValueError("Expected reviewed multi-tile source audit")
     if review["scheme_sha256"] != digest(scheme) or review.get("failed_tiles"):
         raise ValueError("NBS scheme changed or source audit has failures")
