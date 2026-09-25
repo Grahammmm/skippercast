@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CSUMBSourcePolicyTest(unittest.TestCase):
-    def test_six_source_records_remain_held(self):
+    def test_source_records_remain_held(self):
         receipt = json.loads((ROOT / "dist/data/csumb-original-source-policy-review.json").read_text())
         self.assertEqual(set(receipt["affected_candidate_ids"]), set(ARCHIVES))
         self.assertFalse(receipt["website_redistribution_cleared"])

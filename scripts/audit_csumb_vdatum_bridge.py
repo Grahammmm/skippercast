@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 API = 'https://vdatum.noaa.gov/vdatumweb/api/convert'
 EXPECTED_IDS = {'csumb-scc-block04', 'csumb-scc-block05', 'csumb-scc-block06',
-                'csumb-bss-block01', 'csumb-bss-block12', 'csumb-bss-block13'}
+                'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block12', 'csumb-bss-block13'}
 
 
 def request(lon, lat, frame, get=None):
@@ -76,7 +76,7 @@ def compile_review(source_reviews, *, get=None):
         raise ValueError('Expected inspected SCC and BSS CSUMB grids')
     rows = [row for review in source_reviews for row in review.get('sources', [])]
     if len(rows) != len(EXPECTED_IDS) or {row.get('source_id') for row in rows} != EXPECTED_IDS:
-        raise ValueError('Expected all six inspected SCC and BSS blocks')
+        raise ValueError('Expected all inspected SCC and BSS blocks')
     samples = []
     for row in sorted(rows, key=lambda row: row['source_id']):
         bathy = row['bathymetry']
@@ -110,7 +110,7 @@ def compile_review(source_reviews, *, get=None):
             'fishing_target': False, 'exportable': False,
             'limitations': [
                 'The native source identifies NAD83 / UTM 10 but not its realization or coordinate epoch; NAD83_2011 point results cannot yet be applied to those source pixels.',
-                'A raster-envelope midpoint is not guaranteed to lie on a measured source cell, and three point offsets cannot define a datum-correction field across the surveyed grids.',
+                'A raster-envelope midpoint is not guaranteed to lie on a measured source cell, and point offsets cannot define a datum-correction field across the surveyed grids.',
                 'VDatum uncertainty describes the transformation, not the original bathymetry product error; the source has no per-cell uncertainty band.',
                 'Original substrate, MPAs, other closures, charts, routes, date-specific rules and fish evidence remain independent gates.',
             ]}

@@ -183,10 +183,10 @@ def main():
                tile['strict_measured_rock_overlap_pixels'] == 0 for tile in aptos_depth['tiles'])
     datum_bridge = json.loads((WEB / 'data/csumb-vdatum-bridge-review.json').read_text())
     assert datum_bridge['scope'] == 'csumb-original-navd88-geoid09-vdatum-bridge-review'
-    assert len(datum_bridge['samples']) == 6
+    assert len(datum_bridge['samples']) == 7
     assert {sample['source_id'] for sample in datum_bridge['samples']} == {
         'csumb-scc-block04', 'csumb-scc-block05', 'csumb-scc-block06',
-        'csumb-bss-block01', 'csumb-bss-block12', 'csumb-bss-block13'}
+        'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block12', 'csumb-bss-block13'}
     assert datum_bridge['source_horizontal_realization_verified'] is False
     assert datum_bridge['mllw_raster_converted'] is False
     assert datum_bridge['depth_qualified'] is False

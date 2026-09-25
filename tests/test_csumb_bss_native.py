@@ -15,12 +15,17 @@ class BigSurSouthNativeReviewTest(unittest.TestCase):
         report = json.loads((ROOT / 'dist/data/csumb-bss-native-source-review.json').read_text())
         self.assertEqual(report['publication_status'], 'source-evidence-only')
         by_id = {source['source_id']: source for source in report['sources']}
-        self.assertEqual(set(by_id), {'csumb-bss-block01', 'csumb-bss-block12', 'csumb-bss-block13'})
+        self.assertEqual(set(by_id), {'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block12', 'csumb-bss-block13'})
         shallow = by_id['csumb-bss-block01']
         self.assertEqual(shallow['bathymetry']['resolution_m'], [2.0, 2.0])
         self.assertEqual(shallow['native_depth_screen']['cells_within_limit'], 3_773_386)
         self.assertEqual(shallow['native_depth_screen']['derived_rough_class_cells_within_limit'], 166_433)
         self.assertIn('no chart-datum conversion', shallow['native_depth_screen']['basis'])
+        block02 = by_id['csumb-bss-block02']
+        self.assertEqual(block02['bathymetry']['valid_cells'], 5_021_485)
+        self.assertEqual(block02['native_depth_screen']['cells_within_limit'], 3_033_938)
+        self.assertEqual(block02['native_depth_screen']['derived_rough_class_cells_within_limit'], 17_169)
+        self.assertEqual(block02['status'], 'held-from-fishing-targets')
         source = by_id['csumb-bss-block12']
         self.assertEqual(source['status'], 'held-from-fishing-targets')
         self.assertIn('unresolved', source['rights_status'])

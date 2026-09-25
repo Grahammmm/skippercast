@@ -3,6 +3,23 @@
   "scope": "original-csumb-big-sur-south-native-grid-leads",
   "sources": [
     {
+      "id": "csumb-bss-block02",
+      "survey_id": "BSS_Block02",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version2/products/BSS_Block02_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block02_mb.html",
+      "original_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "archive_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+      "archive_bytes": 134535568,
+      "bathymetry_grid": "BSS_Block02/Bathymetry/ArcViewGrids/bss02_2mbathy",
+      "habitat_grid": "BSS_Block02/Habitat/ArcViewGrids/bss02_2mhab",
+      "acquisition_year": 2011,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+      "status": "research-only",
+      "limitations": "Native 2 m NAVD88 bathymetry and derived rough habitat require chart-datum conversion, per-cell uncertainty, independent substrate, producer redistribution rights, current MPAs, chart hazards, local rules and route review. No target, score or export is supported."
+    },
+    {
       "id": "csumb-bss-block12",
       "survey_id": "BSS_Block12",
       "producer": "CSU Monterey Bay Seafloor Mapping Lab",

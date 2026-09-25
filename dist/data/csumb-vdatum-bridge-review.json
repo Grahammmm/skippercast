@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "csumb-original-navd88-geoid09-vdatum-bridge-review",
-  "checked_at": "2026-09-25T10:30:09.250161+00:00",
+  "checked_at": "2026-09-25T19:45:12.831641+00:00",
   "source_reviews": [
     "data/csumb-scc-native-source-review.json",
     "data/csumb-bss-native-source-review.json"
@@ -23,6 +23,18 @@
       "status": "sample_available",
       "offset_m": -0.012,
       "vdatum_uncertainty_m": 0.096
+    },
+    {
+      "source_id": "csumb-bss-block02",
+      "archive_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+      "sample_kind": "raster-envelope-midpoint-not-verified-valid-cell",
+      "longitude": -121.3740553,
+      "latitude": 35.7754942,
+      "request_url": "https://vdatum.noaa.gov/vdatumweb/api/convert?region=westcoast&s_x=-121.3740553&s_y=35.7754942&s_z=0&s_h_frame=NAD83_2011&s_coor=geo&s_v_frame=NAVD88&s_v_geoid=geoid09&s_v_elevation=height&s_v_unit=m&t_h_frame=IGS14&t_coor=geo&t_v_frame=MLLW&t_v_elevation=height&t_v_unit=m",
+      "response_sha256": "9f8bef54db12f8af9c15a83030e2c033dc904ddf808fc43cc1bfbe5f741ba4ba",
+      "status": "sample_available",
+      "offset_m": -0.008,
+      "vdatum_uncertainty_m": 0.097
     },
     {
       "source_id": "csumb-bss-block12",
@@ -99,7 +111,7 @@
   "exportable": false,
   "limitations": [
     "The native source identifies NAD83 / UTM 10 but not its realization or coordinate epoch; NAD83_2011 point results cannot yet be applied to those source pixels.",
-    "A raster-envelope midpoint is not guaranteed to lie on a measured source cell, and three point offsets cannot define a datum-correction field across the surveyed grids.",
+    "A raster-envelope midpoint is not guaranteed to lie on a measured source cell, and point offsets cannot define a datum-correction field across the surveyed grids.",
     "VDatum uncertainty describes the transformation, not the original bathymetry product error; the source has no per-cell uncertainty band.",
     "Original substrate, MPAs, other closures, charts, routes, date-specific rules and fish evidence remain independent gates."
   ]

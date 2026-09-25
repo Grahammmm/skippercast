@@ -23,7 +23,7 @@ class CsumbVdatumBridgeTests(unittest.TestCase):
         payload['s_v_geoid'] = 'geoid18'
         self.assertEqual(assess(payload, -121.2, 35.6, 'NAD83_2011')['status'], 'invalid_response')
 
-    def test_six_original_blocks_remain_unqualified_after_available_samples(self):
+    def test_original_blocks_remain_unqualified_after_available_samples(self):
         sources = [json.loads((ROOT / f'dist/data/csumb-{series}-native-source-review.json').read_text())
                    for series in ('scc', 'bss')]
 
@@ -38,7 +38,7 @@ class CsumbVdatumBridgeTests(unittest.TestCase):
                     't_z': '-0.04', 'uncertainty': '0.10'}
 
         receipt = compile_review(sources, get=get)
-        self.assertEqual(len(receipt['samples']), 6)
+        self.assertEqual(len(receipt['samples']), 7)
         self.assertTrue(all(row['status'] == 'sample_available' for row in receipt['samples']))
         self.assertEqual(receipt['alternative_horizontal_frame_probe']['status'], 'api_rejected')
         self.assertFalse(receipt['source_horizontal_realization_verified'])
