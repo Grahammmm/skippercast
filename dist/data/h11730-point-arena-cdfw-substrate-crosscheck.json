@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "scope": "h11730-point-arena-camera-vs-cdfw-predicted-substrate",
+  "camera_survey": "H11730",
+  "camera_archive_sha256": {
+    "f208nc": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+    "c210nc": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8"
+  },
+  "camera_windows_deduplicated": 110,
+  "transects": [
+    {
+      "cruise": "c210nc",
+      "line": "49",
+      "windows": 14,
+      "cdfw_classes": {
+        "predicted_hard": 14
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "line": "113",
+      "windows": 14,
+      "cdfw_classes": {
+        "predicted_hard": 7,
+        "predicted_soft": 7
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "line": "114",
+      "windows": 26,
+      "cdfw_classes": {
+        "predicted_hard": 5,
+        "predicted_soft": 21
+      }
+    },
+    {
+      "cruise": "f208nc",
+      "line": "115",
+      "windows": 56,
+      "cdfw_classes": {
+        "predicted_soft": 21,
+        "predicted_hard": 35
+      }
+    }
+  ],
+  "cdfw_source_url": "https://tiledimageservices2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3091_cru/ImageServer",
+  "cdfw_audit_checked_at": "2026-09-23T21:38:10.560665+00:00",
+  "cdfw_tile_sha256": [
+    {
+      "row": 34,
+      "col": 10,
+      "sha256": "fba267726565f8cf9d4c93270d65de1901fb02c9de8cab04128c1050bc774cdc"
+    },
+    {
+      "row": 34,
+      "col": 11,
+      "sha256": "9d61e4720c86e77b6afb6b7be0b92b80c2877f5a4349c85de294277a08ec5ef4"
+    },
+    {
+      "row": 35,
+      "col": 11,
+      "sha256": "3870e0c7c3473317e4073331adfe54f8f7ca8222a51f5d0a4f41c18fcaa8268a"
+    }
+  ],
+  "cdfw_class_counts": {
+    "predicted_hard": 61,
+    "predicted_soft": 49
+  },
+  "nearest_existing_usgs_hard_context_m_range": [
+    41892.3,
+    50990.1
+  ],
+  "nearest_existing_usgs_blocks": [
+    "OffshoreBodegaHead",
+    "OffshoreFortRoss",
+    "OffshoreSaltPoint"
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "CDFW ds3091 is a 40 m resampled rugosity-based prediction and can share underlying sonar with the NOAA survey; it is not independent ground truth.",
+    "Four historical camera transects, not 110 independent reefs or catch sites.",
+    "Existing USGS hard-context polygons are geographically remote from these Point Arena camera windows.",
+    "No rock boundary, current fish presence, current chart/MPA/route clearance, legal permission, ranking or export follows."
+  ],
+  "reviewed_at": "2026-09-25T19:09:01.351846+00:00"
+}

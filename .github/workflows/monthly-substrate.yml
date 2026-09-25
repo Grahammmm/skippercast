@@ -583,7 +583,7 @@ jobs:
           restore-keys: |
             california-original-rasters-v1-
       - name: Verify substrate adapter and class safeguards
-        run: python -m unittest tests.test_cdfw_substrate_pipeline -v
+        run: python -m unittest tests.test_cdfw_substrate_pipeline tests.test_h11730_cdfw_substrate_overlap -v
       - name: Recheck Morro Bay USGS report depth-reference evidence
         run: >-
           python scripts/audit_usgs_morro_report_datum.py
@@ -864,6 +864,19 @@ jobs:
           --output var/review/usgs-video-nbs-hard-overlap.json
       - name: Audit every California browse-sector tile
         run: python scripts/audit_cdfw_substrate_tiles.py --workers 8 --output var/review/cdfw-ds3091-tile-audit.json
+      - name: Fetch original Point Arena USGS camera archives
+        run: |
+          mkdir -p var/usgs-video-cache
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip --output var/usgs-video-cache/f208nc_video_observations.zip
+          curl --fail --location --silent --show-error --max-time 120 https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip --output var/usgs-video-cache/c210nc_video_observations.zip
+      - name: Recheck Point Arena camera windows against CDFW substrate and remote USGS context
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_h11730_cdfw_substrate_overlap.py
+          --tile-audit var/review/cdfw-ds3091-tile-audit.json
+          --output var/review/h11730-point-arena-cdfw-substrate-crosscheck.json
+          --verify dist/data/h11730-point-arena-cdfw-substrate-crosscheck.json
       - name: Build MPA-screened review layers
         run: >-
           python scripts/build_cdfw_substrate_context.py
