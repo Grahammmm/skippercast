@@ -4,6 +4,14 @@
   "reviewed_at": "2026-09-24",
   "surveys": [
     {
+      "survey_id": "H11971",
+      "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+      "report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
+      "report_section": "Field report PDF pages 12, 17 and 20; final office-review endnotes 8, 10, 12 and 16; HCell report PDF pages 22–23",
+      "interpretation": "The field report says no new dangers, but final office review digitized a new submerged rock, retained older charted rocks because their actual positions may fall inshore of survey coverage, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The report supplies no exact new-rock position in its text. Its HCell rocky-seabed areas were generalized at 1:200,000 scale and cannot be used as precise reef edges. This is a survey-level hold until original HCell/current ENC feature geometry and survey gaps are reconciled, not an all-clear for historical camera windows or a navigation route.",
+      "hazards": []
+    },
+    {
       "survey_id": "H11876",
       "report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11876/DR/H11876.pdf",
       "report_sha256": "a34335c6bef67de0f1f4d1bb1d4782d2159719e5dbe933c9d8aab607795b0cfc",

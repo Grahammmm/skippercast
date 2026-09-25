@@ -1,11 +1,32 @@
 """Source identity and complete chart response gates for camera/chart leads."""
 import hashlib
+import json
 import unittest
+from pathlib import Path
 
 from scripts.audit_original_camera_chart_lead import audit
+from scripts.summarize_original_camera_chart_lead import summarize
 
 
 class OriginalCameraChartLeadTests(unittest.TestCase):
+    def test_public_summary_removes_camera_positions_and_requires_complete_hold(self):
+        published = json.loads((Path(__file__).resolve().parents[1] /
+                                'dist/data/h11971-bear-landing-research-review.json').read_text())
+        full = dict(published)
+        full['transects'] = [dict(row, camera_position_bounds=[-124.03, 39.93, -124.02, 39.94])
+                             for row in published['transects']]
+        summary = summarize(full)
+        self.assertEqual(summary['historical_camera_windows'], 13)
+        self.assertFalse(summary['fishing_target'])
+        self.assertNotIn('camera_position_bounds', json.dumps(summary))
+        full['enc_danger_queried_layers'] = 17
+        with self.assertRaisesRegex(ValueError, 'complete research review'):
+            summarize(full)
+        full['enc_danger_queried_layers'] = 18
+        full['fishing_target'] = True
+        with self.assertRaisesRegex(ValueError, 'complete research review'):
+            summarize(full)
+
     def test_changed_camera_archive_and_incomplete_chart_receipt_fail_closed(self):
         pair = {'survey_id': 'H11876', 'survey_report_url': 'https://example.test/H11876.pdf',
                 'camera_archive_sha256': hashlib.sha256(b'original').hexdigest()}

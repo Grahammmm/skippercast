@@ -36,6 +36,13 @@
       "output": "dist/regions/fort-bragg-point-arena/enc-hazards-h11967-greenwood-tile.geojson"
     },
     {
+      "id": "h11971-bear-landing-camera",
+      "region_id": "north-mendocino",
+      "bounds": [-124.06, 39.81, -123.88, 39.96],
+      "research_only": true,
+      "output": "var/review/enc-hazards-h11971-bear-landing.geojson"
+    },
+    {
       "id": "cape-mendocino-hard-context",
       "region_id": "northern",
       "bounds": [-124.49, 40.37, -124.37, 40.53],

@@ -38,6 +38,7 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
     project = Transformer.from_crs('EPSG:4326', f'EPSG:326{zone:02d}', always_xy=True).transform
     mpa_projected = transform(project, mpa)
     reader = open_original_zip(camera_raw)
+    charted_dangers = [transform(project, shape(f['geometry'])) for f in enc['features']]
     chart = []
     receipts = []
     seabed_areas = []
@@ -66,6 +67,7 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
         if len(indices) != transect['window_count'] or len(indices) != len(set(indices)):
             raise ValueError('Original camera record identities are incomplete')
         distances = []
+        danger_distances = []
         closures = []
         for index in indices:
             location = reader.shape(index).points[0]
@@ -76,6 +78,8 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
                 raise ValueError('Reviewed rocky camera identity changed')
             point = transform(project, Point(location))
             distances.append(min(point.distance(g) for g in rock))
+            if charted_dangers:
+                danger_distances.append(min(point.distance(g) for g in charted_dangers))
             closures.append(point.distance(mpa_projected))
         rows.append({'date': transect['date'], 'line': transect['line'],
             'historical_rocky_camera_windows': len(indices),
@@ -85,6 +89,7 @@ def audit(pair, camera_raw, enc, mpa_snapshot, report, report_raw):
             'product_uncertainty_m_range': transect['product_uncertainty_m_range'],
             'camera_position_bounds': transect['camera_position_bounds'],
             'nearest_charted_rock_symbol_m_range': [round(min(distances), 1), round(max(distances), 1)],
+            'nearest_charted_danger_m_min': round(min(danger_distances), 1) if danger_distances else None,
             'nearest_cdfw_mpa_boundary_m_min': round(min(closures), 1),
             'within_100m_mpa_review_buffer': sum(distance <= 100 for distance in closures)})
     return {'schema_version': 1, 'scope': 'original-camera-chart-mpa-source-lead',

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scope": "original-camera-bag-chart-research-summary",
+  "survey_id": "H11971",
+  "reviewed_at": "2026-09-25T04:49:31.339878+00:00",
+  "original_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/BAG/H11971_MB_2m_MLLW_5of5.bag",
+  "original_bag_sha256": "ccb11fa7bae8c7be4f428bf88b57ab5fa9ac51d2a1da5dbd76694d30093eaa41",
+  "original_camera_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+  "original_camera_sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+  "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11971/DR/H11971.pdf",
+  "survey_report_sha256": "46030ab9d07bdf79ca6521409e37e34fcbc9dfb2fdd973c72ac9140d5d4e52ad",
+  "survey_report_interpretation": "The field report says no new dangers, but final office review digitized a new submerged rock, retained older charted rocks because their actual positions may fall inshore of survey coverage, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The report supplies no exact new-rock position in its text. Its HCell rocky-seabed areas were generalized at 1:200,000 scale and cannot be used as precise reef edges. This is a survey-level hold until original HCell/current ENC feature geometry and survey gaps are reconciled, not an all-clear for historical camera windows or a navigation route.",
+  "survey_fishing_promotion_hold": "The original 2 m MLLW BAG overlaps 13 historical rock/cobble camera windows on two July 31, 2010 transects at roughly 41.5\u201346.0 m MLLW. Nine windows have historical rockfish visual codes; none records lingcod. These correlated observations are not 13 reefs or a present catch estimate. Although the 2009 field report says no dangers, final office review added a submerged rock, retained charted rocks with uncertain inshore positions, and accepted small survey holidays and some dynamic-bottom vertical discrepancies. The text lacks exact new-rock geometry, and HCell rocky-seabed areas were generalized for a 1:200,000 chart. Hold fishing-target promotion until original HCell and current ENC features, actual substrate footprint, MPA/federal exclusions, route, Mendocino date/method rules and harbor access are checked for each candidate area.",
+  "enc_danger_receipt_checked_at": "2026-09-25T04:48:24.128520+00:00",
+  "enc_danger_queried_layers": 18,
+  "enc_danger_features_in_bounded_scope": 60,
+  "charted_seabed_point_count_by_nature": {
+    "rock": 27,
+    "sand": 6,
+    "sand,mud": 3,
+    "mud,gravel": 3,
+    "shells": 3,
+    "mud": 3,
+    "gravel,sand": 3
+  },
+  "charted_seabed_area_count_by_nature": {},
+  "cdfw_mpa_retrieved_at": "2026-09-23T22:30:59Z",
+  "historical_camera_windows": 13,
+  "transects": [
+    {
+      "date": "2010-07-31",
+      "line": "36",
+      "historical_rocky_camera_windows": 5,
+      "historical_rockfish_positive_windows": 3,
+      "bottom_classes": {
+        "cobble": 5
+      },
+      "measured_depth_m_mllw_range": [
+        41.5,
+        41.89
+      ],
+      "product_uncertainty_m_range": [
+        0.335,
+        0.373
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        2494.4,
+        2586.5
+      ],
+      "nearest_charted_danger_m_min": 4605.4,
+      "nearest_cdfw_mpa_boundary_m_min": 15667.7,
+      "within_100m_mpa_review_buffer": 0
+    },
+    {
+      "date": "2010-07-31",
+      "line": "40",
+      "historical_rocky_camera_windows": 8,
+      "historical_rockfish_positive_windows": 6,
+      "bottom_classes": {
+        "rock": 8
+      },
+      "measured_depth_m_mllw_range": [
+        44.15,
+        46.03
+      ],
+      "product_uncertainty_m_range": [
+        0.347,
+        0.492
+      ],
+      "nearest_charted_rock_symbol_m_range": [
+        350.1,
+        474.7
+      ],
+      "nearest_charted_danger_m_min": 1669.7,
+      "nearest_cdfw_mpa_boundary_m_min": 3851.7,
+      "within_100m_mpa_review_buffer": 0
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_checks": [
+    "Obtain original HCell rocky-area and added submerged-rock geometry; reconcile older retained rocks with the current ENC.",
+    "Compare exact source habitat polygons and survey holes with original BAG native cells and camera position uncertainty.",
+    "Refresh complete CDFW MPAs and federal restrictions, then verify exact site, method and date under Mendocino rules.",
+    "Review approach route, harbor entrance and current conditions before any fishing-plan promotion."
+  ],
+  "limitations": [
+    "Charted seabed symbols and any charted seabed areas are generalized, dated source observations; a nearby symbol or area does not delineate the camera-observed patch.",
+    "Selected ENC danger classes returning zero do not certify safe navigation or an approach route.",
+    "Historical camera rockfish codes are observations, not catch rates or present fish presence.",
+    "The MPA screen is a dated geometry snapshot; exact current local rules, access and protected-area boundaries remain separate gates.",
+    "No fishing coordinate, rating, plan or export is approved by this source-lead review."
+  ]
+}
