@@ -467,6 +467,13 @@ jobs:
           --survey H11971 --cruise c210nc
           --output var/review/h11971-camera-source-rights-review.json
           --verify dist/data/h11971-camera-source-rights-review.json
+      - name: Recheck CSUMB producer and original BSS/SCC source-use terms
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_csumb_source_policy.py
+          --output var/review/csumb-original-source-policy-review.json
+          --verify dist/data/csumb-original-source-policy-review.json
       - name: Reopen original H11876 side-scan mosaic and companion files
         run: |
           mkdir -p var/noaa-native-cache
