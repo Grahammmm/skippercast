@@ -1,1 +1,1 @@
-{"region_id":"crescent-city","generated_at":"2026-09-25T05:34:34Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":66,"sources_total":69,"issues":["sst","chlorophyll","currents"]}
+{"region_id":"crescent-city","generated_at":"2026-09-25T06:05:49Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":68,"sources_total":69,"issues":["currents"]}

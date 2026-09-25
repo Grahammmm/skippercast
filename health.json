@@ -1,1 +1,1 @@
-{"region_id":"morro-bay","generated_at":"2026-09-25T05:34:34Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":66,"issues":["sst","chlorophyll","currents","access-vandenberg-maritime"]}
+{"region_id":"morro-bay","generated_at":"2026-09-25T06:05:49Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":65,"sources_total":66,"issues":["access-vandenberg-maritime"]}
