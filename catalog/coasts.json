@@ -18,7 +18,7 @@
     {
       "id": "northern",
       "name": "Northern",
-      "limits": "Oregon border \u2192 near Cape Mendocino",
+      "limits": "Oregon border → near Cape Mendocino",
       "latitude": [
         40.166666666666664,
         42
@@ -53,7 +53,7 @@
     {
       "id": "mendocino",
       "name": "Mendocino",
-      "limits": "Cape Mendocino line \u2192 Point Arena",
+      "limits": "Cape Mendocino line → Point Arena",
       "latitude": [
         38.958333333333336,
         40.166666666666664
@@ -71,7 +71,9 @@
       ],
       "rules_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Mendocino",
       "groundfish_table_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185054&inline=",
-      "packages": ["fort-bragg-point-arena"],
+      "packages": [
+        "fort-bragg-point-arena"
+      ],
       "targets": [
         "reef",
         "salmon",
@@ -88,7 +90,7 @@
     {
       "id": "san-francisco",
       "name": "San Francisco",
-      "limits": "Point Arena \u2192 Pigeon Point",
+      "limits": "Point Arena → Pigeon Point",
       "latitude": [
         37.18333333333333,
         38.958333333333336
@@ -117,7 +119,9 @@
           "source_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco"
         }
       ],
-      "packages": [],
+      "packages": [
+        "bodega-point-reyes"
+      ],
       "targets": [
         "reef",
         "halibut",
@@ -133,7 +137,7 @@
     {
       "id": "central",
       "name": "Central",
-      "limits": "Pigeon Point \u2192 Point Conception",
+      "limits": "Pigeon Point → Point Conception",
       "latitude": [
         34.45,
         37.18333333333333
@@ -174,7 +178,7 @@
     {
       "id": "southern",
       "name": "Southern",
-      "limits": "Point Conception \u2192 Mexico border",
+      "limits": "Point Conception → Mexico border",
       "latitude": [
         32.5343,
         34.45

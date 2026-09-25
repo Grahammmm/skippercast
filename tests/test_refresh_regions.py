@@ -21,20 +21,20 @@ class DraftRehearsalTests(unittest.TestCase):
                     'regulations': {}, 'sources': {}}
             with patch('scripts.refresh_regions.daily', return_value=data) as collector, \
                     patch('scripts.refresh_regions.coverage', return_value={'status': 'fixture', 'species': {}}):
-                rows = refresh('daily', output, only_region='bodega-point-reyes', include_drafts=True)
-            self.assertEqual([row['region_id'] for row in rows], ['bodega-point-reyes'])
+                rows = refresh('daily', output, only_region='crescent-city', include_drafts=True)
+            self.assertEqual([row['region_id'] for row in rows], ['crescent-city'])
             self.assertEqual(collector.call_count, 1)
-            self.assertTrue((output / 'regions/bodega-point-reyes/regulations-health.json').is_file())
+            self.assertTrue((output / 'regions/crescent-city/regulations-health.json').is_file())
             self.assertFalse((output / 'latest.json').exists())
             self.assertFalse((output / 'regions/morro-bay').exists())
 
     def test_draft_cannot_enter_regular_or_external_output(self):
         with tempfile.TemporaryDirectory(dir=REPO / 'var') as directory:
             with self.assertRaisesRegex(ValueError, 'was not collected'):
-                refresh('daily', Path(directory), only_region='bodega-point-reyes')
+                refresh('daily', Path(directory), only_region='crescent-city')
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, 'unpublished var'):
-                refresh('daily', Path(directory), only_region='bodega-point-reyes', include_drafts=True)
+                refresh('daily', Path(directory), only_region='crescent-city', include_drafts=True)
 
 
 if __name__ == '__main__':

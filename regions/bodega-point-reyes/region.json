@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "bodega-point-reyes",
   "name": "Bodega Bay to Point Reyes",
-  "status": "draft",
+  "status": "preview",
   "timezone": "America/Los_Angeles",
   "jurisdiction": "California \u00b7 San Francisco Groundfish Management Area",
   "bounds": [
@@ -23,7 +23,7 @@
       -123.15
     ],
     "zoom": 10,
-    "locality_method": "Draft outer-coast discovery extent from Bodega Bay to Point Reyes. San Francisco Bay is excluded; this rectangle is not a legal fishing boundary.",
+    "locality_method": "Outer-coast discovery extent from Bodega Bay to Point Reyes. San Francisco Bay is excluded; this preview rectangle is not a legal fishing boundary, qualified spot or navigation clearance.",
     "region_notice_ids": [
       "bodega-reyes-mpas",
       "cordell-groundfish"
@@ -247,27 +247,27 @@
     },
     "regulations": {
       "status": "partial",
-      "reason": "Six 2026 outer-coast species profiles have a hash-bound San Francisco review, including the 38\u00b002\u2032 N salmon latitude gate. This draft region has no first daily rule-health feed or date-and-position clearance."
+      "reason": "Six 2026 outer-coast species profiles passed a hash-bound San Francisco review; a fresh regional daily rehearsal found watched official sources available. The 38\u00b002\u2032 N salmon boundary, exact date, method, in-season changes and local notices remain mandatory checks."
     },
     "dynamic-closures": {
       "status": "research",
       "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "wind-forecast": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "NOAA GFS and ECMWF IFS returned local model grids for three regional forecast points in the fresh rehearsal; runtime freshness, matchup and advisories still govern each date."
     },
     "wave-forecast": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "NOAA GFS Wave and ECMWF WAM returned local model grids in the fresh rehearsal; current advisories and actual forecast coverage still govern each date."
     },
     "wave-observations": {
       "status": "partial",
       "reason": "NDBC 46013 is an offshore regional buoy; it does not observe the Bodega Harbor entrance."
     },
     "weather-observations": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "NDBC 46013 returned current offshore observations; neither it nor the inland airport observes the Bodega Harbor entrance."
     },
     "tides": {
       "status": "partial",
@@ -275,19 +275,19 @@
     },
     "surface-currents": {
       "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "The tested 6 km surface-radar current source returned no usable vectors; missing is not zero current or bottom drift."
     },
     "subsurface-ocean": {
       "status": "research",
       "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "sea-temperature": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "Fresh NOAA SST returned populated regional cells in the daily rehearsal. Coverage is incomplete and missing cells remain missing."
     },
     "chlorophyll": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "partial",
+      "reason": "Fresh NOAA VIIRS chlorophyll returned populated regional cells in the daily rehearsal. This is surface context, not verified fish presence."
     },
     "species-occurrence": {
       "status": "research",
@@ -307,7 +307,7 @@
     },
     "harbor-access": {
       "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "reason": "Harbor and NWS notice sources are checked, but Bodega Harbor approach and shoaling still need current chart and local entrance clearance."
     },
     "wind-ensemble": {
       "status": "research",
@@ -343,7 +343,7 @@
     "Tomales Bay",
     "Point Reyes"
   ],
-  "coverage_note": "Draft Bodega Bay\u2013Point Reyes package. Original-cell hard-bottom context is historical research only. No reviewed target, season status, route or local forecast is published.",
+  "coverage_note": "Bodega\u2013Point Reyes preview with local forecast, offshore buoy references, tide predictions and reviewed outer-coast rules. No qualified fishing spots, bottom images or drift lines. Current-radar vectors were unavailable in the tested grid; original seabed context still needs exact chart, MPA, route and species-site review.",
   "landing_note": "Bodega buoy observations and harbor tide predictions do not locate fish or clear the harbor approach.",
   "jurisdiction_id": "california-san-francisco",
   "ecology_profile": "california-northern",
@@ -394,6 +394,39 @@
         "coastal": "PZZ545",
         "offshore": "PZZ571"
       }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46013",
+        "latitude": 38.235,
+        "longitude": -123.317,
+        "name": "Bodega Bay offshore",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46013"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-northern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
     }
   }
 }
