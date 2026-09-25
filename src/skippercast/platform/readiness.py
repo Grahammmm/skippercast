@@ -16,6 +16,15 @@ def compile_readiness(root=REPO):
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
     discovery = read_json(root / 'dist/data/noaa-survey-discovery.json')
     seabed_samples = read_json(root / 'dist/data/noaa-seabed-samples-sector-review.json')
+    deepwater = read_json(root / 'dist/data/noaa-central-deepwater-native-depth-screen.json')
+    if (deepwater.get('scope') != 'noaa-original-central-coast-vr-depth-band-screen'
+            or deepwater.get('depth_band_ft_mllw') != [25, 200]
+            or {row['survey_id'] for row in deepwater.get('sources', [])} != {'H13089', 'H13151'}
+            or any(row['raw_cells_in_25_to_200_ft_mllw_band'] != 0
+                   or row['nearshore_depth_lead'] is not False
+                   for row in deepwater['sources'])):
+        raise ValueError('The bounded central deepwater exclusion changed')
+    deepwater_ids = {row['survey_id'] for row in deepwater['sources']}
     csumb_series = [read_json(root / f'catalog/csumb-{series}-source-leads.json')
                     for series in ('scc', 'bss')]
     usgs_map_areas = read_json(root / 'catalog/usgs-ds781-source-leads.json')
@@ -110,6 +119,7 @@ def compile_readiness(root=REPO):
         found = discovery_by_id[ident]
         if found['status'] != 'ok':
             raise ValueError(f'Survey discovery is incomplete for {ident}')
+        excluded_deepwater = sorted(deepwater_ids & {row['id'] for row in found['surveys']})
         package_rows = []
         for package_id in sector['partial_package_ids']:
             if package_id not in packages:
@@ -147,6 +157,9 @@ def compile_readiness(root=REPO):
                          'datum, uncertainty and class semantics before any seabed or fishing-target import.')
         if held_files:
             next_step += ' Reconcile held survey hazards before any target promotion.'
+        if excluded_deepwater:
+            next_step += (' Broad catalog hits ' + ', '.join(excluded_deepwater) +
+                          ' have zero original MLLW cells in 25–200 ft; search other nearshore sources.')
         rows.append({
             'sector_id': ident, 'coast': sector['coast'], 'name': sector['name'],
             'bounds': sector['bounds'], 'package_overlaps': package_rows,
@@ -166,6 +179,7 @@ def compile_readiness(root=REPO):
             'held_file_leads': held_files,
             'native_review_survey_ids': lead['screen_survey_ids'],
             'held_survey_ids': lead['held_survey_ids'],
+            'native_depth_excluded_survey_ids': excluded_deepwater,
             'next_source_step': next_step,
             'remaining_promotion_gates': [
                 'native measured depth, datum, uncertainty and footprint',

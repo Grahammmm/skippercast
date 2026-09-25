@@ -35,6 +35,8 @@ class AtlasReadinessTests(unittest.TestCase):
                             for a in by_sector['humboldt-cape']['usgs_ds781_map_area_leads']))
         self.assertEqual(by_sector['san-diego-border']['usgs_ds781_map_area_leads'], [])
         self.assertEqual(by_sector['big-sur']['published_candidate_points_in_band'], 0)
+        self.assertIn('H13151', by_sector['sur-san-simeon']['native_depth_excluded_survey_ids'])
+        self.assertEqual(by_sector['morro-conception']['native_depth_excluded_survey_ids'], ['H13089', 'H13151'])
         self.assertIn('noaa-h11971-bear-landing-original-camera',
                       by_sector['north-mendocino']['accessible_inspected_fine_source_candidate_ids'])
         for sector_id in ('pigeon-monterey', 'monterey-sur'):
@@ -64,6 +66,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              'dist/data/noaa-regular-native-depth-review.json',
                              'dist/data/noaa-survey-discovery.json',
                              'dist/data/noaa-seabed-samples-sector-review.json',
+                             'dist/data/noaa-central-deepwater-native-depth-screen.json',
                              'catalog/csumb-scc-source-leads.json',
                              'catalog/csumb-bss-source-leads.json',
                              'catalog/usgs-ds781-source-leads.json',

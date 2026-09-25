@@ -164,6 +164,11 @@ def main():
     assert {row['sector_id'] for row in readiness['sectors']} == {row['id'] for row in sectors}
     assert all(row['status'] in {'source-review-only', 'partial-local-targets'}
                and row['remaining_promotion_gates'] for row in readiness['sectors'])
+    deep_by_sector = {row['sector_id']: row['native_depth_excluded_survey_ids']
+                      for row in readiness['sectors']}
+    assert deep_by_sector['morro-conception'] == ['H13089', 'H13151']
+    assert deep_by_sector['cambria-morro'] == ['H13089', 'H13151']
+    assert deep_by_sector['sur-san-simeon'] == ['H13151']
     assert all('usgs_ds781_map_area_leads' in row for row in readiness['sectors'])
     assert all('fgdc_metadata_reviewed' in lead for row in readiness['sectors']
                for lead in row['usgs_ds781_map_area_leads'])
@@ -187,6 +192,12 @@ def main():
     assert datum_bridge['depth_qualified'] is False
     assert datum_bridge['fishing_target'] is False and datum_bridge['exportable'] is False
     assert datum_bridge['alternative_horizontal_frame_probe']['status'] == 'api_rejected'
+    central_deep = json.loads((WEB / 'data/noaa-central-deepwater-native-depth-screen.json').read_text())
+    assert central_deep['scope'] == 'noaa-original-central-coast-vr-depth-band-screen'
+    assert {row['survey_id'] for row in central_deep['sources']} == {'H13089', 'H13151'}
+    assert central_deep['fishing_target'] is False and central_deep['exportable'] is False
+    assert all(row['raw_cells_in_25_to_200_ft_mllw_band'] == 0 and
+               row['nearshore_depth_lead'] is False for row in central_deep['sources'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name

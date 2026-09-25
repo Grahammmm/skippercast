@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "scope": "noaa-original-central-coast-vr-depth-band-screen",
+  "reviewed_at": "2026-09-25T10:43:09.723315+00:00",
+  "source_manifest": "catalog/noaa-central-deepwater-source-screen.json",
+  "depth_band_ft_mllw": [
+    25,
+    200
+  ],
+  "sources": [
+    {
+      "survey_id": "H13089",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13089/BAG/H13089_MB_VR_MLLW.bag",
+      "bag_sha256": "0ec0b7c205e08eeed9c9d74752980716dfdc204083688b92d5f32fcba42c482f",
+      "metadata_sha256": "17f3a73742e870a0ee7dfd3ed0aca9db47f69caa847443b482d0ec7e7362563b",
+      "survey_start": "2017-10-04T02:08:48",
+      "survey_end": "2017-10-05T04:30:14",
+      "source_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13089/DR/H13089_DR.pdf",
+      "original_refinement_grids": 4471,
+      "original_refinement_records": 4146722,
+      "measured_depth_cells": 469113,
+      "shallowest_elevation_m_mllw": -452.273,
+      "deepest_elevation_m_mllw": -1096.698,
+      "minimum_native_resolution_m": 32.274,
+      "maximum_native_resolution_m": 34.695,
+      "raw_cells_in_25_to_200_ft_mllw_band": 0,
+      "nearshore_depth_lead": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H13151",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13151/BAG/H13151_MB_VR_MLLW.bag",
+      "bag_sha256": "18db06d30038375f7b7c251a6c1ccb7b24dc115dca3b2208fd0d392d80d4fe82",
+      "metadata_sha256": "e987b78b786619408a35ed4740b64f7f24ba37e18324ad79ee6c5fd891d40916",
+      "survey_start": "2018-08-29T11:11:36",
+      "survey_end": "2018-10-28T21:19:57",
+      "source_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13151/DR/H13151_DR.pdf",
+      "original_refinement_grids": 12839,
+      "original_refinement_records": 3244276,
+      "measured_depth_cells": 2613282,
+      "shallowest_elevation_m_mllw": -468.573,
+      "deepest_elevation_m_mllw": -1621.715,
+      "minimum_native_resolution_m": 32.0,
+      "maximum_native_resolution_m": 32.0,
+      "raw_cells_in_25_to_200_ft_mllw_band": 0,
+      "nearshore_depth_lead": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Original survey-track and BAG envelopes cross broad sectors but are not measured nearshore coverage.",
+    "A positive depth-band count would still need actual cell position, product uncertainty, native resolution, substrate, legal and chart review before a target.",
+    "This source triage does not score fishing, identify chart hazards, clear MPAs or substitute for current nautical charts."
+  ]
+}

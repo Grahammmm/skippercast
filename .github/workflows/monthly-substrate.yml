@@ -279,6 +279,42 @@ jobs:
             var/review/csumb-bss-native-source-review.json
             var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
+  central-deepwater:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned native BAG reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify original-depth source hold
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_noaa_vr_source_depth -v
+      - name: Reuse pinned NOAA deepwater BAGs
+        uses: actions/cache@v4
+        with:
+          path: |
+            var/noaa-native-cache/H13089-*.bag
+            var/noaa-native-cache/H13151-*.bag
+          key: noaa-central-deepwater-v1-${{ hashFiles('catalog/noaa-central-deepwater-source-screen.json') }}
+      - name: Recheck exact MLLW refinement depths in the broad Central Coast survey leads
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/screen_noaa_vr_source_depth.py
+          --fetch
+          --output var/review/noaa-central-deepwater-native-depth-screen.json
+          --verify dist/data/noaa-central-deepwater-native-depth-screen.json
+      - name: Upload unpublished native-depth receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: noaa-central-deepwater-native-depth-screen
+          path: var/review/noaa-central-deepwater-native-depth-screen.json
+          retention-days: 30
   audit:
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest
