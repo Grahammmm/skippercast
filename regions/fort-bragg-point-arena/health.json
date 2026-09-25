@@ -1,1 +1,1 @@
-{"region_id":"fort-bragg-point-arena","generated_at":"2026-09-25T18:59:33Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":61,"sources_total":62,"issues":["currents"]}
+{"region_id":"fort-bragg-point-arena","generated_at":"2026-09-25T19:13:13Z","status":"ok","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":62,"issues":[]}
