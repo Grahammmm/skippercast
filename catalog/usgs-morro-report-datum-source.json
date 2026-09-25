@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "scope": "usgs-morro-report-depth-reference-review",
-  "report_url": "https://pubs.usgs.gov/publication/ofr20231064/full",
-  "report_sha256": "08f985decf3dcde8758c422e22ca506dafbc505e3d68728fa6672261d4527c8c",
+  "report_url": "https://pubs.usgs.gov/of/2023/1064/ofr20231064.xml",
+  "report_sha256": "da9e777e621e034d1bd1292ca9253da95d0d78d401eb0aad6cdae140b3d2c4e1",
   "release_ids": ["P9HEZNRO", "P9ZSTUK1", "P9KBGELE"],
   "depth_reference_reported": "MLLW",
-  "interpretation": "The USGS report states that depths referred to in the report are relative to MLLW from verified tides and links the three data releases. This does not itself declare the output datum or product uncertainty of each original GeoTIFF."
+  "interpretation": "The USGS report states that depths referred to in the report are relative to MLLW from verified tides and links the three data releases. Each original product XML estimates vertical accuracy as no less than 20 cm, without an upper bound or per-cell uncertainty. Neither source alone clears the original GeoTIFF for fishing depth."
 }

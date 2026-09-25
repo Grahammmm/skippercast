@@ -248,6 +248,11 @@ jobs:
           python scripts/audit_usgs_morro_report_datum.py
           --fetch
           --output var/review/usgs-morro-report-datum-review.json
+      - name: Recheck original USGS bathymetry accuracy statewide
+        run: >-
+          python scripts/audit_usgs_bathy_accuracy_statewide.py
+          --fetch --strict
+          --output var/review/usgs-bathymetry-accuracy-review.json
       - name: Audit pinned USGS camera observations statewide
         run: >-
           python scripts/audit_usgs_video_observations.py

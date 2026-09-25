@@ -105,7 +105,24 @@ def check_usgs_morro_report_datum():
     assert review['report_depth_reference'] == 'MLLW'
     assert {row['release_id'] for row in review['sources']} == set(manifest['release_ids'])
     assert all(row['depth_qualified_for_fishing'] is False and
-               row['has_per_cell_product_uncertainty'] is False for row in review['sources'])
+               row['has_per_cell_product_uncertainty'] is False and
+               row['vertical_accuracy_lower_bound_m'] == .2 and
+               row['vertical_accuracy_upper_bound_m'] is None for row in review['sources'])
+    assert review['fishing_target'] is False and review['exportable'] is False
+
+
+def check_usgs_bathy_accuracy_statewide():
+    review = json.loads((WEB / 'data/usgs-bathymetry-accuracy-review.json').read_text())
+    ledger = json.loads((WEB / 'data/usgs-depth-datum-ledger.json').read_text())
+    assert review['scope'] == 'california-usgs-original-bathymetry-accuracy-review'
+    assert review['status'] == 'ok' and not review['issues']
+    assert review['source_grid_count'] == review['fully_verified_source_count'] == len(review['sources']) == ledger['source_grid_count']
+    originals = {row['metadata_url']: row for row in ledger['sources']}
+    assert {row['metadata_url'] for row in review['sources']} == set(originals)
+    for row in review['sources']:
+        assert row['status'] == 'ok' and row['metadata_sha256'] == originals[row['metadata_url']]['metadata_sha256']
+        assert row['depth_qualified_for_fishing'] is False
+        assert row['per_cell_uncertainty_available'] is False
     assert review['fishing_target'] is False and review['exportable'] is False
 
 
@@ -161,6 +178,7 @@ def main():
                               'california-original-regular-native-depth-review')
     check_central_sediment_context()
     check_usgs_morro_report_datum()
+    check_usgs_bathy_accuracy_statewide()
     print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
 
 
