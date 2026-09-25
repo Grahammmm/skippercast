@@ -89,7 +89,7 @@
       ]
     },
     "rules-tuna-federal": {
-      "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
+      "name": "Federal recreational Pacific tuna rules \u00b7 50 CFR 660.721",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "keywords": [
         "660.721",
@@ -101,7 +101,7 @@
       "section": "660.721"
     },
     "rules-salmon-pdf": {
-      "name": "CDFW 2026 ocean salmon season flyer · August update",
+      "name": "CDFW 2026 ocean salmon season flyer \u00b7 August update",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "format": "pdf"
     },
@@ -150,6 +150,31 @@
         "2026",
         "November 15",
         "one fish"
+      ]
+    },
+    "mpa-samoa": {
+      "name": "CDFW Samoa SMCA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Samoa",
+      "keywords": [
+        "Samoa",
+        "Dungeness crab"
+      ]
+    },
+    "mpa-south-humboldt": {
+      "name": "CDFW South Humboldt Bay SMRMA",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Humboldt-Bay",
+      "keywords": [
+        "South Humboldt Bay",
+        "waterfowl"
+      ]
+    },
+    "mpa-south-cape": {
+      "name": "CDFW South Cape Mendocino SMR and special closures",
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Cape-Mendocino-Sugarloaf-Island-Steamboat-Rock",
+      "keywords": [
+        "South Cape Mendocino",
+        "Sugarloaf Island",
+        "Steamboat Rock"
       ]
     }
   },
