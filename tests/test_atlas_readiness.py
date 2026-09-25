@@ -28,6 +28,10 @@ class AtlasReadinessTests(unittest.TestCase):
         self.assertEqual(by_sector['reyes-pigeon']['unheld_variable_depth_file_leads'], 0)
         self.assertEqual(by_sector['reyes-pigeon']['native_substrate_review_file_leads'], 6)
         self.assertEqual(by_sector['reyes-pigeon']['native_substrate_screen_files_with_eligible_sector_cells'], 3)
+        self.assertEqual(by_sector['reyes-pigeon']['nbs_original_hard_footprint_screen']['inventoried_tiles'], 20)
+        self.assertEqual(by_sector['reyes-pigeon']['nbs_original_hard_footprint_screen']['tiles_with_strict_original_hard_overlap'], 11)
+        self.assertEqual(by_sector['cambria-morro']['nbs_original_hard_footprint_screen']['tiles_with_strict_original_hard_overlap'], 0)
+        self.assertEqual(by_sector['north-mendocino']['nbs_original_hard_footprint_screen']['inventoried_tiles'], 0)
         self.assertEqual(by_sector['reyes-pigeon']['substrate_screen_bbox_only_file_count'], 3)
         self.assertEqual(by_sector['reyes-pigeon']['held_file_leads'], 2)
         self.assertIn('H12112', by_sector['reyes-pigeon']['held_survey_ids'])
@@ -75,6 +79,9 @@ class AtlasReadinessTests(unittest.TestCase):
             self.assertEqual(bool(row['published_candidate_points_in_band']),
                              row['status'] == 'partial-local-targets')
             self.assertGreaterEqual(len(row['remaining_promotion_gates']), 6)
+            self.assertTrue(row['nbs_original_hard_footprint_screen']['research_only'])
+            self.assertLessEqual(row['nbs_original_hard_footprint_screen']['tiles_with_strict_original_hard_overlap'],
+                                 row['nbs_original_hard_footprint_screen']['inventoried_tiles'])
             self.assertNotIn('latitude', row)
             self.assertNotIn('longitude', row)
 
@@ -90,6 +97,9 @@ class AtlasReadinessTests(unittest.TestCase):
                              'dist/data/noaa-survey-discovery.json',
                              'dist/data/noaa-seabed-samples-sector-review.json',
                              'dist/data/noaa-central-deepwater-native-depth-screen.json',
+                             'dist/data/nbs-hard-footprint-tile-inventory.json',
+                             'dist/data/nbs-hard-footprint-depth-audit.json',
+                             'dist/data/nbs-hard-footprint-original-class-overlap.json',
                              'catalog/csumb-scc-source-leads.json',
                              'catalog/csumb-bss-source-leads.json',
                              'catalog/usgs-ds781-source-leads.json',

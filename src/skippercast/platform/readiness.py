@@ -3,6 +3,8 @@
 The source audits are discovery evidence. Their counts never become target
 coordinates or proof that an entire sector has been surveyed.
 """
+from collections import defaultdict
+import hashlib
 from pathlib import Path
 
 from .contracts import REPO, atomic_json, read_json
@@ -17,6 +19,43 @@ def compile_readiness(root=REPO):
     discovery = read_json(root / 'dist/data/noaa-survey-discovery.json')
     seabed_samples = read_json(root / 'dist/data/noaa-seabed-samples-sector-review.json')
     deepwater = read_json(root / 'dist/data/noaa-central-deepwater-native-depth-screen.json')
+    footprint_path = root / 'dist/data/nbs-hard-footprint-tile-inventory.json'
+    depth_path = root / 'dist/data/nbs-hard-footprint-depth-audit.json'
+    original_path = root / 'dist/data/nbs-hard-footprint-original-class-overlap.json'
+    footprint = read_json(footprint_path)
+    footprint_depth = read_json(depth_path)
+    footprint_original = read_json(original_path)
+    def file_sha(path):
+        with path.open('rb') as stream:
+            return hashlib.file_digest(stream, 'sha256').hexdigest()
+    if (footprint.get('scope') != 'noaa-nbs-tiles-intersecting-displayed-usgs-hard-context'
+            or footprint.get('fishing_target') is not False
+            or footprint_depth.get('scope') != 'noaa-nbs-hard-footprint-native-depth-source-audit'
+            or footprint_depth.get('status') != 'complete'
+            or footprint_depth.get('failed_tiles') != 0
+            or footprint_depth.get('inventory_sha256') != file_sha(footprint_path)
+            or footprint_original.get('scope') != 'california-nbs-displayed-hard-footprint-original-class-review'
+            or footprint_original.get('status') != 'research-leads-only'
+            or footprint_original.get('depth_audit_sha256') != file_sha(depth_path)
+            or footprint_original.get('fishing_target') is not False):
+        raise ValueError('Complete, non-target original hard-footprint source review required')
+    depth_tiles = {row['tile']: row for row in footprint_depth['tiles']}
+    if (len(depth_tiles) != footprint['tile_count']
+            or len(depth_tiles) != len(footprint_depth['tiles'])
+            or {row['tile'] for row in footprint['tiles']} != set(depth_tiles)):
+        raise ValueError('Displayed-hard NOAA tile inventory and depth receipts differ')
+    original_by_sector = defaultdict(dict)
+    for coast in footprint_original['coasts']:
+        for sector_review in coast['source_review']['sectors']:
+            ident = sector_review['sector_id']
+            for tile in sector_review['tiles']:
+                previous = original_by_sector[ident].get(tile['tile'])
+                if previous and previous['source_raster_sha256'] != tile['source_raster_sha256']:
+                    raise ValueError('Cross-coast NOAA tile source changed')
+                original_by_sector[ident][tile['tile']] = tile
+    if sum(coast['tile_count'] for coast in footprint_original['coasts']) != sum(
+            len(row['coasts']) for row in footprint['tiles']):
+        raise ValueError('Original hard-footprint source review coverage changed')
     if (deepwater.get('scope') != 'noaa-original-central-coast-vr-depth-band-screen'
             or deepwater.get('depth_band_ft_mllw') != [25, 200]
             or {row['survey_id'] for row in deepwater.get('sources', [])} != {'H13089', 'H13151'}
@@ -69,6 +108,8 @@ def compile_readiness(root=REPO):
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
     seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
     expected = {row['id'] for row in sectors}
+    if not set(original_by_sector) <= expected:
+        raise ValueError('Hard-footprint source review has an unknown sector')
     csumb_by_sector = {ident: set() for ident in expected}
     usgs_by_sector = {ident: [] for ident in expected}
     if len(usgs_map_areas.get('map_areas', [])) < 35:
@@ -218,6 +259,24 @@ def compile_readiness(root=REPO):
         if character and character['verified_original_class_tables']:
             next_step += (' Cross-screen the opened USGS character rasters and verified class tables against'
                           ' measured MLLW depth, MPAs and current charts; catalog area labels are not exact footprints.')
+        footprint_tiles = {row['tile'] for row in footprint['tiles'] if ident in row['planning_sector_ids']}
+        original_tiles = original_by_sector.get(ident, {})
+        if not set(original_tiles) <= footprint_tiles:
+            raise ValueError('Original class review escaped inventoried sector tiles')
+        footprint_summary = {
+            'method': 'Exact NOAA 2–4 m tile intersections with selected displayed USGS historical hard-context outlines; original class pixels joined to measured MLLW cells outside 100 m MPA/GEA buffers.',
+            'inventoried_tiles': len(footprint_tiles),
+            'tiles_with_qualified_depth': sum(depth_tiles[tile]['counts']['qualified_screen_pixels'] > 0
+                                              for tile in footprint_tiles),
+            'tiles_with_strict_original_hard_overlap': sum(
+                row['strict_1m_original_class3_unique_pixels'] > 0 for row in original_tiles.values()),
+            'strict_original_hard_overlap_tile_pixels': sum(
+                row['strict_1m_original_class3_unique_pixels'] for row in original_tiles.values()),
+            'research_only': True,
+        }
+        if footprint_summary['tiles_with_strict_original_hard_overlap'] and not points:
+            next_step += (' Review the original NOAA contributor report and site chart, fish/habitat observations,'
+                          ' local access and species/date rules before considering any fishing area.')
         rows.append({
             'sector_id': ident, 'coast': sector['coast'], 'name': sector['name'],
             'bounds': sector['bounds'], 'package_overlaps': package_rows,
@@ -237,6 +296,7 @@ def compile_readiness(root=REPO):
             'unheld_variable_depth_file_leads': unheld_variable_files,
             'native_regular_depth_file_leads': regular_files,
             'historical_noaa_seabed_samples': seabed_by_id[ident]['historical_sample_count'],
+            'nbs_original_hard_footprint_screen': footprint_summary,
             'native_substrate_review_file_leads': candidate_files,
             'native_substrate_screen_files_with_eligible_sector_cells': len(sector_cell_rows),
             'native_substrate_screen_survey_ids_with_eligible_sector_cells': sorted(sector_cell_survey_ids),
@@ -265,6 +325,7 @@ def compile_readiness(root=REPO):
         'source_audit_at': native['audit_collected_at'],
         'survey_discovery_at': discovery['last_complete_scan_at'],
         'historical_seabed_samples_retrieved_at': seabed_samples['retrieved_at'],
+        'nbs_hard_footprint_reviewed_at': footprint_original['reviewed_at'],
         'limitations': [
             'BAG envelope leads still come from a bounded <=100 MB audit. The separate variable-depth file count includes previously screened larger surveys; neither count is unique surveyed area or eligible fishing spots.',
             'Native-depth counts are files with some measured cells passing the 25–200 ft and product-uncertainty screen; they are not reef cells and may cover only a small part of a sector.',
@@ -276,6 +337,7 @@ def compile_readiness(root=REPO):
             'USGS DS 781 map-area associations follow broad place names, not inspected original grid footprints. Linked products are acquisition leads, not surveyed area or fishable marks.',
             'USGS FGDC metadata rights, spacing and datum values are source descriptions only; a public-domain statement does not validate raster coverage, chart depth or fishing use.',
             'Historical NOAA seabed sample counts are sparse point records, not surveyed area, precise rock positions or current fish.',
+            'NBS original-hard overlap counts are tile-level historical source pixels, can repeat across tiles, and exclude smaller or undisplayed USGS hard patches. They are not unique reef area, catches or fishing points.',
             'Every target still requires current legal and safety review; this queue does not grant fishing or navigation clearance.',
         ],
         'sectors': rows,

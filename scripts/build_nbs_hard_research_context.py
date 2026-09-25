@@ -26,7 +26,8 @@ from scripts.review_nbs_hard_overlap import current_federal, mask_for, original_
 def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache, mpas, federal,
                     *, map_audit=None, map_cache=None, coast_id="central",
                     sector_ids=("cambria-morro", "monterey-sur"), max_uncertainty_m=2,
-                    max_per_tile=10, minimum_area_m2=2500, display_block=5):
+                    max_per_tile=10, minimum_area_m2=2500, display_block=5,
+                    source_review_reference="data/nbs-central-usgs-hard-overlap-review.json"):
     if (review.get("scope") != "central-nbs-usgs-hard-source-review"
             or review.get("status") != "research-leads-only"
             or review["scheme_sha256"] != digest(scheme)):
@@ -138,7 +139,7 @@ def compile_context(review, scheme, cache, hard_context, usgs_audit, usgs_cache,
     return {"type": "FeatureCollection", "schema_version": 1,
             "scope": f"{coast_id}-nbs-usgs-hard-research-context", "coast_id": coast_id,
             "compiled_at": datetime.now(timezone.utc).isoformat(),
-            "source_review": "data/nbs-central-usgs-hard-overlap-review.json",
+            "source_review": source_review_reference,
             "mpa_screened_at": mpa_record["data_retrieved_at"],
             "federal_screened_at": federal["retrieved_at"],
             "minimum_component_area_m2": minimum_area_m2, "maximum_displayed_per_tile": max_per_tile,
@@ -168,12 +169,14 @@ def main():
     parser.add_argument("--max-uncertainty-m", type=float, default=2)
     parser.add_argument("--display-block", type=int, default=5)
     parser.add_argument("--max-per-tile", type=int, default=10)
+    parser.add_argument("--minimum-area-m2", type=int, default=2500)
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--federal", type=Path, default=Path("dist/data/noaa-federal-areas.json"))
     parser.add_argument("--output", type=Path, default=Path("dist/data/central-nbs-usgs-hard-research-context.geojson"))
     args = parser.parse_args()
     source_review = json.loads(args.review.read_text())
-    if source_review.get("scope") == "california-nbs-usgs-original-class-source-review":
+    if source_review.get("scope") in ("california-nbs-usgs-original-class-source-review",
+                                      "california-nbs-displayed-hard-footprint-original-class-review"):
         if source_review.get("status") != "research-leads-only":
             raise ValueError("Statewide source review changed")
         coast = next((row for row in source_review["coasts"] if row["coast_id"] == args.coast_id), None)
@@ -193,7 +196,9 @@ def main():
                              map_audit=json.loads(args.map_audit.read_text()) if args.map_audit else None,
                              map_cache=args.map_cache, coast_id=args.coast_id,
                              sector_ids=sectors, max_uncertainty_m=args.max_uncertainty_m,
-                             display_block=args.display_block, max_per_tile=args.max_per_tile)
+                             display_block=args.display_block, max_per_tile=args.max_per_tile,
+                             minimum_area_m2=args.minimum_area_m2,
+                             source_review_reference="data/" + args.review.name)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.write_text(json.dumps(result, separators=(",", ":")) + "\n")
