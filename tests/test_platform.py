@@ -117,6 +117,13 @@ class RegionalContracts(TestCase):
         self.assertEqual(data["spatial"]["footprint_kind"], "native-raster-envelope-with-nodata")
         self.assertFalse(validate_candidate(data)["publication_approved"])
 
+    def test_every_saved_source_candidate_stays_valid_and_unpublished(self):
+        for path in sorted((REPO / "catalog/candidates").glob("*.json")):
+            with self.subTest(candidate=path.name):
+                result = validate_candidate(read_json(path))
+                self.assertTrue(result["valid"])
+                self.assertFalse(result["publication_approved"])
+
     def test_all_tiles_have_original_source_identity_and_measured_center(self):
         import base64, hashlib, struct
         index=read_json(REPO/"dist/regions/morro-bay/bottom/index.json")
