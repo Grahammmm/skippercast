@@ -20,6 +20,12 @@ class AtlasReadinessTests(unittest.TestCase):
         by_sector = {row['sector_id']: row for row in report['sectors']}
         self.assertEqual(by_sector['del-norte']['native_variable_depth_file_leads'], 2)
         self.assertEqual(by_sector['north-mendocino']['native_variable_depth_file_leads'], 3)
+        for sector_id in ('pigeon-monterey', 'monterey-sur'):
+            row = by_sector[sector_id]
+            self.assertIn('usgs-offshore-monterey-original-grids',
+                          row['accessible_inspected_fine_source_candidate_ids'])
+            self.assertEqual(row['published_candidate_points_in_band'], 0)
+            self.assertIn('chart datum and uncertainty', row['next_source_step'])
         for row in report['sectors']:
             self.assertIn(row['status'], {'source-review-only', 'partial-local-targets'})
             self.assertEqual(bool(row['published_candidate_points_in_band']),

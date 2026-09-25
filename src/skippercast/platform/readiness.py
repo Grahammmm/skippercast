@@ -21,6 +21,21 @@ def compile_readiness(root=REPO):
         region = read_json(path)
         if region['status'] == 'draft':
             drafts.append(region)
+    fine_original_leads = {row['id']: [] for row in sectors}
+    for path in sorted((root / 'catalog/candidates').glob('*.json')):
+        candidate = read_json(path)
+        spatial = candidate.get('spatial', {})
+        resolution = spatial.get('resolution_m')
+        if (candidate.get('access_status') != 'accessible'
+                or not isinstance(resolution, (int, float)) or isinstance(resolution, bool)
+                or resolution > 10 or spatial.get('resolution_basis') != 'inspected'
+                or not spatial.get('bounds')
+                or not {'bathymetry', 'substrate'} & set(candidate.get('need_ids', []))):
+            continue
+        for sector_id in candidate.get('sector_ids', []):
+            if sector_id not in fine_original_leads:
+                raise ValueError(f'Unknown sector for original-grid candidate: {sector_id}')
+            fine_original_leads[sector_id].append(candidate['id'])
     native_by_id = {row['sector_id']: row for row in native['sectors']}
     variable_by_id = {row['sector_id']: row for row in variable_depth['sectors']}
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
@@ -54,6 +69,7 @@ def compile_readiness(root=REPO):
                                and draft['fishing_bounds'][1] < north and draft['fishing_bounds'][3] > south))
         points = sector['published_candidate_points']
         candidate_files = lead['eligible_for_native_substrate_review_bboxes']
+        source_leads = sorted(fine_original_leads[ident])
         held_files = lead['held_substrate_overlap_screen_bboxes']
         variable_files = variable_by_id[ident]['source_files_with_eligible_cells']
         regular_files = regular_by_id[ident]['source_files_with_eligible_cells']
@@ -66,6 +82,9 @@ def compile_readiness(root=REPO):
             next_step = 'Find independent original substrate overlap in the measured, depth-qualified native cells; do not infer reef from depth alone.'
         else:
             next_step = 'Find original fine-resolution depth and independent substrate within the actual sector water; sampled files yielded no eligible cells.'
+        if source_leads and not (candidate_files or variable_files or regular_files):
+            next_step = ('Audit the listed original fine-resolution source leads at native cells, reconcile chart datum and uncertainty, '
+                         'then screen substrate, MPAs, hazards and local rules; the bounded NOAA sample yielded no qualified depth cells.')
         if held_files:
             next_step += ' Reconcile held survey hazards before any target promotion.'
         rows.append({
@@ -79,6 +98,7 @@ def compile_readiness(root=REPO):
             'native_variable_depth_file_leads': variable_files,
             'native_regular_depth_file_leads': regular_files,
             'native_substrate_review_file_leads': candidate_files,
+            'accessible_inspected_fine_source_candidate_ids': source_leads,
             'held_file_leads': held_files,
             'native_review_survey_ids': lead['screen_survey_ids'],
             'held_survey_ids': lead['held_survey_ids'],
