@@ -8,7 +8,7 @@ import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js?v=8.11';
 let tripExport;
 import { getRegion, assetURL } from "./region.js?v=8.11";
 import { mountBottom } from "./bottom-view.js?v=8.11";
-import { initSurveyHabitat } from "./survey-habitat.js?v=8.11";
+import { initSurveyHabitat } from "./survey-habitat.js?v=8.12";
 import { initRegionalContext } from "./regional-context.js?v=8.11";
 import { initGeology } from "./geology.js?v=8.11";
 import { initWeather } from "./weather-ui.js?v=8.11";

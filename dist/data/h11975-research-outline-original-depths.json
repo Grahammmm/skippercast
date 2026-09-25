@@ -1,0 +1,1712 @@
+{
+  "schema_version": 1,
+  "scope": "h11975-research-outline-original-depth-distributions",
+  "reviewed_at": "2026-09-25T03:35:11+00:00",
+  "context_sha256": "5da1b18cf0bd46a27a245d1e9573028692eaa90b1564a5798a93ddc7c495aab7",
+  "bag_sha256": "9cf8d46441b5f45711231bc4823361cd7cd32a7fc0b0bf7de039dec850fc12b0",
+  "usgs_archive_sha256": "0930b70a422072dc01dd1651dd54b154c8cd7e9bde74a40cbd98a9556a8da1a1",
+  "mpa_screened_at": "2026-09-23T22:30:59Z",
+  "federal_screened_at": "2026-09-23T22:56:33.483262+00:00",
+  "outline_count": 121,
+  "outlines": [
+    {
+      "id": "cape-mendocino-native-hard-001",
+      "qualified_original_cells": 11340,
+      "qualified_original_cell_area_m2": 11340.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.1,
+        "p05": 56.9,
+        "median": 60.4,
+        "p95": 67.2,
+        "maximum": 71.6
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-002",
+      "qualified_original_cells": 11342,
+      "qualified_original_cell_area_m2": 11342.0,
+      "sampled_original_depth_ft": {
+        "minimum": 35.6,
+        "p05": 46.3,
+        "median": 55.9,
+        "p95": 59.7,
+        "maximum": 61.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-003",
+      "qualified_original_cells": 11264,
+      "qualified_original_cell_area_m2": 11264.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.1,
+        "p05": 40.9,
+        "median": 50.8,
+        "p95": 60.6,
+        "maximum": 64.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-004",
+      "qualified_original_cells": 10651,
+      "qualified_original_cell_area_m2": 10651.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.5,
+        "p05": 27.3,
+        "median": 35.5,
+        "p95": 51.1,
+        "maximum": 55.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-005",
+      "qualified_original_cells": 9908,
+      "qualified_original_cell_area_m2": 9908.0,
+      "sampled_original_depth_ft": {
+        "minimum": 29.8,
+        "p05": 34.7,
+        "median": 47.9,
+        "p95": 53.7,
+        "maximum": 55.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-006",
+      "qualified_original_cells": 8929,
+      "qualified_original_cell_area_m2": 8929.0,
+      "sampled_original_depth_ft": {
+        "minimum": 51.6,
+        "p05": 52.5,
+        "median": 54.9,
+        "p95": 59.4,
+        "maximum": 62.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-007",
+      "qualified_original_cells": 8282,
+      "qualified_original_cell_area_m2": 8282.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.5,
+        "p05": 57.3,
+        "median": 60.4,
+        "p95": 64.6,
+        "maximum": 67.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-008",
+      "qualified_original_cells": 7184,
+      "qualified_original_cell_area_m2": 7184.0,
+      "sampled_original_depth_ft": {
+        "minimum": 34.6,
+        "p05": 40.9,
+        "median": 44.6,
+        "p95": 48.4,
+        "maximum": 51.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-009",
+      "qualified_original_cells": 6919,
+      "qualified_original_cell_area_m2": 6919.0,
+      "sampled_original_depth_ft": {
+        "minimum": 36.4,
+        "p05": 37.8,
+        "median": 41.2,
+        "p95": 44.7,
+        "maximum": 47.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-010",
+      "qualified_original_cells": 7127,
+      "qualified_original_cell_area_m2": 7127.0,
+      "sampled_original_depth_ft": {
+        "minimum": 37.6,
+        "p05": 47.2,
+        "median": 59.3,
+        "p95": 65.9,
+        "maximum": 71.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-011",
+      "qualified_original_cells": 6213,
+      "qualified_original_cell_area_m2": 6213.0,
+      "sampled_original_depth_ft": {
+        "minimum": 30.4,
+        "p05": 39.8,
+        "median": 58.2,
+        "p95": 67.3,
+        "maximum": 69.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-012",
+      "qualified_original_cells": 5983,
+      "qualified_original_cell_area_m2": 5983.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.3,
+        "p05": 57.3,
+        "median": 59.9,
+        "p95": 62.8,
+        "maximum": 65.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-013",
+      "qualified_original_cells": 4617,
+      "qualified_original_cell_area_m2": 4617.0,
+      "sampled_original_depth_ft": {
+        "minimum": 44.3,
+        "p05": 49.3,
+        "median": 54.8,
+        "p95": 58.6,
+        "maximum": 62.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-014",
+      "qualified_original_cells": 4603,
+      "qualified_original_cell_area_m2": 4603.0,
+      "sampled_original_depth_ft": {
+        "minimum": 44.4,
+        "p05": 57.1,
+        "median": 61.1,
+        "p95": 63.6,
+        "maximum": 64.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-015",
+      "qualified_original_cells": 4477,
+      "qualified_original_cell_area_m2": 4477.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.0,
+        "p05": 27.7,
+        "median": 31.1,
+        "p95": 33.9,
+        "maximum": 35.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-016",
+      "qualified_original_cells": 4135,
+      "qualified_original_cell_area_m2": 4135.0,
+      "sampled_original_depth_ft": {
+        "minimum": 40.6,
+        "p05": 45.1,
+        "median": 48.0,
+        "p95": 50.4,
+        "maximum": 52.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-017",
+      "qualified_original_cells": 4177,
+      "qualified_original_cell_area_m2": 4177.0,
+      "sampled_original_depth_ft": {
+        "minimum": 40.2,
+        "p05": 41.2,
+        "median": 42.7,
+        "p95": 45.3,
+        "maximum": 48.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-018",
+      "qualified_original_cells": 4226,
+      "qualified_original_cell_area_m2": 4226.0,
+      "sampled_original_depth_ft": {
+        "minimum": 34.6,
+        "p05": 40.5,
+        "median": 43.3,
+        "p95": 45.6,
+        "maximum": 46.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-019",
+      "qualified_original_cells": 4193,
+      "qualified_original_cell_area_m2": 4193.0,
+      "sampled_original_depth_ft": {
+        "minimum": 44.1,
+        "p05": 52.4,
+        "median": 56.9,
+        "p95": 59.4,
+        "maximum": 60.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-020",
+      "qualified_original_cells": 4201,
+      "qualified_original_cell_area_m2": 4201.0,
+      "sampled_original_depth_ft": {
+        "minimum": 49.6,
+        "p05": 50.1,
+        "median": 52.5,
+        "p95": 56.1,
+        "maximum": 58.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-021",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 28.4,
+        "p05": 32.8,
+        "median": 38.2,
+        "p95": 45.1,
+        "maximum": 48.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-022",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 40.4,
+        "p05": 47.3,
+        "median": 60.0,
+        "p95": 67.4,
+        "maximum": 68.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-023",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 28.6,
+        "p05": 33.9,
+        "median": 53.4,
+        "p95": 66.5,
+        "maximum": 69.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-024",
+      "qualified_original_cells": 4215,
+      "qualified_original_cell_area_m2": 4215.0,
+      "sampled_original_depth_ft": {
+        "minimum": 36.8,
+        "p05": 38.6,
+        "median": 48.6,
+        "p95": 62.5,
+        "maximum": 64.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-025",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 39.7,
+        "p05": 43.7,
+        "median": 56.0,
+        "p95": 61.6,
+        "maximum": 64.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-026",
+      "qualified_original_cells": 4236,
+      "qualified_original_cell_area_m2": 4236.0,
+      "sampled_original_depth_ft": {
+        "minimum": 27.9,
+        "p05": 28.9,
+        "median": 38.8,
+        "p95": 49.0,
+        "maximum": 50.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-027",
+      "qualified_original_cells": 4280,
+      "qualified_original_cell_area_m2": 4280.0,
+      "sampled_original_depth_ft": {
+        "minimum": 61.6,
+        "p05": 62.2,
+        "median": 64.3,
+        "p95": 67.5,
+        "maximum": 68.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-028",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 54.2,
+        "p05": 54.8,
+        "median": 56.5,
+        "p95": 59.3,
+        "maximum": 62.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-029",
+      "qualified_original_cells": 4280,
+      "qualified_original_cell_area_m2": 4280.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.6,
+        "p05": 56.8,
+        "median": 60.6,
+        "p95": 65.2,
+        "maximum": 68.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-030",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 48.4,
+        "p05": 49.4,
+        "median": 51.8,
+        "p95": 56.6,
+        "maximum": 59.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-031",
+      "qualified_original_cells": 4279,
+      "qualified_original_cell_area_m2": 4279.0,
+      "sampled_original_depth_ft": {
+        "minimum": 54.0,
+        "p05": 55.5,
+        "median": 58.3,
+        "p95": 64.5,
+        "maximum": 68.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-032",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 58.4,
+        "p05": 59.6,
+        "median": 62.4,
+        "p95": 69.7,
+        "maximum": 72.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-033",
+      "qualified_original_cells": 4238,
+      "qualified_original_cell_area_m2": 4238.0,
+      "sampled_original_depth_ft": {
+        "minimum": 57.4,
+        "p05": 58.4,
+        "median": 61.5,
+        "p95": 70.1,
+        "maximum": 74.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-034",
+      "qualified_original_cells": 4239,
+      "qualified_original_cell_area_m2": 4239.0,
+      "sampled_original_depth_ft": {
+        "minimum": 56.2,
+        "p05": 57.2,
+        "median": 59.2,
+        "p95": 67.9,
+        "maximum": 71.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-035",
+      "qualified_original_cells": 4239,
+      "qualified_original_cell_area_m2": 4239.0,
+      "sampled_original_depth_ft": {
+        "minimum": 53.7,
+        "p05": 55.0,
+        "median": 57.1,
+        "p95": 61.5,
+        "maximum": 64.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-036",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 52.4,
+        "p05": 53.7,
+        "median": 55.5,
+        "p95": 59.7,
+        "maximum": 62.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-037",
+      "qualified_original_cells": 4280,
+      "qualified_original_cell_area_m2": 4280.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.5,
+        "p05": 56.7,
+        "median": 59.3,
+        "p95": 67.0,
+        "maximum": 70.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-038",
+      "qualified_original_cells": 4280,
+      "qualified_original_cell_area_m2": 4280.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.6,
+        "p05": 56.4,
+        "median": 59.2,
+        "p95": 64.0,
+        "maximum": 66.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-039",
+      "qualified_original_cells": 4268,
+      "qualified_original_cell_area_m2": 4268.0,
+      "sampled_original_depth_ft": {
+        "minimum": 54.5,
+        "p05": 55.7,
+        "median": 60.0,
+        "p95": 62.6,
+        "maximum": 64.6
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-040",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 36.9,
+        "p05": 43.3,
+        "median": 56.3,
+        "p95": 76.4,
+        "maximum": 81.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-041",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 29.9,
+        "p05": 42.5,
+        "median": 57.7,
+        "p95": 66.7,
+        "maximum": 71.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-042",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 33.1,
+        "p05": 48.1,
+        "median": 61.0,
+        "p95": 65.3,
+        "maximum": 67.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-043",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 43.6,
+        "p05": 51.0,
+        "median": 57.7,
+        "p95": 63.2,
+        "maximum": 65.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-044",
+      "qualified_original_cells": 4239,
+      "qualified_original_cell_area_m2": 4239.0,
+      "sampled_original_depth_ft": {
+        "minimum": 38.6,
+        "p05": 49.3,
+        "median": 54.2,
+        "p95": 57.2,
+        "maximum": 60.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-045",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 40.4,
+        "p05": 49.0,
+        "median": 53.0,
+        "p95": 55.2,
+        "maximum": 56.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-046",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 27.1,
+        "p05": 32.4,
+        "median": 53.6,
+        "p95": 71.5,
+        "maximum": 74.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-047",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 40.9,
+        "p05": 52.9,
+        "median": 69.5,
+        "p95": 78.5,
+        "maximum": 80.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-048",
+      "qualified_original_cells": 4240,
+      "qualified_original_cell_area_m2": 4240.0,
+      "sampled_original_depth_ft": {
+        "minimum": 39.5,
+        "p05": 45.8,
+        "median": 58.7,
+        "p95": 68.2,
+        "maximum": 73.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-049",
+      "qualified_original_cells": 4173,
+      "qualified_original_cell_area_m2": 4173.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.3,
+        "p05": 29.5,
+        "median": 33.9,
+        "p95": 36.9,
+        "maximum": 38.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-050",
+      "qualified_original_cells": 4154,
+      "qualified_original_cell_area_m2": 4154.0,
+      "sampled_original_depth_ft": {
+        "minimum": 60.8,
+        "p05": 61.8,
+        "median": 64.2,
+        "p95": 69.0,
+        "maximum": 73.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-051",
+      "qualified_original_cells": 4151,
+      "qualified_original_cell_area_m2": 4151.0,
+      "sampled_original_depth_ft": {
+        "minimum": 36.6,
+        "p05": 39.6,
+        "median": 47.6,
+        "p95": 50.9,
+        "maximum": 52.6
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-052",
+      "qualified_original_cells": 4144,
+      "qualified_original_cell_area_m2": 4144.0,
+      "sampled_original_depth_ft": {
+        "minimum": 29.6,
+        "p05": 32.9,
+        "median": 45.0,
+        "p95": 57.8,
+        "maximum": 60.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-053",
+      "qualified_original_cells": 4120,
+      "qualified_original_cell_area_m2": 4120.0,
+      "sampled_original_depth_ft": {
+        "minimum": 28.4,
+        "p05": 32.2,
+        "median": 48.1,
+        "p95": 54.1,
+        "maximum": 56.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-054",
+      "qualified_original_cells": 3978,
+      "qualified_original_cell_area_m2": 3978.0,
+      "sampled_original_depth_ft": {
+        "minimum": 32.3,
+        "p05": 36.4,
+        "median": 38.5,
+        "p95": 40.9,
+        "maximum": 42.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-055",
+      "qualified_original_cells": 4081,
+      "qualified_original_cell_area_m2": 4081.0,
+      "sampled_original_depth_ft": {
+        "minimum": 52.0,
+        "p05": 52.6,
+        "median": 54.2,
+        "p95": 56.4,
+        "maximum": 59.6
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-056",
+      "qualified_original_cells": 4011,
+      "qualified_original_cell_area_m2": 4011.0,
+      "sampled_original_depth_ft": {
+        "minimum": 54.3,
+        "p05": 55.3,
+        "median": 56.8,
+        "p95": 60.8,
+        "maximum": 62.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-057",
+      "qualified_original_cells": 3984,
+      "qualified_original_cell_area_m2": 3984.0,
+      "sampled_original_depth_ft": {
+        "minimum": 30.2,
+        "p05": 34.5,
+        "median": 43.3,
+        "p95": 47.9,
+        "maximum": 51.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-058",
+      "qualified_original_cells": 4013,
+      "qualified_original_cell_area_m2": 4013.0,
+      "sampled_original_depth_ft": {
+        "minimum": 58.3,
+        "p05": 58.9,
+        "median": 61.1,
+        "p95": 66.6,
+        "maximum": 68.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-059",
+      "qualified_original_cells": 3999,
+      "qualified_original_cell_area_m2": 3999.0,
+      "sampled_original_depth_ft": {
+        "minimum": 56.6,
+        "p05": 57.4,
+        "median": 59.4,
+        "p95": 62.9,
+        "maximum": 67.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-060",
+      "qualified_original_cells": 3922,
+      "qualified_original_cell_area_m2": 3922.0,
+      "sampled_original_depth_ft": {
+        "minimum": 35.9,
+        "p05": 45.3,
+        "median": 58.1,
+        "p95": 65.3,
+        "maximum": 67.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-061",
+      "qualified_original_cells": 3935,
+      "qualified_original_cell_area_m2": 3935.0,
+      "sampled_original_depth_ft": {
+        "minimum": 30.0,
+        "p05": 39.2,
+        "median": 43.7,
+        "p95": 49.7,
+        "maximum": 55.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-062",
+      "qualified_original_cells": 3964,
+      "qualified_original_cell_area_m2": 3964.0,
+      "sampled_original_depth_ft": {
+        "minimum": 52.5,
+        "p05": 53.4,
+        "median": 55.9,
+        "p95": 61.5,
+        "maximum": 64.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-063",
+      "qualified_original_cells": 3935,
+      "qualified_original_cell_area_m2": 3935.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.7,
+        "p05": 56.3,
+        "median": 57.9,
+        "p95": 61.2,
+        "maximum": 63.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-064",
+      "qualified_original_cells": 3867,
+      "qualified_original_cell_area_m2": 3867.0,
+      "sampled_original_depth_ft": {
+        "minimum": 50.3,
+        "p05": 50.7,
+        "median": 52.7,
+        "p95": 55.1,
+        "maximum": 57.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-065",
+      "qualified_original_cells": 3858,
+      "qualified_original_cell_area_m2": 3858.0,
+      "sampled_original_depth_ft": {
+        "minimum": 56.0,
+        "p05": 57.6,
+        "median": 60.5,
+        "p95": 63.0,
+        "maximum": 65.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-066",
+      "qualified_original_cells": 3798,
+      "qualified_original_cell_area_m2": 3798.0,
+      "sampled_original_depth_ft": {
+        "minimum": 59.9,
+        "p05": 60.6,
+        "median": 62.3,
+        "p95": 66.1,
+        "maximum": 67.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-067",
+      "qualified_original_cells": 3672,
+      "qualified_original_cell_area_m2": 3672.0,
+      "sampled_original_depth_ft": {
+        "minimum": 56.7,
+        "p05": 57.4,
+        "median": 58.8,
+        "p95": 62.5,
+        "maximum": 66.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-068",
+      "qualified_original_cells": 3747,
+      "qualified_original_cell_area_m2": 3747.0,
+      "sampled_original_depth_ft": {
+        "minimum": 31.7,
+        "p05": 38.8,
+        "median": 59.1,
+        "p95": 67.2,
+        "maximum": 70.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-069",
+      "qualified_original_cells": 3733,
+      "qualified_original_cell_area_m2": 3733.0,
+      "sampled_original_depth_ft": {
+        "minimum": 54.0,
+        "p05": 60.5,
+        "median": 62.2,
+        "p95": 64.1,
+        "maximum": 65.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-070",
+      "qualified_original_cells": 3672,
+      "qualified_original_cell_area_m2": 3672.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.0,
+        "p05": 29.7,
+        "median": 36.6,
+        "p95": 48.9,
+        "maximum": 51.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-071",
+      "qualified_original_cells": 3522,
+      "qualified_original_cell_area_m2": 3522.0,
+      "sampled_original_depth_ft": {
+        "minimum": 46.2,
+        "p05": 48.4,
+        "median": 53.4,
+        "p95": 55.4,
+        "maximum": 56.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-072",
+      "qualified_original_cells": 3613,
+      "qualified_original_cell_area_m2": 3613.0,
+      "sampled_original_depth_ft": {
+        "minimum": 32.6,
+        "p05": 36.2,
+        "median": 39.5,
+        "p95": 46.3,
+        "maximum": 48.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-073",
+      "qualified_original_cells": 3655,
+      "qualified_original_cell_area_m2": 3655.0,
+      "sampled_original_depth_ft": {
+        "minimum": 35.9,
+        "p05": 43.0,
+        "median": 51.5,
+        "p95": 55.7,
+        "maximum": 57.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-074",
+      "qualified_original_cells": 3601,
+      "qualified_original_cell_area_m2": 3601.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.5,
+        "p05": 30.2,
+        "median": 36.3,
+        "p95": 41.6,
+        "maximum": 43.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-075",
+      "qualified_original_cells": 3256,
+      "qualified_original_cell_area_m2": 3256.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.6,
+        "p05": 30.9,
+        "median": 40.6,
+        "p95": 47.1,
+        "maximum": 50.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-076",
+      "qualified_original_cells": 3518,
+      "qualified_original_cell_area_m2": 3518.0,
+      "sampled_original_depth_ft": {
+        "minimum": 48.1,
+        "p05": 48.9,
+        "median": 50.2,
+        "p95": 54.3,
+        "maximum": 57.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-077",
+      "qualified_original_cells": 3464,
+      "qualified_original_cell_area_m2": 3464.0,
+      "sampled_original_depth_ft": {
+        "minimum": 53.6,
+        "p05": 54.3,
+        "median": 55.6,
+        "p95": 57.9,
+        "maximum": 59.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-078",
+      "qualified_original_cells": 3361,
+      "qualified_original_cell_area_m2": 3361.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.0,
+        "p05": 26.1,
+        "median": 34.5,
+        "p95": 44.0,
+        "maximum": 46.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-079",
+      "qualified_original_cells": 3383,
+      "qualified_original_cell_area_m2": 3383.0,
+      "sampled_original_depth_ft": {
+        "minimum": 29.2,
+        "p05": 32.6,
+        "median": 35.8,
+        "p95": 39.5,
+        "maximum": 41.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-080",
+      "qualified_original_cells": 3362,
+      "qualified_original_cell_area_m2": 3362.0,
+      "sampled_original_depth_ft": {
+        "minimum": 52.5,
+        "p05": 54.7,
+        "median": 59.1,
+        "p95": 61.3,
+        "maximum": 62.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-081",
+      "qualified_original_cells": 3324,
+      "qualified_original_cell_area_m2": 3324.0,
+      "sampled_original_depth_ft": {
+        "minimum": 29.1,
+        "p05": 30.7,
+        "median": 34.8,
+        "p95": 40.2,
+        "maximum": 42.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-082",
+      "qualified_original_cells": 3345,
+      "qualified_original_cell_area_m2": 3345.0,
+      "sampled_original_depth_ft": {
+        "minimum": 31.2,
+        "p05": 41.1,
+        "median": 54.3,
+        "p95": 71.6,
+        "maximum": 76.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-083",
+      "qualified_original_cells": 3343,
+      "qualified_original_cell_area_m2": 3343.0,
+      "sampled_original_depth_ft": {
+        "minimum": 28.3,
+        "p05": 34.4,
+        "median": 39.7,
+        "p95": 43.0,
+        "maximum": 44.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-084",
+      "qualified_original_cells": 3278,
+      "qualified_original_cell_area_m2": 3278.0,
+      "sampled_original_depth_ft": {
+        "minimum": 27.4,
+        "p05": 34.5,
+        "median": 53.6,
+        "p95": 67.0,
+        "maximum": 71.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-085",
+      "qualified_original_cells": 3229,
+      "qualified_original_cell_area_m2": 3229.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.1,
+        "p05": 30.6,
+        "median": 45.7,
+        "p95": 49.3,
+        "maximum": 50.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-086",
+      "qualified_original_cells": 3202,
+      "qualified_original_cell_area_m2": 3202.0,
+      "sampled_original_depth_ft": {
+        "minimum": 58.5,
+        "p05": 59.3,
+        "median": 61.4,
+        "p95": 63.8,
+        "maximum": 65.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-087",
+      "qualified_original_cells": 3219,
+      "qualified_original_cell_area_m2": 3219.0,
+      "sampled_original_depth_ft": {
+        "minimum": 34.2,
+        "p05": 36.7,
+        "median": 45.1,
+        "p95": 52.2,
+        "maximum": 54.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-088",
+      "qualified_original_cells": 3251,
+      "qualified_original_cell_area_m2": 3251.0,
+      "sampled_original_depth_ft": {
+        "minimum": 27.6,
+        "p05": 33.1,
+        "median": 35.1,
+        "p95": 37.4,
+        "maximum": 38.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-089",
+      "qualified_original_cells": 3114,
+      "qualified_original_cell_area_m2": 3114.0,
+      "sampled_original_depth_ft": {
+        "minimum": 31.0,
+        "p05": 36.0,
+        "median": 41.5,
+        "p95": 44.2,
+        "maximum": 45.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-090",
+      "qualified_original_cells": 3150,
+      "qualified_original_cell_area_m2": 3150.0,
+      "sampled_original_depth_ft": {
+        "minimum": 59.5,
+        "p05": 60.1,
+        "median": 62.1,
+        "p95": 65.1,
+        "maximum": 66.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-091",
+      "qualified_original_cells": 3109,
+      "qualified_original_cell_area_m2": 3109.0,
+      "sampled_original_depth_ft": {
+        "minimum": 49.7,
+        "p05": 50.3,
+        "median": 51.5,
+        "p95": 56.3,
+        "maximum": 59.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-092",
+      "qualified_original_cells": 3075,
+      "qualified_original_cell_area_m2": 3075.0,
+      "sampled_original_depth_ft": {
+        "minimum": 32.6,
+        "p05": 42.4,
+        "median": 50.6,
+        "p95": 55.6,
+        "maximum": 57.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-093",
+      "qualified_original_cells": 3075,
+      "qualified_original_cell_area_m2": 3075.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.4,
+        "p05": 56.3,
+        "median": 58.6,
+        "p95": 60.9,
+        "maximum": 63.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-094",
+      "qualified_original_cells": 2980,
+      "qualified_original_cell_area_m2": 2980.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.8,
+        "p05": 56.3,
+        "median": 57.6,
+        "p95": 59.6,
+        "maximum": 62.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-095",
+      "qualified_original_cells": 3015,
+      "qualified_original_cell_area_m2": 3015.0,
+      "sampled_original_depth_ft": {
+        "minimum": 30.6,
+        "p05": 35.3,
+        "median": 52.4,
+        "p95": 65.9,
+        "maximum": 68.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-096",
+      "qualified_original_cells": 3047,
+      "qualified_original_cell_area_m2": 3047.0,
+      "sampled_original_depth_ft": {
+        "minimum": 61.5,
+        "p05": 62.2,
+        "median": 64.2,
+        "p95": 66.8,
+        "maximum": 68.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-097",
+      "qualified_original_cells": 2888,
+      "qualified_original_cell_area_m2": 2888.0,
+      "sampled_original_depth_ft": {
+        "minimum": 49.4,
+        "p05": 50.4,
+        "median": 52.3,
+        "p95": 54.4,
+        "maximum": 56.0
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-098",
+      "qualified_original_cells": 2945,
+      "qualified_original_cell_area_m2": 2945.0,
+      "sampled_original_depth_ft": {
+        "minimum": 57.8,
+        "p05": 58.5,
+        "median": 60.5,
+        "p95": 64.3,
+        "maximum": 66.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-099",
+      "qualified_original_cells": 2924,
+      "qualified_original_cell_area_m2": 2924.0,
+      "sampled_original_depth_ft": {
+        "minimum": 28.9,
+        "p05": 30.1,
+        "median": 32.0,
+        "p95": 37.9,
+        "maximum": 39.5
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-100",
+      "qualified_original_cells": 2908,
+      "qualified_original_cell_area_m2": 2908.0,
+      "sampled_original_depth_ft": {
+        "minimum": 26.1,
+        "p05": 29.3,
+        "median": 32.0,
+        "p95": 34.0,
+        "maximum": 35.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-101",
+      "qualified_original_cells": 2927,
+      "qualified_original_cell_area_m2": 2927.0,
+      "sampled_original_depth_ft": {
+        "minimum": 56.0,
+        "p05": 63.2,
+        "median": 65.6,
+        "p95": 67.8,
+        "maximum": 68.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-102",
+      "qualified_original_cells": 2885,
+      "qualified_original_cell_area_m2": 2885.0,
+      "sampled_original_depth_ft": {
+        "minimum": 59.1,
+        "p05": 60.3,
+        "median": 65.5,
+        "p95": 68.1,
+        "maximum": 69.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-103",
+      "qualified_original_cells": 2933,
+      "qualified_original_cell_area_m2": 2933.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.1,
+        "p05": 30.2,
+        "median": 39.9,
+        "p95": 47.8,
+        "maximum": 48.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-104",
+      "qualified_original_cells": 2876,
+      "qualified_original_cell_area_m2": 2876.0,
+      "sampled_original_depth_ft": {
+        "minimum": 55.2,
+        "p05": 59.6,
+        "median": 62.1,
+        "p95": 65.1,
+        "maximum": 66.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-105",
+      "qualified_original_cells": 2798,
+      "qualified_original_cell_area_m2": 2798.0,
+      "sampled_original_depth_ft": {
+        "minimum": 37.3,
+        "p05": 38.7,
+        "median": 40.3,
+        "p95": 42.5,
+        "maximum": 44.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-106",
+      "qualified_original_cells": 2803,
+      "qualified_original_cell_area_m2": 2803.0,
+      "sampled_original_depth_ft": {
+        "minimum": 53.8,
+        "p05": 54.5,
+        "median": 57.3,
+        "p95": 61.2,
+        "maximum": 62.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-107",
+      "qualified_original_cells": 2750,
+      "qualified_original_cell_area_m2": 2750.0,
+      "sampled_original_depth_ft": {
+        "minimum": 30.2,
+        "p05": 33.5,
+        "median": 34.9,
+        "p95": 36.6,
+        "maximum": 38.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-108",
+      "qualified_original_cells": 2723,
+      "qualified_original_cell_area_m2": 2723.0,
+      "sampled_original_depth_ft": {
+        "minimum": 44.6,
+        "p05": 48.0,
+        "median": 53.0,
+        "p95": 55.2,
+        "maximum": 57.3
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-109",
+      "qualified_original_cells": 2692,
+      "qualified_original_cell_area_m2": 2692.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.4,
+        "p05": 29.2,
+        "median": 44.4,
+        "p95": 53.9,
+        "maximum": 55.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-110",
+      "qualified_original_cells": 2715,
+      "qualified_original_cell_area_m2": 2715.0,
+      "sampled_original_depth_ft": {
+        "minimum": 36.9,
+        "p05": 37.5,
+        "median": 39.3,
+        "p95": 42.2,
+        "maximum": 44.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-111",
+      "qualified_original_cells": 2574,
+      "qualified_original_cell_area_m2": 2574.0,
+      "sampled_original_depth_ft": {
+        "minimum": 49.2,
+        "p05": 50.0,
+        "median": 51.4,
+        "p95": 54.1,
+        "maximum": 55.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-112",
+      "qualified_original_cells": 2679,
+      "qualified_original_cell_area_m2": 2679.0,
+      "sampled_original_depth_ft": {
+        "minimum": 25.1,
+        "p05": 32.5,
+        "median": 41.0,
+        "p95": 46.0,
+        "maximum": 49.2
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-113",
+      "qualified_original_cells": 2622,
+      "qualified_original_cell_area_m2": 2622.0,
+      "sampled_original_depth_ft": {
+        "minimum": 27.6,
+        "p05": 31.9,
+        "median": 35.5,
+        "p95": 38.2,
+        "maximum": 39.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-114",
+      "qualified_original_cells": 2606,
+      "qualified_original_cell_area_m2": 2606.0,
+      "sampled_original_depth_ft": {
+        "minimum": 42.0,
+        "p05": 52.5,
+        "median": 57.8,
+        "p95": 62.8,
+        "maximum": 64.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-115",
+      "qualified_original_cells": 2473,
+      "qualified_original_cell_area_m2": 2473.0,
+      "sampled_original_depth_ft": {
+        "minimum": 41.4,
+        "p05": 42.5,
+        "median": 45.8,
+        "p95": 49.0,
+        "maximum": 51.4
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-116",
+      "qualified_original_cells": 2555,
+      "qualified_original_cell_area_m2": 2555.0,
+      "sampled_original_depth_ft": {
+        "minimum": 45.1,
+        "p05": 60.3,
+        "median": 62.4,
+        "p95": 63.6,
+        "maximum": 65.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-117",
+      "qualified_original_cells": 2506,
+      "qualified_original_cell_area_m2": 2506.0,
+      "sampled_original_depth_ft": {
+        "minimum": 53.6,
+        "p05": 55.8,
+        "median": 57.5,
+        "p95": 59.9,
+        "maximum": 61.8
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-118",
+      "qualified_original_cells": 2509,
+      "qualified_original_cell_area_m2": 2509.0,
+      "sampled_original_depth_ft": {
+        "minimum": 37.2,
+        "p05": 40.4,
+        "median": 42.6,
+        "p95": 45.8,
+        "maximum": 47.1
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-119",
+      "qualified_original_cells": 2396,
+      "qualified_original_cell_area_m2": 2396.0,
+      "sampled_original_depth_ft": {
+        "minimum": 49.5,
+        "p05": 50.2,
+        "median": 51.4,
+        "p95": 53.6,
+        "maximum": 55.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-120",
+      "qualified_original_cells": 2487,
+      "qualified_original_cell_area_m2": 2487.0,
+      "sampled_original_depth_ft": {
+        "minimum": 53.7,
+        "p05": 54.1,
+        "median": 56.0,
+        "p95": 58.6,
+        "maximum": 59.9
+      },
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "id": "cape-mendocino-native-hard-121",
+      "qualified_original_cells": 2498,
+      "qualified_original_cell_area_m2": 2498.0,
+      "sampled_original_depth_ft": {
+        "minimum": 50.7,
+        "p05": 51.6,
+        "median": 53.1,
+        "p95": 56.6,
+        "maximum": 59.7
+      },
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "limitations": [
+    "Original 2008\u20132009 measured cells are historical; they do not predict present catch.",
+    "Values summarize eligible original cells inside an inset display outline, not a continuous depth surface or charted safe-water envelope.",
+    "The source screen excludes buffered MPAs, federal GEAs and pinned historical DTONs; current chart, route and local method/date rules still need separate clearance."
+  ]
+}

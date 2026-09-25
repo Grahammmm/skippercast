@@ -236,6 +236,8 @@ The rollout unit is a **bounded regional package**, not all California at once. 
 
 ## Reproducible commands
 
+The H11975 outline-depth audit requires the exact original NOAA BAG and USGS class archives plus a complete CDFW MPA snapshot and NOAA federal-area snapshot no more than 36 hours old. Refresh those inputs before the commands below; a stale or changed input fails the audit. The generated layer remains research context pending current chart, access and site review.
+
 ```bash
 PYTHONPATH=src python -m skippercast.platform.build
 python scripts/discover_noaa_surveys.py --output var/survey-discovery.json --previous dist/data/noaa-survey-discovery.json --max-age-days 30
@@ -251,6 +253,10 @@ PYTHONPATH=src:. python scripts/audit_vr_camera_overlap.py --audit var/noaa-h119
 PYTHONPATH=src:. python scripts/audit_vr_source_coverage.py --survey-audit var/noaa-h11973-native-audit.json --survey-audit var/noaa-h11974-native-audit.json --survey-audit var/noaa-h11975-native-audit.json --usgs-audit var/usgs-doi-native-audit-eureka.json --usgs-metadata var/usgs-doi-metadata-eureka.json --usgs-release-id P9U0SUGL --output dist/data/noaa-cape-mendocino-vr-source-coverage.json
 PYTHONPATH=src:. python scripts/screen_vr_original_hard.py --survey-audit var/noaa-h11975-native-audit.json --usgs-audit var/usgs-doi-native-audit-eureka.json --usgs-metadata var/usgs-doi-metadata-eureka.json --usgs-release-id P9U0SUGL --output dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json
 PYTHONPATH=src:. python scripts/build_vr_hard_context.py --output dist/data/cape-mendocino-native-hard-context.geojson
+PYTHONPATH=src:. python scripts/audit_h11975_context_depths.py
+python scripts/build_native_context_survey_habitat.py
+python scripts/build_search_plans.py
+PYTHONPATH=src python -m skippercast.platform.build
 python scripts/screen_regular_native_depth.py --audit dist/data/noaa-w00456-native-audit.json --survey-id W00456 --output dist/data/noaa-w00456-native-depth-review.json
 python scripts/screen_vr_native_depth.py --audit var/noaa-native-audit-100mb-refined.json --output dist/data/noaa-vr-native-depth-review.json
 python scripts/screen_regular_native_depth.py --audit var/noaa-native-audit-100mb-refined.json --output dist/data/noaa-regular-native-depth-review.json

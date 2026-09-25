@@ -13,7 +13,8 @@ export function habitatMatches(feature, species, region=getRegion()) {
 export function habitatDetails(feature, region=getRegion()) {
   const p=feature.properties;
   const unit={rock:'Mapped hard bottom',mixed:'Mapped mixed bottom',sediment:'Mapped soft bottom',kelp:'Historical kelp detections'}[p.habitat_kind] || 'Survey context';
-  const depth=Array.isArray(p.view_depth_range_ft)?`${p.view_depth_range_ft.map(x=>Number(x).toFixed(0)).join('–')} ft across the image window, not the whole habitat outline`:Array.isArray(p.depth_range_ft)?`${p.depth_range_ft.map(x=>Number(x).toFixed(0)).join('–')} ft in sampled cells`:'No complete native-depth range attached';
+  const native=p.sampled_original_depth_ft;
+  const depth=native?`Original measured cells inside this outline: ${Number(native.minimum).toFixed(0)}–${Number(native.maximum).toFixed(0)} ft; most sampled cells (5th–95th percentile) ${Number(native.p05).toFixed(0)}–${Number(native.p95).toFixed(0)} ft. Historical survey; gaps and safe approach are not established`:Array.isArray(p.view_depth_range_ft)?`${p.view_depth_range_ft.map(x=>Number(x).toFixed(0)).join('–')} ft across the image window, not the whole habitat outline`:Array.isArray(p.depth_range_ft)?`${p.depth_range_ft.map(x=>Number(x).toFixed(0)).join('–')} ft in sampled cells`:'No complete native-depth range attached';
   const sourceLinks=[{title:'Habitat source',url:p.source_url},...(p.source_links||[])].filter(s=>String(s.url).startsWith('https://'));
   return `<div class="eyebrow">SURVEY HABITAT · ${esc(p.island_name || p.island || region.name)}</div><h2>${esc(p.name)}</h2>
     <div class="area-facts"><strong>${unit}</strong><span>${Number(p.area_km2).toFixed(3)} km² · ${p.habitat_kind==='kelp'?'observed':'compiled'} ${esc(p.source_date)}</span></div>

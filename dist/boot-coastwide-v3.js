@@ -13,7 +13,7 @@ try {
     initCoastSelector(catalog,coast);
     void initCoastalContext(catalog,coast);
     void initRecentDiscussions(url.searchParams.get('region')||'morro-bay');
-    await import("./app.js?v=8.12");
+    await import("./app.js?v=8.13");
   }
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;
