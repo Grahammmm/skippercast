@@ -19,9 +19,9 @@
     "historical_rockfish_visual_code": "USGS camera code; not a catch count"
   },
   "rights": {
-    "license": null,
-    "terms_url": null,
-    "redistribution_reviewed": false
+    "license": "NOAA original survey CC0-1.0; USGS original camera data have no access constraint and require source credit and sharing of derived products",
+    "terms_url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/c210nc_video_observations_metadata.txt",
+    "redistribution_reviewed": true
   },
   "spatial": {
     "bounds": [-124.087813, 39.8062575, -123.8897181, 39.9908707],
@@ -60,6 +60,14 @@
     {
       "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
       "supports": "All 18 bounded ENC danger layers were queried on September 25, 2026; 60 charted features in the review envelope, but no route or target clearance."
+    },
+    {
+      "url": "https://www.ngdc.noaa.gov/nos/H10001-H12000/H11971.html",
+      "supports": "NOAA identifies its original survey data as CC0-1.0; the source-rights receipt pins the official page and USGS camera metadata hashes."
+    },
+    {
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/metadata/c210nc_video_observations_metadata.txt",
+      "supports": "Original camera metadata states no access constraint, requires USGS credit, requests sharing derived products, and rules out navigational use."
     }
   ],
   "limitations": [
@@ -67,6 +75,6 @@
     "Original camera positions vary by about 10 m and 13 correlated observations on two transects are not 13 independent reefs or current catch evidence.",
     "The original report's final office review added a submerged rock and retained older rocks with uncertain positions; exact HCell and current ENC feature geometry must be reconciled.",
     "No charted seabed-area polygon was returned in the bounded current ENC query; a camera line cannot define a continuous rock boundary.",
-    "The source is held from fishing-target promotion and export until exact substrate, federal and state closure geometry, Mendocino species/method/date rules, route, harbor and rights review pass."
+    "The source is held from fishing-target promotion and export until exact substrate, federal and state closure geometry, Mendocino species/method/date rules, route and harbor review pass. Source terms are reviewed, but any future derived camera product must credit USGS and address its sharing request."
   ]
 }

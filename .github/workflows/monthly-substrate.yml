@@ -452,6 +452,14 @@ jobs:
           --survey H11730
           --output var/review/h11730-fort-bragg-regional-camera-support.json
           --verify dist/data/h11730-fort-bragg-regional-camera-support.json
+      - name: Recheck H11971 NOAA and USGS camera source terms
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_noaa_usgs_camera_rights.py
+          --survey H11971 --cruise c210nc
+          --output var/review/h11971-camera-source-rights-review.json
+          --verify dist/data/h11971-camera-source-rights-review.json
       - name: Reopen original H11876 side-scan mosaic and companion files
         run: |
           mkdir -p var/noaa-native-cache
