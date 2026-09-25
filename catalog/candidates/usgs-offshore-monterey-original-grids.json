@@ -34,8 +34,8 @@
     "source_time": null,
     "checked_at": "2026-09-24T12:08:14+00:00",
     "update_cadence": "Static historical grids; monthly catalog and source-integrity check",
-    "coverage_start": "1998-01-01",
-    "coverage_end": "2014-12-31"
+    "coverage_start": null,
+    "coverage_end": null
   },
   "provenance": {
     "access_service": "Original USGS Coastal and Marine Geoscience Data System ZIP and FGDC XML downloads",
