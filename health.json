@@ -1,1 +1,1 @@
-{"region_id":"morro-bay","generated_at":"2026-09-25T00:44:48Z","status":"degraded","critical_available":true,"recent_report_days_ok":7,"sources_ok":62,"sources_total":63,"issues":["currents"]}
+{"region_id":"morro-bay","generated_at":"2026-09-25T01:07:13Z","status":"ok","critical_available":true,"recent_report_days_ok":7,"sources_ok":63,"sources_total":63,"issues":[]}
