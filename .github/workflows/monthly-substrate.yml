@@ -623,6 +623,17 @@ jobs:
           --bss-review var/review/csumb-bss-native-source-review.json
           --output var/review/csumb-vdatum-bridge-review.json
           --verify dist/data/csumb-vdatum-bridge-review.json
+      - name: Recheck private Block 03 footprint VDatum diagnostic
+        run: >-
+          python scripts/audit_bss03_datum_footprint.py
+          --access var/review/bss03-camera-access-triage.json
+          --output var/review/bss03-footprint-vdatum-diagnostic.json
+          --verify dist/data/bss03-footprint-vdatum-diagnostic.json
+      - name: Recheck official Block 03 CARIS project archive lead
+        run: >-
+          python scripts/audit_bss03_caris_acquisition.py
+          --output var/review/bss03-caris-acquisition-lead.json
+          --verify dist/data/bss03-caris-acquisition-lead.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@v4
@@ -638,9 +649,10 @@ jobs:
             var/review/bss03-cdfw-mpas.geojson
             var/review/bss03-federal-areas.json
             var/review/enc-hazards-bss03-original-camera.geojson
-            var/review/bss03-camera-100m-blocks.geojson
             var/review/bss03-camera-access-triage.json
             var/review/csumb-vdatum-bridge-review.json
+            var/review/bss03-footprint-vdatum-diagnostic.json
+            var/review/bss03-caris-acquisition-lead.json
           retention-days: 30
   central-deepwater:
     runs-on: ubuntu-latest

@@ -1,0 +1,30 @@
+{
+  "api_target_frame": "IGS14 / MLLW",
+  "assumed_api_source_frame": "NAD83_2011",
+  "block_count": 3,
+  "checked_at": "2026-09-26T21:59:59.350615+00:00",
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "The source NAD83 realization and epoch are unspecified. NAD83_2011 API probes are diagnostic assumptions, not source-grid transformations.",
+    "Five samples per 100 m block do not define a correction field for each original 2 m bathymetry cell.",
+    "VDatum transformation uncertainty is not the original CARIS/CUBE total propagated bathymetric uncertainty.",
+    "Research block geometry and sample coordinates stay private; no navigable location or 1\u20133 fishing rank is released."
+  ],
+  "mllw_raster_converted": false,
+  "original_product_uncertainty_verified": false,
+  "private_block_fingerprint": "2ca5a328298c07a14f046e93611ff7fdda3fe7584c81ba2004ead060cbc0d243",
+  "qualified_waypoints": 0,
+  "sample_count": 15,
+  "sample_design": "four corners and center of each private 100 m research block",
+  "schema_version": 1,
+  "scope": "bss03-private-footprint-vdatum-diagnostic",
+  "source_access_receipt": "data/bss03-camera-access-triage.json",
+  "source_horizontal_crs": "EPSG:26910 (NAD83 / UTM zone 10N)",
+  "source_horizontal_realization_verified": false,
+  "source_vertical_datum": "NAVD88 Geoid09",
+  "upper_bounded_mllw_depth_verified": false,
+  "vdatum_offset_m_max": -0.02,
+  "vdatum_offset_m_min": -0.021,
+  "vdatum_transform_uncertainty_m_max": 0.097
+}

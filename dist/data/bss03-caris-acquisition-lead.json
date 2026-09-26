@@ -1,0 +1,28 @@
+{
+  "archive_contents_verified": false,
+  "archive_downloaded": false,
+  "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/ancillary/BSSBlock03_caris.tar.gz",
+  "catalog_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block03_mb.html",
+  "checked_at": "2026-09-26T21:59:49.841245+00:00",
+  "cube_or_tpu_surface_confirmed": false,
+  "depth_qualified": false,
+  "exportable": false,
+  "fishing_target": false,
+  "horizontal_realization_confirmed": false,
+  "http_head": {
+    "accept_ranges": "bytes",
+    "content_length_bytes": "42090312342",
+    "content_type": "application/x-gzip",
+    "last_modified": "Fri, 10 May 2019 14:19:58 GMT",
+    "status": 200,
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/ancillary/BSSBlock03_caris.tar.gz"
+  },
+  "limitations": [
+    "An HTTP HEAD receipt proves only that the official archive endpoint is available; it does not establish that any TPU/CUBE grid exists inside.",
+    "The original public 2 m ArcInfo grid has no verified product uncertainty and does not state NAD83 realization or epoch."
+  ],
+  "next_acquisition": "Request a targeted CARIS/BASE or CUBE depth, TPU and horizontal-frame extract from the survey custodian; the published archive is roughly 42 GB and its internal contents have not been inspected.",
+  "producer_redistribution_terms_confirmed": false,
+  "schema_version": 1,
+  "scope": "bss03-caris-original-project-acquisition-lead"
+}

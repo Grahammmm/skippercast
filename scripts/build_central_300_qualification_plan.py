@@ -72,7 +72,7 @@ SECTOR_OVERRIDES = {
     },
     "sur-san-simeon": {
         "lead": "CSUMB BSS Block03 2 m NAVD88 cells nominally overlap 46 USGS camera windows at 221–238 ft source-datum depth, including 11 rock/boulder windows on one camera line",
-        "next": "Obtain original TPU/CUBE and source-frame bridge; review video positioning and the entire measured patch, then clear source rights, current MPAs, ENC hazards and access routes.",
+        "next": "Request a targeted extract from the official 42 GB CARIS project for original TPU/CUBE, horizontal realization and epoch. Only then transform and bound every candidate cell; review video positioning, source rights, current rules and full access routes.",
         "hold": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
     },
     "cambria-morro": {
@@ -104,10 +104,14 @@ def build(root):
     estero_path = "dist/data/estero-independent-2012-depth-2008-character-overlap.json"
     bss03_video_path = "dist/data/bss03-video-grid-overlap.json"
     bss03_access_path = "dist/data/bss03-camera-access-triage.json"
+    bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
+    bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
     bss03_access = load(root, bss03_access_path)
+    bss03_datum = load(root, bss03_datum_path)
+    bss03_caris = load(root, bss03_caris_path)
     if (bss03_video.get('scope') != 'bss03-original-video-vs-populated-grid'
             or bss03_video.get('camera_windows_in_200_300ft_source_datum_band') != 46
             or bss03_video.get('rock_boulder_cobble_windows_in_band') != 11
@@ -123,6 +127,16 @@ def build(root):
             or bss03_access.get('fishing_target') is not False
             or bss03_access.get('exportable') is not False):
         raise ValueError('Big Sur Block03 partial official-area screen changed')
+    if (bss03_datum.get('scope') != 'bss03-private-footprint-vdatum-diagnostic'
+            or bss03_datum.get('sample_count') != 15
+            or bss03_datum.get('source_horizontal_realization_verified') is not False
+            or bss03_datum.get('upper_bounded_mllw_depth_verified') is not False
+            or bss03_datum.get('fishing_target') is not False
+            or bss03_caris.get('scope') != 'bss03-caris-original-project-acquisition-lead'
+            or bss03_caris.get('archive_contents_verified') is not False
+            or bss03_caris.get('cube_or_tpu_surface_confirmed') is not False
+            or bss03_caris.get('depth_qualified') is not False):
+        raise ValueError('Block03 datum or CARIS acquisition evidence changed')
     if queue.get("status") != "research-only" or ledger.get("depth_planning_ceiling_ft") != 300:
         raise ValueError("Central 300 ft source and coverage receipts are not current")
     if (buchon.get("fishing_target") is not False or buchon.get("qualified_waypoints") != 0
@@ -151,6 +165,8 @@ def build(root):
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
+            receipts.append(bss03_datum_path)
+            receipts.append(bss03_caris_path)
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             spatial = row.get("estero_vdatum_spatial_diagnostic")
@@ -232,7 +248,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, bss03_video_path, bss03_access_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",
