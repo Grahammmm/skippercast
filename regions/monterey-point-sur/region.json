@@ -317,7 +317,7 @@
     "geology": null,
     "ecology": "regions/monterey-point-sur/ecology.json",
     "search_plans": "regions/monterey-point-sur/search-plans.json",
-    "survey_habitat": null
+    "survey_habitat": "regions/monterey-point-sur/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/monterey-point-sur/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/monterey-point-sur/latest.json",

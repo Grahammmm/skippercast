@@ -314,7 +314,7 @@
     "geology": null,
     "ecology": "regions/big-sur-coast/ecology.json",
     "search_plans": "regions/big-sur-coast/search-plans.json",
-    "survey_habitat": null
+    "survey_habitat": "regions/big-sur-coast/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/big-sur-coast/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/big-sur-coast/latest.json",

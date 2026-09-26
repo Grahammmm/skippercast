@@ -318,7 +318,7 @@
     "geology": null,
     "ecology": "regions/santa-cruz-monterey-bay/ecology.json",
     "search_plans": "regions/santa-cruz-monterey-bay/search-plans.json",
-    "survey_habitat": null
+    "survey_habitat": "regions/santa-cruz-monterey-bay/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/santa-cruz-monterey-bay/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/santa-cruz-monterey-bay/latest.json",

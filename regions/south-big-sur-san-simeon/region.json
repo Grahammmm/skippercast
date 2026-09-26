@@ -316,7 +316,7 @@
     "geology": null,
     "ecology": "regions/south-big-sur-san-simeon/ecology.json",
     "search_plans": "regions/south-big-sur-san-simeon/search-plans.json",
-    "survey_habitat": null
+    "survey_habitat": "regions/south-big-sur-san-simeon/survey-habitat.geojson"
   },
   "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/south-big-sur-san-simeon/latest.json",
   "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/south-big-sur-san-simeon/latest.json",
