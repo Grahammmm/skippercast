@@ -9,6 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  ccfrp-open-reference-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify bounded public evidence contract
+        run: python -m unittest tests.test_ccfrp_area_evidence -v
+      - name: Recheck CCFRP release, license, objects and effort
+        run: >-
+          python scripts/build_ccfrp_area_evidence.py --fetch
+          --output var/review/central-ccfrp-area-evidence.json
+      - name: Detect changed biological context
+        run: cmp dist/data/central-ccfrp-area-evidence.json var/review/central-ccfrp-area-evidence.json
+      - name: Upload review-only area evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccfrp-open-reference-area-evidence
+          path: var/review/central-ccfrp-area-evidence.json
+          retention-days: 30
   central-300-research-priority:
     runs-on: ubuntu-latest
     timeout-minutes: 5

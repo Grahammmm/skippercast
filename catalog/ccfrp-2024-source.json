@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "package_id": "urn:uuid:2250743c-a813-42c1-aeaa-f8b142b77199",
+  "metadata_url": "https://opc.dataone.org/metacat/d1/mn/v2/object/urn:uuid:2250743c-a813-42c1-aeaa-f8b142b77199",
+  "citation_url": "https://www.ccfrp.org/publications-reports",
+  "license": "CC BY 4.0",
+  "coverage_years": [2007, 2024],
+  "use_limit": "Regional reference-site hook-and-line context only. Sampled nearshore rocky grid cells are primarily shallower than 40 m; never infer exact fishable coordinates, a 200-300 ft encounter rate, current bite, or access inside an MPA.",
+  "files": {
+    "species": {
+      "object_id": "urn:uuid:10aeab45-9506-4227-9ee6-c6f6229767a5",
+      "bytes": 18983,
+      "sha256": "50604f9bb604b3125248a4dd39771a290e3fae2bfede8fc3d824af1d233013d6"
+    },
+    "location": {
+      "object_id": "urn:uuid:209bd321-9597-4d0b-adae-b8d1f5d45664",
+      "bytes": 91846,
+      "sha256": "b2cec9719a76c030e6614c6e77511153610fa9960f5ef94cc8a78d6c6f0cb0c7"
+    },
+    "effort": {
+      "object_id": "urn:uuid:a146fbfb-5e6d-4c63-be0e-1cf73e0e35f2",
+      "bytes": 79741788,
+      "sha256": "c3a3a8cb183d745f9dc5b9c7ded5179890e0e32edbdda4fe78952928c8da7b63"
+    }
+  }
+}

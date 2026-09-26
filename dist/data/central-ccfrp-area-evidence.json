@@ -1,0 +1,219 @@
+{
+  "areas": [
+    {
+      "angler_hours": 1855.9,
+      "area": "Point Lobos",
+      "evidence_scope": "historical_multi_year",
+      "maximum_recorded_sample_depth_m": 45.5,
+      "observed_years": [
+        2007,
+        2024
+      ],
+      "sampled_cell_trips": 263,
+      "sampled_dates": 74,
+      "site_type": "fished_reference_only",
+      "species": [
+        {
+          "catch_per_angler_hour": 0.227,
+          "name": "Lingcod",
+          "observed_catch": 421
+        },
+        {
+          "catch_per_angler_hour": 2.938,
+          "name": "Blue Rockfish",
+          "observed_catch": 5453
+        },
+        {
+          "catch_per_angler_hour": 0.267,
+          "name": "Black Rockfish",
+          "observed_catch": 495
+        },
+        {
+          "catch_per_angler_hour": 0.071,
+          "name": "Vermilion Rockfish",
+          "observed_catch": 131
+        },
+        {
+          "catch_per_angler_hour": 0.03,
+          "name": "Canary Rockfish",
+          "observed_catch": 56
+        },
+        {
+          "catch_per_angler_hour": 0.095,
+          "name": "Copper Rockfish",
+          "observed_catch": 177
+        },
+        {
+          "catch_per_angler_hour": 2.181,
+          "name": "Gopher Rockfish",
+          "observed_catch": 4048
+        }
+      ]
+    },
+    {
+      "angler_hours": 1442.1,
+      "area": "Piedras Blancas",
+      "evidence_scope": "historical_multi_year",
+      "maximum_recorded_sample_depth_m": 40.4,
+      "observed_years": [
+        2008,
+        2024
+      ],
+      "sampled_cell_trips": 216,
+      "sampled_dates": 59,
+      "site_type": "fished_reference_only",
+      "species": [
+        {
+          "catch_per_angler_hour": 0.259,
+          "name": "Lingcod",
+          "observed_catch": 374
+        },
+        {
+          "catch_per_angler_hour": 4.977,
+          "name": "Blue Rockfish",
+          "observed_catch": 7178
+        },
+        {
+          "catch_per_angler_hour": 0.089,
+          "name": "Black Rockfish",
+          "observed_catch": 128
+        },
+        {
+          "catch_per_angler_hour": 0.386,
+          "name": "Vermilion Rockfish",
+          "observed_catch": 556
+        },
+        {
+          "catch_per_angler_hour": 0.04,
+          "name": "Canary Rockfish",
+          "observed_catch": 58
+        },
+        {
+          "catch_per_angler_hour": 0.193,
+          "name": "Copper Rockfish",
+          "observed_catch": 278
+        },
+        {
+          "catch_per_angler_hour": 2.144,
+          "name": "Gopher Rockfish",
+          "observed_catch": 3092
+        }
+      ]
+    },
+    {
+      "angler_hours": 1901.5,
+      "area": "Point Buchon",
+      "evidence_scope": "historical_multi_year",
+      "maximum_recorded_sample_depth_m": 37.2,
+      "observed_years": [
+        2007,
+        2024
+      ],
+      "sampled_cell_trips": 281,
+      "sampled_dates": 71,
+      "site_type": "fished_reference_only",
+      "species": [
+        {
+          "catch_per_angler_hour": 0.158,
+          "name": "Lingcod",
+          "observed_catch": 300
+        },
+        {
+          "catch_per_angler_hour": 1.741,
+          "name": "Blue Rockfish",
+          "observed_catch": 3310
+        },
+        {
+          "catch_per_angler_hour": 0.363,
+          "name": "Black Rockfish",
+          "observed_catch": 691
+        },
+        {
+          "catch_per_angler_hour": 0.156,
+          "name": "Vermilion Rockfish",
+          "observed_catch": 297
+        },
+        {
+          "catch_per_angler_hour": 0.029,
+          "name": "Canary Rockfish",
+          "observed_catch": 56
+        },
+        {
+          "catch_per_angler_hour": 0.035,
+          "name": "Copper Rockfish",
+          "observed_catch": 66
+        },
+        {
+          "catch_per_angler_hour": 1.851,
+          "name": "Gopher Rockfish",
+          "observed_catch": 3519
+        }
+      ]
+    },
+    {
+      "angler_hours": 43.9,
+      "area": "Point Conception",
+      "evidence_scope": "sparse_single_year",
+      "maximum_recorded_sample_depth_m": 29.5,
+      "observed_years": [
+        2018,
+        2018
+      ],
+      "sampled_cell_trips": 7,
+      "sampled_dates": 6,
+      "site_type": "fished_reference_only",
+      "species": [
+        {
+          "catch_per_angler_hour": 0.068,
+          "name": "Lingcod",
+          "observed_catch": 3
+        },
+        {
+          "catch_per_angler_hour": 0.0,
+          "name": "Blue Rockfish",
+          "observed_catch": 0
+        },
+        {
+          "catch_per_angler_hour": 0.0,
+          "name": "Black Rockfish",
+          "observed_catch": 0
+        },
+        {
+          "catch_per_angler_hour": 0.023,
+          "name": "Vermilion Rockfish",
+          "observed_catch": 1
+        },
+        {
+          "catch_per_angler_hour": 0.0,
+          "name": "Canary Rockfish",
+          "observed_catch": 0
+        },
+        {
+          "catch_per_angler_hour": 0.046,
+          "name": "Copper Rockfish",
+          "observed_catch": 2
+        },
+        {
+          "catch_per_angler_hour": 0.0,
+          "name": "Gopher Rockfish",
+          "observed_catch": 0
+        }
+      ]
+    }
+  ],
+  "exportable": false,
+  "fishing_target": false,
+  "interpretation_limit": "Historical area-level context only; no exact location, 200-300 ft validation, present bite prediction, or legal-access conclusion.",
+  "sampling_note": "Standardized hook-and-line rocky-reef grid-cell observations with zero-catch records and angler effort; protected sites excluded. Protocol selects grid cells in water under 40 m, though individual records may be deeper.",
+  "schema_version": 1,
+  "scope": "ccfrp-historical-open-reference-area-context",
+  "source_file_sha256": {
+    "effort": "c3a3a8cb183d745f9dc5b9c7ded5179890e0e32edbdda4fe78952928c8da7b63",
+    "location": "b2cec9719a76c030e6614c6e77511153610fa9960f5ef94cc8a78d6c6f0cb0c7",
+    "species": "50604f9bb604b3125248a4dd39771a290e3fae2bfede8fc3d824af1d233013d6"
+  },
+  "source_license": "CC BY 4.0",
+  "source_package_id": "urn:uuid:2250743c-a813-42c1-aeaa-f8b142b77199",
+  "source_rows_checked": 366630,
+  "source_url": "https://www.ccfrp.org/publications-reports"
+}

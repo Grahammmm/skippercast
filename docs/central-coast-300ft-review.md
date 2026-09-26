@@ -2,6 +2,8 @@
 
 Reviewed September 26, 2026. The boat's 300 ft planning ceiling is **not** a promise of mapped or legal fishing coverage to 300 ft. The public Morro Bay–Avila atlas has 132 historical survey-derived rocky targets, all within its original 200 ft source screen. The six adjacent preview packages still have no exportable bottom-fishing targets.
 
+The companion [biological evidence and gap plan](central-biological-evidence-and-gaps.md) adds a reproducible 2007–2024 open-reference CCFRP catch/effort summary and identifies the CDFW ROV observations most relevant to deeper reef validation. Neither source has qualified a new 200–300 ft waypoint.
+
 ## What was checked
 
 * [26 pinned NOAA NBS Modeling tiles](../dist/data/nbs-central-300-depth-screen.json) across Monterey–Point Sur, Big Sur, and Point Sur–San Simeon were re-downloaded, SHA-256 checked, and screened at 25–300 ft. A cell needed a measured post-1990 contributor, at most 4 m resolution, no more than 1 m supplied vertical uncertainty, and room for the 2 m planning margin. **Zero cells passed.** One Monterey tile had 6,790 measured post-1990 pixels within the nominal depth band, but none passed all uncertainty and depth-margin gates. The NBS compilation is a test/evaluation product, not a chart or original survey.
