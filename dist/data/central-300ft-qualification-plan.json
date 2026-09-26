@@ -1,0 +1,578 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
+  "status": "research-only",
+  "depth_ceiling_ft": 300,
+  "source_sha256": {
+    "dist/data/central-source-acquisition-queue.json": "2cd11459b803344f47634bd1fd56340c95db29524b566c05b3830e36d82eb312",
+    "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
+    "dist/data/point-buchon-original-paired-200-300ft-review.json": "87fa25e2ca585fd3ac4610550658a0a46a560906b08c69f35a195789f9d3c487",
+    "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f"
+  },
+  "release_gate_ids": [
+    "native-cells",
+    "depth-uncertainty",
+    "independent-substrate",
+    "biological-observations",
+    "sampling-scope",
+    "legal-chart-access"
+  ],
+  "tracks": [
+    {
+      "id": "native-cells",
+      "requirement": "Locate populated original cells over the full proposed patch"
+    },
+    {
+      "id": "depth-uncertainty",
+      "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch"
+    },
+    {
+      "id": "independent-substrate",
+      "requirement": "Pair measured depth with surveyed substrate at supported resolution"
+    },
+    {
+      "id": "biological-observations",
+      "requirement": "Link dated species observations at their actual spatial support"
+    },
+    {
+      "id": "sampling-scope",
+      "requirement": "Preserve effort, zero detections, method, and position uncertainty"
+    },
+    {
+      "id": "current-fishery",
+      "requirement": "Collect consented, dated trips with effort and unsuccessful drifts"
+    },
+    {
+      "id": "legal-chart-access",
+      "requirement": "Screen full patch, approach, drift, and return using current authorities"
+    },
+    {
+      "id": "evidence-ladder",
+      "requirement": "Keep research geometry separate from releasable targets and exports"
+    },
+    {
+      "id": "calibration",
+      "requirement": "Evaluate future species-specific trips against a held-out baseline"
+    },
+    {
+      "id": "promotion-refresh",
+      "requirement": "Publish only after all release gates pass and retain rollback"
+    }
+  ],
+  "source_search_order": {
+    "bathymetry": [
+      {
+        "publisher": "NOAA NCEI",
+        "url": "https://www.ncei.noaa.gov/products/nos-hydrographic-survey",
+        "request": "Original BAG and descriptive report by survey ID; inspect elevation, product uncertainty, datum, age, valid-cell mask and actual grid locations"
+      },
+      {
+        "publisher": "NOAA Office of Coast Survey",
+        "url": "https://www.nauticalcharts.noaa.gov/data/bluetopo_specs.html",
+        "request": "BlueTopo contributor IDs and measured-coverage flag to discover the upstream survey, not to substitute interpolated cells"
+      },
+      {
+        "publisher": "USGS CSMP",
+        "url": "https://cmgds.marine.usgs.gov/",
+        "request": "Original gridded bathymetry, processing report, horizontal reference frame, vertical datum and total propagated uncertainty"
+      }
+    ],
+    "substrate": [
+      {
+        "publisher": "USGS CSMP",
+        "url": "https://cmgds.marine.usgs.gov/",
+        "request": "Original video-supervised seafloor character and confusion assessment; verify cellwise overlap with the depth source"
+      }
+    ],
+    "fish": [
+      {
+        "publisher": "CDFW MPA Monitoring",
+        "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Management/monitoring/ROV",
+        "request": "Georeferenced ROV transects, species observations and zero-observation effort, retaining protected/reference roles and positional error"
+      }
+    ],
+    "legal": [
+      {
+        "publisher": "CDFW",
+        "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs",
+        "request": "Current MPA boundaries and species/method rules for the date"
+      },
+      {
+        "publisher": "NOAA Office of Coast Survey",
+        "url": "https://nauticalcharts.noaa.gov/",
+        "request": "Current ENC danger and approach context; certified navigation review remains separate"
+      }
+    ]
+  },
+  "sectors": [
+    {
+      "sector_id": "pigeon-monterey",
+      "source_review_priority_tier": 1,
+      "reviewed_lead": "W00614 measured 200\u2013300 ft MLLW cells near Pigeon Point",
+      "next_acquisition": "Find an independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; check the full patch against MPAs and ENC.",
+      "limiting_evidence": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
+      "native_cell_evidence": "measured-mllw-substrate-unpaired",
+      "source_receipts": [
+        "dist/data/w00614-original-300-pigeon-monterey-review.json"
+      ],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "partial-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "source_review_priority_tier": 1,
+      "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; cataloged NOAA BAGs do not overlap the 17 researched outlines at measured cells",
+      "next_acquisition": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then seek another original depth survey on the same class pixels.",
+      "limiting_evidence": "No chart-datum depth and uncertainty over the reviewed rock outlines.",
+      "native_cell_evidence": "source-datum-only",
+      "source_receipts": [],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "source_review_priority_tier": 3,
+      "reviewed_lead": "CSUMB BSS 2\u20135 m NAVD88 cells and original USGS/CSUMB habitat context",
+      "next_acquisition": "Obtain CSUMB survey processing, rights and TPU/CUBE surfaces; test independent rock and ROV overlap with the original 200\u2013300 ft cells.",
+      "limiting_evidence": "Datum, upper uncertainty, source rights and independent substrate remain unresolved.",
+      "native_cell_evidence": "source-datum-only",
+      "source_receipts": [
+        "dist/data/csumb-bss-native-source-review.json"
+      ],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "source_review_priority_tier": 3,
+      "reviewed_lead": "CSUMB BSS 2 m NAVD88 cells and historical Big Creek ROV reference observations",
+      "next_acquisition": "Get original uncertainty and reference-frame bridge, then pair surveyed substrate and position-audited fish transects at the same patch.",
+      "limiting_evidence": "ROV area counts and terrain roughness do not define a precise fishing patch.",
+      "native_cell_evidence": "source-datum-only",
+      "source_receipts": [
+        "dist/data/csumb-bss-native-source-review.json"
+      ],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "source_review_priority_tier": 1,
+      "reviewed_lead": "Independent 2012 Estero depth and 2008 video-supervised character overlap",
+      "next_acquisition": "Resolve the CORS96 epoch bridge and NAVD88-to-MLLW surface; obtain 2012 CARIS TPU, then rescreen the full 100 m blocks and approaches.",
+      "limiting_evidence": "The 2010 independent cross-check reaches four shallow blocks and no deeper blocks; total depth error remains unknown.",
+      "native_cell_evidence": "source-datum-only",
+      "source_receipts": [
+        "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
+        "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json"
+      ],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "source_review_priority_tier": 1,
+      "reviewed_lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; H11951/52/53 deep cells do not cover the needed rock patches",
+      "next_acquisition": "Establish Point Buchon output datum and upper uncertainty; acquire an original MLLW survey over deep hard cells and current Diablo/Vandenberg access and ENC screens.",
+      "limiting_evidence": "Historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
+      "native_cell_evidence": "source-datum-only",
+      "source_receipts": [
+        "dist/data/point-buchon-original-paired-200-300ft-review.json"
+      ],
+      "independent_groundtruth_at_candidate_scale": false,
+      "full_patch_current_legal_chart_access_review": false,
+      "qualified_200_to_300ft_targets": 0,
+      "fishing_rank": null,
+      "exportable": false,
+      "tracks": [
+        {
+          "id": "native-cells",
+          "requirement": "Locate populated original cells over the full proposed patch",
+          "stage": "research-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "depth-uncertainty",
+          "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "independent-substrate",
+          "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "biological-observations",
+          "requirement": "Link dated species observations at their actual spatial support",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "sampling-scope",
+          "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "current-fishery",
+          "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "legal-chart-access",
+          "requirement": "Screen full patch, approach, drift, and return using current authorities",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": false
+        },
+        {
+          "id": "evidence-ladder",
+          "requirement": "Keep research geometry separate from releasable targets and exports",
+          "stage": "implemented-hold",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "calibration",
+          "requirement": "Evaluate future species-specific trips against a held-out baseline",
+          "stage": "missing-release-evidence",
+          "release_gate_satisfied": null
+        },
+        {
+          "id": "promotion-refresh",
+          "requirement": "Publish only after all release gates pass and retain rollback",
+          "stage": "implemented-guarded",
+          "release_gate_satisfied": null
+        }
+      ]
+    }
+  ],
+  "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",
+  "limitations": "This work queue does not certify a fishing spot, chartplotter coordinate, catch probability, safe navigation, or open season. Provider URLs are authoritative discovery entry points; only audited original cells and current rules can close gates."
+}
