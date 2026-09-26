@@ -12,6 +12,8 @@ A regional package is configuration and evidence, not a fork of the app. The [So
 5. Compile and inspect the package. Preview status allows explicit geological context and regional forecasts while unavailable targets stay empty. Published fishing targets require ready depth, substrate and MPA coverage, or a hash-validated qualified subset that proves depth/substrate for its exact footprints while keeping the other gates. Partial source coverage remains partial. A production-ready forecast also needs fresh observations, advisories and confidence checks at runtime.
 6. Add the region to the existing daily and half-hourly workflow discovery (non-draft packages are discovered automatically). Confirm its first feed receipt before claiming the updater works. No new per-region scheduler or copied app is needed.
 
+For first-run port selection, add a reviewed entry to `catalog/home-ports.json` with the port label, regional package, a local `forecast_point` ID, and an approximate harbor/city coordinate used only for on-device nearest-port matching. Run `python scripts/build_home_ports.py` to compile `dist/data/home-ports.json`. The resulting map center is the region's marine forecast sample, never a harbor entrance, fishing waypoint, or verified departure route. A preview region stays labeled as a preview in the chooser. Port preference is browser-local; shared region/view links override it without changing the saved choice.
+
 ```bash
 PYTHONPATH=src python -m skippercast.platform validate --region cambria-san-simeon
 PYTHONPATH=src python -m skippercast.platform.build

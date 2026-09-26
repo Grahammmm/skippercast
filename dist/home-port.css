@@ -1,0 +1,26 @@
+.home-port-button{flex:0 0 auto;min-height:38px;padding:0 12px;border:1px solid #568087;border-radius:10px;background:#163f4b;color:#fff;font:700 .83rem/1 system-ui,sans-serif;cursor:pointer}
+.home-port-button:hover,.home-port-button:focus-visible{background:#1e5962;outline:2px solid #78ded1;outline-offset:2px}
+.choosing-home-port{overflow:hidden}
+.home-port-scrim{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;overflow:auto;padding:18px;background:linear-gradient(135deg,#072a37ef,#0c4e55dc);backdrop-filter:blur(7px)}
+.home-port-card{position:relative;width:min(540px,100%);max-height:min(850px,calc(100dvh - 36px));overflow:auto;padding:clamp(22px,4vw,34px);border:1px solid #bed7d8;border-radius:23px;background:#fcfdfb;color:#123341;box-shadow:0 28px 90px #051d2a8c}
+.home-port-kicker{color:#007f77;font-size:.74rem;letter-spacing:.17em;font-weight:800}
+.home-port-card h1{margin:12px 0 7px;font-size:clamp(1.75rem,5vw,2.45rem);line-height:1.09;letter-spacing:-.035em}
+.home-port-intro{margin:0 0 22px;color:#4e6872;line-height:1.45}
+.home-port-card label{display:block;margin-bottom:7px;font-size:.88rem;font-weight:800}
+.home-port-card input{box-sizing:border-box;width:100%;min-height:48px;padding:10px 13px;border:1.5px solid #b8cfd0;border-radius:11px;background:#fff;color:#123341;font:inherit}
+.home-port-card input:focus{outline:2px solid #007f77;outline-offset:2px}
+.home-port-results{display:grid;gap:7px;max-height:min(325px,39dvh);overflow:auto;margin:13px 0 3px;padding:2px 3px 3px 0}
+.home-port-option,.home-port-more{width:100%;text-align:left;cursor:pointer;font:inherit}
+.home-port-option{display:grid;gap:3px;padding:10px 13px;border:1px solid #d6e3e3;border-radius:11px;background:#f4f8f7;color:#123341}
+.home-port-option:hover,.home-port-option:focus-visible{border-color:#007f77;background:#e7f5f1;outline:0}
+.home-port-option strong{font-size:.98rem}
+.home-port-option span{font-size:.78rem;color:#56717a}
+.home-port-more{padding:10px 13px;border:0;background:transparent;color:#007f77;font-weight:800}
+.home-port-feedback{min-height:1.2em;margin:7px 0;color:#315964;font-size:.85rem}
+.home-port-actions{display:flex;gap:9px;flex-wrap:wrap}
+.home-port-actions button{min-height:42px;flex:1 1 150px;padding:8px 12px;border:1px solid #bdd2d3;border-radius:10px;background:#fff;color:#0a5360;font:700 .88rem/1.25 system-ui,sans-serif;cursor:pointer}
+.home-port-actions button:hover,.home-port-actions button:focus-visible{background:#e7f5f1;outline:2px solid #007f77;outline-offset:1px}
+.home-port-fine{margin:17px 0 0;color:#5b727b;font-size:.77rem;line-height:1.4}
+.home-port-close{position:absolute;right:17px;top:15px;width:35px;height:35px;border:0;border-radius:50%;background:#e7eff0;color:#214550;font-size:1.45rem;cursor:pointer}
+@media(max-width:600px){.home-port-button{width:42px;min-width:42px;padding:0;font-size:.72rem}.masthead .coast-control{flex-basis:115px;min-width:85px}.masthead .best-day-banner{flex-basis:112px;max-width:34%}.home-port-scrim{padding:0;align-items:end}.home-port-card{width:100%;max-height:92dvh;border-radius:22px 22px 0 0;padding:24px 19px max(20px,env(safe-area-inset-bottom))}.home-port-results{max-height:34dvh}}
+@media(max-width:360px){.masthead .best-day-banner{flex-basis:98px}.masthead .coast-control{flex-basis:95px}}

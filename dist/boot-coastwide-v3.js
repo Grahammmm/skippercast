@@ -1,7 +1,11 @@
-import { initRegion } from "./region.js?v=8.14";
-import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.26';
-import {initRecentDiscussions} from './recent-discussions.js?v=8.14';
 try {
+  const {initHomePort}=await import('./home-port.js?v=1');
+  if(!await initHomePort()) {
+    // First visit is choosing a port, or a saved port is navigating to its region.
+  } else {
+  const {initRegion}=await import('./region.js?v=8.14');
+  const {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext}=await import('./coasts.js?v=8.26');
+  const {initRecentDiscussions}=await import('./recent-discussions.js?v=8.14');
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {
     const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
@@ -14,6 +18,7 @@ try {
     void initCoastalContext(catalog,coast);
     void initRecentDiscussions(url.searchParams.get('region')||'morro-bay');
     await import("./app.js?v=8.14");
+  }
   }
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;
