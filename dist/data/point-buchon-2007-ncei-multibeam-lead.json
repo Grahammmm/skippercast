@@ -43,9 +43,9 @@
   ],
   "processed_gsf_probes": {
     "PointBuchon": {
-      "compressed_sha256": "6138a3d85d8303ac3311b3f7eb8cb2aed67a41bc32f3dbeec2c797e70ef400ee",
+      "compressed_sha256": "a3218f68647a8423bd395684044f88fc3b5ec19ab09e3bd4d87548f9d98efdb9",
       "gsf_version": "03.01",
-      "swath_ping_records": 273,
+      "swath_ping_records": 3744,
       "processing_parameters": [
         "TIDE_COMPENSATED=YES",
         "GEOID=WGS-84",
@@ -54,9 +54,9 @@
       "datum_qualified": false
     },
     "PointBuchon_Control": {
-      "compressed_sha256": "2cbdd942db72d4afa576c3fe3580801723ad0fd018fb7473a02ee8614ab59873",
+      "compressed_sha256": "a093e49ea552da7128e6e22b423b523f40c0bb29996fbab1214db04a09d664e8",
       "gsf_version": "03.01",
-      "swath_ping_records": 324,
+      "swath_ping_records": 10253,
       "processing_parameters": [
         "TIDE_COMPENSATED=YES",
         "GEOID=WGS-84",
@@ -65,7 +65,51 @@
       "datum_qualified": false
     }
   },
-  "limitation": "Catalog footprint overlap does not establish measured GSF sounding overlap, horizontal registration, vertical datum, error bounds, independent rock evidence, lawful access or fish. NOAA ISO says vertical datum unknown, and one byte-pinned processed GSF line from each 2007 cruise explicitly records TIDAL_DATUM=UNKNOWN despite tide compensation. These two lines do not establish every archived line's parameters. The nominal USGS depth band is itself in an unresolved output datum.",
+  "selected_line_unknown_datum_depth_ranges": {
+    "PointBuchon": {
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2245.gsf.mb121.inf",
+      "inf_sha256": "b1ec6b1f308c47ab28157ecf4f037365e3caeb61424e5105f0ed84731e4bdb5c",
+      "minimum_depth_m_unknown_datum": 78.64,
+      "maximum_depth_m_unknown_datum": 91.7086
+    },
+    "PointBuchon_Control": {
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1555.gsf.mb121.inf",
+      "inf_sha256": "feafdf18577e67bf9068741e23c296a83f96169e2ac17a1b24b3a2d1abac0f52",
+      "minimum_depth_m_unknown_datum": 49.8256,
+      "maximum_depth_m_unknown_datum": 93.8767
+    }
+  },
+  "selected_line_navigation_swath_screens": {
+    "PointBuchon": {
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2245.gsf.mb121.fnv",
+      "fnv_sha256": "b774793b4152d33306955ac1d5f3ae17f2f2633893ac0a2beb780a3050b96785",
+      "navigation_rows": 3744,
+      "unique_usgs_pixels_at_five_interpolated_swath_positions_per_row": 14168,
+      "sampled_usgs_pixels_by_class": {
+        "no_paired_usgs_pixel": 206,
+        "200_300ft_hard_flat": 1487,
+        "200_300ft_hard_rugose": 317,
+        "200_300ft_soft_flat": 12158,
+        "outside_nominal_band": 0
+      },
+      "actual_gsf_beam_to_usgs_cell_overlap_verified": false
+    },
+    "PointBuchon_Control": {
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1555.gsf.mb121.fnv",
+      "fnv_sha256": "a96a7b0e367b9e81d75999b03f1b1838059dc8f725f1cedfc2b8a3a206df3c10",
+      "navigation_rows": 10253,
+      "unique_usgs_pixels_at_five_interpolated_swath_positions_per_row": 27811,
+      "sampled_usgs_pixels_by_class": {
+        "no_paired_usgs_pixel": 3714,
+        "200_300ft_hard_flat": 2606,
+        "200_300ft_hard_rugose": 1985,
+        "200_300ft_soft_flat": 18741,
+        "outside_nominal_band": 765
+      },
+      "actual_gsf_beam_to_usgs_cell_overlap_verified": false
+    }
+  },
+  "limitation": "The two selected original processed GSF lines span nominal 200\u2013300 ft and their generated swath navigation crosses original USGS hard/rugose pixels at sampled positions. Five interpolated points per navigation row are not actual valid sounding beams or complete coverage. NOAA ISO and these GSF processing records say tidal datum unknown despite tide compensation; the other archived lines remain unchecked. The USGS depth band also has unresolved output datum. No horizontal registration, product error, complete legal access, or fish catch odds are established.",
   "next_action": "Inspect original processed GSF sounding positions and processing lineage; obtain verified vertical datum, epoch and total uncertainty before any Point Buchon depth promotion.",
   "qualified_waypoints": 0,
   "fishing_target": false,

@@ -125,6 +125,11 @@ def build(root):
             or any("TIDAL_DATUM=UNKNOWN" not in probe.get("processing_parameters", [])
                    or probe.get("datum_qualified") is not False
                    for probe in buchon_ncei["processed_gsf_probes"].values())
+            or set(buchon_ncei.get("selected_line_unknown_datum_depth_ranges", {})) != {"PointBuchon", "PointBuchon_Control"}
+            or set(buchon_ncei.get("selected_line_navigation_swath_screens", {})) != {"PointBuchon", "PointBuchon_Control"}
+            or any(screen.get("actual_gsf_beam_to_usgs_cell_overlap_verified") is not False
+                   or screen.get("sampled_usgs_pixels_by_class", {}).get("200_300ft_hard_rugose", 0) <= 0
+                   for screen in buchon_ncei["selected_line_navigation_swath_screens"].values())
             or buchon_ncei.get("qualified_waypoints") != 0
             or buchon_ncei.get("fishing_target") is not False):
         raise ValueError("Point Buchon NCEI processed sounding lead changed")

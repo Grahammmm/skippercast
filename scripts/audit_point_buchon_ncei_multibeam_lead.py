@@ -36,12 +36,16 @@ SURVEYS = {
 }
 PROBES = {
     "PointBuchon": {
-        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/PB131-2122.gsf.mb121.gz",
-        "sha256": "6138a3d85d8303ac3311b3f7eb8cb2aed67a41bc32f3dbeec2c797e70ef400ee",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/PB129-2245.gsf.mb121.gz",
+        "sha256": "a3218f68647a8423bd395684044f88fc3b5ec19ab09e3bd4d87548f9d98efdb9",
+        "inf_sha256": "b1ec6b1f308c47ab28157ecf4f037365e3caeb61424e5105f0ed84731e4bdb5c",
+        "fnv_sha256": "b774793b4152d33306955ac1d5f3ae17f2f2633893ac0a2beb780a3050b96785",
     },
     "PointBuchon_Control": {
-        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/MB297-2308.gsf.mb121.gz",
-        "sha256": "2cbdd942db72d4afa576c3fe3580801723ad0fd018fb7473a02ee8614ab59873",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/MB299-1555.gsf.mb121.gz",
+        "sha256": "a093e49ea552da7128e6e22b423b523f40c0bb29996fbab1214db04a09d664e8",
+        "inf_sha256": "feafdf18577e67bf9068741e23c296a83f96169e2ac17a1b24b3a2d1abac0f52",
+        "fnv_sha256": "a96a7b0e367b9e81d75999b03f1b1838059dc8f725f1cedfc2b8a3a206df3c10",
     },
 }
 LOWER_M, UPPER_M = 200 / 3.280839895, 300 / 3.280839895
@@ -76,8 +80,9 @@ class Page(HTMLParser):
 
 def fetch(url):
     with urlopen(Request(url, headers={"User-Agent": "Mozilla/5.0 (SkipperCast source audit)"}), timeout=45) as response:
-        body = response.read(5_000_001)
-    if len(body) > 5_000_000:
+        limit = 20_000_000 if url.endswith(".gsf.mb121.gz") else 5_000_000
+        body = response.read(limit + 1)
+    if len(body) > limit:
         raise ValueError("NCEI acquisition response exceeds reviewed size")
     return body
 
@@ -129,11 +134,11 @@ def archive_page(name, fetcher=fetch):
 
 
 def parse_gsf_probe(compressed, expected_sha):
-    if hashlib.sha256(compressed).hexdigest() != expected_sha or len(compressed) > 5_000_000:
+    if hashlib.sha256(compressed).hexdigest() != expected_sha or len(compressed) > 20_000_000:
         raise ValueError("Original NCEI GSF probe bytes changed or exceed reviewed size")
     with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as source:
-        data = source.read(100_000_001)
-    if len(data) > 100_000_000:
+        data = source.read(80_000_001)
+    if len(data) > 80_000_000:
         raise ValueError("NCEI GSF probe expansion exceeds reviewed size")
     offset, records, parameters = 0, Counter(), []
     while offset + 8 <= len(data):
@@ -171,11 +176,82 @@ def parse_gsf_probe(compressed, expected_sha):
             "datum_qualified": False}
 
 
+def companion_urls(gsf_url):
+    base = gsf_url.removesuffix(".gz")
+    if base == gsf_url:
+        raise ValueError("Unexpected GSF companion URL")
+    return base.rsplit("/", 1)[0] + "/generated/" + base.rsplit("/", 1)[1] + ".inf", \
+           base.rsplit("/", 1)[0] + "/generated/" + base.rsplit("/", 1)[1] + ".fnv"
+
+
+def original_line_depth_range(data, expected_sha):
+    if hashlib.sha256(data).hexdigest() != expected_sha:
+        raise ValueError("Original NCEI generated line summary changed")
+    match = re.search(rb"Minimum Depth:\s*([-\d.]+)\s+Maximum Depth:\s*([-\d.]+)", data)
+    if not match:
+        raise ValueError("Original NCEI generated line summary lacks depth range")
+    lo, hi = map(float, match.groups())
+    if not (0 <= lo <= UPPER_M and hi >= LOWER_M and hi >= lo):
+        raise ValueError("NCEI selected line no longer spans nominal 200–300 ft")
+    return {"inf_sha256": expected_sha, "minimum_depth_m_unknown_datum": lo,
+            "maximum_depth_m_unknown_datum": hi}
+
+
+def navigation_sample_cells(data, expected_sha, bathy, character):
+    if hashlib.sha256(data).hexdigest() != expected_sha:
+        raise ValueError("Original NCEI generated navigation changed")
+    projector = Transformer.from_crs("EPSG:4326", bathy.crs, always_xy=True)
+    cells, rows = set(), 0
+    for line in data.decode("ascii").splitlines():
+        values = line.split()
+        if len(values) != 19:
+            raise ValueError("Generated NCEI navigation row layout changed")
+        port_lon, port_lat, star_lon, star_lat = map(float, values[15:19])
+        if not (-121.2 < port_lon < -120.7 and -121.2 < star_lon < -120.7
+                and 35.1 < port_lat < 35.4 and 35.1 < star_lat < 35.4):
+            raise ValueError("Generated NCEI navigation outside reviewed Point Buchon bounds")
+        rows += 1
+        for fraction in (0, .25, .5, .75, 1):
+            lon = port_lon * (1 - fraction) + star_lon * fraction
+            lat = port_lat * (1 - fraction) + star_lat * fraction
+            row, col = bathy.index(*projector.transform(lon, lat))
+            if 0 <= row < bathy.height and 0 <= col < bathy.width:
+                cells.add((row, col))
+    if rows < 100 or not cells:
+        raise ValueError("Generated NCEI swath navigation is incomplete")
+    locations = [bathy.xy(row, col) for row, col in sorted(cells)]
+    summary = {"no_paired_usgs_pixel": 0, "200_300ft_hard_flat": 0,
+               "200_300ft_hard_rugose": 0, "200_300ft_soft_flat": 0,
+               "outside_nominal_band": 0}
+    for depth, kind in zip(bathy.sample(locations, masked=True), character.sample(locations, masked=True)):
+        if np.ma.getmaskarray(depth)[0] or np.ma.getmaskarray(kind)[0]:
+            summary["no_paired_usgs_pixel"] += 1
+            continue
+        if not LOWER_M <= -float(depth[0]) <= UPPER_M:
+            summary["outside_nominal_band"] += 1
+        else:
+            label = {1: "soft_flat", 2: "hard_flat", 3: "hard_rugose"}.get(int(kind[0]))
+            if label is None:
+                raise ValueError("USGS seabed class changed")
+            summary[f"200_300ft_{label}"] += 1
+    return {"fnv_sha256": expected_sha, "navigation_rows": rows,
+            "unique_usgs_pixels_at_five_interpolated_swath_positions_per_row": len(cells),
+            "sampled_usgs_pixels_by_class": summary,
+            "actual_gsf_beam_to_usgs_cell_overlap_verified": False}
+
+
 def audit(bathy_zip, class_zip, fetcher=fetch):
     by_id, query, catalog_sha = catalog(fetcher)
     source = {name: archive_page(name, fetcher) for name in SURVEYS}
     probes = {name: parse_gsf_probe(fetcher(PROBES[name]["url"]), PROBES[name]["sha256"])
               for name in SURVEYS}
+    line_ranges = {}
+    navigation = {}
+    for name in SURVEYS:
+        inf_url, fnv_url = companion_urls(PROBES[name]["url"])
+        line_ranges[name] = {"source_url": inf_url,
+                             **original_line_depth_range(fetcher(inf_url), PROBES[name]["inf_sha256"])}
+        navigation[name] = (fnv_url, fetcher(fnv_url))
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:32610", always_xy=True)
     footprints = {}
     for name, spec in SURVEYS.items():
@@ -215,6 +291,10 @@ def audit(bathy_zip, class_zip, fetcher=fetch):
                 for code, label in ((2, "hard_flat"), (3, "hard_rugose")):
                     counts[name][f"nominal_usgs_200_300ft_{label}_cell_centers_in_catalog_polygon"] += int(
                         np.count_nonzero(valid & (cv == code) & mask))
+        nav_screens = {name: {"source_url": navigation[name][0],
+                              **navigation_sample_cells(navigation[name][1], PROBES[name]["fnv_sha256"],
+                                                      bathy, character)}
+                       for name in SURVEYS}
     return {"schema_version": 1, "scope": "point-buchon-2007-ncei-multibeam-acquisition-lead",
             "catalog_query_url": query, "catalog_geometry_sha256": catalog_sha,
             "usgs_original_bathymetry_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
@@ -223,7 +303,9 @@ def audit(bathy_zip, class_zip, fetcher=fetch):
                          "catalog_feature_ids": sorted(spec["ids"]), **source[name], **counts[name]}
                         for name, spec in SURVEYS.items()],
             "processed_gsf_probes": probes,
-            "limitation": "Catalog footprint overlap does not establish measured GSF sounding overlap, horizontal registration, vertical datum, error bounds, independent rock evidence, lawful access or fish. NOAA ISO says vertical datum unknown, and one byte-pinned processed GSF line from each 2007 cruise explicitly records TIDAL_DATUM=UNKNOWN despite tide compensation. These two lines do not establish every archived line's parameters. The nominal USGS depth band is itself in an unresolved output datum.",
+            "selected_line_unknown_datum_depth_ranges": line_ranges,
+            "selected_line_navigation_swath_screens": nav_screens,
+            "limitation": "The two selected original processed GSF lines span nominal 200–300 ft and their generated swath navigation crosses original USGS hard/rugose pixels at sampled positions. Five interpolated points per navigation row are not actual valid sounding beams or complete coverage. NOAA ISO and these GSF processing records say tidal datum unknown despite tide compensation; the other archived lines remain unchecked. The USGS depth band also has unresolved output datum. No horizontal registration, product error, complete legal access, or fish catch odds are established.",
             "next_action": "Inspect original processed GSF sounding positions and processing lineage; obtain verified vertical datum, epoch and total uncertainty before any Point Buchon depth promotion.",
             "qualified_waypoints": 0, "fishing_target": False, "exportable": False}
 

@@ -24,6 +24,25 @@ class PointBuchonNCEILeadTest(unittest.TestCase):
                                for row in result["surveys"]), 0)
         self.assertEqual(set(result["processed_gsf_probes"]), set(lead.SURVEYS))
         self.assertTrue(all(not row["datum_qualified"] for row in result["processed_gsf_probes"].values()))
+        self.assertEqual(set(result["selected_line_navigation_swath_screens"]), set(lead.SURVEYS))
+        self.assertEqual(set(result["selected_line_unknown_datum_depth_ranges"]), set(lead.SURVEYS))
+        for row in result["selected_line_navigation_swath_screens"].values():
+            self.assertFalse(row["actual_gsf_beam_to_usgs_cell_overlap_verified"])
+            self.assertGreater(row["sampled_usgs_pixels_by_class"]["200_300ft_hard_rugose"], 0)
+        self.assertTrue(all("TIDAL_DATUM=UNKNOWN" in row["processing_parameters"]
+                            for row in result["processed_gsf_probes"].values()))
+
+    def test_selected_line_companions_and_depth_bounds(self):
+        url = lead.PROBES["PointBuchon"]["url"]
+        inf, fnv = lead.companion_urls(url)
+        self.assertTrue(inf.endswith("/generated/PB129-2245.gsf.mb121.inf"))
+        self.assertTrue(fnv.endswith("/generated/PB129-2245.gsf.mb121.fnv"))
+        raw = b"Minimum Depth: 78.64 Maximum Depth: 91.7086"
+        found = lead.original_line_depth_range(raw, hashlib.sha256(raw).hexdigest())
+        self.assertEqual(found["minimum_depth_m_unknown_datum"], 78.64)
+        with self.assertRaisesRegex(ValueError, "no longer spans"):
+            changed = b"Minimum Depth: 100 Maximum Depth: 110"
+            lead.original_line_depth_range(changed, hashlib.sha256(changed).hexdigest())
 
     def test_wrong_catalog_lineage_fails(self):
         features = []
