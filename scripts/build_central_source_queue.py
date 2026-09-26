@@ -43,6 +43,15 @@ def build(root):
     estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
+    buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
+    if (buchon_catalog_gap.get("scope") != "point-buchon-noaa-survey-catalog-envelope-gap"
+            or buchon_catalog_gap.get("usgs_bathymetry_archive_sha256") != "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4"
+            or buchon_catalog_gap.get("original_hard_rugose_cells") != 804337
+            or buchon_catalog_gap.get("bag_survey_ids_returned") != ["W00479"]
+            or buchon_catalog_gap.get("only_returned_survey_original_depth_receipt") != "dist/data/central-deep-original-300-refutation.json"
+            or buchon_catalog_gap.get("fishing_target") is not False
+            or buchon_catalog_gap.get("exportable") is not False):
+        raise ValueError("Original Point Buchon NOAA catalog gap changed")
     if (deep_binding.get("scope") != deep_refutation.get("scope")
             or deep_refutation.get("fishing_target") is not False
             or deep_refutation.get("exportable") is not False
@@ -61,6 +70,9 @@ def build(root):
         deep_refuted[sid] = match
     if len(deep_refuted) != len(deep_refutation["sources"]):
         raise ValueError("Original Central deepwater source set changed")
+    if (buchon_catalog_gap["only_returned_survey_shallowest_measured_depth_m_mllw"]
+            != deep_refuted["W00479"]["native_refinements"]["shallowest_depth_m_mllw"]):
+        raise ValueError("Point Buchon catalog gap and original W00479 depth disagree")
     if (estero_vdatum_spatial.get("scope") != "estero-2012-vdatum-spatial-offset-diagnostic"
             or estero_vdatum_spatial.get("sample_lattice", {}).get("points") != 28
             or estero_vdatum_spatial.get("converted_source_raster") is not False
@@ -312,6 +324,13 @@ def build(root):
                 {"survey_id": sid, "review_path": "dist/data/central-deep-original-300-refutation.json",
                  "shallowest_native_depth_m_mllw": deep_refuted[sid]["native_refinements"]["shallowest_depth_m_mllw"]}
                 for sid in original_bag if sid in deep_refuted],
+            "point_buchon_noaa_catalog_gap": ({
+                "receipt": "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
+                "catalog_bag_survey_ids": buchon_catalog_gap["bag_survey_ids_returned"],
+                "claim": "One current NOS survey-catalog envelope query returned only W00479; its original measured MLLW cells are all deeper than 300 ft. Other archives and unpublished surveys remain possible.",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "morro-conception" else None),
             "noaa_original_200_300ft_sector_refutations": [
                 {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
                 for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],

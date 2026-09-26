@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-noaa-survey-catalog-envelope-gap",
+  "usgs_bathymetry_archive_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+  "usgs_character_archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "nominal_source_datum_depth_band_ft": [
+    200,
+    300
+  ],
+  "original_hard_rugose_cells": 804337,
+  "query_envelope_wgs84": [
+    -120.96219,
+    35.13149,
+    -120.82101,
+    35.29059
+  ],
+  "catalog_service": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer/0",
+  "request_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer/0/query?where=1%3D1&geometry=-120.96219%2C35.13149%2C-120.82101%2C35.29059&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=SURVEY_ID%2CLOCALITY%2CSURVEY_YEAR%2CBAGS_EXIST%2CDOWNLOAD_URL&returnGeometry=false&f=json",
+  "response_sha256": "d38b9593a1e1f9d4d749b01313aa00bb8567a1f01632c0daacc8fc3519f7c762",
+  "bag_survey_ids_returned": [
+    "W00479"
+  ],
+  "only_returned_survey_original_depth_receipt": "dist/data/central-deep-original-300-refutation.json",
+  "only_returned_survey_shallowest_measured_depth_m_mllw": 98.89,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "This is one NOS catalog envelope query, not an exhaustive inventory or a cellwise USGS/NOAA overlap. The USGS 200\u2013300 ft band is source-datum only; no chart datum, upper uncertainty, legal access, navigation or biological spot validation is established."
+}

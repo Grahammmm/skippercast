@@ -33,7 +33,8 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/estero-2012-vdatum-spatial-diagnostic.json", estero["source_receipts"])
         conception = next(s for s in result["sectors"] if s["sector_id"] == "morro-conception")
         self.assertIn("dist/data/central-deep-original-300-refutation.json", conception["source_receipts"])
-        self.assertIn("other original MLLW surveys", conception["next_acquisition"])
+        self.assertIn("dist/data/point-buchon-noaa-catalog-envelope-gap.json", conception["source_receipts"])
+        self.assertIn("non-NOS archives", conception["next_acquisition"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):
         original = plan.load

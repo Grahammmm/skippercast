@@ -82,7 +82,7 @@ SECTOR_OVERRIDES = {
     },
     "morro-conception": {
         "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Establish Point Buchon output datum and upper uncertainty; search other original MLLW surveys over its hard cells and obtain current Diablo/Vandenberg access and ENC screens.",
+        "next": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB processing records; search non-NOS archives or unpublished original MLLW surveys over the hard cells, then obtain current Diablo/Vandenberg access and ENC screens.",
         "hold": "Historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
     },
 }
@@ -139,6 +139,11 @@ def build(root):
             receipts.append(spatial["receipt"])
         if sector_id == "morro-conception":
             receipts.append(buchon_path)
+            catalog_gap = row.get("point_buchon_noaa_catalog_gap")
+            if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
+                    or catalog_gap["fishing_target"] is not False):
+                raise ValueError("Point Buchon source catalog gap changed")
+            receipts.append(catalog_gap["receipt"])
         if row.get("noaa_usgs_original_character_overlap"):
             class_lead = row["noaa_usgs_original_character_overlap"]
             if (class_lead["depth_qualified_cells"] != 141331

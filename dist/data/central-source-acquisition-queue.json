@@ -43,6 +43,7 @@
         }
       ],
       "noaa_original_deepwater_300ft_refutations": [],
+      "point_buchon_noaa_catalog_gap": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -161,6 +162,7 @@
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_deepwater_300ft_refutations": [],
+      "point_buchon_noaa_catalog_gap": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -256,6 +258,7 @@
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_deepwater_300ft_refutations": [],
+      "point_buchon_noaa_catalog_gap": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -382,6 +385,7 @@
           "shallowest_native_depth_m_mllw": 98.89
         }
       ],
+      "point_buchon_noaa_catalog_gap": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -497,6 +501,7 @@
           "shallowest_native_depth_m_mllw": 98.89
         }
       ],
+      "point_buchon_noaa_catalog_gap": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -639,6 +644,15 @@
           "shallowest_native_depth_m_mllw": 98.89
         }
       ],
+      "point_buchon_noaa_catalog_gap": {
+        "receipt": "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
+        "catalog_bag_survey_ids": [
+          "W00479"
+        ],
+        "claim": "One current NOS survey-catalog envelope query returned only W00479; its original measured MLLW cells are all deeper than 300 ft. Other archives and unpublished surveys remain possible.",
+        "fishing_target": false,
+        "exportable": false
+      },
       "noaa_original_200_300ft_sector_refutations": [
         {
           "survey_id": "H11951",
