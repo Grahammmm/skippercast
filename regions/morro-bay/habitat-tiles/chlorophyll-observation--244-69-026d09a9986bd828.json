@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"morro-bay","layer_id":"chlorophyll-observation","bounds":[-122.0,34.5,-121.5,35.0],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790164800,"cells":[[34.96875,-121.66875,0.54666],[34.96875,-121.55625,0.34706]],"valid_cells":2}]}
