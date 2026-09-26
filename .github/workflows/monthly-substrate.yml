@@ -544,7 +544,7 @@ jobs:
       - name: Install pinned native-grid reader
         run: python -m pip install -r requirements-survey.txt
       - name: Verify native-grid receipts stay out of fishing targets
-        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_csumb_vdatum_bridge -v
+        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_bss03_access_blocks tests.test_csumb_vdatum_bridge -v
       - name: Reuse original CSUMB archives
         uses: actions/cache@v4
         with:
@@ -591,6 +591,31 @@ jobs:
           --download-video
           --output var/review/bss03-video-grid-overlap.json
           --verify dist/data/bss03-video-grid-overlap.json
+      - name: Recheck official MPAs around Block 03 research blocks
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/collect_bss03_mpa_review.py
+          --output var/review/bss03-cdfw-mpas.geojson
+      - name: Recheck NOAA federal groundfish areas for Block 03
+        run: >-
+          python scripts/collect_noaa_groundfish_areas.py
+          --output var/review/bss03-federal-areas.json
+      - name: Recheck NOAA ENC danger layers for Block 03
+        run: >-
+          python scripts/refresh_enc_hazards.py
+          --scope bss03-original-camera-depth-context
+          --output var/review/enc-hazards-bss03-original-camera.geojson
+      - name: Screen complete private Block 03 research blocks and review margin
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_bss03_access_blocks.py
+          --mpas var/review/bss03-cdfw-mpas.geojson
+          --federal var/review/bss03-federal-areas.json
+          --enc var/review/enc-hazards-bss03-original-camera.geojson
+          --output var/review/bss03-camera-access-triage.json
+          --verify dist/data/bss03-camera-access-triage.json
       - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
         run: >-
           python scripts/audit_csumb_vdatum_bridge.py
@@ -610,6 +635,11 @@ jobs:
             var/review/bss02-accuracy-provenance.json
             var/review/bss02-video-grid-overlap.json
             var/review/bss03-video-grid-overlap.json
+            var/review/bss03-cdfw-mpas.geojson
+            var/review/bss03-federal-areas.json
+            var/review/enc-hazards-bss03-original-camera.geojson
+            var/review/bss03-camera-100m-blocks.geojson
+            var/review/bss03-camera-access-triage.json
             var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
   central-deepwater:

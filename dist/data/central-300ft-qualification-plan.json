@@ -8,7 +8,8 @@
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "8904b11fb07b822e55acf0dcde7433bc80b3013e379e7b2ed9868afc2ffcc6a0",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
-    "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124"
+    "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124",
+    "dist/data/bss03-camera-access-triage.json": "83dfc44bff60039347e7b519c5bc1061b9a93881c585692d5c57727989166f44"
   },
   "release_gate_ids": [
     "native-cells",
@@ -347,6 +348,7 @@
       "limiting_evidence": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "dist/data/bss03-camera-access-triage.json",
         "dist/data/bss03-video-grid-overlap.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/csumb-bss-native-source-review.json"
@@ -396,7 +398,7 @@
         {
           "id": "legal-chart-access",
           "requirement": "Screen full patch, approach, drift, and return using current authorities",
-          "stage": "missing-release-evidence",
+          "stage": "partial-release-evidence",
           "release_gate_satisfied": false
         },
         {

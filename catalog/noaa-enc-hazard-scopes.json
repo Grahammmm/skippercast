@@ -133,6 +133,18 @@
       "output": "var/review/enc-hazards-estero-independent-deep-hard.geojson"
     },
     {
+      "id": "bss03-original-camera-depth-context",
+      "region_id": "south-big-sur-san-simeon",
+      "bounds": [
+        -121.46,
+        35.74,
+        -121.33,
+        35.84
+      ],
+      "research_only": true,
+      "output": "var/review/enc-hazards-bss03-original-camera.geojson"
+    },
+    {
       "id": "point-buchon-open-reference-hard-context",
       "region_id": "morro-bay",
       "bounds": [
