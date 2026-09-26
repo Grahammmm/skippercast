@@ -1,6 +1,6 @@
 # SkipperCast
 
-[Statewide buildout ledger](docs/statewide-buildout.md) · [Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
+[Statewide buildout ledger](docs/statewide-buildout.md) · [Central Coast coverage and accuracy](docs/central-coast-coverage-and-accuracy.md) · [Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
 
 
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**
@@ -46,7 +46,7 @@ To use the existing atlas without Python, download [complete.gpx](atlas/avila-po
 
 - A grade ranks **mapped habitat search priority**, not catch probability, boulder size, or a verified fishing hotspot. Purple boat labels mark [two named charter vicinities](docs/charter-grounds.md), backed by 31 published trips. Their outlines are approximate search water, not exact boat positions. There are **no AIS-confirmed charter hotspots** in this release.
 - Outlines are selected portions of surveyed habitat. Drift lines are optional alignments over structure, **not safe approach or passage routes**.
-- Qualified Central Coast targets and the 11 new island patches use surveyed MLLW depths. The island patches also screen product uncertainty and a planning allowance at native 1–4 m resolution. Other Channel Islands terrain retains an unspecified merged reference and remains context. Actual sounder depth changes with water level; the default fishing limit is 200 feet.
+- Qualified Central Coast targets and the 11 new island patches use surveyed MLLW depths. The island patches also screen product uncertainty and a planning allowance at native 1–4 m resolution. Other Channel Islands terrain retains an unspecified merged reference and remains context. Actual sounder depth changes with water level. The Central Coast boat-planning ceiling is 300 feet, but its currently published targets were only qualified through 200 feet; [the coverage ledger](docs/central-coast-coverage-and-accuracy.md) tracks the gap.
 - This public atlas excludes 11 Cambria targets and the older DS1091 charter-ground annotations whose source reuse terms are unresolved. The [source register](docs/data-sources.md) explains the smaller public edition.
 - The monitor example covers **Cambria–Diablo Canyon**; the included public atlas covers **Avila / Point Buchon–Point Estero**. They have different extents.
 

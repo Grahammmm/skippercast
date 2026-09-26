@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "scope": "Monterey Bay to Point Conception regional browsing packages",
+  "source_audits": {
+    "nbs_300ft": "data/nbs-central-300-depth-screen.json",
+    "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
+    "existing_target_closures": "data/central-atlas-300-current-closure-screen.json"
+  },
+  "source_audit_times": {
+    "nbs": "2026-09-26T14:59:23+00:00",
+    "closures": "2026-09-26T15:01:39+00:00",
+    "original_noaa": "2026-09-26T15:00:05.712962+00:00"
+  },
+  "depth_planning_ceiling_ft": 300,
+  "qualification_ceiling_of_published_targets_ft": 200,
+  "totals": {
+    "qualified_targets_at_or_under_200ft": 132,
+    "qualified_targets_200_to_300ft": 0,
+    "research_only_outlines": 579,
+    "regions_without_qualified_targets": 6
+  },
+  "regions": [
+    {
+      "region_id": "santa-cruz-monterey-bay",
+      "name": "Pigeon Point to Monterey Bay",
+      "browsing_bounds_wgs84": [
+        -122.75,
+        36.6,
+        -121.6,
+        37.18333333333333
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 231,
+      "bottom_evidence_status": {
+        "bathymetry": "research",
+        "substrate": "research",
+        "groundtruth": "research",
+        "protected-areas": "partial"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "USGS DS 781 Aptos and Monterey Bay original bathymetry/character pairs",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    },
+    {
+      "region_id": "monterey-point-sur",
+      "name": "Monterey Peninsula to Point Sur",
+      "browsing_bounds_wgs84": [
+        -122.35,
+        36.3,
+        -121.65,
+        36.625
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 33,
+      "bottom_evidence_status": {
+        "bathymetry": "research",
+        "substrate": "research",
+        "groundtruth": "research",
+        "protected-areas": "partial"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "USGS Offshore Monterey original grids and video",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    },
+    {
+      "region_id": "big-sur-coast",
+      "name": "Big Sur outer coast",
+      "browsing_bounds_wgs84": [
+        -122.2,
+        35.9,
+        -121.45,
+        36.3
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 265,
+      "bottom_evidence_status": {
+        "bathymetry": "research",
+        "substrate": "research",
+        "groundtruth": "research",
+        "protected-areas": "partial"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "USGS DS 781 Big Sur blocks and camera observations",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    },
+    {
+      "region_id": "south-big-sur-san-simeon",
+      "name": "South Big Sur to San Simeon",
+      "browsing_bounds_wgs84": [
+        -122.0,
+        35.66,
+        -121.2,
+        35.9
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 43,
+      "bottom_evidence_status": {
+        "bathymetry": "research",
+        "substrate": "research",
+        "groundtruth": "research",
+        "protected-areas": "partial"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "USGS DS 781 southern Big Sur blocks",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    },
+    {
+      "region_id": "cambria-san-simeon",
+      "name": "Cambria\u2013San Simeon",
+      "browsing_bounds_wgs84": [
+        -121.95,
+        35.45,
+        -120.95,
+        35.66
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 3,
+      "bottom_evidence_status": {
+        "bathymetry": "partial",
+        "substrate": "partial",
+        "groundtruth": "research",
+        "protected-areas": "ready"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "USGS original bathymetry/character survey pairs",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    },
+    {
+      "region_id": "morro-bay",
+      "name": "Morro Bay & Avila",
+      "browsing_bounds_wgs84": [
+        -121.95,
+        34.95,
+        -120.55,
+        35.85
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 132,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 0,
+      "bottom_evidence_status": {
+        "bathymetry": "ready",
+        "substrate": "ready",
+        "groundtruth": "research",
+        "protected-areas": "ready"
+      },
+      "fishing_coordinate_status": "qualified-reviewed",
+      "next_source_leads": [
+        "USGS original surveys beyond the 200 ft source screen",
+        "NOAA NOS original BAGs"
+      ],
+      "remaining_gates": [
+        "No newly qualified 200\u2013300 ft source footprint",
+        "Independent fish-presence/catch-effort evidence remains absent"
+      ]
+    },
+    {
+      "region_id": "point-arguello-conception",
+      "name": "Point Sal to Point Conception",
+      "browsing_bounds_wgs84": [
+        -121.25,
+        34.45,
+        -120.35,
+        35.07
+      ],
+      "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
+      "qualified_targets_at_or_under_200ft": 0,
+      "qualified_targets_200_to_300ft": 0,
+      "research_only_habitat_outlines": 4,
+      "bottom_evidence_status": {
+        "bathymetry": "research",
+        "substrate": "research",
+        "groundtruth": "research",
+        "protected-areas": "partial"
+      },
+      "fishing_coordinate_status": "none-qualified",
+      "next_source_leads": [
+        "NOAA H11952/H11953 original BAGs plus USGS character",
+        "Additional original NOS hydrographic survey footprints"
+      ],
+      "remaining_gates": [
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
+      ]
+    }
+  ],
+  "warning": "Browsing extents do not measure seabed survey coverage. Research outlines are not fishing coordinates. Zero new >200 ft targets have passed all source and legal gates."
+}

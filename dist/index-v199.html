@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Explore fishing grounds, check live ocean conditions, and plan your next trip with wave, wind and tide forecasts."
+    />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+    <meta name="theme-color" content="#082e3b" />
+    <title>SkipperCast · Fishing grounds, weather &amp; tides</title>
+    <link rel="canonical" href="https://skippercast.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SkipperCast" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://skippercast.com/" />
+    <meta property="og:title" content="SkipperCast · Find your next great fishing day" />
+    <meta property="og:description" content="Explore fishing grounds, check live ocean conditions, and plan your next trip with wave, wind and tide forecasts." />
+    <meta property="og:image" content="https://skippercast.com/skippercast-parker-preview.jpg" />
+    <meta property="og:image:secure_url" content="https://skippercast.com/skippercast-parker-preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1736" />
+    <meta property="og:image:height" content="906" />
+    <meta property="og:image:alt" content="SkipperCast: Find your next great fishing day. A white fishing boat on a teal ocean beside a coastline, with fishing grounds, weather, waves and tides." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SkipperCast · Find your next great fishing day" />
+    <meta name="twitter:description" content="Explore fishing grounds, check live ocean conditions, and plan your next trip with wave, wind and tide forecasts." />
+    <meta name="twitter:image" content="https://skippercast.com/skippercast-parker-preview.jpg" />
+    <meta name="twitter:image:alt" content="SkipperCast: Find your next great fishing day. A white fishing boat on a teal ocean beside a coastline, with fishing grounds, weather, waves and tides." />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="vendor/leaflet.css" />
+    <link rel="stylesheet" href="styles.css?v=8.14" />
+    <link rel="stylesheet" href="marine.css?v=8.14" />
+    <link rel="stylesheet" href="map-first.css?v=8.14" />
+    <link rel="stylesheet" href="boat-position.css?v=1" />
+    <link rel="stylesheet" href="home-port.css?v=1" />
+    <link rel="stylesheet" href="bite-evidence.css?v=8.14" />
+    <link rel="stylesheet" href="regulations.css?v=8.14" />
+    <link rel="stylesheet" href="live-conditions.css?v=8.14" />
+    <link rel="stylesheet" href="calm-layout.css?v=8.14" />
+    <link rel="stylesheet" href="planning.css?v=8.14" />
+    <link rel="stylesheet" href="platform.css?v=8.14" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <script src="vendor/leaflet.js" defer></script>
+    <script type="module" src="boot-coastwide-v199.js"></script>
+  <link rel="stylesheet" href="insights.css?v=8.14"/>
+  <link rel="stylesheet" href="export.css?v=8.14"/>
+  <link rel="stylesheet" href="mobile-polish-v2.css?v=8.16"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="theme-color" content="#007f77"/>
+</head>
+  <body class="atlas-app" data-view="map">
+    <a class="skip" href="#workspace">Skip to fishing atlas</a>
+    <header class="masthead">
+      <a class="brand" href="#map" aria-label="SkipperCast home"
+        ><span class="brand-mark" aria-hidden="true">⌁</span><span class="brand-name">SkipperCast</span></a
+      >
+      <label class="coast-control"><span class="sr-only">California coastal region</span><select id="coast-select" aria-label="California coastal region" disabled><option>Region…</option></select></label>
+      <button id="home-port-button" class="home-port-button" type="button" aria-label="Choose home port">Port</button>
+      <button
+        id="best-day-banner"
+        class="best-day-banner"
+        aria-label="Open seven-day morning outlook"
+      >
+        <span>7-day outlook</span><strong>Checking…</strong>
+      </button>
+    </header>
+    <main id="workspace" class="workspace" tabindex="-1">
+      <section
+        id="map-panel"
+        class="map-column app-panel"
+        data-panel="map"
+        aria-label="Fishing map"
+      >
+        <div class="map-wrap">
+          <div id="map" aria-label="Interactive fishing habitat map"></div><div id="region-note" class="region-note" hidden></div>
+          <div class="species-bar">
+            <label for="species-select">Target species</label>
+            <select id="species-select"><option value="reef">Loading regional species…</option></select>
+            <button
+              id="open-map-options"
+              class="map-options-button"
+              aria-label="Open map options and charter evidence"
+            >
+              Options
+            </button>
+          </div>
+          <div id="location-caption" class="location-caption" aria-live="polite">Locating regional targets…</div>
+          <button id="boat-position-toggle" class="boat-position-toggle" type="button" aria-pressed="false">⌖ Locate me</button>
+          <section id="boat-position-card" class="boat-position-card" aria-label="Phone GPS to fishing mark" hidden>
+            <div class="boat-position-head"><strong>Phone GPS</strong><button id="boat-position-center" type="button">Center</button></div>
+            <p id="boat-position-status" role="status">Location off.</p>
+            <p class="boat-position-caution">Bearing is a straight line, not a safe route. Check your navigation chart, hazards and MPAs. Map and GPS may fail offshore; keep your chartplotter available.</p>
+          </section>
+          <details id="species-regulations" class="regulations-card" aria-label="Local fishing regulations">
+            <summary>Regulations · checking sources…</summary>
+          </details>
+          <button id="show-charter-grounds" class="charter-map-chip" hidden>
+            Charter grounds
+          </button>
+          <div id="map-empty" class="map-empty" hidden>
+            <strong>No spots match</strong>
+            <p>Adjust your filters to explore this area.</p>
+            <button id="empty-options">Change filters</button>
+          </div>
+          <div
+            id="map-time-dock"
+            class="time-dock"
+            aria-label="Weather forecast timeline"
+          ></div>
+          <div class="map-note">
+            Planning only · keep your navigation chart aboard.
+          </div>
+        </div>
+      </section>
+      <section
+        id="forecast-panel"
+        class="forecast app-panel"
+        data-panel="forecast"
+        aria-labelledby="forecast-heading"
+        hidden
+      >
+        <div class="forecast-heading">
+          <div>
+            <div class="eyebrow">ON THE WATER</div>
+            <h2 id="forecast-heading">Weather &amp; ocean</h2>
+          </div>
+          <button id="load-forecast" class="primary">Refresh</button>
+        </div>
+        <p class="outside-location-note">The map location is outside this region’s reviewed coverage. Move the map into a supported region to load its conditions and rules.</p>
+        <p id="forecast-status" role="status">
+          Loading wind, waves, temperature, and NOAA tides…
+        </p>
+        <div id="forecast-content"></div>
+        <div id="morning-outlook"></div>
+        <div id="bite-evidence" aria-label="Recent fishing evidence"></div>
+      </section>
+      <section
+        id="guide-panel"
+        class="guide-panel app-panel"
+        data-panel="guide"
+        aria-label="Map guide"
+        hidden
+      >
+        <div class="view-heading">
+          <h1>Field guide</h1>
+          <p>Choose what you want to explore.</p>
+        </div>
+        <details id="coastal-seasonal" class="guide-topic"><summary>Regional species & seasonal watch</summary></details>
+        <details id="recent-discussions" class="guide-topic"><summary>Recent local fishing discussions</summary><div class="coastal-notes recent-discussions-body">Loading dated public links…</div></details>
+        <details class="guide-topic"><summary>Regional data coverage</summary><div id="region-coverage"></div></details>
+        <details class="guide-topic"><summary>Fishing your target species</summary>
+        <section
+          id="species-guide"
+          class="map-guide"
+          aria-label="Species field guide"
+        ></section>
+        </details>
+        <details class="guide-topic"><summary>Map symbols &amp; A/B/C grades</summary>
+        <section
+          id="grade-guide"
+          class="map-guide"
+          aria-labelledby="grade-title"
+        >
+          <div class="eyebrow">READING THE MAP</div>
+          <h2 id="grade-title">A starting point for your sounder.</h2>
+          <p>
+            The letters rank <strong>mapped rocky habitat</strong> for
+            investigation. They do not grade catches, charter popularity, or how
+            safe a spot is to fish.
+          </p>
+          <div class="grade-guide-grid">
+            <div>
+              <span class="grade A">A</span>
+              <h3>First look <small>75–100</small></h3>
+              <p>
+                The strongest overall combination of rocky cover, relief, uneven
+                terrain, and nearby habitat in this atlas. Start your search
+                here when conditions and access suit.
+              </p>
+            </div>
+            <div>
+              <span class="grade B">B</span>
+              <h3>Useful alternatives <small>55–74</small></h3>
+              <p>
+                Meaningful mapped structure, with a lower combined score in one
+                or more factors. Good options to investigate when another area
+                is crowded or the drift is awkward.
+              </p>
+            </div>
+            <div>
+              <span class="grade C">C</span>
+              <h3>Exploratory <small>Below 55</small></h3>
+              <p>
+                A lower terrain score, often reflecting less relief, less rocky
+                cover, or a smaller nearby patch. A productive isolated feature
+                can still score C.
+              </p>
+            </div>
+          </div>
+          <p class="small">
+            Score weights: relief 35 points, rough/bedrock cover 30, terrain
+            unevenness 20, nearby rough habitat area 15. A large rocky area
+            alone cannot earn A. These are chosen research weights; they have
+            not been validated against catches.
+            <a href="sources.html#grades">See the scoring method</a>.
+          </p>
+          <details class="geometry-guide">
+            <summary>Point, shaded area, or dashed line?</summary>
+            <p>
+              <strong>Lettered marker:</strong> a place to begin a sounder
+              search, not a confirmed individual boulder.
+              <strong>Shaded area:</strong> a selected footprint of mapped rocky
+              habitat, not the whole reef. <strong>Dashed line:</strong> an
+              alignment over structure you could try to cross if your measured
+              drift allows; it is not a safe approach route or a current
+              forecast.
+            </p>
+            <p>
+              Survey depths are referenced to MLLW. The water depth you see
+              depends on the tide. Confirm bottom and depth on your sounder, and
+              use current charts and protected-area boundaries before setting a
+              drift.
+            </p>
+          </details>
+        </section>
+        </details>
+        <details class="guide-topic"><summary>Where charters fish</summary>
+        <section
+          id="charter-evidence"
+          class="map-guide charter-evidence"
+          aria-labelledby="charter-title"
+        >
+          <div class="eyebrow">A SEPARATE KIND OF EVIDENCE</div>
+          <h2 id="charter-title">Where local charters report fishing</h2>
+          <div id="charter-ground-context" role="status">
+            <p>Loading named grounds and trip history…</p>
+          </div>
+          <div id="ais-context" role="status">
+            <p>Loading the dated research summary…</p>
+          </div>
+          <p class="small">
+            AIS records a boat’s reported position and movement. Even repeated
+            slow movement can mean wildlife watching, waiting, or other work. It
+            does not establish fishing or catches.
+            <a href="sources.html#ais"
+              >Sources, coverage, and what would qualify</a
+            >.
+          </p>
+        </section>
+        </details>
+        <details class="guide-topic"><summary>Chartplotter export &amp; sources</summary>
+        <section class="map-guide guide-downloads">
+          <h2>Take the atlas with you</h2>
+          <p>
+            Download the GPX file, then use Share → iNavX on your iPad. The full
+            set includes 132 rocky targets, partial reef outlines, and drift
+            alignments. Charter-report search areas, sediment regions and
+            offshore search references are currently map-only.
+          </p>
+          <a
+            class="download"
+            href="#export"
+
+            >Build a chartplotter day plan</a
+          >
+          <div class="source-links">
+            <a href="downloads/spot-notes.html" target="_blank" rel="noopener"
+              >Offline spot notes ↗</a
+            ><a href="sources.html">Sources, methods &amp; license</a>
+          </div>
+          <button id="about-guide">
+            About this atlas &amp; current official checks
+          </button>
+        </section>
+        </details>
+      </section>
+      <section id="export-panel" class="export-panel app-panel" data-panel="export" aria-labelledby="export-heading" hidden>
+        <div class="view-heading"><h1 id="export-heading">Your day on the water</h1><p>A small fishing plan, ready for your chartplotter.</p></div>
+        <div id="export-content"><p role="status">Loading regional export data…</p></div>
+      </section>
+    </main>
+    <nav class="app-nav" aria-label="Main navigation">
+      <a href="#map" data-nav="map" aria-label="Map" aria-current="page"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
+          <path d="M9 3v15m6-12v15" /></svg
+        ><span>Map</span></a
+      ><a href="#forecast" data-nav="forecast" aria-label="Conditions"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5a3 3 0 1 1-3 3"
+          /></svg
+        ><span>Conditions</span></a
+      ><a href="#export" data-nav="export" aria-label="Export"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg><span>Export</span></a><a href="#guide" data-nav="guide" aria-label="Guide"
+        ><svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6m0-10h.01" /></svg
+        ><span>Guide</span></a
+      >
+    </nav>
+    <dialog
+      id="spot-dialog"
+      class="spot-sheet"
+      aria-labelledby="spot-sheet-title"
+    >
+      <div class="sheet-header">
+        <h2 id="spot-sheet-title">Fishing area</h2>
+        <button id="close-spot-dialog" aria-label="Close spot details">
+          ×
+        </button>
+      </div>
+      <div id="spot-dialog-body" class="sheet-body">
+        <div id="detail" class="detail"></div>
+      </div>
+      <div class="sheet-actions">
+        <button id="show-selected-map">Show on map</button
+        ><a class="primary" id="export-selected" download>↓ Export GPX</a>
+      </div>
+    </dialog>
+    <dialog
+      id="map-options"
+      class="options-sheet"
+      aria-labelledby="map-options-title"
+    >
+      <div class="sheet-header">
+        <h2 id="map-options-title">Map options</h2>
+        <button id="close-map-options" aria-label="Close map options">×</button>
+      </div>
+      <div class="options-body">
+        <label class="region-control" for="region-select">Mapped area<select id="region-select"></select></label>
+        <label
+          >Chart detail<select id="base-map">
+            <option value="fishing">Fishing chart · detail as you zoom</option>
+            <option value="nautical">Full NOAA chart · all symbols</option>
+            <option value="street">Street map</option>
+          </select></label
+        >
+        <p class="small">
+          Fishing chart keeps depths, coastal features and navigation aids.
+          Cable, traffic-route and additional chart-area symbols are hidden.
+          MPAs stay visible. Full NOAA restores the complete chart display.
+        </p>
+        <div id="weather-map-options"></div>
+        <p class="small">
+          Numbered clusters count nearby reef candidates. A/B/C grades describe
+          general terrain; 1–3 grades are species-specific mapped habitat fit (1 strongest), not catch odds.
+          Purple boat labels mark charter-reported grounds; their
+          dashed outlines are approximate search areas.
+        </p>
+        <details>
+          <summary>Map layers</summary>
+          <div class="layer-options">
+            <label
+              ><input id="layer-charters" type="checkbox" checked />
+              Charter-reported grounds</label
+            >
+            <label><input id="layer-commercial" type="checkbox" /> Commercial AIS · 2024 · any depth</label>
+            <label
+              ><input id="layer-targets" type="checkbox" checked /> Reef
+              markers</label
+            >
+            <label
+              ><input id="layer-areas" type="checkbox" checked /> Habitat
+              outlines</label
+            >
+            <label
+              ><input id="layer-drifts" type="checkbox" /> Structure / drift
+              alignments</label
+            >
+            <label
+              ><input id="layer-forecast" type="checkbox" checked /> Selected
+              weather overlay</label
+            >
+            <label><input id="layer-central-coverage" type="checkbox" /> Survey evidence gaps · Central Coast</label>
+          </div>
+          <p id="central-coverage-status" class="small" role="status">Checking Central Coast source coverage…</p>
+          <p id="mpa-status" class="small" role="status">Loading protected-area boundaries…</p>
+          <p class="small">Pink boundaries: MPAs, always shown. Fishing targets are excluded from every MPA. Habitat footprints appear at close zoom.</p>
+          <div id="drift-options"></div>
+        </details>
+        <button id="show-commercial-ais" class="secondary">Show commercial AIS areas</button>
+        <p id="commercial-ais-status" class="small">Loading historical coverage…</p>
+        <button id="charter-status" class="charter-status">
+          <strong>Charter reports &amp; evidence</strong
+          ><span>Loading reported grounds…</span>
+        </button>
+        <div id="regional-explore" class="search-field" hidden>
+          <label for="map-focus">Explore a coast or island</label>
+          <select id="map-focus"><option value="all">Whole region</option></select>
+          <p class="small" id="habitat-layer-status" role="status"></p>
+          <label><input type="checkbox" id="survey-habitat-toggle" checked> Mapped habitat context</label>
+          <p class="small">Outlines follow surveyed substrate or dated kelp. Habitat context can extend beyond 200 ft where native depth is unknown; it is not a qualified fishing waypoint.</p>
+        </div>
+        <div class="search-field">
+          <label for="search">Find a spot</label
+          ><input
+            id="search"
+            type="search"
+            placeholder="Ground, boat, marker ID…"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+        </div>
+        <details class="filter-disclosure" id="filter-options">
+          <summary>
+            <span>Filters</span
+            ><span id="filter-summary">All areas · 300 ft</span>
+          </summary>
+          <section class="filters" aria-label="Filter spots">
+            <div class="filter-row">
+              <label
+                >Area<select id="area">
+                  <option value="all">All areas</option>
+                  <option value="PointBuchon">Avila / Point Buchon</option>
+                  <option value="MorroBay">Morro Bay</option>
+                  <option value="PointEstero">Point Estero</option>
+                </select></label
+              ><label
+                >Habitat grade<select id="grade">
+                  <option value="all">All grades</option>
+                  <option value="A">A · 75–100</option>
+                  <option value="B">B · 55–74</option>
+                  <option value="C">C · &lt;55</option>
+                </select></label
+              >
+            </div>
+            <div class="filter-row">
+              <label
+                >Target depth limit<select id="depth">
+                  <option value="300">300 ft</option>
+                  <option value="200">200 ft</option>
+                  <option value="150">150 ft</option>
+                  <option value="100">100 ft</option>
+                </select><small>Planning ceiling. Published Morro Bay surveyed spots currently reach 200 ft; no deeper marks are implied.</small></label
+              ><label
+                >Geometry<select id="geometry">
+                  <option value="all">All spots</option>
+                  <option value="drift">With a drift line</option>
+                  <option value="area">With a reef area</option>
+                </select></label
+              >
+            </div>
+            <p class="small">
+              Depth filters each spot’s 100 m neighborhood. Linked reef areas
+              and drift lines can extend deeper. Charter outlines are shown only
+              when their full survey-depth range fits the depth limit; terrain
+              grade and geometry filters apply to reef candidates only.
+            </p>
+            <div class="filter-actions">
+              <a href="#grade-guide">A / B / C explained</a
+              ><button id="reset-filters" class="text-button">
+                Reset filters
+              </button>
+            </div>
+          </section>
+        </details>
+        <button id="fit-map">Fit fishing areas on map</button>
+        <button id="species-info">Species field notes</button>
+        <a
+          class="download"
+          href="#export"
+
+          >Choose a set to export</a
+        >
+        <button id="about-button">About the atlas</button>
+      </div>
+    </dialog>
+    <dialog id="about-dialog" aria-labelledby="about-title">
+      <div class="dialog-head">
+        <h2 id="about-title">Know what’s on the map.</h2>
+        <button id="close-about" aria-label="Close about dialog">×</button>
+      </div>
+      <p>
+        This public edition contains
+        <strong
+          >132 habitat candidates, 107 partial reef outlines, and 31 optional
+          drift alignments</strong
+        >
+        derived from 2008 USGS surveys. The research screen is dated September
+        20, 2026.
+      </p>
+      <p>
+        <strong
+          >A = 75–100 (first look), B = 55–74 (useful alternatives), C = below
+          55 (exploratory).</strong
+        >
+        Grades rank measured terrain, not expected catches. There are no
+        verified catches or AIS-confirmed charter hotspots at these coordinates.
+        Outlines show selected habitat; they are not the complete reef. Lines
+        suggest an alignment over structure, not a boat route or a prediction of
+        your drift.
+      </p>
+      <p>
+        Depths use the survey’s MLLW reference. Tides, position uncertainty, and
+        seabed change affect the depth you find. Confirm depth and structure
+        with your sounder.
+      </p>
+      <p>
+        Cambria survey derivatives and the older DS1091 charter annotations are
+        excluded while source reuse terms are unresolved. The separate purple
+        charter layer uses dated public trip reports, with approximate search
+        outlines and no exact fishing positions. Protected-area boundaries and the Diablo Canyon security zone are shown separately. Targets and exports are gated by the current boundary screen. A marker does not
+        establish current legal access.
+      </p>
+      <div class="source-links">
+        <a
+          href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central"
+          target="_blank"
+          rel="noopener"
+          >CDFW current fishing rules ↗</a
+        ><a
+          href="https://wildlife.ca.gov/Conservation/Marine/MPAs"
+          target="_blank"
+          rel="noopener"
+          >CDFW marine protected areas ↗</a
+        ><a
+          href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=PZZ645"
+          target="_blank"
+          rel="noopener"
+          >NWS coastal forecast ↗</a
+        ><a href="downloads/spot-notes.html" target="_blank" rel="noopener"
+          >Complete offline target notes ↗</a
+        ><a href="sources.html">Sources, methods &amp; license ↗</a>
+      </div>
+      <p class="small">
+        The map is public. Optional sign-in enables private trip alerts and comfort feedback, with export and deletion controls. No analytics tracking is added. Map and forecast providers receive normal network requests.
+      </p>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <noscript
+      ><p class="error">
+        Enable JavaScript to use the map and forecasts.
+        <a href="#export">Open the export planner</a> or read the
+        <a href="downloads/spot-notes.html">offline notes</a>.
+      </p></noscript
+    >
+  </body>
+</html>

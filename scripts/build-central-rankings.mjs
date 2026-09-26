@@ -26,7 +26,9 @@ const targets = atlas.targets.map(t => {
     center_depth_ft:t.center_depth_ft, neighborhood_depth_ft:t.neighborhood_depth_ft,
     source_id:t.source_id, source_url:t.source_url, survey_year:t.survey_year,
     habitat_score:t.habitat_score, terrain_grade:t.habitat_grade,
+    terrain_interpretation_confidence:t.confidence,
     lingcod_fit_rank:lingcod.rank, rockfish_fit_rank:rockfish.rank,
+    lingcod_fit_index:lingcod.score, rockfish_fit_index:rockfish.score,
     lingcod_reason:lingcod.reason, rockfish_reason:rockfish.reason};
 });
 targets.sort((a,b) => a.lingcod_fit_rank-b.lingcod_fit_rank ||
@@ -37,6 +39,8 @@ const result = {schema_version:1, scope:'central-surveyed-rocky-species-fit',
   source_atlas_edition:atlas.edition, source_depth_ceiling_ft:200,
   boat_planning_depth_ceiling_ft:300, target_count:targets.length,
   closure_audited_at:screen.audited_at, rank_counts,
+  rank_thresholds:{strong:{minimum_index:0.9,minimum_rough_cover_fraction:0.7},
+    intermediate:{minimum_index:0.7}},
   rank_meaning:{1:'Stronger relative mapped habitat fit',2:'Intermediate relative mapped habitat fit',3:'Lower relative mapped habitat fit'},
   limitations:['These are historical surveyed habitat candidates, not verified catches or fish-presence probabilities.',
     'The existing target inventory ends at 200 ft. The 300-ft planning ceiling adds no newly qualified coordinates.',

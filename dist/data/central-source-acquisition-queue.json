@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "scope": "central-original-source-acquisition-queue",
+  "source_catalog_times": {
+    "noaa_discovery": "2026-09-23T18:33:06.148529+00:00",
+    "noaa_products": "2026-09-23T19:08:14.094982+00:00",
+    "usgs": "2026-09-25T09:06:16.053734+00:00"
+  },
+  "status": "research-only",
+  "region_gaps": [
+    "santa-cruz-monterey-bay",
+    "monterey-point-sur",
+    "big-sur-coast",
+    "south-big-sur-san-simeon",
+    "cambria-san-simeon",
+    "point-arguello-conception"
+  ],
+  "sectors": [
+    {
+      "sector_id": "pigeon-monterey",
+      "priority_tier": 1,
+      "noaa_catalog_lead_count": 6,
+      "noaa_catalog_leads_with_bag_links": 6,
+      "noaa_survey_ids": [
+        "F00600",
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447",
+        "W00614"
+      ],
+      "noaa_filename_fine_grid_leads": [
+        "F00600",
+        "W00614"
+      ],
+      "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_coarse_or_unresolved_leads": [
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Pigeon Point to Monterey Region",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/PigeonToMonterey/data_catalog_PigeonPointToMonterey.html",
+          "paired_original_products": false
+        },
+        {
+          "name": "Offshore of Pigeon Point",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data_catalog_OffshorePigeonPoint.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Scott Creek",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreScottCreek/data_catalog_OffshoreScottCreek.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Santa Cruz",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreSantaCruz/data_catalog_OffshoreSantaCruz.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Aptos",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreAptos/data_catalog_OffshoreAptos.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Monterey Canyon and Vicinity",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data_catalog_MontereyCanyon.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Monterey",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data_catalog_OffshoreMonterey.html",
+          "paired_original_products": true
+        }
+      ],
+      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    },
+    {
+      "sector_id": "monterey-sur",
+      "priority_tier": 1,
+      "noaa_catalog_lead_count": 4,
+      "noaa_catalog_leads_with_bag_links": 4,
+      "noaa_survey_ids": [
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447"
+      ],
+      "noaa_filename_fine_grid_leads": [],
+      "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_coarse_or_unresolved_leads": [
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Monterey Canyon and Vicinity",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/MontereyCanyon/data_catalog_MontereyCanyon.html",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Monterey",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data_catalog_OffshoreMonterey.html",
+          "paired_original_products": true
+        }
+      ],
+      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    },
+    {
+      "sector_id": "big-sur",
+      "priority_tier": 3,
+      "noaa_catalog_lead_count": 4,
+      "noaa_catalog_leads_with_bag_links": 4,
+      "noaa_survey_ids": [
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447"
+      ],
+      "noaa_filename_fine_grid_leads": [],
+      "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_coarse_or_unresolved_leads": [
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Point Sur to Point Arguello Region",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/PointSurToPointArguello/data_catalog_PointSurToPointArguello.html",
+          "paired_original_products": false
+        }
+      ],
+      "next_action": "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "priority_tier": 3,
+      "noaa_catalog_lead_count": 7,
+      "noaa_catalog_leads_with_bag_links": 7,
+      "noaa_survey_ids": [
+        "H13151",
+        "W00431",
+        "W00433",
+        "W00443",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "noaa_filename_fine_grid_leads": [],
+      "noaa_native_audit_refuted_fine_hint": [
+        "H13151",
+        "W00479"
+      ],
+      "noaa_coarse_or_unresolved_leads": [
+        "H13151",
+        "W00431",
+        "W00433",
+        "W00443",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Point Sur to Point Arguello Region",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/PointSurToPointArguello/data_catalog_PointSurToPointArguello.html",
+          "paired_original_products": false
+        }
+      ],
+      "next_action": "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    },
+    {
+      "sector_id": "cambria-morro",
+      "priority_tier": 1,
+      "noaa_catalog_lead_count": 8,
+      "noaa_catalog_leads_with_bag_links": 8,
+      "noaa_survey_ids": [
+        "H13089",
+        "H13151",
+        "W00431",
+        "W00433",
+        "W00443",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "noaa_filename_fine_grid_leads": [],
+      "noaa_native_audit_refuted_fine_hint": [
+        "H13089",
+        "H13151",
+        "W00479"
+      ],
+      "noaa_coarse_or_unresolved_leads": [
+        "H13089",
+        "H13151",
+        "W00431",
+        "W00433",
+        "W00443",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Offshore of Point Estero",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9ZSTUK1/",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Morro Bay",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9HEZNRO/",
+          "paired_original_products": true
+        },
+        {
+          "name": "Point Sur to Point Arguello Region",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/PointSurToPointArguello/data_catalog_PointSurToPointArguello.html",
+          "paired_original_products": false
+        }
+      ],
+      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    },
+    {
+      "sector_id": "morro-conception",
+      "priority_tier": 1,
+      "noaa_catalog_lead_count": 13,
+      "noaa_catalog_leads_with_bag_links": 13,
+      "noaa_survey_ids": [
+        "F00844",
+        "H11951",
+        "H11952",
+        "H11953",
+        "H13089",
+        "H13151",
+        "H13152",
+        "W00341",
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "noaa_filename_fine_grid_leads": [
+        "F00844",
+        "H11951",
+        "H11952",
+        "H11953",
+        "W00341"
+      ],
+      "noaa_native_audit_refuted_fine_hint": [
+        "H13089",
+        "H13151",
+        "H13152",
+        "W00479"
+      ],
+      "noaa_coarse_or_unresolved_leads": [
+        "H13089",
+        "H13151",
+        "H13152",
+        "W00431",
+        "W00433",
+        "W00444",
+        "W00447",
+        "W00479"
+      ],
+      "usgs_map_areas": [
+        {
+          "name": "Offshore of Morro Bay",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9HEZNRO/",
+          "paired_original_products": true
+        },
+        {
+          "name": "Offshore of Point Buchon",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9KBGELE/",
+          "paired_original_products": true
+        },
+        {
+          "name": "Point Sur to Point Arguello Region",
+          "catalog_url": "https://cmgds.marine.usgs.gov/data/csmp/PointSurToPointArguello/data_catalog_PointSurToPointArguello.html",
+          "paired_original_products": false
+        }
+      ],
+      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "blocking_checks": [
+        "valid measured cells within 300 ft plus uncertainty margin",
+        "paired high-resolution substrate and independent groundtruth",
+        "current MPA/federal/security/chart screen of full footprint"
+      ]
+    }
+  ],
+  "method_note": "Catalog intersections, BAG links and filename spacing hints are not measured raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion."
+}

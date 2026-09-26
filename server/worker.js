@@ -119,9 +119,9 @@ export default {async fetch(request,env){
     if(!env.ASSETS)return new Response('Not found',{status:404});
     // The Sites edge can retain a previously deployed asset at a stable URL.
     // Resolve the shell and its changed modules through versioned asset paths.
-    const current={'/':'/index-v195','/index.html':'/index-v195',
-      '/boot-coastwide-v3.js':'/boot-coastwide-v195.js',
-      '/app.js':'/app-v195.js','/survey-habitat.js':'/survey-habitat-v195.js'}[path];
+    const current={'/':'/index-v199','/index.html':'/index-v199',
+      '/boot-coastwide-v3.js':'/boot-coastwide-v199.js',
+      '/app.js':'/app-v199.js','/survey-habitat.js':'/survey-habitat-v195.js'}[path];
     if(!current)return env.ASSETS.fetch(request);
     const assetUrl=new URL(request.url);assetUrl.pathname=current;assetUrl.search='';
     const response=await env.ASSETS.fetch(new Request(assetUrl,request));

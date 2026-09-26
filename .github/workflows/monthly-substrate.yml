@@ -9,6 +9,33 @@ permissions:
   contents: read
 
 jobs:
+  central-coverage-and-source-queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Central gap ledger and catalog join
+        run: python -m unittest tests.test_central_coverage_pipeline -v
+      - name: Rebuild deterministic Central Coast coverage and source priorities
+        run: |
+          python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
+          python scripts/build_central_source_queue.py --output var/review/central-source-acquisition-queue.json
+      - name: Hold any unexplained publication drift for review
+        run: |
+          cmp var/review/central-coverage-ledger-v1.json dist/data/central-coverage-ledger-v1.json
+          cmp var/review/central-source-acquisition-queue.json dist/data/central-source-acquisition-queue.json
+      - name: Upload source-gap review even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-coast-source-gaps
+          path: |
+            var/review/central-coverage-ledger-v1.json
+            var/review/central-source-acquisition-queue.json
+          retention-days: 30
   san-pedro-original-character:
     runs-on: ubuntu-latest
     timeout-minutes: 20
