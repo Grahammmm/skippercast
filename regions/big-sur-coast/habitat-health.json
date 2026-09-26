@@ -1,1 +1,1 @@
-{"schema_version":1,"region_id":"big-sur-coast","generated_at":"2026-09-26T18:49:13Z","status":"degraded","issues":["sst-analysis","chlorophyll-observation"],"coverage_gaps":[]}
+{"schema_version":1,"region_id":"big-sur-coast","generated_at":"2026-09-26T19:03:24Z","status":"degraded","issues":["sst-analysis"],"coverage_gaps":[]}
