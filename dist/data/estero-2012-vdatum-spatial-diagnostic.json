@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scope": "estero-2012-vdatum-spatial-offset-diagnostic",
+  "service_documentation": "https://vdatum.noaa.gov/docs/services.html",
+  "source_survey": "https://doi.org/10.3133/ofr20131225",
+  "survey_horizontal_frame": "NAD83(CORS96), processing epoch 2010.1548",
+  "api_request_horizontal_frame": "NAD83_2011",
+  "source_vertical_datum": "NAVD88 Geoid12",
+  "target_vertical_datum": "MLLW",
+  "sample_lattice": {
+    "columns": 7,
+    "rows": 4,
+    "points": 28,
+    "maximum_spacing_m": 1033.3
+  },
+  "research_envelope_dimensions_m": [
+    5900,
+    3100
+  ],
+  "offset_m": {
+    "minimum": 0.021,
+    "maximum": 0.032,
+    "range": 0.011,
+    "maximum_adjacent_sample_change": 0.004
+  },
+  "vdatum_reported_uncertainty_m": {
+    "minimum": 0.098,
+    "maximum": 0.099
+  },
+  "private_sample_receipt_sha256": "16a16de5274953c9ccb911f5bf2ce09aae504a8b591b39540b4a891e67c25ab3",
+  "converted_source_raster": false,
+  "full_error_budget_resolved": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "These are NOAA point-service samples of a spatial NAVD88-to-MLLW offset, not a converted 2012 raster or a cellwise uncertainty bound. The source CORS96-to-API NAD83(2011) epoch bridge, 2012 CARIS TPU, horizontal registration and interpolation error remain unresolved. No site or route is cleared for fishing."
+}

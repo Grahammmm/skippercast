@@ -20,7 +20,7 @@ jobs:
       - name: Install pinned original-grid readers
         run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_csumb_estero_2010_blocks -v
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python scripts/audit_point_estero_original_pair.py --fetch
@@ -54,6 +54,12 @@ jobs:
         run: >-
           python scripts/audit_estero_vdatum_frames.py --expect-current-gates
           --output var/review/estero-2012-vdatum-frame-review.json
+      - name: Recheck spatial VDatum offset without converting the source raster
+        run: >-
+          python scripts/audit_estero_vdatum_spatial.py
+          --blocks var/review/estero-nominal-research-blocks.geojson
+          --private-output var/review/estero-vdatum-spatial-samples.json
+          --output var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Detect changed research-only original cells
         run: |
           cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
@@ -61,6 +67,7 @@ jobs:
           cmp dist/data/estero-independent-2012-depth-2008-character-overlap.json var/review/estero-independent-2012-depth-2008-character-overlap.json
           python scripts/check_estero_review_change.py --current var/review/estero-2012-depth-class-closure-block-review.json
           cmp dist/data/csumb-scc-2010-estero-original-block-coverage.json var/review/csumb-scc-2010-estero-original-block-coverage.json
+          cmp dist/data/estero-2012-vdatum-spatial-diagnostic.json var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Upload research-only source audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,6 +83,8 @@ jobs:
             var/review/estero-federal-areas.geojson
             var/review/enc-hazards-estero-independent-deep-hard.geojson
             var/review/estero-2012-vdatum-frame-review.json
+            var/review/estero-2012-vdatum-spatial-diagnostic.json
+            var/review/estero-vdatum-spatial-samples.json
           retention-days: 30
   point-buchon-original-pair:
     runs-on: ubuntu-latest

@@ -85,6 +85,8 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(crosscheck["shallower_research_blocks_with_measured_2010_cells"], 4)
         self.assertEqual(crosscheck["deeper_research_blocks_with_measured_2010_cells"], 0)
         self.assertFalse(crosscheck["exportable"])
+        self.assertEqual(estero["estero_vdatum_spatial_diagnostic"]["sample_points"], 28)
+        self.assertFalse(estero["estero_vdatum_spatial_diagnostic"]["fishing_target"])
 
     def test_unreviewed_bluetopo_lead_blocks_queue(self):
         original = sources.read

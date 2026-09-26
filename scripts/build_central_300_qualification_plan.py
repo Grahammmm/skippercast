@@ -127,6 +127,12 @@ def build(root):
             receipts.append(row["csumb_native_band_receipt"])
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
+            spatial = row.get("estero_vdatum_spatial_diagnostic")
+            if (not spatial or spatial["sample_points"] != 28
+                    or spatial["fishing_target"] is not False
+                    or spatial["exportable"] is not False):
+                raise ValueError("Estero VDatum spatial evidence changed")
+            receipts.append(spatial["receipt"])
         if sector_id == "morro-conception":
             receipts.append(buchon_path)
         if row.get("noaa_usgs_original_character_overlap"):

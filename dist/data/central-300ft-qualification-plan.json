@@ -4,7 +4,7 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "ae9b1837c9bd61111c769dc61aa8f1a7c972a3a3498f63f98ff4b9651cfad37c",
+    "dist/data/central-source-acquisition-queue.json": "f7ea14c598fba6d684cc695b32e45e89748e1687eb7dd60d77b9d6c972a09fb3",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "87fa25e2ca585fd3ac4610550658a0a46a560906b08c69f35a195789f9d3c487",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f"
@@ -424,6 +424,7 @@
       "limiting_evidence": "The 2010 independent cross-check reaches four shallow blocks and no deeper blocks; total depth error remains unknown.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
         "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
         "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json"
       ],

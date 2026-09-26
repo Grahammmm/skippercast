@@ -30,6 +30,7 @@ class QualificationPlanTests(unittest.TestCase):
         estero = next(s for s in result["sectors"] if s["sector_id"] == "cambria-morro")
         self.assertEqual(estero["native_cell_evidence"], "source-datum-only")
         self.assertIn("CARIS TPU", estero["next_acquisition"])
+        self.assertIn("dist/data/estero-2012-vdatum-spatial-diagnostic.json", estero["source_receipts"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):
         original = plan.load

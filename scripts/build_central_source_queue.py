@@ -40,6 +40,14 @@ def build(root):
     estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
     estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
     scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
+    estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
+    if (estero_vdatum_spatial.get("scope") != "estero-2012-vdatum-spatial-offset-diagnostic"
+            or estero_vdatum_spatial.get("sample_lattice", {}).get("points") != 28
+            or estero_vdatum_spatial.get("converted_source_raster") is not False
+            or estero_vdatum_spatial.get("full_error_budget_resolved") is not False
+            or estero_vdatum_spatial.get("qualified_waypoints") != 0
+            or estero_vdatum_spatial.get("fishing_target") is not False):
+        raise ValueError("Estero VDatum spatial diagnostic changed or was promoted")
     pigeon_class = read(root / "dist/data/w00614-pigeon-original-character-overlap.json")
     pigeon_binding = read(root / "catalog/pigeon-w00614-original-class-binding.json")
     if (pigeon_class.get("scope") != pigeon_binding.get("scope")
@@ -328,6 +336,14 @@ def build(root):
                     for row in scc_estero["source_results"]),
                 "deeper_research_blocks_with_measured_2010_cells": 0,
                 "release_status": "source-coverage-only",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "cambria-morro" else None),
+            "estero_vdatum_spatial_diagnostic": ({
+                "receipt": "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
+                "sample_points": estero_vdatum_spatial["sample_lattice"]["points"],
+                "offset_range_m": estero_vdatum_spatial["offset_m"]["range"],
+                "release_status": "CORS96-registration-and-total-uncertainty-hold",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "cambria-morro" else None),

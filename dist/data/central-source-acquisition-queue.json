@@ -99,6 +99,7 @@
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
+      "estero_vdatum_spatial_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Pigeon Point to Monterey Region",
@@ -217,6 +218,7 @@
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
+      "estero_vdatum_spatial_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Monterey Canyon and Vicinity",
@@ -335,6 +337,7 @@
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
+      "estero_vdatum_spatial_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -442,6 +445,7 @@
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
+      "estero_vdatum_spatial_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -522,6 +526,14 @@
         "shallower_research_blocks_with_measured_2010_cells": 4,
         "deeper_research_blocks_with_measured_2010_cells": 0,
         "release_status": "source-coverage-only",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "estero_vdatum_spatial_diagnostic": {
+        "receipt": "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
+        "sample_points": 28,
+        "offset_range_m": 0.011,
+        "release_status": "CORS96-registration-and-total-uncertainty-hold",
         "fishing_target": false,
         "exportable": false
       },
@@ -640,6 +652,7 @@
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
+      "estero_vdatum_spatial_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Offshore of Morro Bay",
