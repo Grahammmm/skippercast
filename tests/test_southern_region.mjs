@@ -17,7 +17,15 @@ test('southern contexts isolate San Diego and Santa Barbara tides, buoy and new 
  assert.equal(localContext('san-miguel').marine_zones.coastal,'PZZ673');
  assert.equal(localContext('santa-rosa').marine_zones.offshore,'PZZ673');
  assert.equal(localContext('santa-barbara-island').marine_zones.coastal,'PZZ676');
+ assert.equal(localContext('san-nicolas').marine_zones.coastal,'PZZ676');
+ assert.equal(localContext('san-clemente').marine_zones.coastal,'PZZ676');
  for(const focus of r.map.focus_areas)assert.ok(r.forecast_points.some(p=>p.id===focus.forecast_point));
+ for(const id of ['anacapa','santa-cruz','santa-rosa','san-miguel','santa-barbara-island','catalina','san-nicolas','san-clemente']){
+  const area=r.map.local_areas.find(a=>a.id===id),focus=r.map.focus_areas.find(a=>a.id===id);
+  assert.ok(area&&focus,`${id} needs a mapped locality and selectable focus`);
+  assert.deepEqual(focus.bounds,area.bounds);
+  assert.ok(r.forecast_points.some(p=>p.id===focus.forecast_point));
+ }
  const b={models:{},contexts:{'san-diego':{tides:[1],alerts:{coastal:['SD alert']}}}};
  assert.deepEqual(pointBundle(b,'santa-barbara').tides,[]);
  assert.deepEqual(pointBundle(b,'santa-barbara').alerts,{});

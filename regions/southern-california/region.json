@@ -102,6 +102,18 @@
         "forecast_point": "catalina"
       },
       {
+        "id": "san-nicolas",
+        "name": "San Nicolas Island",
+        "bounds": [-119.65, 33.13, -119.25, 33.42],
+        "forecast_point": "san-nicolas"
+      },
+      {
+        "id": "san-clemente",
+        "name": "San Clemente Island",
+        "bounds": [-118.75, 32.65, -118.2, 33.13],
+        "forecast_point": "san-clemente"
+      },
+      {
         "id": "san-diego",
         "name": "San Diego coast",
         "bounds": [
@@ -537,6 +549,22 @@
       "latitude": 33.48,
       "longitude": -119.08,
       "context": "outer-islands"
+    },
+    {
+      "id": "san-nicolas",
+      "name": "San Nicolas Island offshore sample",
+      "latitude": 33.3,
+      "longitude": -119.45,
+      "context": "outer-islands",
+      "offshore": true
+    },
+    {
+      "id": "san-clemente",
+      "name": "San Clemente Island west offshore sample",
+      "latitude": 32.9,
+      "longitude": -118.7,
+      "context": "outer-islands",
+      "offshore": true
     }
   ],
   "marine_zones": {

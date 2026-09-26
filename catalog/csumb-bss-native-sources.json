@@ -86,6 +86,23 @@
       "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
       "status": "research-only",
       "limitations": "The original 2 m NAVD88 grid contains shallow source-datum cells north of the Piedras Blancas MPAs, but the terrain class is derived from bathymetry rather than independent rock evidence. No chart-datum conversion, per-cell uncertainty, producer redistribution rights, chart hazards, approach, or fishing-date legal clearance has been established. No fishing target, score or export is supported."
+    },
+    {
+      "id": "csumb-bss-block08",
+      "survey_id": "BSS_Block08",
+      "producer": "CSU Monterey Bay Seafloor Mapping Lab",
+      "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version2/products/BSS_Block08_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block08_mb.html",
+      "original_metadata_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version1/metadata/BigSurSouth_BSS_Project.xml",
+      "archive_sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
+      "archive_bytes": 81146262,
+      "bathymetry_grid": "BSS_Block08/Bathymetry/ArcViewGrids/bss08_2mbathy",
+      "habitat_grid": "BSS_Block08/Habitat/ArcViewGrids/bss08_2mhab",
+      "acquisition_year": 2011,
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+      "status": "research-only",
+      "limitations": "Native 2 m NAVD88 bathymetry and derived rough habitat remain research only. Chart-datum conversion, per-cell uncertainty, independent substrate, redistribution rights, current MPAs, chart hazards, local rules and route review are unresolved; no target or export is supported."
     }
   ]
 }

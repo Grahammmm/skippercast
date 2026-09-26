@@ -38,7 +38,7 @@ class CsumbVdatumBridgeTests(unittest.TestCase):
                     't_z': '-0.04', 'uncertainty': '0.10'}
 
         receipt = compile_review(sources, get=get)
-        self.assertEqual(len(receipt['samples']), 8)
+        self.assertEqual(len(receipt['samples']), 9)
         self.assertTrue(all(row['status'] == 'sample_available' for row in receipt['samples']))
         self.assertEqual(receipt['alternative_horizontal_frame_probe']['status'], 'api_rejected')
         self.assertFalse(receipt['source_horizontal_realization_verified'])
