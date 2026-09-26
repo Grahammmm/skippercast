@@ -17,7 +17,7 @@ try {
     initCoastSelector(catalog,coast);
     void initCoastalContext(catalog,coast);
     void initRecentDiscussions(url.searchParams.get('region')||'morro-bay');
-    await import("./app.js?v=8.15");
+    await import("./app.js?v=8.16");
   }
   }
 } catch(error) {

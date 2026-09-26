@@ -548,6 +548,11 @@ try {
   if (!response.ok)
     throw new Error(`Atlas request failed (${response.status})`);
   atlas = await response.json();
+  if(getRegion().id==='morro-bay'){
+    const note=$('region-note');
+    note.hidden=false;
+    note.textContent=`${atlas.targets.length} surveyed reef candidates near Morro Bay only. Elsewhere on this coast, fishing marks await survey qualification. Numbered circles group nearby spots; zoom in for individual 1–3 habitat ranks.`;
+  }
   initMap();
   boatPosition=initBoatPosition(map,{onMapRequested:()=>navigation.showView('map')});
   protectedAreas = await initProtectedAreas(map, () => filterTargets());
