@@ -49,6 +49,7 @@ def fresh(value, now):
 def source_blocks(bathy_zip, character_zip, rov_csv, rov_pin):
     source_bytes(rov_csv, rov_pin)
     blocks = defaultdict(lambda: {"subunits": 0, "lingcod_seen": 0, "vermilion_seen": 0,
+                                  "centers_on_at_or_over_80m_5m_source": 0,
                                   "classes": Counter(), "years": set()})
     seen = set()
     with rasterio.open(original_tiff(bathy_zip)) as bathy, rasterio.open(original_tiff(character_zip)) as character:
@@ -82,6 +83,7 @@ def source_blocks(bathy_zip, character_zip, rov_csv, rov_pin):
                 key = (int(x // GRID_M), int(y // GRID_M))
                 item = blocks[key]
                 item["subunits"] += 1
+                item["centers_on_at_or_over_80m_5m_source"] += int(-float(depth) >= 80)
                 item["lingcod_seen"] += int(row["Lingcod"])
                 item["vermilion_seen"] += int(row["Vermilion_rf"])
                 item["classes"][kind] += 1
@@ -139,6 +141,7 @@ def build(blocks, mpas, federal, enc, *, now=None):
         totals["blocks"] += 1
         totals["subunits"] += item["subunits"]
         totals["hard_rugose_subunits"] += item["classes"]["hard_rugose"]
+        totals["centers_on_at_or_over_80m_5m_source"] += item["centers_on_at_or_over_80m_5m_source"]
         for label, held in holds.items():
             totals[label + "_margin_blocks"] += int(held)
             totals[label + "_margin_subunits"] += item["subunits"] if held else 0
@@ -147,6 +150,7 @@ def build(blocks, mpas, federal, enc, *, now=None):
                         "properties": {"subunits": item["subunits"], "classes": dict(item["classes"]),
                                        "lingcod_seen": item["lingcod_seen"],
                                        "vermilion_seen": item["vermilion_seen"],
+                                       "centers_on_at_or_over_80m_5m_source": item["centers_on_at_or_over_80m_5m_source"],
                                        "observation_years": sorted(item["years"]),
                                        "review_holds": holds, "fishing_target": False,
                                        "exportable": False}})
@@ -171,6 +175,7 @@ def build(blocks, mpas, federal, enc, *, now=None):
              "totals": dict(sorted(totals.items())), "qualified_waypoints": 0,
              "fishing_target": False, "exportable": False,
              "limitations": ["Historical 10 m ROV subunits are grouped into 100 m private research blocks, not fishable reef boundaries or current catch observations.",
+                             "All open-reference ROV center overlays are shallower than 80 m in the USGS mosaic; they do not biologically sample its 5 m source-gridded deeper band.",
                              "A 100 m GIS review margin is not an uncertainty-derived safe approach, drift or transit buffer.",
                              "CDFW MPA, NOAA GEA and three-scale ENC danger layers are a partial screen; other closures, security areas, current rules, chart completeness and full routes remain unresolved.",
                              "The original USGS 200–300 ft band is source-datum only and has no established upper depth uncertainty."]},

@@ -13,6 +13,7 @@
   },
   "limitations": [
     "Historical 10 m ROV subunits are grouped into 100 m private research blocks, not fishable reef boundaries or current catch observations.",
+    "All open-reference ROV center overlays are shallower than 80 m in the USGS mosaic; they do not biologically sample its 5 m source-gridded deeper band.",
     "A 100 m GIS review margin is not an uncertainty-derived safe approach, drift or transit buffer.",
     "CDFW MPA, NOAA GEA and three-scale ENC danger layers are a partial screen; other closures, security areas, current rules, chart completeness and full routes remain unresolved.",
     "The original USGS 200\u2013300 ft band is source-datum only and has no established upper depth uncertainty."
@@ -42,6 +43,7 @@
   "totals": {
     "all_three_clear_margin_blocks": 26,
     "blocks": 26,
+    "centers_on_at_or_over_80m_5m_source": 0,
     "charted_danger_margin_blocks": 0,
     "charted_danger_margin_subunits": 0,
     "gea_margin_blocks": 0,

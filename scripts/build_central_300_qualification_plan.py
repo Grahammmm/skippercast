@@ -157,6 +157,17 @@ def build(root):
                     or rov_access["exportable"] is not False):
                 raise ValueError("Point Buchon ROV access triage changed")
             receipts.append(rov_access["receipt"])
+            source_grid = row.get("point_buchon_source_gridding_resolution")
+            if (not source_grid or source_grid["source_grid_m_deeper_than_80m"] != 5
+                    or source_grid["nominal_hard_rugose_published_cells_from_5m_source"] != 70158
+                    or source_grid["fishing_target"] is not False):
+                raise ValueError("Point Buchon deeper source-gridding resolution changed")
+            receipts.append(source_grid["receipt"])
+            datum_lead = row.get("point_buchon_datum_provenance_lead")
+            if (not datum_lead or datum_lead["usgs_published_raster_output_datum"] != "unresolved"
+                    or datum_lead["fishing_target"] is not False):
+                raise ValueError("Point Buchon datum provenance lead changed")
+            receipts.append(datum_lead["receipt"])
         if row.get("noaa_usgs_original_character_overlap"):
             class_lead = row["noaa_usgs_original_character_overlap"]
             if (class_lead["depth_qualified_cells"] != 141331

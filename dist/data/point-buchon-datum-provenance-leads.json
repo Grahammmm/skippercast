@@ -1,0 +1,48 @@
+{
+  "acquisition_actions": [
+    "Obtain CSUMB/Fugro original Point Buchon bathymetry survey processing report and CUBE/TPU or BASE uncertainty surface.",
+    "Establish source file and processing-lineage linkage between the PG&E CSMP comparison grid and the USGS 2022 GeoTIFF.",
+    "Obtain an explicitly declared output vertical datum, horizontal realization and epoch for the USGS raster and original 5 m deep grid.",
+    "Resolve the two listed 2007 Point Buchon control and MPA bathymetry archives or request current copies from the CSUMB data custodian."
+  ],
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "A datum stated for a related CSMP grid cannot be assigned to the later USGS mosaic without source-to-source provenance.",
+    "The 20 cm phrase is a lower bound on accuracy, not a maximum vertical error.",
+    "Listed legacy download URLs are acquisition leads, not verified accessible or same-survey products."
+  ],
+  "qualified_waypoints": 0,
+  "related_csmp_mbes_product": {
+    "reported_horizontal_frame": "NAD83(CORS96), epoch 2002, UTM 10N",
+    "reported_vertical_datum": "NAVD88 (geoids03-09)",
+    "same_bytes_or_processing_lineage_as_usgs_release_proven": false,
+    "table_pdf_page": 13
+  },
+  "schema_version": 1,
+  "scope": "point-buchon-datum-and-original-grid-provenance-leads",
+  "source_sha256": {
+    "csumb_legacy_library_html": "e8dbb107fce2008462fec99228a13897cda86fa1bda83dda002b98ede970b49c",
+    "pge_technical_appendix_pdf": "49babc172bc2de9e6fa349aa257499e9f88a5c69b89817f0963634f2bab9d77a",
+    "usgs_bathymetry_metadata": "67f5bd344c133d44fdabc3893f15dc7da6f0c69a30017d62ccfcfed60b4eec63"
+  },
+  "source_urls": {
+    "csumb_legacy_library": "http://seafloor.otterlabs.org/SFMLwebDATA_c.htm#BUCHON",
+    "csumb_listed_archive_leads": [
+      "http://arcims.csumb.edu/DATA_DOWNLOAD/PointBuchon07/PtBuchon_CON_2m_BathyGrids.zip",
+      "http://arcims.csumb.edu/DATA_DOWNLOAD/PointBuchon07/PtBuchon_MPA_2m_BathyGrids.zip",
+      "http://arcims.csumb.edu/DATA_DOWNLOAD/PointBuchon07/PtBuchon07_2m_xyz.zip"
+    ],
+    "pge_technical_appendix_pdf": "https://www.pge.com/assets/pge/docs/about/pge-systems/Ch2.GEO.DCPP.TR.12.01_R1_AppA.pdf",
+    "usgs_bathymetry_metadata": "https://cmgds.marine.usgs.gov/catalog/pcmsc/DataReleases/CMGDS_DR_tool/DR_P9KBGELE/Bathymetry_OffshorePointBuchon_metadata.html"
+  },
+  "usgs_published_raster": {
+    "horizontal_crs": "WGS84 UTM 10N",
+    "metadata_uncertainty_phrase_is_lower_bound_only": true,
+    "output_vertical_datum": "unresolved",
+    "published_pixel_spacing_m": 2,
+    "source_gridding_m_deeper_than_80m": 5,
+    "source_gridding_m_under_80m": 2,
+    "upper_depth_uncertainty_m": null
+  }
+}

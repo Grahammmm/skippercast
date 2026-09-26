@@ -18,6 +18,7 @@ class PointBuchonRovAccessBlocksTest(unittest.TestCase):
         # The screen must inspect the full block plus margin, not just a ROV center.
         from unittest.mock import patch
         blocks = {(100, 100): {"subunits": 2, "lingcod_seen": 1, "vermilion_seen": 0,
+                               "centers_on_at_or_over_80m_5m_source": 0,
                                "classes": Counter({"hard_rugose": 2}), "years": {2020}}}
         geometry = box(10150, 10020, 10160, 10080)
         mpa = {"status": "research-closure-screen-only", "checked_at": "2026-09-26T12:00:00Z",
@@ -40,6 +41,7 @@ class PointBuchonRovAccessBlocksTest(unittest.TestCase):
         self.assertEqual(report["totals"]["blocks"], 26)
         self.assertEqual(report["totals"]["subunits"], 183)
         self.assertEqual(report["totals"]["hard_rugose_subunits"], 58)
+        self.assertEqual(report["totals"]["centers_on_at_or_over_80m_5m_source"], 0)
         self.assertEqual(report["qualified_waypoints"], 0)
         self.assertFalse(report["fishing_target"])
         self.assertFalse(report["exportable"])

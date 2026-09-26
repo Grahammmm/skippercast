@@ -44,12 +44,33 @@ def build(root):
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
+    buchon_original = read(root / "dist/data/point-buchon-original-paired-200-300ft-review.json")
+    buchon_datum_leads = read(root / "dist/data/point-buchon-datum-provenance-leads.json")
+    if (buchon_datum_leads.get("scope") != "point-buchon-datum-and-original-grid-provenance-leads"
+            or buchon_datum_leads.get("usgs_published_raster", {}).get("output_vertical_datum") != "unresolved"
+            or buchon_datum_leads.get("related_csmp_mbes_product", {}).get("same_bytes_or_processing_lineage_as_usgs_release_proven") is not False
+            or buchon_datum_leads.get("qualified_waypoints") != 0
+            or buchon_datum_leads.get("fishing_target") is not False):
+        raise ValueError("Point Buchon datum provenance lead changed")
     buchon_bluetopo = read(root / "dist/data/point-buchon-bluetopo-hard-cell-overlap.json")
+    hard_buchon = buchon_original.get("paired_nominal_band_by_character", {}).get("hard_rugose", {})
+    if (buchon_original.get("bathymetry_metadata_sha256")
+            != "67f5bd344c133d44fdabc3893f15dc7da6f0c69a30017d62ccfcfed60b4eec63"
+            or buchon_original.get("published_grid_resolution_m") != 2
+            or buchon_original.get("source_gridding_resolution_m", {}).get("deeper_than_80m") != 5
+            or hard_buchon.get("cells") != 804337
+            or hard_buchon.get("cells_from_at_or_over_80m_5m_source") != 70158
+            or max(row["observed_depth_range_m"][1] for row in
+                   buchon_original.get("open_reference_rov_at_nominal_centers", [])) != 66.37
+            or buchon_original.get("qualified_waypoints") != 0
+            or buchon_original.get("fishing_target") is not False):
+        raise ValueError("Point Buchon USGS source-gridding resolution review changed")
     buchon_access = read(root / "dist/data/point-buchon-rov-access-triage.json")
     if (buchon_access.get("scope") != "point-buchon-open-reference-rov-100m-access-triage"
             or buchon_access.get("totals", {}).get("blocks") != 26
             or buchon_access.get("totals", {}).get("subunits") != 183
             or buchon_access.get("totals", {}).get("hard_rugose_subunits") != 58
+            or buchon_access.get("totals", {}).get("centers_on_at_or_over_80m_5m_source") != 0
             or buchon_access.get("noaa_enc_query_layers") != 18
             or buchon_access.get("qualified_waypoints") != 0
             or buchon_access.get("fishing_target") is not False
@@ -365,6 +386,24 @@ def build(root):
                 "private_research_blocks": buchon_access["totals"]["blocks"],
                 "historic_open_reference_subunits": buchon_access["totals"]["subunits"],
                 "claim": "A bounded current MPA, NOAA GEA and ENC danger screen clears 26 historical ROV research blocks with a 100 m review margin; no complete route, security, depth or rules clearance.",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_buchon_source_gridding_resolution": ({
+                "receipt": "dist/data/point-buchon-original-paired-200-300ft-review.json",
+                "published_grid_m": 2,
+                "source_grid_m_deeper_than_80m": 5,
+                "nominal_hard_rugose_published_cells_from_5m_source": hard_buchon["cells_from_at_or_over_80m_5m_source"],
+                "deepest_published_open_reference_rov_observed_depth_m": 66.37,
+                "claim": "The 2 m published mosaic includes 5 m source-gridded bathymetry deeper than 80 m; fine pixel spacing does not imply 2 m independent bottom detail there.",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_buchon_datum_provenance_lead": ({
+                "receipt": "dist/data/point-buchon-datum-provenance-leads.json",
+                "related_product_reported_datum": buchon_datum_leads["related_csmp_mbes_product"]["reported_vertical_datum"],
+                "usgs_published_raster_output_datum": "unresolved",
+                "claim": "A PG&E technical appendix reports NAVD88 for a related CSMP MBES product, but its processing lineage to the USGS release is not established; CSUMB lists two older Point Buchon grid archives as acquisition leads.",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "morro-conception" else None),

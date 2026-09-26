@@ -46,6 +46,8 @@
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
       "point_buchon_rov_access_triage": null,
+      "point_buchon_source_gridding_resolution": null,
+      "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -167,6 +169,8 @@
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
       "point_buchon_rov_access_triage": null,
+      "point_buchon_source_gridding_resolution": null,
+      "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -265,6 +269,8 @@
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
       "point_buchon_rov_access_triage": null,
+      "point_buchon_source_gridding_resolution": null,
+      "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -394,6 +400,8 @@
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
       "point_buchon_rov_access_triage": null,
+      "point_buchon_source_gridding_resolution": null,
+      "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -512,6 +520,8 @@
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
       "point_buchon_rov_access_triage": null,
+      "point_buchon_source_gridding_resolution": null,
+      "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -676,6 +686,24 @@
         "private_research_blocks": 26,
         "historic_open_reference_subunits": 183,
         "claim": "A bounded current MPA, NOAA GEA and ENC danger screen clears 26 historical ROV research blocks with a 100 m review margin; no complete route, security, depth or rules clearance.",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "point_buchon_source_gridding_resolution": {
+        "receipt": "dist/data/point-buchon-original-paired-200-300ft-review.json",
+        "published_grid_m": 2,
+        "source_grid_m_deeper_than_80m": 5,
+        "nominal_hard_rugose_published_cells_from_5m_source": 70158,
+        "deepest_published_open_reference_rov_observed_depth_m": 66.37,
+        "claim": "The 2 m published mosaic includes 5 m source-gridded bathymetry deeper than 80 m; fine pixel spacing does not imply 2 m independent bottom detail there.",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "point_buchon_datum_provenance_lead": {
+        "receipt": "dist/data/point-buchon-datum-provenance-leads.json",
+        "related_product_reported_datum": "NAVD88 (geoids03-09)",
+        "usgs_published_raster_output_datum": "unresolved",
+        "claim": "A PG&E technical appendix reports NAVD88 for a related CSMP MBES product, but its processing lineage to the USGS release is not established; CSUMB lists two older Point Buchon grid archives as acquisition leads.",
         "fishing_target": false,
         "exportable": false
       },

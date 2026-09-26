@@ -4,9 +4,9 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "321b2aa09559d87fae5e0b2361ed088ae0bf91540ceaf1540b6f19402a509ff1",
+    "dist/data/central-source-acquisition-queue.json": "4b0f748f0e877c9bdd53010a8931ec8d09b638f3129b2e110376cf1eef71d847",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
-    "dist/data/point-buchon-original-paired-200-300ft-review.json": "87fa25e2ca585fd3ac4610550658a0a46a560906b08c69f35a195789f9d3c487",
+    "dist/data/point-buchon-original-paired-200-300ft-review.json": "8904b11fb07b822e55acf0dcde7433bc80b3013e379e7b2ed9868afc2ffcc6a0",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f"
   },
   "release_gate_ids": [
@@ -508,6 +508,7 @@
       "source_receipts": [
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/point-buchon-bluetopo-hard-cell-overlap.json",
+        "dist/data/point-buchon-datum-provenance-leads.json",
         "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
         "dist/data/point-buchon-original-paired-200-300ft-review.json",
         "dist/data/point-buchon-rov-access-triage.json"
