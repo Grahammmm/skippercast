@@ -78,6 +78,11 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertFalse(lead["exportable"])
         self.assertTrue(all(row["estero_independent_depth_character_lead"] is None
                             for row in result["sectors"] if row["sector_id"] != "cambria-morro"))
+        crosscheck = estero["csumb_scc_estero_2010_crosscheck"]
+        self.assertEqual(crosscheck["survey_ids"], ["SCC_Block12", "SCC_Block13"])
+        self.assertEqual(crosscheck["shallower_research_blocks_with_measured_2010_cells"], 4)
+        self.assertEqual(crosscheck["deeper_research_blocks_with_measured_2010_cells"], 0)
+        self.assertFalse(crosscheck["exportable"])
 
     def test_unreviewed_bluetopo_lead_blocks_queue(self):
         original = sources.read

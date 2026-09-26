@@ -91,6 +91,7 @@
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
+      "csumb_scc_estero_2010_crosscheck": null,
       "usgs_map_areas": [
         {
           "name": "Pigeon Point to Monterey Region",
@@ -207,6 +208,7 @@
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
+      "csumb_scc_estero_2010_crosscheck": null,
       "usgs_map_areas": [
         {
           "name": "Monterey Canyon and Vicinity",
@@ -323,6 +325,7 @@
       ],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
+      "csumb_scc_estero_2010_crosscheck": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -428,6 +431,7 @@
       ],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
+      "csumb_scc_estero_2010_crosscheck": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -495,6 +499,18 @@
         "nominal_200_300ft_depth_cells": 9593612,
         "nominal_200_300ft_independent_hard_rugose_overlap_cells": 24210,
         "release_status": "datum-registration-uncertainty-legal-chart-biology-hold",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "csumb_scc_estero_2010_crosscheck": {
+        "receipt": "dist/data/csumb-scc-2010-estero-original-block-coverage.json",
+        "survey_ids": [
+          "SCC_Block12",
+          "SCC_Block13"
+        ],
+        "shallower_research_blocks_with_measured_2010_cells": 4,
+        "deeper_research_blocks_with_measured_2010_cells": 0,
+        "release_status": "source-coverage-only",
         "fishing_target": false,
         "exportable": false
       },
@@ -611,6 +627,7 @@
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "estero_independent_depth_character_lead": null,
+      "csumb_scc_estero_2010_crosscheck": null,
       "usgs_map_areas": [
         {
           "name": "Offshore of Morro Bay",
@@ -636,5 +653,5 @@
       ]
     }
   ],
-  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. Re-run discovery and inspect original pixels before promotion."
+  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion."
 }

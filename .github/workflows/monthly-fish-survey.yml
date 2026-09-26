@@ -20,7 +20,7 @@ jobs:
       - name: Install pinned original-grid readers
         run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks -v
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_csumb_estero_2010_blocks -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python scripts/audit_point_estero_original_pair.py --fetch
@@ -46,6 +46,10 @@ jobs:
           --enc var/review/enc-hazards-estero-independent-deep-hard.geojson
           --private-blocks var/review/estero-nominal-research-blocks.geojson
           --output var/review/estero-2012-depth-class-closure-block-review.json
+      - name: Cross-check original 2010 CSUMB 2 m bathymetry on the Estero blocks
+        run: >-
+          python scripts/audit_csumb_estero_2010_blocks.py --fetch
+          --output var/review/csumb-scc-2010-estero-original-block-coverage.json
       - name: Recheck VDatum source-frame acceptance without converting a grid
         run: >-
           python scripts/audit_estero_vdatum_frames.py --expect-current-gates
@@ -56,6 +60,7 @@ jobs:
           cmp dist/data/usgs-estero-bay-2012-original-200-300ft-review.json var/review/usgs-estero-bay-2012-original-200-300ft-review.json
           cmp dist/data/estero-independent-2012-depth-2008-character-overlap.json var/review/estero-independent-2012-depth-2008-character-overlap.json
           python scripts/check_estero_review_change.py --current var/review/estero-2012-depth-class-closure-block-review.json
+          cmp dist/data/csumb-scc-2010-estero-original-block-coverage.json var/review/csumb-scc-2010-estero-original-block-coverage.json
       - name: Upload research-only source audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,6 +71,7 @@ jobs:
             var/review/usgs-estero-bay-2012-original-200-300ft-review.json
             var/review/estero-independent-2012-depth-2008-character-overlap.json
             var/review/estero-2012-depth-class-closure-block-review.json
+            var/review/csumb-scc-2010-estero-original-block-coverage.json
             var/review/estero-cdfw-mpas.geojson
             var/review/estero-federal-areas.geojson
             var/review/enc-hazards-estero-independent-deep-hard.geojson

@@ -1,0 +1,86 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "2010 SCC grids are original measured coverage, but their NAVD88 Geoid09 elevations are not MLLW chart depths.",
+    "The source metadata states \u00b120 cm vertical accuracy varies with depth; it supplies no per-cell upper bound.",
+    "The 2010 habitat grid derives ruggedness from the 2010 depth grid and is not independent rock or fish groundtruth.",
+    "Nominal 2010-minus-2012 nearest-cell differences in the overlapping shallow blocks combine geoid09/geoid12, epoch/registration, resampling, survey and possible seabed-change effects; their 95th percentile is not an upper depth-uncertainty bound.",
+    "Research blocks aggregate 2012 depth and 2008 class cells; 2010 cells within a block do not prove exact cell registration, unchanged bottom, or a fishing coordinate."
+  ],
+  "private_block_count": 60,
+  "qualified_waypoints": 0,
+  "schema_version": 1,
+  "scope": "csumb-scc-2010-estero-original-research-block-coverage",
+  "source_2012_archive_sha256": "b44661031acac9e22e18fed8785e796690368cb8a2cdf7887903a1e732d6c08a",
+  "source_results": [
+    {
+      "archive_sha256": "e2e3b2d0db017ab3160a5c2184b2b87e2aba25eb35b7807809188cea51bd211b",
+      "bands": {
+        "200-250ft": {
+          "2010_cells_in_same_nominal_navd88_band": 7305,
+          "blocks_with_measured_2010_cells": 4,
+          "measured_2010_cells": 7305,
+          "research_blocks": 7
+        },
+        "250-300ft": {
+          "2010_cells_in_same_nominal_navd88_band": 0,
+          "blocks_with_measured_2010_cells": 0,
+          "measured_2010_cells": 0,
+          "research_blocks": 53
+        }
+      },
+      "native": {
+        "crs": "EPSG:26910",
+        "native_depth_min_m": -76.0199966430664,
+        "resolution_m": [
+          2.0,
+          2.0
+        ]
+      },
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "nominal_2010_2012_depth_comparison": {
+        "matched_native_cells": 7243,
+        "median_2010_minus_2012_m": -0.23,
+        "p95_abs_difference_m": 0.494
+      },
+      "source_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block12_mb.html",
+      "survey_id": "SCC_Block12",
+      "survey_year": 2010
+    },
+    {
+      "archive_sha256": "ee72aa92a3ffad81a0630fa35519383aa7a33159a44094ad3ca7fd3052a06cdd",
+      "bands": {
+        "200-250ft": {
+          "2010_cells_in_same_nominal_navd88_band": 5391,
+          "blocks_with_measured_2010_cells": 4,
+          "measured_2010_cells": 5391,
+          "research_blocks": 7
+        },
+        "250-300ft": {
+          "2010_cells_in_same_nominal_navd88_band": 0,
+          "blocks_with_measured_2010_cells": 0,
+          "measured_2010_cells": 0,
+          "research_blocks": 53
+        }
+      },
+      "native": {
+        "crs": "EPSG:26910",
+        "native_depth_min_m": -74.58999633789062,
+        "resolution_m": [
+          2.0,
+          2.0
+        ]
+      },
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "nominal_2010_2012_depth_comparison": {
+        "matched_native_cells": 5660,
+        "median_2010_minus_2012_m": -0.164,
+        "p95_abs_difference_m": 0.523
+      },
+      "source_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block13_mb.html",
+      "survey_id": "SCC_Block13",
+      "survey_year": 2010
+    }
+  ]
+}
