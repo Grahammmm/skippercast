@@ -66,6 +66,11 @@ jobs:
           --blocks var/review/estero-nominal-research-blocks.geojson
           --output var/review/estero-wgs84-direct-vdatum-review.json
           --verify dist/data/estero-wgs84-direct-vdatum-review.json
+      - name: Recheck USGS report release inventory for newly available TPU
+        run: >-
+          python scripts/audit_estero_release_inventory.py
+          --output var/review/estero-2012-public-release-inventory.json
+          --verify dist/data/estero-2012-public-release-inventory.json
       - name: Detect changed research-only original cells
         run: |
           cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
@@ -91,6 +96,7 @@ jobs:
             var/review/estero-2012-vdatum-frame-review.json
             var/review/estero-2012-vdatum-spatial-diagnostic.json
             var/review/estero-wgs84-direct-vdatum-review.json
+            var/review/estero-2012-public-release-inventory.json
           retention-days: 30
   point-buchon-original-pair:
     runs-on: ubuntu-latest

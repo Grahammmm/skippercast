@@ -1,0 +1,33 @@
+{
+  "custodian_request": [
+    "CARIS Swath Angle BASE or TPU uncertainty surface for S-05-12-SC, with statistical definition and confidence level",
+    "Original WGS84(G1150) horizontal frame epoch and survey processing/settings report",
+    "Cellwise total horizontal and vertical uncertainty or documented conservative upper bounds",
+    "Rights and original soundings or other reproducible way to verify the error budget"
+  ],
+  "exportable": false,
+  "field_activity_id": "S-05-12-SC",
+  "fishing_target": false,
+  "interpretation": "Only this report's four listed ZIPs were checked. The sounding-spread raster and 1.96-times-spread figures are not a complete product TPU or an upper depth-error bound. Other archives or a custodian may hold it.",
+  "listed_downloads": [
+    "https://pubs.usgs.gov/of/2013/1225/data/Amplitude_utm10_EsteroBay.zip",
+    "https://pubs.usgs.gov/of/2013/1225/data/NAD83_utm10_EsteroBay.zip",
+    "https://pubs.usgs.gov/of/2013/1225/data/StDev_utm10_EsteroBay.zip",
+    "https://pubs.usgs.gov/of/2013/1225/data/WGS84_utm10_EsteroBay.zip"
+  ],
+  "listed_tpu_or_base_surface": false,
+  "processing_reports_tpu_computed": true,
+  "qualified_waypoints": 0,
+  "schema_version": 1,
+  "scope": "estero-2012-public-release-inventory",
+  "source_pages": {
+    "data_processing.html": {
+      "normalized_content_sha256": "737d891c1343db24e15f647bfdf30d7c67a68316cdb1e88bad08417e72c93bf2",
+      "url": "https://pubs.usgs.gov/of/2013/1225/data_processing.html"
+    },
+    "data_tables.html": {
+      "normalized_content_sha256": "2d26a4d2cbf1bd4da86e7c86fd2e1fe5b5fe0986ad653b1a8faa558111d92671",
+      "url": "https://pubs.usgs.gov/of/2013/1225/data_tables.html"
+    }
+  }
+}

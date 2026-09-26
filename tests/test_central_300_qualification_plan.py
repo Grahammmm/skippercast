@@ -31,6 +31,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertEqual(estero["native_cell_evidence"], "source-datum-only")
         self.assertIn("CARIS TPU", estero["next_acquisition"])
         self.assertIn("dist/data/estero-2012-vdatum-spatial-diagnostic.json", estero["source_receipts"])
+        self.assertIn("dist/data/estero-2012-public-release-inventory.json", estero["source_receipts"])
         south_sur = next(s for s in result["sectors"] if s["sector_id"] == "sur-san-simeon")
         self.assertIn("dist/data/bss03-video-grid-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-camera-access-triage.json", south_sur["source_receipts"])

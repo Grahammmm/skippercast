@@ -107,6 +107,7 @@ def build(root):
     bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
+    estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -114,6 +115,12 @@ def build(root):
     bss03_datum = load(root, bss03_datum_path)
     bss03_caris = load(root, bss03_caris_path)
     estero_direct = load(root, estero_direct_path)
+    estero_inventory = load(root, estero_inventory_path)
+    if (estero_inventory.get("scope") != "estero-2012-public-release-inventory"
+            or estero_inventory.get("listed_tpu_or_base_surface") is not False
+            or estero_inventory.get("processing_reports_tpu_computed") is not True
+            or estero_inventory.get("qualified_waypoints") != 0):
+        raise ValueError("Estero public release inventory changed; review uncertainty acquisition")
     if (bss03_video.get('scope') != 'bss03-original-video-vs-populated-grid'
             or bss03_video.get('camera_windows_in_200_300ft_source_datum_band') != 46
             or bss03_video.get('rock_boulder_cobble_windows_in_band') != 11
@@ -182,6 +189,7 @@ def build(root):
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             receipts.append(estero_direct_path)
+            receipts.append(estero_inventory_path)
             direct = row.get("estero_wgs84_direct_diagnostic")
             if (not direct or direct["sample_points"] != 60
                     or direct["nominal_center_offset_200_300ft_cells"] != sum(
@@ -269,7 +277,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, estero_direct_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",
