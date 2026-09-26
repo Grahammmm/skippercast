@@ -82,8 +82,8 @@ SECTOR_OVERRIDES = {
     },
     "morro-conception": {
         "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB processing records; search non-NOS archives or unpublished original MLLW surveys over the hard cells, then obtain current Diablo/Vandenberg access and ENC screens.",
-        "hold": "BlueTopo's nominal overlap is almost entirely interpolated historical contributor pixels; historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
+        "next": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB records; inspect NCEI's 2007 PointBuchon/Control processed GSF sounding positions and processing lineage over the candidate hard cells, then obtain current Diablo/Vandenberg access and ENC route screens.",
+        "hold": "NCEI's processed soundings have unknown vertical datum in the public ISO metadata; catalog-footprint overlap is not measured cell overlap. BlueTopo is mostly interpolated; historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
     },
 }
 
@@ -108,6 +108,7 @@ def build(root):
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
+    buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -116,6 +117,17 @@ def build(root):
     bss03_caris = load(root, bss03_caris_path)
     estero_direct = load(root, estero_direct_path)
     estero_inventory = load(root, estero_inventory_path)
+    buchon_ncei = load(root, buchon_ncei_path)
+    if (buchon_ncei.get("scope") != "point-buchon-2007-ncei-multibeam-acquisition-lead"
+            or len(buchon_ncei.get("surveys", [])) != 2
+            or any(row.get("metadata_vertical_datum") != "Unknown" for row in buchon_ncei["surveys"])
+            or set(buchon_ncei.get("processed_gsf_probes", {})) != {"PointBuchon", "PointBuchon_Control"}
+            or any("TIDAL_DATUM=UNKNOWN" not in probe.get("processing_parameters", [])
+                   or probe.get("datum_qualified") is not False
+                   for probe in buchon_ncei["processed_gsf_probes"].values())
+            or buchon_ncei.get("qualified_waypoints") != 0
+            or buchon_ncei.get("fishing_target") is not False):
+        raise ValueError("Point Buchon NCEI processed sounding lead changed")
     if (estero_inventory.get("scope") != "estero-2012-public-release-inventory"
             or estero_inventory.get("listed_tpu_or_base_surface") is not False
             or estero_inventory.get("processing_reports_tpu_computed") is not True
@@ -206,6 +218,7 @@ def build(root):
             receipts.append(spatial["receipt"])
         if sector_id == "morro-conception":
             receipts.append(buchon_path)
+            receipts.append(buchon_ncei_path)
             catalog_gap = row.get("point_buchon_noaa_catalog_gap")
             if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
                     or catalog_gap["fishing_target"] is not False):
@@ -277,7 +290,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",

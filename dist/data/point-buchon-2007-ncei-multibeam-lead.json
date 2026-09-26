@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-2007-ncei-multibeam-acquisition-lead",
+  "catalog_query_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/multibeam_footprints/MapServer/0/query?where=OBJECTID+IN+%281732%2C1733%2C1734%2C1735%29&outFields=OBJECTID%2CNCEI_ID%2CSURVEY_ID%2CSURVEY_YEAR&returnGeometry=true&outSR=4326&f=json",
+  "catalog_geometry_sha256": "08b99c0bd13a3f85f98dbd8894f6773b301e6aa89f066952064ab4ae47d4d658",
+  "usgs_original_bathymetry_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+  "usgs_original_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "surveys": [
+    {
+      "survey_id": "PointBuchon",
+      "ncei_id": "NEW2833",
+      "catalog_feature_ids": [
+        1732,
+        1733
+      ],
+      "page_url": "https://www.ngdc.noaa.gov/ships/ventresca/PointBuchon_mb.html",
+      "metadata_url": "https://www.ngdc.noaa.gov/metaview/page?xml=NOAA/NESDIS/NGDC/MGG/Multibeam/iso/xml/PointBuchon_Multibeam.xml&view=getDataView&header=none",
+      "processed_gsf_link_count": 73,
+      "processed_gsf_first_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/PB129-1413.gsf.mb121.gz",
+      "metadata_vertical_datum": "Unknown",
+      "archive_page_content_sha256": "04501f94b9d7ddc0e55c92f19bf187058b68442094556e671395bfa409b30d07",
+      "metadata_content_sha256": "2bd7b2a7311aaaf946d6c9095c35c219839ea227c7d3eb21e2419883fbf3f9ab",
+      "nominal_usgs_200_300ft_hard_flat_cell_centers_in_catalog_polygon": 1090214,
+      "nominal_usgs_200_300ft_hard_rugose_cell_centers_in_catalog_polygon": 195660
+    },
+    {
+      "survey_id": "PointBuchon_Control",
+      "ncei_id": "NEW2834",
+      "catalog_feature_ids": [
+        1734,
+        1735
+      ],
+      "page_url": "https://www.ngdc.noaa.gov/ships/ventresca/PointBuchon_Control_mb.html",
+      "metadata_url": "https://www.ngdc.noaa.gov/metaview/page?xml=NOAA/NESDIS/NGDC/MGG/Multibeam/iso/xml/PointBuchon_Control_Multibeam.xml&view=getDataView&header=none",
+      "processed_gsf_link_count": 113,
+      "processed_gsf_first_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/MB297-1440.gsf.mb121.gz",
+      "metadata_vertical_datum": "Unknown",
+      "archive_page_content_sha256": "43e18806fdae4e1680fc6de047cf3d57b8b06fa67eeb26d067eb33e12ad33f0b",
+      "metadata_content_sha256": "768a26bf536b9b78ebac7ee333251b7f3452af62703683338cf9066c942cf87c",
+      "nominal_usgs_200_300ft_hard_flat_cell_centers_in_catalog_polygon": 430406,
+      "nominal_usgs_200_300ft_hard_rugose_cell_centers_in_catalog_polygon": 90204
+    }
+  ],
+  "processed_gsf_probes": {
+    "PointBuchon": {
+      "compressed_sha256": "6138a3d85d8303ac3311b3f7eb8cb2aed67a41bc32f3dbeec2c797e70ef400ee",
+      "gsf_version": "03.01",
+      "swath_ping_records": 273,
+      "processing_parameters": [
+        "TIDE_COMPENSATED=YES",
+        "GEOID=WGS-84",
+        "TIDAL_DATUM=UNKNOWN"
+      ],
+      "datum_qualified": false
+    },
+    "PointBuchon_Control": {
+      "compressed_sha256": "2cbdd942db72d4afa576c3fe3580801723ad0fd018fb7473a02ee8614ab59873",
+      "gsf_version": "03.01",
+      "swath_ping_records": 324,
+      "processing_parameters": [
+        "TIDE_COMPENSATED=YES",
+        "GEOID=WGS-84",
+        "TIDAL_DATUM=UNKNOWN"
+      ],
+      "datum_qualified": false
+    }
+  },
+  "limitation": "Catalog footprint overlap does not establish measured GSF sounding overlap, horizontal registration, vertical datum, error bounds, independent rock evidence, lawful access or fish. NOAA ISO says vertical datum unknown, and one byte-pinned processed GSF line from each 2007 cruise explicitly records TIDAL_DATUM=UNKNOWN despite tide compensation. These two lines do not establish every archived line's parameters. The nominal USGS depth band is itself in an unresolved output datum.",
+  "next_action": "Inspect original processed GSF sounding positions and processing lineage; obtain verified vertical datum, epoch and total uncertainty before any Point Buchon depth promotion.",
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false
+}
