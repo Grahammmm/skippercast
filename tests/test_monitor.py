@@ -82,7 +82,7 @@ class CollectorFixtures(unittest.TestCase):
         self.assertEqual(result["forecast_dates"], [f"2026-09-{day}" for day in range(21, 28)])
         wave_row = result["locations"][1]["daily_06_to_13_screen"][0]
         self.assertEqual(wave_row["hour_count"], 8)
-        self.assertEqual(wave_row["ranges"]["wave_height_ecmwf_wam025"], {
+        self.assertEqual(wave_row["ranges"]["wave_height_ecmwf_wam"], {
             "min": 1.64, "max": 1.64, "available_hours": 8, "unit": "ft",
         })
 
@@ -119,9 +119,9 @@ class CollectorFixtures(unittest.TestCase):
 
     def test_all_null_variables_are_unavailable_and_gaps(self):
         wave = fixture_dataset("wave-models")
-        wave["hourly"]["secondary_swell_wave_height_ecmwf_wam025"] = [None] * 192
+        wave["hourly"]["secondary_swell_wave_height_ecmwf_wam"] = [None] * 192
         result = self.screen(wave=wave)
-        self.assertTrue(any("secondary_swell_wave_height_ecmwf_wam025 incomplete" in gap for gap in result["data_gaps"]))
+        self.assertTrue(any("secondary_swell_wave_height_ecmwf_wam incomplete" in gap for gap in result["data_gaps"]))
 
     def test_gust_below_wind_is_flagged_without_correction(self):
         wind = fixture_dataset("wind-models")

@@ -1,18 +1,18 @@
-import {getRegion} from "./region.js?v=8.13";
-import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.13";
+import {getRegion} from "./region.js?v=8.14";
+import { futureDates, pacificEpoch, localDate } from "./forecast.js?v=8.14";
 import {
   readConditions,
   comfort,
   angleBetween,
   HOUR,
   POINTS,
-} from "./marine-data.js?v=8.13";
-import { esc, local, num } from "./marine-charts.js?v=8.13";
+} from "./marine-data.js?v=8.14";
+import { esc, local, num } from "./marine-charts.js?v=8.14";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",
   "ncep_gfswave016",
-  "ecmwf_wam025",
+  "ecmwf_wam",
 ];
 const clamp = (n) => Math.round(Math.max(0, Math.min(10, n)) * 10) / 10;
 // Wind and wave burdens overlap in how a small boat moves. Charge the larger
@@ -64,7 +64,7 @@ export function rateHour(bundle, point, species, time, now=Date.now()) {
       (!Number.isFinite(m.retrieved)||now-m.retrieved<=3*3600000);
   };
   const gfsWind=usable("gfs_global"), gfsWave=usable("ncep_gfswave016");
-  const ecmwfWind=usable("ecmwf_ifs025"), ecmwfWave=usable("ecmwf_wam025");
+  const ecmwfWind=usable("ecmwf_ifs025"), ecmwfWave=usable("ecmwf_wam");
   const gfs=readConditions(bundle,point,time,"gfs"), ecmwf=readConditions(bundle,point,time,"ecmwf");
   if(!gfsWind) for(const k of ["wind","gust","windFrom","visibility","weatherCode"]) gfs[k]=null;
   if(!ecmwfWind) for(const k of ["wind","gust","windFrom","visibility","weatherCode"]) ecmwf[k]=null;

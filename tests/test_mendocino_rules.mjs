@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {getRegion,setRegion} from '../dist/region.js?v=8.13';
+import {getRegion,setRegion} from '../dist/region.js?v=8.14';
 import {regulationState,validRegulations} from '../dist/regulations.js';
 
 const region=JSON.parse(readFileSync(new URL('../regions/fort-bragg-point-arena/region.json',import.meta.url)));

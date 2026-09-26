@@ -575,7 +575,7 @@
     },
     {
       "id": "ecmwf-wam",
-      "name": "ECMWF WAM through Open-Meteo",
+      "name": "ECMWF WAM 9 km through Open-Meteo",
       "provider": "ECMWF; Open-Meteo access service",
       "needs": [
         "wave-forecast",
@@ -584,7 +584,7 @@
       "documentation_url": "https://open-meteo.com/en/docs/marine-weather-api",
       "adapter": "open-meteo",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-25",
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "ECMWF; Open-Meteo access service",
@@ -594,18 +594,18 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "Global seas; independent model comparison with NOAA GFS Wave.",
+      "coverage_note": "Global 9 km seas; independent model comparison with regional NOAA GFS Wave. The published forecast was probed at all 15 active California region points on 2026-09-25.",
       "limitations": [
         "Some components are unavailable.",
         "Missing components stay unavailable."
       ],
-      "model_id": "ecmwf_wam025",
+      "model_id": "ecmwf_wam",
       "allowed_hosts": [
         "marine-api.open-meteo.com"
       ],
       "max_age_hours": 18,
-      "model": "ecmwf_wam025",
-      "metadata_url": "https://marine-api.open-meteo.com/data/ecmwf_wam025/static/meta.json"
+      "model": "ecmwf_wam",
+      "metadata_url": "https://marine-api.open-meteo.com/data/ecmwf_wam/static/meta.json"
     },
     {
       "id": "ndbc-buoys",

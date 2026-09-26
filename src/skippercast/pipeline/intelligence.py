@@ -101,7 +101,7 @@ def run(region_id,output,previous_root=None,now=None):
         state=load_archive(previous_root/'regions'/region_id,region_id,required=bool(prior))
     if prior and prior.get('region_id')!=region_id:raise ValueError('Prior intelligence belongs to another region')
     if state and state.get('region_id')!=region_id:raise ValueError('Prior verification archive belongs to another region')
-    previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam025']
+    previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam']
     def one(model):return 'model-'+model,model_source(model,region,now,previous.get('model-'+model))
     with ThreadPoolExecutor(max_workers=4) as pool:sources=dict(pool.map(one,models))
     sources['ensemble']=source('ensemble','NOAA GEFS ensemble','forecast','https://open-meteo.com/en/docs/ensemble-api',36,lambda c:ensemble(c,region),now,previous.get('ensemble'))

@@ -1,8 +1,8 @@
-import {getRegion} from './region.js?v=8.13';
-import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=8.13";
-import { esc, num, from, local, weatherName } from "./marine-charts.js?v=8.13";
-import { pacificEpoch } from "./forecast.js?v=8.13";
-import { rateHour } from "./morning-outlook.js?v=8.13";
+import {getRegion} from './region.js?v=8.14';
+import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=8.14";
+import { esc, num, from, local, weatherName } from "./marine-charts.js?v=8.14";
+import { pacificEpoch } from "./forecast.js?v=8.14";
+import { rateHour } from "./morning-outlook.js?v=8.14";
 export function forecastSummaryHTML(bundle,point,species,time,family,dayRating,now=Date.now()) {
   const c=readConditions(bundle,point,time,family), parts=readConditions(bundle,point,time,"gfs");
   const other=readConditions(bundle,point,time,family==="gfs"?"ecmwf":"gfs");

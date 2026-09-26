@@ -28,7 +28,7 @@ export function modelURLs(latitude,longitude) {
   if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude<32.4||latitude>42.1||longitude< -126||longitude> -116.7)throw Error('Outside California model coverage');
   const common={latitude:latitude.toFixed(2),longitude:longitude.toFixed(2),forecast_days:'8',timezone:zone,cell_selection:'sea'};
   const wind=new URLSearchParams({...common,models:'ecmwf_ifs025,gfs_global',wind_speed_unit:'kn',hourly:'wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility,precipitation'});
-  const wave=new URLSearchParams({...common,models:'ecmwf_wam025,ncep_gfswave016',length_unit:'imperial',hourly:'wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,secondary_swell_wave_height,secondary_swell_wave_period,secondary_swell_wave_direction,wind_wave_height,wind_wave_period,wind_wave_direction'});
+  const wave=new URLSearchParams({...common,models:'ecmwf_wam,ncep_gfswave016',length_unit:'imperial',hourly:'wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,secondary_swell_wave_height,secondary_swell_wave_period,secondary_swell_wave_direction,wind_wave_height,wind_wave_period,wind_wave_direction'});
   return {wind:`https://api.open-meteo.com/v1/forecast?${wind}`,wave:`https://marine-api.open-meteo.com/v1/marine?${wave}`};
 }
 
@@ -47,7 +47,7 @@ export function morningRows(wind,wave,now=new Date()) {
     dates.add(date);
     const g=morningMax(wind,'wind_speed_10m','gfs_global',date),e=morningMax(wind,'wind_speed_10m','ecmwf_ifs025',date);
     const gg=morningMax(wind,'wind_gusts_10m','gfs_global',date),eg=morningMax(wind,'wind_gusts_10m','ecmwf_ifs025',date);
-    const gw=morningMax(wave,'wave_height','ncep_gfswave016',date),ew=morningMax(wave,'wave_height','ecmwf_wam025',date);
+    const gw=morningMax(wave,'wave_height','ncep_gfswave016',date),ew=morningMax(wave,'wave_height','ecmwf_wam',date);
     const swell=modelValue(wave,'swell_wave_height','ncep_gfswave016',wa),period=modelValue(wave,'swell_wave_period','ncep_gfswave016',wa);
     const secondary=modelValue(wave,'secondary_swell_wave_height','ncep_gfswave016',wa),secondPeriod=modelValue(wave,'secondary_swell_wave_period','ncep_gfswave016',wa);
     const chop=modelValue(wave,'wind_wave_height','ncep_gfswave016',wa);

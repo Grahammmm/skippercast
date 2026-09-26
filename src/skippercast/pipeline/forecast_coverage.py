@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 
 WIND_MODELS = ('gfs_global', 'ecmwf_ifs025')
-WAVE_MODELS = ('ncep_gfswave016', 'ecmwf_wam025')
+WAVE_MODELS = ('ncep_gfswave016', 'ecmwf_wam')
 
 
 def _sample(model, point_index, epoch, field, unit, now):

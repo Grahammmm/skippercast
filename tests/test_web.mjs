@@ -54,11 +54,11 @@ test("missing, null, invalid units, duplicates, and malformed arrays are unavail
 test("values do not extrapolate past the returned hours", () => {
   const f = {
     timezone: "America/Los_Angeles",
-    hourly: { time: ["2026-09-21T08:00"], wave_height_ecmwf_wam025: [2] },
-    hourly_units: { wave_height_ecmwf_wam025: "ft" },
+    hourly: { time: ["2026-09-21T08:00"], wave_height_ecmwf_wam: [2] },
+    hourly_units: { wave_height_ecmwf_wam: "ft" },
   };
   assert.equal(
-    valueAt(f, "ecmwf_wam025", "wave_height", "2026-09-22T08:00", "ft"),
+    valueAt(f, "ecmwf_wam", "wave_height", "2026-09-22T08:00", "ft"),
     null,
   );
 });
@@ -128,11 +128,11 @@ test("selected GPX keeps polygon holes as separate segments and rejects unknown 
 test("timezone and latest-run coverage are checked independently of populated values", () => {
   const f = {
     timezone: "UTC",
-    hourly: { time: ["2026-09-21T08:00"], wave_height_ecmwf_wam025: [2] },
-    hourly_units: { wave_height_ecmwf_wam025: "ft" },
+    hourly: { time: ["2026-09-21T08:00"], wave_height_ecmwf_wam: [2] },
+    hourly_units: { wave_height_ecmwf_wam: "ft" },
   };
   assert.equal(
-    valueAt(f, "ecmwf_wam025", "wave_height", "2026-09-21T08:00", "ft"),
+    valueAt(f, "ecmwf_wam", "wave_height", "2026-09-21T08:00", "ft"),
     null,
   );
   assert.equal(

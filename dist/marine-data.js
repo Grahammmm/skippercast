@@ -1,6 +1,6 @@
-import { getRegion, localContext } from "./region.js?v=8.13";
+import { getRegion, localContext } from "./region.js?v=8.14";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
-import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.13";
+import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js?v=8.14";
 
 export const HOUR = 3600;
 export const POINTS = getRegion().forecast_points;
@@ -11,7 +11,7 @@ export const MODELS = [
     kind: "wind",
     resolution: m.id === "gfs_global" ? "~13 km" : "~25 km",
   })),
-  ...WAVE_MODELS.map((m) => ({ ...m, kind: "wave", resolution: m.id === "ncep_gfswave016" ? "~16 km" : "~25 km" })),
+  ...WAVE_MODELS.map((m) => ({ ...m, kind: "wave", resolution: m.id === "ncep_gfswave016" ? "~16 km" : "~9 km" })),
   {
     id: "meteofrance_currents",
     name: "Météo-France / Copernicus ocean",
@@ -116,7 +116,7 @@ export function distanceNm(a, b) {
 }
 export function readConditions(bundle, point, epoch, family = "gfs") {
   const windId = family === "gfs" ? "gfs_global" : "ecmwf_ifs025",
-    waveId = family === "gfs" ? "ncep_gfswave016" : "ecmwf_wam025";
+    waveId = family === "gfs" ? "ncep_gfswave016" : "ecmwf_wam";
   const at = (id, key, unit) =>
     sample(
       bundle.models[id]?.data?.[point],

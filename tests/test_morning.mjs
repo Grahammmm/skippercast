@@ -42,7 +42,7 @@ function bundle() {
     retrieved: now,
     alerts: { coastal: [], offshore: [] },
     models: Object.fromEntries(
-      ["gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam025"].map(
+      ["gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam"].map(
         (id) => [
           id,
           {
@@ -84,7 +84,7 @@ test("full morning rating preserves unknown bite and uses the worst return hour"
 });
 test("missing detail and stale individual models show limited scores that cannot qualify", () => {
   for (const mutate of [
-    (b) => (b.models.ecmwf_wam025.data[0].hourly.wave_height[6] = null),
+    (b) => (b.models.ecmwf_wam.data[0].hourly.wave_height[6] = null),
     (b) => (b.alerts.coastal = null),
     (b) => (b.models.ncep_gfswave016.data[0].hourly.wind_wave_period[3] = null),
     (b) =>
@@ -126,7 +126,7 @@ test("partial last day is disclosed and cannot get an 8+ score", () => {
 test("seven-day strip retains numeric warnings and limited outlooks without a false 8+",()=>{
   const b=bundle();
   b.alerts.coastal=[{title:'Small Craft Advisory',starts:times[0]-3600,ends:times[6]+3600}];
-  b.models.ecmwf_wam025.meta.data_end_time=times[20];
+  b.models.ecmwf_wam.meta.data_end_time=times[20];
   const rows=rankTimelineDays(b,0,'reef',times,now);
   assert.equal(rows.length,7);
   assert.ok(rows.every(r=>Number.isFinite(r.conditions)));
@@ -137,7 +137,7 @@ test("seven-day strip retains numeric warnings and limited outlooks without a fa
 test("no usable wind or combined seas remains unrated",()=>{
   const b=bundle();
   for(const m of ['gfs_global','ecmwf_ifs025']) b.models[m].data[0].hourly.wind_speed_10m.fill(null);
-  for(const m of ['ncep_gfswave016','ecmwf_wam025']) b.models[m].data[0].hourly.wave_height.fill(null);
+  for(const m of ['ncep_gfswave016','ecmwf_wam']) b.models[m].data[0].hourly.wave_height.fill(null);
   const row=rankTimelineDays(b,0,'reef',times,now)[0];
   assert.equal(row.conditions,null);
   assert.ok(row.reasons.some(r=>r.includes('No usable wind')));
@@ -200,7 +200,7 @@ test("day narrative labels incomplete coverage as a limited estimate",async()=>{
  b.models.ncep_gfswave016.data[0].hourly.wave_height.fill(null);
  const missing=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],missing,now);
  assert.match(html,/Limited forecast screen/);assert.match(html,/limited comparison/);assert.ok(missing.conditions<=6.9);
- b.models.ecmwf_wam025.data[0].hourly.wave_height.fill(null);
+ b.models.ecmwf_wam.data[0].hourly.wave_height.fill(null);
  const none=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],none,now);
  assert.equal(none.conditions,null);assert.match(html,/Data incomplete/);assert.doesNotMatch(html,/0.0\/10/);
 });

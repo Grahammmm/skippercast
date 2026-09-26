@@ -35,7 +35,7 @@ MODEL_META = {
     "gfs_global": "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
     "ecmwf_ifs025": "https://api.open-meteo.com/data/ecmwf_ifs025/static/meta.json",
     "ncep_gfswave016": "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
-    "ecmwf_wam025": "https://marine-api.open-meteo.com/data/ecmwf_wam025/static/meta.json",
+    "ecmwf_wam": "https://marine-api.open-meteo.com/data/ecmwf_wam/static/meta.json",
 }
 POINTS = [("Point Estero", 35.45, -121.02), ("Estero Bay", 35.36, -120.94),
           ("Point Buchon", 35.24, -120.94), ("Off Avila", 35.1, -120.82),
@@ -216,7 +216,7 @@ def grid_loader(kind, bounds=None, config=None):
 
 def model_loader(model, points=None):
     points = POINTS if points is None else points
-    wave = model in ("ecmwf_wam025", "ncep_gfswave016")
+    wave = model in ("ecmwf_wam", "ncep_gfswave016")
     variables = ([f"{p}_{q}" for p in ("wave", "wind_wave", "swell_wave", "secondary_swell_wave")
                   for q in ("height", "period", "direction")] if wave else
                  ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "visibility", "precipitation", "temperature_2m", "cloud_cover", "weather_code"])

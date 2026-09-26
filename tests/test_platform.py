@@ -74,6 +74,8 @@ class RegionalContracts(TestCase):
         wave_url,_=model_loader("ncep_gfswave016",points)
         self.assertIn("models=ncep_gfswave016",wave_url)
         self.assertIn("wind_wave_height",wave_url)
+        wam_url,_=model_loader("ecmwf_wam",points)
+        self.assertIn("models=ecmwf_wam",wam_url)
         self.assertEqual(north["region"]["landing_names"],[])
 
     def test_cross_region_retention_and_legacy_migration(self):

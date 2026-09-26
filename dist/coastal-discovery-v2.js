@@ -1,9 +1,9 @@
-import {initChart} from './chart-map.js?v=8.13';
-import {initNavigation} from './navigation.js?v=8.13';
-import {esc} from './marine-charts.js?v=8.13';
-import {viewFromURL} from './location-context.js?v=8.13';
-import {mappedPackageAt} from './map-response.js?v=8.13';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.13';
+import {initChart} from './chart-map.js?v=8.14';
+import {initNavigation} from './navigation.js?v=8.14';
+import {esc} from './marine-charts.js?v=8.14';
+import {viewFromURL} from './location-context.js?v=8.14';
+import {mappedPackageAt} from './map-response.js?v=8.14';
+import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.14';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
 import {updateCoastalForecast} from './coastal-forecast-v2.js?v=8.16';
 

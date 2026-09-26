@@ -230,7 +230,7 @@ class ForecastVerificationTests(unittest.TestCase):
 
     def test_model_comparisons_use_common_run_and_hour_not_all_available_cases(self):
         forecasts, obs, now = seven_days()
-        second = [{**f, 'model': 'ecmwf_wam025', 'id': 'b' + f['id'], 'value': 4} for f in forecasts]
+        second = [{**f, 'model': 'ecmwf_wam', 'id': 'b' + f['id'], 'value': 4} for f in forecasts]
         report = verify(forecasts + second, obs, now)
         comparison = report['comparisons'][0]
         self.assertEqual(comparison['n'], 35)

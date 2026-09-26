@@ -1,7 +1,7 @@
-import {getRegion,assetURL} from './region.js?v=8.13';
-import {esc,local,num} from './marine-charts.js?v=8.13';
-import {nearestSearchForecast,searchWindow,oceanSearchAreas} from './search-plan-data.js?v=8.13';
-import {loadPrimaryStrategies,strategyMarkup} from './primary-strategy.js?v=8.13';
+import {getRegion,assetURL} from './region.js?v=8.14';
+import {esc,local,num} from './marine-charts.js?v=8.14';
+import {nearestSearchForecast,searchWindow,oceanSearchAreas} from './search-plan-data.js?v=8.14';
+import {loadPrimaryStrategies,strategyMarkup} from './primary-strategy.js?v=8.14';
 export async function initSearchPlans(map,screen,onSelect){
  const region=getRegion();let data,strategies=null,state=null,ocean=null,shown=[],generation=0,timer;
  const layer=L.layerGroup().addTo(map),panel=document.createElement('details');panel.className='search-plan-card';panel.innerHTML='<summary>Where to focus · loading</summary><div></div>';document.querySelector('.map-wrap').append(panel);

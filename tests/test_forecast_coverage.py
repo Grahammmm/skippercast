@@ -18,7 +18,7 @@ class ForecastCoverageTests(unittest.TestCase):
                               (day+timedelta(days=d)).day, hour, tzinfo=zone).timestamp())
                  for d in range(1, 8) for hour in range(7, 14)]
         self.forecast = {'models': {}}
-        for model in ('gfs_global', 'ecmwf_ifs025', 'ncep_gfswave016', 'ecmwf_wam025'):
+        for model in ('gfs_global', 'ecmwf_ifs025', 'ncep_gfswave016', 'ecmwf_wam'):
             field, unit = ('wind_speed_10m', 'kn') if model in ('gfs_global', 'ecmwf_ifs025') else ('wave_height', 'ft')
             self.forecast['models'][model] = {
                 'meta': {'last_run_initialisation_time': self.now.timestamp()-3600,
@@ -35,21 +35,21 @@ class ForecastCoverageTests(unittest.TestCase):
                                              'unavailable_point_days': 0})
 
     def test_missing_comparison_is_limited_but_retains_rating_coverage(self):
-        self.forecast['models']['ecmwf_wam025']['data'][1]['hourly']['wave_height'][-1] = None
+        self.forecast['models']['ecmwf_wam']['data'][1]['hourly']['wave_height'][-1] = None
         result = audit_forecast_coverage(self.forecast, self.region, self.now)
         self.assertEqual(result['summary']['rated_point_days'], 14)
         self.assertEqual(result['summary']['two_model_point_days'], 13)
         self.assertEqual(result['points'][1]['days'][-1]['status'], 'limited')
 
     def test_missing_both_wave_models_is_reported_as_incomplete(self):
-        for model in ('ncep_gfswave016', 'ecmwf_wam025'):
+        for model in ('ncep_gfswave016', 'ecmwf_wam'):
             self.forecast['models'][model]['data'][0]['hourly']['wave_height'][-1] = None
         result = audit_forecast_coverage(self.forecast, self.region, self.now)
         self.assertEqual(result['summary']['incomplete_point_days'], 1)
         self.assertEqual(result['points'][0]['days'][-1]['rated_hours'], 6)
 
     def test_stale_run_and_invalid_wave_period_do_not_count(self):
-        for model in ('ncep_gfswave016', 'ecmwf_wam025'):
+        for model in ('ncep_gfswave016', 'ecmwf_wam'):
             self.forecast['models'][model]['data'][0]['hourly']['wave_period'][0] = 0
         self.forecast['models']['ecmwf_ifs025']['meta']['last_run_initialisation_time'] = self.now.timestamp()-40*3600
         result = audit_forecast_coverage(self.forecast, self.region, self.now)
