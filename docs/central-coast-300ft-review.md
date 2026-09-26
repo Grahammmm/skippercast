@@ -2,7 +2,7 @@
 
 Reviewed September 26, 2026. The boat's 300 ft planning ceiling is **not** a promise of mapped or legal fishing coverage to 300 ft. The public Morro Bay–Avila atlas has 132 historical survey-derived rocky targets, all within its original 200 ft source screen. The six adjacent preview packages still have no exportable bottom-fishing targets.
 
-The companion [biological evidence and gap plan](central-biological-evidence-and-gaps.md) adds a reproducible 2007–2024 open-reference CCFRP catch/effort summary and identifies the CDFW ROV observations most relevant to deeper reef validation. Neither source has qualified a new 200–300 ft waypoint.
+The companion [biological evidence and gap plan](central-biological-evidence-and-gaps.md) adds a reproducible 2007–2024 open-reference CCFRP catch/effort summary and a separate published ROV analysis with **observed** lingcod and rockfish in the 200–300 ft band at five broad open-reference areas. Neither source has qualified a new 200–300 ft waypoint.
 
 ## What was checked
 

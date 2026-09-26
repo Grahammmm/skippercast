@@ -9,6 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  central-rov-deep-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify depth and protected-site gates
+        run: python -m unittest tests.test_central_rov_depth_evidence -v
+      - name: Recheck published ROV object and open-reference summary
+        run: >-
+          python scripts/build_central_rov_depth_evidence.py --fetch
+          --output var/review/central-rov-200-300ft-evidence.json
+      - name: Detect changed deeper biological context
+        run: cmp dist/data/central-rov-200-300ft-evidence.json var/review/central-rov-200-300ft-evidence.json
+      - name: Upload research-only ROV summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-rov-200-300ft-evidence
+          path: var/review/central-rov-200-300ft-evidence.json
+          retention-days: 30
   ccfrp-open-reference-context:
     runs-on: ubuntu-latest
     timeout-minutes: 20

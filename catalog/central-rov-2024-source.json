@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "record_id": 10929417,
+  "doi": "10.5281/zenodo.10929417",
+  "source_url": "https://zenodo.org/records/10929417",
+  "api_url": "https://zenodo.org/api/records/10929417",
+  "file_url": "https://zenodo.org/api/records/10929417/files/ROV_data_con_sci_prac.csv/content",
+  "file_name": "ROV_data_con_sci_prac.csv",
+  "file_bytes": 23648238,
+  "file_md5": "fb509f3615bc241bd626a698cfe7a754",
+  "file_sha256": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8",
+  "license": "CC BY 4.0",
+  "source_publication_year": 2024,
+  "observation_years": [2005, 2021],
+  "depth_band_ft": [200, 300],
+  "use_limit": "Historical 10 m ROV subunit fish observations in open reference sites only. Area-level biological context, not exact fishing spots, catch rate, current bite, chart clearance, or MPA access."
+}
