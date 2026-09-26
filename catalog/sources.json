@@ -13,7 +13,7 @@
       "documentation_url": "https://doi.org/10.5066/P9KBGELE",
       "adapter": "geotiff",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-26",
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
@@ -26,10 +26,11 @@
       "coverage_note": "Surveyed regional footprint, with nodata preserved.",
       "limitations": [
         "2008 survey; present sand and vegetation can differ.",
-        "2 m cells do not provide an individual-boulder catalog."
+        "2 m cells do not provide an individual-boulder catalog.",
+        "Original bathymetry output datum and per-cell upper uncertainty are unresolved; do not use this source alone to qualify a 300 ft fishing depth."
       ],
       "native_resolution_m": 2,
-      "vertical_datum": "MLLW",
+      "vertical_datum": null,
       "survey_year": 2008,
       "allowed_hosts": [
         "doi.org",
@@ -48,7 +49,7 @@
       "documentation_url": "https://doi.org/10.5066/P9HEZNRO",
       "adapter": "geotiff",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-26",
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
@@ -61,10 +62,11 @@
       "coverage_note": "Surveyed regional footprint, with nodata preserved.",
       "limitations": [
         "2008 survey; present sand and vegetation can differ.",
-        "2 m cells do not provide an individual-boulder catalog."
+        "2 m cells do not provide an individual-boulder catalog.",
+        "Original bathymetry output datum and per-cell upper uncertainty are unresolved; do not use this source alone to qualify a 300 ft fishing depth."
       ],
       "native_resolution_m": 2,
-      "vertical_datum": "MLLW",
+      "vertical_datum": null,
       "survey_year": 2008,
       "allowed_hosts": [
         "doi.org",
@@ -83,7 +85,7 @@
       "documentation_url": "https://doi.org/10.5066/P9ZSTUK1",
       "adapter": "geotiff",
       "review_status": "approved",
-      "reviewed_at": "2026-09-21",
+      "reviewed_at": "2026-09-26",
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
@@ -96,10 +98,11 @@
       "coverage_note": "Surveyed regional footprint, with nodata preserved.",
       "limitations": [
         "2008 survey; present sand and vegetation can differ.",
-        "2 m cells do not provide an individual-boulder catalog."
+        "2 m cells do not provide an individual-boulder catalog.",
+        "Original bathymetry output datum and per-cell upper uncertainty are unresolved; do not use this source alone to qualify a 300 ft fishing depth."
       ],
       "native_resolution_m": 2,
-      "vertical_datum": "MLLW",
+      "vertical_datum": null,
       "survey_year": 2008,
       "allowed_hosts": [
         "doi.org",

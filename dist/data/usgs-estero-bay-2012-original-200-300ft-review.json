@@ -1,0 +1,57 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "NAVD88 depths require spatial MLLW conversion and its propagated uncertainty before any 300 ft fishing-depth claim.",
+    "The spread grid is standard deviation of soundings in WGS84 cells, not an upper bound on total propagated product uncertainty; natural rugosity can inflate it.",
+    "Index pairing reflects documented coordinate-frame shift, but does not replace a surveyed registration-error analysis.",
+    "The output mosaic is 2 m; source cells beyond 100 m were 4 m and resampled. Only the 200\u2013300 ft nominal band falls inside the native 2 m portion.",
+    "No independent substrate, MPA, chart, access, biological or drift/route screen has qualified these cells as fishing spots."
+  ],
+  "nad_wgs_valid_mask_disagreements": 0,
+  "native_depth_resolution_m_in_band": 2,
+  "nominal_depth_bands": {
+    "200-250ft": {
+      "area_m2_at_2m_output_grid": 9420220,
+      "depth_cells": 2355055,
+      "max_within_cell_sounding_spread_m": 1.217,
+      "mean_within_cell_sounding_spread_m": 0.175,
+      "paired_nominal_cells": 2304351,
+      "spread_le_0_5m": 2275188,
+      "spread_le_1m": 2304245
+    },
+    "250-300ft": {
+      "area_m2_at_2m_output_grid": 28954228,
+      "depth_cells": 7238557,
+      "max_within_cell_sounding_spread_m": 1.361,
+      "mean_within_cell_sounding_spread_m": 0.174,
+      "paired_nominal_cells": 7152614,
+      "spread_le_0_5m": 6995827,
+      "spread_le_1m": 7152404
+    }
+  },
+  "qualified_waypoints": 0,
+  "schema_version": 1,
+  "scope": "usgs-estero-bay-2012-original-200-300ft-research",
+  "source_archives_sha256": {
+    "NAD83_utm10_EsteroBay.zip": "b44661031acac9e22e18fed8785e796690368cb8a2cdf7887903a1e732d6c08a",
+    "StDev_utm10_EsteroBay.zip": "06a0c2e375617d7bb96cf739e1843045f50726925f2e834e1c81e742743d4f65",
+    "WGS84_utm10_EsteroBay.zip": "0379883c10a67ecad2a65a38d6d948dc9441df06528bac08034d0dc85295e876"
+  },
+  "source_metadata_sha256": {
+    "NAD83_metadata_EsteroBay.xml": "8764aed9a629890e3512c9451e215488b4bea78767718147e5c21c125b6cdf2c",
+    "StDev_metadata_EsteroBay.xml": "84d84abc196561626d99cef76984dc99597b04c6f7b7cf6e96bca4b994576d51",
+    "WGS84_metadata_EsteroBay.xml": "2bbf92a1c1163800e11e45c2f2bea98fd5ee95e0e44850762a4b27fbd24f2ea2"
+  },
+  "source_report": "https://doi.org/10.3133/ofr20131225",
+  "source_vertical_datum": "NAVD88 Geoid12 for NAD83 bathymetry",
+  "survey_dates": [
+    "2012-07-30",
+    "2012-08-09"
+  ],
+  "valid_navd88_depth_cells": 44385666,
+  "wgs_to_nad_grid_origin_shift_m": [
+    1.17,
+    -0.513
+  ]
+}

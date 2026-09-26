@@ -9,6 +9,50 @@ permissions:
   contents: read
 
 jobs:
+  estero-original-depth-and-independent-character:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned original-grid readers
+        run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1
+      - name: Check depth-datum and research-only gates
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum -v
+      - name: Recheck original 2008 Point Estero pair
+        run: >-
+          python scripts/audit_point_estero_original_pair.py --fetch
+          --output var/review/point-estero-original-paired-200-300ft-review.json
+      - name: Recheck original 2012 Estero Bay depth and sounding spread
+        run: >-
+          python scripts/audit_usgs_estero_2012_original.py --fetch
+          --output var/review/usgs-estero-bay-2012-original-200-300ft-review.json
+      - name: Recheck independent 2008/2012 overlap
+        run: >-
+          python scripts/audit_estero_2012_2008_overlap.py
+          --output var/review/estero-independent-2012-depth-2008-character-overlap.json
+      - name: Recheck VDatum source-frame acceptance without converting a grid
+        run: >-
+          python scripts/audit_estero_vdatum_frames.py --expect-current-gates
+          --output var/review/estero-2012-vdatum-frame-review.json
+      - name: Detect changed research-only original cells
+        run: |
+          cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
+          cmp dist/data/usgs-estero-bay-2012-original-200-300ft-review.json var/review/usgs-estero-bay-2012-original-200-300ft-review.json
+          cmp dist/data/estero-independent-2012-depth-2008-character-overlap.json var/review/estero-independent-2012-depth-2008-character-overlap.json
+      - name: Upload research-only source audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: estero-original-200-300ft-research
+          path: |
+            var/review/point-estero-original-paired-200-300ft-review.json
+            var/review/usgs-estero-bay-2012-original-200-300ft-review.json
+            var/review/estero-independent-2012-depth-2008-character-overlap.json
+            var/review/estero-2012-vdatum-frame-review.json
+          retention-days: 30
   point-buchon-original-pair:
     runs-on: ubuntu-latest
     timeout-minutes: 30

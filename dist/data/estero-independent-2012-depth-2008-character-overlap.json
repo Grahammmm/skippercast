@@ -1,0 +1,39 @@
+{
+  "character_archive_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+  "depth_archive_sha256": "b44661031acac9e22e18fed8785e796690368cb8a2cdf7887903a1e732d6c08a",
+  "depth_bands": {
+    "200-250ft": {
+      "2012_depth_cells_within_2008_raster_bounds": 1184319,
+      "classified_cells_by_type": {
+        "hard_flat": 1533,
+        "hard_rugose": 119,
+        "soft_flat": 315763
+      },
+      "independently_classified_cells": 317415
+    },
+    "250-300ft": {
+      "2012_depth_cells_within_2008_raster_bounds": 1605058,
+      "classified_cells_by_type": {
+        "hard_flat": 7222,
+        "hard_rugose": 24091,
+        "soft_flat": 134576
+      },
+      "independently_classified_cells": 165889
+    }
+  },
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "Nominal EPSG:26910-to-EPSG:32610 transform does not resolve source horizontal realization, epoch or registration uncertainty; these counts are not exact fishing polygons.",
+    "2012 depth and 2008 video-supervised class are independent surveys but may reflect seafloor change and class error.",
+    "NAVD88-to-MLLW transformation and full upper depth uncertainty are absent; 200\u2013300 ft here is a source-datum comparison only.",
+    "Full current MPA, ENC hazard, access, approach, return and drift screens have not cleared these cells."
+  ],
+  "native_depth_resolution_m_in_band": 2,
+  "native_depth_vertical_datum": "NAVD88 Geoid12",
+  "qualified_waypoints": 0,
+  "schema_version": 1,
+  "scope": "estero-independent-2012-depth-2008-character-nominal-overlap",
+  "source_2008": "https://doi.org/10.5066/P9ZSTUK1",
+  "source_2012": "https://doi.org/10.3133/ofr20131225"
+}

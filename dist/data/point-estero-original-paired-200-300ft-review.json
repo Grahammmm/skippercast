@@ -1,0 +1,46 @@
+{
+  "character_classes": {
+    "1": "soft_flat",
+    "2": "hard_flat",
+    "3": "hard_rugose"
+  },
+  "exportable": false,
+  "fishing_target": false,
+  "has_per_cell_upper_uncertainty": false,
+  "limitations": [
+    "Original 2008 USGS raster cells, not MLLW or navigational soundings; depth datum and upper uncertainty remain unresolved.",
+    "Class 3 is a video-supervised hard/rugose class, not a measurement of individual boulder dimensions or fish abundance.",
+    "No same-footprint species observation, current legal-area screen, chart-danger screen, or approach/drift review qualifies these cells."
+  ],
+  "native_depth_vertical_datum": null,
+  "native_grid_resolution_m": 2,
+  "nominal_depth_bands": {
+    "200-250ft": {
+      "cells_by_class": {
+        "hard_flat": 580752,
+        "hard_rugose": 871810,
+        "soft_flat": 3101858
+      },
+      "paired_area_m2": 18217680
+    },
+    "250-300ft": {
+      "cells_by_class": {
+        "hard_flat": 152450,
+        "hard_rugose": 304939,
+        "soft_flat": 3844721
+      },
+      "paired_area_m2": 17208440
+    }
+  },
+  "qualified_waypoints": 0,
+  "schema_version": 1,
+  "scope": "point-estero-original-paired-200-300ft-research",
+  "source_release": "https://doi.org/10.5066/P9ZSTUK1",
+  "source_sha256": {
+    "Bathymetry_OffshorePointEstero.zip": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
+    "Bathymetry_OffshorePointEstero_metadata.xml": "26c3b384597cdd9d29f6280f6c99951c80d6114fbb0e706fe0939200862a30e1",
+    "SeafloorCharacter_OffshorePointEstero.zip": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+    "SeafloorCharacter_OffshorePointEstero_metadata.xml": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708"
+  },
+  "survey_year": 2008
+}

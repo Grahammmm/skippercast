@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "usgs-estero-bay-2012-navd88-original",
+  "name": "USGS 2012 outer Estero Bay multibeam depth and sounding-spread grids",
+  "region_ids": ["morro-bay"],
+  "sector_ids": ["cambria-morro", "morro-conception"],
+  "need_ids": ["bathymetry"],
+  "producer": {
+    "name": "U.S. Geological Survey Pacific Coastal and Marine Science Center",
+    "url": "https://pubs.usgs.gov/of/2013/1225/"
+  },
+  "documentation_url": "https://pubs.usgs.gov/of/2013/1225/",
+  "access_url": "https://pubs.usgs.gov/of/2013/1225/data/NAD83_utm10_EsteroBay.zip",
+  "access_status": "accessible",
+  "variables": ["bathymetry_elevation", "within_cell_sounding_standard_deviation"],
+  "units": {
+    "bathymetry_elevation": "m NAVD88",
+    "within_cell_sounding_standard_deviation": "m in separate WGS84 G1150 grid"
+  },
+  "rights": {
+    "license": "USGS public-domain work; source metadata requires attribution and says not for navigation",
+    "terms_url": "https://pubs.usgs.gov/of/2013/1225/metadata/NAD83_metadata_EsteroBay.xml",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-121.172404, 35.224352, -120.915074, 35.520167],
+    "resolution_m": 2,
+    "horizontal_crs": "NAD83(CORS96) UTM zone 10 for NAVD88 depth; WGS84(G1150) UTM zone 10 for sounding spread",
+    "vertical_datum": "NAVD88 Geoid12 for the NAD83 bathymetry grid",
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://pubs.usgs.gov/of/2013/1225/data_tables.html",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "coverage_start": "2012-07-30",
+    "coverage_end": "2012-08-09",
+    "checked_at": "2026-09-26T19:12:00Z",
+    "update_cadence": "Static survey; monthly source-integrity check after spatial audit"
+  },
+  "provenance": {
+    "access_service": "Original USGS Open-File Report 2013-1225 ZIP and FGDC metadata",
+    "raw_sha256": "b44661031acac9e22e18fed8785e796690368cb8a2cdf7887903a1e732d6c08a",
+    "transformations": [
+      "Inspected native ESRI ASCII header: 11,456 columns, 16,020 rows, 2 m cell size; source states mixed 2 m/4 m survey data, resampled into a 2 m mosaic.",
+      "No NAVD88-to-MLLW transformation or fishing target has been approved."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://pubs.usgs.gov/of/2013/1225/survey_results.html",
+      "supports": "117 survey lines, about 165 square kilometres of outer Estero Bay, 45–250 m below NAVD88; the report compares a 1.96-times-sounding-spread TVU estimate with IHO standards."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2013/1225/data_processing.html",
+      "supports": "The processing report documents NAD83(CORS96)/NAVD88 Geoid12, estimated sounding TPU, 2 m cells under 100 m, and 4 m data beyond 100 m resampled into the final mosaic."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2013/1225/data_tables.html",
+      "supports": "Original NAD83/NAVD88 bathymetry and separate WGS84 sounding-standard-deviation archives are publicly listed."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2013/1225/metadata/NAD83_metadata_EsteroBay.xml",
+      "supports": "Original source metadata gives the bounding box, collection dates, source restrictions and 2 m output grid."
+    }
+  ],
+  "limitations": [
+    "The source's sounding standard deviation is a precision or terrain-variation statistic, not by itself a total propagated product-uncertainty bound; the report warns that high-relief cells may reflect natural bottom variation.",
+    "Depth and spread grids use different horizontal realizations and shifted raster origins. Their rows cannot be paired by index without reviewed coordinate transformation and registration uncertainty.",
+    "NAVD88 depths require a reviewed spatial VDatum transformation to MLLW plus total vertical uncertainty before applying the 300 ft fishing limit.",
+    "The raster envelope contains nodata and includes 4 m native-depth data resampled onto a 2 m output grid beyond 100 m. It is not a navigation product or a set of fishing spots.",
+    "Overlap with independently classified seabed, biological observations, current MPAs, chart dangers and usable drift/route geometry remains unreviewed."
+  ]
+}
