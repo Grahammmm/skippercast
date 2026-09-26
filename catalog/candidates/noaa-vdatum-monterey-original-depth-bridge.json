@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "noaa-vdatum-monterey-original-depth-bridge",
+  "name": "NOAA West Coast VDatum model support for Offshore Monterey original depth",
+  "sector_ids": ["pigeon-monterey", "monterey-sur"],
+  "need_ids": ["bathymetry"],
+  "documentation_url": "https://vdatum.noaa.gov/docs/services.html",
+  "access_url": "https://vdatum.noaa.gov/vdatumweb/api/convert",
+  "access_status": "partial",
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.vdatum.noaa.gov/runapp_agreement.php",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-124.757634, 34.9015, -120.397634, 37.4015],
+    "resolution_m": null,
+    "resolution_basis": "unknown",
+    "horizontal_crs": "API source assumed NAD83_2011; target IGS14; original USGS NAD83 realization and epoch unresolved",
+    "vertical_datum": "Conditional NAVD88 height to MLLW height at queried points",
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://www.vdatum.noaa.gov/download.php"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-26T17:15:35.357289+00:00",
+    "update_cadence": "Monthly archive byte, API semantics and source-frame check",
+    "coverage_start": "1983-01-01T00:00:00Z",
+    "coverage_end": "2001-12-31T23:59:59Z"
+  },
+  "evidence": [
+    {
+      "url": "https://www.vdatum.noaa.gov/download.php",
+      "supports": "NOAA lists California Monterey Bay to Morro Bay regional transformation grids, Version 03."
+    },
+    {
+      "url": "https://vdatum.noaa.gov/docs/services.html",
+      "supports": "NOAA West Coast JSON API returns transformed height and vertical uncertainty with explicit source and target frames."
+    },
+    {
+      "url": "https://www.vdatum.noaa.gov/runapp_agreement.php",
+      "supports": "NOAA terms require attribution, disclose possible model mismatch and uncertainty, and do not warrant fitness for navigation."
+    }
+  ],
+  "limitations": [
+    "The downloaded regional model ZIP SHA-256 is pinned, but an API response does not identify which ZIP version the service used.",
+    "Seventeen one-point outline probes conditionally assume NAD83(2011). The original USGS raster declares NAD83 without realization or coordinate epoch, so the probes cannot be applied to its native 2 m pixels.",
+    "The API-reported transformation uncertainty excludes the original USGS survey's measurement uncertainty, for which no per-cell upper bound has been established.",
+    "Model grid bounds contain nodata and are not proof of full candidate-polygon transformation coverage. No fishing coordinate or depth qualification is supported."
+  ],
+  "producer": {
+    "name": "NOAA National Ocean Service, VDatum",
+    "url": "https://vdatum.noaa.gov/"
+  },
+  "variables": ["conditional NAVD88-to-MLLW point offset", "VDatum API-reported uncertainty"],
+  "units": {
+    "conditional NAVD88-to-MLLW point offset": "m at queried point",
+    "VDatum API-reported uncertainty": "m at queried point"
+  },
+  "provenance": {
+    "access_service": "Official NOAA VDatum West Coast JSON API and regional grid archive",
+    "raw_sha256": "6c1b3c900563500eb9bafb4f04e5a6deabfbdfa26e66b53f2c1510b7f3778b62",
+    "transformations": [
+      "Verified original regional grid ZIP hash and metadata: IGS14, 1983-2001 tidal epoch, tidal release 2024-03-26.",
+      "Queried 17 bounded interior research-outline points with hypothetical NAD83(2011) NAVD88 zero-height input; saved exact URLs, response digests, offsets and API uncertainty in a research-only receipt.",
+      "Kept the source-realization, full-patch transform and USGS source-uncertainty gates closed; no source depth cell was converted or promoted."
+    ]
+  }
+}
