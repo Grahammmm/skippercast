@@ -1,0 +1,89 @@
+{
+  "bathy_archive_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+  "character_archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "character_metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "USGS class 2 is hard/flat; class 3 is hard/rugose boulder, megaclast and bedrock; neither is an individual boulder measurement.",
+    "ROV center overlay is nominal; independent survey coordinate accuracy, datum realization, epoch, and 10 m observation support are unresolved.",
+    "USGS bathymetry lacks an established MLLW output datum and per-cell upper uncertainty bound; nominal 200\u2013300 ft is not a fishing-depth clearance.",
+    "Historical ROV counts are visual observations, not present fish, angler catch rates, or spot-level validation.",
+    "No full-footprint MPA, chart hazard, access, approach/return, or drift screen has qualified these cells for fishing or export."
+  ],
+  "native_depth_datum": "unresolved",
+  "native_grid_resolution_m": 2,
+  "nominal_depth_band_ft": [
+    200,
+    300
+  ],
+  "open_reference_rov_at_nominal_centers": [
+    {
+      "camera_area_m2": 1246.4,
+      "center_character_class": "hard_flat",
+      "centers_matching_10m_majority": 50,
+      "lingcod_seen": 3,
+      "mean_hard_rugose_fraction_within_10m": 0.058,
+      "median_nominal_depth_difference_m": -0.17,
+      "observation_years": [
+        2008,
+        2012,
+        2016,
+        2019
+      ],
+      "subunits": 55,
+      "vermilion_rockfish_seen": 0
+    },
+    {
+      "camera_area_m2": 1574.5,
+      "center_character_class": "hard_rugose",
+      "centers_matching_10m_majority": 56,
+      "lingcod_seen": 2,
+      "mean_hard_rugose_fraction_within_10m": 0.87,
+      "median_nominal_depth_difference_m": -3.27,
+      "observation_years": [
+        2008,
+        2012,
+        2016
+      ],
+      "subunits": 58,
+      "vermilion_rockfish_seen": 7
+    },
+    {
+      "camera_area_m2": 1653.4,
+      "center_character_class": "soft_flat",
+      "centers_matching_10m_majority": 63,
+      "lingcod_seen": 3,
+      "mean_hard_rugose_fraction_within_10m": 0.055,
+      "median_nominal_depth_difference_m": -0.71,
+      "observation_years": [
+        2008,
+        2012,
+        2016,
+        2019
+      ],
+      "subunits": 70,
+      "vermilion_rockfish_seen": 1
+    }
+  ],
+  "paired_nominal_band_by_character": {
+    "hard_flat": {
+      "area_m2": 6229052,
+      "cells": 1557263
+    },
+    "hard_rugose": {
+      "area_m2": 3217348,
+      "cells": 804337
+    },
+    "soft_flat": {
+      "area_m2": 28099164,
+      "cells": 7024791
+    }
+  },
+  "qualified_waypoints": 0,
+  "rov_source_doi": "10.5281/zenodo.10929417",
+  "rov_source_sha256": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8",
+  "schema_version": 1,
+  "scope": "point-buchon-original-paired-200-300ft-research",
+  "source_release": "https://doi.org/10.5066/P9KBGELE"
+}

@@ -9,6 +9,31 @@ permissions:
   contents: read
 
 jobs:
+  point-buchon-original-pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned raster readers
+        run: python -m pip install numpy==2.2.6 rasterio==1.4.3
+      - name: Verify original pair safeguards
+        run: python -m unittest tests.test_point_buchon_original_pair -v
+      - name: Recheck original USGS bathymetry and video-supervised character with published ROV
+        run: >-
+          python scripts/audit_point_buchon_original_pair.py --fetch
+          --output var/review/point-buchon-original-paired-200-300ft-review.json
+      - name: Detect change in research-only original pair
+        run: cmp dist/data/point-buchon-original-paired-200-300ft-review.json var/review/point-buchon-original-paired-200-300ft-review.json
+      - name: Upload unpublished original-pair review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: point-buchon-original-paired-review
+          path: var/review/point-buchon-original-paired-200-300ft-review.json
+          retention-days: 30
   central-rov-deep-reference:
     runs-on: ubuntu-latest
     timeout-minutes: 20
