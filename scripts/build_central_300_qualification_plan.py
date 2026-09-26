@@ -81,8 +81,8 @@ SECTOR_OVERRIDES = {
         "hold": "The 2010 independent cross-check reaches four shallow blocks and no deeper blocks; total depth error remains unknown.",
     },
     "morro-conception": {
-        "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; H11951/52/53 deep cells do not cover the needed rock patches",
-        "next": "Establish Point Buchon output datum and upper uncertainty; acquire an original MLLW survey over deep hard cells and current Diablo/Vandenberg access and ENC screens.",
+        "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
+        "next": "Establish Point Buchon output datum and upper uncertainty; search other original MLLW surveys over its hard cells and obtain current Diablo/Vandenberg access and ENC screens.",
         "hold": "Historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
     },
 }
@@ -123,6 +123,10 @@ def build(root):
         measured = bool(original or csumb or estero_lead or sector_id in ("monterey-sur", "morro-conception"))
         chart_depth = bool(original)
         receipts = [lead["review_path"] for lead in original]
+        deep_refutations = row.get("noaa_original_deepwater_300ft_refutations", [])
+        if any(lead["shallowest_native_depth_m_mllw"] <= 300 * .3048 for lead in deep_refutations):
+            raise ValueError("Reviewed deepwater survey now intersects 300 ft band")
+        receipts.extend(lead["review_path"] for lead in deep_refutations)
         if csumb:
             receipts.append(row["csumb_native_band_receipt"])
         if estero_lead:

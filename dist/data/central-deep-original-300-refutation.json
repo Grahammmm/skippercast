@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "scope": "original-mllw-vr-bags-refuting-central-200-300ft",
+  "depth_band_ft_mllw": [
+    200,
+    300
+  ],
+  "sources": [
+    {
+      "survey_id": "H13152",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13152/BAG/H13152_MB_VR_MLLW.bag",
+      "source_sha256": "d55c138eb1319c27f226f3d865b255f9014b4895e813feefaae7e1e46dbb88cd",
+      "metadata_sha256": "5de992c965c39bc6d653f91f0e09526b93460af6f33fe39983ed4d5d5c567630",
+      "survey_start": "2018-08-31T00:00:00",
+      "survey_end": "2018-10-28T00:00:00",
+      "vertical_datum": "MLLW",
+      "uncertainty_type": "productUncert",
+      "active_supergrids": 28012,
+      "finest_native_resolution_m": 18.106,
+      "active_refinement_records": 3618844,
+      "trailing_padding_records_ignored": 92465,
+      "overview": {
+        "valid_cells": 28012,
+        "shallowest_depth_m_mllw": 348.871,
+        "nominal_200_300ft_cells": 0,
+        "cells_at_or_shallower_than_300ft": 0
+      },
+      "native_refinements": {
+        "valid_cells": 3515189,
+        "nominal_200_300ft_cells": 0,
+        "cells_at_or_shallower_than_300ft": 0,
+        "shallowest_depth_m_mllw": 341.034
+      }
+    },
+    {
+      "survey_id": "W00479",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00479/BAG/W00479_MB_VR_MLLW_1of1.bag",
+      "source_sha256": "a2c88ae72c90b2e06ca06e89e175abf17041aa091d0e6421f3fbc232ab69ea14",
+      "metadata_sha256": "8a00e5f6f061564e10c76d9c49350f60d7089679c9e4a8d3832298e3c14d9363",
+      "survey_start": "2019-09-24T18:31:36",
+      "survey_end": "2019-10-03T07:50:25",
+      "vertical_datum": "MLLW",
+      "uncertainty_type": "productUncert",
+      "active_supergrids": 533140,
+      "finest_native_resolution_m": 8.0,
+      "active_refinement_records": 7980154,
+      "trailing_padding_records_ignored": 444671,
+      "overview": {
+        "valid_cells": 533140,
+        "shallowest_depth_m_mllw": 100.311,
+        "nominal_200_300ft_cells": 0,
+        "cells_at_or_shallower_than_300ft": 0
+      },
+      "native_refinements": {
+        "valid_cells": 7915079,
+        "nominal_200_300ft_cells": 0,
+        "cells_at_or_shallower_than_300ft": 0,
+        "shallowest_depth_m_mllw": 98.89
+      }
+    }
+  ],
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "All original overview and variable-resolution depth records in these two pinned MLLW BAGs are deeper than 300 ft. This is a file-specific depth refutation, not a finding that Point Buchon or the broader sector lacks 200\u2013300 ft habitat."
+}

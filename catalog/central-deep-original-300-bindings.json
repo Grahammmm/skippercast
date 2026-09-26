@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "scope": "original-mllw-vr-bags-refuting-central-200-300ft",
+  "sources": [
+    {
+      "survey_id": "H13152",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13152/BAG/H13152_MB_VR_MLLW.bag",
+      "source_sha256": "d55c138eb1319c27f226f3d865b255f9014b4895e813feefaae7e1e46dbb88cd",
+      "source_bytes": 30190830,
+      "cache_path": "var/review/H13152_MB_VR_MLLW.bag"
+    },
+    {
+      "survey_id": "W00479",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00479/BAG/W00479_MB_VR_MLLW_1of1.bag",
+      "source_sha256": "a2c88ae72c90b2e06ca06e89e175abf17041aa091d0e6421f3fbc232ab69ea14",
+      "source_bytes": 78991380,
+      "cache_path": "var/review/W00479_MB_VR_MLLW_1of1.bag"
+    }
+  ]
+}

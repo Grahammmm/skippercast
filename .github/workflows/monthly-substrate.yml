@@ -90,8 +90,14 @@ jobs:
         run: |
           python scripts/audit_pigeon_w00614_original_class.py --fetch --output var/review/w00614-pigeon-original-character-overlap.json
           cmp var/review/w00614-pigeon-original-character-overlap.json dist/data/w00614-pigeon-original-character-overlap.json
+      - name: Recheck original H13152 and W00479 active MLLW cells
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/audit_central_deep_original_300.py --fetch --output var/review/central-deep-original-300-refutation.json
+          cmp var/review/central-deep-original-300-refutation.json dist/data/central-deep-original-300-refutation.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -110,6 +116,7 @@ jobs:
           path: |
             var/review/f00844-original-fifth-bag-review.json
             var/review/w00614-pigeon-original-character-overlap.json
+            var/review/central-deep-original-300-refutation.json
             var/review/central-coverage-ledger-v1.json
             var/review/central-source-acquisition-queue.json
             var/review/central-300ft-qualification-plan.json

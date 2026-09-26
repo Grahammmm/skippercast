@@ -42,6 +42,7 @@
           ]
         }
       ],
+      "noaa_original_deepwater_300ft_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -159,6 +160,7 @@
       "noaa_native_audit_refuted_fine_hint": [],
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_deepwater_300ft_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -253,6 +255,7 @@
       "noaa_native_audit_refuted_fine_hint": [],
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_deepwater_300ft_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -368,11 +371,17 @@
       ],
       "noaa_filename_fine_grid_leads": [],
       "noaa_native_audit_refuted_fine_hint": [
-        "H13151",
-        "W00479"
+        "H13151"
       ],
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_deepwater_300ft_refutations": [
+        {
+          "survey_id": "W00479",
+          "review_path": "dist/data/central-deep-original-300-refutation.json",
+          "shallowest_native_depth_m_mllw": 98.89
+        }
+      ],
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -381,8 +390,7 @@
         "W00433",
         "W00443",
         "W00444",
-        "W00447",
-        "W00479"
+        "W00447"
       ],
       "noaa_original_300ft_depth_leads": [],
       "noaa_usgs_original_character_overlap": null,
@@ -478,11 +486,17 @@
       "noaa_filename_fine_grid_leads": [],
       "noaa_native_audit_refuted_fine_hint": [
         "H13089",
-        "H13151",
-        "W00479"
+        "H13151"
       ],
       "noaa_reviewed_vr_fine_grids_outside_sector": [],
       "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_deepwater_300ft_refutations": [
+        {
+          "survey_id": "W00479",
+          "review_path": "dist/data/central-deep-original-300-refutation.json",
+          "shallowest_native_depth_m_mllw": 98.89
+        }
+      ],
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -492,8 +506,7 @@
         "W00433",
         "W00443",
         "W00444",
-        "W00447",
-        "W00479"
+        "W00447"
       ],
       "noaa_original_300ft_depth_leads": [],
       "noaa_usgs_original_character_overlap": null,
@@ -590,9 +603,7 @@
         "F00844",
         "H13089",
         "H13151",
-        "H13152",
-        "W00341",
-        "W00479"
+        "W00341"
       ],
       "noaa_reviewed_vr_fine_grids_outside_sector": [
         {
@@ -616,6 +627,18 @@
         }
       ],
       "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_deepwater_300ft_refutations": [
+        {
+          "survey_id": "H13152",
+          "review_path": "dist/data/central-deep-original-300-refutation.json",
+          "shallowest_native_depth_m_mllw": 341.034
+        },
+        {
+          "survey_id": "W00479",
+          "review_path": "dist/data/central-deep-original-300-refutation.json",
+          "shallowest_native_depth_m_mllw": 98.89
+        }
+      ],
       "noaa_original_200_300ft_sector_refutations": [
         {
           "survey_id": "H11951",
@@ -631,13 +654,11 @@
         "F00844",
         "H13089",
         "H13151",
-        "H13152",
         "W00341",
         "W00431",
         "W00433",
         "W00444",
-        "W00447",
-        "W00479"
+        "W00447"
       ],
       "noaa_original_300ft_depth_leads": [],
       "noaa_usgs_original_character_overlap": null,

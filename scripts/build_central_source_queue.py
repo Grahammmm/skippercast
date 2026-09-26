@@ -41,6 +41,26 @@ def build(root):
     estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
     scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
     estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
+    deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
+    deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
+    if (deep_binding.get("scope") != deep_refutation.get("scope")
+            or deep_refutation.get("fishing_target") is not False
+            or deep_refutation.get("exportable") is not False
+            or deep_refutation.get("qualified_waypoints") != 0):
+        raise ValueError("Original Central deepwater refutation changed")
+    deep_refuted = {}
+    for binding in deep_binding["sources"]:
+        sid = binding["survey_id"]
+        match = next((row for row in deep_refutation["sources"] if row["survey_id"] == sid), None)
+        if (sid in deep_refuted or not match or match["source_url"] != binding["source_url"]
+                or match["source_sha256"] != binding["source_sha256"]
+                or match["vertical_datum"] != "MLLW"
+                or match["native_refinements"]["cells_at_or_shallower_than_300ft"] != 0
+                or match["overview"]["cells_at_or_shallower_than_300ft"] != 0):
+            raise ValueError(f"Original Central deepwater refutation invalid for {sid}")
+        deep_refuted[sid] = match
+    if len(deep_refuted) != len(deep_refutation["sources"]):
+        raise ValueError("Original Central deepwater source set changed")
     if (estero_vdatum_spatial.get("scope") != "estero-2012-vdatum-spatial-offset-diagnostic"
             or estero_vdatum_spatial.get("sample_lattice", {}).get("points") != 28
             or estero_vdatum_spatial.get("converted_source_raster") is not False
@@ -126,6 +146,9 @@ def build(root):
     footprint_by_sector = {row["sector_id"]: row for row in multibeam["sectors"]}
     discovery_rows = {s["sector_id"]: s for s in discovery["sectors"]}
     surveyed = {s["id"]: s for s in products["surveys"]}
+    if any(row["source_url"] not in surveyed[sid]["products"]["bag"]
+           for sid, row in deep_refuted.items()):
+        raise ValueError("Original Central deepwater BAG not in NOAA product catalog")
     if (extra_bag_pin.get("schema_version") != 1 or extra_bag.get("schema_version") != 1
             or extra_bag.get("scope") != "original-noaa-f00844-fifth-bag-coverage-audit"
             or any(extra_bag.get(field) != extra_bag_pin.get(field)
@@ -240,6 +263,8 @@ def build(root):
                               re.search(r"_(?:50cm|[1-4]m)_MLLW", url)]
             if sid in depth_refuted:
                 continue
+            if sid in deep_refuted:
+                continue
             confirmed_fine_here = any(
                 ("_VR_" in url and url in vr_by_url
                  and vr_by_url[url].get("sectors", {}).get(sector_id, {}).get("fine_native_grids", 0) > 0)
@@ -283,6 +308,10 @@ def build(root):
             "noaa_original_300ft_depth_refutations": [
                 {"survey_id": sid, "review_paths": depth_refuted[sid]}
                 for sid in original_bag if sid in depth_refuted],
+            "noaa_original_deepwater_300ft_refutations": [
+                {"survey_id": sid, "review_path": "dist/data/central-deep-original-300-refutation.json",
+                 "shallowest_native_depth_m_mllw": deep_refuted[sid]["native_refinements"]["shallowest_depth_m_mllw"]}
+                for sid in original_bag if sid in deep_refuted],
             "noaa_original_200_300ft_sector_refutations": [
                 {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
                 for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],
@@ -290,7 +319,7 @@ def build(root):
                 {"survey_id": sid, "review_path": monterey_no_overlap[sid]}
                 for sid in original_bag if sid in monterey_no_overlap
                 and sector_id in ("pigeon-monterey", "monterey-sur")],
-            "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted)),
+            "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted) - set(deep_refuted)),
             "noaa_original_300ft_depth_leads": ([{
                 "survey_id": "W00614", "review_path": "dist/data/w00614-original-300-pigeon-monterey-review.json",
                 "qualified_200_300ft_native_cells": w00614_300["counts"]["depth_uncertainty_qualified_200_300ft_cells"],

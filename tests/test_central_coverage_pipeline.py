@@ -54,6 +54,10 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(pigeon["noaa_usgs_original_character_overlap"]["classified_cells_on_those_depth_cells"], 0)
         conception = result["sectors"][-1]
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
+        self.assertEqual({row["survey_id"] for row in conception["noaa_original_deepwater_300ft_refutations"]},
+                         {"H13152", "W00479"})
+        self.assertNotIn("H13152", conception["noaa_coarse_or_unresolved_leads"])
+        self.assertNotIn("W00479", conception["noaa_coarse_or_unresolved_leads"])
         self.assertEqual(set(conception["noaa_filename_fine_grid_leads"]),
                          {"H11951", "H11952", "H11953"})
         self.assertEqual({row["survey_id"] for row in conception["noaa_reviewed_vr_fine_grids_outside_sector"]},
