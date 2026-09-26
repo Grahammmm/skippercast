@@ -22,11 +22,11 @@
   "scope": "estero-2012-public-release-inventory",
   "source_pages": {
     "data_processing.html": {
-      "normalized_content_sha256": "737d891c1343db24e15f647bfdf30d7c67a68316cdb1e88bad08417e72c93bf2",
+      "normalized_content_sha256": "f87c7dba34156a54c84f25a3dc29ffa437b106964abf5ac43e728ca25a2e82d3",
       "url": "https://pubs.usgs.gov/of/2013/1225/data_processing.html"
     },
     "data_tables.html": {
-      "normalized_content_sha256": "2d26a4d2cbf1bd4da86e7c86fd2e1fe5b5fe0986ad653b1a8faa558111d92671",
+      "normalized_content_sha256": "3a2371522aaa5e60576dbb757c6c9911b9d3e61a7e9a36ffb832528840b35855",
       "url": "https://pubs.usgs.gov/of/2013/1225/data_tables.html"
     }
   }

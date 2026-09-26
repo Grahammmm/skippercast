@@ -24,6 +24,7 @@ class Links(HTMLParser):
     def __init__(self):
         super().__init__()
         self.hrefs = []
+        self.all_hrefs = []
         self.words = []
         self.suppressed = 0
 
@@ -32,6 +33,8 @@ class Links(HTMLParser):
             self.suppressed += 1
         if tag == "a":
             href = dict(attrs).get("href", "")
+            if href:
+                self.all_hrefs.append(href)
             if href.lower().endswith(".zip"):
                 self.hrefs.append(href)
 
@@ -66,7 +69,7 @@ def build(pages):
         "field_activity_id": "S-05-12-SC",
         "source_pages": {name: {"url": urljoin(BASE, name),
                                "normalized_content_sha256": hashlib.sha256(
-                                   (parsed[name].normalized_text() + "\n" + "\n".join(sorted(parsed[name].hrefs))).encode()
+                                   (parsed[name].normalized_text() + "\n" + "\n".join(sorted(parsed[name].all_hrefs))).encode()
                                ).hexdigest()}
                          for name in sorted(pages)},
         "listed_downloads": releases,
