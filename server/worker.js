@@ -115,7 +115,20 @@ export async function checkTrips(env,cursor=''){
 
 export default {async fetch(request,env){
   const url=new URL(request.url),path=url.pathname;
-  if(!path.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(request):new Response('Not found',{status:404});
+  if(!path.startsWith('/api/')){
+    if(!env.ASSETS)return new Response('Not found',{status:404});
+    // The Sites edge can retain a previously deployed asset at a stable URL.
+    // Resolve the shell and its changed modules through versioned asset paths.
+    const current={'/':'/index-v195','/index.html':'/index-v195',
+      '/boot-coastwide-v3.js':'/boot-coastwide-v195.js',
+      '/app.js':'/app-v195.js','/survey-habitat.js':'/survey-habitat-v195.js'}[path];
+    if(!current)return env.ASSETS.fetch(request);
+    const assetUrl=new URL(request.url);assetUrl.pathname=current;assetUrl.search='';
+    const response=await env.ASSETS.fetch(new Request(assetUrl,request));
+    const fresh=new Response(response.body,response);
+    fresh.headers.set('Cache-Control','no-store');
+    return fresh;
+  }
   try{
     if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){

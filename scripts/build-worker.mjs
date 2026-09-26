@@ -4,6 +4,9 @@ const regions={};const draftRegions=[];for(const id of await readdir('regions'))
 const deployment=JSON.parse(await readFile('deployments/production.json','utf8'));
 await rm('dist/client',{recursive:true,force:true});await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('dist'))if(!['client','server','.openai'].includes(entry))await cp(`dist/${entry}`,`dist/client/${entry}`,{recursive:true});
+// Sites serves matching static assets before the Worker. Remove stable shell
+// paths so the Worker can route them to fresh, versioned assets after publish.
+for(const stale of ['index.html','boot-coastwide-v3.js','app.js','survey-habitat.js'])await rm(`dist/client/${stale}`,{force:true});
 const publicRules=new Set(Object.values(regions).map(region=>region.assets.regulations));
 for(const region of draftRegions){const asset=region.assets.regulations;if(asset&&!publicRules.has(asset))await rm(`dist/client/${asset}`,{force:true});}
 await build({entryPoints:['server/worker.js'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment)},sourcemap:false});
