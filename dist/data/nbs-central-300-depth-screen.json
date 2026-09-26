@@ -1,0 +1,1203 @@
+{
+  "schema_version": 1,
+  "scope": "central-nbs-300ft-original-source-screen",
+  "reviewed_at": "2026-09-26T14:59:23+00:00",
+  "status": "complete-source-screen",
+  "depth_ft": [
+    25,
+    300
+  ],
+  "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+  "source_review_sha256": "80b4d1877296efaa089ee80dca44830784df971ea10577b2a00a7c5d71eee987",
+  "requested_unique_tiles": 26,
+  "screened_unique_tiles": 26,
+  "failed_tiles": {},
+  "sectors": [
+    {
+      "sector_id": "monterey-sur",
+      "tiles": [
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:09+00:00",
+          "tile": "BH44N5CH",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:03:10",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CH/Modeling_BH44N5CH_20260702.tiff",
+          "raster_sha256": "4c76744ce11f3218947e00add32292be61e7c6d5292c523811c902edcfda24c8",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CH/Modeling_BH44N5CH_20260702.tiff.aux.xml",
+          "rat_sha256": "6d48c05e64ae631eff2da84efca440e953611c86d53cde45dd953880512a15f9",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 681215,
+            "measured_depth_pixels": 809,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:10+00:00",
+          "tile": "BH44N5CJ",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:10:08",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CJ/Modeling_BH44N5CJ_20260702.tiff",
+          "raster_sha256": "d7ce04f9c85de804376b841ba854b80a312b39023cd453e5eed308ed6a554e1e",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CJ/Modeling_BH44N5CJ_20260702.tiff.aux.xml",
+          "rat_sha256": "08c078f6138ebbd26afefa28f7737958238091f4ac94428f2f349bfa84f62cc1",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 956697,
+            "measured_depth_pixels": 8823,
+            "recent_measured_depth_pixels": 6790,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:12+00:00",
+          "tile": "BH44P5CJ",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:06:55",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CJ/Modeling_BH44P5CJ_20260702.tiff",
+          "raster_sha256": "dc2187a38a56dc246fa20b8c37f9ef450c3ec6940c3912b0be538ed1dbeb8ea1",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CJ/Modeling_BH44P5CJ_20260702.tiff.aux.xml",
+          "rat_sha256": "e7ed1aafb73468f7bc6fc9120f85f0cb2b2ef8cb20007cd81884f95fa00161d3",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 316528,
+            "measured_depth_pixels": 1014,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:10+00:00",
+          "tile": "BH44P5CG",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:39:28",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CG/Modeling_BH44P5CG_20260702.tiff",
+          "raster_sha256": "2bd6cd3e118fb8b0c3172eab8bca1fc0c0e1deb2e745949b6bbebdeabfb6c5fb",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CG/Modeling_BH44P5CG_20260702.tiff.aux.xml",
+          "rat_sha256": "d23d5982bad69f7563c937ad8792501f4748a90ddf4278b75836ffcd91764ed1",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1598063,
+            "measured_depth_pixels": 1569,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:12+00:00",
+          "tile": "BH44P5CF",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:52:35",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CF/Modeling_BH44P5CF_20260702.tiff",
+          "raster_sha256": "026eef57071137f93484c1f8142cd07b46b401df50f2b9dbe5f9d1d48c5154c6",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CF/Modeling_BH44P5CF_20260702.tiff.aux.xml",
+          "rat_sha256": "98b0d5257d0b11e9625bbfb2fc0a1a877cab8c8ad6c9500efe5bec13c39a3b3d",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 2266996,
+            "measured_depth_pixels": 2961,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:08+00:00",
+          "tile": "BH44N5CF",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 02:10:04",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CF/Modeling_BH44N5CF_20260702.tiff",
+          "raster_sha256": "0bfe3b3e3b4c2dfc212b87a4183681786ef6dfea7e9cfe7e24114dbc05abf7a0",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CF/Modeling_BH44N5CF_20260702.tiff.aux.xml",
+          "rat_sha256": "3fc256cdd8acacd625a5e13f1e1f22be24362a592e6549741aaed1aaa73673fd",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 909974,
+            "measured_depth_pixels": 1531,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:08+00:00",
+          "tile": "BH44N5CG",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:03:53",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CG/Modeling_BH44N5CG_20260702.tiff",
+          "raster_sha256": "7c05b6f9930b04f6d13fe9a690fef3796d6366fe4d466f4315c2994a623b0fb1",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CG/Modeling_BH44N5CG_20260702.tiff.aux.xml",
+          "rat_sha256": "61dc66859d7eff2e43a7a3d7cca6bcbe39fb3d979c4da05faa884a40f9db2e5c",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 106761,
+            "measured_depth_pixels": 17,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        }
+      ],
+      "missing_tiles": []
+    },
+    {
+      "sector_id": "big-sur",
+      "tiles": [
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:13+00:00",
+          "tile": "BH44R5CC",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:28:58",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44R5CC/Modeling_BH44R5CC_20260702.tiff",
+          "raster_sha256": "843c921c2b3c9d3d0bb01633bb3faca9ccf189a319696ee97d80bf6df0939eb3",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44R5CC/Modeling_BH44R5CC_20260702.tiff.aux.xml",
+          "rat_sha256": "281fc386effdd2eecad0bf03a3d86eb49feec0f8ea4e172c066cec7e8dd4a3a5",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 805028,
+            "measured_depth_pixels": 1242,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:23+00:00",
+          "tile": "BH44V5C8",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 00:53:32",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44V5C8/Modeling_BH44V5C8_20260716.tiff",
+          "raster_sha256": "e4623b45ddc071352bbccf3c31895d843d698a2a6538a4b2ce7fe37d7b0753c4",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44V5C8/Modeling_BH44V5C8_20260716.tiff.aux.xml",
+          "rat_sha256": "63b833551da18a6f573a69051545f76ee97766841d92d2f68e73e67d091af6db",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1385790,
+            "measured_depth_pixels": 1893,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:14+00:00",
+          "tile": "BH44S5CB",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:25:00",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44S5CB/Modeling_BH44S5CB_20260716.tiff",
+          "raster_sha256": "92a1cd127483fb6d2a6b38325b9e686309c169b3e351decfac97dd29dd65ba32",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44S5CB/Modeling_BH44S5CB_20260716.tiff.aux.xml",
+          "rat_sha256": "9ac7de6aafc755bb0827761528ced0ce025fcff065ecdffaf3d1192b2bf895a8",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 539943,
+            "measured_depth_pixels": 1080,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:14+00:00",
+          "tile": "BH44S5CC",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:44:47",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44S5CC/Modeling_BH44S5CC_20260702.tiff",
+          "raster_sha256": "b3fa32dc505a915bdd791c779e7959f3c4c9a7223409de1e1ba6de52d7bfbff8",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44S5CC/Modeling_BH44S5CC_20260702.tiff.aux.xml",
+          "rat_sha256": "08114728cc8dae16c3e2cc03f06d670096a2bbe1b531223098db233b5ee16d74",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 529863,
+            "measured_depth_pixels": 846,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:10+00:00",
+          "tile": "BH44P5CD",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:38:21",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CD/Modeling_BH44P5CD_20260702.tiff",
+          "raster_sha256": "37470e28b729284599bace28233bb67cd9ecd2184ebb27e7cd71cd52c91f7add",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44P5CD/Modeling_BH44P5CD_20260702.tiff.aux.xml",
+          "rat_sha256": "1727145781340957dfc08d771405653154935980ec8bc472978213db3fa7b2b3",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 2414412,
+            "measured_depth_pixels": 6649,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:17+00:00",
+          "tile": "BH44W5C7",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 00:37:22",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C7/Modeling_BH44W5C7_20260618.tiff",
+          "raster_sha256": "ab50c37773a25150f404f18d24e3460a257a3f7afbb1f1431644dc2161cccb90",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C7/Modeling_BH44W5C7_20260618.tiff.aux.xml",
+          "rat_sha256": "58b7650288aac37a35e8435b8ce69a7b0db644bb70647779885131fb2d767863",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1656339,
+            "measured_depth_pixels": 3193,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:15+00:00",
+          "tile": "BH44T5C9",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 05:12:23",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44T5C9/Modeling_BH44T5C9_20260702.tiff",
+          "raster_sha256": "73c9ece9ca69c76aa417a644b5b07bb7532540b2441693ceab2d7dc09b507f9d",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44T5C9/Modeling_BH44T5C9_20260702.tiff.aux.xml",
+          "rat_sha256": "6864f34d581465afe47afecf7d7fd66cd6b231576c6e73e22f2a37a927a4e463",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1108019,
+            "measured_depth_pixels": 2000,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:15+00:00",
+          "tile": "BH44T5CB",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:06:10",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44T5CB/Modeling_BH44T5CB_20260702.tiff",
+          "raster_sha256": "80163f8946280ec3ffb2a4d1f17fe6d4696af3b100fdf55eecdbdafb29af58ae",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44T5CB/Modeling_BH44T5CB_20260702.tiff.aux.xml",
+          "rat_sha256": "9a7df2bc721d59be75611b53fc06180cce95288beee6ccec8cce7e1221eb3819",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 578400,
+            "measured_depth_pixels": 1076,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:18+00:00",
+          "tile": "BH44W5C8",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:38:51",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C8/Modeling_BH44W5C8_20260716.tiff",
+          "raster_sha256": "e4a4b9241b4fd692be4f9e170890702d84827f008feb6124a3775f59f607814e",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C8/Modeling_BH44W5C8_20260716.tiff.aux.xml",
+          "rat_sha256": "fadff05b1618a74572fd94923ec5452fcebc0851ff8b58914be56f00a98375ec",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 564778,
+            "measured_depth_pixels": 1462,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:08+00:00",
+          "tile": "BH44N5CD",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:19:32",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CD/Modeling_BH44N5CD_20260702.tiff",
+          "raster_sha256": "c5d5a693609103e47e08aa407d9284a7df2f783e38c51563062881e4f5f16483",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44N5CD/Modeling_BH44N5CD_20260702.tiff.aux.xml",
+          "rat_sha256": "61cfb2b565398bed78b9fc2949c2200cd319e2f7480eabe47c62e68bb02a3c00",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1518350,
+            "measured_depth_pixels": 16279,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:16+00:00",
+          "tile": "BH44V5C7",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:03:01",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44V5C7/Modeling_BH44V5C7_20260716.tiff",
+          "raster_sha256": "6f62a75587de03f0e395251f86d32d35bc810ab06d7edf6c32f82019babf84a0",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44V5C7/Modeling_BH44V5C7_20260716.tiff.aux.xml",
+          "rat_sha256": "d75991bf92d89853b031e134377703ac26dcf70e1f5b47c04ee3c7c6016781c8",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 192572,
+            "measured_depth_pixels": 154,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:12+00:00",
+          "tile": "BH44Q5CD",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:49:08",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Q5CD/Modeling_BH44Q5CD_20260702.tiff",
+          "raster_sha256": "3d7412832d2b4402dde9e00c002ecef53ee81b8c5c1cc1669407a9c71d0e4d6c",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Q5CD/Modeling_BH44Q5CD_20260702.tiff.aux.xml",
+          "rat_sha256": "482f4128178776e36a1fc7cb25c0f59bb897433208dddf4d44347d6b1004324d",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1306062,
+            "measured_depth_pixels": 2494,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        }
+      ],
+      "missing_tiles": []
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tiles": [
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:21+00:00",
+          "tile": "BH44Z5C4",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:10:34",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Z5C4/Modeling_BH44Z5C4_20260618.tiff",
+          "raster_sha256": "f0bd589127ec7f6afd7d54019311d4a0949d904d2fe75c2225a58be01a56e72f",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Z5C4/Modeling_BH44Z5C4_20260618.tiff.aux.xml",
+          "rat_sha256": "5b037e2f7b3c3c3d680df3108f783df6e9b572d46050cdcbcc256301356aa9af",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 2470504,
+            "measured_depth_pixels": 3801,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:17+00:00",
+          "tile": "BH44W5C6",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:22:38",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C6/Modeling_BH44W5C6_20260716.tiff",
+          "raster_sha256": "db81e29a867f934c75a9256560e9a09a674aa056bc1ffec655b4e38764f56824",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C6/Modeling_BH44W5C6_20260716.tiff.aux.xml",
+          "rat_sha256": "b4d213af9d490ad95dca54783c4dab3c8998fd1196f2074d2e0046dbce2ec2f6",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 890355,
+            "measured_depth_pixels": 568,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:21+00:00",
+          "tile": "BH4525C2",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:45:25",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4525C2/Modeling_BH4525C2_20260618.tiff",
+          "raster_sha256": "fada26a4d0f28924a88b64ceaa1a029936b528de1c04b4216dc00095262b4e7b",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH4525C2/Modeling_BH4525C2_20260618.tiff.aux.xml",
+          "rat_sha256": "3ed637ecee494c6f98e5390d7c2dad54f3f33eb9b2342ef0d26ca2be2da19017",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1416034,
+            "measured_depth_pixels": 744,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:19+00:00",
+          "tile": "BH44X5C5",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 04:48:38",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C5/Modeling_BH44X5C5_20260618.tiff",
+          "raster_sha256": "06932262aaacf5e3cb16edb2b37090934236f975bd9c89fca4cbae96708f0249",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C5/Modeling_BH44X5C5_20260618.tiff.aux.xml",
+          "rat_sha256": "518c25c2670440333171283f78909af3d48e8c1cfc2f2763ec7d0da7e4c60b40",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 2672216,
+            "measured_depth_pixels": 1410,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:17+00:00",
+          "tile": "BH44W5C7",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 00:37:22",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C7/Modeling_BH44W5C7_20260618.tiff",
+          "raster_sha256": "ab50c37773a25150f404f18d24e3460a257a3f7afbb1f1431644dc2161cccb90",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44W5C7/Modeling_BH44W5C7_20260618.tiff.aux.xml",
+          "rat_sha256": "58b7650288aac37a35e8435b8ce69a7b0db644bb70647779885131fb2d767863",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1656339,
+            "measured_depth_pixels": 3193,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:19+00:00",
+          "tile": "BH44X5C6",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 02:01:33",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C6/Modeling_BH44X5C6_20260618.tiff",
+          "raster_sha256": "82de546c199ad0d9469493880e74cd3fd56b0483f9f36147ca59653c37ac568e",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C6/Modeling_BH44X5C6_20260618.tiff.aux.xml",
+          "rat_sha256": "2c121fef746925274e66080e3a7538cb7f398a19c13bcc6201fa2c699316a1b8",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 2308011,
+            "measured_depth_pixels": 3271,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:18+00:00",
+          "tile": "BH44X5C4",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 01:36:38",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C4/Modeling_BH44X5C4_20260618.tiff",
+          "raster_sha256": "11b8a87b8a7c49a59bc011ad958f14a49023258f8d4020c9770369e7b3977e3e",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44X5C4/Modeling_BH44X5C4_20260618.tiff.aux.xml",
+          "rat_sha256": "1418b7545894ff1f37b223924d841bacd7dddb588eed44376ad40bffa397973a",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 613142,
+            "measured_depth_pixels": 138,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        },
+        {
+          "schema_version": 1,
+          "scope": "nbs-modeling-single-tile-source-screen",
+          "reviewed_at": "2026-09-26T14:59:21+00:00",
+          "tile": "BH44Z5C5",
+          "scheme_sha256": "0debc1fdec609fa3ffc2f6a7bcc4a6bd9e2c7e7f60c8fca719f7d385568c063e",
+          "delivered_date": "2026-09-05 03:38:19",
+          "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Z5C5/Modeling_BH44Z5C5_20260618.tiff",
+          "raster_sha256": "e13bab04417d12f892d46bad2156c01c31f830da9b4ba126c0e69686e45cb382",
+          "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/Test-and-Evaluation/Modeling/BH44Z5C5/Modeling_BH44Z5C5_20260618.tiff.aux.xml",
+          "rat_sha256": "afb6fa4b0a2691190630341b717511548b837aba294d06b4963b2020dcdf7ddc",
+          "vertical_datum": "MLLW",
+          "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + MLLW height\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"MLLW height\",VERT_DATUM[\"Mean Lower Low Water\",2005,AUTHORITY[\"EPSG\",\"1089\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+          "resolution_m": [
+            4.0,
+            4.0
+          ],
+          "screen": {
+            "depth_ft": [
+              25,
+              300
+            ],
+            "max_uncertainty_m": 1.0,
+            "min_survey_year": 1990,
+            "planning_depth_margin_m": 2,
+            "measured_contributor_flags_required": true
+          },
+          "counts": {
+            "depth_25_to_300_ft_pixels": 1332866,
+            "measured_depth_pixels": 3129,
+            "recent_measured_depth_pixels": 0,
+            "qualified_screen_pixels": 0
+          },
+          "qualified_contributors": [],
+          "test_and_evaluation_product": true,
+          "fishing_target": false,
+          "exportable": false,
+          "caveats": [
+            "NBS Modeling is a test-and-evaluation product, not a navigation chart.",
+            "Tile footprints do not establish measured coverage; interpolation and old soundings fail this screen.",
+            "Screened pixels are source leads only; substrate, hazards, protected areas, access and species rules require separate review."
+          ]
+        }
+      ],
+      "missing_tiles": []
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "NOAA NBS Modeling is a test-and-evaluation compilation, not a navigation chart.",
+    "Depth-qualified pixels are source leads; original survey, native substrate, relief, closures, hazards and routes remain separate gates.",
+    "Counts include overlapping tiles and cannot be added as unique seafloor area."
+  ]
+}

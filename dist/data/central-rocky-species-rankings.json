@@ -1,0 +1,2673 @@
+{
+  "schema_version": 1,
+  "scope": "central-surveyed-rocky-species-fit",
+  "source_atlas_edition": "2026-09-20-public-1",
+  "source_depth_ceiling_ft": 200,
+  "boat_planning_depth_ceiling_ft": 300,
+  "target_count": 132,
+  "closure_audited_at": "2026-09-26T15:01:39+00:00",
+  "rank_counts": {
+    "lingcod": {
+      "1": 105,
+      "2": 18,
+      "3": 9
+    },
+    "rockfish": {
+      "1": 116,
+      "2": 9,
+      "3": 7
+    }
+  },
+  "rank_meaning": {
+    "1": "Stronger relative mapped habitat fit",
+    "2": "Intermediate relative mapped habitat fit",
+    "3": "Lower relative mapped habitat fit"
+  },
+  "limitations": [
+    "These are historical surveyed habitat candidates, not verified catches or fish-presence probabilities.",
+    "The existing target inventory ends at 200 ft. The 300-ft planning ceiling adds no newly qualified coordinates.",
+    "Fresh state/federal GIS screening does not certify current chart, local access, route or season/method clearance."
+  ],
+  "targets": [
+    {
+      "id": "SC26-004",
+      "label": "North Buchon rocky rise",
+      "latitude": 35.259204,
+      "longitude": -120.912987,
+      "center_depth_ft": 61,
+      "neighborhood_depth_ft": [
+        47,
+        105
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 98,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "16.8 m local relief; 94% mapped rough cover.",
+      "rockfish_reason": "10.2 ha nearby rough habitat; 94% mapped rough cover."
+    },
+    {
+      "id": "SC26-012",
+      "label": "West White Rock complex",
+      "latitude": 35.540362,
+      "longitude": -121.114515,
+      "center_depth_ft": 96,
+      "neighborhood_depth_ft": [
+        47,
+        131
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 93,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "21.7 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "11.4 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-011",
+      "label": "Estero rock high",
+      "latitude": 35.495769,
+      "longitude": -121.076534,
+      "center_depth_ft": 137,
+      "neighborhood_depth_ft": [
+        130,
+        171
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 89,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "13.3 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "14.8 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-001",
+      "label": "Southern rocky rise",
+      "latitude": 35.164314,
+      "longitude": -120.843179,
+      "center_depth_ft": 140,
+      "neighborhood_depth_ft": [
+        135,
+        184
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 88,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "14.1 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "16.9 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-002",
+      "label": "Southern reef crest",
+      "latitude": 35.17118,
+      "longitude": -120.854196,
+      "center_depth_ft": 146,
+      "neighborhood_depth_ft": [
+        139,
+        180
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 86,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "13.0 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "14.1 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-008",
+      "label": "Morro inshore mound",
+      "latitude": 35.411253,
+      "longitude": -120.895528,
+      "center_depth_ft": 49,
+      "neighborhood_depth_ft": [
+        43,
+        80
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 86,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.3 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "10.6 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-024",
+      "label": "Avila rough reef",
+      "latitude": 35.153685,
+      "longitude": -120.788686,
+      "center_depth_ft": 68,
+      "neighborhood_depth_ft": [
+        44,
+        94
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 86,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "16.3 m local relief; 76% mapped rough cover.",
+      "rockfish_reason": "6.6 ha nearby rough habitat; 76% mapped rough cover."
+    },
+    {
+      "id": "SC26-031",
+      "label": "Avila rough reef",
+      "latitude": 35.163172,
+      "longitude": -120.834756,
+      "center_depth_ft": 109,
+      "neighborhood_depth_ft": [
+        97,
+        142
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 86,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "14.0 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "17.3 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-003",
+      "label": "Southern rock high",
+      "latitude": 35.182333,
+      "longitude": -120.852695,
+      "center_depth_ft": 101,
+      "neighborhood_depth_ft": [
+        97,
+        136
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 83,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.7 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "17.9 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-047",
+      "label": "Avila rough reef",
+      "latitude": 35.26625,
+      "longitude": -120.919072,
+      "center_depth_ft": 131,
+      "neighborhood_depth_ft": [
+        123,
+        154
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 83,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.9 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "17.2 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-049",
+      "label": "Avila rough reef",
+      "latitude": 35.272486,
+      "longitude": -120.904292,
+      "center_depth_ft": 51,
+      "neighborhood_depth_ft": [
+        46,
+        84
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 83,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.0 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "18.0 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-126",
+      "label": "Point Estero rough reef",
+      "latitude": 35.483922,
+      "longitude": -121.057308,
+      "center_depth_ft": 132,
+      "neighborhood_depth_ft": [
+        112,
+        153
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 83,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "17.0 m local relief; 90% mapped rough cover.",
+      "rockfish_reason": "17.0 ha nearby rough habitat; 90% mapped rough cover."
+    },
+    {
+      "id": "SC26-009",
+      "label": "Estero rocky rise",
+      "latitude": 35.477428,
+      "longitude": -121.051513,
+      "center_depth_ft": 131,
+      "neighborhood_depth_ft": [
+        126,
+        167
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 82,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "13.6 m local relief; 92% mapped rough cover.",
+      "rockfish_reason": "15.8 ha nearby rough habitat; 92% mapped rough cover."
+    },
+    {
+      "id": "SC26-034",
+      "label": "Avila rough reef",
+      "latitude": 35.168752,
+      "longitude": -120.849429,
+      "center_depth_ft": 154,
+      "neighborhood_depth_ft": [
+        141,
+        189
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 82,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "14.0 m local relief; 86% mapped rough cover.",
+      "rockfish_reason": "12.2 ha nearby rough habitat; 86% mapped rough cover."
+    },
+    {
+      "id": "SC26-044",
+      "label": "Avila rough reef",
+      "latitude": 35.184419,
+      "longitude": -120.833204,
+      "center_depth_ft": 62,
+      "neighborhood_depth_ft": [
+        49,
+        84
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 82,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "12.1 m local relief; 95% mapped rough cover.",
+      "rockfish_reason": "16.9 ha nearby rough habitat; 95% mapped rough cover."
+    },
+    {
+      "id": "SC26-010",
+      "label": "Estero reef crest",
+      "latitude": 35.491555,
+      "longitude": -121.066714,
+      "center_depth_ft": 135,
+      "neighborhood_depth_ft": [
+        125,
+        165
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 80,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "12.5 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "14.3 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-048",
+      "label": "Avila rough reef",
+      "latitude": 35.268905,
+      "longitude": -120.910979,
+      "center_depth_ft": 63,
+      "neighborhood_depth_ft": [
+        54,
+        92
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 80,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.9 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "19.2 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-124",
+      "label": "Point Estero rough reef",
+      "latitude": 35.478112,
+      "longitude": -121.043671,
+      "center_depth_ft": 75,
+      "neighborhood_depth_ft": [
+        65,
+        103
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 80,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "12.3 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "19.5 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-005",
+      "label": "Morro inshore rock high",
+      "latitude": 35.384039,
+      "longitude": -120.885778,
+      "center_depth_ft": 54,
+      "neighborhood_depth_ft": [
+        37,
+        92
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 79,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "12.8 m local relief; 76% mapped rough cover.",
+      "rockfish_reason": "9.6 ha nearby rough habitat; 76% mapped rough cover."
+    },
+    {
+      "id": "SC26-007",
+      "label": "Morro outer rocky crest",
+      "latitude": 35.410384,
+      "longitude": -120.955124,
+      "center_depth_ft": 147,
+      "neighborhood_depth_ft": [
+        140,
+        174
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 79,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.9 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "15.8 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-051",
+      "label": "Avila rough reef",
+      "latitude": 35.281992,
+      "longitude": -120.901408,
+      "center_depth_ft": 44,
+      "neighborhood_depth_ft": [
+        40,
+        76
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 79,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.2 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "17.6 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-128",
+      "label": "Point Estero rough reef",
+      "latitude": 35.501521,
+      "longitude": -121.069782,
+      "center_depth_ft": 91,
+      "neighborhood_depth_ft": [
+        77,
+        115
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 79,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.6 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "16.5 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-006",
+      "label": "Morro outer reef high",
+      "latitude": 35.408112,
+      "longitude": -120.943399,
+      "center_depth_ft": 131,
+      "neighborhood_depth_ft": [
+        123,
+        162
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.3 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "14.8 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-037",
+      "label": "Avila rough reef",
+      "latitude": 35.17353,
+      "longitude": -120.849413,
+      "center_depth_ft": 122,
+      "neighborhood_depth_ft": [
+        119,
+        154
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.5 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "17.4 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-038",
+      "label": "Avila rough reef",
+      "latitude": 35.174864,
+      "longitude": -120.818196,
+      "center_depth_ft": 53,
+      "neighborhood_depth_ft": [
+        44,
+        84
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.8 m local relief; 88% mapped rough cover.",
+      "rockfish_reason": "14.4 ha nearby rough habitat; 88% mapped rough cover."
+    },
+    {
+      "id": "SC26-041",
+      "label": "Avila rough reef",
+      "latitude": 35.178331,
+      "longitude": -120.830511,
+      "center_depth_ft": 58,
+      "neighborhood_depth_ft": [
+        45,
+        87
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.3 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "15.5 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-100",
+      "label": "Point Estero rough reef",
+      "latitude": 35.434795,
+      "longitude": -120.980722,
+      "center_depth_ft": 108,
+      "neighborhood_depth_ft": [
+        99,
+        125
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.9 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "15.6 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-131",
+      "label": "Point Estero rough reef",
+      "latitude": 35.503837,
+      "longitude": -121.096407,
+      "center_depth_ft": 159,
+      "neighborhood_depth_ft": [
+        157,
+        189
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 77,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.0 m local relief; 92% mapped rough cover.",
+      "rockfish_reason": "13.6 ha nearby rough habitat; 92% mapped rough cover."
+    },
+    {
+      "id": "SC26-052",
+      "label": "Avila rough reef",
+      "latitude": 35.288232,
+      "longitude": -120.923457,
+      "center_depth_ft": 160,
+      "neighborhood_depth_ft": [
+        151,
+        183
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 76,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.1 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "15.8 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-094",
+      "label": "Point Estero rough reef",
+      "latitude": 35.430427,
+      "longitude": -120.989092,
+      "center_depth_ft": 138,
+      "neighborhood_depth_ft": [
+        130,
+        162
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 76,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.6 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "15.0 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-123",
+      "label": "Point Estero rough reef",
+      "latitude": 35.474487,
+      "longitude": -121.036926,
+      "center_depth_ft": 69,
+      "neighborhood_depth_ft": [
+        66,
+        99
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 76,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.7 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "18.4 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-040",
+      "label": "Avila rough reef",
+      "latitude": 35.17792,
+      "longitude": -120.84787,
+      "center_depth_ft": 104,
+      "neighborhood_depth_ft": [
+        95,
+        136
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 75,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.1 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "16.0 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-071",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.387961,
+      "longitude": -120.893602,
+      "center_depth_ft": 85,
+      "neighborhood_depth_ft": [
+        74,
+        113
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 75,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.0 m local relief; 87% mapped rough cover.",
+      "rockfish_reason": "8.9 ha nearby rough habitat; 87% mapped rough cover."
+    },
+    {
+      "id": "SC26-122",
+      "label": "Point Estero rough reef",
+      "latitude": 35.47266,
+      "longitude": -121.046558,
+      "center_depth_ft": 135,
+      "neighborhood_depth_ft": [
+        125,
+        165
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 75,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.4 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "18.7 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-125",
+      "label": "Point Estero rough reef",
+      "latitude": 35.482228,
+      "longitude": -121.047319,
+      "center_depth_ft": 73,
+      "neighborhood_depth_ft": [
+        63,
+        97
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 75,
+      "terrain_grade": "A",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.9 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "19.3 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-116",
+      "label": "Point Estero rough reef",
+      "latitude": 35.456924,
+      "longitude": -121.026886,
+      "center_depth_ft": 130,
+      "neighborhood_depth_ft": [
+        122,
+        159
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 74,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.6 m local relief; 92% mapped rough cover.",
+      "rockfish_reason": "17.3 ha nearby rough habitat; 92% mapped rough cover."
+    },
+    {
+      "id": "SC26-127",
+      "label": "Point Estero rough reef",
+      "latitude": 35.497842,
+      "longitude": -121.06524,
+      "center_depth_ft": 72,
+      "neighborhood_depth_ft": [
+        70,
+        101
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 74,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.2 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "19.3 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-053",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.291634,
+      "longitude": -120.895991,
+      "center_depth_ft": 48,
+      "neighborhood_depth_ft": [
+        44,
+        73
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 73,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.7 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "18.2 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-119",
+      "label": "Point Estero rough reef",
+      "latitude": 35.465035,
+      "longitude": -121.037817,
+      "center_depth_ft": 138,
+      "neighborhood_depth_ft": [
+        134,
+        168
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 73,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.7 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "17.1 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-132",
+      "label": "Point Estero rough reef",
+      "latitude": 35.510111,
+      "longitude": -121.099787,
+      "center_depth_ft": 160,
+      "neighborhood_depth_ft": [
+        151,
+        186
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 73,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.8 m local relief; 77% mapped rough cover.",
+      "rockfish_reason": "10.8 ha nearby rough habitat; 77% mapped rough cover."
+    },
+    {
+      "id": "SC26-136",
+      "label": "Point Estero rough reef",
+      "latitude": 35.535789,
+      "longitude": -121.110321,
+      "center_depth_ft": 104,
+      "neighborhood_depth_ft": [
+        90,
+        142
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 73,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.9 m local relief; 91% mapped rough cover.",
+      "rockfish_reason": "7.9 ha nearby rough habitat; 91% mapped rough cover."
+    },
+    {
+      "id": "SC26-020",
+      "label": "Avila rough reef",
+      "latitude": 35.147255,
+      "longitude": -120.826946,
+      "center_depth_ft": 157,
+      "neighborhood_depth_ft": [
+        153,
+        186
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.1 m local relief; 83% mapped rough cover.",
+      "rockfish_reason": "13.0 ha nearby rough habitat; 83% mapped rough cover."
+    },
+    {
+      "id": "SC26-036",
+      "label": "Avila rough reef",
+      "latitude": 35.170898,
+      "longitude": -120.803261,
+      "center_depth_ft": 40,
+      "neighborhood_depth_ft": [
+        37,
+        75
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.2 m local relief; 82% mapped rough cover.",
+      "rockfish_reason": "14.6 ha nearby rough habitat; 82% mapped rough cover."
+    },
+    {
+      "id": "SC26-050",
+      "label": "Avila rough reef",
+      "latitude": 35.278227,
+      "longitude": -120.913049,
+      "center_depth_ft": 108,
+      "neighborhood_depth_ft": [
+        105,
+        134
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.8 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "19.1 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-083",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.41863,
+      "longitude": -120.9417,
+      "center_depth_ft": 90,
+      "neighborhood_depth_ft": [
+        82,
+        117
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "10.4 m local relief; 80% mapped rough cover.",
+      "rockfish_reason": "12.1 ha nearby rough habitat; 80% mapped rough cover."
+    },
+    {
+      "id": "SC26-120",
+      "label": "Point Estero rough reef",
+      "latitude": 35.468647,
+      "longitude": -121.04368,
+      "center_depth_ft": 153,
+      "neighborhood_depth_ft": [
+        146,
+        184
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "11.2 m local relief; 82% mapped rough cover.",
+      "rockfish_reason": "13.1 ha nearby rough habitat; 82% mapped rough cover."
+    },
+    {
+      "id": "SC26-121",
+      "label": "Point Estero rough reef",
+      "latitude": 35.471212,
+      "longitude": -121.029622,
+      "center_depth_ft": 63,
+      "neighborhood_depth_ft": [
+        56,
+        83
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 72,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.3 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "17.5 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-035",
+      "label": "Avila rough reef",
+      "latitude": 35.169945,
+      "longitude": -120.830404,
+      "center_depth_ft": 68,
+      "neighborhood_depth_ft": [
+        65,
+        90
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.7 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "16.6 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-043",
+      "label": "Avila rough reef",
+      "latitude": 35.179244,
+      "longitude": -120.836196,
+      "center_depth_ft": 73,
+      "neighborhood_depth_ft": [
+        66,
+        98
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.2 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "18.4 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-079",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.415771,
+      "longitude": -120.94849,
+      "center_depth_ft": 110,
+      "neighborhood_depth_ft": [
+        103,
+        130
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.3 m local relief; 87% mapped rough cover.",
+      "rockfish_reason": "13.9 ha nearby rough habitat; 87% mapped rough cover."
+    },
+    {
+      "id": "SC26-087",
+      "label": "Point Estero rough reef",
+      "latitude": 35.424436,
+      "longitude": -120.986598,
+      "center_depth_ft": 164,
+      "neighborhood_depth_ft": [
+        158,
+        184
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.6 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "11.5 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-092",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.429006,
+      "longitude": -120.963464,
+      "center_depth_ft": 80,
+      "neighborhood_depth_ft": [
+        76,
+        105
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.5 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "13.9 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-102",
+      "label": "Point Estero rough reef",
+      "latitude": 35.43676,
+      "longitude": -121.001272,
+      "center_depth_ft": 141,
+      "neighborhood_depth_ft": [
+        137,
+        168
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 71,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.0 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "14.6 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-032",
+      "label": "Avila rough reef",
+      "latitude": 35.164276,
+      "longitude": -120.815954,
+      "center_depth_ft": 80,
+      "neighborhood_depth_ft": [
+        77,
+        106
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 70,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.6 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "14.0 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-054",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.292087,
+      "longitude": -120.927427,
+      "center_depth_ft": 161,
+      "neighborhood_depth_ft": [
+        156,
+        189
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 70,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.5 m local relief; 95% mapped rough cover.",
+      "rockfish_reason": "11.6 ha nearby rough habitat; 95% mapped rough cover."
+    },
+    {
+      "id": "SC26-064",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.317319,
+      "longitude": -120.895546,
+      "center_depth_ft": 95,
+      "neighborhood_depth_ft": [
+        88,
+        114
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 69,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.3 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "18.6 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-088",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.424898,
+      "longitude": -120.955087,
+      "center_depth_ft": 74,
+      "neighborhood_depth_ft": [
+        70,
+        94
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 69,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.5 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "17.1 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-096",
+      "label": "Point Estero rough reef",
+      "latitude": 35.431806,
+      "longitude": -120.996107,
+      "center_depth_ft": 149,
+      "neighborhood_depth_ft": [
+        148,
+        172
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 69,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.4 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "17.3 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-109",
+      "label": "Point Estero rough reef",
+      "latitude": 35.444904,
+      "longitude": -121.019578,
+      "center_depth_ft": 161,
+      "neighborhood_depth_ft": [
+        155,
+        185
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 69,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.1 m local relief; 94% mapped rough cover.",
+      "rockfish_reason": "11.7 ha nearby rough habitat; 94% mapped rough cover."
+    },
+    {
+      "id": "SC26-117",
+      "label": "Point Estero rough reef",
+      "latitude": 35.45774,
+      "longitude": -121.016178,
+      "center_depth_ft": 73,
+      "neighborhood_depth_ft": [
+        70,
+        95
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 69,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.0 m local relief; 94% mapped rough cover.",
+      "rockfish_reason": "18.1 ha nearby rough habitat; 94% mapped rough cover."
+    },
+    {
+      "id": "SC26-018",
+      "label": "Avila rough reef",
+      "latitude": 35.146525,
+      "longitude": -120.806441,
+      "center_depth_ft": 106,
+      "neighborhood_depth_ft": [
+        102,
+        127
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 68,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.6 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "15.2 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-028",
+      "label": "Avila rough reef",
+      "latitude": 35.159784,
+      "longitude": -120.796864,
+      "center_depth_ft": 64,
+      "neighborhood_depth_ft": [
+        62,
+        86
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 68,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.3 m local relief; 84% mapped rough cover.",
+      "rockfish_reason": "15.0 ha nearby rough habitat; 84% mapped rough cover."
+    },
+    {
+      "id": "SC26-070",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.376893,
+      "longitude": -120.87925,
+      "center_depth_ft": 56,
+      "neighborhood_depth_ft": [
+        48,
+        75
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 68,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.3 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "9.0 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-130",
+      "label": "Point Estero rough reef",
+      "latitude": 35.503766,
+      "longitude": -121.080533,
+      "center_depth_ft": 116,
+      "neighborhood_depth_ft": [
+        97,
+        155
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 68,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "12.4 m local relief; 86% mapped rough cover.",
+      "rockfish_reason": "5.5 ha nearby rough habitat; 86% mapped rough cover."
+    },
+    {
+      "id": "SC26-056",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.298008,
+      "longitude": -120.925736,
+      "center_depth_ft": 170,
+      "neighborhood_depth_ft": [
+        166,
+        189
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 67,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.5 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "13.4 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-082",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.416368,
+      "longitude": -120.930635,
+      "center_depth_ft": 88,
+      "neighborhood_depth_ft": [
+        85,
+        107
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 67,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.0 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "18.4 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-101",
+      "label": "Point Estero rough reef",
+      "latitude": 35.435899,
+      "longitude": -121.009224,
+      "center_depth_ft": 159,
+      "neighborhood_depth_ft": [
+        158,
+        186
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 67,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.1 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "16.6 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-105",
+      "label": "Point Estero rough reef",
+      "latitude": 35.441721,
+      "longitude": -121.012385,
+      "center_depth_ft": 141,
+      "neighborhood_depth_ft": [
+        138,
+        172
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 67,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.4 m local relief; 81% mapped rough cover.",
+      "rockfish_reason": "15.3 ha nearby rough habitat; 81% mapped rough cover."
+    },
+    {
+      "id": "SC26-118",
+      "label": "Point Estero rough reef",
+      "latitude": 35.461983,
+      "longitude": -121.033043,
+      "center_depth_ft": 135,
+      "neighborhood_depth_ft": [
+        131,
+        163
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 67,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.8 m local relief; 81% mapped rough cover.",
+      "rockfish_reason": "14.9 ha nearby rough habitat; 81% mapped rough cover."
+    },
+    {
+      "id": "SC26-025",
+      "label": "Avila rough reef",
+      "latitude": 35.154261,
+      "longitude": -120.830492,
+      "center_depth_ft": 133,
+      "neighborhood_depth_ft": [
+        125,
+        153
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.4 m local relief; 85% mapped rough cover.",
+      "rockfish_reason": "16.1 ha nearby rough habitat; 85% mapped rough cover."
+    },
+    {
+      "id": "SC26-030",
+      "label": "Avila rough reef",
+      "latitude": 35.162812,
+      "longitude": -120.809736,
+      "center_depth_ft": 72,
+      "neighborhood_depth_ft": [
+        70,
+        96
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.4 m local relief; 92% mapped rough cover.",
+      "rockfish_reason": "17.2 ha nearby rough habitat; 92% mapped rough cover."
+    },
+    {
+      "id": "SC26-046",
+      "label": "Avila rough reef",
+      "latitude": 35.190288,
+      "longitude": -120.833707,
+      "center_depth_ft": 48,
+      "neighborhood_depth_ft": [
+        35,
+        69
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.6 m local relief; 74% mapped rough cover.",
+      "rockfish_reason": "9.9 ha nearby rough habitat; 74% mapped rough cover."
+    },
+    {
+      "id": "SC26-085",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.421222,
+      "longitude": -120.950995,
+      "center_depth_ft": 73,
+      "neighborhood_depth_ft": [
+        73,
+        96
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.2 m local relief; 97% mapped rough cover.",
+      "rockfish_reason": "17.9 ha nearby rough habitat; 97% mapped rough cover."
+    },
+    {
+      "id": "SC26-095",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.431456,
+      "longitude": -120.948423,
+      "center_depth_ft": 55,
+      "neighborhood_depth_ft": [
+        53,
+        74
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.4 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "16.4 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-111",
+      "label": "Point Estero rough reef",
+      "latitude": 35.450111,
+      "longitude": -121.023747,
+      "center_depth_ft": 148,
+      "neighborhood_depth_ft": [
+        145,
+        182
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 66,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.0 m local relief; 87% mapped rough cover.",
+      "rockfish_reason": "13.8 ha nearby rough habitat; 87% mapped rough cover."
+    },
+    {
+      "id": "SC26-091",
+      "label": "Point Estero rough reef",
+      "latitude": 35.427418,
+      "longitude": -120.970884,
+      "center_depth_ft": 117,
+      "neighborhood_depth_ft": [
+        110,
+        133
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 65,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.3 m local relief; 95% mapped rough cover.",
+      "rockfish_reason": "15.1 ha nearby rough habitat; 95% mapped rough cover."
+    },
+    {
+      "id": "SC26-093",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.430055,
+      "longitude": -120.929734,
+      "center_depth_ft": 41,
+      "neighborhood_depth_ft": [
+        41,
+        65
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 65,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.4 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "18.6 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-104",
+      "label": "Point Estero rough reef",
+      "latitude": 35.438616,
+      "longitude": -120.988227,
+      "center_depth_ft": 99,
+      "neighborhood_depth_ft": [
+        96,
+        118
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 65,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.0 m local relief; 94% mapped rough cover.",
+      "rockfish_reason": "17.4 ha nearby rough habitat; 94% mapped rough cover."
+    },
+    {
+      "id": "SC26-106",
+      "label": "Point Estero rough reef",
+      "latitude": 35.443072,
+      "longitude": -120.995938,
+      "center_depth_ft": 101,
+      "neighborhood_depth_ft": [
+        93,
+        115
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 65,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.2 m local relief; 100% mapped rough cover.",
+      "rockfish_reason": "16.2 ha nearby rough habitat; 100% mapped rough cover."
+    },
+    {
+      "id": "SC26-078",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.414165,
+      "longitude": -120.96549,
+      "center_depth_ft": 151,
+      "neighborhood_depth_ft": [
+        146,
+        177
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 64,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.8 m local relief; 72% mapped rough cover.",
+      "rockfish_reason": "10.7 ha nearby rough habitat; 72% mapped rough cover."
+    },
+    {
+      "id": "SC26-084",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.41989,
+      "longitude": -120.962813,
+      "center_depth_ft": 115,
+      "neighborhood_depth_ft": [
+        114,
+        137
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 64,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.8 m local relief; 91% mapped rough cover.",
+      "rockfish_reason": "16.7 ha nearby rough habitat; 91% mapped rough cover."
+    },
+    {
+      "id": "SC26-114",
+      "label": "Point Estero rough reef",
+      "latitude": 35.452197,
+      "longitude": -121.008051,
+      "center_depth_ft": 83,
+      "neighborhood_depth_ft": [
+        80,
+        101
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 64,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.4 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "13.0 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-115",
+      "label": "Point Estero rough reef",
+      "latitude": 35.453787,
+      "longitude": -121.00063,
+      "center_depth_ft": 52,
+      "neighborhood_depth_ft": [
+        47,
+        69
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 64,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.8 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "16.6 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-039",
+      "label": "Avila rough reef",
+      "latitude": 35.176124,
+      "longitude": -120.858458,
+      "center_depth_ft": 156,
+      "neighborhood_depth_ft": [
+        151,
+        181
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 63,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.3 m local relief; 78% mapped rough cover.",
+      "rockfish_reason": "13.5 ha nearby rough habitat; 78% mapped rough cover."
+    },
+    {
+      "id": "SC26-042",
+      "label": "Avila rough reef",
+      "latitude": 35.179122,
+      "longitude": -120.864858,
+      "center_depth_ft": 176,
+      "neighborhood_depth_ft": [
+        167,
+        189
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 61,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.3 m local relief; 87% mapped rough cover.",
+      "rockfish_reason": "10.2 ha nearby rough habitat; 87% mapped rough cover."
+    },
+    {
+      "id": "SC26-055",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.294892,
+      "longitude": -120.917569,
+      "center_depth_ft": 152,
+      "neighborhood_depth_ft": [
+        145,
+        165
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 61,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.4 m local relief; 91% mapped rough cover.",
+      "rockfish_reason": "13.8 ha nearby rough habitat; 91% mapped rough cover."
+    },
+    {
+      "id": "SC26-059",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.309335,
+      "longitude": -120.903011,
+      "center_depth_ft": 124,
+      "neighborhood_depth_ft": [
+        119,
+        135
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 61,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "5.9 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "13.5 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-108",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.444207,
+      "longitude": -120.961429,
+      "center_depth_ft": 47,
+      "neighborhood_depth_ft": [
+        41,
+        61
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 61,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.8 m local relief; 99% mapped rough cover.",
+      "rockfish_reason": "12.5 ha nearby rough habitat; 99% mapped rough cover."
+    },
+    {
+      "id": "SC26-113",
+      "label": "Point Estero rough reef",
+      "latitude": 35.451727,
+      "longitude": -120.990545,
+      "center_depth_ft": 48,
+      "neighborhood_depth_ft": [
+        44,
+        65
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 61,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.1 m local relief; 94% mapped rough cover.",
+      "rockfish_reason": "16.8 ha nearby rough habitat; 94% mapped rough cover."
+    },
+    {
+      "id": "SC26-029",
+      "label": "Avila rough reef",
+      "latitude": 35.162739,
+      "longitude": -120.790856,
+      "center_depth_ft": 51,
+      "neighborhood_depth_ft": [
+        47,
+        76
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 60,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "7.9 m local relief; 70% mapped rough cover.",
+      "rockfish_reason": "12.0 ha nearby rough habitat; 70% mapped rough cover."
+    },
+    {
+      "id": "SC26-045",
+      "label": "Avila rough reef",
+      "latitude": 35.184997,
+      "longitude": -120.840326,
+      "center_depth_ft": 81,
+      "neighborhood_depth_ft": [
+        78,
+        95
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 60,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "5.5 m local relief; 92% mapped rough cover.",
+      "rockfish_reason": "16.1 ha nearby rough habitat; 92% mapped rough cover."
+    },
+    {
+      "id": "SC26-099",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.434448,
+      "longitude": -120.96542,
+      "center_depth_ft": 72,
+      "neighborhood_depth_ft": [
+        71,
+        89
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 60,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.3 m local relief; 85% mapped rough cover.",
+      "rockfish_reason": "14.2 ha nearby rough habitat; 85% mapped rough cover."
+    },
+    {
+      "id": "SC26-019",
+      "label": "Avila rough reef",
+      "latitude": 35.147099,
+      "longitude": -120.798304,
+      "center_depth_ft": 91,
+      "neighborhood_depth_ft": [
+        88,
+        105
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.1 m local relief; 95% mapped rough cover.",
+      "rockfish_reason": "16.9 ha nearby rough habitat; 95% mapped rough cover."
+    },
+    {
+      "id": "SC26-023",
+      "label": "Avila rough reef",
+      "latitude": 35.152369,
+      "longitude": -120.795637,
+      "center_depth_ft": 83,
+      "neighborhood_depth_ft": [
+        81,
+        100
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.8 m local relief; 91% mapped rough cover.",
+      "rockfish_reason": "13.8 ha nearby rough habitat; 91% mapped rough cover."
+    },
+    {
+      "id": "SC26-026",
+      "label": "Avila rough reef",
+      "latitude": 35.155095,
+      "longitude": -120.80676,
+      "center_depth_ft": 103,
+      "neighborhood_depth_ft": [
+        102,
+        118
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.5 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "16.3 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-062",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.315914,
+      "longitude": -120.908121,
+      "center_depth_ft": 141,
+      "neighborhood_depth_ft": [
+        137,
+        158
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.0 m local relief; 78% mapped rough cover.",
+      "rockfish_reason": "10.6 ha nearby rough habitat; 78% mapped rough cover."
+    },
+    {
+      "id": "SC26-063",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.316262,
+      "longitude": -120.917791,
+      "center_depth_ft": 175,
+      "neighborhood_depth_ft": [
+        171,
+        188
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "5.3 m local relief; 88% mapped rough cover.",
+      "rockfish_reason": "11.5 ha nearby rough habitat; 88% mapped rough cover."
+    },
+    {
+      "id": "SC26-097",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.432907,
+      "longitude": -120.938362,
+      "center_depth_ft": 46,
+      "neighborhood_depth_ft": [
+        42,
+        60
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 59,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.7 m local relief; 98% mapped rough cover.",
+      "rockfish_reason": "15.8 ha nearby rough habitat; 98% mapped rough cover."
+    },
+    {
+      "id": "SC26-021",
+      "label": "Avila rough reef",
+      "latitude": 35.148717,
+      "longitude": -120.812968,
+      "center_depth_ft": 134,
+      "neighborhood_depth_ft": [
+        130,
+        148
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 58,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.8 m local relief; 90% mapped rough cover.",
+      "rockfish_reason": "14.3 ha nearby rough habitat; 90% mapped rough cover."
+    },
+    {
+      "id": "SC26-022",
+      "label": "Avila rough reef",
+      "latitude": 35.150128,
+      "longitude": -120.841358,
+      "center_depth_ft": 180,
+      "neighborhood_depth_ft": [
+        174,
+        189
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 58,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.4 m local relief; 89% mapped rough cover.",
+      "rockfish_reason": "9.5 ha nearby rough habitat; 89% mapped rough cover."
+    },
+    {
+      "id": "SC26-060",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.312326,
+      "longitude": -120.914372,
+      "center_depth_ft": 163,
+      "neighborhood_depth_ft": [
+        160,
+        179
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 58,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "5.1 m local relief; 89% mapped rough cover.",
+      "rockfish_reason": "15.5 ha nearby rough habitat; 89% mapped rough cover."
+    },
+    {
+      "id": "SC26-107",
+      "label": "Point Estero rough reef",
+      "latitude": 35.443859,
+      "longitude": -120.989088,
+      "center_depth_ft": 75,
+      "neighborhood_depth_ft": [
+        73,
+        90
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 58,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.8 m local relief; 90% mapped rough cover.",
+      "rockfish_reason": "16.7 ha nearby rough habitat; 90% mapped rough cover."
+    },
+    {
+      "id": "SC26-110",
+      "label": "Point Estero rough reef",
+      "latitude": 35.446726,
+      "longitude": -120.977229,
+      "center_depth_ft": 57,
+      "neighborhood_depth_ft": [
+        53,
+        71
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 58,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.3 m local relief; 96% mapped rough cover.",
+      "rockfish_reason": "15.8 ha nearby rough habitat; 96% mapped rough cover."
+    },
+    {
+      "id": "SC26-033",
+      "label": "Avila rough reef",
+      "latitude": 35.165456,
+      "longitude": -120.801432,
+      "center_depth_ft": 54,
+      "neighborhood_depth_ft": [
+        52,
+        82
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 56,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "8.3 m local relief; 57% mapped rough cover.",
+      "rockfish_reason": "8.8 ha nearby rough habitat; 57% mapped rough cover."
+    },
+    {
+      "id": "SC26-129",
+      "label": "Point Estero rough reef",
+      "latitude": 35.503585,
+      "longitude": -121.08616,
+      "center_depth_ft": 153,
+      "neighborhood_depth_ft": [
+        150,
+        184
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 53,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 1,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "9.1 m local relief; 59% mapped rough cover.",
+      "rockfish_reason": "5.7 ha nearby rough habitat; 59% mapped rough cover."
+    },
+    {
+      "id": "SC26-058",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.308116,
+      "longitude": -120.921189,
+      "center_depth_ft": 176,
+      "neighborhood_depth_ft": [
+        174,
+        191
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 57,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.1 m local relief; 87% mapped rough cover.",
+      "rockfish_reason": "12.4 ha nearby rough habitat; 87% mapped rough cover."
+    },
+    {
+      "id": "SC26-065",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.31988,
+      "longitude": -120.913298,
+      "center_depth_ft": 165,
+      "neighborhood_depth_ft": [
+        162,
+        178
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 57,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "5.0 m local relief; 89% mapped rough cover.",
+      "rockfish_reason": "14.1 ha nearby rough habitat; 89% mapped rough cover."
+    },
+    {
+      "id": "SC26-080",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.415906,
+      "longitude": -120.888359,
+      "center_depth_ft": 43,
+      "neighborhood_depth_ft": [
+        40,
+        56
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 56,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.4 m local relief; 93% mapped rough cover.",
+      "rockfish_reason": "11.6 ha nearby rough habitat; 93% mapped rough cover."
+    },
+    {
+      "id": "SC26-089",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.425394,
+      "longitude": -120.936572,
+      "center_depth_ft": 71,
+      "neighborhood_depth_ft": [
+        69,
+        86
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 56,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.2 m local relief; 85% mapped rough cover.",
+      "rockfish_reason": "13.6 ha nearby rough habitat; 85% mapped rough cover."
+    },
+    {
+      "id": "SC26-027",
+      "label": "Avila rough reef",
+      "latitude": 35.155295,
+      "longitude": -120.837929,
+      "center_depth_ft": 165,
+      "neighborhood_depth_ft": [
+        162,
+        180
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 55,
+      "terrain_grade": "B",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.7 m local relief; 85% mapped rough cover.",
+      "rockfish_reason": "11.9 ha nearby rough habitat; 85% mapped rough cover."
+    },
+    {
+      "id": "SC26-086",
+      "label": "Point Estero rough reef",
+      "latitude": 35.422582,
+      "longitude": -120.972767,
+      "center_depth_ft": 143,
+      "neighborhood_depth_ft": [
+        140,
+        157
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 51,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.6 m local relief; 83% mapped rough cover.",
+      "rockfish_reason": "8.7 ha nearby rough habitat; 83% mapped rough cover."
+    },
+    {
+      "id": "SC26-112",
+      "label": "Point Estero rough reef",
+      "latitude": 35.450953,
+      "longitude": -120.981971,
+      "center_depth_ft": 44,
+      "neighborhood_depth_ft": [
+        40,
+        55
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 51,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.4 m local relief; 85% mapped rough cover.",
+      "rockfish_reason": "8.3 ha nearby rough habitat; 85% mapped rough cover."
+    },
+    {
+      "id": "SC26-090",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.426968,
+      "longitude": -120.902389,
+      "center_depth_ft": 50,
+      "neighborhood_depth_ft": [
+        46,
+        59
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 50,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "3.7 m local relief; 86% mapped rough cover.",
+      "rockfish_reason": "8.7 ha nearby rough habitat; 86% mapped rough cover."
+    },
+    {
+      "id": "SC26-098",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.433621,
+      "longitude": -120.922153,
+      "center_depth_ft": 42,
+      "neighborhood_depth_ft": [
+        38,
+        63
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 50,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "6.9 m local relief; 53% mapped rough cover.",
+      "rockfish_reason": "6.5 ha nearby rough habitat; 53% mapped rough cover."
+    },
+    {
+      "id": "SC26-066",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.321262,
+      "longitude": -120.889064,
+      "center_depth_ft": 83,
+      "neighborhood_depth_ft": [
+        81,
+        98
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 49,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.5 m local relief; 82% mapped rough cover.",
+      "rockfish_reason": "7.6 ha nearby rough habitat; 82% mapped rough cover."
+    },
+    {
+      "id": "SC26-077",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.410313,
+      "longitude": -120.883,
+      "center_depth_ft": 46,
+      "neighborhood_depth_ft": [
+        42,
+        55
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 46,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 1,
+      "lingcod_reason": "4.0 m local relief; 77% mapped rough cover.",
+      "rockfish_reason": "7.8 ha nearby rough habitat; 77% mapped rough cover."
+    },
+    {
+      "id": "SC26-017",
+      "label": "Avila rough reef",
+      "latitude": 35.145341,
+      "longitude": -120.790888,
+      "center_depth_ft": 88,
+      "neighborhood_depth_ft": [
+        87,
+        108
+      ],
+      "source_id": "PointBuchon",
+      "source_url": "https://doi.org/10.5066/P9KBGELE",
+      "survey_year": 2008,
+      "habitat_score": 45,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "5.6 m local relief; 65% mapped rough cover.",
+      "rockfish_reason": "4.2 ha nearby rough habitat; 65% mapped rough cover."
+    },
+    {
+      "id": "SC26-061",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.313668,
+      "longitude": -120.887832,
+      "center_depth_ft": 74,
+      "neighborhood_depth_ft": [
+        67,
+        85
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 45,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "6.0 m local relief; 60% mapped rough cover.",
+      "rockfish_reason": "7.1 ha nearby rough habitat; 60% mapped rough cover."
+    },
+    {
+      "id": "SC26-069",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.37505,
+      "longitude": -120.913199,
+      "center_depth_ft": 173,
+      "neighborhood_depth_ft": [
+        170,
+        189
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 42,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "4.9 m local relief; 52% mapped rough cover.",
+      "rockfish_reason": "7.1 ha nearby rough habitat; 52% mapped rough cover."
+    },
+    {
+      "id": "SC26-057",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.300359,
+      "longitude": -120.915669,
+      "center_depth_ft": 155,
+      "neighborhood_depth_ft": [
+        151,
+        166
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 41,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "4.1 m local relief; 63% mapped rough cover.",
+      "rockfish_reason": "6.5 ha nearby rough habitat; 63% mapped rough cover."
+    },
+    {
+      "id": "SC26-072",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.390125,
+      "longitude": -120.883307,
+      "center_depth_ft": 74,
+      "neighborhood_depth_ft": [
+        69,
+        85
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 39,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "3.1 m local relief; 53% mapped rough cover.",
+      "rockfish_reason": "8.7 ha nearby rough habitat; 53% mapped rough cover."
+    },
+    {
+      "id": "SC26-076",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.404772,
+      "longitude": -120.880612,
+      "center_depth_ft": 47,
+      "neighborhood_depth_ft": [
+        43,
+        59
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 37,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "4.6 m local relief; 57% mapped rough cover.",
+      "rockfish_reason": "4.6 ha nearby rough habitat; 57% mapped rough cover."
+    },
+    {
+      "id": "SC26-081",
+      "label": "Point Estero rough reef",
+      "latitude": 35.416191,
+      "longitude": -120.973368,
+      "center_depth_ft": 173,
+      "neighborhood_depth_ft": [
+        166,
+        189
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 37,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 2,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "6.1 m local relief; 47% mapped rough cover.",
+      "rockfish_reason": "3.7 ha nearby rough habitat; 47% mapped rough cover."
+    },
+    {
+      "id": "SC26-074",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.395872,
+      "longitude": -120.892295,
+      "center_depth_ft": 91,
+      "neighborhood_depth_ft": [
+        89,
+        107
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 31,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "4.1 m local relief; 35% mapped rough cover.",
+      "rockfish_reason": "5.0 ha nearby rough habitat; 35% mapped rough cover."
+    },
+    {
+      "id": "SC26-067",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.325221,
+      "longitude": -120.914591,
+      "center_depth_ft": 177,
+      "neighborhood_depth_ft": [
+        170,
+        189
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 29,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "4.9 m local relief; 35% mapped rough cover.",
+      "rockfish_reason": "3.5 ha nearby rough habitat; 35% mapped rough cover."
+    },
+    {
+      "id": "SC26-135",
+      "label": "Point Estero rough reef",
+      "latitude": 35.526934,
+      "longitude": -121.10325,
+      "center_depth_ft": 133,
+      "neighborhood_depth_ft": [
+        119,
+        141
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 28,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "3.8 m local relief; 40% mapped rough cover.",
+      "rockfish_reason": "0.9 ha nearby rough habitat; 40% mapped rough cover."
+    },
+    {
+      "id": "SC26-103",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.437525,
+      "longitude": -120.91335,
+      "center_depth_ft": 41,
+      "neighborhood_depth_ft": [
+        37,
+        47
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 27,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 2,
+      "lingcod_reason": "2.1 m local relief; 42% mapped rough cover.",
+      "rockfish_reason": "4.5 ha nearby rough habitat; 42% mapped rough cover."
+    },
+    {
+      "id": "SC26-075",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.399049,
+      "longitude": -120.87812,
+      "center_depth_ft": 47,
+      "neighborhood_depth_ft": [
+        43,
+        57
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 22,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "3.9 m local relief; 28% mapped rough cover.",
+      "rockfish_reason": "1.8 ha nearby rough habitat; 28% mapped rough cover."
+    },
+    {
+      "id": "SC26-134",
+      "label": "Point Estero rough reef",
+      "latitude": 35.523117,
+      "longitude": -121.107089,
+      "center_depth_ft": 155,
+      "neighborhood_depth_ft": [
+        153,
+        167
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 22,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "4.7 m local relief; 22% mapped rough cover.",
+      "rockfish_reason": "1.7 ha nearby rough habitat; 22% mapped rough cover."
+    },
+    {
+      "id": "SC26-073",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.393804,
+      "longitude": -120.877156,
+      "center_depth_ft": 52,
+      "neighborhood_depth_ft": [
+        46,
+        59
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 20,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "4.2 m local relief; 22% mapped rough cover.",
+      "rockfish_reason": "1.5 ha nearby rough habitat; 22% mapped rough cover."
+    },
+    {
+      "id": "SC26-133",
+      "label": "Point Estero rough reef",
+      "latitude": 35.516455,
+      "longitude": -121.096219,
+      "center_depth_ft": 152,
+      "neighborhood_depth_ft": [
+        148,
+        159
+      ],
+      "source_id": "PointEstero",
+      "source_url": "https://doi.org/10.5066/P9ZSTUK1",
+      "survey_year": 2008,
+      "habitat_score": 12,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "4.0 m local relief; 3% mapped rough cover.",
+      "rockfish_reason": "0.1 ha nearby rough habitat; 3% mapped rough cover."
+    },
+    {
+      "id": "SC26-068",
+      "label": "Morro Bay rough reef",
+      "latitude": 35.335569,
+      "longitude": -120.908274,
+      "center_depth_ft": 175,
+      "neighborhood_depth_ft": [
+        173,
+        181
+      ],
+      "source_id": "MorroBay",
+      "source_url": "https://doi.org/10.5066/P9HEZNRO",
+      "survey_year": 2008,
+      "habitat_score": 7,
+      "terrain_grade": "C",
+      "lingcod_fit_rank": 3,
+      "rockfish_fit_rank": 3,
+      "lingcod_reason": "2.6 m local relief; 1% mapped rough cover.",
+      "rockfish_reason": "0.1 ha nearby rough habitat; 1% mapped rough cover."
+    }
+  ]
+}

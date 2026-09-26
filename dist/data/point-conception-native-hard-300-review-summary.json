@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "scope": "native-noaa-usgs-review-summary",
+  "generated_at": "2026-09-26T15:00:05.712962+00:00",
+  "surveys": [
+    {
+      "survey_id": "H11952",
+      "survey_dates": [
+        "2008-08-26T00:00:00",
+        "2008-09-04T00:00:00"
+      ],
+      "compiled_at": "2026-09-26T14:56:51.679954+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "noaa_bag_sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "survey_report_sha256": "387941c7238f10b6477d8e92de01187c0d9f153fb3f36b2d8f8d65fca820b086",
+      "usgs_sources": [
+        {
+          "release_id": "F7QN64XQ",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+          "archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+          "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        },
+        {
+          "release_id": "F7TH8JWJ",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/data/SeafloorCharacter_OffshoreGaviota.zip",
+          "archive_sha256": "f8605263b06aeff232f48e5bd21b306d18d75511772a007ce5de1534a646a0fa",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreGaviota/metadata/SeafloorCharacter_OffshoreGaviota_metadata.xml",
+          "metadata_sha256": "b5ab1dde41df4397c1d200f8b6e428d8dc08618fdfd1ad9bba2e38530d592601",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-26T14:53:12.176264+00:00",
+      "noaa_federal_areas_retrieved_at": "2026-09-26T14:51:34.381260+00:00",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "maximum_planning_depth_ft": 300,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 1,
+        "depth_values_changed_in_current_grid": 1,
+        "maximum_depth_revision_m": 0.17
+      },
+      "counts": {
+        "hard_cells_after_inset": 1726678,
+        "depth_uncertainty_qualified_cells": 5411412,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 312046,
+        "retained_components": 27
+      },
+      "retained_component_area_m2": 1112732,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    },
+    {
+      "survey_id": "H11953",
+      "survey_dates": [
+        "2008-08-29T15:13:58",
+        "2008-09-05T01:14:20"
+      ],
+      "compiled_at": "2026-09-26T14:57:42.426429+00:00",
+      "noaa_bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "noaa_bag_sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "survey_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "survey_report_sha256": "b6cfc4a13417be089319ee96c5f5a955a79db212e0961bc846cab1f9e8492fb5",
+      "usgs_sources": [
+        {
+          "release_id": "F7QN64XQ",
+          "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+          "archive_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+          "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+          "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+          "original_resolution_m": [
+            2.0,
+            2.0
+          ]
+        }
+      ],
+      "cdfw_mpa_retrieved_at": "2026-09-26T14:53:12.176264+00:00",
+      "noaa_federal_areas_retrieved_at": "2026-09-26T14:51:34.381260+00:00",
+      "native_resolution_m": [
+        1.0,
+        1.0
+      ],
+      "maximum_planning_depth_ft": 300,
+      "bag_tracking_history": {
+        "original_values_before_manual_edits": 1,
+        "depth_values_changed_in_current_grid": 1,
+        "maximum_depth_revision_m": 0.214
+      },
+      "counts": {
+        "hard_cells_after_inset": 129123,
+        "depth_uncertainty_qualified_cells": 6378018,
+        "hard_depth_cells_after_mpa_gea_historical_hazard_screen": 74056,
+        "retained_components": 1
+      },
+      "retained_component_area_m2": 71459,
+      "fishing_target": false,
+      "legal_clearance": false,
+      "exportable": false
+    }
+  ],
+  "limitations": [
+    "Historical review components are not fishing waypoints, verified fish habitat, or safe navigation areas.",
+    "Regional and federal closures, current hazards, current local rules, route and trip conditions require separate review.",
+    "Component counts and areas may overlap between surveys and must not be summed as unique coast coverage."
+  ]
+}

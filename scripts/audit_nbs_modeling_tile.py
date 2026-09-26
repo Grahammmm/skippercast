@@ -86,15 +86,18 @@ def is_measured_survey(item):
 
 
 def qualified_mask(elevation, uncertainty, contributor, source_rows, *, max_uncertainty_m=1.0,
-                   min_survey_year=1990, resolution_m=4.0):
+                   min_survey_year=1990, resolution_m=4.0, limit_ft=200):
     recent = {value for value, item in source_rows.items()
               if is_measured_survey(item) and item_year(item["survey_date_end"]) >= min_survey_year}
     return (cells_qualified(elevation, uncertainty, resolution_m,
-                            maximum_uncertainty_m=max_uncertainty_m)
+                            maximum_uncertainty_m=max_uncertainty_m, limit_ft=limit_ft)
             & np.isin(contributor, list(recent)))
 
 
-def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey_year=1990):
+def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey_year=1990,
+          limit_ft=200):
+    if limit_ft not in (200, 300):
+        raise ValueError('Only reviewed 200- or 300-foot planning limits are supported')
     row = scheme_row(scheme, tile)
     raster_path = cache / f"{tile}.tiff"
     rat_path = cache / f"{tile}.tiff.aux.xml"
@@ -110,15 +113,16 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
         unlisted = set(np.unique(contributor[np.isfinite(contributor)]).astype(int)) - set(source_rows)
         if unlisted:
             raise ValueError(f"Contributor RAT is missing raster values: {sorted(unlisted)[:5]}")
-        depth = np.isfinite(elevation) & (elevation <= -25 / 3.28084) & (elevation >= -200 / 3.28084)
+        depth = np.isfinite(elevation) & (elevation <= -25 / 3.28084) & (elevation >= -limit_ft / 3.28084)
         measured = {value for value, item in source_rows.items()
                     if is_measured_survey(item)}
         recent = {value for value in measured
                   if item_year(source_rows[value]["survey_date_end"]) >= min_survey_year}
         qualified = qualified_mask(elevation, uncertainty, contributor, source_rows,
                                    max_uncertainty_m=max_uncertainty_m,
-                                   min_survey_year=min_survey_year, resolution_m=max(raster.res))
-        counts = {"depth_25_to_200_ft_pixels": int(depth.sum()),
+                                   min_survey_year=min_survey_year, resolution_m=max(raster.res),
+                                   limit_ft=limit_ft)
+        counts = {f"depth_25_to_{limit_ft}_ft_pixels": int(depth.sum()),
                   "measured_depth_pixels": int((depth & np.isin(contributor, list(measured))).sum()),
                   "recent_measured_depth_pixels": int((depth & np.isin(contributor, list(recent))).sum()),
                   "qualified_screen_pixels": int(qualified.sum())}
@@ -131,7 +135,7 @@ def audit(scheme, tile, cache, *, fetch=False, max_uncertainty_m=1.0, min_survey
             "raster_url": row["GeoTIFF_Link"], "raster_sha256": raster_digest,
             "rat_url": row["RAT_Link"], "rat_sha256": rat_digest,
             "vertical_datum": "MLLW", "raster_crs_wkt": crs, "resolution_m": resolution,
-            "screen": {"depth_ft": [25, 200], "max_uncertainty_m": max_uncertainty_m,
+            "screen": {"depth_ft": [25, limit_ft], "max_uncertainty_m": max_uncertainty_m,
                        "min_survey_year": min_survey_year, "planning_depth_margin_m": 2,
                        "measured_contributor_flags_required": True},
             "counts": counts,
@@ -157,9 +161,10 @@ def main():
     parser.add_argument("--tile", required=True)
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache"))
     parser.add_argument("--fetch", action="store_true")
+    parser.add_argument("--limit-ft", type=int, choices=(200, 300), default=200)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = audit(args.scheme, args.tile, args.cache, fetch=args.fetch)
+    result = audit(args.scheme, args.tile, args.cache, fetch=args.fetch, limit_ft=args.limit_ft)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(args.tile, result["counts"])

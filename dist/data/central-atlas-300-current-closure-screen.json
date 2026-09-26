@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "scope": "central-legacy-atlas-current-closure-screen",
+  "audited_at": "2026-09-26T15:01:39+00:00",
+  "atlas_source_depth_ceiling_ft": 200,
+  "boat_planning_depth_ceiling_ft": 300,
+  "cdfw_mpa_retrieved_at": "2026-09-26T14:53:12.176264+00:00",
+  "noaa_federal_retrieved_at": "2026-09-26T14:51:34.381260+00:00",
+  "sections": {
+    "targets": {
+      "count": 132,
+      "screen_buffer_m": 200,
+      "minimum_clearance_m": 504.0,
+      "held_ids": []
+    },
+    "areas": {
+      "count": 107,
+      "screen_buffer_m": 100,
+      "minimum_clearance_m": 505.0,
+      "held_ids": []
+    },
+    "drifts": {
+      "count": 31,
+      "screen_buffer_m": 100,
+      "minimum_clearance_m": 531.3,
+      "held_ids": []
+    }
+  },
+  "all_geometry_clear_of_screen_buffers": true,
+  "limitations": [
+    "The 132 targets retain historical recorded 200-ft survey evidence; this is not a new native-depth survey.",
+    "Approximate GIS polygon clearance is not an official legal-boundary or navigation determination.",
+    "Current ENC hazards, Diablo security limits, Vandenberg access, drift route and season/method rules need separate checks.",
+    "No new 200\u2013300-ft targets were qualified by this audit."
+  ],
+  "input_sha256": {
+    "atlas": "f3f623e16fb55ad6161198c11aa98a629a8b2921ff4bb9d7af657b975089688c",
+    "mpas": "c29339ccef85f7c40c096d61690c911aa3d70abebd6d4d11ff88f436c6f4e6bd",
+    "federal": "933b09625d1fa10200d8c57632d5dc4e88c6a20bc1f2feca8211042e399984b3"
+  }
+}

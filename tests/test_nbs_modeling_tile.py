@@ -37,6 +37,19 @@ class NbsModelingTileTest(unittest.TestCase):
         self.assertEqual(qualified_mask(elevation, uncertainty, contributor, sources,
                                         resolution_m=4).tolist(), [[True, False, False]])
 
+    def test_300ft_screen_includes_deeper_measured_cell_but_keeps_margin(self):
+        sources = {1: {"coverage": "1", "bathy_coverage": "1", "source_survey_id": "H12345",
+                       "survey_date_end": "2020-01-01"}}
+        elevation = np.array([[-75.0, -85.0, -90.0]])
+        uncertainty = np.array([[0.5, 0.5, 1.0]])
+        contributor = np.array([[1, 1, 1]])
+        self.assertEqual(qualified_mask(elevation, uncertainty, contributor, sources,
+                                        resolution_m=4, limit_ft=200).tolist(),
+                         [[False, False, False]])
+        self.assertEqual(qualified_mask(elevation, uncertainty, contributor, sources,
+                                        resolution_m=4, limit_ft=300).tolist(),
+                         [[True, True, False]])
+
     def test_real_point_sur_tile_does_not_promote_old_or_interpolated_depth(self):
         root = Path(__file__).resolve().parents[1]
         scheme = root / "var/modeling-tile-scheme-20260923.gpkg"

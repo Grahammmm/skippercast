@@ -39,9 +39,14 @@ def original_character(row, cache, metadata):
     if not record or record['xml_sha256'] != row['metadata_sha256'] or not hard_class_review(record):
         raise ValueError('Original USGS class-3 semantics or metadata digest are unreviewed')
     url = row['archive_url']
-    path = cache / (ident + '-' + row['kind'] + '-'
-                    + hashlib.sha256(url.encode()).hexdigest()[:16] + '.zip')
-    if not path.is_file() or sha256(path) != row['archive_sha256']:
+    prefix = ident + '-' + row['kind'] + '-'
+    # Both the original fetcher's URL-keyed cache and the DOI auditor's
+    # content-keyed cache are in use. Neither is trusted without the digest.
+    candidates = [cache / (prefix + key + '.zip') for key in (
+        hashlib.sha256(url.encode()).hexdigest()[:16], row['archive_sha256'][:16])]
+    path = next((candidate for candidate in candidates if candidate.is_file()
+                 and sha256(candidate) == row['archive_sha256']), None)
+    if path is None:
         raise ValueError('Original USGS archive is missing or changed')
     with zipfile.ZipFile(path) as bundle:
         members = [x.filename for x in bundle.infolist() if x.filename.lower().endswith('.tif')
@@ -274,6 +279,8 @@ def main():
     parser.add_argument('--bag-cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--usgs-cache', type=Path, default=Path('var/usgs-native-cache'))
     parser.add_argument('--report-cache', type=Path, default=Path('var/noaa-report-cache'))
+    parser.add_argument('--limit-ft', type=int, choices=(200, 300), default=200,
+                        help='Maximum planning depth; each cell also needs uncertainty and the 2 m margin')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     bag_audit = json.loads(args.bag_audit.read_text())
@@ -287,7 +294,8 @@ def main():
     result = compile_review(bag_row, selected, json.loads(args.usgs_metadata.read_text()),
                             json.loads(args.mpas.read_text()), json.loads(args.federal_areas.read_text()),
                             json.loads(args.hazards.read_text()),
-                            args.bag_cache, args.usgs_cache, args.report_cache)
+                            args.bag_cache, args.usgs_cache, args.report_cache,
+                            limit_ft=args.limit_ft)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temp = args.output.with_suffix(args.output.suffix + '.tmp')
     temp.write_text(json.dumps(result, separators=(',', ':')) + '\n')
