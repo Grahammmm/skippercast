@@ -4,7 +4,7 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "7cf31465c4fdbcc44a64b9e34f00d441cfa61729a806dd5efac5893e93c93c7f",
+    "dist/data/central-source-acquisition-queue.json": "496cd308e85b2ecc0ac970731b2e881868c155a493f12774f45623f46d60249a",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "87fa25e2ca585fd3ac4610550658a0a46a560906b08c69f35a195789f9d3c487",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f"
@@ -503,10 +503,11 @@
       "source_review_priority_tier": 1,
       "reviewed_lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
       "next_acquisition": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB processing records; search non-NOS archives or unpublished original MLLW surveys over the hard cells, then obtain current Diablo/Vandenberg access and ENC screens.",
-      "limiting_evidence": "Historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
+      "limiting_evidence": "BlueTopo's nominal overlap is almost entirely interpolated historical contributor pixels; historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "dist/data/central-deep-original-300-refutation.json",
+        "dist/data/point-buchon-bluetopo-hard-cell-overlap.json",
         "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
         "dist/data/point-buchon-original-paired-200-300ft-review.json"
       ],

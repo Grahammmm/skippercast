@@ -60,6 +60,10 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertNotIn("W00479", conception["noaa_coarse_or_unresolved_leads"])
         self.assertEqual(conception["point_buchon_noaa_catalog_gap"]["catalog_bag_survey_ids"], ["W00479"])
         self.assertFalse(conception["point_buchon_noaa_catalog_gap"]["fishing_target"])
+        lineage = conception["point_buchon_bluetopo_contributor_overlap"]
+        self.assertEqual(lineage["original_usgs_hard_rugose_cell_centers"], 804337)
+        self.assertEqual(lineage["measured_survey_contributor_centers"], 16)
+        self.assertFalse(lineage["fishing_target"])
         self.assertEqual(set(conception["noaa_filename_fine_grid_leads"]),
                          {"H11951", "H11952", "H11953"})
         self.assertEqual({row["survey_id"] for row in conception["noaa_reviewed_vr_fine_grids_outside_sector"]},

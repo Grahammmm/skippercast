@@ -44,6 +44,17 @@ def build(root):
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
+    buchon_bluetopo = read(root / "dist/data/point-buchon-bluetopo-hard-cell-overlap.json")
+    if (buchon_bluetopo.get("scope") != "point-buchon-original-hard-cells-bluetopo-contributor-overlap"
+            or buchon_bluetopo.get("scheme_sha256") != bluetopo_manifest["scheme_sha256"]
+            or buchon_bluetopo.get("usgs_bathymetry_archive_sha256") != buchon_catalog_gap.get("usgs_bathymetry_archive_sha256")
+            or buchon_bluetopo.get("source_envelope_receipt") != "dist/data/point-buchon-noaa-catalog-envelope-gap.json"
+            or buchon_bluetopo.get("original_usgs_hard_rugose_cell_centers") != 804337
+            or buchon_bluetopo.get("bluetopo_measured_survey_contributor_centers") != 16
+            or buchon_bluetopo.get("qualified_waypoints") != 0
+            or buchon_bluetopo.get("fishing_target") is not False
+            or buchon_bluetopo.get("exportable") is not False):
+        raise ValueError("Point Buchon original-cell BlueTopo source review changed")
     if (buchon_catalog_gap.get("scope") != "point-buchon-noaa-survey-catalog-envelope-gap"
             or buchon_catalog_gap.get("usgs_bathymetry_archive_sha256") != "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4"
             or buchon_catalog_gap.get("original_hard_rugose_cells") != 804337
@@ -328,6 +339,14 @@ def build(root):
                 "receipt": "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
                 "catalog_bag_survey_ids": buchon_catalog_gap["bag_survey_ids_returned"],
                 "claim": "One current NOS survey-catalog envelope query returned only W00479; its original measured MLLW cells are all deeper than 300 ft. Other archives and unpublished surveys remain possible.",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_buchon_bluetopo_contributor_overlap": ({
+                "receipt": "dist/data/point-buchon-bluetopo-hard-cell-overlap.json",
+                "original_usgs_hard_rugose_cell_centers": buchon_bluetopo["original_usgs_hard_rugose_cell_centers"],
+                "measured_survey_contributor_centers": buchon_bluetopo["bluetopo_measured_survey_contributor_centers"],
+                "claim": "Nominal original USGS hard-cell center overlay finds only 16 BlueTopo pixels attributed to measured survey IDs; most use interpolated historical contributors.",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "morro-conception" else None),

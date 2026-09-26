@@ -34,6 +34,7 @@ class QualificationPlanTests(unittest.TestCase):
         conception = next(s for s in result["sectors"] if s["sector_id"] == "morro-conception")
         self.assertIn("dist/data/central-deep-original-300-refutation.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-noaa-catalog-envelope-gap.json", conception["source_receipts"])
+        self.assertIn("dist/data/point-buchon-bluetopo-hard-cell-overlap.json", conception["source_receipts"])
         self.assertIn("non-NOS archives", conception["next_acquisition"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):

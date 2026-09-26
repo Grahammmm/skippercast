@@ -83,7 +83,7 @@ SECTOR_OVERRIDES = {
     "morro-conception": {
         "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
         "next": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB processing records; search non-NOS archives or unpublished original MLLW surveys over the hard cells, then obtain current Diablo/Vandenberg access and ENC screens.",
-        "hold": "Historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
+        "hold": "BlueTopo's nominal overlap is almost entirely interpolated historical contributor pixels; historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
     },
 }
 
@@ -144,6 +144,12 @@ def build(root):
                     or catalog_gap["fishing_target"] is not False):
                 raise ValueError("Point Buchon source catalog gap changed")
             receipts.append(catalog_gap["receipt"])
+            compiled = row.get("point_buchon_bluetopo_contributor_overlap")
+            if (not compiled or compiled["original_usgs_hard_rugose_cell_centers"] != 804337
+                    or compiled["measured_survey_contributor_centers"] != 16
+                    or compiled["fishing_target"] is not False):
+                raise ValueError("Point Buchon BlueTopo source-lineage review changed")
+            receipts.append(compiled["receipt"])
         if row.get("noaa_usgs_original_character_overlap"):
             class_lead = row["noaa_usgs_original_character_overlap"]
             if (class_lead["depth_qualified_cells"] != 141331

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-original-hard-cells-bluetopo-contributor-overlap",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
+  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+  "usgs_bathymetry_archive_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+  "usgs_character_archive_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "source_envelope_receipt": "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
+  "nominal_source_datum_depth_band_ft": [
+    200,
+    300
+  ],
+  "original_usgs_hard_rugose_cell_centers": 804337,
+  "bluetopo_cells_with_finite_elevation_uncertainty_and_contributor": 804337,
+  "bluetopo_measured_survey_contributor_centers": 16,
+  "measured_source_dates": {
+    "H05748": "1934-01-01",
+    "H05832": "1934-01-01"
+  },
+  "contributor_center_counts": {
+    "H05662.interpolated": 761079,
+    "H05748": 14,
+    "H05748.interpolated": 41726,
+    "H05831.interpolated": 546,
+    "H05832": 2,
+    "H05832.interpolated": 968,
+    "NBS Generalization": 2
+  },
+  "tiles": [
+    {
+      "tile_id": "BH4575BS",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BS/BlueTopo_BH4575BS_20260820.tiff",
+      "raster_sha256": "5886b434ce0f5c193c3b6bdef6d9fa343682504dff0cfcec6a79ae8987265f9c",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BS/BlueTopo_BH4575BS_20260820.tiff.aux.xml",
+      "rat_sha256": "13aed94b29811a9733bc5cc830afb54bfcf7a4705d4caa2c3dccd8312ad72cbf"
+    },
+    {
+      "tile_id": "BH4575BT",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BT/BlueTopo_BH4575BT_20260820.tiff",
+      "raster_sha256": "9841a5de69e88919667fa3963eeb5a5fec9b7b797e26224b62f2e4714e60d2e4",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BT/BlueTopo_BH4575BT_20260820.tiff.aux.xml",
+      "rat_sha256": "1dd6d012c52a2fabffbb69baab450db799ece3d45663b636f5196d4916f822c4"
+    },
+    {
+      "tile_id": "BH4575BV",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BV/BlueTopo_BH4575BV_20260820.tiff",
+      "raster_sha256": "8732a3570aab98764447be4009183d24977a9cdcd0f014bd386fc270eae7a528",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BV/BlueTopo_BH4575BV_20260820.tiff.aux.xml",
+      "rat_sha256": "440766f5ae1754c56c2adeee31ebe56cf762f02ff152f75f01445c18beef57f3"
+    },
+    {
+      "tile_id": "BH4585BS",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BS/BlueTopo_BH4585BS_20260820.tiff",
+      "raster_sha256": "399cd50d6c4b452e94f512e410395864cac1eb2703a69e181dc48758a20cac00",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BS/BlueTopo_BH4585BS_20260820.tiff.aux.xml",
+      "rat_sha256": "51b5a193b6a008278554a9734d5a06137b13b43c552430c52154c5d22288586e"
+    },
+    {
+      "tile_id": "BH4585BT",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BT/BlueTopo_BH4585BT_20260820.tiff",
+      "raster_sha256": "27a774b457c834b9aab0d8651c7c018a148d18f892c7fd0a235c045a069e196a",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BT/BlueTopo_BH4585BT_20260820.tiff.aux.xml",
+      "rat_sha256": "960876ee44996927a95ff878c0dd044ab4696b56b2e00774a285005360e4bbc2"
+    },
+    {
+      "tile_id": "BH4585BV",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BV/BlueTopo_BH4585BV_20260820.tiff",
+      "raster_sha256": "f6a1b2975c76d666fa973b959b4397f79832b98d75c139267921e87a15d3e6b6",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BV/BlueTopo_BH4585BV_20260820.tiff.aux.xml",
+      "rat_sha256": "a71773014c0ead32b2c07719ddf5c37820c1bb4812ecaf715dae3adebb0cbaa6"
+    },
+    {
+      "tile_id": "BH4595BS",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BS/BlueTopo_BH4595BS_20260820.tiff",
+      "raster_sha256": "49df1407e88caae7df04e85ae97c0b4d8bebaec7e26a654361a927aa38abf6aa",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BS/BlueTopo_BH4595BS_20260820.tiff.aux.xml",
+      "rat_sha256": "1a18d846b5079bf8269f53e55f8d84ac33456689fe807688d4c9757d1a3d2e31"
+    },
+    {
+      "tile_id": "BH4595BT",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BT/BlueTopo_BH4595BT_20260820.tiff",
+      "raster_sha256": "6916adc706ab79a26f6168da0c08733d23f09383ccc64119056e35349ceb1e6a",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BT/BlueTopo_BH4595BT_20260820.tiff.aux.xml",
+      "rat_sha256": "753d8ddae24ee21f461da0d8c52f450387565264b81e44623db7abeb3c78b36f"
+    }
+  ],
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "BlueTopo is a compiled NAVD88 raster. These are nominal 2 m USGS center-to-4 m BlueTopo cell matches without resolved survey epoch or horizontal registration. Contributor codes identify source lineage, not independent rock groundtruth, validated MLLW depth or navigable fishing patches."
+}
