@@ -1,6 +1,6 @@
-import {getRegion,getRegionDirectory} from './region.js?v=8.11';
-import {esc} from './marine-charts.js?v=8.11';
-import {buildExport,offlineNotes,readDraft,draftKey} from './trip-export.js?v=8.11';
+import {getRegion,getRegionDirectory} from './region.js?v=8.12';
+import {esc} from './marine-charts.js?v=8.12';
+import {buildExport,offlineNotes,readDraft,draftKey} from './trip-export.js?v=8.12';
 
 const DEVICE_HELP={
   generic:['Chartplotter model not selected','Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.','https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],

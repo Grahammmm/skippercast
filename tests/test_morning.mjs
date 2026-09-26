@@ -71,7 +71,7 @@ test("full morning rating preserves unknown bite and uses the worst return hour"
   assert.ok(row.conditions < 8);
   assert.ok(row.control <= row.comfort);
 });
-test("missing hours, inconsistent gusts, alert uncertainty and stale runs cannot qualify", () => {
+test("missing detail and stale individual models show limited scores that cannot qualify", () => {
   for (const mutate of [
     (b) => (b.models.ecmwf_wam025.data[0].hourly.wave_height[6] = null),
     (b) => (b.alerts.coastal = null),
@@ -86,10 +86,12 @@ test("missing hours, inconsistent gusts, alert uncertainty and stale runs cannot
   ]) {
     const b = bundle();
     mutate(b);
-    assert.equal(rankMornings(b, 0, "lingcod", now)[0].conditions, null);
+    const row=rankMornings(b, 0, "lingcod", now)[0];
+    assert.ok(Number.isFinite(row.conditions) && row.conditions<8);
+    assert.equal(row.confidence,"Low");
   }
 });
-test("a bad gust uses the independent valid gust with low confidence; two bad gusts stay unscored", () => {
+test("inconsistent gusts remain flagged and never produce a high-confidence score", () => {
   const b=bundle();
   b.models.gfs_global.data[0].hourly.wind_gusts_10m[4]=2;
   const row=rankMornings(b,0,"reef",now)[0];
@@ -98,7 +100,9 @@ test("a bad gust uses the independent valid gust with low confidence; two bad gu
   assert.ok(row.reasons.some(r=>r.includes("Inconsistent gust omitted")));
   assert.equal(b.models.gfs_global.data[0].hourly.wind_gusts_10m[4],2);
   b.models.ecmwf_ifs025.data[0].hourly.wind_gusts_10m[4]=3;
-  assert.equal(rankMornings(b,0,"reef",now)[0].conditions,null);
+  const both=rankMornings(b,0,"reef",now)[0];
+  assert.ok(both.conditions<=6.9);
+  assert.ok(both.reasons.some(r=>r.includes("no gust assumed")));
 });
 test("partial last day is disclosed and cannot get an 8+ score", () => {
   const b=bundle(),hours=times.slice(0,-3);
@@ -107,6 +111,25 @@ test("partial last day is disclosed and cannot get an 8+ score", () => {
   assert.equal(rows.at(-1).sampleCount,4);
   assert.ok(rows.at(-1).conditions<=7.9);
   assert.equal(rows.at(-1).confidence,"Low");
+});
+test("seven-day strip retains numeric warnings and limited outlooks without a false 8+",()=>{
+  const b=bundle();
+  b.alerts.coastal=[{title:'Small Craft Advisory',starts:times[0]-3600,ends:times[6]+3600}];
+  b.models.ecmwf_wam025.meta.data_end_time=times[20];
+  const rows=rankTimelineDays(b,0,'reef',times,now);
+  assert.equal(rows.length,7);
+  assert.ok(rows.every(r=>Number.isFinite(r.conditions)));
+  assert.ok(rows[0].conditions<=1.9 && rows[0].hazard);
+  assert.ok(rows.slice(3).every(r=>r.limited && r.conditions<=6.9 && r.confidence==='Low'));
+  assert.ok([rows[0],...rows.slice(3)].every(r=>r.conditions<8));
+});
+test("no usable wind or combined seas remains unrated",()=>{
+  const b=bundle();
+  for(const m of ['gfs_global','ecmwf_ifs025']) b.models[m].data[0].hourly.wind_speed_10m.fill(null);
+  for(const m of ['ncep_gfswave025','ecmwf_wam025']) b.models[m].data[0].hourly.wave_height.fill(null);
+  const row=rankTimelineDays(b,0,'reef',times,now)[0];
+  assert.equal(row.conditions,null);
+  assert.ok(row.reasons.some(r=>r.includes('No usable wind')));
 });
 test("model disagreement can show a tentative best but never an 8+ highlight", () => {
   const b = bundle();
@@ -152,9 +175,12 @@ test("connected habitat regions retain holes and species depth ceilings", () => 
 
 test("a retained individual model cannot be made fresh by another successful refresh",()=>{
  const b=bundle();b.models.gfs_global.retrieved=now-4*3600000;
- assert.equal(rateHour(b,0,'reef',times[0],now).conditions,null);
+ const row=rateHour(b,0,'reef',times[0],now);
+ assert.ok(row.conditions<=6.9);
+ assert.equal(row.limited,true);
+ assert.ok(row.reasons.some(r=>r.includes('NOAA GFS forecast unavailable')));
 });
-test("day narrative explains rough conditions and incomplete coverage without inventing a score",async()=>{
+test("day narrative labels incomplete coverage as a limited estimate",async()=>{
  const {boatDayHTML,ratingLabel}=await import('../dist/forecast-summary.js');
  const b=bundle(),r=rankMornings(b,0,'reef',now)[0];
  let html=boatDayHTML(b,0,'reef',times[0],r,now);
@@ -162,5 +188,8 @@ test("day narrative explains rough conditions and incomplete coverage without in
  assert.equal(ratingLabel(0),'Very rough');assert.equal(ratingLabel(null),'Data incomplete');
  b.models.ncep_gfswave025.data[0].hourly.wave_height.fill(null);
  const missing=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],missing,now);
- assert.match(html,/Data incomplete/);assert.match(html,/day rating is unavailable/);assert.doesNotMatch(html,/0.0\/10/);
+ assert.match(html,/Limited forecast screen/);assert.match(html,/limited comparison/);assert.ok(missing.conditions<=6.9);
+ b.models.ecmwf_wam025.data[0].hourly.wave_height.fill(null);
+ const none=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],none,now);
+ assert.equal(none.conditions,null);assert.match(html,/Data incomplete/);assert.doesNotMatch(html,/0.0\/10/);
 });

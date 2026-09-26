@@ -1,6 +1,6 @@
-import {getRegion,assetURL} from './region.js?v=8.11';
-import {esc} from './marine-charts.js?v=8.11';
-import {terrainSource} from './terrain-evidence.js?v=8.11';
+import {getRegion,assetURL} from './region.js?v=8.12';
+import {esc} from './marine-charts.js?v=8.12';
+import {terrainSource} from './terrain-evidence.js?v=8.12';
 const cache=new Map();
 export function spotEvidence(target,species,profile,region){
   const measured=[],inferred=[],unknown=[];

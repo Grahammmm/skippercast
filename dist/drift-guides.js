@@ -1,6 +1,6 @@
-import {assetURL} from "./region.js?v=8.11";
-import { POINTS, readConditions, distanceNm, directionTo } from "./marine-data.js?v=8.11";
-import { esc, num, full, from } from "./marine-charts.js?v=8.11";
+import {assetURL} from "./region.js?v=8.12";
+import { POINTS, readConditions, distanceNm, directionTo } from "./marine-data.js?v=8.12";
+import { esc, num, full, from } from "./marine-charts.js?v=8.12";
 export function offsetPosition(p, direction, metres) {
   const a=direction*Math.PI/180;
   return [p.longitude+Math.sin(a)*metres/(111320*Math.cos(p.latitude*Math.PI/180)),p.latitude+Math.cos(a)*metres/111320];

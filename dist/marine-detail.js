@@ -1,4 +1,4 @@
-import { getRegion } from "./region.js?v=8.11";
+import { getRegion } from "./region.js?v=8.12";
 import {
   POINTS,
   MODELS,
@@ -7,7 +7,7 @@ import {
   tideAt,
   distanceNm,
   angleBetween,
-} from "./marine-data.js?v=8.11";
+} from "./marine-data.js?v=8.12";
 import {
   esc,
   num,
@@ -19,7 +19,7 @@ import {
   lineChart,
   waveSketch,
   rose,
-} from "./marine-charts.js?v=8.11";
+} from "./marine-charts.js?v=8.12";
 
 export function detailHTML({
   bundle,

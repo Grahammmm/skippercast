@@ -1,5 +1,5 @@
 // Original sampled-depth annotations for Monterey's existing USGS context layer.
-import {esc} from './marine-charts.js?v=8.11';
+import {esc} from './marine-charts.js?v=8.12';
 
 export function validateMontereyResearch(context, depth) {
   if(context?.type!=='FeatureCollection' || context.scope!=='generalized-statewide-usgs-hard-bottom-context'

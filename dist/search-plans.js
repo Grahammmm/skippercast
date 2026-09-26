@@ -1,6 +1,6 @@
-import {getRegion,assetURL} from './region.js?v=8.11';
-import {esc,local,num} from './marine-charts.js?v=8.11';
-import {nearestSearchForecast,searchWindow,oceanSearchAreas} from './search-plan-data.js?v=8.11';
+import {getRegion,assetURL} from './region.js?v=8.12';
+import {esc,local,num} from './marine-charts.js?v=8.12';
+import {nearestSearchForecast,searchWindow,oceanSearchAreas} from './search-plan-data.js?v=8.12';
 import {loadPrimaryStrategies,strategyMarkup} from './primary-strategy.js?v=8.12';
 export async function initSearchPlans(map,screen,onSelect){
  const region=getRegion();let data,strategies=null,state=null,ocean=null,shown=[],generation=0,timer;

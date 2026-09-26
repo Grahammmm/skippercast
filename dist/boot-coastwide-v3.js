@@ -1,4 +1,4 @@
-import { initRegion } from "./region.js?v=8.11";
+import { initRegion } from "./region.js?v=8.12";
 import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.26';
 import {initRecentDiscussions} from './recent-discussions.js?v=8.12';
 try {

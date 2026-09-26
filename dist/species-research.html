@@ -400,10 +400,10 @@
       </p>
       <h2 id="morning-ratings">Morning ratings</h2>
       <p>
-        The top bar highlights the best rated morning at the selected regional
-        forecast sample over the next seven future Pacific calendar dates. Every
-        hour from 7 a.m. through 1 p.m. must be covered inside the slider
-        horizon. This is a six-hour environmental window, not a charted route or
+        The top bar highlights the best rated available day at the selected regional
+        forecast sample across the displayed Pacific dates. The normal morning
+        window samples every hour from 7 a.m. through 1 p.m.; an incomplete
+        window is labeled partial and receives Low confidence. This is an environmental window, not a charted route or
         proof that transit leaves four hours of fishing. The personal monitor
         remains separate.
       </p>
@@ -420,14 +420,18 @@
         for chop ≥0.5 ft with period ≤6 s. Clamp 0–10 and round to a tenth.
       </p>
       <p>
-        The conditions score is the lower component score and the lowest hourly
-        value across the window. Missing critical fields, inconsistent wave components,
-        stale/unidentified runs, active marine alerts or a fog/thunderstorm
-        signal prevent a score. When one gust is below its model’s sustained wind, omit that gust, use the other model’s valid gust, retain both winds, and cap the score at 7.9 with Low confidence. Both invalid gusts still prevent a score. With material model
-        disagreement, use the rougher forecast, label Low confidence and cap the
-        conditions score at 7.9; such a day cannot qualify as 8+. Days four
-        through seven are provisional. Current alerts do not establish that no
-        future warnings will be issued.
+        The conditions score is the lower component score and the lowest rated
+        hourly value across the window. A complete rating uses two current model
+        runs and all needed wind, gust, sea and wave-component fields. When a
+        comparison model, gust or wave detail is missing but at least one current
+        wind and combined-sea forecast remains, a limited estimate uses those
+        available fields only. It is capped at 6.9/10 with Low confidence; no
+        missing gust, chop or swell is assumed to be zero. A missing hour also
+        limits the day. A marine advisory or visibility hazard caps the result at
+        1.9/10. No usable wind or combined-sea forecast, or a stale whole bundle,
+        still prevents a score. The rougher valid model is used where both exist.
+        Dates four through seven are provisional. Current alerts do not establish
+        that no future warnings will be issued.
       </p>
       <p>
         Bite potential and an overall bite-plus-comfort score remain null:

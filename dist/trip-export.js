@@ -1,5 +1,5 @@
 // Shared export contract. Rendering and hardware instructions do not decide what is safe to serialize.
-import {tripFeatures, featuresGPX, geometryTrack, xml} from './gpx.js?v=8.11';
+import {tripFeatures, featuresGPX, geometryTrack, xml} from './gpx.js?v=8.12';
 
 export const DEFAULT_LAYERS={waypoints:true,outlines:false,alignments:false,exclusions:false};
 export const draftKey=region=>`skippercast.export.v1.${region}`;

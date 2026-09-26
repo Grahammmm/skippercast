@@ -1,8 +1,8 @@
-import {getRegion} from './region.js?v=8.11';
-import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=8.11";
-import { esc, num, from, local, weatherName } from "./marine-charts.js?v=8.11";
-import { pacificEpoch } from "./forecast.js?v=8.11";
-import { rateHour } from "./morning-outlook.js?v=8.11";
+import {getRegion} from './region.js?v=8.12';
+import { readConditions, tideAt, HOUR, POINTS } from "./marine-data.js?v=8.12";
+import { esc, num, from, local, weatherName } from "./marine-charts.js?v=8.12";
+import { pacificEpoch } from "./forecast.js?v=8.12";
+import { rateHour } from "./morning-outlook.js?v=8.12";
 export function forecastSummaryHTML(bundle,point,species,time,family,dayRating,now=Date.now()) {
   const c=readConditions(bundle,point,time,family), parts=readConditions(bundle,point,time,"gfs");
   const other=readConditions(bundle,point,time,family==="gfs"?"ecmwf":"gfs");
@@ -13,7 +13,7 @@ export function forecastSummaryHTML(bundle,point,species,time,family,dayRating,n
   const wave=(part)=>`${num(part.height)} ft${part.period>0?` <span>@ ${num(part.period)} s</span>`:""}`;
   const waveNote=(part)=>part.height===0?"No resolved component":`From ${from(part.from)}`;
   const reasons=rating.reasons.length?rating.reasons.join(" · "):"Two-model comparison; lower comfort / gear-control estimate.";
-  return `<div class="hour-score"><div><span>Hourly conditions</span><strong>${rating.conditions===null?"No score":num(rating.conditions)+"<small>/10</small>"}</strong></div><p>${rating.confidence} confidence${time-now/1000>=72*HOUR?" · provisional":""}<br><span>Comfort ${num(rating.comfort)} · fishing stability ${num(rating.control)}</span></p></div>
+  return `<div class="hour-score"><div><span>Hourly conditions${rating.hazard?' · hazard':rating.limited?' · limited':''}</span><strong>${rating.conditions===null?"No score":num(rating.conditions)+"<small>/10</small>"}</strong></div><p>${rating.confidence} confidence${time-now/1000>=72*HOUR?" · provisional":""}<br><span>Comfort ${num(rating.comfort)} · fishing stability ${num(rating.control)}</span></p></div>
     <details class="hour-details"><summary>Selected-hour measurements</summary><div class="forecast-metrics">${[
       card("Wind / gust",`${num(c.wind)} / ${num(c.gust)} kt`, `From ${from(c.windFrom)}${c.gust!==null&&c.gust<c.wind?" · gust inconsistent":""}`),
       card("Combined seas",wave(c.sea),`From ${from(c.sea.from)} · ${family==="gfs"?"primary-wave":"mean"} period`),
@@ -51,10 +51,12 @@ export function boatDayHTML(bundle, point, species, time, dayRating, now=Date.no
   let first;
   if(!fresh) first='The forecast is out of date, so the selected day’s boat conditions cannot be assessed reliably.';
   else if(wind===null||sea===null) first='There is not enough wind and wave coverage to describe this day reliably yet.';
-  else first=`${rated?quality+' conditions expected':'Available forecast hours show'} at ${POINTS[point].name}: wind up to ${num(wind)} kt and seas up to ${num(sea)} ft${periods.length?`, with swell spaced ${num(Math.min(...periods),0)}–${num(Math.max(...periods),0)} seconds apart`:''}${!complete?' (partial coverage)':''}.`;
+  else first=`${rated?(dayRating?.limited?'Limited forecast screen':'Expected '+quality.toLowerCase()+' conditions'):'Available forecast hours show'} at ${POINTS[point].name}: wind up to ${num(wind)} kt and seas up to ${num(sea)} ft${periods.length?`, with swell spaced ${num(Math.min(...periods),0)}–${num(Math.max(...periods),0)} seconds apart`:''}${!complete?' (partial coverage)':''}.`;
   const reason=dayRating?.reasons?.[0];
   let second=!rated?`A day rating is unavailable${reason?': '+reason.toLowerCase():' until the required forecasts are verified'}; recheck before planning the trip.`:dayRating.conditions<4?'Expect uncomfortable boat motion and difficult fishing; this is a poor window for a small-boat outing.':dayRating.conditions<6?'Expect noticeable boat motion and more effort keeping your gear fishing effectively.':chop>=1?'Wind chop may make the ride bumpy and holding your fishing position harder.':'The forecast suggests a more manageable ride and easier gear handling; check the entrance and your return conditions before departure.';
+  if(rated&&dayRating?.hazard) second='A marine advisory or weather hazard affects this window. Treat the low score as a warning, not a trip recommendation.';
+  else if(rated&&dayRating?.limited) second=`This ${num(dayRating.conditions)}/10 is a limited comparison from ${dayRating.ratedHours||0} of ${dayRating.sampleCount||0} hours; ${reason?reason.toLowerCase():'some forecast detail is missing'}. Recheck before planning.`;
   if(dayRating?.score_scope==='boat-comfort'&&rated) second='This describes boat motion only; night operations, diving and lobster gear handling need a separate assessment.';
   if(rated&&dayRating.confidence==='Low') second=second.replace(/\.$/,'')+' (low forecast confidence).';
-  return `<div class="boat-day-heading"><strong>${esc(title)}</strong><span>${rated?num(dayRating.conditions)+'/10 · '+quality:'Data incomplete'}</span></div><p>${esc(first)} ${esc(second)}</p><small>${esc(dayRating?.window||'7 a.m.–1 p.m.')} Pacific · forecast, not catch probability${dayRating?.provisional?' · provisional outlook':''}</small>`;
+  return `<div class="boat-day-heading"><strong>${esc(title)}</strong><span>${rated?num(dayRating.conditions)+'/10 · '+(dayRating?.hazard?'Hazard':dayRating?.limited?'Limited':quality):'Data incomplete'}</span></div><p>${esc(first)} ${esc(second)}</p><small>${esc(dayRating?.window||'7 a.m.–1 p.m.')} Pacific · forecast, not catch probability${dayRating?.provisional?' · provisional outlook':''}</small>`;
 }

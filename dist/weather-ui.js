@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.11';
-import {matrixHTML} from './forecast-matrix.js?v=8.11';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.11";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.12';
+import {matrixHTML} from './forecast-matrix.js?v=8.12';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.12";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.11";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.11";
-import { rankMornings, rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.11";
-import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.11";
-import { localDate } from "./forecast.js?v=8.11";
-import { detailHTML } from "./marine-detail.js?v=8.11";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.11";
+} from "./marine-data.js?v=8.12";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.12";
+import { rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.12";
+import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.12";
+import { localDate } from "./forecast.js?v=8.12";
+import { detailHTML } from "./marine-detail.js?v=8.12";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.12";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -408,7 +408,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     const nextKey = `${bundle?.retrieved}:${point}:${lastSpecies}:${Math.floor(Date.now() / 3600000)}`;
     if (nextKey !== outlookKey && bundle) {
       dayRatings=rankTimelineDays(selectedBundle,point,lastSpecies,hours);
-      renderOutlook(rankMornings(selectedBundle,point,lastSpecies,Date.now(),hours.at(-1)),point);
+      renderOutlook(dayRatings.filter(r=>r.date>isoDay(hours[0])),point);
       outlookKey=nextKey;
     }
     const dates = new Map();
@@ -421,7 +421,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
         ([d, i], n) =>
           {
             const r=dayRatings.find(r=>r.date===d), at=r?Math.max(0,Math.round((r.time-hours[0])/HOUR)):i;
-            return `<button data-hour="${at}" aria-pressed="${d === isoDay(t)}" class="${r?.conditions>=8?'good':''}" title="${esc(r?.window||'Forecast loading')} · ${esc(r?.confidence||'')} confidence">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small><b>${Number.isFinite(r?.conditions)?num(r.conditions)+"/10":"No rating"}</b><small>${r?ratingLabel(r.conditions):'Loading'}${r?.provisional?' · outlook':''}</small></button>`;
+            return `<button data-hour="${at}" aria-pressed="${d === isoDay(t)}" class="${r?.conditions>=8?'good':''}" title="${esc(r?.window||'Forecast loading')} · ${esc(r?.confidence||'')} confidence${r?.reasons?.length?' · '+esc(r.reasons[0]):''}">${n === 0 ? "Today" : local(hours[i], { weekday: "short" })}<small>${local(hours[i], { month: "numeric", day: "numeric" })}</small><b>${Number.isFinite(r?.conditions)?num(r.conditions)+"/10":"No rating"}</b><small>${r?.hazard?'Hazard':r?.limited?'Limited · '+ratingLabel(r.conditions):r?ratingLabel(r.conditions):'Loading'}${r?.provisional?' · outlook':''}</small></button>`;
           },
       )
       .join("");
