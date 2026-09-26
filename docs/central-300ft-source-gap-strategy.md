@@ -13,6 +13,8 @@ The [source queue](../dist/data/central-source-acquisition-queue.json) holds sur
 
 The queue now joins the independent Estero 2012 depth and 2008 character receipts by pinned source hash. Its 24,210 nominal hard/rugose overlap cells are a source-acquisition priority only; it explicitly records the datum, registration, uncertainty, legal, chart and biological hold. The monthly audit regenerates the receipts but cannot promote that lead into a fishing mark.
 
+The [Estero research-block screen](../dist/data/estero-2012-depth-class-closure-block-review.json) aggregates those cells into 60 **100 m review blocks** (7 in the nominal 200–250 ft band and 53 in 250–300 ft). A fresh bounded CDFW query returned five named MPAs, NOAA returned ten Groundfish Exclusion Area polygons, and NOAA ENC Direct completed 18 bounded obstruction/awash-rock/wreck queries. None intersected the full blocks plus a 100 m margin. Zero ENC danger features returned is not a complete chart or safe-transit finding. The exact block geometry remains an unpublished research artifact under `var/review/`; no ranked point or export is created. The monthly job reruns all three official source checks and fails if reviewed geometry or screening counts change.
+
 ## Ten release tracks and their gates
 
 1. **Cell-level coverage.** The current source queue, depth screens and original raster receipts identify sectors with real pixels, not catalog footprints. Next, build a common sector/cell matrix keyed by source hash, survey year, native resolution, observed/derived status, and missing reason. Pass only if every proposed patch has populated original cells.

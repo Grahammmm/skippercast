@@ -11,16 +11,16 @@ permissions:
 jobs:
   estero-original-depth-and-independent-character:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install pinned original-grid readers
-        run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1
+        run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum -v
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python scripts/audit_point_estero_original_pair.py --fetch
@@ -33,6 +33,19 @@ jobs:
         run: >-
           python scripts/audit_estero_2012_2008_overlap.py
           --output var/review/estero-independent-2012-depth-2008-character-overlap.json
+      - name: Fetch current Estero CDFW, NOAA federal and ENC research screens
+        run: |
+          python -m scripts.collect_estero_mpa_review --output var/review/estero-cdfw-mpas.geojson
+          python scripts/collect_noaa_groundfish_areas.py --output var/review/estero-federal-areas.geojson
+          python scripts/refresh_enc_hazards.py --scope estero-independent-deep-hard-context --output var/review/enc-hazards-estero-independent-deep-hard.geojson
+      - name: Screen whole 100 m Estero research blocks with 100 m margin
+        run: >-
+          python scripts/audit_estero_research_blocks.py
+          --mpas var/review/estero-cdfw-mpas.geojson
+          --federal var/review/estero-federal-areas.geojson
+          --enc var/review/enc-hazards-estero-independent-deep-hard.geojson
+          --private-blocks var/review/estero-nominal-research-blocks.geojson
+          --output var/review/estero-2012-depth-class-closure-block-review.json
       - name: Recheck VDatum source-frame acceptance without converting a grid
         run: >-
           python scripts/audit_estero_vdatum_frames.py --expect-current-gates
@@ -42,6 +55,7 @@ jobs:
           cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
           cmp dist/data/usgs-estero-bay-2012-original-200-300ft-review.json var/review/usgs-estero-bay-2012-original-200-300ft-review.json
           cmp dist/data/estero-independent-2012-depth-2008-character-overlap.json var/review/estero-independent-2012-depth-2008-character-overlap.json
+          python scripts/check_estero_review_change.py --current var/review/estero-2012-depth-class-closure-block-review.json
       - name: Upload research-only source audit
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,6 +65,10 @@ jobs:
             var/review/point-estero-original-paired-200-300ft-review.json
             var/review/usgs-estero-bay-2012-original-200-300ft-review.json
             var/review/estero-independent-2012-depth-2008-character-overlap.json
+            var/review/estero-2012-depth-class-closure-block-review.json
+            var/review/estero-cdfw-mpas.geojson
+            var/review/estero-federal-areas.geojson
+            var/review/enc-hazards-estero-independent-deep-hard.geojson
             var/review/estero-2012-vdatum-frame-review.json
           retention-days: 30
   point-buchon-original-pair:
