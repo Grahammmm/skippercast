@@ -121,6 +121,18 @@
       "output": "var/review/enc-hazards-cape-mendocino.geojson"
     },
     {
+      "id": "monterey-original-300-hard-context",
+      "region_id": "monterey-point-sur",
+      "bounds": [
+        -122.02,
+        36.50,
+        -121.77,
+        36.72
+      ],
+      "research_only": true,
+      "output": "var/review/enc-hazards-monterey-original-300.geojson"
+    },
+    {
       "id": "point-conception-hard-context",
       "region_id": "southern-california",
       "bounds": [

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "scope": "original-regular-bag-300-depth-source-review",
+  "audited_at": "2026-09-26T16:47:41.258005+00:00",
+  "survey_id": "H11951",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11951/BAG/H11951_MB_1m_MLLW_1of5.bag",
+  "file_sha256": "cc827151685e203b3ad58b037f27d32e2c526a9b4c5d2b7b9c90574268e6491b",
+  "metadata_sha256": "2b31b0450d88f00e6ebca3f885c0bf119f429a4cbdad2e003a54b2b73e16d392",
+  "survey_start": "2008-08-15T23:23:12",
+  "survey_end": "2008-09-04T20:16:52",
+  "vertical_datum": "MLLW",
+  "uncertainty_type": "productUncert",
+  "native_resolution_m": [
+    1.0,
+    1.0
+  ],
+  "raster_bounds_wgs84": [
+    -120.4334994,
+    34.3806908,
+    -120.178735,
+    34.4821677
+  ],
+  "policy": {
+    "minimum_ft": 25,
+    "ceiling_ft": 300,
+    "planning_margin_m": 2,
+    "maximum_product_uncertainty_m": 1
+  },
+  "counts": {
+    "measured_native_cells": 21508089,
+    "eligible_25_200ft_cells_with_margin": 21368138,
+    "eligible_25_300ft_cells_with_margin": 21368138,
+    "nominal_200_300ft_cells": 0,
+    "nominal_200_300ft_cells_passing_300ft_uncertainty_margin": 0,
+    "minimum_depth_m_below_mllw": 5.106,
+    "maximum_depth_m_below_mllw": 20.0,
+    "minimum_product_uncertainty_m": 0.228,
+    "maximum_product_uncertainty_m": 0.594
+  },
+  "sector_cell_center_screen": {
+    "sector_id": "morro-conception",
+    "bounds_wgs84": [
+      -123.5,
+      34.45,
+      -119.8,
+      35.35
+    ],
+    "counts": {
+      "eligible_25_300ft_cells_with_margin": 14737857,
+      "nominal_200_300ft_cells_passing_300ft_uncertainty_margin": 0
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Measured cell centers, paired original substrate and independent groundtruth, protected-area/security/chart screens and source-age review are required before any candidate geometry. This BAG is not a navigation chart or fish observation."
+}

@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-original-300-research-closure-screen",
+  "audited_at": "2026-09-26T17:01:05.241776+00:00",
+  "projected_crs": "EPSG:32610",
+  "buffer_m": 100,
+  "cdfw_mpa_features": 21,
+  "noaa_gea_features": 10,
+  "cdfw_checked_at": [
+    "2026-09-26T16:51:44.965455+00:00",
+    "2026-09-26T16:51:41.064165+00:00"
+  ],
+  "noaa_retrieved_at": "2026-09-26T16:51:50.918873+00:00",
+  "outline_count": 17,
+  "held_within_100m_count": 4,
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "native_200_300ft_navd88_cells": 1403,
+      "nearest_cdfw_mpa_m": 0.0,
+      "nearest_noaa_gea_m": 29063.5,
+      "within_100m_closure_review_buffer": true,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "native_200_300ft_navd88_cells": 22500,
+      "nearest_cdfw_mpa_m": 2626.7,
+      "nearest_noaa_gea_m": 41749.5,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "native_200_300ft_navd88_cells": 6342,
+      "nearest_cdfw_mpa_m": 0.0,
+      "nearest_noaa_gea_m": 37225.8,
+      "within_100m_closure_review_buffer": true,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "native_200_300ft_navd88_cells": 3800,
+      "nearest_cdfw_mpa_m": 2260.5,
+      "nearest_noaa_gea_m": 42183.7,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "native_200_300ft_navd88_cells": 2831,
+      "nearest_cdfw_mpa_m": 1159.2,
+      "nearest_noaa_gea_m": 34372.7,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "native_200_300ft_navd88_cells": 9500,
+      "nearest_cdfw_mpa_m": 2143.4,
+      "nearest_noaa_gea_m": 42288.6,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "native_200_300ft_navd88_cells": 9126,
+      "nearest_cdfw_mpa_m": 1271.3,
+      "nearest_noaa_gea_m": 36235.3,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "native_200_300ft_navd88_cells": 6600,
+      "nearest_cdfw_mpa_m": 1297.7,
+      "nearest_noaa_gea_m": 39407.7,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "native_200_300ft_navd88_cells": 2861,
+      "nearest_cdfw_mpa_m": 2088.0,
+      "nearest_noaa_gea_m": 32518.1,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "native_200_300ft_navd88_cells": 395,
+      "nearest_cdfw_mpa_m": 0.0,
+      "nearest_noaa_gea_m": 28852.1,
+      "within_100m_closure_review_buffer": true,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "native_200_300ft_navd88_cells": 2851,
+      "nearest_cdfw_mpa_m": 3.9,
+      "nearest_noaa_gea_m": 29836.0,
+      "within_100m_closure_review_buffer": true,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "native_200_300ft_navd88_cells": 3104,
+      "nearest_cdfw_mpa_m": 2785.4,
+      "nearest_noaa_gea_m": 42876.6,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "native_200_300ft_navd88_cells": 1700,
+      "nearest_cdfw_mpa_m": 2783.9,
+      "nearest_noaa_gea_m": 42780.7,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "native_200_300ft_navd88_cells": 1700,
+      "nearest_cdfw_mpa_m": 2064.7,
+      "nearest_noaa_gea_m": 42300.6,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "native_200_300ft_navd88_cells": 1700,
+      "nearest_cdfw_mpa_m": 2633.9,
+      "nearest_noaa_gea_m": 41658.6,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "native_200_300ft_navd88_cells": 162,
+      "nearest_cdfw_mpa_m": 1191.3,
+      "nearest_noaa_gea_m": 39517.6,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "native_200_300ft_navd88_cells": 1380,
+      "nearest_cdfw_mpa_m": 1300.3,
+      "nearest_noaa_gea_m": 36556.4,
+      "within_100m_closure_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Approximate MPA/GEA GIS screen only. NAVD88 has not been converted to MLLW; source uncertainty, current species rules, USCG/security notices, NOAA ENC dangers and transit remain unreviewed for these outlines. No fishing or navigation permission is inferred.",
+  "input_sha256": {
+    "pixel": "f88fe765a7068287cc7de089a3b2a0febafb464326a6948d8b2beda0a4b74fbc",
+    "context": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+    "mpa_north": "d53ce9b39ef4722c04b0c118ef868e47b381cf37809fb9dd85a7bd32e4addbcd",
+    "mpa_south": "a1f715d1471016e8287de84a35de19a56805ae41b82eb181b244e6cdde900f91",
+    "federal": "5cd45290d3abce3ac161e60170ddc3b75e52b762058700a295bbd7f874667703"
+  }
+}

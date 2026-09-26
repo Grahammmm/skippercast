@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-original-300-enc-danger-screen",
+  "audited_at": "2026-09-26T16:54:59.776095+00:00",
+  "enc_checked_at": "2026-09-26T16:54:13.584789+00:00",
+  "enc_source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "enc_scope_id": "monterey-original-300-hard-context",
+  "query_layer_count": 18,
+  "charted_danger_features_in_scope": 851,
+  "outline_count": 17,
+  "outlines_within_100m_of_charted_danger": 1,
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "nearest_charted_danger_in_scope_m": 0.0,
+      "charted_dangers_within_100m": 80,
+      "within_charted_danger_review_buffer": true,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "nearest_charted_danger_in_scope_m": 4489.2,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "nearest_charted_danger_in_scope_m": 869.3,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "nearest_charted_danger_in_scope_m": 5014.3,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "nearest_charted_danger_in_scope_m": 1104.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "nearest_charted_danger_in_scope_m": 5068.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "nearest_charted_danger_in_scope_m": 760.8,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "nearest_charted_danger_in_scope_m": 1662.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "nearest_charted_danger_in_scope_m": 1581.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "nearest_charted_danger_in_scope_m": 1369.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "nearest_charted_danger_in_scope_m": 960.6,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "nearest_charted_danger_in_scope_m": 5695.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "nearest_charted_danger_in_scope_m": 5618.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "nearest_charted_danger_in_scope_m": 5068.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "nearest_charted_danger_in_scope_m": 4382.4,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "nearest_charted_danger_in_scope_m": 1442.3,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "nearest_charted_danger_in_scope_m": 678.7,
+      "charted_dangers_within_100m": 0,
+      "within_charted_danger_review_buffer": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "ENC Direct feature proximity is only a research screen. It is not a navigation chart, chart-completeness finding, safe route, current maritime notice check or fishing permission.",
+  "input_sha256": {
+    "enc": "d89458e45a8e4b26a89f1d01d75a025e111fafc13286b93fa1bf1067d8d40416",
+    "pixel": "f88fe765a7068287cc7de089a3b2a0febafb464326a6948d8b2beda0a4b74fbc",
+    "context": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39"
+  }
+}

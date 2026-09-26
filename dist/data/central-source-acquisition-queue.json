@@ -30,10 +30,18 @@
         "W00614"
       ],
       "noaa_filename_fine_grid_leads": [
-        "F00600",
         "W00614"
       ],
       "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_original_300ft_depth_refutations": [
+        {
+          "survey_id": "F00600",
+          "review_paths": [
+            "dist/data/f00600-original-300-depth-review.json"
+          ]
+        }
+      ],
+      "noaa_original_200_300ft_sector_refutations": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -97,6 +105,8 @@
       ],
       "noaa_filename_fine_grid_leads": [],
       "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_200_300ft_sector_refutations": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -135,6 +145,8 @@
       ],
       "noaa_filename_fine_grid_leads": [],
       "noaa_native_audit_refuted_fine_hint": [],
+      "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_200_300ft_sector_refutations": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -174,6 +186,8 @@
         "H13151",
         "W00479"
       ],
+      "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_200_300ft_sector_refutations": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13151",
         "W00431",
@@ -218,6 +232,8 @@
         "H13151",
         "W00479"
       ],
+      "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_200_300ft_sector_refutations": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
         "H13151",
@@ -284,6 +300,17 @@
         "H13151",
         "H13152",
         "W00479"
+      ],
+      "noaa_original_300ft_depth_refutations": [],
+      "noaa_original_200_300ft_sector_refutations": [
+        {
+          "survey_id": "H11951",
+          "review_paths": [
+            "dist/data/h11951-1m-original-300-depth-review.json",
+            "dist/data/h11951-2m-original-300-depth-review.json",
+            "dist/data/h11951-4m-original-300-depth-review.json"
+          ]
+        }
       ],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",

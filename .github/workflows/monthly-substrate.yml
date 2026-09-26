@@ -9,6 +9,48 @@ permissions:
   contents: read
 
 jobs:
+  monterey-original-300-source-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned GIS dependencies
+        run: python -m pip install -r requirements-survey.txt
+      - name: Verify Monterey evidence joins and fail-closed source checks
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_monterey_300_closures tests.test_monterey_300_enc tests.test_monterey_300_review_matrix -v
+      - name: Refresh reviewed official protected areas and federal groundfish areas
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/refresh_reviewed_closures.py --region santa-cruz-monterey-bay
+          python scripts/refresh_reviewed_closures.py --region monterey-point-sur
+          python scripts/collect_noaa_groundfish_areas.py --output var/review/monterey-noaa-federal-areas.json
+      - name: Refresh bounded NOAA ENC danger features
+        run: python scripts/refresh_enc_hazards.py --scope monterey-original-300-hard-context --output var/review/monterey-enc-dangers.geojson
+      - name: Recheck original research outlines and join independent evidence
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/audit_monterey_300_closures.py --federal var/review/monterey-noaa-federal-areas.json --output var/review/monterey-300-closure-review.json
+          python scripts/audit_monterey_300_enc.py --enc var/review/monterey-enc-dangers.geojson --output var/review/monterey-300-enc-review.json
+          python scripts/build_monterey_300_review_matrix.py --closure var/review/monterey-300-closure-review.json --enc var/review/monterey-300-enc-review.json --output var/review/monterey-300-evidence-matrix.json
+      - name: Upload research-only source receipts even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monterey-original-300-source-screen
+          path: |
+            var/review/monterey-noaa-federal-areas.json
+            var/review/monterey-enc-dangers.geojson
+            var/review/monterey-300-closure-review.json
+            var/review/monterey-300-enc-review.json
+            var/review/monterey-300-evidence-matrix.json
+          retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest
     timeout-minutes: 10

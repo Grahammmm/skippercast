@@ -43,6 +43,11 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertIn("not measured raster coverage", result["method_note"])
         self.assertTrue(all(row["noaa_catalog_leads_with_bag_links"] <= row["noaa_catalog_lead_count"]
                             for row in result["sectors"]))
+        pigeon = result["sectors"][0]
+        self.assertNotIn("F00600", pigeon["noaa_filename_fine_grid_leads"])
+        self.assertEqual(pigeon["noaa_original_300ft_depth_refutations"][0]["survey_id"], "F00600")
+        conception = result["sectors"][-1]
+        self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
 
     def test_new_deeper_waypoint_needs_explicit_qualification_receipt(self):
         original = coverage.read

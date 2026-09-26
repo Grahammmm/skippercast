@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "purpose": "Bind reviewed original NOAA native-depth receipts to Central Coast source triage. No receipt is a fishing target.",
+  "bindings": [
+    {
+      "survey_id": "F00600",
+      "claim": "no-eligible-25-300ft-anywhere",
+      "review_paths": ["dist/data/f00600-original-300-depth-review.json"]
+    },
+    {
+      "survey_id": "H11951",
+      "claim": "no-eligible-200-300ft-in-sector",
+      "sector_id": "morro-conception",
+      "review_paths": [
+        "dist/data/h11951-1m-original-300-depth-review.json",
+        "dist/data/h11951-2m-original-300-depth-review.json",
+        "dist/data/h11951-4m-original-300-depth-review.json"
+      ]
+    }
+  ]
+}

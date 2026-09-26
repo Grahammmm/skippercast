@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-original-pixel-depth-band-audit",
+  "audited_at": "2026-09-26T16:50:37.292955+00:00",
+  "source_archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+  "source_archive_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+  "native_vertical_datum": "NAVD88",
+  "native_resolution_m": 2,
+  "comparison_band_m_below_navd88": [
+    60.96,
+    91.44
+  ],
+  "outline_count": 17,
+  "outlines_with_native_band_cells": 17,
+  "total_native_band_cells": 77955,
+  "followup_order_context_ids": [
+    "usgs-OffshoreMonterey-8ca813f1-023",
+    "usgs-OffshoreMonterey-8ca813f1-026",
+    "usgs-OffshoreMonterey-8ca813f1-046",
+    "usgs-OffshoreMonterey-8ca813f1-001",
+    "usgs-OffshoreMonterey-8ca813f1-033",
+    "usgs-OffshoreMonterey-8ca813f1-034",
+    "usgs-OffshoreMonterey-8ca813f1-038",
+    "usgs-OffshoreMonterey-8ca813f1-059",
+    "usgs-OffshoreMonterey-8ca813f1-040",
+    "usgs-OffshoreMonterey-8ca813f1-056",
+    "usgs-OffshoreMonterey-8ca813f1-011",
+    "usgs-OffshoreMonterey-8ca813f1-070",
+    "usgs-OffshoreMonterey-8ca813f1-071",
+    "usgs-OffshoreMonterey-8ca813f1-072",
+    "usgs-OffshoreMonterey-8ca813f1-086",
+    "usgs-OffshoreMonterey-8ca813f1-003",
+    "usgs-OffshoreMonterey-8ca813f1-076"
+  ],
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "native_valid_cells_in_outline": 737649,
+      "native_cells_200_300ft_below_navd88": 1403,
+      "native_2m_cell_area_in_band_m2": 5612,
+      "historical_camera_windows": 13,
+      "historical_rockfish_positive_windows": 1,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "native_valid_cells_in_outline": 22500,
+      "native_cells_200_300ft_below_navd88": 22500,
+      "native_2m_cell_area_in_band_m2": 90000,
+      "historical_camera_windows": 5,
+      "historical_rockfish_positive_windows": 1,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "native_valid_cells_in_outline": 12560,
+      "native_cells_200_300ft_below_navd88": 6342,
+      "native_2m_cell_area_in_band_m2": 25368,
+      "historical_camera_windows": 3,
+      "historical_rockfish_positive_windows": 2,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "native_valid_cells_in_outline": 3800,
+      "native_cells_200_300ft_below_navd88": 3800,
+      "native_2m_cell_area_in_band_m2": 15200,
+      "historical_camera_windows": 2,
+      "historical_rockfish_positive_windows": 1,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "native_valid_cells_in_outline": 125375,
+      "native_cells_200_300ft_below_navd88": 2831,
+      "native_2m_cell_area_in_band_m2": 11324,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "native_valid_cells_in_outline": 9500,
+      "native_cells_200_300ft_below_navd88": 9500,
+      "native_2m_cell_area_in_band_m2": 38000,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "native_valid_cells_in_outline": 9200,
+      "native_cells_200_300ft_below_navd88": 9126,
+      "native_2m_cell_area_in_band_m2": 36504,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "native_valid_cells_in_outline": 6600,
+      "native_cells_200_300ft_below_navd88": 6600,
+      "native_2m_cell_area_in_band_m2": 26400,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "native_valid_cells_in_outline": 5330,
+      "native_cells_200_300ft_below_navd88": 2861,
+      "native_2m_cell_area_in_band_m2": 11444,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "native_valid_cells_in_outline": 4270,
+      "native_cells_200_300ft_below_navd88": 395,
+      "native_2m_cell_area_in_band_m2": 1580,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "native_valid_cells_in_outline": 3220,
+      "native_cells_200_300ft_below_navd88": 2851,
+      "native_2m_cell_area_in_band_m2": 11404,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "native_valid_cells_in_outline": 3104,
+      "native_cells_200_300ft_below_navd88": 3104,
+      "native_2m_cell_area_in_band_m2": 12416,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "native_valid_cells_in_outline": 1700,
+      "native_cells_200_300ft_below_navd88": 1700,
+      "native_2m_cell_area_in_band_m2": 6800,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "native_valid_cells_in_outline": 1700,
+      "native_cells_200_300ft_below_navd88": 1700,
+      "native_2m_cell_area_in_band_m2": 6800,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "native_valid_cells_in_outline": 1700,
+      "native_cells_200_300ft_below_navd88": 1700,
+      "native_2m_cell_area_in_band_m2": 6800,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "native_valid_cells_in_outline": 1580,
+      "native_cells_200_300ft_below_navd88": 162,
+      "native_2m_cell_area_in_band_m2": 648,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "native_valid_cells_in_outline": 1380,
+      "native_cells_200_300ft_below_navd88": 1380,
+      "native_2m_cell_area_in_band_m2": 5520,
+      "historical_camera_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "NAVD88 is not MLLW; this comparison band cannot establish a legal 200\u2013300 ft fishing depth.",
+    "The original USGS product lacks per-cell uncertainty, so no 300 ft candidate passes depth qualification.",
+    "Pixels are counted within generalized hard-bottom outlines, not converted into chartplotter points or independently verified catches."
+  ]
+}

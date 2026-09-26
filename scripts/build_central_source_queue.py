@@ -25,12 +25,47 @@ def build(root):
     usgs = read(root / "catalog/usgs-ds781-source-leads.json")
     metadata = read(root / "catalog/usgs-ds781-metadata-review.json")
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
+    bindings = read(root / "catalog/central-native-depth-review-bindings.json")
+    if bindings.get("schema_version") != 1:
+        raise ValueError("Invalid original depth review bindings")
     if discovery["health"]["status"] != "ok" or products["health"]["status"] != "ok":
         raise ValueError("NOAA discovery incomplete")
     if metadata["record_count"] != len(metadata["records"]):
         raise ValueError("USGS metadata receipt incomplete")
     discovery_rows = {s["sector_id"]: s for s in discovery["sectors"]}
     surveyed = {s["id"]: s for s in products["surveys"]}
+    depth_refuted = {}
+    deeper_sector_refuted = {}
+    for binding in bindings["bindings"]:
+        sid = binding["survey_id"]
+        catalog_urls = surveyed.get(sid, {}).get("products", {}).get("bag", [])
+        paths = binding.get("review_paths", [])
+        if not paths or len(paths) != len(set(paths)):
+            raise ValueError(f"Missing or duplicate native depth receipts for {sid}")
+        receipts = [read(root / path) for path in paths]
+        for receipt in receipts:
+            if (receipt.get("survey_id") != sid or receipt.get("source_url") not in catalog_urls
+                    or receipt.get("scope") != "original-regular-bag-300-depth-source-review"
+                    or receipt.get("vertical_datum") != "MLLW"
+                    or receipt.get("fishing_target") is not False
+                    or receipt.get("counts", {}).get("measured_native_cells", 0) <= 0):
+                raise ValueError(f"Unreviewed native depth receipt for {sid}")
+        if binding.get("claim") == "no-eligible-25-300ft-anywhere":
+            if sid in depth_refuted or any(r["counts"]["eligible_25_300ft_cells_with_margin"] != 0 for r in receipts):
+                raise ValueError(f"Original depth refutation failed for {sid}")
+            depth_refuted[sid] = paths
+        elif binding.get("claim") == "no-eligible-200-300ft-in-sector":
+            sector_id = binding.get("sector_id")
+            fine_urls = {url for url in catalog_urls if re.search(r"_(?:50cm|[1-4]m)_MLLW", url)}
+            if (not sector_id or (sid, sector_id) in deeper_sector_refuted
+                    or {r["source_url"] for r in receipts} != fine_urls
+                    or any(r.get("sector_cell_center_screen", {}).get("sector_id") != sector_id
+                           or r["sector_cell_center_screen"]["counts"]["nominal_200_300ft_cells_passing_300ft_uncertainty_margin"] != 0
+                           for r in receipts)):
+                raise ValueError(f"Original deeper-band sector refutation failed for {sid}")
+            deeper_sector_refuted[(sid, sector_id)] = paths
+        else:
+            raise ValueError(f"Unknown original native-depth review claim for {sid}")
     native_links = {lead["bag_url"]: lead for region in native["regions"]
                     for lead in region.get("leads", [])}
     source_rows = []
@@ -47,6 +82,8 @@ def build(root):
             # prove spacing, actual measured-cell location, datum and quality.
             candidate_urls = [url for url in urls if "_VR_MLLW" in url or
                               re.search(r"_(?:50cm|[1-4]m)_MLLW", url)]
+            if sid in depth_refuted:
+                continue
             if any(url not in native_links or
                    max(native_links[url]["resolution_m"]) <= 4 or
                    native_links[url]["fine_refinement_grids"] > 0
@@ -68,7 +105,13 @@ def build(root):
             "noaa_survey_ids": original_bag,
             "noaa_filename_fine_grid_leads": fine_leads,
             "noaa_native_audit_refuted_fine_hint": coarse_audited,
-            "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads)),
+            "noaa_original_300ft_depth_refutations": [
+                {"survey_id": sid, "review_paths": depth_refuted[sid]}
+                for sid in original_bag if sid in depth_refuted],
+            "noaa_original_200_300ft_sector_refutations": [
+                {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
+                for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],
+            "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted)),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
