@@ -7,7 +7,8 @@
     "dist/data/central-source-acquisition-queue.json": "4b0f748f0e877c9bdd53010a8931ec8d09b638f3129b2e110376cf1eef71d847",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "8904b11fb07b822e55acf0dcde7433bc80b3013e379e7b2ed9868afc2ffcc6a0",
-    "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f"
+    "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
+    "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124"
   },
   "release_gate_ids": [
     "native-cells",
@@ -341,11 +342,12 @@
     {
       "sector_id": "sur-san-simeon",
       "source_review_priority_tier": 3,
-      "reviewed_lead": "CSUMB BSS 2 m NAVD88 cells and historical Big Creek ROV reference observations",
-      "next_acquisition": "Get original uncertainty and reference-frame bridge, then pair surveyed substrate and position-audited fish transects at the same patch.",
-      "limiting_evidence": "ROV area counts and terrain roughness do not define a precise fishing patch.",
+      "reviewed_lead": "CSUMB BSS Block03 2 m NAVD88 cells nominally overlap 46 USGS camera windows at 221\u2013238 ft source-datum depth, including 11 rock/boulder windows on one camera line",
+      "next_acquisition": "Obtain original TPU/CUBE and source-frame bridge; review video positioning and the entire measured patch, then clear source rights, current MPAs, ENC hazards and access routes.",
+      "limiting_evidence": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "dist/data/bss03-video-grid-overlap.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
@@ -370,13 +372,13 @@
         {
           "id": "independent-substrate",
           "requirement": "Pair measured depth with surveyed substrate at supported resolution",
-          "stage": "missing-release-evidence",
+          "stage": "research-evidence",
           "release_gate_satisfied": false
         },
         {
           "id": "biological-observations",
           "requirement": "Link dated species observations at their actual spatial support",
-          "stage": "missing-release-evidence",
+          "stage": "research-evidence",
           "release_gate_satisfied": false
         },
         {

@@ -71,9 +71,9 @@ SECTOR_OVERRIDES = {
         "hold": "Datum, upper uncertainty, source rights and independent substrate remain unresolved.",
     },
     "sur-san-simeon": {
-        "lead": "CSUMB BSS 2 m NAVD88 cells and historical Big Creek ROV reference observations",
-        "next": "Get original uncertainty and reference-frame bridge, then pair surveyed substrate and position-audited fish transects at the same patch.",
-        "hold": "ROV area counts and terrain roughness do not define a precise fishing patch.",
+        "lead": "CSUMB BSS Block03 2 m NAVD88 cells nominally overlap 46 USGS camera windows at 221–238 ft source-datum depth, including 11 rock/boulder windows on one camera line",
+        "next": "Obtain original TPU/CUBE and source-frame bridge; review video positioning and the entire measured patch, then clear source rights, current MPAs, ENC hazards and access routes.",
+        "hold": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
     },
     "cambria-morro": {
         "lead": "Independent 2012 Estero depth and 2008 video-supervised character overlap",
@@ -102,8 +102,18 @@ def build(root):
     ledger_path = "dist/data/central-coverage-ledger-v1.json"
     buchon_path = "dist/data/point-buchon-original-paired-200-300ft-review.json"
     estero_path = "dist/data/estero-independent-2012-depth-2008-character-overlap.json"
+    bss03_video_path = "dist/data/bss03-video-grid-overlap.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
+    bss03_video = load(root, bss03_video_path)
+    if (bss03_video.get('scope') != 'bss03-original-video-vs-populated-grid'
+            or bss03_video.get('camera_windows_in_200_300ft_source_datum_band') != 46
+            or bss03_video.get('rock_boulder_cobble_windows_in_band') != 11
+            or bss03_video.get('distinct_nonempty_camera_line_ids_in_band') != 1
+            or bss03_video.get('rank_effect') != 'none'
+            or bss03_video.get('fishing_target') is not False
+            or bss03_video.get('exportable') is not False):
+        raise ValueError('Original Big Sur Block03 camera/grid evidence changed')
     if queue.get("status") != "research-only" or ledger.get("depth_planning_ceiling_ft") != 300:
         raise ValueError("Central 300 ft source and coverage receipts are not current")
     if (buchon.get("fishing_target") is not False or buchon.get("qualified_waypoints") != 0
@@ -129,6 +139,8 @@ def build(root):
         receipts.extend(lead["review_path"] for lead in deep_refutations)
         if csumb:
             receipts.append(row["csumb_native_band_receipt"])
+        if sector_id == 'sur-san-simeon':
+            receipts.append(bss03_video_path)
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             spatial = row.get("estero_vdatum_spatial_diagnostic")
@@ -180,6 +192,8 @@ def build(root):
             stage = "research-evidence" if key == "native-cells" and measured else "missing-release-evidence"
             if key == "depth-uncertainty" and chart_depth:
                 stage = "partial-release-evidence"
+            if sector_id == 'sur-san-simeon' and key in ('independent-substrate', 'biological-observations'):
+                stage = 'research-evidence'
             if key == "evidence-ladder":
                 stage = "implemented-hold"
             if key == "promotion-refresh":
@@ -206,7 +220,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, bss03_video_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",

@@ -582,6 +582,15 @@ jobs:
           --download-video
           --output var/review/bss02-video-grid-overlap.json
           --verify dist/data/bss02-video-grid-overlap.json
+      - name: Check Block 03 video, source-depth band and derived rough class
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_bss02_video_grid_overlap.py
+          --survey-id BSS_Block03
+          --download-video
+          --output var/review/bss03-video-grid-overlap.json
+          --verify dist/data/bss03-video-grid-overlap.json
       - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
         run: >-
           python scripts/audit_csumb_vdatum_bridge.py
@@ -600,6 +609,7 @@ jobs:
             var/review/csumb-bss-native-source-review.json
             var/review/bss02-accuracy-provenance.json
             var/review/bss02-video-grid-overlap.json
+            var/review/bss03-video-grid-overlap.json
             var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
   central-deepwater:

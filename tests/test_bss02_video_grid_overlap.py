@@ -41,6 +41,21 @@ class VideoGridOverlapTest(unittest.TestCase):
         self.assertFalse(receipt['fishing_target'])
         self.assertFalse(receipt['exportable'])
 
+    def test_adjacent_block_has_real_but_limited_source_datum_overlap(self):
+        receipt = json.loads((ROOT / 'dist/data/bss03-video-grid-overlap.json').read_text())
+        self.assertEqual(receipt['camera_records_on_valid_depth_pixel'], 46)
+        self.assertEqual(receipt['camera_windows_in_200_300ft_source_datum_band'], 46)
+        self.assertEqual(receipt['rock_boulder_cobble_windows_in_band'], 11)
+        self.assertEqual(receipt['rock_boulder_cobble_windows_on_derived_rough_class'], 3)
+        self.assertEqual(receipt['rock_boulder_cobble_windows_within_10m_of_derived_rough_class'], 10)
+        self.assertEqual(receipt['rock_boulder_cobble_windows_within_25m_of_derived_rough_class'], 11)
+        self.assertEqual(receipt['distinct_nonempty_camera_line_ids_in_band'], 1)
+        self.assertGreater(receipt['source_depth_range_m_on_populated_band'][0], -91.44)
+        self.assertLess(receipt['source_depth_range_m_on_populated_band'][1], -60.96)
+        self.assertTrue(receipt['independent_observations_on_populated_grid'])
+        self.assertEqual(receipt['rank_effect'], 'none')
+        self.assertFalse(receipt['fishing_target'])
+
     def test_hash_pinned_sources_reproduce_receipt_when_cached(self):
         bss_cache = ROOT / 'var/review/csumb-bss-cache'
         video_cache = ROOT / 'var/usgs-video-cache'
@@ -52,6 +67,19 @@ class VideoGridOverlapTest(unittest.TestCase):
         video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
         expected = json.loads((ROOT / 'dist/data/bss02-video-grid-overlap.json').read_text())
+        self.assertEqual(actual, expected)
+
+    def test_adjacent_block_reproduces_when_cached(self):
+        bss_cache = ROOT / 'var/review/csumb-bss-cache'
+        video_cache = ROOT / 'var/usgs-video-cache'
+        if not ((bss_cache / 'BSS_Block03_additional_products.tar.gz').exists()
+                and (video_cache / 'c0212sc_video_observations.zip').exists()):
+            self.skipTest('Original archives not cached locally')
+        bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
+                   if source['survey_id'] == 'BSS_Block03')
+        video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
+        actual = inspect(bss, video, bss_cache, video_cache)
+        expected = json.loads((ROOT / 'dist/data/bss03-video-grid-overlap.json').read_text())
         self.assertEqual(actual, expected)
 
 

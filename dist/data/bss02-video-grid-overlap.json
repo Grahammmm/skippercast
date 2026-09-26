@@ -12,6 +12,9 @@
   "observation_dates": [
     "2012-08-13"
   ],
+  "source_datum": "NAVD88 Geoid09",
+  "source_depth_range_m_on_populated_band": null,
+  "distinct_nonempty_camera_line_ids_in_band": 0,
   "camera_records_inside_raster_bounds": 46,
   "interpreted_bottom_windows": 39,
   "rock_boulder_cobble_windows": 11,
@@ -19,9 +22,17 @@
   "lingcod_positive_windows": 1,
   "camera_records_on_valid_depth_pixel": 0,
   "camera_records_within_100m_of_valid_depth_pixel": 0,
+  "camera_windows_in_200_300ft_source_datum_band": 0,
+  "rock_boulder_cobble_windows_in_band": 0,
+  "rock_boulder_cobble_windows_on_derived_rough_class": 0,
+  "rock_boulder_cobble_windows_off_derived_rough_class": 0,
+  "rock_boulder_cobble_windows_within_10m_of_derived_rough_class": 0,
+  "rock_boulder_cobble_windows_within_25m_of_derived_rough_class": 0,
+  "rockfish_positive_windows_in_band": 0,
+  "lingcod_positive_windows_in_band": 0,
   "independent_observations_on_populated_grid": false,
   "rank_effect": "none",
   "fishing_target": false,
   "exportable": false,
-  "limitations": "Rectangular raster bounds include nodata. Historical camera observations and fish codes are not current catch evidence. The 100 m search is a conservative proximity screen, not a positioning error bound or a biological extrapolation. Depth datum, product uncertainty, reuse rights and full chart/legal review remain unresolved."
+  "limitations": "Rectangular raster bounds include nodata. Camera positions have order-10-m error against a 2 m grid, so nominal point-to-pixel joins do not identify an exact rock cell. Adjacent windows on one camera line are correlated, not independent surveys. The 200\u2013300 ft depth screen is original NAVD88 source elevation, not MLLW-qualified fishing depth. Historical fish codes are not catch or current presence. The 100 m search is a proximity screen, not a positioning error bound or biological extrapolation. Product uncertainty, reuse rights and full chart/legal review remain unresolved."
 }
