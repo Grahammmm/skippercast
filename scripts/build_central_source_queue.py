@@ -37,6 +37,20 @@ def build(root):
     regular_native = read(root / "dist/data/noaa-regular-native-depth-review.json")
     extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
     extra_bag = read(root / "dist/data/f00844-original-fifth-bag-review.json")
+    estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
+    estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
+    if (estero_depth.get("scope") != "usgs-estero-bay-2012-original-200-300ft-research"
+            or estero_overlap.get("scope") != "estero-independent-2012-depth-2008-character-nominal-overlap"
+            or estero_depth.get("fishing_target") is not False
+            or estero_overlap.get("fishing_target") is not False
+            or estero_depth.get("exportable") is not False
+            or estero_overlap.get("exportable") is not False
+            or estero_depth.get("source_report") != estero_overlap.get("source_2012")
+            or estero_depth.get("source_archives_sha256", {}).get("NAD83_utm10_EsteroBay.zip")
+            != estero_overlap.get("depth_archive_sha256")
+            or not estero_depth.get("nominal_depth_bands")
+            or not estero_overlap.get("depth_bands")):
+        raise ValueError("Original Estero independent source audits missing or changed")
     if (csumb.get("scope") != "original-csumb-bss-native-grid-review"
             or csumb.get("publication_status") != "source-evidence-only"
             or any(s.get("status") != "held-from-fishing-targets"
@@ -265,6 +279,20 @@ def build(root):
             "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
             "csumb_native_band_leads": csumb_leads,
             "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+            "estero_independent_depth_character_lead": ({
+                "depth_source": estero_depth["source_report"],
+                "depth_receipt": "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json",
+                "character_source": estero_overlap["source_2008"],
+                "overlap_receipt": "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
+                "nominal_200_300ft_depth_cells": sum(
+                    band["depth_cells"] for band in estero_depth["nominal_depth_bands"].values()),
+                "nominal_200_300ft_independent_hard_rugose_overlap_cells": sum(
+                    band["classified_cells_by_type"]["hard_rugose"]
+                    for band in estero_overlap["depth_bands"].values()),
+                "release_status": "datum-registration-uncertainty-legal-chart-biology-hold",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "cambria-morro" else None),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
@@ -281,7 +309,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

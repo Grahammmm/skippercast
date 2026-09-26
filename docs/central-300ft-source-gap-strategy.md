@@ -11,6 +11,8 @@ Updated September 26, 2026. This is the working release gate for the ten qualifi
 
 The [source queue](../dist/data/central-source-acquisition-queue.json) holds survey IDs and URLs; the [coverage ledger](../dist/data/central-coverage-ledger-v1.json) records mapped versus research-only coverage. Search queries should be by **bounding polygon and survey ID**, not by town name or a chart label. Candidate providers, in order, are original [NOAA NCEI bathymetric surveys](https://www.ncei.noaa.gov/products/bathymetry), [NOAA BlueTopo source references](https://nauticalcharts.noaa.gov/data/bluetopo.html), [USGS California Seafloor Mapping Program](https://cmgds.marine.usgs.gov/), CSUMB Seafloor Mapping Lab, and CDFW/MARE visual-survey custodians. Catalog polygons and compiled surfaces identify where to ask; only the original populated cells count as evidence.
 
+The queue now joins the independent Estero 2012 depth and 2008 character receipts by pinned source hash. Its 24,210 nominal hard/rugose overlap cells are a source-acquisition priority only; it explicitly records the datum, registration, uncertainty, legal, chart and biological hold. The monthly audit regenerates the receipts but cannot promote that lead into a fishing mark.
+
 ## Ten release tracks and their gates
 
 1. **Cell-level coverage.** The current source queue, depth screens and original raster receipts identify sectors with real pixels, not catalog footprints. Next, build a common sector/cell matrix keyed by source hash, survey year, native resolution, observed/derived status, and missing reason. Pass only if every proposed patch has populated original cells.

@@ -70,6 +70,14 @@ class CentralCoveragePipelineTests(unittest.TestCase):
                        if row["source_id"] == "csumb-bss-block02")
         self.assertEqual(block02["measured_200_300ft_navd88_comparison_cells"], 1_987_547)
         self.assertEqual(block02["release_status"], "datum-uncertainty-rights-hold")
+        estero = next(row for row in result["sectors"] if row["sector_id"] == "cambria-morro")
+        lead = estero["estero_independent_depth_character_lead"]
+        self.assertEqual(lead["nominal_200_300ft_depth_cells"], 9_593_612)
+        self.assertEqual(lead["nominal_200_300ft_independent_hard_rugose_overlap_cells"], 24_210)
+        self.assertFalse(lead["fishing_target"])
+        self.assertFalse(lead["exportable"])
+        self.assertTrue(all(row["estero_independent_depth_character_lead"] is None
+                            for row in result["sectors"] if row["sector_id"] != "cambria-morro"))
 
     def test_unreviewed_bluetopo_lead_blocks_queue(self):
         original = sources.read
