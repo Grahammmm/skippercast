@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-native-200-300ft-research-priority",
+  "source_review_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+  "native_vertical_datum": "NAVD88",
+  "comparison_band_m_below_navd88": [
+    60.96,
+    91.44
+  ],
+  "source_outline_count": 88,
+  "possible_band_overlap_outline_count": 17,
+  "historical_camera_overlap_outline_count": 4,
+  "priority_order": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "native_measured_cells_in_full_outline": 737649,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        3.57,
+        67.3
+      ],
+      "historical_camera_windows": 13,
+      "historical_rock_boulder_windows": 13,
+      "historical_rockfish_positive_windows": 1,
+      "priority_for_original_pixel_recheck": "camera-and-bottom",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "native_measured_cells_in_full_outline": 22500,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        75.83,
+        84.6
+      ],
+      "historical_camera_windows": 5,
+      "historical_rock_boulder_windows": 5,
+      "historical_rockfish_positive_windows": 1,
+      "priority_for_original_pixel_recheck": "camera-and-bottom",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "native_measured_cells_in_full_outline": 12560,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        43.77,
+        69.47
+      ],
+      "historical_camera_windows": 3,
+      "historical_rock_boulder_windows": 2,
+      "historical_rockfish_positive_windows": 2,
+      "priority_for_original_pixel_recheck": "camera-and-bottom",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "native_measured_cells_in_full_outline": 3800,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        81.14,
+        86.76
+      ],
+      "historical_camera_windows": 2,
+      "historical_rock_boulder_windows": 2,
+      "historical_rockfish_positive_windows": 1,
+      "priority_for_original_pixel_recheck": "camera-and-bottom",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "native_measured_cells_in_full_outline": 125375,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        34.74,
+        65.46
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "native_measured_cells_in_full_outline": 9500,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        81.33,
+        87.32
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "native_measured_cells_in_full_outline": 9200,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        60.41,
+        74.63
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "native_measured_cells_in_full_outline": 6600,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        65.45,
+        70.64
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "native_measured_cells_in_full_outline": 5330,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        47.87,
+        86.84
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "native_measured_cells_in_full_outline": 4270,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        37.9,
+        64.83
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "native_measured_cells_in_full_outline": 3220,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        64.73,
+        107.65
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "native_measured_cells_in_full_outline": 3104,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        80.05,
+        85.44
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "native_measured_cells_in_full_outline": 1700,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        82.68,
+        85.62
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "native_measured_cells_in_full_outline": 1700,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        84.88,
+        87.96
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "native_measured_cells_in_full_outline": 1700,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        78.38,
+        84.38
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "native_measured_cells_in_full_outline": 1580,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        57.1,
+        61.92
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "native_measured_cells_in_full_outline": 1380,
+      "native_measured_cells_in_200_300ft_band": null,
+      "navd88_depth_range_m": [
+        72.44,
+        77.69
+      ],
+      "historical_camera_windows": 0,
+      "historical_rock_boulder_windows": 0,
+      "historical_rockfish_positive_windows": 0,
+      "priority_for_original_pixel_recheck": "bottom-only",
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_required_work": [
+    "Reopen the original GeoTIFF and count valid 200\u2013300 ft NAVD88 cells inside each outline.",
+    "Resolve horizontal realization/epoch and full-area NAVD88-to-MLLW conversion with transformation uncertainty.",
+    "Obtain independent per-cell bathymetry uncertainty or a better original MLLW survey.",
+    "Review original bottom classification, dated video positions, current protected areas, hazards and access before ranking any fishable patch."
+  ],
+  "limitations": "A min/max range can intersect the comparison band even if no measured pixel within the outline actually lies in it. The band is NAVD88, not a verified 200\u2013300 ft MLLW fishing depth. Camera windows are historical and do not prove current fish presence."
+}

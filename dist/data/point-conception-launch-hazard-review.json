@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "scope": "point-conception-dated-launch-hazard-screen",
+  "checked_at": "2026-09-26T16:29:54.948995+00:00",
+  "source_url": "https://www.navcen.uscg.gov/broadcast-notice-to-mariners-message?guid=70014340",
+  "source_sha256": "27c236addf542cd9e38440532ecb205d9800cdbb7657fcab1567796799cedccd",
+  "notice_id": "SEC LALB BNM 0239-26",
+  "notice_cancellation_or_update_checked": false,
+  "source_status": "individual USCG message inspected; later cancellation/update requires separate live check",
+  "review_buffer_m": 100,
+  "hazard_areas": [
+    {
+      "id": 1,
+      "vertex_count": 7,
+      "windows": [
+        {
+          "start_utc": "2026-09-26T11:56:00+00:00",
+          "end_utc": "2026-09-26T15:21:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-27T12:49:00+00:00",
+          "end_utc": "2026-09-27T15:07:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-28T11:28:00+00:00",
+          "end_utc": "2026-09-28T14:53:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-29T11:14:00+00:00",
+          "end_utc": "2026-09-29T14:39:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-30T11:00:00+00:00",
+          "end_utc": "2026-09-30T14:25:00+00:00"
+        },
+        {
+          "start_utc": "2026-10-01T10:47:00+00:00",
+          "end_utc": "2026-10-01T14:12:00+00:00"
+        },
+        {
+          "start_utc": "2026-10-02T10:33:00+00:00",
+          "end_utc": "2026-10-02T13:58:00+00:00"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "vertex_count": 9,
+      "windows": [
+        {
+          "start_utc": "2026-09-26T11:56:00+00:00",
+          "end_utc": "2026-09-26T15:39:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-27T12:49:00+00:00",
+          "end_utc": "2026-09-27T15:25:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-28T11:28:00+00:00",
+          "end_utc": "2026-09-28T15:11:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-29T11:14:00+00:00",
+          "end_utc": "2026-09-29T14:57:00+00:00"
+        },
+        {
+          "start_utc": "2026-09-30T11:00:00+00:00",
+          "end_utc": "2026-09-30T14:43:00+00:00"
+        },
+        {
+          "start_utc": "2026-10-01T10:47:00+00:00",
+          "end_utc": "2026-10-01T14:30:00+00:00"
+        },
+        {
+          "start_utc": "2026-10-02T10:33:00+00:00",
+          "end_utc": "2026-10-02T14:16:00+00:00"
+        }
+      ]
+    }
+  ],
+  "research_shortlist": [
+    {
+      "context_id": "native-hard-H11952-689",
+      "hazard_window_ids_with_100m_margin": [
+        1
+      ],
+      "currently_exportable": false
+    },
+    {
+      "context_id": "native-hard-H11953-1",
+      "hazard_window_ids_with_100m_margin": [
+        1
+      ],
+      "currently_exportable": false
+    },
+    {
+      "context_id": "native-hard-H11952-604",
+      "hazard_window_ids_with_100m_margin": [
+        1
+      ],
+      "currently_exportable": false
+    },
+    {
+      "context_id": "native-hard-H11952-1762",
+      "hazard_window_ids_with_100m_margin": [
+        1
+      ],
+      "currently_exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Temporary launch hazard applies only at the stated UTC windows and may be updated or cancelled.",
+    "All four research polygons remain unpromoted for independent chart, access, source-age, fish and route review.",
+    "A BNM is not a substitute for current USCG broadcasts or a navigation chart."
+  ]
+}

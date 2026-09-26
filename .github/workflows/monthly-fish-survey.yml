@@ -9,6 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  central-300-research-priority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify conservative band overlap handling
+        run: python -m unittest tests.test_monterey_300_research_queue -v
+      - name: Rebuild unpublished Monterey depth-band priority
+        run: >-
+          python scripts/build_monterey_300_research_queue.py
+          --output var/review/monterey-300-native-research-queue.json
+      - name: Detect changed priority against reviewed snapshot
+        run: cmp dist/data/monterey-300-native-research-queue.json var/review/monterey-300-native-research-queue.json
+      - name: Upload research-only depth-band review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monterey-300-native-research-priority
+          path: var/review/monterey-300-native-research-queue.json
+          retention-days: 30
   noaa-vdatum-monterey-coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 10
