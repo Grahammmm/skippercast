@@ -25,6 +25,10 @@ class BigSurSouthNativeReviewTest(unittest.TestCase):
         self.assertEqual(block02['bathymetry']['valid_cells'], 5_021_485)
         self.assertEqual(block02['native_depth_screen']['cells_within_limit'], 3_033_938)
         self.assertEqual(block02['native_depth_screen']['derived_rough_class_cells_within_limit'], 17_169)
+        self.assertEqual(block02['native_depth_screen']['comparison_band_200_300ft_navd88_cells'], 1_987_547)
+        self.assertEqual(block02['native_depth_screen']['derived_rough_class_cells_in_comparison_band'], 13_834)
+        self.assertEqual(block02['archive_product_inventory']['named_uncertainty_or_cube_surface_products'], [])
+        self.assertIn('not MLLW-qualified', block02['native_depth_screen']['comparison_band_note'])
         self.assertEqual(block02['status'], 'held-from-fishing-targets')
         block03 = by_id['csumb-bss-block03']
         self.assertEqual(block03['bathymetry']['valid_cells'], 5_630_223)
@@ -49,6 +53,8 @@ class BigSurSouthNativeReviewTest(unittest.TestCase):
         self.assertGreater(deep['bathymetry']['valid_cells'], 750_000)
         self.assertLess(deep['bathymetry']['maximum'], -78)
         self.assertEqual(deep['native_depth_screen']['cells_within_limit'], 0)
+        self.assertEqual(deep['native_depth_screen']['comparison_band_200_300ft_navd88_cells'], 12_063)
+        self.assertEqual(deep['bathymetry']['resolution_m'], [5.0, 5.0])
         self.assertIn('No shallow-water target', deep['reason'])
         self.assertNotIn('targets', report)
 

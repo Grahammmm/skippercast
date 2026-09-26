@@ -101,6 +101,9 @@ def inspect_grid(bundle, grid, kind, tmp):
 def audit(spec, cache, fetch=False):
     path = acquire(spec, cache, fetch)
     with tarfile.open(path, 'r:gz') as bundle, tempfile.TemporaryDirectory() as directory:
+        member_names = [member.name for member in bundle.getmembers() if member.isfile()]
+        uncertainty_products = [name for name in member_names if any(
+            word in name.lower() for word in ('uncertainty', 'stddev', 'std_dev', 'cube_surface'))]
         tmp = Path(directory)
         bathy = inspect_grid(bundle, spec['bathymetry_grid'], 'bathymetry', tmp)
         habitat = inspect_grid(bundle, spec['habitat_grid'], 'habitat', tmp)
@@ -111,11 +114,16 @@ def audit(spec, cache, fetch=False):
                 raise ValueError('Original depth and terrain grids do not align cell for cell')
             within_limit = (~np.ma.getmaskarray(depth) & (depth.data >= -60.96) & (depth.data < 0))
             rough = (~np.ma.getmaskarray(terrain) & np.isin(terrain.data, [-1, -31, -101, -201]))
+            band_200_300 = (~np.ma.getmaskarray(depth) & (depth.data >= -91.44)
+                            & (depth.data < -60.96))
             native_depth_screen = {
                 'limit_ft': 200,
                 'cells_within_limit': int(within_limit.sum()),
                 'derived_rough_class_cells_within_limit': int((within_limit & rough).sum()),
                 'basis': 'source NAVD88 elevation only; no chart-datum conversion or independent rock confirmation',
+                'comparison_band_200_300ft_navd88_cells': int(band_200_300.sum()),
+                'derived_rough_class_cells_in_comparison_band': int((band_200_300 & rough).sum()),
+                'comparison_band_note': '2 m exported NAVD88 DEM cells only; not MLLW-qualified 200–300 ft coverage or verified rock',
             }
     if (bathy['crs'] != habitat['crs'] or bathy['bounds_native'] != habitat['bounds_native']
             or bathy['resolution_m'] != habitat['resolution_m']):
@@ -131,6 +139,11 @@ def audit(spec, cache, fetch=False):
             'native_vertical_datum': spec['native_vertical_datum'], 'status': 'held-from-fishing-targets',
             'rights_status': spec['rights_status'], 'reason': spec['limitations'],
             'bathymetry': bathy, 'terrain_habitat': habitat,
+            'archive_product_inventory': {
+                'file_members': len(member_names),
+                'named_uncertainty_or_cube_surface_products': uncertainty_products,
+                'note': 'Filename inventory of this compact additional-products archive only; a CARIS source CUBE surface may exist outside it.',
+            },
             'native_depth_screen': native_depth_screen}
 
 
