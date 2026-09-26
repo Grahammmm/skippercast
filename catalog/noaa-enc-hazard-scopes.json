@@ -133,6 +133,18 @@
       "output": "var/review/enc-hazards-estero-independent-deep-hard.geojson"
     },
     {
+      "id": "point-buchon-open-reference-hard-context",
+      "region_id": "morro-bay",
+      "bounds": [
+        -121.02,
+        35.10,
+        -120.79,
+        35.33
+      ],
+      "research_only": true,
+      "output": "var/review/enc-hazards-point-buchon-open-reference.geojson"
+    },
+    {
       "id": "monterey-original-300-hard-context",
       "region_id": "monterey-point-sur",
       "bounds": [

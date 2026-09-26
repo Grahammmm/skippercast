@@ -45,6 +45,16 @@ def build(root):
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
     buchon_bluetopo = read(root / "dist/data/point-buchon-bluetopo-hard-cell-overlap.json")
+    buchon_access = read(root / "dist/data/point-buchon-rov-access-triage.json")
+    if (buchon_access.get("scope") != "point-buchon-open-reference-rov-100m-access-triage"
+            or buchon_access.get("totals", {}).get("blocks") != 26
+            or buchon_access.get("totals", {}).get("subunits") != 183
+            or buchon_access.get("totals", {}).get("hard_rugose_subunits") != 58
+            or buchon_access.get("noaa_enc_query_layers") != 18
+            or buchon_access.get("qualified_waypoints") != 0
+            or buchon_access.get("fishing_target") is not False
+            or buchon_access.get("exportable") is not False):
+        raise ValueError("Point Buchon ROV access triage changed")
     if (buchon_bluetopo.get("scope") != "point-buchon-original-hard-cells-bluetopo-contributor-overlap"
             or buchon_bluetopo.get("scheme_sha256") != bluetopo_manifest["scheme_sha256"]
             or buchon_bluetopo.get("usgs_bathymetry_archive_sha256") != buchon_catalog_gap.get("usgs_bathymetry_archive_sha256")
@@ -347,6 +357,14 @@ def build(root):
                 "original_usgs_hard_rugose_cell_centers": buchon_bluetopo["original_usgs_hard_rugose_cell_centers"],
                 "measured_survey_contributor_centers": buchon_bluetopo["bluetopo_measured_survey_contributor_centers"],
                 "claim": "Nominal original USGS hard-cell center overlay finds only 16 BlueTopo pixels attributed to measured survey IDs; most use interpolated historical contributors.",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_buchon_rov_access_triage": ({
+                "receipt": "dist/data/point-buchon-rov-access-triage.json",
+                "private_research_blocks": buchon_access["totals"]["blocks"],
+                "historic_open_reference_subunits": buchon_access["totals"]["subunits"],
+                "claim": "A bounded current MPA, NOAA GEA and ENC danger screen clears 26 historical ROV research blocks with a 100 m review margin; no complete route, security, depth or rules clearance.",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "morro-conception" else None),

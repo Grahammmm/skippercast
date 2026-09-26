@@ -150,6 +150,13 @@ def build(root):
                     or compiled["fishing_target"] is not False):
                 raise ValueError("Point Buchon BlueTopo source-lineage review changed")
             receipts.append(compiled["receipt"])
+            rov_access = row.get("point_buchon_rov_access_triage")
+            if (not rov_access or rov_access["private_research_blocks"] != 26
+                    or rov_access["historic_open_reference_subunits"] != 183
+                    or rov_access["fishing_target"] is not False
+                    or rov_access["exportable"] is not False):
+                raise ValueError("Point Buchon ROV access triage changed")
+            receipts.append(rov_access["receipt"])
         if row.get("noaa_usgs_original_character_overlap"):
             class_lead = row["noaa_usgs_original_character_overlap"]
             if (class_lead["depth_qualified_cells"] != 141331

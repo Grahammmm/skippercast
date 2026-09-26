@@ -45,6 +45,7 @@
       "noaa_original_deepwater_300ft_refutations": [],
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
+      "point_buchon_rov_access_triage": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -165,6 +166,7 @@
       "noaa_original_deepwater_300ft_refutations": [],
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
+      "point_buchon_rov_access_triage": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
@@ -262,6 +264,7 @@
       "noaa_original_deepwater_300ft_refutations": [],
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
+      "point_buchon_rov_access_triage": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -390,6 +393,7 @@
       ],
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
+      "point_buchon_rov_access_triage": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -507,6 +511,7 @@
       ],
       "point_buchon_noaa_catalog_gap": null,
       "point_buchon_bluetopo_contributor_overlap": null,
+      "point_buchon_rov_access_triage": null,
       "noaa_original_200_300ft_sector_refutations": [],
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
@@ -663,6 +668,14 @@
         "original_usgs_hard_rugose_cell_centers": 804337,
         "measured_survey_contributor_centers": 16,
         "claim": "Nominal original USGS hard-cell center overlay finds only 16 BlueTopo pixels attributed to measured survey IDs; most use interpolated historical contributors.",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "point_buchon_rov_access_triage": {
+        "receipt": "dist/data/point-buchon-rov-access-triage.json",
+        "private_research_blocks": 26,
+        "historic_open_reference_subunits": 183,
+        "claim": "A bounded current MPA, NOAA GEA and ENC danger screen clears 26 historical ROV research blocks with a 100 m review margin; no complete route, security, depth or rules clearance.",
         "fishing_target": false,
         "exportable": false
       },

@@ -1,0 +1,54 @@
+{
+  "cdfw_mpa_feature_count": 3,
+  "exportable": false,
+  "fishing_target": false,
+  "grid_m": 100,
+  "input_sha256": {
+    "bathy": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+    "character": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+    "enc": "735a5025f6a15b1a5962bb7e0a7202a4a712056a3283c1ab28fff1bbb5d0e790",
+    "federal": "0d7ad10f9a17a4769d41dee0d3dd5c269615c44d1d5bc13905a637a856298932",
+    "mpas": "892581a7f4377b87a63a2589e92e8f09309dcd1a10d4708563cd6ab90812f0aa",
+    "rov": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8"
+  },
+  "limitations": [
+    "Historical 10 m ROV subunits are grouped into 100 m private research blocks, not fishable reef boundaries or current catch observations.",
+    "A 100 m GIS review margin is not an uncertainty-derived safe approach, drift or transit buffer.",
+    "CDFW MPA, NOAA GEA and three-scale ENC danger layers are a partial screen; other closures, security areas, current rules, chart completeness and full routes remain unresolved.",
+    "The original USGS 200\u2013300 ft band is source-datum only and has no established upper depth uncertainty."
+  ],
+  "noaa_enc_danger_feature_count": 1062,
+  "noaa_enc_query_layers": 18,
+  "noaa_gea_feature_count": 10,
+  "official_geometry_sha256": {
+    "cdfw_mpas": "be8ed81a55f05fa6344aff57bab4d5ff9ff6c9d0cfb608cd2e8dcddde320a938",
+    "noaa_enc_dangers": "fbf2368c2f0d1fc84e18e0357e4bc7ad2ff9b43fe16086e5c1f7842852454040",
+    "noaa_federal_geas": "7f97a777f7afd62fc5a11f2bf08862202470c233927fb4b03cc3302eb8c48be0"
+  },
+  "qualified_waypoints": 0,
+  "review_margin_m": 100,
+  "schema_version": 1,
+  "scope": "point-buchon-open-reference-rov-100m-access-triage",
+  "source_checked_at": {
+    "cdfw_mpa": "2026-09-26T21:00:29.085971+00:00",
+    "noaa_enc": "2026-09-26T21:00:34.013099+00:00",
+    "noaa_federal": "2026-09-26T19:38:07.955536+00:00"
+  },
+  "source_urls": {
+    "cdfw_mpa": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.02%2C35.1%2C-120.79%2C35.33&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson",
+    "noaa_enc": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+    "noaa_federal": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer"
+  },
+  "totals": {
+    "all_three_clear_margin_blocks": 26,
+    "blocks": 26,
+    "charted_danger_margin_blocks": 0,
+    "charted_danger_margin_subunits": 0,
+    "gea_margin_blocks": 0,
+    "gea_margin_subunits": 0,
+    "hard_rugose_subunits": 58,
+    "mpa_margin_blocks": 0,
+    "mpa_margin_subunits": 0,
+    "subunits": 183
+  }
+}

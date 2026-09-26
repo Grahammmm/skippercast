@@ -88,16 +88,16 @@ jobs:
           retention-days: 30
   point-buchon-original-pair:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install pinned raster readers
-        run: python -m pip install numpy==2.2.6 rasterio==1.4.3
+        run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2
       - name: Verify original pair safeguards
-        run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap -v
+        run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap tests.test_point_buchon_rov_access_blocks -v
       - name: Recheck original USGS bathymetry and video-supervised character with published ROV
         run: >-
           python scripts/audit_point_buchon_original_pair.py --fetch
@@ -112,6 +112,21 @@ jobs:
         run: |
           python scripts/audit_point_buchon_bluetopo_overlap.py --fetch --output var/review/point-buchon-bluetopo-hard-cell-overlap.json
           cmp dist/data/point-buchon-bluetopo-hard-cell-overlap.json var/review/point-buchon-bluetopo-hard-cell-overlap.json
+      - name: Fetch current Point Buchon MPA, federal and ENC research screens
+        run: |
+          python -m scripts.collect_point_buchon_mpa_review --output var/review/point-buchon-cdfw-mpas.geojson
+          python scripts/collect_noaa_groundfish_areas.py --output var/review/point-buchon-federal-areas.geojson
+          python scripts/refresh_enc_hazards.py --scope point-buchon-open-reference-hard-context --output var/review/enc-hazards-point-buchon-open-reference.geojson
+      - name: Screen whole historical ROV research blocks with margin
+        run: >-
+          python scripts/audit_point_buchon_rov_access_blocks.py
+          --mpas var/review/point-buchon-cdfw-mpas.geojson
+          --federal var/review/point-buchon-federal-areas.geojson
+          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
+          --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
+          --output var/review/point-buchon-rov-access-triage.json
+      - name: Hold changes to research-only access screen
+        run: python scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,6 +136,10 @@ jobs:
             var/review/point-buchon-original-paired-200-300ft-review.json
             var/review/point-buchon-noaa-catalog-envelope-gap.json
             var/review/point-buchon-bluetopo-hard-cell-overlap.json
+            var/review/point-buchon-cdfw-mpas.geojson
+            var/review/point-buchon-federal-areas.geojson
+            var/review/enc-hazards-point-buchon-open-reference.geojson
+            var/review/point-buchon-rov-access-triage.json
           retention-days: 30
   central-rov-deep-reference:
     runs-on: ubuntu-latest
