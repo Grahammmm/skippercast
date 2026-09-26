@@ -37,6 +37,19 @@ feed, not streaming sensor data: NOAA publication and GitHub scheduling can dela
 updates. The original sample times and failed refresh state remain visible.
 The job operates without this Mac or a browser open.
 
+The same job collects NOAA GFS and ECMWF IFS winds plus NOAA GFS Wave 0.16°
+and ECMWF WAM seas for every published regional forecast point. The finer NOAA
+wave grid replaced its 0.25° product after several coastal cells returned zero
+height and zero period. Its coverage audit
+checks each point's next seven local 7 a.m.–1 p.m. windows hour by hour. The
+published regional intelligence includes rated-hour and independent-model
+counts; `intelligence-health.json` reports point-days with full wind-and-sea
+coverage and two-model coverage. A point-day missing any usable wind or
+combined-sea hour degrades the scheduled run instead of silently displaying a
+calm or complete rating. A comparison gap remains visible as limited coverage.
+Forecast grids can represent the same coarse water cell for nearby points, so
+complete data coverage does not imply reef-scale weather accuracy.
+
 The conditions branch is independent of the daily fishing-evidence data branch;
 the two jobs do not write the same files or branch. No API keys or private
 observations are used. [Job status](https://github.com/Grahammmm/skippercast/actions/workflows/live-conditions.yml).
