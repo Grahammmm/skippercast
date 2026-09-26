@@ -1,5 +1,5 @@
 import {speciesFit} from './species-fit.js?v=1';
-import {initSearchPlans} from './search-plans.js?v=8.14';
+import {initSearchPlans} from './search-plans.js?v=8.15';
 import {initTripAlerts} from './trip-alerts.js?v=8.14';
 import {initExport} from './export-ui.js?v=8.14';
 import {mountSpotEvidence} from './spot-evidence.js?v=8.14';
@@ -16,7 +16,7 @@ import { initWeather } from "./weather-ui.js?v=8.14";
 import { initNavigation } from "./navigation.js?v=8.14";
 import { initChart } from "./chart-map.js?v=8.14";
 import { initBoatPosition } from "./boat-position.js?v=1";
-import { initSpecies, matchesSpecies } from "./species.js?v=8.14";
+import { initSpecies, matchesSpecies } from "./species.js?v=8.15";
 import { initRegulations } from "./regulations.js?v=8.14";
 import { initLocationContext, viewFromURL } from './location-context.js?v=8.14';
 import { initCharterGrounds } from "./charter-grounds.js?v=8.14";

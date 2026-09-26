@@ -26,7 +26,8 @@ export function oceanSearchAreas(frame,profile,region,limit=30){
    const band=profile.thermal_range_c,within=!band||temps.every(t=>t>=band[0]&&t<=band[1]);
    // Thermal envelope adds context only; outside is not proof of absence.
    const gradient=(Math.max(...temps)-Math.min(...temps))/(dx*2*111*Math.cos(a[0][0]*Math.PI/180));
-   areas.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[west,south],[east,south],[east,north],[west,north],[west,south]]]},properties:{id:`water-${a[0][0]}-${a[0][1]}`,name:'Modeled water transition',latitude:a[0][0],longitude:a[1][1],bounds:[west,south,east,north],species:[],habitat_kind:'ocean',temperature_c:[Math.min(...temps),Math.max(...temps)],gradient,thermal_reference:band?(within?'within':'outside'):null,frame_time:frame.time,source_url:frame.sourceURL,source_date:frame.issuedAt,depth_qualified:false,exportable:false}});
+   const latitude=a[0][0],longitude=a[1][1];
+   areas.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[west,south],[east,south],[east,north],[west,north],[west,south]]]},properties:{id:`water-${latitude}-${a[0][1]}`,name:`Water transition ${latitude.toFixed(2)}°N ${Math.abs(longitude).toFixed(2)}°W`,latitude,longitude,bounds:[west,south,east,north],species:[],habitat_kind:'ocean',temperature_c:[Math.min(...temps),Math.max(...temps)],gradient,thermal_reference:band?(within?'within':'outside'):null,frame_time:frame.time,source_url:frame.sourceURL,source_date:frame.issuedAt,depth_qualified:false,exportable:false}});
   }
  }
  return areas.sort((a,b)=>b.properties.gradient-a.properties.gradient).slice(0,limit);
