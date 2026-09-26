@@ -66,6 +66,27 @@
         "W00444",
         "W00447"
       ],
+      "noaa_original_300ft_depth_leads": [
+        {
+          "survey_id": "W00614",
+          "review_path": "dist/data/w00614-original-300-pigeon-monterey-review.json",
+          "qualified_200_300ft_native_cells": 141331,
+          "eligible_supergrid_center_bounds": [
+            -122.4843526553121,
+            37.11382398518569,
+            -122.4431045024566,
+            37.162990688492215
+          ],
+          "coverage_note": "Native measured cells cluster near Pigeon Point, north of Monterey Bay; no substrate or fishable target qualified."
+        }
+      ],
+      "bluetopo_rat_tile_count": 0,
+      "bluetopo_rat_historical_hydrography_ids": [],
+      "bluetopo_rat_coastal_dem_ids": [],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 132,
+      "ncei_multibeam_distinct_survey_id_count": 118,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Pigeon Point to Monterey Region",
@@ -149,6 +170,35 @@
         "W00444",
         "W00447"
       ],
+      "noaa_original_300ft_depth_leads": [],
+      "bluetopo_rat_tile_count": 7,
+      "bluetopo_rat_historical_hydrography_ids": [
+        "B00079",
+        "B00081",
+        "B00094",
+        "B00120",
+        "B00123",
+        "H05279",
+        "H05313",
+        "H05414",
+        "H05452",
+        "H05453",
+        "H05472",
+        "H05618"
+      ],
+      "bluetopo_rat_coastal_dem_ids": [
+        "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR38_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C18",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR40_C18",
+        "west_coast_2016_el_nino_dem_J1337041tR40_C19"
+      ],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 126,
+      "ncei_multibeam_distinct_survey_id_count": 112,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Monterey Canyon and Vicinity",
@@ -190,6 +240,43 @@
         "W00444",
         "W00447"
       ],
+      "noaa_original_300ft_depth_leads": [],
+      "bluetopo_rat_tile_count": 12,
+      "bluetopo_rat_historical_hydrography_ids": [
+        "B00081",
+        "B00085",
+        "B00094",
+        "B00123",
+        "B00209",
+        "H05313",
+        "H05477",
+        "H05567",
+        "H05611",
+        "H05618",
+        "H05619",
+        "H05620",
+        "H05640",
+        "H05641",
+        "H05642",
+        "H05651",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "bluetopo_rat_coastal_dem_ids": [
+        "west_coast_2016_el_nino_dem_J1337041tR33_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C23",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C23",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C21",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C20"
+      ],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 126,
+      "ncei_multibeam_distinct_survey_id_count": 114,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -235,6 +322,28 @@
         "W00447",
         "W00479"
       ],
+      "noaa_original_300ft_depth_leads": [],
+      "bluetopo_rat_tile_count": 8,
+      "bluetopo_rat_historical_hydrography_ids": [
+        "B00085",
+        "H05476",
+        "H05566",
+        "H05567",
+        "H05642",
+        "H05651",
+        "H05671",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "bluetopo_rat_coastal_dem_ids": [
+        "west_coast_2016_el_nino_dem_J1337041tR31_C24",
+        "west_coast_2016_el_nino_dem_J1337041tR32_C23",
+        "west_coast_2016_el_nino_dem_J1337041tR32_C24",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C23"
+      ],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 123,
+      "ncei_multibeam_distinct_survey_id_count": 105,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -283,6 +392,14 @@
         "W00447",
         "W00479"
       ],
+      "noaa_original_300ft_depth_leads": [],
+      "bluetopo_rat_tile_count": 0,
+      "bluetopo_rat_historical_hydrography_ids": [],
+      "bluetopo_rat_coastal_dem_ids": [],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 127,
+      "ncei_multibeam_distinct_survey_id_count": 111,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Offshore of Point Estero",
@@ -362,6 +479,14 @@
         "W00447",
         "W00479"
       ],
+      "noaa_original_300ft_depth_leads": [],
+      "bluetopo_rat_tile_count": 0,
+      "bluetopo_rat_historical_hydrography_ids": [],
+      "bluetopo_rat_coastal_dem_ids": [],
+      "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+      "ncei_multibeam_footprint_lead_count": 162,
+      "ncei_multibeam_distinct_survey_id_count": 139,
+      "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "usgs_map_areas": [
         {
           "name": "Offshore of Morro Bay",
@@ -387,5 +512,5 @@
       ]
     }
   ],
-  "method_note": "Catalog intersections, BAG links and filename spacing hints are not measured raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion."
+  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion."
 }

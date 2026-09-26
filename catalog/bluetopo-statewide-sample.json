@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "scope": "reviewed-bluetopo-statewide-source-sample",
-  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_150737.gpkg",
-  "scheme_sha256": "1a77fbef8e11bb27eda165e9b7af72ec4a7d90e9001c1e9594d8ee023f948531",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
+  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
   "selection_basis": "One camera-prioritized NBS Modeling tile ID per 19 California discovery sectors; corresponding BlueTopo tiles have been found in the separate dated NOAA BlueTopo scheme. This is a survey-delivery comparison, not independent evidence or complete sector coverage.",
   "upstream_modeling_review_sha256": "9ed3e5efb39e300279323d505bf42ecf1b267c235e1bfa0ad2e59c49818ea5c9",
   "tile_ids": [

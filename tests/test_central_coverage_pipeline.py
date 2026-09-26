@@ -40,7 +40,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         result = sources.build(ROOT)
         self.assertEqual(result["status"], "research-only")
         self.assertEqual(len(result["sectors"]), 6)
-        self.assertIn("not measured raster coverage", result["method_note"])
+        self.assertIn("not measured 25–300 ft raster coverage", result["method_note"])
         self.assertTrue(all(row["noaa_catalog_leads_with_bag_links"] <= row["noaa_catalog_lead_count"]
                             for row in result["sectors"]))
         pigeon = result["sectors"][0]
@@ -48,8 +48,36 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(pigeon["noaa_original_300ft_depth_refutations"][0]["survey_id"], "F00600")
         self.assertEqual({row["survey_id"] for row in pigeon["noaa_no_measured_cells_in_17_monterey_outlines"]},
                          {"W00431", "W00433", "W00444", "W00447"})
+        self.assertEqual(pigeon["noaa_original_300ft_depth_leads"][0]["survey_id"], "W00614")
+        self.assertGreater(pigeon["noaa_original_300ft_depth_leads"][0]["eligible_supergrid_center_bounds"][1], 37.1)
         conception = result["sectors"][-1]
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
+        big_sur = next(row for row in result["sectors"] if row["sector_id"] == "big-sur")
+        self.assertEqual(big_sur["bluetopo_rat_tile_count"], 12)
+        self.assertGreater(big_sur["ncei_multibeam_footprint_lead_count"], 0)
+        self.assertIn("W00479_MB_VR_MLLW_1of1", big_sur["bluetopo_rat_historical_hydrography_ids"])
+        self.assertTrue(big_sur["bluetopo_rat_coastal_dem_ids"])
+
+    def test_unreviewed_bluetopo_lead_blocks_queue(self):
+        original = sources.read
+
+        def stale_report(path):
+            result = original(path)
+            if str(path).endswith("central-bluetopo-upstream-source-leads.json"):
+                result = copy.deepcopy(result)
+                result["scheme_sha256"] = "0" * 64
+            return result
+
+        with patch.object(sources, "read", side_effect=stale_report):
+            with self.assertRaisesRegex(ValueError, "receipt is missing or stale"):
+                sources.build(ROOT)
+
+    def test_deep_noaa_cells_near_pigeon_point_are_not_fishing_spots(self):
+        receipt = sources.read(ROOT / "dist/data/w00614-original-300-pigeon-monterey-review.json")
+        self.assertGreater(receipt["counts"]["depth_uncertainty_qualified_200_300ft_cells"], 100000)
+        self.assertGreater(receipt["eligible_supergrid_center_bounds"][1], 37.1)
+        self.assertFalse(receipt["fishing_target"])
+        self.assertFalse(receipt["exportable"])
 
     def test_measured_cell_invalidates_monterey_bag_refutation(self):
         original = sources.read

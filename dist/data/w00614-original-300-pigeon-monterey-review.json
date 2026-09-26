@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scope": "original-noaa-vr-300ft-browse-sector-screen",
+  "reviewed_at": "2026-09-26T17:43:40+00:00",
+  "survey_id": "W00614",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00614/BAG/W00614_MB_VR_MLLW_1of1.bag",
+  "source_sha256": "561eedd13f6cec795f276933ca04b04e22af36659d56bd77ebba06104f7f4077",
+  "source_report_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00614/DR/W00614_DR.pdf",
+  "survey_dates": [
+    "2018-07-31T12:00:00",
+    "2018-08-10T12:00:00"
+  ],
+  "vertical_datum": "MLLW",
+  "sector_id": "pigeon-monterey",
+  "sector_bounds": [
+    -123.5,
+    36.6,
+    -119.8,
+    37.18333333333333
+  ],
+  "counts": {
+    "fine_supergrids": 650,
+    "measured_cells": 167562,
+    "nominal_200_300ft_cells": 167562,
+    "depth_uncertainty_qualified_200_300ft_cells": 141331,
+    "depth_uncertainty_qualified_25_300ft_cells": 141331
+  },
+  "eligible_supergrid_center_bounds": [
+    -122.4843526553121,
+    37.11382398518569,
+    -122.4431045024566,
+    37.162990688492215
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Fine-grid counts use approximate browse-sector assignment by supergrid center. Depth/uncertainty qualification is only a source screen. No substrate, fish presence, current MPA/GEA/security/ENC clearance, transit or safe drift has been established."
+}

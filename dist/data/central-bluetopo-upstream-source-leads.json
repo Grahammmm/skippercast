@@ -1,0 +1,1591 @@
+{
+  "schema_version": 1,
+  "scope": "central-bluetopo-rat-upstream-source-leads",
+  "reviewed_at": "2026-09-26T17:39:03.589964+00:00",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
+  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+  "sectors": [
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44N5CH",
+      "tile_delivered_at": "2026-08-27 21:12:17",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CH/BlueTopo_BH44N5CH_20260820.tiff",
+      "raster_sha256": "f6e6e3a5c2b302a5b29b697114b14ccbb03665d3f4a795e18f5b249ef685b0c1",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CH/BlueTopo_BH44N5CH_20260820.tiff.aux.xml",
+      "rat_sha256": "b22e426b5a1656dd4e314faf9a8df04948e2872798ca56362d7c4e4fcc14dd6f",
+      "resolution_label": "4m",
+      "rat_contributor_count": 13,
+      "rat_measured_survey_ids": [
+        "B00079",
+        "B00081",
+        "B00120",
+        "B00123",
+        "H05313",
+        "H05453",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00079",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00120",
+          "survey_date_end": "1988-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00123",
+          "survey_date_end": "1988-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05453",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44N5CJ",
+      "tile_delivered_at": "2026-08-27 21:07:28",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CJ/BlueTopo_BH44N5CJ_20260820.tiff",
+      "raster_sha256": "dfef9ef859f187f8a79cda6cb820155c36910f60b9f7b9432513aab80f76b5ca",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CJ/BlueTopo_BH44N5CJ_20260820.tiff.aux.xml",
+      "rat_sha256": "10e81ba52fc71e6a1b1e37d36e6d605c958294701463bf10e9ba7ff748bcb66f",
+      "resolution_label": "4m",
+      "rat_contributor_count": 20,
+      "rat_measured_survey_ids": [
+        "B00079",
+        "B00081",
+        "B00120",
+        "H05279",
+        "H05313",
+        "H05414",
+        "H05453",
+        "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C18",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR40_C18",
+        "west_coast_2016_el_nino_dem_J1337041tR40_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00079",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00120",
+          "survey_date_end": "1988-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05279",
+          "survey_date_end": "1935-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05414",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05453",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+          "survey_date_end": "2014-10-05",
+          "source_institution": "DOD/USACE/JALBTCX -- Joint Airborne Lidar Bathymetry Technical Center of Expertise",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR39_C18",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR40_C18",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR40_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44P5CJ",
+      "tile_delivered_at": "2026-08-27 21:06:53",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CJ/BlueTopo_BH44P5CJ_20260820.tiff",
+      "raster_sha256": "3fe408b0d746fb30e751a2dd78f44414977071f0b2d8b93644ff75d66e2cc0b1",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CJ/BlueTopo_BH44P5CJ_20260820.tiff.aux.xml",
+      "rat_sha256": "c8537fc4c93e47f4e55b551590611c142d5489adb24602de166f239d5149a2d3",
+      "resolution_label": "4m",
+      "rat_contributor_count": 9,
+      "rat_measured_survey_ids": [
+        "B00079",
+        "H05453",
+        "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+        "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR40_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00079",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05453",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "ca2014_usace_ncmp_ca_dem_J1392745tR0_C2",
+          "survey_date_end": "2014-10-05",
+          "source_institution": "DOD/USACE/JALBTCX -- Joint Airborne Lidar Bathymetry Technical Center of Expertise",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR39_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR40_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44P5CG",
+      "tile_delivered_at": "2026-08-27 21:13:29",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CG/BlueTopo_BH44P5CG_20260820.tiff",
+      "raster_sha256": "78b7d7477826bbb179d25bbc91fea61e1f14536fbe6e2df75c520171a49adeab",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CG/BlueTopo_BH44P5CG_20260820.tiff.aux.xml",
+      "rat_sha256": "9850d8e40f29578f7af649d035bf15762d060e66a668f59f86e0319b75551ba0",
+      "resolution_label": "4m",
+      "rat_contributor_count": 9,
+      "rat_measured_survey_ids": [
+        "H05313",
+        "H05452",
+        "H05453",
+        "west_coast_2016_el_nino_dem_J1337041tR38_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05452",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05453",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR38_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44P5CF",
+      "tile_delivered_at": "2026-08-27 21:12:23",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CF/BlueTopo_BH44P5CF_20260820.tiff",
+      "raster_sha256": "b94f6dc52e44c9eba0234bc7cfbb563432fda7f7f28d219844d961e11ed64f38",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CF/BlueTopo_BH44P5CF_20260820.tiff.aux.xml",
+      "rat_sha256": "6876acb73e8de16672309eb0e1bbfd21edef0b9b6a477d44c8f8b3a1e4e1ec39",
+      "resolution_label": "4m",
+      "rat_contributor_count": 12,
+      "rat_measured_survey_ids": [
+        "B00094",
+        "H05313",
+        "H05452",
+        "H05618",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR38_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00094",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05452",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05618",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR38_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44N5CF",
+      "tile_delivered_at": "2026-08-27 21:13:40",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CF/BlueTopo_BH44N5CF_20260820.tiff",
+      "raster_sha256": "73f2ff7e8cd258df50be98d420f8c5811d9d8c2d928cfa19045fee8dcda94787",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CF/BlueTopo_BH44N5CF_20260820.tiff.aux.xml",
+      "rat_sha256": "0fe13e8afba4dd9ee528bc43f7849948fe4ff1e32b1533cbb02dfbe09130c455",
+      "resolution_label": "4m",
+      "rat_contributor_count": 10,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00094",
+        "H05313",
+        "H05472"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00094",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05472",
+          "survey_date_end": "1932-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "monterey-sur",
+      "tile_id": "BH44N5CG",
+      "tile_delivered_at": "2026-08-27 21:12:11",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CG/BlueTopo_BH44N5CG_20260820.tiff",
+      "raster_sha256": "aba5b95d1b5b4e37a834f017666c24858a22fc0ce9470a455da575f8ff129ddc",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CG/BlueTopo_BH44N5CG_20260820.tiff.aux.xml",
+      "rat_sha256": "29323ccdc013f71a036597d1bf6f169a67b6808939cc684913b7c3caa438c7db",
+      "resolution_label": "4m",
+      "rat_contributor_count": 9,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00123",
+        "H05313",
+        "H05453"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00123",
+          "survey_date_end": "1988-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05453",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44R5CC",
+      "tile_delivered_at": "2026-08-27 21:12:30",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CC/BlueTopo_BH44R5CC_20260820.tiff",
+      "raster_sha256": "678ddb591a17406a364eab97df1a4e35640d8f78f56eb3c1b165b4bda5ec9124",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CC/BlueTopo_BH44R5CC_20260820.tiff.aux.xml",
+      "rat_sha256": "d00eb2008b7cd100f6a69b6b18071bf05ef31c86b73a28ecdc1d97858080e822",
+      "resolution_label": "4m",
+      "rat_contributor_count": 17,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00209",
+        "H05313",
+        "H05477",
+        "H05619",
+        "H05620",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C21"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05619",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05620",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44V5C8",
+      "tile_delivered_at": "2026-08-27 21:16:42",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C8/BlueTopo_BH44V5C8_20260716.tiff",
+      "raster_sha256": "6e1bb5ab46bc6b9734bfde0cd0aa52c9d3c77a2203124912a3b5ca542e9482bc",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C8/BlueTopo_BH44V5C8_20260716.tiff.aux.xml",
+      "rat_sha256": "63b833551da18a6f573a69051545f76ee97766841d92d2f68e73e67d091af6db",
+      "resolution_label": "4m",
+      "rat_contributor_count": 13,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05477",
+        "H05567",
+        "H05641",
+        "H05651",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C22"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05641",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44S5CB",
+      "tile_delivered_at": "2026-08-27 21:12:04",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CB/BlueTopo_BH44S5CB_20260820.tiff",
+      "raster_sha256": "38cb50e0a2c8386d37cbf90e378408cdc8d3fabed99ac64dc10689c05d233967",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CB/BlueTopo_BH44S5CB_20260820.tiff.aux.xml",
+      "rat_sha256": "9ac7de6aafc755bb0827761528ced0ce025fcff065ecdffaf3d1192b2bf895a8",
+      "resolution_label": "4m",
+      "rat_contributor_count": 12,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00209",
+        "H05477",
+        "H05620",
+        "H05640",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C21"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05620",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05640",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44S5CC",
+      "tile_delivered_at": "2026-08-27 21:13:38",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CC/BlueTopo_BH44S5CC_20260820.tiff",
+      "raster_sha256": "a89bc9d21e5bb95990cbcd2a39a6fc299684c610c314031a664ad1a9f2d6daad",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CC/BlueTopo_BH44S5CC_20260820.tiff.aux.xml",
+      "rat_sha256": "cc02092512e718c3b519ec5f2e89b7e383fe2f6d2cf0070b1b0cfd59b4ba9e0e",
+      "resolution_label": "4m",
+      "rat_contributor_count": 14,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "H05313",
+        "H05477",
+        "H05619",
+        "H05620",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C21"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05619",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05620",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44P5CD",
+      "tile_delivered_at": "2026-08-27 21:12:20",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CD/BlueTopo_BH44P5CD_20260820.tiff",
+      "raster_sha256": "7f8c7c5d3738dfc6b3ae33ed7ec22a408218f36e4e849a843979e21c088f6ce5",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CD/BlueTopo_BH44P5CD_20260820.tiff.aux.xml",
+      "rat_sha256": "a5995f67e57e960c5e6fd242f7db67eaf00dbc50e2afb83c9e0e7741702a7ff7",
+      "resolution_label": "4m",
+      "rat_contributor_count": 15,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00094",
+        "B00209",
+        "H05313",
+        "H05477",
+        "H05611",
+        "H05618",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C19"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00094",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05611",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05618",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44W5C7",
+      "tile_delivered_at": "2026-08-27 21:14:46",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C7/BlueTopo_BH44W5C7_20260716.tiff",
+      "raster_sha256": "caabddfac1f912efb8fce0f0ca5d53545f8b714e52ba66be7ab5167956f9791b",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C7/BlueTopo_BH44W5C7_20260716.tiff.aux.xml",
+      "rat_sha256": "58b7650288aac37a35e8435b8ce69a7b0db644bb70647779885131fb2d767863",
+      "resolution_label": "4m",
+      "rat_contributor_count": 10,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "H05642",
+        "H05651",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C23"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR33_C23",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44T5C9",
+      "tile_delivered_at": "2026-08-27 21:12:51",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C9/BlueTopo_BH44T5C9_20260820.tiff",
+      "raster_sha256": "7f4b195c27669e7fba7e38a097d95db1f776dabc4c17f068a538acb4594b4ac4",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C9/BlueTopo_BH44T5C9_20260820.tiff.aux.xml",
+      "rat_sha256": "a537e31a4cb989e85431e797dd04e70ae431d05b10799bd7bd7d4dd09e5bf311",
+      "resolution_label": "4m",
+      "rat_contributor_count": 16,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00085",
+        "B00209",
+        "H05477",
+        "H05640",
+        "H05641",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C22"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05640",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05641",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44T5CB",
+      "tile_delivered_at": "2026-08-27 21:12:36",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5CB/BlueTopo_BH44T5CB_20260820.tiff",
+      "raster_sha256": "ae797e913e153d2730db9d17ac896bd741c8707ca39e2982d448eb07a5cd663c",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5CB/BlueTopo_BH44T5CB_20260820.tiff.aux.xml",
+      "rat_sha256": "89a4b1b6cbd8a23a0be22ae1ff42c6ea04f4ba63d816e76d6ba0f31dfce51e45",
+      "resolution_label": "4m",
+      "rat_contributor_count": 12,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00209",
+        "H05477",
+        "H05620",
+        "H05640",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+        "west_coast_2016_el_nino_dem_J1337041tR35_C22"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05620",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05640",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C21",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR35_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44W5C8",
+      "tile_delivered_at": "2026-08-27 21:15:56",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C8/BlueTopo_BH44W5C8_20260716.tiff",
+      "raster_sha256": "e21613c7fe693edc3f4c3572797c640ab6a73d6e9c1fd1192e7c57ed4d1353be",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C8/BlueTopo_BH44W5C8_20260716.tiff.aux.xml",
+      "rat_sha256": "fadff05b1618a74572fd94923ec5452fcebc0851ff8b58914be56f00a98375ec",
+      "resolution_label": "4m",
+      "rat_contributor_count": 12,
+      "rat_measured_survey_ids": [
+        "H05567",
+        "H05641",
+        "H05651",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C23",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+        "west_coast_2016_el_nino_dem_J1337041tR34_C23"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05641",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR33_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR33_C23",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR34_C22",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR34_C23",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44N5CD",
+      "tile_delivered_at": "2026-08-27 21:12:57",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CD/BlueTopo_BH44N5CD_20260820.tiff",
+      "raster_sha256": "c55d611c92f3f003aed85bd1ab526928dc8671f110ec1962e03b0d8b117f6b59",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CD/BlueTopo_BH44N5CD_20260820.tiff.aux.xml",
+      "rat_sha256": "2fa9470edcfd921546731b3d521fcfdc19d9b126dfcc3c0fa7c5a5f85f6ee935",
+      "resolution_label": "4m",
+      "rat_contributor_count": 10,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "B00094",
+        "B00123",
+        "B00209",
+        "H05313"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00094",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00123",
+          "survey_date_end": "1988-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "B00209",
+          "survey_date_end": "1989-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44V5C7",
+      "tile_delivered_at": "2026-08-27 21:14:31",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C7/BlueTopo_BH44V5C7_20260716.tiff",
+      "raster_sha256": "f7844e53e98dfcffb5a61d436359a67e8dc153696e01229aa53fbdcbfa137a20",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C7/BlueTopo_BH44V5C7_20260716.tiff.aux.xml",
+      "rat_sha256": "d75991bf92d89853b031e134377703ac26dcf70e1f5b47c04ee3c7c6016781c8",
+      "resolution_label": "4m",
+      "rat_contributor_count": 11,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "H05651",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "big-sur",
+      "tile_id": "BH44Q5CD",
+      "tile_delivered_at": "2026-08-27 21:13:09",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CD/BlueTopo_BH44Q5CD_20260820.tiff",
+      "raster_sha256": "133d37bd8c86aadb9f3e5986303333f74cc462c399d8a11d8054b6535b1bc2fc",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CD/BlueTopo_BH44Q5CD_20260820.tiff.aux.xml",
+      "rat_sha256": "98ecee9b9a18e58eac3259b3f026c2abf307f42cea32e6d53f1c607effe2da0f",
+      "resolution_label": "4m",
+      "rat_contributor_count": 15,
+      "rat_measured_survey_ids": [
+        "B00081",
+        "H05313",
+        "H05477",
+        "H05618",
+        "H05619",
+        "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+        "west_coast_2016_el_nino_dem_J1337041tR37_C20"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00081",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05313",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05477",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05618",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05619",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR37_C19",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR37_C20",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44Z5C4",
+      "tile_delivered_at": "2026-08-27 21:16:05",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C4/BlueTopo_BH44Z5C4_20260716.tiff",
+      "raster_sha256": "99d380ad16aa2377ff6892e1b444a92abe5a6b799f71863671b49dfdc2524320",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C4/BlueTopo_BH44Z5C4_20260716.tiff.aux.xml",
+      "rat_sha256": "5b037e2f7b3c3c3d680df3108f783df6e9b572d46050cdcbcc256301356aa9af",
+      "resolution_label": "4m",
+      "rat_contributor_count": 14,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05476",
+        "H05566",
+        "H05567",
+        "H05671",
+        "W00479_MB_VR_MLLW_1of1",
+        "west_coast_2016_el_nino_dem_J1337041tR31_C24"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05476",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05566",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05671",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR31_C24",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44W5C6",
+      "tile_delivered_at": "2026-08-27 21:14:13",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C6/BlueTopo_BH44W5C6_20260716.tiff",
+      "raster_sha256": "1adc84041519b2c0e7150057062e93ba7fba07b7c82ec5799e7aaa4198f1721d",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C6/BlueTopo_BH44W5C6_20260716.tiff.aux.xml",
+      "rat_sha256": "b4d213af9d490ad95dca54783c4dab3c8998fd1196f2074d2e0046dbce2ec2f6",
+      "resolution_label": "4m",
+      "rat_contributor_count": 13,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "H05642",
+        "H05651",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH4525C2",
+      "tile_delivered_at": "2026-08-27 21:14:49",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525C2/BlueTopo_BH4525C2_20260716.tiff",
+      "raster_sha256": "cf30305f62c950c082fed1a9539b12b315bd79074c031b791aa1c0f2c331524c",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525C2/BlueTopo_BH4525C2_20260716.tiff.aux.xml",
+      "rat_sha256": "3ed637ecee494c6f98e5390d7c2dad54f3f33eb9b2342ef0d26ca2be2da19017",
+      "resolution_label": "4m",
+      "rat_contributor_count": 10,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05476",
+        "H05566",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05476",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05566",
+          "survey_date_end": "1933-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44X5C5",
+      "tile_delivered_at": "2026-08-27 21:14:58",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C5/BlueTopo_BH44X5C5_20260716.tiff",
+      "raster_sha256": "a31ce4ade96903f37542f262b2e8708f89843a3a11c3a4b46cf1f3697b7f8cf6",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C5/BlueTopo_BH44X5C5_20260716.tiff.aux.xml",
+      "rat_sha256": "518c25c2670440333171283f78909af3d48e8c1cfc2f2763ec7d0da7e4c60b40",
+      "resolution_label": "4m",
+      "rat_contributor_count": 11,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "H05642",
+        "H05671",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05671",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44W5C7",
+      "tile_delivered_at": "2026-08-27 21:14:46",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C7/BlueTopo_BH44W5C7_20260716.tiff",
+      "raster_sha256": "caabddfac1f912efb8fce0f0ca5d53545f8b714e52ba66be7ab5167956f9791b",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C7/BlueTopo_BH44W5C7_20260716.tiff.aux.xml",
+      "rat_sha256": "58b7650288aac37a35e8435b8ce69a7b0db644bb70647779885131fb2d767863",
+      "resolution_label": "4m",
+      "rat_contributor_count": 10,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "H05642",
+        "H05651",
+        "west_coast_2016_el_nino_dem_J1337041tR33_C23"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05651",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR33_C23",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44X5C6",
+      "tile_delivered_at": "2026-08-27 21:16:35",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C6/BlueTopo_BH44X5C6_20260716.tiff",
+      "raster_sha256": "b3e5334f3852b4b0aa32c0fbf1f1b3afa68847a5c5d1ac385dbbfc304bf10ed5",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C6/BlueTopo_BH44X5C6_20260716.tiff.aux.xml",
+      "rat_sha256": "2c121fef746925274e66080e3a7538cb7f398a19c13bcc6201fa2c699316a1b8",
+      "resolution_label": "4m",
+      "rat_contributor_count": 8,
+      "rat_measured_survey_ids": [
+        "H05567",
+        "H05642",
+        "west_coast_2016_el_nino_dem_J1337041tR32_C23",
+        "west_coast_2016_el_nino_dem_J1337041tR32_C24"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR32_C23",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR32_C24",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44X5C4",
+      "tile_delivered_at": "2026-08-27 21:16:45",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C4/BlueTopo_BH44X5C4_20260716.tiff",
+      "raster_sha256": "6f6353fa708856951f399e3c4a93168ac1b9a66ea283a0afea3800a51c8a8417",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C4/BlueTopo_BH44X5C4_20260716.tiff.aux.xml",
+      "rat_sha256": "1418b7545894ff1f37b223924d841bacd7dddb588eed44376ad40bffa397973a",
+      "resolution_label": "4m",
+      "rat_contributor_count": 8,
+      "rat_measured_survey_ids": [
+        "B00085",
+        "H05567",
+        "W00479_MB_VR_MLLW_1of1"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "B00085",
+          "survey_date_end": "1986-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "W00479_MB_VR_MLLW_1of1",
+          "survey_date_end": "2019-10-03",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "CC0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "sector_id": "sur-san-simeon",
+      "tile_id": "BH44Z5C5",
+      "tile_delivered_at": "2026-08-27 21:15:20",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C5/BlueTopo_BH44Z5C5_20260716.tiff",
+      "raster_sha256": "367065a9d4baea52ee27dd06e9f2fcf51aecc84ebda59223c8c9523376bbca71",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C5/BlueTopo_BH44Z5C5_20260716.tiff.aux.xml",
+      "rat_sha256": "afb6fa4b0a2691190630341b717511548b837aba294d06b4963b2020dcdf7ddc",
+      "resolution_label": "4m",
+      "rat_contributor_count": 9,
+      "rat_measured_survey_ids": [
+        "H05567",
+        "H05642",
+        "H05671",
+        "west_coast_2016_el_nino_dem_J1337041tR31_C24",
+        "west_coast_2016_el_nino_dem_J1337041tR32_C24"
+      ],
+      "rat_measured_source_leads": [
+        {
+          "source_survey_id": "H05567",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05642",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "H05671",
+          "survey_date_end": "1934-01-01",
+          "source_institution": "DOC/NOAA/NOS/OCS -- Office of Coast Survey",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR31_C24",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        },
+        {
+          "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR32_C24",
+          "survey_date_end": "2016-05-28",
+          "source_institution": "DOC/NOAA/NOS/NGS/RSD -- Remote Sensing Division",
+          "license_name": "cc0-1.0"
+        }
+      ],
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "RAT rows describe tile contributors, including historical hydrography and coastal DEMs; they do not prove those sources contribute pixels inside a species habitat patch or 200\u2013300 ft band. BlueTopo is a NAVD88 compilation; inspect original source grids, measured masks, dates, datum and uncertainty before candidate release."
+}

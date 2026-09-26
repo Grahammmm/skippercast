@@ -28,18 +28,55 @@ def build(root):
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
     bindings = read(root / "catalog/central-native-depth-review-bindings.json")
     monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
+    bluetopo = read(root / "dist/data/central-bluetopo-upstream-source-leads.json")
+    bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
+    multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
     if bindings.get("schema_version") != 1:
         raise ValueError("Invalid original depth review bindings")
     if discovery["health"]["status"] != "ok" or products["health"]["status"] != "ok":
         raise ValueError("NOAA discovery incomplete")
     if metadata["record_count"] != len(metadata["records"]):
         raise ValueError("USGS metadata receipt incomplete")
+    if (bluetopo.get("scope") != "central-bluetopo-rat-upstream-source-leads"
+            or bluetopo.get("fishing_target") is not False
+            or bluetopo.get("exportable") is not False
+            or bluetopo.get("scheme_url") != bluetopo_manifest["scheme_url"]
+            or bluetopo.get("scheme_sha256") != bluetopo_manifest["scheme_sha256"]):
+        raise ValueError("BlueTopo upstream-source receipt is missing or stale")
+    bluetopo_by_sector = {sector: [] for sector in SECTORS}
+    for row in bluetopo.get("sectors", []):
+        sector = row.get("sector_id")
+        if (sector not in bluetopo_by_sector or row.get("fishing_target") is not False
+                or row.get("exportable") is not False or not row.get("rat_sha256")):
+            raise ValueError("Unreviewed BlueTopo contributor-table lead")
+        bluetopo_by_sector[sector].append(row)
+    if not all(bluetopo_by_sector[s] for s in ("monterey-sur", "big-sur", "sur-san-simeon")):
+        raise ValueError("Central Coast BlueTopo contributor-table coverage incomplete")
+    if (multibeam.get("scope") != "noaa-ncei-central-multibeam-footprint-discovery"
+            or multibeam.get("status") != "complete-catalog-query"
+            or multibeam.get("fishing_target") is not False
+            or multibeam.get("exportable") is not False
+            or {row["sector_id"] for row in multibeam.get("sectors", [])} != set(SECTORS)
+            or any(row["footprint_lead_count"] != len(row["footprints"])
+                   for row in multibeam["sectors"])):
+        raise ValueError("NOAA multibeam footprint discovery incomplete")
+    footprint_by_sector = {row["sector_id"]: row for row in multibeam["sectors"]}
     discovery_rows = {s["sector_id"]: s for s in discovery["sectors"]}
     surveyed = {s["id"]: s for s in products["surveys"]}
     if (monterey_bindings.get("scope") != "original-noaa-mllw-bag-overlap-with-17-monterey-research-outlines"
             or monterey_bindings.get("claim") != "no-measured-native-cells-inside-these-17-outlines"):
         raise ValueError("Unreviewed original Monterey BAG overlap claim")
     original_pixel = read(root / "dist/data/monterey-original-300-pixel-review.json")
+    w00614_300 = read(root / "dist/data/w00614-original-300-pigeon-monterey-review.json")
+    if (w00614_300.get("scope") != "original-noaa-vr-300ft-browse-sector-screen"
+            or w00614_300.get("survey_id") != "W00614"
+            or w00614_300.get("sector_id") != "pigeon-monterey"
+            or w00614_300.get("source_url") not in surveyed["W00614"]["products"]["bag"]
+            or w00614_300.get("fishing_target") is not False
+            or w00614_300.get("exportable") is not False
+            or w00614_300["counts"]["depth_uncertainty_qualified_200_300ft_cells"] <= 0
+            or w00614_300["eligible_supergrid_center_bounds"][1] < 37.1):
+        raise ValueError("Unreviewed W00614 300 ft native-cell source lead")
     original_ids = {row["context_id"] for row in original_pixel["outlines"]}
     original_context_sha = hashlib.sha256(
         (root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_bytes()).hexdigest()
@@ -124,6 +161,10 @@ def build(root):
         usgs_areas = [m for m in usgs["map_areas"] if sector_id in m.get("planning_sector_ids", [])]
         paired = [m for m in usgs_areas if
                   {"bathymetry", "seafloor-character"}.issubset({p["kind"] for p in m.get("products", [])})]
+        upstream_ids = {sid for row in bluetopo_by_sector[sector_id]
+                        for sid in row["rat_measured_survey_ids"]}
+        historical_hydrography = sorted(sid for sid in upstream_ids if re.fullmatch(r"[BHW]\d{5}(?:_.*)?", sid))
+        coastal_dem = sorted(upstream_ids - set(historical_hydrography))
         region_gaps = [r["region_id"] for r in ledger["regions"] if not r["qualified_targets_at_or_under_200ft"]]
         # Priority is a *source-review* queue, not a predicted fish-density map.
         tier = 1 if paired else 2 if fine_leads else 3
@@ -146,6 +187,20 @@ def build(root):
                 for sid in original_bag if sid in monterey_no_overlap
                 and sector_id in ("pigeon-monterey", "monterey-sur")],
             "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted)),
+            "noaa_original_300ft_depth_leads": ([{
+                "survey_id": "W00614", "review_path": "dist/data/w00614-original-300-pigeon-monterey-review.json",
+                "qualified_200_300ft_native_cells": w00614_300["counts"]["depth_uncertainty_qualified_200_300ft_cells"],
+                "eligible_supergrid_center_bounds": w00614_300["eligible_supergrid_center_bounds"],
+                "coverage_note": "Native measured cells cluster near Pigeon Point, north of Monterey Bay; no substrate or fishable target qualified."}]
+                if sector_id == "pigeon-monterey" else []),
+            "bluetopo_rat_tile_count": len(bluetopo_by_sector[sector_id]),
+            "bluetopo_rat_historical_hydrography_ids": historical_hydrography,
+            "bluetopo_rat_coastal_dem_ids": coastal_dem,
+            "bluetopo_rat_receipt": "dist/data/central-bluetopo-upstream-source-leads.json",
+            "ncei_multibeam_footprint_lead_count": footprint_by_sector[sector_id]["footprint_lead_count"],
+            "ncei_multibeam_distinct_survey_id_count": len({item["survey_id"] for item in footprint_by_sector[sector_id]["footprints"]
+                                                             if item["survey_id"]}),
+            "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
@@ -162,7 +217,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links and filename spacing hints are not measured raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

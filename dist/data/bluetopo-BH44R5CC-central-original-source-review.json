@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "scope": "bluetopo-single-tile-source-review",
+  "reviewed_at": "2026-09-26T17:32:55+00:00",
+  "tile": "BH44R5CC",
+  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+  "delivered_date": "2026-08-27 21:12:30",
+  "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CC/BlueTopo_BH44R5CC_20260820.tiff",
+  "raster_sha256": "678ddb591a17406a364eab97df1a4e35640d8f78f56eb3c1b165b4bda5ec9124",
+  "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CC/BlueTopo_BH44R5CC_20260820.tiff.aux.xml",
+  "rat_sha256": "d00eb2008b7cd100f6a69b6b18071bf05ef31c86b73a28ecdc1d97858080e822",
+  "vertical_datum": "NAVD88",
+  "raster_crs_wkt": "COMPD_CS[\"NAD83 / UTM zone 10N + navd88\",PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]],VERT_CS[\"navd88\",VERT_DATUM[\"North American Vertical Datum 1988\",2005,AUTHORITY[\"EPSG\",\"5103\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP]]]",
+  "bounds_native_crs": [
+    607814.0,
+    4001222.0,
+    614730.0,
+    4009690.0
+  ],
+  "resolution_m": [
+    4.0,
+    4.0
+  ],
+  "min_survey_year": 1990,
+  "counts": {
+    "finite_elevation_and_uncertainty_pixels": 3218592,
+    "measured_contributor_pixels": 140937,
+    "measured_since_min_year_pixels": 135992,
+    "measured_since_min_year_below_navd88_pixels": 9,
+    "measured_since_min_year_below_navd88_uncertainty_le_1m_pixels": 0
+  },
+  "recent_measured_contributors": [
+    {
+      "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C20",
+      "survey_date_end": "2016-05-28",
+      "below_navd88_pixels": 5,
+      "license_name": "cc0-1.0"
+    },
+    {
+      "source_survey_id": "west_coast_2016_el_nino_dem_J1337041tR36_C21",
+      "survey_date_end": "2016-05-28",
+      "below_navd88_pixels": 4,
+      "license_name": "cc0-1.0"
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Negative NAVD88 elevation does not prove submerged fishing depth; NAVD88 is not MLLW and this review does not convert datums.",
+    "A measured contributor flag is a source lead, not independent substrate or fish evidence.",
+    "BlueTopo may reuse surveys already counted in NOAA BAG or NBS Modeling reviews.",
+    "This product is not for navigation; hazards, protected areas, local rules and original survey reports remain unreviewed for this tile."
+  ]
+}

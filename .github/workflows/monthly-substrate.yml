@@ -428,12 +428,22 @@ jobs:
           python scripts/refresh_bluetopo_samples.py
           --manifest catalog/bluetopo-statewide-sample.json
           --output var/review/bluetopo-pinned-samples.json
+      - name: Refresh Central Coast contributor-table source leads
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/review_central_bluetopo_contributor_leads.py
+          --scheme var/bluetopo-cache/BlueTopo_Tile_Scheme_20260924_191855.gpkg
+          --cache var/bluetopo-cache/rat-central
+          --output var/review/central-bluetopo-upstream-source-leads.json
       - name: Upload unpublished BlueTopo source review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bluetopo-source-leads
-          path: var/review/bluetopo-pinned-samples.json
+          path: |
+            var/review/bluetopo-pinned-samples.json
+            var/review/central-bluetopo-upstream-source-leads.json
           retention-days: 30
   usgs-caldig-deepwater:
     runs-on: ubuntu-latest
@@ -477,17 +487,25 @@ jobs:
       - name: Verify bounded survey discovery
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_ncei_multibeam_discovery -v
+        run: python -m unittest tests.test_ncei_multibeam_discovery tests.test_noaa_multibeam_footprint_discovery -v
       - name: Discover original multibeam survey leads for all 19 sectors
         run: >-
           python scripts/discover_ncei_multibeam.py
           --output var/review/ncei-multibeam-discovery.json
+      - name: Discover Central Coast multibeam swath-footprint leads
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/discover_noaa_multibeam_footprints.py
+          --output var/review/noaa-central-multibeam-footprint-leads.json
       - name: Upload unpublished source-lead review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ncei-multibeam-discovery
-          path: var/review/ncei-multibeam-discovery.json
+          path: |
+            var/review/ncei-multibeam-discovery.json
+            var/review/noaa-central-multibeam-footprint-leads.json
           retention-days: 30
   csumb-native:
     runs-on: ubuntu-latest
