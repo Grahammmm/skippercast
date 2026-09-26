@@ -544,7 +544,7 @@ jobs:
       - name: Install pinned native-grid reader
         run: python -m pip install -r requirements-survey.txt
       - name: Verify native-grid receipts stay out of fishing targets
-        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_csumb_vdatum_bridge -v
+        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_csumb_vdatum_bridge -v
       - name: Reuse original CSUMB archives
         uses: actions/cache@v4
         with:
@@ -567,6 +567,10 @@ jobs:
           python scripts/audit_csumb_bss_native.py
           --fetch
           --output var/review/csumb-bss-native-source-review.json
+      - name: Check whether Block 02 accuracy assessment independently observes rock
+        run: >-
+          python scripts/audit_bss02_accuracy_provenance.py
+          --output var/review/bss02-accuracy-provenance.json
       - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
         run: >-
           python scripts/audit_csumb_vdatum_bridge.py
@@ -583,6 +587,7 @@ jobs:
             var/review/csumb-scc-native-source-review.json
             var/review/csumb-sansimeon-bedrock-overlap-review.json
             var/review/csumb-bss-native-source-review.json
+            var/review/bss02-accuracy-provenance.json
             var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
   central-deepwater:

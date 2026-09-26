@@ -1,0 +1,14 @@
+{
+  "source_id": "csumb-bss-block02",
+  "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version2/products/BSS_Block02_additional_products.tar.gz",
+  "archive_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+  "metadata_member": "BSS_Block02/Habitat/BSS_Block02_accuracy_assessment.shp.xml",
+  "assessment_points": 100,
+  "reported_agreement_percent": 100,
+  "reference_method": "visual interpretation of bathymetric shaded-relief image",
+  "comparison_method": "rugosity-based substrate classification of the same bathymetry",
+  "independent_seabed_observation": false,
+  "rank_effect": "none",
+  "reason": "Both sides of the accuracy comparison derive from the same bathymetry; no video, grab sample, or independent rock observation is established by this assessment.",
+  "publication_status": "source-method-review-only"
+}
