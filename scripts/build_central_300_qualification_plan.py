@@ -76,9 +76,9 @@ SECTOR_OVERRIDES = {
         "hold": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
     },
     "cambria-morro": {
-        "lead": "Independent 2012 Estero depth and 2008 video-supervised character overlap",
-        "next": "Resolve the CORS96 epoch bridge and NAVD88-to-MLLW surface; obtain 2012 CARIS TPU, then rescreen the full 100 m blocks and approaches.",
-        "hold": "The 2010 independent cross-check reaches four shallow blocks and no deeper blocks; total depth error remains unknown.",
+        "lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples, plus 2008 video-supervised character overlap",
+        "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration before full legal and route screens.",
+        "hold": "Direct block-center VDatum removes the CORS96 frame shortcut but does not bound product error or every 2 m cell; the 2010 independent cross-check reaches four shallow blocks and no deeper blocks.",
     },
     "morro-conception": {
         "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
@@ -106,12 +106,14 @@ def build(root):
     bss03_access_path = "dist/data/bss03-camera-access-triage.json"
     bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
+    estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
     bss03_access = load(root, bss03_access_path)
     bss03_datum = load(root, bss03_datum_path)
     bss03_caris = load(root, bss03_caris_path)
+    estero_direct = load(root, estero_direct_path)
     if (bss03_video.get('scope') != 'bss03-original-video-vs-populated-grid'
             or bss03_video.get('camera_windows_in_200_300ft_source_datum_band') != 46
             or bss03_video.get('rock_boulder_cobble_windows_in_band') != 11
@@ -140,6 +142,13 @@ def build(root):
             or bss03_caris.get('cube_or_tpu_surface_confirmed') is not False
             or bss03_caris.get('depth_qualified') is not False):
         raise ValueError('Block03 datum or CARIS acquisition evidence changed')
+    if (estero_direct.get('scope') != 'estero-2012-original-wgs84-direct-vdatum-research'
+            or estero_direct.get('sample_count') != 60
+            or estero_direct.get('source_product_upper_uncertainty_verified') is not False
+            or estero_direct.get('full_cellwise_mllw_surface_verified') is not False
+            or estero_direct.get('qualified_waypoints') != 0
+            or estero_direct.get('fishing_target') is not False):
+        raise ValueError('Original Estero direct-frame evidence changed')
     if queue.get("status") != "research-only" or ledger.get("depth_planning_ceiling_ft") != 300:
         raise ValueError("Central 300 ft source and coverage receipts are not current")
     if (buchon.get("fishing_target") is not False or buchon.get("qualified_waypoints") != 0
@@ -172,6 +181,15 @@ def build(root):
             receipts.append(bss03_caris_path)
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
+            receipts.append(estero_direct_path)
+            direct = row.get("estero_wgs84_direct_diagnostic")
+            if (not direct or direct["sample_points"] != 60
+                    or direct["nominal_center_offset_200_300ft_cells"] != sum(
+                        band["nominal_center_offset_200_300ft_cells"]
+                        for band in estero_direct["by_prior_nominal_band"].values())
+                    or direct["fishing_target"] is not False
+                    or direct["exportable"] is not False):
+                raise ValueError("Estero direct source queue changed")
             spatial = row.get("estero_vdatum_spatial_diagnostic")
             if (not spatial or spatial["sample_points"] != 28
                     or spatial["fishing_target"] is not False
@@ -251,7 +269,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, estero_path, estero_direct_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",

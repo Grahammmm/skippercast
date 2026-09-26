@@ -4,10 +4,11 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "4b0f748f0e877c9bdd53010a8931ec8d09b638f3129b2e110376cf1eef71d847",
+    "dist/data/central-source-acquisition-queue.json": "e8048c7ff091ad9a22b57f494bff1de260a13df849c528a985285712154f9498",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "8904b11fb07b822e55acf0dcde7433bc80b3013e379e7b2ed9868afc2ffcc6a0",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
+    "dist/data/estero-wgs84-direct-vdatum-review.json": "12bdc1257618b3287eb402a958c2e513b73256724809a382b95ba53407afc0f3",
     "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124",
     "dist/data/bss03-camera-access-triage.json": "83dfc44bff60039347e7b519c5bc1061b9a93881c585692d5c57727989166f44",
     "dist/data/bss03-footprint-vdatum-diagnostic.json": "8b32b12cc112cb35cc2460daf4f7c19434c7d90d80dcbf31c8aa2f69b9c1a4e4",
@@ -428,14 +429,15 @@
     {
       "sector_id": "cambria-morro",
       "source_review_priority_tier": 1,
-      "reviewed_lead": "Independent 2012 Estero depth and 2008 video-supervised character overlap",
-      "next_acquisition": "Resolve the CORS96 epoch bridge and NAVD88-to-MLLW surface; obtain 2012 CARIS TPU, then rescreen the full 100 m blocks and approaches.",
-      "limiting_evidence": "The 2010 independent cross-check reaches four shallow blocks and no deeper blocks; total depth error remains unknown.",
+      "reviewed_lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples, plus 2008 video-supervised character overlap",
+      "next_acquisition": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration before full legal and route screens.",
+      "limiting_evidence": "Direct block-center VDatum removes the CORS96 frame shortcut but does not bound product error or every 2 m cell; the 2010 independent cross-check reaches four shallow blocks and no deeper blocks.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
         "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
+        "dist/data/estero-wgs84-direct-vdatum-review.json",
         "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,

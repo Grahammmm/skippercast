@@ -1,0 +1,54 @@
+{
+  "api_epoch_assumption": "2012.6",
+  "api_target": "IGS14 / MLLW",
+  "by_prior_nominal_band": {
+    "200-250ft": {
+      "blocks": 7,
+      "nominal_center_offset_200_300ft_cells": 16959,
+      "source_ellipsoid_max_m": -96.40263366699219,
+      "source_ellipsoid_min_m": -105.32129669189453,
+      "valid_source_cells": 17192
+    },
+    "250-300ft": {
+      "blocks": 53,
+      "nominal_center_offset_200_300ft_cells": 111355,
+      "source_ellipsoid_max_m": -111.83809661865234,
+      "source_ellipsoid_min_m": -127.8772964477539,
+      "valid_source_cells": 112519
+    }
+  },
+  "checked_at": "2026-09-26T22:26:41.583092+00:00",
+  "exportable": false,
+  "fishing_target": false,
+  "full_cellwise_mllw_surface_verified": false,
+  "independent_habitat_registration_verified": false,
+  "limitations": [
+    "The original USGS WGS84(G1150) ellipsoid-height grid can be queried directly through NOAA VDatum, avoiding the separate NAD83(CORS96) raster bridge.",
+    "The 2012.6 API epoch is a survey-midpoint assumption; the source raster does not specify a per-pixel coordinate epoch.",
+    "One VDatum offset per 100 m block provides nominal cell counts only, not a validated correction at every populated 2 m cell or its upper error.",
+    "VDatum transformation uncertainty and within-cell sounding spread do not establish the original CARIS bathymetry total propagated uncertainty.",
+    "The 2008 independent character raster still needs a horizontal registration-error analysis against these 2012 WGS84 cells.",
+    "Full legal, MPA, chart, route and current species checks are separate release gates; these research blocks are not fishing targets."
+  ],
+  "metadata_url": "https://pubs.usgs.gov/of/2013/1225/metadata/WGS84_metadata_EsteroBay.xml",
+  "offset_m": {
+    "maximum": 35.872,
+    "minimum": 35.747
+  },
+  "private_block_fingerprint": "2c4b8ef6a149a7b953d31f29508f66b3b38ba5f92cdd26d772477b7d1610e56b",
+  "qualified_waypoints": 0,
+  "sample_count": 60,
+  "sample_kind": "one VDatum point at the center of each 100 m research block",
+  "schema_version": 1,
+  "scope": "estero-2012-original-wgs84-direct-vdatum-research",
+  "source_archive_sha256": "0379883c10a67ecad2a65a38d6d948dc9441df06528bac08034d0dc85295e876",
+  "source_horizontal_frame": "WGS84(G1150) / UTM zone 10N (metadata)",
+  "source_metadata_sha256": "2bbf92a1c1163800e11e45c2f2bea98fd5ee95e0e44850762a4b27fbd24f2ea2",
+  "source_product_upper_uncertainty_verified": false,
+  "source_url": "https://pubs.usgs.gov/of/2013/1225/data/WGS84_utm10_EsteroBay.zip",
+  "source_vertical_frame": "WGS84(G1150) ellipsoid height (metadata)",
+  "vdatum_transform_uncertainty_m": {
+    "maximum": 0.077,
+    "minimum": 0.076
+  }
+}

@@ -20,7 +20,7 @@ jobs:
       - name: Install pinned original-grid readers
         run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial -v
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial tests.test_estero_wgs84_direct -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python scripts/audit_point_estero_original_pair.py --fetch
@@ -60,6 +60,12 @@ jobs:
           --blocks var/review/estero-nominal-research-blocks.geojson
           --private-output var/review/estero-vdatum-spatial-samples.json
           --output var/review/estero-2012-vdatum-spatial-diagnostic.json
+      - name: Recheck original WGS84 ellipsoid cells and direct VDatum block samples
+        run: >-
+          python scripts/audit_estero_wgs84_direct.py
+          --blocks var/review/estero-nominal-research-blocks.geojson
+          --output var/review/estero-wgs84-direct-vdatum-review.json
+          --verify dist/data/estero-wgs84-direct-vdatum-review.json
       - name: Detect changed research-only original cells
         run: |
           cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
@@ -84,7 +90,7 @@ jobs:
             var/review/enc-hazards-estero-independent-deep-hard.geojson
             var/review/estero-2012-vdatum-frame-review.json
             var/review/estero-2012-vdatum-spatial-diagnostic.json
-            var/review/estero-vdatum-spatial-samples.json
+            var/review/estero-wgs84-direct-vdatum-review.json
           retention-days: 30
   point-buchon-original-pair:
     runs-on: ubuntu-latest

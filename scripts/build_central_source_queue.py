@@ -41,6 +41,7 @@ def build(root):
     estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
     scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
     estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
+    estero_direct = read(root / "dist/data/estero-wgs84-direct-vdatum-review.json")
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
@@ -122,6 +123,14 @@ def build(root):
             or estero_vdatum_spatial.get("qualified_waypoints") != 0
             or estero_vdatum_spatial.get("fishing_target") is not False):
         raise ValueError("Estero VDatum spatial diagnostic changed or was promoted")
+    if (estero_direct.get("scope") != "estero-2012-original-wgs84-direct-vdatum-research"
+            or estero_direct.get("source_archive_sha256")
+            != estero_depth.get("source_archives_sha256", {}).get("WGS84_utm10_EsteroBay.zip")
+            or estero_direct.get("sample_count") != 60
+            or estero_direct.get("source_product_upper_uncertainty_verified") is not False
+            or estero_direct.get("qualified_waypoints") != 0
+            or estero_direct.get("fishing_target") is not False):
+        raise ValueError("Original Estero direct WGS84 datum diagnostic changed or was promoted")
     pigeon_class = read(root / "dist/data/w00614-pigeon-original-character-overlap.json")
     pigeon_binding = read(root / "catalog/pigeon-w00614-original-class-binding.json")
     if (pigeon_class.get("scope") != pigeon_binding.get("scope")
@@ -468,6 +477,16 @@ def build(root):
                 "sample_points": estero_vdatum_spatial["sample_lattice"]["points"],
                 "offset_range_m": estero_vdatum_spatial["offset_m"]["range"],
                 "release_status": "CORS96-registration-and-total-uncertainty-hold",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "cambria-morro" else None),
+            "estero_wgs84_direct_diagnostic": ({
+                "receipt": "dist/data/estero-wgs84-direct-vdatum-review.json",
+                "sample_points": estero_direct["sample_count"],
+                "nominal_center_offset_200_300ft_cells": sum(
+                    row["nominal_center_offset_200_300ft_cells"]
+                    for row in estero_direct["by_prior_nominal_band"].values()),
+                "release_status": "direct-ellipsoid-datum-available-product-uncertainty-and-registration-hold",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "cambria-morro" else None),

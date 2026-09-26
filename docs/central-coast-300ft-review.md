@@ -4,7 +4,7 @@ Reviewed September 26, 2026. The boat's 300 ft planning ceiling is **not** a pro
 
 The companion [biological evidence and gap plan](central-biological-evidence-and-gaps.md) adds a reproducible 2007–2024 open-reference CCFRP catch/effort summary and a separate published ROV analysis with **observed** lingcod and rockfish in the 200–300 ft band at five broad open-reference areas. Neither source has qualified a new 200–300 ft waypoint.
 
-The subsequent [source-gap strategy](central-300ft-source-gap-strategy.md) records a newly inspected independent 2012 USGS outer Estero Bay survey and its original 2008 Point Estero class overlap. These strengthen the research-cell inventory but do not resolve MLLW conversion, total depth uncertainty, legal/chart access or current biological support. They add **zero** ranked or exportable 200–300 ft marks.
+The subsequent [source-gap strategy](central-300ft-source-gap-strategy.md) records the independent 2012 USGS outer Estero Bay survey and its original 2008 Point Estero class overlap. Its separate WGS84(G1150) ellipsoid-height grid now has a direct NOAA VDatum research path, with original cells read in 60 private blocks. Cellwise MLLW conversion, total product uncertainty, exact habitat registration, legal/chart access and current biological support remain unresolved. This adds **zero** ranked or exportable 200–300 ft marks.
 
 ## What was checked
 

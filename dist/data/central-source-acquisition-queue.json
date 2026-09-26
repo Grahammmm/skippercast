@@ -106,6 +106,7 @@
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
+      "estero_wgs84_direct_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Pigeon Point to Monterey Region",
@@ -231,6 +232,7 @@
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
+      "estero_wgs84_direct_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Monterey Canyon and Vicinity",
@@ -356,6 +358,7 @@
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
+      "estero_wgs84_direct_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -474,6 +477,7 @@
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
+      "estero_wgs84_direct_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -572,6 +576,14 @@
         "sample_points": 28,
         "offset_range_m": 0.011,
         "release_status": "CORS96-registration-and-total-uncertainty-hold",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "estero_wgs84_direct_diagnostic": {
+        "receipt": "dist/data/estero-wgs84-direct-vdatum-review.json",
+        "sample_points": 60,
+        "nominal_center_offset_200_300ft_cells": 128314,
+        "release_status": "direct-ellipsoid-datum-available-product-uncertainty-and-registration-hold",
         "fishing_target": false,
         "exportable": false
       },
@@ -742,6 +754,7 @@
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
+      "estero_wgs84_direct_diagnostic": null,
       "usgs_map_areas": [
         {
           "name": "Offshore of Morro Bay",
