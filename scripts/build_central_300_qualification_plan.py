@@ -57,7 +57,7 @@ PROVIDERS = {
 SECTOR_OVERRIDES = {
     "pigeon-monterey": {
         "lead": "W00614 measured 200–300 ft MLLW cells near Pigeon Point",
-        "next": "Find an independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; check the full patch against MPAs and ENC.",
+        "next": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; inspect W00614's archived backscatter as a classification input only after groundtruth, then check full patch against MPAs and ENC.",
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
@@ -129,6 +129,13 @@ def build(root):
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
         if sector_id == "morro-conception":
             receipts.append(buchon_path)
+        if row.get("noaa_usgs_original_character_overlap"):
+            class_lead = row["noaa_usgs_original_character_overlap"]
+            if (class_lead["depth_qualified_cells"] != 141331
+                    or class_lead["classified_cells_on_those_depth_cells"] != 0
+                    or class_lead["fishing_target"] is not False):
+                raise ValueError("Pigeon Point independent substrate claim changed")
+            receipts.append(class_lead["receipt"])
         tracks = []
         for key, requirement in TRACKS:
             stage = "research-evidence" if key == "native-cells" and measured else "missing-release-evidence"

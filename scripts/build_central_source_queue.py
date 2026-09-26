@@ -40,6 +40,16 @@ def build(root):
     estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
     estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
     scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
+    pigeon_class = read(root / "dist/data/w00614-pigeon-original-character-overlap.json")
+    pigeon_binding = read(root / "catalog/pigeon-w00614-original-class-binding.json")
+    if (pigeon_class.get("scope") != pigeon_binding.get("scope")
+            or pigeon_class.get("depth_source_sha256") != pigeon_binding.get("bag_sha256")
+            or pigeon_class.get("character_source_sha256") != pigeon_binding.get("character_sha256")
+            or pigeon_class.get("counts", {}).get("qualified_depth_cells") != 141331
+            or pigeon_class.get("counts", {}).get("classified") != 0
+            or pigeon_class.get("fishing_target") is not False
+            or pigeon_class.get("exportable") is not False):
+        raise ValueError("Original Pigeon Point character-overlap refutation changed")
     if (estero_depth.get("scope") != "usgs-estero-bay-2012-original-200-300ft-research"
             or estero_overlap.get("scope") != "estero-independent-2012-depth-2008-character-nominal-overlap"
             or estero_depth.get("fishing_target") is not False
@@ -279,6 +289,13 @@ def build(root):
                 "eligible_supergrid_center_bounds": w00614_300["eligible_supergrid_center_bounds"],
                 "coverage_note": "Native measured cells cluster near Pigeon Point, north of Monterey Bay; no substrate or fishable target qualified."}]
                 if sector_id == "pigeon-monterey" else []),
+            "noaa_usgs_original_character_overlap": ({
+                "receipt": "dist/data/w00614-pigeon-original-character-overlap.json",
+                "depth_qualified_cells": pigeon_class["counts"]["qualified_depth_cells"],
+                "classified_cells_on_those_depth_cells": pigeon_class["counts"]["classified"],
+                "claim": "The USGS Offshore Pigeon Point 2 m class raster has no valid pixels over these W00614 200–300 ft cells; seek a different independent substrate source.",
+                "fishing_target": False,
+            } if sector_id == "pigeon-monterey" else None),
             "bluetopo_rat_tile_count": len(bluetopo_by_sector[sector_id]),
             "bluetopo_rat_historical_hydrography_ids": historical_hydrography,
             "bluetopo_rat_coastal_dem_ids": coastal_dem,

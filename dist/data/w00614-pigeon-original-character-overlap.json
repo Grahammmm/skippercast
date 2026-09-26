@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "scope": "original-pigeon-point-noaa-depth-usgs-character-overlap",
+  "survey_id": "W00614",
+  "depth_source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00614/BAG/W00614_MB_VR_MLLW_1of1.bag",
+  "depth_source_sha256": "561eedd13f6cec795f276933ca04b04e22af36659d56bd77ebba06104f7f4077",
+  "character_source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/SeafloorCharacter_OffshorePigeonPoint.zip",
+  "character_source_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+  "depth_datum": "MLLW",
+  "character_native_resolution_m": 2,
+  "nominal_depth_band_ft": [
+    200,
+    300
+  ],
+  "counts": {
+    "fine_supergrids_with_qualified_depth": 639,
+    "qualified_depth_cells": 141331,
+    "classified": 0,
+    "hard_flat": 0,
+    "hard_rugose": 0,
+    "soft_flat": 0
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "qualified_waypoints": 0,
+  "limitation": "No original USGS classified pixels overlap these W00614 depth-screened cells. The character raster's bounding box overlaps, but its valid-data mask does not. A different independent substrate source is needed; no fishing mark, legal or chart clearance follows."
+}

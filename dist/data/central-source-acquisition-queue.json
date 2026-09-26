@@ -81,6 +81,13 @@
           "coverage_note": "Native measured cells cluster near Pigeon Point, north of Monterey Bay; no substrate or fishable target qualified."
         }
       ],
+      "noaa_usgs_original_character_overlap": {
+        "receipt": "dist/data/w00614-pigeon-original-character-overlap.json",
+        "depth_qualified_cells": 141331,
+        "classified_cells_on_those_depth_cells": 0,
+        "claim": "The USGS Offshore Pigeon Point 2 m class raster has no valid pixels over these W00614 200\u2013300 ft cells; seek a different independent substrate source.",
+        "fishing_target": false
+      },
       "bluetopo_rat_tile_count": 0,
       "bluetopo_rat_historical_hydrography_ids": [],
       "bluetopo_rat_coastal_dem_ids": [],
@@ -177,6 +184,7 @@
         "W00447"
       ],
       "noaa_original_300ft_depth_leads": [],
+      "noaa_usgs_original_character_overlap": null,
       "bluetopo_rat_tile_count": 7,
       "bluetopo_rat_historical_hydrography_ids": [
         "B00079",
@@ -252,6 +260,7 @@
         "W00447"
       ],
       "noaa_original_300ft_depth_leads": [],
+      "noaa_usgs_original_character_overlap": null,
       "bluetopo_rat_tile_count": 12,
       "bluetopo_rat_historical_hydrography_ids": [
         "B00081",
@@ -373,6 +382,7 @@
         "W00479"
       ],
       "noaa_original_300ft_depth_leads": [],
+      "noaa_usgs_original_character_overlap": null,
       "bluetopo_rat_tile_count": 8,
       "bluetopo_rat_historical_hydrography_ids": [
         "B00085",
@@ -482,6 +492,7 @@
         "W00479"
       ],
       "noaa_original_300ft_depth_leads": [],
+      "noaa_usgs_original_character_overlap": null,
       "bluetopo_rat_tile_count": 0,
       "bluetopo_rat_historical_hydrography_ids": [],
       "bluetopo_rat_coastal_dem_ids": [],
@@ -617,6 +628,7 @@
         "W00479"
       ],
       "noaa_original_300ft_depth_leads": [],
+      "noaa_usgs_original_character_overlap": null,
       "bluetopo_rat_tile_count": 0,
       "bluetopo_rat_historical_hydrography_ids": [],
       "bluetopo_rat_coastal_dem_ids": [],

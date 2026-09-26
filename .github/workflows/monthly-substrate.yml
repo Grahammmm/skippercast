@@ -70,7 +70,7 @@ jobs:
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -84,8 +84,14 @@ jobs:
         run: |
           python scripts/audit_central_extra_bag.py --fetch --output var/review/f00844-original-fifth-bag-review.json
           cmp var/review/f00844-original-fifth-bag-review.json dist/data/f00844-original-fifth-bag-review.json
+      - name: Recheck original W00614 depth versus USGS Pigeon Point character
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/audit_pigeon_w00614_original_class.py --fetch --output var/review/w00614-pigeon-original-character-overlap.json
+          cmp var/review/w00614-pigeon-original-character-overlap.json dist/data/w00614-pigeon-original-character-overlap.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -103,6 +109,7 @@ jobs:
           name: central-coast-source-gaps
           path: |
             var/review/f00844-original-fifth-bag-review.json
+            var/review/w00614-pigeon-original-character-overlap.json
             var/review/central-coverage-ledger-v1.json
             var/review/central-source-acquisition-queue.json
             var/review/central-300ft-qualification-plan.json

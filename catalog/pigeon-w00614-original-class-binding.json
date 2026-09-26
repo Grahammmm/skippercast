@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "scope": "original-pigeon-point-noaa-depth-usgs-character-overlap",
+  "survey_id": "W00614",
+  "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00614/BAG/W00614_MB_VR_MLLW_1of1.bag",
+  "bag_sha256": "561eedd13f6cec795f276933ca04b04e22af36659d56bd77ebba06104f7f4077",
+  "character_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePigeonPoint/data/SeafloorCharacter_OffshorePigeonPoint.zip",
+  "character_sha256": "5902db088f639e336edfdcb567c196193c926b1efcac00649b9786f544389796",
+  "character_tif": "SeafloorCharacter_OffshorePigeonPoint/SeafloorCharacter_OffshorePigeonPoint.tif",
+  "release_gate": "research-only"
+}

@@ -26,6 +26,7 @@ class QualificationPlanTests(unittest.TestCase):
         pigeon = next(s for s in result["sectors"] if s["sector_id"] == "pigeon-monterey")
         self.assertEqual(pigeon["native_cell_evidence"], "measured-mllw-substrate-unpaired")
         self.assertIn("dist/data/w00614-original-300-pigeon-monterey-review.json", pigeon["source_receipts"])
+        self.assertIn("dist/data/w00614-pigeon-original-character-overlap.json", pigeon["source_receipts"])
         estero = next(s for s in result["sectors"] if s["sector_id"] == "cambria-morro")
         self.assertEqual(estero["native_cell_evidence"], "source-datum-only")
         self.assertIn("CARIS TPU", estero["next_acquisition"])
