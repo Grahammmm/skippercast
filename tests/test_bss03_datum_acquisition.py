@@ -1,9 +1,11 @@
 """Research diagnostics must not promote private camera blocks to fish marks."""
+import io
 import json
 from pathlib import Path
+import tarfile
 import unittest
 
-from scripts.audit_bss03_caris_acquisition import URL, inspect
+from scripts.audit_bss03_caris_acquisition import PREFIX_BYTES, URL, inspect, inspect_prefix
 from scripts.audit_bss03_datum_footprint import compile_review, stable
 
 
@@ -37,16 +39,35 @@ class Bss03DatumAcquisitionTests(unittest.TestCase):
             compile_review(blocks, dict(access, private_block_fingerprint='changed'), get=get)
 
     def test_archive_head_is_lead_only(self):
+        contents = {
+            'BSS_Block03/BSS_Block03.hpf': b'PROJECTION = AUTO_UTM,WG84_10N\n',
+            'BSS_Block03/45HaroldHeath_PPK/line/LogFile':
+                (b'Uncertainty Source: Vessel Settings\nCompute TPU end:\n'
+                 b'Tide Values:  Measured 0.000 (m), Zoning 0.000 (m)\n'),
+            'BSS_Block03/45HaroldHeath_PPK/line/TPE': b'not a decoded surface',
+        }
+        compressed = io.BytesIO()
+        with tarfile.open(fileobj=compressed, mode='w:gz') as archive:
+            for name, data in contents.items():
+                member = tarfile.TarInfo(name)
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+        prefix = compressed.getvalue().ljust(PREFIX_BYTES, b'\0')
         head = lambda: {'status': 200, 'url': URL,
                         'content_length_bytes': '42090312342',
                         'last_modified': 'Fri, 10 May 2019 14:19:58 GMT',
                         'accept_ranges': 'bytes', 'content_type': 'application/x-gzip'}
-        result = inspect(head)
+        result = inspect(head, prefix=prefix)
+        self.assertEqual(result['bounded_original_prefix']['project_projection'],
+                         'AUTO_UTM,WG84_10N')
+        self.assertFalse(result['bounded_original_prefix']['tpe_member_downloaded_or_decoded'])
         self.assertFalse(result['archive_contents_verified'])
         self.assertFalse(result['cube_or_tpu_surface_confirmed'])
         self.assertFalse(result['depth_qualified'])
         with self.assertRaises(ValueError):
-            inspect(lambda: dict(head(), accept_ranges='none'))
+            inspect(lambda: dict(head(), accept_ranges='none'), prefix=prefix)
+        with self.assertRaises(ValueError):
+            inspect_prefix(prefix[:100])
 
 
 if __name__ == '__main__':

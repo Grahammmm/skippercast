@@ -11,7 +11,7 @@
     "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124",
     "dist/data/bss03-camera-access-triage.json": "83dfc44bff60039347e7b519c5bc1061b9a93881c585692d5c57727989166f44",
     "dist/data/bss03-footprint-vdatum-diagnostic.json": "8b32b12cc112cb35cc2460daf4f7c19434c7d90d80dcbf31c8aa2f69b9c1a4e4",
-    "dist/data/bss03-caris-acquisition-lead.json": "3cf988520a8df266138f6878a673b269890c0f20fb725a932b171cf163667f64"
+    "dist/data/bss03-caris-acquisition-lead.json": "88813ff6984b17e6c653a863631e6e999361ddb90d3940ebf672dbe6ceb2e9a0"
   },
   "release_gate_ids": [
     "native-cells",

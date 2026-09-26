@@ -133,6 +133,9 @@ def build(root):
             or bss03_datum.get('upper_bounded_mllw_depth_verified') is not False
             or bss03_datum.get('fishing_target') is not False
             or bss03_caris.get('scope') != 'bss03-caris-original-project-acquisition-lead'
+            or bss03_caris.get('bounded_original_prefix', {}).get('project_projection') != 'AUTO_UTM,WG84_10N'
+            or bss03_caris.get('bounded_original_prefix', {}).get('processing_log_computed_tpu') is not True
+            or bss03_caris.get('bounded_original_prefix', {}).get('tpe_member_downloaded_or_decoded') is not False
             or bss03_caris.get('archive_contents_verified') is not False
             or bss03_caris.get('cube_or_tpu_surface_confirmed') is not False
             or bss03_caris.get('depth_qualified') is not False):
