@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "scope": "bss02-original-video-vs-populated-grid",
+  "survey_id": "BSS_Block02",
+  "survey_archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block02/multibeam/data/version2/products/BSS_Block02_additional_products.tar.gz",
+  "survey_archive_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+  "camera_cruise": "c0212sc",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+  "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+  "camera_position_accuracy": "Highly variable on the order of 10 meters (original metadata)",
+  "search_radius_m": 100,
+  "observation_dates": [
+    "2012-08-13"
+  ],
+  "camera_records_inside_raster_bounds": 46,
+  "interpreted_bottom_windows": 39,
+  "rock_boulder_cobble_windows": 11,
+  "rockfish_positive_windows": 1,
+  "lingcod_positive_windows": 1,
+  "camera_records_on_valid_depth_pixel": 0,
+  "camera_records_within_100m_of_valid_depth_pixel": 0,
+  "independent_observations_on_populated_grid": false,
+  "rank_effect": "none",
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Rectangular raster bounds include nodata. Historical camera observations and fish codes are not current catch evidence. The 100 m search is a conservative proximity screen, not a positioning error bound or a biological extrapolation. Depth datum, product uncertainty, reuse rights and full chart/legal review remain unresolved."
+}

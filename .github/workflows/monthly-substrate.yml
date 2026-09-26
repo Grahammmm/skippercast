@@ -544,14 +544,15 @@ jobs:
       - name: Install pinned native-grid reader
         run: python -m pip install -r requirements-survey.txt
       - name: Verify native-grid receipts stay out of fishing targets
-        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_csumb_vdatum_bridge -v
+        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_csumb_vdatum_bridge -v
       - name: Reuse original CSUMB archives
         uses: actions/cache@v4
         with:
           path: |
             var/noaa-native-cache/SCC_Block*_additional_products.tar.gz
             var/noaa-native-cache/BSS_Block*_additional_products.tar.gz
-          key: csumb-scc-bss-original-v1-${{ hashFiles('catalog/csumb-scc-native-sources.json', 'catalog/csumb-bss-native-sources.json') }}
+            var/usgs-video-cache/c0212sc_video_observations.zip
+          key: csumb-scc-bss-original-v1-${{ hashFiles('catalog/csumb-scc-native-sources.json', 'catalog/csumb-bss-native-sources.json', 'catalog/usgs-video-cruises.json') }}
       - name: Audit exact original CSUMB bathymetry and terrain classes
         run: >-
           python scripts/audit_csumb_scc_native.py
@@ -568,9 +569,19 @@ jobs:
           --fetch
           --output var/review/csumb-bss-native-source-review.json
       - name: Check whether Block 02 accuracy assessment independently observes rock
+        env:
+          PYTHONPATH: src:.
         run: >-
           python scripts/audit_bss02_accuracy_provenance.py
           --output var/review/bss02-accuracy-provenance.json
+      - name: Check original USGS camera observations against Block 02 populated cells
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_bss02_video_grid_overlap.py
+          --download-video
+          --output var/review/bss02-video-grid-overlap.json
+          --verify dist/data/bss02-video-grid-overlap.json
       - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
         run: >-
           python scripts/audit_csumb_vdatum_bridge.py
@@ -588,6 +599,7 @@ jobs:
             var/review/csumb-sansimeon-bedrock-overlap-review.json
             var/review/csumb-bss-native-source-review.json
             var/review/bss02-accuracy-provenance.json
+            var/review/bss02-video-grid-overlap.json
             var/review/csumb-vdatum-bridge-review.json
           retention-days: 30
   central-deepwater:
