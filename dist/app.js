@@ -14,6 +14,7 @@ import { initGeology } from "./geology.js?v=8.14";
 import { initWeather } from "./weather-ui.js?v=8.14";
 import { initNavigation } from "./navigation.js?v=8.14";
 import { initChart } from "./chart-map.js?v=8.14";
+import { initBoatPosition } from "./boat-position.js?v=1";
 import { initSpecies, matchesSpecies } from "./species.js?v=8.14";
 import { initRegulations } from "./regulations.js?v=8.14";
 import { initLocationContext, viewFromURL } from './location-context.js?v=8.14';
@@ -57,7 +58,7 @@ let atlas,
   initialFitPending = true,
   initialViewShown = false,
   visible = [];
-let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI, locationUI;
+let speciesUI, charterUI, weather, protectedAreas, driftGuides, commercialUI, locationUI, boatPosition;
 let boundaryRefreshDone=false;
 const layers = {},
   markers = new Map();
@@ -139,6 +140,7 @@ function filterTargets() {
     );
   if (selected && !visible.some((t) => t.id === selected.id)) {
     selected = undefined;
+    boatPosition?.setTarget(null);
     $("export-selected").hidden = true;
     $("export-selected").removeAttribute("href");
     $("detail").innerHTML =
@@ -268,6 +270,7 @@ function selectTarget(id, pan = true) {
   const target = atlas.targets.find((t) => t.id === id);
   if (!target || !protectedAreas?.pointAllowed(target)) return;
   selected = target;
+  boatPosition?.setTarget(target);
   locationUI?.select(target);
   drawHabitat();
   driftGuides?.draw();
@@ -281,6 +284,9 @@ function selectTarget(id, pan = true) {
   const survey=terrainSource(t);
   $("detail").innerHTML =
     `<div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · ${escapeHTML(survey.datum)}</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} ${escapeHTML(survey.grid)}; this does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><a class="primary" id="download-target" href="downloads/targets/${t.id}.gpx" download="SkipperCast-${t.id}.gpx">↓ Export this spot + geometry</a><div class="detail-section"><h3>Source</h3><p>${escapeHTML(t.source_name||areaNames[t.source_id]||t.source_id)} · ${escapeHTML(survey.producer)} ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
+  const locateButton=document.createElement('button');locateButton.type='button';locateButton.className='primary';locateButton.textContent='⌖ Use phone GPS for this mark';
+  locateButton.addEventListener('click',()=>{navigation.showView('map');boatPosition?.start();});
+  $("detail").insertBefore(locateButton,$("download-target"));
   $("export-selected").href = `downloads/targets/${t.id}.gpx`;
   $("export-selected").download = `SkipperCast-${t.id}.gpx`;
   updateExports();
@@ -468,6 +474,7 @@ function toast(message) {
 
 function showAreaDetails(html, area, conditionsButton) {
   selected = undefined;
+  boatPosition?.setTarget(null);
   locationUI?.select(area);
   drawHabitat();
   speciesUI?.draw();
@@ -534,6 +541,7 @@ try {
     throw new Error(`Atlas request failed (${response.status})`);
   atlas = await response.json();
   initMap();
+  boatPosition=initBoatPosition(map,{onMapRequested:()=>navigation.showView('map')});
   protectedAreas = await initProtectedAreas(map, () => filterTargets());
   tripExport=initExport({atlas,screen:protectedAreas,map,getVisible:()=>visible,navigation});
   filterTargets();

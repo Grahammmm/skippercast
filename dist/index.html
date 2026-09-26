@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="styles.css?v=8.14" />
     <link rel="stylesheet" href="marine.css?v=8.14" />
     <link rel="stylesheet" href="map-first.css?v=8.14" />
+    <link rel="stylesheet" href="boat-position.css?v=1" />
     <link rel="stylesheet" href="home-port.css?v=1" />
     <link rel="stylesheet" href="bite-evidence.css?v=8.14" />
     <link rel="stylesheet" href="regulations.css?v=8.14" />
@@ -93,6 +94,12 @@
             </button>
           </div>
           <div id="location-caption" class="location-caption" aria-live="polite">Locating regional targets…</div>
+          <button id="boat-position-toggle" class="boat-position-toggle" type="button" aria-pressed="false">⌖ Locate me</button>
+          <section id="boat-position-card" class="boat-position-card" aria-label="Phone GPS to fishing mark" hidden>
+            <div class="boat-position-head"><strong>Phone GPS</strong><button id="boat-position-center" type="button">Center</button></div>
+            <p id="boat-position-status" role="status">Location off.</p>
+            <p class="boat-position-caution">Bearing is a straight line, not a safe route. Check your navigation chart, hazards and MPAs. Map and GPS may fail offshore; keep your chartplotter available.</p>
+          </section>
           <details id="species-regulations" class="regulations-card" aria-label="Local fishing regulations">
             <summary>Regulations · checking sources…</summary>
           </details>

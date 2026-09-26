@@ -1,0 +1,10 @@
+.boat-position-toggle{position:absolute;right:12px;top:100px;z-index:510;min-height:44px;border:1px solid #b8d2d8;border-radius:12px;background:#fff;color:#103745;font:700 14px system-ui;padding:0 12px;box-shadow:0 2px 9px #092c3c25}
+.boat-position-toggle[aria-pressed="true"]{background:#e0f5f3;border-color:#007f73;color:#006458}
+.boat-position-card{position:absolute;right:12px;top:224px;z-index:510;width:min(320px,calc(100% - 24px));padding:10px 12px;border:1px solid #b8d2d8;border-radius:12px;background:#fffc;box-shadow:0 4px 15px #092c3c35;color:#103745;font:14px/1.4 system-ui;backdrop-filter:blur(8px)}
+.boat-position-card[hidden]{display:none}
+.boat-position-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.boat-position-head button{min-height:38px;border:1px solid #b8d2d8;border-radius:8px;background:#fff;color:#006458;padding:0 12px}
+.boat-position-card p{margin:6px 0 0}
+.boat-position-caution{font-size:12px;color:#49636d}
+@media(max-width:600px){.boat-position-card{top:auto;bottom:18px;max-height:min(28vh,180px);overflow:auto}#map-panel:has(.boat-position-card:not([hidden])) .time-dock,#map-panel:has(.boat-position-card:not([hidden])) .search-plan-card{display:none}}
+@media(max-width:360px){.boat-position-toggle{top:146px}.boat-position-card{max-height:25vh}}
