@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "scope": "original-noaa-f00844-fifth-bag-coverage-audit",
+  "survey_id": "F00844",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/F00001-F02000/F00844/BAG/F00844_MB_VR_MLLW_5of5.bag",
+  "source_sha256": "0a4ce638cb12d9c0da1e97ee4aa3761c594fabf0d51bf130ba4718874191b25c",
+  "source_bytes": 515439,
+  "native": {
+    "raster_bounds_wgs84": [
+      -120.7381971,
+      34.6041422,
+      -120.7225326,
+      34.6170934
+    ],
+    "overview_width": 32,
+    "overview_height": 32,
+    "overview_resolution_m": [
+      43.369063,
+      43.369063
+    ],
+    "overview_valid_cells": 250,
+    "overview_total_cells": 1024,
+    "overview_min_elevation_m": -75.63665008544922,
+    "overview_max_elevation_m": -69.90208435058594,
+    "variable_refinement_records": 56434,
+    "refinement_grids_at_most_4m": 0,
+    "refinement_cells_at_most_4m": 0,
+    "refinement_resolution_range_m": null,
+    "metadata_status": "mllw-product-uncertainty-reviewed-by-adapter",
+    "metadata_issue": null,
+    "vertical_datum": "MLLW",
+    "uncertainty_type": "productUncert",
+    "survey_start": "2021-10-04T15:50:50",
+    "survey_end": "2021-10-13T21:40:16",
+    "metadata_sha256": "948e332bcbb3962a38813f0025b9534a159b9745eea8b1257d307cd46d5053e6"
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Original MLLW BAG overview has no refinements at or below 4 m; its 43 m grid cannot locate individual fishing rocks. Source metadata and native-cell overlap with substrate are separate gates."
+}

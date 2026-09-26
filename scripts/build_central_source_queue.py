@@ -33,6 +33,10 @@ def build(root):
     bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
     multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
     csumb = read(root / "dist/data/csumb-bss-native-source-review.json")
+    vr_native = read(root / "dist/data/noaa-vr-native-depth-review.json")
+    regular_native = read(root / "dist/data/noaa-regular-native-depth-review.json")
+    extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
+    extra_bag = read(root / "dist/data/f00844-original-fifth-bag-review.json")
     if (csumb.get("scope") != "original-csumb-bss-native-grid-review"
             or csumb.get("publication_status") != "source-evidence-only"
             or any(s.get("status") != "held-from-fishing-targets"
@@ -40,6 +44,14 @@ def build(root):
                    or s.get("archive_product_inventory", {}).get("named_uncertainty_or_cube_surface_products") != []
                    for s in csumb.get("sources", []))):
         raise ValueError("CSUMB native 300 ft source audit missing or changed")
+    if (vr_native.get("scope") != "california-original-vr-native-depth-review"
+            or vr_native.get("status") != "ok"):
+        raise ValueError("Original NOAA VR native-sector audit missing or changed")
+    vr_by_url = {item["bag_url"]: item for item in vr_native["files"] if item.get("status") == "ok"}
+    if (regular_native.get("scope") != "california-original-regular-native-depth-review"
+            or regular_native.get("status") != "ok"):
+        raise ValueError("Original NOAA regular native-sector audit missing or changed")
+    regular_by_url = {item["bag_url"]: item for item in regular_native["files"] if item.get("status") == "ok"}
     if bindings.get("schema_version") != 1:
         raise ValueError("Invalid original depth review bindings")
     if discovery["health"]["status"] != "ok" or products["health"]["status"] != "ok":
@@ -72,6 +84,15 @@ def build(root):
     footprint_by_sector = {row["sector_id"]: row for row in multibeam["sectors"]}
     discovery_rows = {s["sector_id"]: s for s in discovery["sectors"]}
     surveyed = {s["id"]: s for s in products["surveys"]}
+    if (extra_bag_pin.get("schema_version") != 1 or extra_bag.get("schema_version") != 1
+            or extra_bag.get("scope") != "original-noaa-f00844-fifth-bag-coverage-audit"
+            or any(extra_bag.get(field) != extra_bag_pin.get(field)
+                   for field in ("survey_id", "source_url", "source_sha256", "source_bytes"))
+            or extra_bag["source_url"] not in surveyed[extra_bag["survey_id"]]["products"]["bag"]
+            or extra_bag.get("fishing_target") is not False
+            or extra_bag.get("exportable") is not False
+            or extra_bag.get("native", {}).get("refinement_grids_at_most_4m") != 0):
+        raise ValueError("Original F00844 fifth BAG source audit missing or changed")
     if (monterey_bindings.get("scope") != "original-noaa-mllw-bag-overlap-with-17-monterey-research-outlines"
             or monterey_bindings.get("claim") != "no-measured-native-cells-inside-these-17-outlines"):
         raise ValueError("Unreviewed original Monterey BAG overlap claim")
@@ -168,6 +189,7 @@ def build(root):
         original_bag = [sid for sid in survey_ids if surveyed.get(sid, {}).get("products", {}).get("bag")]
         fine_leads = []
         coarse_audited = []
+        fine_elsewhere = []
         for sid in original_bag:
             urls = surveyed[sid]["products"]["bag"]
             # A filename is only a triage hint. The native raster still has to
@@ -176,10 +198,24 @@ def build(root):
                               re.search(r"_(?:50cm|[1-4]m)_MLLW", url)]
             if sid in depth_refuted:
                 continue
-            if any(url not in native_links or
-                   max(native_links[url]["resolution_m"]) <= 4 or
-                   native_links[url]["fine_refinement_grids"] > 0
-                   for url in candidate_urls):
+            confirmed_fine_here = any(
+                ("_VR_" in url and url in vr_by_url
+                 and vr_by_url[url].get("sectors", {}).get(sector_id, {}).get("fine_native_grids", 0) > 0)
+                or ("_VR_" not in url and url in regular_by_url
+                    and max(regular_by_url[url]["native_resolution_m"]) <= 4
+                    and regular_by_url[url].get("sectors", {}).get(sector_id, {}).get("measured_native_cells", 0) > 0)
+                for url in candidate_urls)
+            reviewed_fine_elsewhere = [url for url in candidate_urls
+                                       if url in native_links and native_links[url]["fine_refinement_grids"] > 0
+                                       and url in vr_by_url
+                                       and vr_by_url[url].get("sectors", {}).get(sector_id, {}).get("fine_native_grids", 0) == 0]
+            if reviewed_fine_elsewhere and not confirmed_fine_here:
+                fine_elsewhere.append({"survey_id": sid,
+                                       "fine_grids_outside_sector_urls": reviewed_fine_elsewhere,
+                                       "uninspected_candidate_urls": [url for url in candidate_urls
+                                                                       if url not in native_links and url != extra_bag["source_url"]],
+                                       "claim": "reviewed fine native grids have no centers in this browse sector; other files remain separate leads"})
+            if confirmed_fine_here:
                 fine_leads.append(sid)
             elif candidate_urls:
                 coarse_audited.append(sid)
@@ -201,6 +237,7 @@ def build(root):
             "noaa_survey_ids": original_bag,
             "noaa_filename_fine_grid_leads": fine_leads,
             "noaa_native_audit_refuted_fine_hint": coarse_audited,
+            "noaa_reviewed_vr_fine_grids_outside_sector": fine_elsewhere,
             "noaa_original_300ft_depth_refutations": [
                 {"survey_id": sid, "review_paths": depth_refuted[sid]}
                 for sid in original_bag if sid in depth_refuted],
@@ -244,7 +281,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

@@ -52,6 +52,12 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertGreater(pigeon["noaa_original_300ft_depth_leads"][0]["eligible_supergrid_center_bounds"][1], 37.1)
         conception = result["sectors"][-1]
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
+        self.assertEqual(set(conception["noaa_filename_fine_grid_leads"]),
+                         {"H11951", "H11952", "H11953"})
+        self.assertEqual({row["survey_id"] for row in conception["noaa_reviewed_vr_fine_grids_outside_sector"]},
+                         {"F00844", "W00341"})
+        self.assertEqual(next(row for row in conception["noaa_reviewed_vr_fine_grids_outside_sector"]
+                              if row["survey_id"] == "F00844")["uninspected_candidate_urls"], [])
         big_sur = next(row for row in result["sectors"] if row["sector_id"] == "big-sur")
         self.assertEqual(big_sur["bluetopo_rat_tile_count"], 12)
         self.assertGreater(big_sur["ncei_multibeam_footprint_lead_count"], 0)
@@ -91,6 +97,20 @@ class CentralCoveragePipelineTests(unittest.TestCase):
 
         with patch.object(sources, "read", side_effect=changed_report):
             with self.assertRaisesRegex(ValueError, "CSUMB native 300 ft source audit"):
+                sources.build(ROOT)
+
+    def test_new_fine_refinement_invalidates_f00844_refutation(self):
+        original = sources.read
+
+        def changed_report(path):
+            result = original(path)
+            if str(path).endswith("f00844-original-fifth-bag-review.json"):
+                result = copy.deepcopy(result)
+                result["native"]["refinement_grids_at_most_4m"] = 1
+            return result
+
+        with patch.object(sources, "read", side_effect=changed_report):
+            with self.assertRaisesRegex(ValueError, "F00844 fifth BAG"):
                 sources.build(ROOT)
 
     def test_deep_noaa_cells_near_pigeon_point_are_not_fishing_spots(self):
