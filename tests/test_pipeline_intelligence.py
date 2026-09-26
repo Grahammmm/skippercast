@@ -30,7 +30,7 @@ class IntelligenceTests(unittest.TestCase):
     def test_forecasts_are_prospective_immutable_and_not_counted_twice(self):
         station={'id':'46215','variables':['wave_height']}
         data={'meta':{'last_run_initialisation_time':1000,'data_end_time':9000},'points':[{'latitude':35.2,'longitude':-120.85,'hourly_units':{'wave_height':'ft'},'hourly':{'time':[2000,5000,10000],'wave_height':[8,3,4]}}]}
-        records=forecast_records('ncep_gfswave025',data,3000,[station]);self.assertEqual(len(records),1)
+        records=forecast_records('ncep_gfswave016',data,3000,[station]);self.assertEqual(len(records),1)
         altered=[dict(records[0],value=999,acquired_at=6000)]
         self.assertEqual(merge_records(records,altered,6000)[0]['value'],3)
         obs=[{'id':'o','station':'46215','variable':'wave_height','time':5000,'value':2,'unit':'ft'}]

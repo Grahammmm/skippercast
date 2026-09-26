@@ -135,6 +135,9 @@ jobs:
                   lines.append('\n### ' + name)
                   for region in data['regions']:
                       lines.append('- ' + region['region_id'] + ': ' + region['status'])
+                      coverage = region.get('forecast_coverage')
+                      if coverage:
+                          lines.append(f"  - Seven-day wind + seas: {coverage['rated_point_days']}/{coverage['point_days']} point-days; two-model comparison: {coverage['two_model_point_days']}/{coverage['point_days']}")
                       lines.extend('  - Source issue: ' + str(issue) for issue in region['issues'])
                       lines.extend('  - Coverage gap: ' + str(gap) for gap in region.get('coverage_gaps', []))
                       failures.extend(region['issues'])

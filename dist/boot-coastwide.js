@@ -1,6 +1,6 @@
-import { initRegion } from "./region.js?v=8.12";
-import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.12';
-import {initRecentDiscussions} from './recent-discussions.js?v=8.12';
+import { initRegion } from "./region.js?v=8.13";
+import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.13';
+import {initRecentDiscussions} from './recent-discussions.js?v=8.13';
 try {
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {
@@ -13,7 +13,7 @@ try {
     initCoastSelector(catalog,coast);
     void initCoastalContext(catalog,coast);
     void initRecentDiscussions(url.searchParams.get('region')||'morro-bay');
-    await import("./app.js?v=8.12");
+    await import("./app.js?v=8.13");
   }
 } catch(error) {
   const panel=document.getElementById("map-empty");panel.hidden=false;

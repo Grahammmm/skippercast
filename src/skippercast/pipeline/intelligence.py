@@ -11,6 +11,7 @@ from .ocean import collect_ocean
 from .parsers import ndbc
 from .verification import ForecastCollectionDeferred, forecast_records, merge_records, observation_records, merge_observations, derived_wind_data, derived_wind_records, verify
 from .verification_archive import load_archive, write_archive
+from .forecast_coverage import audit_forecast_coverage
 from ..platform.contracts import load_region, atomic_json, read_json
 
 
@@ -100,7 +101,7 @@ def run(region_id,output,previous_root=None,now=None):
         state=load_archive(previous_root/'regions'/region_id,region_id,required=bool(prior))
     if prior and prior.get('region_id')!=region_id:raise ValueError('Prior intelligence belongs to another region')
     if state and state.get('region_id')!=region_id:raise ValueError('Prior verification archive belongs to another region')
-    previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave025','ecmwf_wam025']
+    previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam025']
     def one(model):return 'model-'+model,model_source(model,region,now,previous.get('model-'+model))
     with ThreadPoolExecutor(max_workers=4) as pool:sources=dict(pool.map(one,models))
     sources['ensemble']=source('ensemble','NOAA GEFS ensemble','forecast','https://open-meteo.com/en/docs/ensemble-api',36,lambda c:ensemble(c,region),now,previous.get('ensemble'))
@@ -141,9 +142,19 @@ def run(region_id,output,previous_root=None,now=None):
     verification['collection_deferrals']={k:s['verification_deferral'] for k,s in sources.items() if s.get('verification_deferral')}
     forecast={'region_id':region_id,'requested_points':[[p['id'],p['latitude'],p['longitude']] for p in region['forecast_points']],'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
         'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},'retrieved':int(now.timestamp()*1000)}
+    coverage=audit_forecast_coverage(forecast,region,now)
+    forecast['coverage']=coverage
+    health=collection_health(sources)
+    health['forecast_coverage']=coverage['summary']
+    missing=coverage['summary']['incomplete_point_days']
+    if missing:
+        health['status']='degraded'
+        health['issues'].append(f'forecast: {missing} point-days lack a full 7-hour wind and combined-sea window')
+    elif coverage['summary']['two_model_point_days']<coverage['summary']['point_days']:
+        health['coverage_gaps'].append('forecast: independent model comparison incomplete for some point-days')
     data={'schema_version':1,'region_id':region_id,'generated_at':stamp(now),'completed_at':stamp(),'ocean_collected_at':ocean_at,
           'sources':sources,'verification':verification,'forecast':forecast,
-          'health':collection_health(sources)}
+          'health':health}
     target=output/'regions'/region_id
     write_archive(target,region_id,records,observed,evaluated_at,
                   previous_root/'regions'/region_id if previous_root else None)

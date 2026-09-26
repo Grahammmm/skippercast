@@ -1,4 +1,4 @@
-import { getRegion } from "./region.js?v=8.12";
+import { getRegion } from "./region.js?v=8.13";
 // Pure data handling shared by the browser and offline checks. Missing is never calm.
 export const STATIONS = [
   {
@@ -39,9 +39,9 @@ export const WAVE_MODELS = [
     meta: "https://marine-api.open-meteo.com/data/ecmwf_wam025/static/meta.json",
   },
   {
-    id: "ncep_gfswave025",
-    name: "NOAA GFS Wave",
-    meta: "https://marine-api.open-meteo.com/data/ncep_gfswave025/static/meta.json",
+    id: "ncep_gfswave016",
+    name: "NOAA GFS Wave 0.16°",
+    meta: "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
   },
 ];
 export const TIMEZONE = getRegion().timezone;

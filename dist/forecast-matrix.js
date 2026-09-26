@@ -1,7 +1,7 @@
-import {getRegion} from "./region.js?v=8.12";
-import {readConditions, tideAt, HOUR} from './marine-data.js?v=8.12';
-import {esc, num, local, from} from './marine-charts.js?v=8.12';
-import {rateHour} from './morning-outlook.js?v=8.12';
+import {getRegion} from "./region.js?v=8.13";
+import {readConditions, tideAt, HOUR} from './marine-data.js?v=8.13';
+import {esc, num, local, from} from './marine-charts.js?v=8.13';
+import {rateHour} from './morning-outlook.js?v=8.13';
 
 // One UTC clock drives every column; an absent sample is never interpolated.
 export function matrixHTML({bundle, point, species, time, family, now=Date.now()}) {

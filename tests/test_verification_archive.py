@@ -14,7 +14,7 @@ REGION = 'morro-bay'
 
 
 def row(index=0):
-    return {'id': f'forecast-{index}', 'station': '46215', 'model': 'ncep_gfswave025',
+    return {'id': f'forecast-{index}', 'station': '46215', 'model': 'ncep_gfswave016',
             'cycle': NOW - 21600, 'time': NOW + index * 3600, 'value': 3,
             'variable': 'wave_height', 'unit': 'ft', 'acquired_at': NOW - 20000}
 

@@ -11,7 +11,7 @@ BASE = 1789984800
 STATION = {'id': '46215', 'latitude': 35.2, 'longitude': -120.85, 'variables': ['wave_height']}
 
 
-def forecast(valid=BASE, model='ncep_gfswave025', cycle=None, **extra):
+def forecast(valid=BASE, model='ncep_gfswave016', cycle=None, **extra):
     cycle = valid - 6 * 3600 if cycle is None else cycle
     row = {'id': f'{model}:{cycle}:46215:{valid}:wave_height', 'model': model, 'cycle': cycle,
            'acquired_at': cycle + 3600, 'station': '46215', 'time': valid,
@@ -38,10 +38,10 @@ class ForecastVerificationTests(unittest.TestCase):
                 'points': [{'latitude': 35.2, 'longitude': -120.85, 'hourly_units': {'wave_height': 'ft'},
                             'hourly': {'time': [BASE + 1800, BASE + 3600, BASE + 10800], 'wave_height': [2, 3, 4]}}]}
         with self.assertRaisesRegex(ValueError, 'availability'):
-            forecast_records('ncep_gfswave025', data, BASE + 500, [STATION])
+            forecast_records('ncep_gfswave016', data, BASE + 500, [STATION])
         with self.assertRaisesRegex(ValueError, 'settling'):
-            forecast_records('ncep_gfswave025', data, BASE + 900, [STATION])
-        rows = forecast_records('ncep_gfswave025', data, BASE + 1900, [STATION])
+            forecast_records('ncep_gfswave016', data, BASE + 900, [STATION])
+        rows = forecast_records('ncep_gfswave016', data, BASE + 1900, [STATION])
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['model_available_at'], BASE + 600)
         self.assertEqual(rows[0]['cycle'], BASE)
@@ -52,14 +52,14 @@ class ForecastVerificationTests(unittest.TestCase):
         data = {'meta': {'last_run_initialisation_time': BASE}, 'points': [
             {'latitude': 35.2, 'longitude': -120.85, 'hourly_units': {'wave_height': 'ft'},
              'hourly': {'time': [BASE + 3600, BASE + 7200], 'wave_height': [True, float('nan')]}}]}
-        self.assertEqual(forecast_records('ncep_gfswave025', data, BASE + 1, [STATION]), [])
+        self.assertEqual(forecast_records('ncep_gfswave016', data, BASE + 1, [STATION]), [])
         data['points'][0]['hourly_units']['wave_height'] = 'm'
         with self.assertRaisesRegex(ValueError, 'unit'):
-            forecast_records('ncep_gfswave025', data, BASE + 1, [STATION])
+            forecast_records('ncep_gfswave016', data, BASE + 1, [STATION])
         data['points'][0]['hourly_units']['wave_height'] = 'ft'
         data['points'][0]['hourly']['time'] = [BASE + 3600, BASE + 3600]
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
-            forecast_records('ncep_gfswave025', data, BASE + 1, [STATION])
+            forecast_records('ncep_gfswave016', data, BASE + 1, [STATION])
 
     def test_first_forecast_acquisition_remains_immutable_and_ages_out(self):
         old = forecast()
@@ -234,7 +234,7 @@ class ForecastVerificationTests(unittest.TestCase):
         report = verify(forecasts + second, obs, now)
         comparison = report['comparisons'][0]
         self.assertEqual(comparison['n'], 35)
-        self.assertEqual(comparison['lower_error_model'], 'ncep_gfswave025')
+        self.assertEqual(comparison['lower_error_model'], 'ncep_gfswave016')
         self.assertEqual(comparison['mae_a'], 2)
         self.assertEqual(comparison['mae_b'], 1)
         shifted = [{**f, 'cycle': f['cycle'] - 3600} for f in second]

@@ -1,6 +1,6 @@
-import { initRegion } from "./region.js?v=8.12";
+import { initRegion } from "./region.js?v=8.13";
 import {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext} from './coasts.js?v=8.26';
-import {initRecentDiscussions} from './recent-discussions.js?v=8.12';
+import {initRecentDiscussions} from './recent-discussions.js?v=8.13';
 try {
   const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
   if(requested) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.12';
+import {setRegion,localContext,pointBundle} from '../dist/region.js?v=8.13';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {buildContext} from '../scripts/build_reef_context.mjs';
 import {regulationState} from '../dist/regulations.js';
@@ -52,6 +52,6 @@ test('Southern fall windows never become an unrestricted reef opening even with 
 test('zero combined-wave period is unavailable rather than a calm sea',async()=>{
  const {readConditions}=await import('../dist/marine-data.js');
  const data={hourly_units:{time:'unixtime',wave_height:'ft',wave_period:'s',wave_direction:'°'},utc_offset_seconds:0,hourly:{time:[1],wave_height:[0],wave_period:[0],wave_direction:[0]}};
- const conditions=readConditions({models:{ncep_gfswave025:{data:[data]}}},0,1);
+ const conditions=readConditions({models:{ncep_gfswave016:{data:[data]}}},0,1);
  assert.equal(conditions.sea.height,null);assert.equal(conditions.sea.period,null);
 });

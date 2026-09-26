@@ -42,7 +42,7 @@ function bundle() {
     retrieved: now,
     alerts: { coastal: [], offshore: [] },
     models: Object.fromEntries(
-      ["gfs_global", "ecmwf_ifs025", "ncep_gfswave025", "ecmwf_wam025"].map(
+      ["gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam025"].map(
         (id) => [
           id,
           {
@@ -57,6 +57,17 @@ function bundle() {
     ),
   };
 }
+test("rough combined seas retain a useful nonzero ranking without double-counting wind waves", () => {
+  const c={wind:12,gust:16,sea:{height:6},chop:{height:5,period:8},
+    swell:{from:300},secondary:{height:0,from:200}};
+  const rough=hourScores(c,{wind:12,gust:16,sea:{height:6}},'reef');
+  assert.ok(rough.conditions>2 && rough.conditions<5);
+  const lessChop=hourScores({...c,chop:{height:0.5,period:8}},{wind:12,gust:16,sea:{height:6}},'reef');
+  assert.ok(rough.conditions<lessChop.conditions);
+  const extreme=hourScores({...c,wind:30,gust:38,sea:{height:12},chop:{height:11,period:5}},
+    {wind:30,gust:38,sea:{height:12}},'reef');
+  assert.equal(extreme.conditions,0);
+});
 test("full morning rating preserves unknown bite and uses the worst return hour", () => {
   const b = bundle();
   let row = rankMornings(b, 0, "lingcod", now)[0];
@@ -75,9 +86,9 @@ test("missing detail and stale individual models show limited scores that cannot
   for (const mutate of [
     (b) => (b.models.ecmwf_wam025.data[0].hourly.wave_height[6] = null),
     (b) => (b.alerts.coastal = null),
-    (b) => (b.models.ncep_gfswave025.data[0].hourly.wind_wave_period[3] = null),
+    (b) => (b.models.ncep_gfswave016.data[0].hourly.wind_wave_period[3] = null),
     (b) =>
-      (b.models.ncep_gfswave025.data[0].hourly.secondary_swell_wave_direction[3] =
+      (b.models.ncep_gfswave016.data[0].hourly.secondary_swell_wave_direction[3] =
         null),
     (b) =>
       (b.models.gfs_global.meta.last_run_initialisation_time =
@@ -126,7 +137,7 @@ test("seven-day strip retains numeric warnings and limited outlooks without a fa
 test("no usable wind or combined seas remains unrated",()=>{
   const b=bundle();
   for(const m of ['gfs_global','ecmwf_ifs025']) b.models[m].data[0].hourly.wind_speed_10m.fill(null);
-  for(const m of ['ncep_gfswave025','ecmwf_wam025']) b.models[m].data[0].hourly.wave_height.fill(null);
+  for(const m of ['ncep_gfswave016','ecmwf_wam025']) b.models[m].data[0].hourly.wave_height.fill(null);
   const row=rankTimelineDays(b,0,'reef',times,now)[0];
   assert.equal(row.conditions,null);
   assert.ok(row.reasons.some(r=>r.includes('No usable wind')));
@@ -186,7 +197,7 @@ test("day narrative labels incomplete coverage as a limited estimate",async()=>{
  let html=boatDayHTML(b,0,'reef',times[0],r,now);
  assert.match(html,/on the boat/);assert.match(html,/kt/);assert.match(html,/seconds apart/);
  assert.equal(ratingLabel(0),'Very rough');assert.equal(ratingLabel(null),'Data incomplete');
- b.models.ncep_gfswave025.data[0].hourly.wave_height.fill(null);
+ b.models.ncep_gfswave016.data[0].hourly.wave_height.fill(null);
  const missing=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],missing,now);
  assert.match(html,/Limited forecast screen/);assert.match(html,/limited comparison/);assert.ok(missing.conditions<=6.9);
  b.models.ecmwf_wam025.data[0].hourly.wave_height.fill(null);

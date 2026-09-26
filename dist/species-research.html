@@ -411,13 +411,17 @@
         Scores are disclosed author-selected planning heuristics, not
         catch-trained models. Let W be the higher of the two models&#x27;
         sustained winds (kt), G their higher gust (kt), H their higher combined
-        significant sea (ft), and C GFS wind-chop height (ft). Starting from 10,
-        comfort subtracts 0.22×max(W−4,0), 0.10×max(G−7,0), 0.70×max(H−1.5,0),
-        and 0.90×max(C−0.4,0). Gear control subtracts 0.32×max(W−4,0) for bottom
-        species (0.22 for pelagics), 0.08×max(G−8,0), 1.10×max(C−0.4,0) for
-        bottom species (0.80 for pelagics), and 0.45×max(H−2,0). Both subtract
-        0.7 for a secondary swell ≥1 ft crossing the primary by ≥60°, and 0.8
-        for chop ≥0.5 ft with period ≤6 s. Clamp 0–10 and round to a tenth.
+        significant sea (ft), and C GFS wind-wave height (ft). The comfort wind
+        burden is 0.22×max(W−4,0) + 0.10×max(G−7,0). Its wave burden is the
+        larger of 0.70×max(H−1.5,0) and 0.90×max(C−0.4,0). Gear-control wind
+        burden is 0.32×max(W−4,0) for bottom species (0.22 for pelagics), plus
+        0.08×max(G−8,0). Its wave burden is the larger of 0.45×max(H−2,0) and
+        1.10×max(C−0.4,0) for bottom species (0.80 for pelagics). For each
+        component, subtract the larger burden plus 45% of the smaller from 10.
+        This avoids charging the full wind-wave height twice inside combined
+        seas while retaining the added effect of wind and waves together. Both
+        subtract 0.7 for a secondary swell ≥1 ft crossing the primary by ≥60°,
+        and 0.8 for chop ≥0.5 ft with period ≤6 s. Clamp 0–10 and round to a tenth.
       </p>
       <p>
         The conditions score is the lower component score and the lowest rated

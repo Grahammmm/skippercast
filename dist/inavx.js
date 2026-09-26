@@ -1,7 +1,7 @@
-import {tripGPX} from './gpx.js?v=8.12';
-import {atlasExportAllowed} from './export-screen.js?v=8.12';
-import {getRegion} from './region.js?v=8.12';
-import {esc} from './marine-charts.js?v=8.12';
+import {tripGPX} from './gpx.js?v=8.13';
+import {atlasExportAllowed} from './export-screen.js?v=8.13';
+import {getRegion} from './region.js?v=8.13';
+import {esc} from './marine-charts.js?v=8.13';
 
 export function exportSelection(atlas,screen,ids){
   const unique=[...new Set(ids)];

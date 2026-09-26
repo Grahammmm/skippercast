@@ -19,7 +19,7 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
   const times=(base?.hourly?.time||[]).filter(t=>dateInZone(t*1000,region.timezone)===trip.date&&hour(t)>=trip.start_hour&&hour(t)<=trip.end_hour);
   if(times.length!==trip.end_hour-trip.start_hour+1)issues.push('The complete saved window is not populated');
   const max=(key,value)=>{if(finite(value))values[key]=values[key]===null?value:Math.max(values[key],value);else issues.push('Required '+key+' sample missing');};
-  for(const model of ['gfs_global','ecmwf_ifs025','ncep_gfswave025','ecmwf_wam025']){
+  for(const model of ['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam025']){
     const m=models[model],source=intelligence.sources?.['model-'+model];
     if(source?.status!=='ok'||m?.error||!finite(m?.meta?.last_run_initialisation_time)||now/1000-m.meta.last_run_initialisation_time>36*3600||m.meta.last_run_initialisation_time>now/1000+3600)issues.push(model+' is unavailable or stale');
     for(const t of times){
@@ -31,7 +31,7 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
         const visibility=samplePoint(d,'visibility',t,'m'),code=samplePoint(d,'weather_code',t,'wmo code');
         if(visibility===null||code===null)issues.push('Visibility or weather hazard check missing');
         if(visibility!==null&&visibility<1609.344||code!==null&&code>=95)issues.push('Fog or thunderstorm signal');
-      }else{const period=samplePoint(d,'wave_period',t,'s');if(period===null||period<=0)issues.push('Combined wave period unavailable or invalid');max('sea',samplePoint(d,'wave_height',t,'ft'));if(model==='ncep_gfswave025')max('chop',samplePoint(d,'wind_wave_height',t,'ft'));}
+      }else{const period=samplePoint(d,'wave_period',t,'s');if(period===null||period<=0)issues.push('Combined wave period unavailable or invalid');max('sea',samplePoint(d,'wave_height',t,'ft'));if(model==='ncep_gfswave016')max('chop',samplePoint(d,'wind_wave_height',t,'ft'));}
     }
   }
   const species=trip.species==='reef'?['lingcod','rockfish']:[trip.species];

@@ -1,6 +1,6 @@
-import {getRegion, localContext, pointBundle} from './region.js?v=8.12';
-import {matrixHTML} from './forecast-matrix.js?v=8.12';
-import { initBiteEvidence } from "./bite-evidence.js?v=8.12";
+import {getRegion, localContext, pointBundle} from './region.js?v=8.13';
+import {matrixHTML} from './forecast-matrix.js?v=8.13';
+import { initBiteEvidence } from "./bite-evidence.js?v=8.13";
 import {
   POINTS,
   POINT_SIGNATURE,
@@ -13,13 +13,13 @@ import {
   angleBetween,
   distanceNm,
   loadMarine,
-} from "./marine-data.js?v=8.12";
-import { esc, num, local, full, day } from "./marine-charts.js?v=8.12";
-import { rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.12";
-import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.12";
-import { localDate } from "./forecast.js?v=8.12";
-import { detailHTML } from "./marine-detail.js?v=8.12";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.12";
+} from "./marine-data.js?v=8.13";
+import { esc, num, local, full, day } from "./marine-charts.js?v=8.13";
+import { rankTimelineDays, renderOutlook } from "./morning-outlook.js?v=8.13";
+import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js?v=8.13";
+import { localDate } from "./forecast.js?v=8.13";
+import { detailHTML } from "./marine-detail.js?v=8.13";
+import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js?v=8.13";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -247,7 +247,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     const ids = [
       "gfs_global",
       "ecmwf_ifs025",
-      "ncep_gfswave025",
+      "ncep_gfswave016",
       "ecmwf_wam025",
     ];
     const unavailable = ids.some(
@@ -303,7 +303,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
             ? "gfs_global"
             : "ecmwf_ifs025"
           : family === "gfs"
-            ? "ncep_gfswave025"
+            ? "ncep_gfswave016"
             : "ecmwf_wam025";
     POINTS.forEach((p, i) => {
       const grid = bundle.models[id]?.data?.[i];
@@ -505,7 +505,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     try {
       let cached;
       try {
-        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v4:"+getRegion().id));
+        cached = JSON.parse(sessionStorage.getItem("skippercast-marine-v5:"+getRegion().id));
       } catch {
         /* Storage is optional. */
       }
@@ -514,7 +514,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
           ? cached
           : await loadMarine(bundle || cached);
       try {
-        sessionStorage.setItem("skippercast-marine-v4:"+getRegion().id, JSON.stringify(bundle));
+        sessionStorage.setItem("skippercast-marine-v5:"+getRegion().id, JSON.stringify(bundle));
       } catch {
         /* No cache is needed to browse. */
       }

@@ -1,6 +1,6 @@
-import {distanceNm,POINTS} from './marine-data.js?v=8.12';
-import {rateHour} from './morning-outlook.js?v=8.12';
-import {pointBundle} from './region.js?v=8.12';
+import {distanceNm,POINTS} from './marine-data.js?v=8.13';
+import {rateHour} from './morning-outlook.js?v=8.13';
+import {pointBundle} from './region.js?v=8.13';
 export function nearestSearchForecast(area,profile,points=POINTS){
  const rows=points.map((p,i)=>({p,i,d:distanceNm(area,p)})).filter(x=>profile.kind!=='offshore'||x.p.offshore);
  rows.sort((a,b)=>a.d-b.d);return rows[0]?.d<=12?rows[0]:null;

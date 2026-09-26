@@ -31,7 +31,8 @@ def refresh(kind, output, previous_root=None, *, only_region=None, include_draft
             else:
                 from skippercast.pipeline.habitat_dynamics import run
             data=run(ident,output,previous_root,now)
-            summaries.append({'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues'],'coverage_gaps':data['health'].get('coverage_gaps',[])})
+            summaries.append({'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues'],'coverage_gaps':data['health'].get('coverage_gaps',[]),
+                              'forecast_coverage':data['health'].get('forecast_coverage') if kind=='intelligence' else None})
             continue
         data=(daily(now,prior,region_id=ident) if kind=="daily" else live(now,prior,region_id=ident))
         target=output/"regions"/ident

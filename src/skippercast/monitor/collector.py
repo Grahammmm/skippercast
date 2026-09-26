@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 UA = "SkipperCast/0.1 (personal marine forecast research)"
 WIND_MODELS = ("ecmwf_ifs025", "gfs_global")
-WAVE_MODELS = ("ecmwf_wam025", "ncep_gfswave025")
+WAVE_MODELS = ("ecmwf_wam025", "ncep_gfswave016")
 WIND_VARIABLES = (
     "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
     "precipitation", "visibility", "weather_code",
@@ -202,7 +202,7 @@ def sources(config, now):
         "meta-ecmwf-wind": "https://api.open-meteo.com/data/ecmwf_ifs025/static/meta.json",
         "meta-gfs-wind": "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
         "meta-ecmwf-wave": "https://marine-api.open-meteo.com/data/ecmwf_wam025/static/meta.json",
-        "meta-gfs-wave": "https://marine-api.open-meteo.com/data/ncep_gfswave025/static/meta.json",
+        "meta-gfs-wave": "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
         "nws-pzz645": "https://forecast.weather.gov/MapClick.php?TextType=2&zoneid=PZZ645",
         "nws-lox-discussion": "https://forecast.weather.gov/product.php?issuedby=LOX&product=AFD&site=lox",
         "nws-active-alerts": "https://api.weather.gov/alerts/active/zone/PZZ645",

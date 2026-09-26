@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {getRegion,setRegion,localContext,pointBundle} from '../dist/region.js?v=8.12';
+import {getRegion,setRegion,localContext,pointBundle} from '../dist/region.js?v=8.13';
 import {regulationState,validRegulations} from '../dist/regulations.js';
 
 const region=JSON.parse(readFileSync(new URL('../regions/bodega-point-reyes/region.json',import.meta.url)));

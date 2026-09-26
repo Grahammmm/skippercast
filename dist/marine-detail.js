@@ -1,4 +1,4 @@
-import { getRegion } from "./region.js?v=8.12";
+import { getRegion } from "./region.js?v=8.13";
 import {
   POINTS,
   MODELS,
@@ -7,7 +7,7 @@ import {
   tideAt,
   distanceNm,
   angleBetween,
-} from "./marine-data.js?v=8.12";
+} from "./marine-data.js?v=8.13";
 import {
   esc,
   num,
@@ -19,7 +19,7 @@ import {
   lineChart,
   waveSketch,
   rose,
-} from "./marine-charts.js?v=8.12";
+} from "./marine-charts.js?v=8.13";
 
 export function detailHTML({
   bundle,
@@ -61,7 +61,7 @@ export function detailHTML({
     Number.isFinite(waterEpoch) &&
     Date.now() / 1000 - waterEpoch <= 7200 &&
     Date.now() / 1000 >= waterEpoch;
-  const waveId = family === "gfs" ? "ncep_gfswave025" : "ecmwf_wam025",
+  const waveId = family === "gfs" ? "ncep_gfswave016" : "ecmwf_wam025",
     waveGrid = bundle.models[waveId]?.data?.[point];
   const short = c.chop.period > 0 && c.chop.period <= 6 && c.chop.height >= 1;
   const crossed =

@@ -541,7 +541,7 @@
     },
     {
       "id": "noaa-gfs-wave",
-      "name": "NOAA GFS Wave through Open-Meteo",
+      "name": "NOAA GFS Wave 0.16° through Open-Meteo",
       "provider": "NOAA; Open-Meteo access service",
       "needs": [
         "wave-forecast",
@@ -560,18 +560,18 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "Global seas; retain primary, secondary and wind-wave components when populated.",
+      "coverage_note": "16 km regional NOAA wave grid (52.5°N–15°S); retain primary, secondary and wind-wave components when populated.",
       "limitations": [
         "Primary and mean periods are different products.",
         "No inshore bar-wave clearance."
       ],
-      "model_id": "ncep_gfswave025",
+      "model_id": "ncep_gfswave016",
       "allowed_hosts": [
         "marine-api.open-meteo.com"
       ],
       "max_age_hours": 18,
-      "model": "ncep_gfswave025",
-      "metadata_url": "https://marine-api.open-meteo.com/data/ncep_gfswave025/static/meta.json"
+      "model": "ncep_gfswave016",
+      "metadata_url": "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json"
     },
     {
       "id": "ecmwf-wam",
