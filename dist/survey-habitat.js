@@ -91,7 +91,7 @@ export async function initSurveyHabitat(map, screen, onSelect, onFocus=()=>{}) {
       const button=document.createElement('button');button.type='button';button.textContent='Show mapped habitat';
       button.onclick=()=>map.fitBounds(eligible.reduce((b,e)=>b.extend(e.bounds),L.latLngBounds([])),{padding:[60,110],maxZoom:11});key.append(button);
     }
-    if(zoom<10){
+    if(zoom<11){
       if(shown.length)key.textContent='Mapped habitat groups · tap to see outlines';
       for(const group of habitatGroups(shown,p=>map.project(p,zoom))){
         const bounds=group.reduce((b,e)=>b.extend(e.bounds),L.latLngBounds([]));
