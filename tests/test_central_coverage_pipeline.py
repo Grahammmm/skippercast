@@ -36,7 +36,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "closure screen failed"):
                 coverage.build(ROOT)
 
-    def test_source_queue_is_catalog_leads_only(self):
+    def test_source_queue_keeps_native_band_leads_on_hold(self):
         result = sources.build(ROOT)
         self.assertEqual(result["status"], "research-only")
         self.assertEqual(len(result["sectors"]), 6)
@@ -57,6 +57,13 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertGreater(big_sur["ncei_multibeam_footprint_lead_count"], 0)
         self.assertIn("W00479_MB_VR_MLLW_1of1", big_sur["bluetopo_rat_historical_hydrography_ids"])
         self.assertTrue(big_sur["bluetopo_rat_coastal_dem_ids"])
+        self.assertEqual({row["source_id"] for row in big_sur["csumb_native_band_leads"]},
+                         {"csumb-bss-block08", "csumb-bss-block12", "csumb-bss-block13"})
+        south = next(row for row in result["sectors"] if row["sector_id"] == "sur-san-simeon")
+        block02 = next(row for row in south["csumb_native_band_leads"]
+                       if row["source_id"] == "csumb-bss-block02")
+        self.assertEqual(block02["measured_200_300ft_navd88_comparison_cells"], 1_987_547)
+        self.assertEqual(block02["release_status"], "datum-uncertainty-rights-hold")
 
     def test_unreviewed_bluetopo_lead_blocks_queue(self):
         original = sources.read
@@ -70,6 +77,20 @@ class CentralCoveragePipelineTests(unittest.TestCase):
 
         with patch.object(sources, "read", side_effect=stale_report):
             with self.assertRaisesRegex(ValueError, "receipt is missing or stale"):
+                sources.build(ROOT)
+
+    def test_changed_csumb_uncertainty_inventory_blocks_queue(self):
+        original = sources.read
+
+        def changed_report(path):
+            result = original(path)
+            if str(path).endswith("csumb-bss-native-source-review.json"):
+                result = copy.deepcopy(result)
+                result["sources"][0]["archive_product_inventory"]["named_uncertainty_or_cube_surface_products"] = ["new CUBE surface"]
+            return result
+
+        with patch.object(sources, "read", side_effect=changed_report):
+            with self.assertRaisesRegex(ValueError, "CSUMB native 300 ft source audit"):
                 sources.build(ROOT)
 
     def test_deep_noaa_cells_near_pigeon_point_are_not_fishing_spots(self):

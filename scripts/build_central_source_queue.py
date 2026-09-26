@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 
 SECTORS = (
@@ -31,6 +32,14 @@ def build(root):
     bluetopo = read(root / "dist/data/central-bluetopo-upstream-source-leads.json")
     bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
     multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
+    csumb = read(root / "dist/data/csumb-bss-native-source-review.json")
+    if (csumb.get("scope") != "original-csumb-bss-native-grid-review"
+            or csumb.get("publication_status") != "source-evidence-only"
+            or any(s.get("status") != "held-from-fishing-targets"
+                   or s.get("native_depth_screen", {}).get("comparison_band_200_300ft_navd88_cells") is None
+                   or s.get("archive_product_inventory", {}).get("named_uncertainty_or_cube_surface_products") != []
+                   for s in csumb.get("sources", []))):
+        raise ValueError("CSUMB native 300 ft source audit missing or changed")
     if bindings.get("schema_version") != 1:
         raise ValueError("Invalid original depth review bindings")
     if discovery["health"]["status"] != "ok" or products["health"]["status"] != "ok":
@@ -138,6 +147,22 @@ def build(root):
     source_rows = []
     for sector_id in SECTORS:
         area = discovery_rows[sector_id]
+        west, south, east, north = map(float, parse_qs(urlsplit(area["request_url"]).query)["geometry"][0].split(","))
+        csumb_leads = []
+        for source in csumb["sources"]:
+            sw, ss, se, sn = source["bathymetry"]["valid_cell_envelope_wgs84"]
+            if se < west or sw > east or sn < south or ss > north:
+                continue
+            band = source["native_depth_screen"]
+            if band["comparison_band_200_300ft_navd88_cells"]:
+                csumb_leads.append({
+                    "source_id": source["source_id"],
+                    "native_grid_resolution_m": source["bathymetry"]["resolution_m"],
+                    "measured_200_300ft_navd88_comparison_cells": band["comparison_band_200_300ft_navd88_cells"],
+                    "derived_rough_class_cells_in_comparison_band": band["derived_rough_class_cells_in_comparison_band"],
+                    "rights_status": source["rights_status"],
+                    "release_status": "datum-uncertainty-rights-hold",
+                })
         # The discovery service is broad-track geometry; counts are leads only.
         survey_ids = sorted({s["id"] for s in area.get("surveys", [])})
         original_bag = [sid for sid in survey_ids if surveyed.get(sid, {}).get("products", {}).get("bag")]
@@ -201,6 +226,8 @@ def build(root):
             "ncei_multibeam_distinct_survey_id_count": len({item["survey_id"] for item in footprint_by_sector[sector_id]["footprints"]
                                                              if item["survey_id"]}),
             "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+            "csumb_native_band_leads": csumb_leads,
+            "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
@@ -217,7 +244,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

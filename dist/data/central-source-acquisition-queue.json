@@ -87,6 +87,8 @@
       "ncei_multibeam_footprint_lead_count": 132,
       "ncei_multibeam_distinct_survey_id_count": 118,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Pigeon Point to Monterey Region",
@@ -199,6 +201,8 @@
       "ncei_multibeam_footprint_lead_count": 126,
       "ncei_multibeam_distinct_survey_id_count": 112,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Monterey Canyon and Vicinity",
@@ -277,6 +281,42 @@
       "ncei_multibeam_footprint_lead_count": 126,
       "ncei_multibeam_distinct_survey_id_count": 114,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [
+        {
+          "source_id": "csumb-bss-block12",
+          "native_grid_resolution_m": [
+            2.0,
+            2.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 286508,
+          "derived_rough_class_cells_in_comparison_band": 3141,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        },
+        {
+          "source_id": "csumb-bss-block13",
+          "native_grid_resolution_m": [
+            5.0,
+            5.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 12063,
+          "derived_rough_class_cells_in_comparison_band": 688,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        },
+        {
+          "source_id": "csumb-bss-block08",
+          "native_grid_resolution_m": [
+            2.0,
+            2.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 593696,
+          "derived_rough_class_cells_in_comparison_band": 11617,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        }
+      ],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -344,6 +384,42 @@
       "ncei_multibeam_footprint_lead_count": 123,
       "ncei_multibeam_distinct_survey_id_count": 105,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [
+        {
+          "source_id": "csumb-bss-block03",
+          "native_grid_resolution_m": [
+            2.0,
+            2.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 2897684,
+          "derived_rough_class_cells_in_comparison_band": 39705,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        },
+        {
+          "source_id": "csumb-bss-block02",
+          "native_grid_resolution_m": [
+            2.0,
+            2.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 1987547,
+          "derived_rough_class_cells_in_comparison_band": 13834,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        },
+        {
+          "source_id": "csumb-bss-block01",
+          "native_grid_resolution_m": [
+            2.0,
+            2.0
+          ],
+          "measured_200_300ft_navd88_comparison_cells": 1227954,
+          "derived_rough_class_cells_in_comparison_band": 0,
+          "rights_status": "unresolved: original access and use constraints say to be determined by producer and contractors",
+          "release_status": "datum-uncertainty-rights-hold"
+        }
+      ],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Point Sur to Point Arguello Region",
@@ -400,6 +476,8 @@
       "ncei_multibeam_footprint_lead_count": 127,
       "ncei_multibeam_distinct_survey_id_count": 111,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Offshore of Point Estero",
@@ -487,6 +565,8 @@
       "ncei_multibeam_footprint_lead_count": 162,
       "ncei_multibeam_distinct_survey_id_count": 139,
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
+      "csumb_native_band_leads": [],
+      "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
       "usgs_map_areas": [
         {
           "name": "Offshore of Morro Bay",
@@ -512,5 +592,5 @@
       ]
     }
   ],
-  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. Re-run discovery and inspect original pixels before promotion."
+  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. Re-run discovery and inspect original pixels before promotion."
 }
