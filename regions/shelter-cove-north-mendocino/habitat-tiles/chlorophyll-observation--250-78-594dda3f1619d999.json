@@ -1,1 +1,0 @@
-{"schema_version":1,"region_id":"shelter-cove-north-mendocino","layer_id":"chlorophyll-observation","bounds":[-125.0,39.0,-124.5,39.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790078400,"cells":[[39.46875,-124.81875,0.38011],[39.46875,-124.78125,0.47894]],"valid_cells":2}]}
