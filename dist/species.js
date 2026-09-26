@@ -46,7 +46,7 @@ export const PROFILES = {
     short: "Rocky habitat, different niches",
     kind: "reef",
     habitat:
-      "Rockfish are many species, not one habitat preference. Some school above reefs; others stay close to rock, kelp, or sediment edges. This layer covers the rocky-habitat subset within 200 ft.",
+      "Rockfish are many species, not one habitat preference. Some school above reefs; others stay close to rock, kelp, or sediment edges. This layer covers the rocky-habitat subset within the selected planning depth; currently qualified spots extend to 200 ft.",
     approach:
       "Watch the sounder through the water column as well as near bottom. Work a short controlled pass over relief, then adjust to marks. Identify each fish: similar-looking species have different limits.",
     conditions:
@@ -128,7 +128,7 @@ export const PROFILES = {
       "Use the sea-temperature layer to compare water masses, then verify bait, birds, color changes, and fish locally. Broad forecast samples are starting references; they do not locate a sharp front or a school.",
     conditions:
       "A light morning nearshore does not establish a comfortable offshore day. Inspect offshore wind, crossing swell, and return hours. Temperature alone never earns a fishing-quality score.",
-    map: "Nine explicitly constructed offshore search sectors replace bottom targets. Centers are forecast samples, not historical catches. They extend beyond the 200-foot bottom-fishing scope.",
+    map: "Nine explicitly constructed offshore search sectors replace bottom targets. Centers are forecast samples, not historical catches. They extend beyond the 300-foot bottom-fishing planning scope.",
     season:
       "Check current tuna regulations. Availability off Morro Bay varies with the ocean; the calendar does not guarantee accessible fish.",
     unknown:

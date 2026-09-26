@@ -1,3 +1,4 @@
+import {speciesFit} from './species-fit.js?v=1';
 import {initSearchPlans} from './search-plans.js?v=8.14';
 import {initTripAlerts} from './trip-alerts.js?v=8.14';
 import {initExport} from './export-ui.js?v=8.14';
@@ -109,9 +110,12 @@ function updateReefCoverage() {
 }
 
 function pin(target) {
+  const fish=$('species-select').value;
+  const fit=speciesFit(target,fish==='lingcod'?'lingcod':'rockfish');
+  const label=fit?String(fit.rank):target.habitat_grade;
   return L.divIcon({
     className: "target-pin",
-    html: `<span aria-hidden="true" class="pin-content ${target.habitat_grade} ${selected?.id === target.id ? "selected" : ""}">${target.habitat_grade}</span><span class="sr-only">${escapeHTML(target.id)}: ${escapeHTML(target.label)}, grade ${target.habitat_grade}, ${target.center_depth_ft} feet</span>`,
+    html: `<span aria-hidden="true" class="pin-content ${target.habitat_grade} ${selected?.id === target.id ? "selected" : ""}">${label}</span><span class="sr-only">${escapeHTML(target.id)}: ${escapeHTML(target.label)}, ${fish==='lingcod'?'lingcod':'rockfish'} habitat fit ${fit?.rank??'unknown'} of 3, ${target.center_depth_ft} feet</span>`,
     iconSize: [44, 44],
     iconAnchor: [22, 22],
   });
@@ -135,9 +139,11 @@ function filterTargets() {
           .toLowerCase()
           .includes(search),
     )
-    .sort(
-      (a, b) => b.habitat_score - a.habitat_score || a.id.localeCompare(b.id),
-    );
+    .sort((a, b) => {
+      const fish=$('species-select').value==='lingcod'?'lingcod':'rockfish';
+      return (speciesFit(a,fish)?.rank??4)-(speciesFit(b,fish)?.rank??4)
+        || b.habitat_score-a.habitat_score || a.id.localeCompare(b.id);
+    });
   if (selected && !visible.some((t) => t.id === selected.id)) {
     selected = undefined;
     boatPosition?.setTarget(null);
@@ -258,7 +264,7 @@ function drawHabitat() {
         title: `${t.id}: ${t.label}, grade ${t.habitat_grade}, ${t.center_depth_ft} ft`,
         keyboard: true,
       })
-        .bindTooltip(`${escapeHTML(t.label)} · ${t.center_depth_ft} ft`)
+        .bindTooltip(`${escapeHTML(t.label)} · ${t.center_depth_ft} ft · ${$('species-select').value==='lingcod'?'lingcod':'rockfish'} fit ${speciesFit(t,$('species-select').value==='lingcod'?'lingcod':'rockfish')?.rank??'?'}/3`)
         .on("click", () => selectTarget(t.id))
         .addTo(layers.targets);
       markers.set(t.id, m);
@@ -282,8 +288,10 @@ function selectTarget(id, pan = true) {
   const t = selected;
   const grade = gradeGuide[t.habitat_grade];
   const survey=terrainSource(t);
+  const fits=['lingcod','rockfish'].map(name=>({name,fit:speciesFit(t,name)})).filter(row=>row.fit);
+  const fitHTML=`<div class="detail-section"><h3>Species habitat fit · 1–3</h3><p>1 = strongest mapped habitat fit; 3 = lower fit among surveyed candidates. This compares terrain only, not fish presence or catch odds.</p>${fits.map(({name,fit})=>`<p><strong>${name === 'lingcod' ? 'Lingcod' : 'Rockfish'} · ${fit.rank}/3</strong> — ${escapeHTML(fit.reason)}</p>`).join('')}</div>`;
   $("detail").innerHTML =
-    `<div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div><div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · ${escapeHTML(survey.datum)}</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} ${escapeHTML(survey.grid)}; this does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><a class="primary" id="download-target" href="downloads/targets/${t.id}.gpx" download="SkipperCast-${t.id}.gpx">↓ Export this spot + geometry</a><div class="detail-section"><h3>Source</h3><p>${escapeHTML(t.source_name||areaNames[t.source_id]||t.source_id)} · ${escapeHTML(survey.producer)} ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
+    `<div class="detail-top"><span class="grade ${t.habitat_grade}">${t.habitat_grade}</span><div><div class="eyebrow">${t.id} · TERRAIN RANK ${t.rank} OF ${atlas.targets.length}</div><h2>${escapeHTML(t.label)}</h2></div></div><span class="coordinates">${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}</span><p>${escapeHTML(t.terrain_interpretation)}</p><div class="grade-explanation"><strong>Grade ${t.habitat_grade} · ${grade.label} · ${grade.range}</strong><p>${grade.description}</p><a href="#grade-guide">Compare A, B, and C</a></div>${fitHTML}<div class="stats"><div class="stat"><span>Center depth</span><strong>${t.center_depth_ft} ft</strong></div><div class="stat"><span>Terrain score</span><strong>${t.habitat_score}<small>/100</small></strong></div><div class="stat"><span>Nearby depths</span><strong>${t.neighborhood_depth_ft.join("–")}</strong><span>feet · ${escapeHTML(survey.datum)}</span></div><div class="stat"><span>Rough habitat</span><strong>${(t.metrics.rough_habitat_within_250m_ha * 2.47105).toFixed(1)} acres</strong><span>within 820 ft (250 m)</span></div></div><div class="evidence-note"><p><strong>Mapped habitat candidate</strong><br>Terrain interpretation confidence: ${escapeHTML(t.confidence)}. Fish presence is unverified; no verified charter AIS visits at this target. <a href="#charter-evidence">See the AIS research coverage.</a></p></div><div class="detail-section"><h3>Structure &amp; approach</h3><span class="tag">${escapeHTML(t.feature_type)}</span><span class="tag">${t.area_ids.length} linked reef area${t.area_ids.length === 1 ? "" : "s"}</span><p>${t.feature_type === "localized rocky target" ? "This marker identifies a more localized rocky feature to investigate." : "This marker is a starting position for searching a broader patch of reef."} ${escapeHTML(survey.grid)}; this does not identify an individual boulder.</p><p>${t.area_ids.length ? "The shaded outline shows part of the mapped rough habitat to work across, not the entire reef. " : "No reef outline is linked to this marker. "}${t.drift_id ? "The dashed line follows the structure. Measure your drift first, then choose a setup position that carries your rig across it; either end may be appropriate." : "Use your sounder to locate relief and fish, then set a drift across the structure you find."} Check a nautical chart for your approach; these search geometries are not navigation routes.</p></div><a class="primary" id="download-target" href="downloads/targets/${t.id}.gpx" download="SkipperCast-${t.id}.gpx">↓ Export this spot + geometry</a><div class="detail-section"><h3>Source</h3><p>${escapeHTML(t.source_name||areaNames[t.source_id]||t.source_id)} · ${escapeHTML(survey.producer)} ${t.survey_year}<br>Research screen ${atlas.source_validation_date}</p><a href="${t.source_url}" target="_blank" rel="noopener">Open survey record ↗</a></div>`;
   const locateButton=document.createElement('button');locateButton.type='button';locateButton.className='primary';locateButton.textContent='⌖ Use phone GPS for this mark';
   locateButton.addEventListener('click',()=>{navigation.showView('map');boatPosition?.start();});
   $("detail").insertBefore(locateButton,$("download-target"));
@@ -410,7 +418,7 @@ function registerTools() {
           throw new Error("Unknown target_id");
         $("search").value = "";
         for (const id of ["area", "grade", "geometry"]) $(id).value = "all";
-        $("depth").value = "200";
+        $("depth").value = "300";
         $("species-select").value = "reef";
         speciesUI?.refresh();
         filterTargets();
@@ -510,7 +518,7 @@ $("fit-map").addEventListener("click", showFilteredMap);
 $("reset-filters").addEventListener("click", () => {
   $("search").value = "";
   for (const id of ["area", "grade", "geometry"]) $(id).value = "all";
-  $("depth").value = "200";
+  $("depth").value = "300";
   if (atlas) filterTargets();
 });
 for (const id of ["search", "area", "grade", "depth", "geometry"])
@@ -586,7 +594,7 @@ try {
       $("species-select").value = "reef";
       $("search").value = "";
       for (const name of ["area", "grade", "geometry"]) $(name).value = "all";
-      $("depth").value = "200";
+      $("depth").value = "300";
       speciesUI?.refresh();
       filterTargets();
       weather?.setSpecies("reef");

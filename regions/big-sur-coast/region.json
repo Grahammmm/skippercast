@@ -4,7 +4,7 @@
   "name": "Big Sur outer coast",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · Central Groundfish Management Area",
+  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
   "bounds": [
     -122.2,
     35.9,
@@ -38,7 +38,7 @@
     "unavailable_target_sources": {}
   },
   "harbor": {
-    "name": "Monterey Harbor · distant planning origin",
+    "name": "Monterey Harbor \u00b7 distant planning origin",
     "latitude": 36.605,
     "longitude": -121.888,
     "entrance_note": "Monterey Harbor is far north of the Big Sur sector; this planning origin does not establish feasible range, fuel reserve, safe weather window or local refuge. Check current harbormaster and chart independently.",
@@ -49,9 +49,9 @@
     ]
   },
   "boat": {
-    "name": "2019 Parker 23 · planning profile",
+    "name": "2019 Parker 23 \u00b7 planning profile",
     "cruise_knots": 20,
-    "bottom_depth_limit_ft": 200
+    "bottom_depth_limit_ft": 300
   },
   "forecast_points": [
     {
@@ -82,16 +82,16 @@
   },
   "stations": {
     "tide": "9413450",
-    "tide_name": "Monterey Harbor tide predictions · distant reference",
+    "tide_name": "Monterey Harbor tide predictions \u00b7 distant reference",
     "tide_note": "Monterey tide predictions are distant, not a Big Sur current or bottom-drift prediction.",
     "airport": "KMRY",
-    "airport_name": "Monterey Regional Airport · distant land reference",
+    "airport_name": "Monterey Regional Airport \u00b7 distant land reference",
     "nearshore_buoy": "46028",
-    "nearshore_buoy_name": "Cape San Martin buoy · south/offshore reference",
-    "nearshore_buoy_note": "35.763°N, 121.900°W, south of this band; offshore wind and wave data do not measure a nearshore Big Sur patch.",
+    "nearshore_buoy_name": "Cape San Martin buoy \u00b7 south/offshore reference",
+    "nearshore_buoy_note": "35.763\u00b0N, 121.900\u00b0W, south of this band; offshore wind and wave data do not measure a nearshore Big Sur patch.",
     "offshore_buoy": "46042",
-    "offshore_buoy_name": "Monterey offshore buoy · north/distant reference",
-    "offshore_buoy_note": "36.787°N, 122.408°W, well north of this band; not a second local Big Sur measurement."
+    "offshore_buoy_name": "Monterey offshore buoy \u00b7 north/distant reference",
+    "offshore_buoy_note": "36.787\u00b0N, 122.408\u00b0W, well north of this band; not a second local Big Sur measurement."
   },
   "mpa": {
     "bounds": [
@@ -206,7 +206,7 @@
   "coverage": {
     "bathymetry": {
       "status": "research",
-      "reason": "The bounded original NOAA/USGS review found no chart-datum native pixels passing the strict 25–200 ft and ≤1 m uncertainty gate in this sector; this does not mean seabed or fish are absent."
+      "reason": "The bounded original NOAA/USGS review found no chart-datum native pixels passing the strict 25\u2013200 ft and \u22641 m uncertainty gate in this sector; this does not mean seabed or fish are absent."
     },
     "substrate": {
       "status": "research",
@@ -340,16 +340,16 @@
       "name": "Big Sur exposed outer coast",
       "stations": {
         "tide": "9413450",
-        "tide_name": "Monterey Harbor tide predictions · distant reference",
+        "tide_name": "Monterey Harbor tide predictions \u00b7 distant reference",
         "tide_note": "Monterey tide predictions are distant, not a Big Sur current or bottom-drift prediction.",
         "airport": "KMRY",
-        "airport_name": "Monterey Regional Airport · distant land reference",
+        "airport_name": "Monterey Regional Airport \u00b7 distant land reference",
         "nearshore_buoy": "46028",
-        "nearshore_buoy_name": "Cape San Martin buoy · south/offshore reference",
-        "nearshore_buoy_note": "35.763°N, 121.900°W, south of this band; offshore wind and wave data do not measure a nearshore Big Sur patch.",
+        "nearshore_buoy_name": "Cape San Martin buoy \u00b7 south/offshore reference",
+        "nearshore_buoy_note": "35.763\u00b0N, 121.900\u00b0W, south of this band; offshore wind and wave data do not measure a nearshore Big Sur patch.",
         "offshore_buoy": "46042",
-        "offshore_buoy_name": "Monterey offshore buoy · north/distant reference",
-        "offshore_buoy_note": "36.787°N, 122.408°W, well north of this band; not a second local Big Sur measurement."
+        "offshore_buoy_name": "Monterey offshore buoy \u00b7 north/distant reference",
+        "offshore_buoy_note": "36.787\u00b0N, 122.408\u00b0W, well north of this band; not a second local Big Sur measurement."
       },
       "marine_zones": {
         "coastal": "PZZ565",
@@ -369,7 +369,7 @@
         "id": "46028",
         "latitude": 35.763,
         "longitude": -121.9,
-        "name": "Cape San Martin · south/offshore reference",
+        "name": "Cape San Martin \u00b7 south/offshore reference",
         "variables": [
           "wind_speed",
           "wave_height"
@@ -380,7 +380,7 @@
         "id": "46042",
         "latitude": 36.787,
         "longitude": -122.408,
-        "name": "Monterey offshore · distant northern reference",
+        "name": "Monterey offshore \u00b7 distant northern reference",
         "variables": [
           "wind_speed",
           "wave_height"

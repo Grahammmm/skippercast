@@ -4,7 +4,7 @@
   "name": "Monterey Peninsula to Point Sur",
   "status": "preview",
   "timezone": "America/Los_Angeles",
-  "jurisdiction": "California · Central Groundfish Management Area",
+  "jurisdiction": "California \u00b7 Central Groundfish Management Area",
   "bounds": [
     -122.35,
     36.3,
@@ -49,9 +49,9 @@
     ]
   },
   "boat": {
-    "name": "2019 Parker 23 · planning profile",
+    "name": "2019 Parker 23 \u00b7 planning profile",
     "cruise_knots": 20,
-    "bottom_depth_limit_ft": 200
+    "bottom_depth_limit_ft": 300
   },
   "forecast_points": [
     {
@@ -86,13 +86,13 @@
     "tide_name": "Monterey Harbor tide predictions",
     "tide_note": "NOAA Monterey tide predictions and observed water level are local harbor references, not entrance current or safe transit.",
     "airport": "KMRY",
-    "airport_name": "Monterey Regional Airport · land wind reference",
+    "airport_name": "Monterey Regional Airport \u00b7 land wind reference",
     "nearshore_buoy": "46236",
     "nearshore_buoy_name": "Monterey Canyon Outer wave buoy",
-    "nearshore_buoy_note": "36.759°N, 121.950°W, north of this region; a deeper-water wave reference, not Point Sur or harbor conditions.",
+    "nearshore_buoy_note": "36.759\u00b0N, 121.950\u00b0W, north of this region; a deeper-water wave reference, not Point Sur or harbor conditions.",
     "offshore_buoy": "46042",
     "offshore_buoy_name": "Monterey offshore buoy",
-    "offshore_buoy_note": "36.787°N, 122.408°W, far northwest; offshore wind and wave reference, not local reef or harbor conditions."
+    "offshore_buoy_note": "36.787\u00b0N, 122.408\u00b0W, far northwest; offshore wind and wave reference, not local reef or harbor conditions."
   },
   "mpa": {
     "bounds": [
@@ -112,7 +112,7 @@
     "bluefin"
   ],
   "source_names": {
-    "OffshoreMonterey": "USGS/CSUMB Offshore Monterey original class and bathymetry · northern overlap only"
+    "OffshoreMonterey": "USGS/CSUMB Offshore Monterey original class and bathymetry \u00b7 northern overlap only"
   },
   "source_bindings": {
     "bathymetry": [
@@ -221,7 +221,7 @@
     },
     "kelp": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "protected-areas": {
       "status": "partial",
@@ -261,7 +261,7 @@
     },
     "subsurface-ocean": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "sea-temperature": {
       "status": "partial",
@@ -273,19 +273,19 @@
     },
     "species-occurrence": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "catch-effort": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "charter-identity": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "ais-history": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "harbor-access": {
       "status": "partial",
@@ -293,15 +293,15 @@
     },
     "wind-ensemble": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "wave-ensemble": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     },
     "forecast-verification": {
       "status": "research",
-      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey–Point Sur rehearsal; missing data must remain unavailable."
+      "reason": "Bound regional source lead. Population, timeliness and location-specific applicability require the first Monterey\u2013Point Sur rehearsal; missing data must remain unavailable."
     }
   },
   "assets": {
@@ -328,7 +328,7 @@
     "Point Lobos",
     "Point Sur"
   ],
-  "coverage_note": "Monterey–Point Sur limited preview: nine bounded CDFW MPA polygons, scoped Central rules, local NWS marine zones and Monterey tide predictions. Northern-reference buoys and 6 km surface radar are not Point Sur or bottom observations; chlorophyll populated only 4 of 190 requested cells in the first rehearsal. Original Offshore Monterey grids overlap only the northern edge and lack reviewed chart-datum depth uncertainty. No qualified fishing marks, drifts or exports.",
+  "coverage_note": "Monterey\u2013Point Sur limited preview: nine bounded CDFW MPA polygons, scoped Central rules, local NWS marine zones and Monterey tide predictions. Northern-reference buoys and 6 km surface radar are not Point Sur or bottom observations; chlorophyll populated only 4 of 190 requested cells in the first rehearsal. Original Offshore Monterey grids overlap only the northern edge and lack reviewed chart-datum depth uncertainty. No qualified fishing marks, drifts or exports.",
   "landing_note": "Point Sur is exposed and this package has no verified fishing positions. Check exact MPAs and current conditions before planning a trip.",
   "jurisdiction_id": "california-central",
   "ecology_profile": "california-central",
@@ -341,19 +341,19 @@
   "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/monterey-point-sur/habitat-dynamics.json",
   "contexts": {
     "monterey-sur": {
-      "name": "Monterey Peninsula–Point Sur outer coast",
+      "name": "Monterey Peninsula\u2013Point Sur outer coast",
       "stations": {
         "tide": "9413450",
         "tide_name": "Monterey Harbor tide predictions",
         "tide_note": "NOAA Monterey tide predictions and observed water level are local harbor references, not entrance current or safe transit.",
         "airport": "KMRY",
-        "airport_name": "Monterey Regional Airport · land wind reference",
+        "airport_name": "Monterey Regional Airport \u00b7 land wind reference",
         "nearshore_buoy": "46236",
         "nearshore_buoy_name": "Monterey Canyon Outer wave buoy",
-        "nearshore_buoy_note": "36.759°N, 121.950°W, north of this region; a deeper-water wave reference, not Point Sur or harbor conditions.",
+        "nearshore_buoy_note": "36.759\u00b0N, 121.950\u00b0W, north of this region; a deeper-water wave reference, not Point Sur or harbor conditions.",
         "offshore_buoy": "46042",
         "offshore_buoy_name": "Monterey offshore buoy",
-        "offshore_buoy_note": "36.787°N, 122.408°W, far northwest; offshore wind and wave reference, not local reef or harbor conditions."
+        "offshore_buoy_note": "36.787\u00b0N, 122.408\u00b0W, far northwest; offshore wind and wave reference, not local reef or harbor conditions."
       },
       "marine_zones": {
         "coastal": "PZZ565",
@@ -374,7 +374,7 @@
         "id": "46236",
         "latitude": 36.759,
         "longitude": -121.95,
-        "name": "Monterey Canyon Outer · north-of-region wave reference",
+        "name": "Monterey Canyon Outer \u00b7 north-of-region wave reference",
         "variables": [
           "wave_height"
         ],
@@ -384,7 +384,7 @@
         "id": "46042",
         "latitude": 36.787,
         "longitude": -122.408,
-        "name": "Monterey offshore · distant wind/wave reference",
+        "name": "Monterey offshore \u00b7 distant wind/wave reference",
         "variables": [
           "wind_speed",
           "wave_height"

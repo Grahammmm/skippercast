@@ -51,7 +51,7 @@
   "boat": {
     "name": "2019 Parker 23 \u00b7 planning profile",
     "cruise_knots": 20,
-    "bottom_depth_limit_ft": 200
+    "bottom_depth_limit_ft": 300
   },
   "forecast_points": [
     {
