@@ -46,8 +46,24 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         pigeon = result["sectors"][0]
         self.assertNotIn("F00600", pigeon["noaa_filename_fine_grid_leads"])
         self.assertEqual(pigeon["noaa_original_300ft_depth_refutations"][0]["survey_id"], "F00600")
+        self.assertEqual({row["survey_id"] for row in pigeon["noaa_no_measured_cells_in_17_monterey_outlines"]},
+                         {"W00431", "W00433", "W00444", "W00447"})
         conception = result["sectors"][-1]
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
+
+    def test_measured_cell_invalidates_monterey_bag_refutation(self):
+        original = sources.read
+
+        def changed_report(path):
+            result = original(path)
+            if str(path).endswith("w00444-monterey-original-bag-overlap.json"):
+                result = copy.deepcopy(result)
+                result["outlines_with_measured_cells"] = 1
+            return result
+
+        with patch.object(sources, "read", side_effect=changed_report):
+            with self.assertRaisesRegex(ValueError, "overlap refutation failed"):
+                sources.build(ROOT)
 
     def test_new_deeper_waypoint_needs_explicit_qualification_receipt(self):
         original = coverage.read

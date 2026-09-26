@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "original-noaa-mllw-bag-overlap-with-17-monterey-research-outlines",
+  "claim": "no-measured-native-cells-inside-these-17-outlines",
+  "bindings": [
+    {
+      "survey_id": "W00431",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00431/BAG/W00431_MB_8m_MLLW_1of5.bag",
+      "bag_sha256": "fb847a0bd5de9f7a37f9a44af28de8b1eb69aa306b5c07118c981243c60cd025",
+      "review_path": "dist/data/w00431-monterey-original-bag-overlap.json"
+    },
+    {
+      "survey_id": "W00433",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_8m_MLLW_1of5.bag",
+      "bag_sha256": "bca447c4c28f8b0507e120e47c3961fece3ca1d0cd199e5a1d7c2e5a14771c86",
+      "review_path": "dist/data/w00433-monterey-original-bag-overlap.json"
+    },
+    {
+      "survey_id": "W00444",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00444/BAG/W00444_MB_8m_MLLW_1of5.bag",
+      "bag_sha256": "c6173744d347bf315a76ee1eb11564115603003e4bc610f3ecc06de9fed76b59",
+      "review_path": "dist/data/w00444-monterey-original-bag-overlap.json"
+    },
+    {
+      "survey_id": "W00447",
+      "bag_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00447/BAG/W00447_MB_16m_MLLW_1of4.bag",
+      "bag_sha256": "580fb77460dadbeae6d8323453822e7f67a5984c0b48bb70cd7e5b07ccaf96aa",
+      "review_path": "dist/data/w00447-monterey-original-bag-overlap.json"
+    }
+  ],
+  "limitations": "The claim applies only to the 17 published generalized USGS Monterey research outlines and the four named original BAG files. It does not refute any other part of these surveys or other BAG files, and is not a regional no-data finding."
+}

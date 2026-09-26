@@ -22,7 +22,11 @@ jobs:
       - name: Verify Monterey evidence joins and fail-closed source checks
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_monterey_300_closures tests.test_monterey_300_enc tests.test_monterey_300_review_matrix tests.test_monterey_vdatum_probes -v
+        run: python -m unittest tests.test_monterey_300_closures tests.test_monterey_300_enc tests.test_monterey_300_review_matrix tests.test_monterey_vdatum_probes tests.test_monterey_noaa_bag_overlap -v
+      - name: Verify four original NOAA BAGs still lack measured cells in the 17 Monterey outlines
+        env:
+          PYTHONPATH: src:.
+        run: python scripts/refresh_monterey_noaa_bag_overlap.py
       - name: Recheck NOAA Monterey regional VDatum model package and conditional probes
         env:
           PYTHONPATH: src:.
@@ -62,6 +66,7 @@ jobs:
             var/review/monterey-300-enc-review.json
             var/review/monterey-300-evidence-matrix.json
             var/review/monterey-300-conditional-vdatum-probes.json
+            var/review/monterey-bag-overlap/*-fresh-overlap.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

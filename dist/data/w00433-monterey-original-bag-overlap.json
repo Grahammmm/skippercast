@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-original-noaa-bag-cell-overlap",
+  "audited_at": "2026-09-26T17:24:49.055176+00:00",
+  "survey_id": "W00433",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00433/BAG/W00433_MB_8m_MLLW_1of5.bag",
+  "file_sha256": "bca447c4c28f8b0507e120e47c3961fece3ca1d0cd199e5a1d7c2e5a14771c86",
+  "metadata_sha256": "08ee7a8582d155e27ba7f6ea9dc6149d1003579afa460b6fc0a41a2d478d70e6",
+  "survey_start": "2017-09-13T21:21:02",
+  "survey_end": "2017-09-30T16:48:55",
+  "native_resolution_m": [
+    8.0,
+    8.0
+  ],
+  "vertical_datum": "MLLW",
+  "four_meter_habitat_resolution_gate_passed": false,
+  "uncertainty_type": "productUncert",
+  "outline_count": 17,
+  "outlines_with_measured_cells": 0,
+  "measured_native_cells_inside_research_outlines": 0,
+  "nominal_200_300ft_cells_below_cap_with_uncertainty_margin_inside_research_outlines": 0,
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "measured_native_cells": 0,
+      "nominal_200_300ft_cells": 0,
+      "nominal_200_300ft_cells_below_300ft_with_product_uncertainty_and_margin": 0
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Exact native cell overlap of generalized historic USGS research polygons only. No BAG cell has been paired to original rock-class pixels, current legal/chart access, or independent fish evidence. A zero overlap does not refute other parts of the survey or other NOAA surveys.",
+  "context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "pixel_review_sha256": "f88fe765a7068287cc7de089a3b2a0febafb464326a6948d8b2beda0a4b74fbc"
+}

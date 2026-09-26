@@ -2,6 +2,7 @@
 """Join official survey discovery receipts to Central Coast gap priorities."""
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -26,6 +27,7 @@ def build(root):
     metadata = read(root / "catalog/usgs-ds781-metadata-review.json")
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
     bindings = read(root / "catalog/central-native-depth-review-bindings.json")
+    monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
     if bindings.get("schema_version") != 1:
         raise ValueError("Invalid original depth review bindings")
     if discovery["health"]["status"] != "ok" or products["health"]["status"] != "ok":
@@ -34,6 +36,34 @@ def build(root):
         raise ValueError("USGS metadata receipt incomplete")
     discovery_rows = {s["sector_id"]: s for s in discovery["sectors"]}
     surveyed = {s["id"]: s for s in products["surveys"]}
+    if (monterey_bindings.get("scope") != "original-noaa-mllw-bag-overlap-with-17-monterey-research-outlines"
+            or monterey_bindings.get("claim") != "no-measured-native-cells-inside-these-17-outlines"):
+        raise ValueError("Unreviewed original Monterey BAG overlap claim")
+    original_pixel = read(root / "dist/data/monterey-original-300-pixel-review.json")
+    original_ids = {row["context_id"] for row in original_pixel["outlines"]}
+    original_context_sha = hashlib.sha256(
+        (root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_bytes()).hexdigest()
+    original_pixel_sha = hashlib.sha256(
+        (root / "dist/data/monterey-original-300-pixel-review.json").read_bytes()).hexdigest()
+    monterey_no_overlap = {}
+    for binding in monterey_bindings["bindings"]:
+        sid = binding["survey_id"]
+        path = binding["review_path"]
+        report = read(root / path)
+        if (sid in monterey_no_overlap
+                or binding["bag_url"] not in surveyed.get(sid, {}).get("products", {}).get("bag", [])
+                or report.get("scope") != "monterey-original-noaa-bag-cell-overlap"
+                or report.get("survey_id") != sid or report.get("source_url") != binding["bag_url"]
+                or report.get("file_sha256") != binding["bag_sha256"]
+                or report.get("context_sha256") != original_context_sha
+                or report.get("pixel_review_sha256") != original_pixel_sha
+                or report.get("outline_count") != len(original_ids)
+                or {row["context_id"] for row in report.get("outlines", [])} != original_ids
+                or report.get("outlines_with_measured_cells") != 0
+                or report.get("measured_native_cells_inside_research_outlines") != 0
+                or report.get("fishing_target") is not False):
+            raise ValueError(f"Original Monterey BAG overlap refutation failed for {sid}")
+        monterey_no_overlap[sid] = path
     depth_refuted = {}
     deeper_sector_refuted = {}
     for binding in bindings["bindings"]:
@@ -111,6 +141,10 @@ def build(root):
             "noaa_original_200_300ft_sector_refutations": [
                 {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
                 for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],
+            "noaa_no_measured_cells_in_17_monterey_outlines": [
+                {"survey_id": sid, "review_path": monterey_no_overlap[sid]}
+                for sid in original_bag if sid in monterey_no_overlap
+                and sector_id in ("pigeon-monterey", "monterey-sur")],
             "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted)),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],

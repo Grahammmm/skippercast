@@ -42,6 +42,24 @@
         }
       ],
       "noaa_original_200_300ft_sector_refutations": [],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [
+        {
+          "survey_id": "W00431",
+          "review_path": "dist/data/w00431-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00433",
+          "review_path": "dist/data/w00433-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00444",
+          "review_path": "dist/data/w00444-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00447",
+          "review_path": "dist/data/w00447-monterey-original-bag-overlap.json"
+        }
+      ],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -107,6 +125,24 @@
       "noaa_native_audit_refuted_fine_hint": [],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [
+        {
+          "survey_id": "W00431",
+          "review_path": "dist/data/w00431-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00433",
+          "review_path": "dist/data/w00433-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00444",
+          "review_path": "dist/data/w00444-monterey-original-bag-overlap.json"
+        },
+        {
+          "survey_id": "W00447",
+          "review_path": "dist/data/w00447-monterey-original-bag-overlap.json"
+        }
+      ],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -147,6 +183,7 @@
       "noaa_native_audit_refuted_fine_hint": [],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -188,6 +225,7 @@
       ],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13151",
         "W00431",
@@ -234,6 +272,7 @@
       ],
       "noaa_original_300ft_depth_refutations": [],
       "noaa_original_200_300ft_sector_refutations": [],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
         "H13151",
@@ -312,6 +351,7 @@
           ]
         }
       ],
+      "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
         "H13151",
