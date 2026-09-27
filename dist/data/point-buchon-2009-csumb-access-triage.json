@@ -1,0 +1,57 @@
+{
+  "cdfw_mpa_feature_count": 3,
+  "exportable": false,
+  "fishing_target": false,
+  "input_sha256": {
+    "archive": "4677c538c50a8bacb1e8ca61ed2cdcde5aa9259143f27fe16c146e54d8243a5c",
+    "character": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+    "enc": "9abc8f93cef41118834efe5b9fbee399528f41e1d4c69adc4e93e38c1a2cdeae",
+    "federal": "4e20019af26f8af74060e499b298cc97aab3d439aaa98b3326c434c9b4b3a28a",
+    "mpas": "2407add0f290ef9f478f00577b575406493f1449c35dd288fc96af2c75f173aa"
+  },
+  "limitations": [
+    "Each 100 m block is a research bin of 2009 measured source-datum depth and nominally overlaid 2008 hard/rugose class, not an exact rock outline.",
+    "The 100 m margin is a conservative GIS triage radius, not a validated positioning, drift or safe-transit buffer.",
+    "CDFW MPA, NOAA GEA and 18 ENC danger-layer queries are partial screens. Security areas, all chart features, current species rules, full approach/drift/return routes and actual boat conditions remain unchecked.",
+    "NAVD88-to-MLLW per-cell conversion, upper product TPU, cross-survey registration and public reuse rights remain unresolved. A clear partial screen is not fishing permission or a rank."
+  ],
+  "noaa_enc_danger_feature_count": 1062,
+  "noaa_enc_query_layers": 18,
+  "noaa_gea_feature_count": 10,
+  "official_geometry_sha256": {
+    "cdfw_mpas": "be8ed81a55f05fa6344aff57bab4d5ff9ff6c9d0cfb608cd2e8dcddde320a938",
+    "noaa_enc_dangers": "fbf2368c2f0d1fc84e18e0357e4bc7ad2ff9b43fe16086e5c1f7842852454040",
+    "noaa_federal_geas": "7f97a777f7afd62fc5a11f2bf08862202470c233927fb4b03cc3302eb8c48be0"
+  },
+  "qualified_waypoints": 0,
+  "research_grid_m": 100,
+  "review_margin_m": 100,
+  "schema_version": 1,
+  "scope": "point-buchon-2009-csumb-original-100m-access-triage",
+  "source_checked_at": {
+    "cdfw_mpa": "2026-09-27T02:11:48.140370+00:00",
+    "noaa_enc": "2026-09-27T02:11:53.196976+00:00",
+    "noaa_federal": "2026-09-27T02:11:47.162361+00:00"
+  },
+  "source_urls": {
+    "cdfw_mpa": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.02%2C35.1%2C-120.79%2C35.33&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson",
+    "noaa_enc": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+    "noaa_federal": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer"
+  },
+  "source_vertical_datum": "NAVD88 Geoid03, not chart-qualified MLLW",
+  "totals": {
+    "200-250ft_2m_cells": 73331,
+    "250-300ft_2m_cells": 13351,
+    "250-300ft_5m_cells": 575,
+    "all_three_clear_margin_blocks": 173,
+    "all_three_clear_margin_hard_cell_area_m2": 360203,
+    "blocks": 181,
+    "charted_danger_margin_blocks": 0,
+    "charted_danger_margin_hard_cell_area_m2": 0,
+    "gea_margin_blocks": 0,
+    "gea_margin_hard_cell_area_m2": 0,
+    "mpa_margin_blocks": 8,
+    "mpa_margin_hard_cell_area_m2": 900,
+    "nominal_hard_rugose_cell_area_m2": 361103
+  }
+}

@@ -131,6 +131,7 @@ def build(root):
     buchon_beams_path = "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json"
     buchon_caris_path = "dist/data/point-buchon-2007-caris-prefix-lead.json"
     buchon_2009_path = "dist/data/point-buchon-2009-csumb-original-overlap.json"
+    buchon_2009_access_path = "dist/data/point-buchon-2009-csumb-access-triage.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -163,6 +164,7 @@ def build(root):
     buchon_beams = load(root, buchon_beams_path)
     buchon_caris = load(root, buchon_caris_path)
     buchon_2009 = load(root, buchon_2009_path)
+    buchon_2009_access = load(root, buchon_2009_access_path)
     if (buchon_2009.get("scope") != "point-buchon-2009-csumb-original-products-vs-2008-usgs-character"
             or buchon_2009.get("inner_grid_survey_year") != 2009
             or buchon_2009.get("inner_grid_native_vertical_datum") != "NAVD88 Geoid03 (inner original processing metadata)"
@@ -173,6 +175,14 @@ def build(root):
             or buchon_2009.get("reuse_rights_resolved") is not False
             or buchon_2009.get("qualified_waypoints") != 0):
         raise ValueError("Original 2009 CSUMB Block A3 research evidence changed")
+    access_counts = buchon_2009_access.get("totals", {})
+    if (access_counts.get("blocks") != 181
+            or access_counts.get("mpa_margin_blocks") != 8
+            or access_counts.get("all_three_clear_margin_blocks") != 173
+            or access_counts.get("gea_margin_blocks") != 0
+            or access_counts.get("charted_danger_margin_blocks") != 0
+            or buchon_2009_access.get("qualified_waypoints") != 0):
+        raise ValueError("Original 2009 CSUMB access triage changed")
     if (buchon_caris.get("scope") != "point-buchon-2007-original-caris-prefix-acquisition-lead"
             or {row.get("survey_id") for row in buchon_caris.get("surveys", [])}
             != {"PointBuchon", "PointBuchon_Control"}
@@ -322,6 +332,7 @@ def build(root):
             receipts.append(buchon_beams_path)
             receipts.append(buchon_caris_path)
             receipts.append(buchon_2009_path)
+            receipts.append(buchon_2009_access_path)
             catalog_gap = row.get("point_buchon_noaa_catalog_gap")
             if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
                     or catalog_gap["fishing_target"] is not False):
@@ -369,6 +380,8 @@ def build(root):
                 stage = 'research-evidence'
             if sector_id == 'sur-san-simeon' and key == 'legal-chart-access':
                 stage = 'partial-release-evidence'
+            if sector_id == 'morro-conception' and key == 'legal-chart-access':
+                stage = 'partial-release-evidence'
             if key == "evidence-ladder":
                 stage = "implemented-hold"
             if key == "promotion-refresh":
@@ -395,7 +408,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_2009_access_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

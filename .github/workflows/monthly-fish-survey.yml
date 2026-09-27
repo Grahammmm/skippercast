@@ -116,7 +116,7 @@ jobs:
       - name: Install pinned raster readers
         run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2 pypdf==6.10.0
       - name: Verify original pair safeguards
-        run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_2009_csumb_products tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap tests.test_point_buchon_ncei_multibeam_lead tests.test_point_buchon_ncei_line_index tests.test_point_buchon_ncei_beam_overlap tests.test_point_buchon_caris_prefix tests.test_point_buchon_rov_access_blocks -v
+        run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_2009_csumb_products tests.test_point_buchon_2009_access_blocks tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap tests.test_point_buchon_ncei_multibeam_lead tests.test_point_buchon_ncei_line_index tests.test_point_buchon_ncei_beam_overlap tests.test_point_buchon_caris_prefix tests.test_point_buchon_rov_access_blocks -v
       - name: Recheck original USGS bathymetry and video-supervised character with published ROV
         run: >-
           python scripts/audit_point_buchon_original_pair.py --fetch
@@ -165,6 +165,15 @@ jobs:
           python -m scripts.collect_point_buchon_mpa_review --output var/review/point-buchon-cdfw-mpas.geojson
           python scripts/collect_noaa_groundfish_areas.py --output var/review/point-buchon-federal-areas.geojson
           python scripts/refresh_enc_hazards.py --scope point-buchon-open-reference-hard-context --output var/review/enc-hazards-point-buchon-open-reference.geojson
+      - name: Screen whole 2009 CSUMB / 2008 USGS research blocks with margin
+        run: >-
+          python scripts/audit_point_buchon_2009_access_blocks.py
+          --mpas var/review/point-buchon-cdfw-mpas.geojson
+          --federal var/review/point-buchon-federal-areas.geojson
+          --enc var/review/enc-hazards-point-buchon-open-reference.geojson
+          --private-blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
+          --output var/review/point-buchon-2009-csumb-access-triage.json
+          --verify dist/data/point-buchon-2009-csumb-access-triage.json
       - name: Screen whole historical ROV research blocks with margin
         run: >-
           python scripts/audit_point_buchon_rov_access_blocks.py
@@ -183,6 +192,7 @@ jobs:
           path: |
             var/review/point-buchon-original-paired-200-300ft-review.json
             var/review/point-buchon-2009-csumb-original-overlap.json
+            var/review/point-buchon-2009-csumb-access-triage.json
             var/review/point-buchon-2007-ncei-multibeam-lead.json
             var/review/point-buchon-2007-ncei-line-index.json
             var/review/point-buchon-2007-ncei-valid-beam-overlap.json
