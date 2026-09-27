@@ -82,9 +82,9 @@ SECTOR_OVERRIDES = {
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
-        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17, including previously uncovered camera outline 001. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
-        "next": "Locate NOAA's 2013 topo-bathy merge Full_DataInventory.xlsx, acoustic-source extent FGDB and vertical-accuracy raster/vector, then intersect actual entries with the Monterey cells. Obtain 1995/1998 tide, datum and TPU records for any contributing survey; resolve outline 040's discrepancy and seek a genuinely independent later measured survey.",
-        "hold": "The USGS 2 m grid is a resample of NOAA's 2013 multi-source merge, so agreement with an older source is not independent validation. Both older grids lack documented vertical datum and upper error; NOAA acoustic-source accuracy may be undefined. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200–300 ft depth is qualified.",
+        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic points inside all 17 outlines, including four historical rockfish-positive camera outlines. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
+        "next": "Map NOAA 2013 merge point_source_id values to its Full_DataInventory.xlsx and acoustic-source extent FGDB, then obtain the vertical-accuracy raster/vector and original surveys' tide, datum and TPU records. Resolve outline 040's 1995-vs-1998 discrepancy and seek a genuinely independent later measured survey. Only then attempt full-footprint MLLW depth qualification.",
+        "hold": "The NOAA acoustic points and USGS 2 m resample share the 2013 merge lineage; point presence is not independent validation, chart MLLW depth or an upper error bound. Both older grids lack documented vertical datum and upper error; NOAA acoustic-source accuracy may be undefined. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200–300 ft depth is qualified.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
