@@ -1,10 +1,33 @@
 {
   "candidate_accuracy_layer_obtained": false,
   "candidate_acoustic_source_extent_obtained": false,
-  "checked_at": "2026-09-27T12:51:08.963700+00:00",
+  "checked_at": "2026-09-27T12:59:16.033641+00:00",
   "fishing_target": false,
+  "full_archive": {
+    "copc_laz_objects": 8018,
+    "listing_sha256": "a59318c091bf404d3b4abc521ec15b3fb28562b9afb9a485047d06513fe8d330",
+    "objects": 16050,
+    "other_object_keys": [
+      "laz/geoid18/2612/2013_CA_TopoBathy_metadata.xml",
+      "laz/geoid18/2612/index.html",
+      "laz/geoid18/2612/metadata_2013_CA_TopoBathy.xml",
+      "laz/geoid18/2612/metadata_2013_CA_TopoBathyforHumans.html",
+      "laz/geoid18/2612/minmax_2013_CA_TopoBathy_m2612.csv",
+      "laz/geoid18/2612/stac/index.html",
+      "laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612.kmz",
+      "laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612_final_report.pdf",
+      "laz/geoid18/2612/supplemental/index.html",
+      "laz/geoid18/2612/tileindex_2013_CA_TopoBathy_m2612.gpkg",
+      "laz/geoid18/2612/tileindex_2013_CA_TopoBathy_m2612.zip",
+      "laz/geoid18/2612/urllist_2013_CA_TopoBathy_m2612.txt"
+    ],
+    "pages": 17,
+    "prefix": "laz/geoid18/2612/",
+    "requested_accuracy_inventory_or_acoustic_assets_found": [],
+    "stac_json_objects": 8020
+  },
   "limitations": [
-    "These are two NOAA-published supplemental prefixes, not a complete search of NOAA archives or every possible delivery location.",
+    "The 2612 full Geoid18 public distribution and two published supplemental prefixes are inspected, not every NOAA archive or delivery location.",
     "A filename match is a discovery lead only; it cannot qualify accuracy until its contents, footprint, units and source lineage are reviewed.",
     "The public 2013 DEM and COPC/LAS point distributions do not themselves supply the project-reported tiled vertical-accuracy layer or acoustic-source extent geodatabase.",
     "NOAA's source-reported RMSE and undefined cells are not conservative per-cell upper depth errors."
@@ -41,5 +64,5 @@
   "project_report": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612_final_report.pdf",
   "requested_accuracy_inventory_or_acoustic_assets_found": [],
   "schema_version": 1,
-  "scope": "noaa-2013-merge-m2612-published-supplemental-prefix-access"
+  "scope": "noaa-2013-merge-m2612-public-distribution-access"
 }

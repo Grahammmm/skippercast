@@ -30,8 +30,10 @@ def build(root):
     bindings = read(root / "catalog/central-native-depth-review-bindings.json")
     monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
     monterey_merge_assets = read(root / "dist/data/monterey-2013-merge-public-asset-access.json")
-    if (monterey_merge_assets.get("scope") != "noaa-2013-merge-m2612-published-supplemental-prefix-access"
+    if (monterey_merge_assets.get("scope") != "noaa-2013-merge-m2612-public-distribution-access"
             or len(monterey_merge_assets.get("listings", [])) != 2
+            or monterey_merge_assets.get("full_archive", {}).get("objects", 0) < 8000
+            or monterey_merge_assets["full_archive"].get("requested_accuracy_inventory_or_acoustic_assets_found")
             or monterey_merge_assets.get("candidate_accuracy_layer_obtained") is not False
             or monterey_merge_assets.get("candidate_acoustic_source_extent_obtained") is not False
             or monterey_merge_assets.get("fishing_target") is not False):
@@ -504,6 +506,7 @@ def build(root):
                 "receipt": "dist/data/monterey-2013-merge-public-asset-access.json",
                 "source_id_to_resolve": "12241",
                 "public_supplemental_objects_checked": sum(len(row["objects"]) for row in monterey_merge_assets["listings"]),
+                "public_full_distribution_objects_checked": monterey_merge_assets["full_archive"]["objects"],
                 "requested_accuracy_inventory_or_acoustic_assets_found": monterey_merge_assets["requested_accuracy_inventory_or_acoustic_assets_found"],
                 "next_gate": "Obtain NOAA's source-ID crosswalk, original source extents and accuracy/void products; then resolve survey datum and upper error on full research footprints",
                 "fishing_target": False,
