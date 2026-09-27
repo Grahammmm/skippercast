@@ -139,6 +139,11 @@ jobs:
           --fetch
           --output var/review/monterey-2009-centralmontereybay-valid-beam-review.json
           --verify dist/data/monterey-2009-centralmontereybay-valid-beam-review.json
+      - name: Recheck CSUMB producer metadata for the 2009 Monterey survey
+        run: >-
+          python scripts/audit_monterey_2009_producer_metadata.py
+          --output var/review/monterey-2009-producer-metadata-review.json
+          --verify dist/data/monterey-2009-producer-metadata-review.json
       - name: Recheck original 2009 beams against native USGS depth and character cells
         env:
           PYTHONPATH: src:.
@@ -158,7 +163,7 @@ jobs:
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4

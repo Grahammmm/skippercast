@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-2009-producer-general-metadata-review",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version1/metadata/MontereyPen_BigSur_CSMP_Metadata.txt",
+  "source_sha256": "bf9933a8d24c5a33c8465cf93efd4e0f6f2497236377e2fb1680071fd126e567",
+  "source_producer": "CSU Monterey Bay Seafloor Mapping Lab",
+  "original_survey": "Central Monterey Bay North/South 2009",
+  "documented_controls": {
+    "sonar": "Reson 7125, 200/400 kHz",
+    "navigation_attitude": "Applanix POS/MV 320 v4 with Cnav-enabled NAVCON 2050 GPS",
+    "nominal_vessel_position_accuracy_m": 2,
+    "tide_method_general": "KGPS altitude used to account for tidal fluctuations",
+    "sound_speed": "Applied Microsystems SVPlus profiles"
+  },
+  "not_established_by_general_metadata": [
+    "Which correction and vertical datum were applied to each selected processed GSF line",
+    "Output MLLW conversion, epoch, sign and local spatial separation",
+    "Achieved bottom-beam horizontal accuracy or source-to-camera registration",
+    "Per-beam or gridded upper total propagated depth uncertainty",
+    "An independent validation survey or fishable patch clearance"
+  ],
+  "mllw_depth_qualified": false,
+  "fishing_target": false,
+  "exportable": false
+}

@@ -25,6 +25,7 @@
     "dist/data/monterey-noaa2612-acoustic-point-support.json": "e2af525b0a07abe4e5e8a27d23e46c635474b4aa641a972da2286ea2b7fec864",
     "dist/data/monterey-17-ncei-trackline-leads.json": "0346169a45953302b601d2944e0a68c9b2ca68bbff76072efffc13cf2b6ea8ba",
     "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json": "c0105bb4de37695fb90daf552575248f163e4c1325302a1c973fd65ff600a103",
+    "dist/data/monterey-2009-producer-metadata-review.json": "9b20de08d0f6b3370c2505f484a92032b59c9543e5cdd99859875df71bbbf4e4",
     "dist/data/monterey-2009-beam-usgs-cell-screen.json": "c8ed95d23f926eb69923fe4eb788a2e5286dd87d9e6f8927cca6147e97473d9f",
     "dist/data/monterey-2009-beam-2010-video-proximity.json": "c5306e563d127814ce7e18a944147349b7e30dca059133a7b90a8eb245142d5e",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
@@ -263,7 +264,7 @@
       "sector_id": "monterey-sur",
       "source_review_priority_tier": 1,
       "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic samples inside all 17 outlines. Five original processed 2009 CentralMontereyBay GSF files have 314,362 valid beams inside priority outline 023 and 72,083 inside 046. Nearest native USGS 2 m cell joins put these beams over 16,524 and 2,651 distinct hard/rugose nominal-band cell centers inside the outlines, respectively, with 10,886 and 1,705 surviving a one-cell-neighborhood sensitivity screen. Archived 2010 camera transects have one rockfish-positive window in each area, but only one independent transect per area and variable positioning on the order of 10 m. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage there.",
-      "next_acquisition": "Obtain the 2009 CentralMontereyBay processing report and actual tide-zone/vertical-datum, horizontal registration and upper uncertainty records; trace original GSF line IDs to NOAA 2013 merge point_source_id and per-cell accuracy before claiming independence. Resolve outline 040's 1995-vs-1998 discrepancy and seek genuinely independent later measured coverage and in-situ substrate/fish observations. Only then attempt full-footprint MLLW depth qualification.",
+      "next_acquisition": "The CSUMB general metadata confirms KGPS tide compensation but not the selected GSF line output datum. Obtain the 2009 CentralMontereyBay processing report and actual tide-zone/vertical-datum, horizontal registration and upper uncertainty records; trace original GSF line IDs to NOAA 2013 merge point_source_id, Full_DataInventory.xlsx and per-cell accuracy before claiming independence. Resolve outline 040's 1995-vs-1998 discrepancy and seek genuinely independent later measured coverage and in-situ substrate/fish observations. Only then attempt full-footprint MLLW depth qualification.",
       "limiting_evidence": "Original processed 2009 beams prove spatial sounding support at two research outlines and align closely with native USGS 2 m cells, but the GSF processing record says TIDAL_DATUM=UNKNOWN. Close agreement may be shared lineage, not independent validation. The one-cell neighborhood is not an upper horizontal error bound; interpreted class 3 is not a photographed rock or fish. Beam error arrays are not a conservative product-depth bound. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200\u2013300 ft depth is qualified.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
@@ -279,6 +280,7 @@
         "dist/data/monterey-2009-beam-2010-video-proximity.json",
         "dist/data/monterey-2009-beam-usgs-cell-screen.json",
         "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json",
+        "dist/data/monterey-2009-producer-metadata-review.json",
         "dist/data/monterey-2013-merge-lineage-gap.json",
         "dist/data/monterey-noaa2612-acoustic-point-support.json"
       ],
