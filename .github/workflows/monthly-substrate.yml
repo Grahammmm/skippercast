@@ -42,14 +42,6 @@ jobs:
           --fetch
           --output var/review/monterey-17-bluetopo-contributor-pixels.json
           --verify dist/data/monterey-17-bluetopo-contributor-pixels.json
-      - name: Recheck original 1995 USGS multibeam research overlap
-        env:
-          PYTHONPATH: src:.
-        run: >-
-          python scripts/audit_mont95_monterey_original_overlap.py
-          --fetch
-          --output var/review/monterey-1995-original-multibeam-overlap.json
-          --verify dist/data/monterey-1995-original-multibeam-overlap.json
       - name: Recheck NOAA Monterey regional VDatum model package and conditional probes
         env:
           PYTHONPATH: src:.
@@ -92,7 +84,45 @@ jobs:
             var/review/monterey-bag-overlap/*-fresh-overlap.json
             var/review/monterey-17-noaa-bag-catalog-gap.json
             var/review/monterey-17-bluetopo-contributor-pixels.json
+          retention-days: 30
+  monterey-original-multibeam-crosssurvey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned original-grid reader
+        run: python -m pip install -r requirements-survey.txt
+      - name: Recheck original 1995 USGS multibeam research overlap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_mont95_monterey_original_overlap.py
+          --fetch
+          --output var/review/monterey-1995-original-multibeam-overlap.json
+          --verify dist/data/monterey-1995-original-multibeam-overlap.json
+      - name: Recheck original 1998 USGS EM300 research overlap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_em300_monterey_original_overlap.py
+          --fetch
+          --output var/review/monterey-1998-original-em300-overlap.json
+          --verify dist/data/monterey-1998-original-em300-overlap.json
+      - name: Verify both historical source receipts keep fishing release gates closed
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap -v
+      - name: Upload historical source receipts even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monterey-original-multibeam-crosssurvey
+          path: |
             var/review/monterey-1995-original-multibeam-overlap.json
+            var/review/monterey-1998-original-em300-overlap.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

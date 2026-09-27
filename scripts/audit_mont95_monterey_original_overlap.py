@@ -71,22 +71,27 @@ def rounded(value):
     return round(float(value), 3)
 
 
+def ensure_newer(root, fetch=False):
+    newer = root / "var/review/Bathymetry_2m_OffshoreMonterey.zip"
+    if fetch and not newer.exists():
+        newer.parent.mkdir(parents=True, exist_ok=True)
+        request = urllib.request.Request(NEWER_URL, headers={"User-Agent": "SkipperCast-source-audit/1.0"})
+        with urllib.request.urlopen(request, timeout=300) as response:
+            data = response.read(250_000_001)
+        if len(data) > 250_000_000 or hashlib.sha256(data).hexdigest() != NEWER_SHA256:
+            raise ValueError("Recent original USGS archive changed or oversized")
+        newer.write_bytes(data)
+    if hashlib.sha256(newer.read_bytes()).hexdigest() != NEWER_SHA256:
+        raise ValueError("Recent original USGS archive changed")
+    return newer
+
+
 def audit(root, fetch=False):
     cache = root / "var/review/mont95-original"
     verify_sources(cache, fetch)
     matrix_path = root / "dist/data/monterey-300-source-evidence-matrix.json"
     context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-    newer = root / "var/review/Bathymetry_2m_OffshoreMonterey.zip"
-    if fetch and not newer.exists():
-        newer.parent.mkdir(parents=True, exist_ok=True)
-        request = urllib.request.Request(NEWER_URL, headers={"User-Agent": "SkipperCast-source-audit/1.0"})
-        with urllib.request.urlopen(request, timeout=180) as response:
-            data = response.read(100_000_001)
-        if len(data) > 100_000_000 or hashlib.sha256(data).hexdigest() != NEWER_SHA256:
-            raise ValueError("Recent original USGS archive changed or oversized")
-        newer.write_bytes(data)
-    if hashlib.sha256(newer.read_bytes()).hexdigest() != NEWER_SHA256:
-        raise ValueError("Recent original USGS archive changed")
+    newer = ensure_newer(root, fetch)
     matrix = json.loads(matrix_path.read_text())
     context = json.loads(context_path.read_text())
     if matrix.get("outline_count") != 17 or len(matrix["review_order"]) != 17:

@@ -82,9 +82,9 @@ SECTOR_OVERRIDES = {
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
-        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 multibeam has populated 5 m cells in 14/17 research outlines, while no NOS BAG-catalog leads overlap the outlines and BlueTopo's nominal band has only three measured pixels from 1933",
-        "next": "Request the original 1995 multibeam tide, vertical-datum, navigation and sounding-uncertainty records, plus the 2016 composite source-line crosswalk and upper error; resolve the large discrepancy on outline 040. Test any genuinely independent measured survey against all class pixels before a depth gate can pass.",
-        "hold": "The 1995 grid lacks a documented vertical datum or upper error, its independence from the 2016 composite is unproven, and outline 040 has a large mismatch. No MLLW depth plus conservative upper uncertainty is qualified.",
+        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17, including previously uncovered camera outline 001. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
+        "next": "Request original 1995 and 1998 tide, vertical-datum, navigation and sounding-uncertainty records, plus the 2016 composite source-line crosswalk and upper error. Resolve 1995 versus 1998 disagreement on outline 040; seek a genuinely independent later measured survey on the camera-supported cells.",
+        "hold": "Both older grids lack documented vertical datum and upper error; independence from the 2016 composite is unproven. The 1998 cells on camera outline 001 are nominally shallower than 200 ft, and outline 040's older sources disagree. No conservative MLLW 200–300 ft depth is qualified.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
@@ -140,6 +140,7 @@ def build(root):
     monterey_bag_gap_path = "dist/data/monterey-17-noaa-bag-catalog-gap.json"
     monterey_bluetopo_path = "dist/data/monterey-17-bluetopo-contributor-pixels.json"
     monterey_1995_path = "dist/data/monterey-1995-original-multibeam-overlap.json"
+    monterey_1998_path = "dist/data/monterey-1998-original-em300-overlap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -276,6 +277,17 @@ def build(root):
             or monterey_1995.get("independence_from_2016_composite_established") is not False
             or monterey_1995.get("fishing_target") is not False):
         raise ValueError("Monterey 1995 original-source research status changed")
+    monterey_1998 = load(root, monterey_1998_path)
+    if (monterey_1998.get("scope") != "monterey-1998-original-em300-research-overlap"
+            or monterey_1998.get("outlines_reviewed") != 17
+            or monterey_1998.get("outlines_with_original_cells") != 7
+            or monterey_1998.get("rockfish_camera_positive_outlines_with_original_cells") != 1
+            or monterey_1998.get("previously_uncovered_camera_outline_001", {}).get("nominal_200_300ft_cells_unknown_datum") != 0
+            or monterey_1998.get("original_vertical_datum_documented") is not False
+            or monterey_1998.get("original_upper_vertical_error_documented") is not False
+            or monterey_1998.get("independence_from_2016_composite_established") is not False
+            or monterey_1998.get("fishing_target") is not False):
+        raise ValueError("Monterey 1998 EM300 original-source research status changed")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -469,6 +481,7 @@ def build(root):
             receipts.append(monterey_bag_gap_path)
             receipts.append(monterey_bluetopo_path)
             receipts.append(monterey_1995_path)
+            receipts.append(monterey_1998_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -590,7 +603,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

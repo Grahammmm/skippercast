@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "usgs-monterey-1998-em300-original",
+  "name": "USGS 1998 EM300 original 5 m Monterey Canyon–Point Sur grids",
+  "region_ids": ["santa-cruz-monterey-bay", "monterey-point-sur"],
+  "sector_ids": ["monterey-sur"],
+  "need_ids": ["bathymetry"],
+  "producer": {
+    "name": "U.S. Geological Survey; 1998 EM300 survey A4-98-MB",
+    "url": "https://pubs.usgs.gov/of/2001/0179/"
+  },
+  "documentation_url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+  "access_url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/sgf5g/",
+  "access_status": "accessible",
+  "variables": ["bathymetry_elevation"],
+  "units": {"bathymetry_elevation": "m; vertical datum unspecified in the original metadata"},
+  "rights": {
+    "license": null,
+    "terms_url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-122.03259, 36.36070, -121.87569, 36.75134],
+    "resolution_m": 5,
+    "horizontal_crs": "NAD83 UTM zone 10N; original ArcInfo grids read as EPSG:26910",
+    "vertical_datum": null,
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T06:32:37+00:00",
+    "update_cadence": "Static historical grid; monthly byte-integrity and research-overlap review",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Official USGS Open-File Report 01-179 ArcInfo-grid file directory",
+    "raw_sha256": "6a67db6a766fc9df85f7be68054408b8b5140bf6362a44b56813b5f7a0e1a4ed",
+    "transformations": [
+      "Downloaded and SHA-256 pinned the complete MTSHLF5G and SGF5G ArcInfo grid members plus original metadata; original bytes stay in ignored research storage.",
+      "Masked populated 5 m cells under 17 generalized research outlines and paired their centers with the later original USGS 2 m depth grid; published aggregate counts and elevation differences only.",
+      "Kept all datum, uncertainty, independence, navigation and fishing release gates false."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+      "supports": "Official survey year, NAD83 UTM 10, four 5 m grid extents, original processing notes and research/navigation limitations."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/sgf5g/",
+      "supports": "Official downloadable original SGF5G grid with 972 valid 5 m cells in the formerly uncovered historical-camera research outline 001; none is nominally 200–300 ft in the source's undocumented vertical datum."
+    },
+    {
+      "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mtshlf5g/",
+      "supports": "Official downloadable original MTSHLF5G grid with populated research overlap north of SGF5G and a source comparison at outline 040."
+    }
+  ],
+  "limitations": [
+    "The original metadata do not declare a vertical datum or an upper vertical-error bound; native depths cannot qualify the 300 ft MLLW limit.",
+    "The later 2016 USGS composite may incorporate the same survey. Paired differences are not independent validation or total propagated uncertainty.",
+    "Only two of the four original EM300 grids were acquired because their published footprints touch the reviewed Monterey outlines; this is not a whole-coast survey inventory.",
+    "Historical camera windows and interpreted hard-bottom outlines do not establish a current catch site. The newly covered camera outline 001 already intersects bounded official MPA and ENC danger review layers; current rules and complete drift routes remain separate gates.",
+    "The source explicitly says it is not intended for navigation, and product-specific redistribution terms have not been reviewed."
+  ]
+}
