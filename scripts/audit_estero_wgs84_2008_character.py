@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import rasterio
 from rasterio.windows import Window, from_bounds
-from scipy.ndimage import binary_erosion
+from scipy.ndimage import binary_erosion, label
 from shapely.geometry import shape
 
 from scripts.audit_estero_wgs84_direct import ROOT, check_inputs, stable
@@ -124,7 +124,18 @@ def audit(blocks: dict, private: dict, receipt: dict, depth_zip: Path,
             for radius in RADII_M:
                 stable_class = np.zeros(selected_rows.size, dtype=bool)
                 stable_class[inside] = eroded[radius][local_rows[inside], local_cols[inside]]
-                c[f"rugose_class_stable_within_{radius}m_cell_centers"] += int(np.count_nonzero(rugged & stable_class))
+                stable_cells = rugged & stable_class
+                c[f"rugose_class_stable_within_{radius}m_cell_centers"] += int(np.count_nonzero(stable_cells))
+                if radius == 25 and np.any(stable_cells):
+                    # This is deliberately per block. Components crossing a block edge
+                    # are split, making the reported maximum a conservative lower bound.
+                    patch = np.zeros(cells.shape, dtype=bool)
+                    patch[selected_rows[stable_cells], selected_cols[stable_cells]] = True
+                    components, n_components = label(patch, structure=np.ones((3, 3), dtype=int))
+                    sizes = np.bincount(components[patch], minlength=n_components + 1)[1:]
+                    c["within_block_25m_stable_component_count"] += int(n_components)
+                    c["largest_within_block_25m_stable_component_cells"] = max(
+                        c["largest_within_block_25m_stable_component_cells"], int(sizes.max()))
     bands = {key: dict(sorted(values.items())) for key, values in sorted(summary.items())}
     for band in bands.values():
         for key in ("valid_original_source_cells", "nominal_200_300ft_cells"):
@@ -134,6 +145,8 @@ def audit(blocks: dict, private: dict, receipt: dict, depth_zip: Path,
             band.setdefault(name + "_cells", 0)
         for radius in RADII_M:
             band.setdefault(f"rugose_class_stable_within_{radius}m_cell_centers", 0)
+        band.setdefault("within_block_25m_stable_component_count", 0)
+        band.setdefault("largest_within_block_25m_stable_component_cells", 0)
     return {
         "schema_version": 1,
         "scope": "estero-wgs84-direct-vdatum-2008-independent-character-sensitivity",
@@ -160,6 +173,7 @@ def audit(blocks: dict, private: dict, receipt: dict, depth_zip: Path,
             "Each 100 m block uses a single VDatum center offset and an assumed coordinate epoch; this is not a cellwise chart-MLLW depth surface or its upper error bound.",
             "The 2008 and 2012 rasters have different survey/frame lineages; their achieved relative horizontal registration and seafloor change remain unresolved.",
             "The 10 m/25 m erosion tests concern 2008 class-pixel centers only. They are sensitivity distances, not measured cross-survey position error or full candidate-patch clearance.",
+            "Connected 25 m-stable cells are grouped within each separate 100 m research block; groups crossing block boundaries are split and the largest size is only a lower bound for nominal class continuity, not surveyed rock area.",
             "USGS class 3 is a video-supervised historical interpretation, not an independent 2012 rock survey or a fish-presence estimate.",
             "Only aggregate counts leave the private block workspace; no coordinates, spot ranks or exports are approved.",
         ],

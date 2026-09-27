@@ -99,7 +99,7 @@ SECTOR_OVERRIDES = {
     "cambria-morro": {
         "lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples and a native-cell join to independent 2008 video-supervised character",
         "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration. Seek a different independent video/grab survey on the 60 research blocks: the original C0212SC camera observations are all more than 250 m away. A bounded NOAA NOS BAG catalog query returned no lead over those blocks; prioritize the original USGS processing record while rechecking the catalog monthly. Then complete legal and route screens.",
-        "hold": "The direct WGS84/class join has 718 deeper class-3 cell centers stable under a 25 m class-only sensitivity test, but their connected patch geometry is unknown. Block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
+        "hold": "The direct WGS84/class join has 718 deeper class-3 cell centers stable under a 25 m class-only sensitivity test. Their largest within-block connected group is 325 native 2 m cells (1,300 m² nominal), not a validated fishable reef; groups crossing block edges may be split. Block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
         "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
@@ -622,6 +622,8 @@ def build(root):
             or deep_estero.get('rugose_class_stable_within_25m_cell_centers') != 718
             or estero_direct_character.get('source_product_upper_uncertainty_verified') is not False
             or estero_direct_character.get('cross_survey_horizontal_registration_bounded') is not False
+            or deep_estero.get('within_block_25m_stable_component_count') != 11
+            or deep_estero.get('largest_within_block_25m_stable_component_cells') != 325
             or estero_direct_character.get('qualified_waypoints') != 0
             or estero_direct_character.get('fishing_target') is not False):
         raise ValueError('Original Estero direct-frame character sensitivity changed')
@@ -701,6 +703,7 @@ def build(root):
                     or character["nominal_class3_cells"] != sum(
                         band["hard_rugose_cells"] for band in estero_direct_character["by_prior_research_band"].values())
                     or character["class3_cells_stable_within_25m"] != 718
+                    or character["largest_within_block_25m_stable_component_cells"] != 325
                     or character["fishing_target"] is not False
                     or character["exportable"] is not False):
                 raise ValueError("Estero independent-class sensitivity queue changed")

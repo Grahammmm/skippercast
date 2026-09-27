@@ -28,6 +28,10 @@ class EsteroWgs84CharacterTest(unittest.TestCase):
             self.assertLessEqual(band["rugose_class_stable_within_10m_cell_centers"],
                                  band["hard_rugose_cells"])
             self.assertLessEqual(band["hard_rugose_cells"], band["nominal_200_300ft_cells"])
+            self.assertLessEqual(band["largest_within_block_25m_stable_component_cells"],
+                                 band["rugose_class_stable_within_25m_cell_centers"])
+            if band["within_block_25m_stable_component_count"] == 0:
+                self.assertEqual(band["largest_within_block_25m_stable_component_cells"], 0)
 
     def test_circle_uses_native_two_meter_cell_centers(self):
         ten = disk(10)

@@ -623,6 +623,9 @@ def build(root):
                 "class3_cells_stable_within_25m": sum(
                     band["rugose_class_stable_within_25m_cell_centers"] for band in
                     estero_direct_character["by_prior_research_band"].values()),
+                "largest_within_block_25m_stable_component_cells": max(
+                    band["largest_within_block_25m_stable_component_cells"] for band in
+                    estero_direct_character["by_prior_research_band"].values()),
                 "release_status": "nominal-block-center-datum-and-unbounded-registration-hold",
                 "fishing_target": False,
                 "exportable": False,

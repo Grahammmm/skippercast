@@ -4,7 +4,7 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "b42bab90e944135d47494471da129f5fc7f688eb5685ea0e1a23501cf49a0bba",
+    "dist/data/central-source-acquisition-queue.json": "615bdcffdad1941f57ac535581796c71f2049b17ca5bfcd1c7858b953a078838",
     "dist/data/central-coverage-ledger-v1.json": "5fd791f7e954e44dec28963085a20aec01642ba58f870c182445363af9d82266",
     "dist/data/point-conception-original-bag-200-300ft-gap.json": "3f88eac95f0d3ea0d96a85f522a18f46c6b06f3bb08d1c2a954cf5af25d42d54",
     "dist/data/point-conception-original-bag-depth-ladder.json": "e72e347d576f60c9d636cfccf5f0fccf44d2c98cf19ed636803124b6fb4b131d",
@@ -43,7 +43,7 @@
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
     "dist/data/estero-wgs84-direct-vdatum-review.json": "12bdc1257618b3287eb402a958c2e513b73256724809a382b95ba53407afc0f3",
-    "dist/data/estero-wgs84-2008-character-sensitivity.json": "c66c2eb28e01dba3014d372b574a70d74252875186156767e088145ff0596efe",
+    "dist/data/estero-wgs84-2008-character-sensitivity.json": "565c4dd3948e373f48ab6056c3ac0a7d74a501b8d99b2b5b1ac1e1544a99623a",
     "dist/data/estero-noaa-bag-catalog-gap.json": "def92911e54db1f34c843697aafd00cacd0ad3dde775e79fda9501c146a6cf13",
     "dist/data/estero-2012-public-release-inventory.json": "4ba445ae24d1baccc7f8ea26a96599bc7172b6c3847a29f94819f8f9b36e0514",
     "dist/data/estero-original-camera-block-gap.json": "82ffe02b15adc95bff0d4f1f9fb42df494c376084ccbacebaa72a1418b1be424",
@@ -544,7 +544,7 @@
       "source_review_priority_tier": 1,
       "reviewed_lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples and a native-cell join to independent 2008 video-supervised character",
       "next_acquisition": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration. Seek a different independent video/grab survey on the 60 research blocks: the original C0212SC camera observations are all more than 250 m away. A bounded NOAA NOS BAG catalog query returned no lead over those blocks; prioritize the original USGS processing record while rechecking the catalog monthly. Then complete legal and route screens.",
-      "limiting_evidence": "The direct WGS84/class join has 718 deeper class-3 cell centers stable under a 25 m class-only sensitivity test, but their connected patch geometry is unknown. Block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
+      "limiting_evidence": "The direct WGS84/class join has 718 deeper class-3 cell centers stable under a 25 m class-only sensitivity test. Their largest within-block connected group is 325 native 2 m cells (1,300 m\u00b2 nominal), not a validated fishable reef; groups crossing block edges may be split. Block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",

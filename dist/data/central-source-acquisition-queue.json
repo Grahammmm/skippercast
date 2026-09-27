@@ -653,6 +653,7 @@
         "receipt": "dist/data/estero-wgs84-2008-character-sensitivity.json",
         "nominal_class3_cells": 25165,
         "class3_cells_stable_within_25m": 718,
+        "largest_within_block_25m_stable_component_cells": 325,
         "release_status": "nominal-block-center-datum-and-unbounded-registration-hold",
         "fishing_target": false,
         "exportable": false
