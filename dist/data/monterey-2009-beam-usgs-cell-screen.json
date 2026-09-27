@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-2009-original-beams-to-usgs-native-cell-screen",
+  "original_beam_receipt_sha256": "c0105bb4de37695fb90daf552575248f163e4c1325302a1c973fd65ff600a103",
+  "original_usgs_outline_matrix_sha256": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+  "usgs_bathymetry_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+  "usgs_character_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+  "method": "Original processed valid GSF beams projected to nearest native USGS 2 m bathymetry cell; original seafloor character resampled nearest-neighbor to that grid. 3x3 is a one-cell sensitivity diagnostic, not a positional confidence interval.",
+  "outlines": {
+    "023": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "source_valid_beams_inside_outline": 314362,
+      "source_valid_beams_nearest_usgs_cell_center_inside_outline": 313589,
+      "source_valid_beams_on_populated_usgs_depth_cells": 314362,
+      "source_valid_beams_on_usgs_navd88_200_300ft_cells": 314362,
+      "source_valid_beams_on_paired_usgs_class3_200_300ft_cells": 230479,
+      "source_valid_beams_on_3x3_stable_class3_band_cells": 154080,
+      "unique_usgs_2m_cells_under_source_beams": 22864,
+      "unique_usgs_2m_cell_centers_inside_outline_under_source_beams": 22461,
+      "unique_paired_class3_band_cells_under_source_beams": 16524,
+      "unique_3x3_stable_class3_band_cells_under_source_beams": 10886,
+      "unknown_datum_gsf_minus_usgs_navd88_depth_median_m": -0.01,
+      "unknown_datum_gsf_minus_usgs_navd88_depth_p95_absolute_m": 0.776,
+      "mllw_depth_qualified": false,
+      "horizontal_registration_qualified": false,
+      "independent_substrate_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    "046": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "source_valid_beams_inside_outline": 72083,
+      "source_valid_beams_nearest_usgs_cell_center_inside_outline": 71835,
+      "source_valid_beams_on_populated_usgs_depth_cells": 72083,
+      "source_valid_beams_on_usgs_navd88_200_300ft_cells": 72083,
+      "source_valid_beams_on_paired_usgs_class3_200_300ft_cells": 53015,
+      "source_valid_beams_on_3x3_stable_class3_band_cells": 35686,
+      "unique_usgs_2m_cells_under_source_beams": 3754,
+      "unique_usgs_2m_cell_centers_inside_outline_under_source_beams": 3639,
+      "unique_paired_class3_band_cells_under_source_beams": 2651,
+      "unique_3x3_stable_class3_band_cells_under_source_beams": 1705,
+      "unknown_datum_gsf_minus_usgs_navd88_depth_median_m": -0.02,
+      "unknown_datum_gsf_minus_usgs_navd88_depth_p95_absolute_m": 0.839,
+      "mllw_depth_qualified": false,
+      "horizontal_registration_qualified": false,
+      "independent_substrate_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "next_acquisition": "Resolve 2009 source tide/datum and output TPU, source-to-2013-merge lineage, horizontal registration and independent substrate/fish observations before full-footprint MLLW and legal/route screening.",
+  "limitations": [
+    "GSF TIDAL_DATUM=UNKNOWN; its depths are not directly comparable to USGS NAVD88 or chart MLLW. The reported difference is diagnostic only, not a survey error estimate.",
+    "USGS 2 m bathymetry is a NOAA 2013 merge resample and may reuse the 2009 GSF survey; this pairing is not independent corroboration.",
+    "USGS seafloor character is an interpreted class with unverified source-to-GSF registration; nearest and 3x3 matches do not prove a rock pile, boulder size or fish presence.",
+    "No chart-depth, uncertainty, MPA/legal, ENC, access-route or current catch gate is cleared. No source beam positions or fishing coordinates are published."
+  ],
+  "checked_at": "2026-09-27T08:41:06.453449+00:00"
+}

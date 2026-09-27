@@ -101,7 +101,7 @@ def query_file_layer(root, ident, geometry, fetch):
     return sorted(processed), hashlib.sha256(raw).hexdigest()
 
 
-def decode_line(path, inf, fnv, spec, outlines):
+def decode_line(path, inf, fnv, spec, outlines, collect=None):
     geod = Geod(ellps="WGS84")
     counts = Counter()
     navigation = []
@@ -205,6 +205,8 @@ def decode_line(path, inf, fnv, spec, outlines):
                     values[ident]["depth"].append(selected)
                     values[ident]["v_error"].append(v_error[inside])
                     values[ident]["h_error"].append(h_error[inside])
+                    if collect is not None:
+                        collect(ident, beam_lon[inside], beam_lat[inside], selected)
     if version != "GSF-v03.06" or counts["ping_records"] < 100:
         raise ValueError("GSF file lacks full ping or version records")
     required = {"TIDE_COMPENSATED=YES", "TIDAL_DATUM=UNKNOWN", "GEOID=WGS-84"}

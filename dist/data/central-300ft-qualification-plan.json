@@ -25,6 +25,7 @@
     "dist/data/monterey-noaa2612-acoustic-point-support.json": "e2af525b0a07abe4e5e8a27d23e46c635474b4aa641a972da2286ea2b7fec864",
     "dist/data/monterey-17-ncei-trackline-leads.json": "0346169a45953302b601d2944e0a68c9b2ca68bbff76072efffc13cf2b6ea8ba",
     "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json": "c0105bb4de37695fb90daf552575248f163e4c1325302a1c973fd65ff600a103",
+    "dist/data/monterey-2009-beam-usgs-cell-screen.json": "c8ed95d23f926eb69923fe4eb788a2e5286dd87d9e6f8927cca6147e97473d9f",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
@@ -260,9 +261,9 @@
     {
       "sector_id": "monterey-sur",
       "source_review_priority_tier": 1,
-      "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic samples inside all 17 outlines. Five original processed 2009 CentralMontereyBay GSF files have 314,362 valid beams inside priority outline 023 and 72,083 inside 046, all in the nominal 200\u2013300 ft band. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage there.",
-      "next_acquisition": "Obtain the 2009 CentralMontereyBay processing report and actual tide-zone/vertical-datum, horizontal registration and upper uncertainty records; compare original beams to paired USGS 2 m cells and the 2013 merge source-ID inventory. Separately obtain the NOAA merge accuracy layer, resolve outline 040's 1995-vs-1998 discrepancy, and seek genuinely independent later measured coverage. Only then attempt full-footprint MLLW depth qualification.",
-      "limiting_evidence": "Original processed 2009 beams prove spatial sounding support at two research outlines, but the GSF processing record says TIDAL_DATUM=UNKNOWN. Beam error arrays are not a conservative product-depth bound, and beams may share the 2013 merge lineage with USGS 2 m bathymetry. Neither the merge samples nor older grids establish independent MLLW depth or an upper error. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200\u2013300 ft depth is qualified.",
+      "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic samples inside all 17 outlines. Five original processed 2009 CentralMontereyBay GSF files have 314,362 valid beams inside priority outline 023 and 72,083 inside 046. Nearest native USGS 2 m cell joins put these beams over 16,524 and 2,651 distinct hard/rugose nominal-band cell centers inside the outlines, respectively, with 10,886 and 1,705 surviving a one-cell-neighborhood sensitivity screen. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage there.",
+      "next_acquisition": "Obtain the 2009 CentralMontereyBay processing report and actual tide-zone/vertical-datum, horizontal registration and upper uncertainty records; trace original GSF line IDs to NOAA 2013 merge point_source_id and per-cell accuracy before claiming independence. Resolve outline 040's 1995-vs-1998 discrepancy and seek genuinely independent later measured coverage and in-situ substrate/fish observations. Only then attempt full-footprint MLLW depth qualification.",
+      "limiting_evidence": "Original processed 2009 beams prove spatial sounding support at two research outlines and align closely with native USGS 2 m cells, but the GSF processing record says TIDAL_DATUM=UNKNOWN. Close agreement may be shared lineage, not independent validation. The one-cell neighborhood is not an upper horizontal error bound; interpreted class 3 is not a photographed rock or fish. Beam error arrays are not a conservative product-depth bound. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200\u2013300 ft depth is qualified.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
@@ -274,6 +275,7 @@
         "dist/data/monterey-17-noaa-bag-catalog-gap.json",
         "dist/data/monterey-1995-original-multibeam-overlap.json",
         "dist/data/monterey-1998-original-em300-overlap.json",
+        "dist/data/monterey-2009-beam-usgs-cell-screen.json",
         "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json",
         "dist/data/monterey-2013-merge-lineage-gap.json",
         "dist/data/monterey-noaa2612-acoustic-point-support.json"
