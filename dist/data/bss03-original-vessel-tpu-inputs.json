@@ -1,0 +1,81 @@
+{
+  "checked_at": "2026-09-27T00:50:49.823162+00:00",
+  "depth_qualified": false,
+  "exportable": false,
+  "fishing_target": false,
+  "interpretation": "CARIS vessel files specify nominal input standard deviations. They do not provide the resulting sounding TPU, grid CUBE/BASE uncertainty, tide/vertical datum error, or final raster error bound.",
+  "line_to_configuration_assignment_verified": false,
+  "released_grid_upper_error_verified": false,
+  "schema_version": 1,
+  "scope": "bss03-original-vessel-tpu-inputs",
+  "source_bytes": 16727,
+  "source_sha256": "155c39f8e9343a9ed13b944181a61be34163025f616cc4c01e40314c754f85a3",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/ancillary/BSS_vesselconfig_caris.tar.gz",
+  "survey_or_cell_total_propagated_uncertainty_verified": false,
+  "vessel_configurations": [
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/22HaroldHeath.hvf",
+      "member_sha256": "7016de905f0d8e018e692d017ded87dbdaa75a23f87d5c0247ea2400f5d8c536",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/22HaroldHeath_PPK.hvf",
+      "member_sha256": "a059d65a0f5f2f1629fc1bc9b1309a727513dadb275805946b2fca98a0103b7c",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/42HaroldHeath.hvf",
+      "member_sha256": "e0479c1942b7bc6b120eb390de4bace4ab70cc8a6a31b8c8681a3aa32c9b8112",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/42HaroldHeath_PPK.hvf",
+      "member_sha256": "3e02ca6f2c690c5f54a78fe9781d90e850bc175954bd8a663a5bc218f0713ea2",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/45HaroldHeath.hvf",
+      "member_sha256": "6896999495947a2f4ae9b9d69f6b9f49a47266a659baf823f08c8bf120c42dff",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/45HaroldHeath_PPK.hvf",
+      "member_sha256": "4b2301a42ccda26b43ade01e7a4af56331624cc2832ef8a0bdc4f6ae720f8fff",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/7111HaroldHeath.hvf",
+      "member_sha256": "63e9560914561b1aaef62013313693803ee43512b2dc0db364789230f65b5890",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    },
+    {
+      "heave_input": 0.05,
+      "heave_percent_amplitude_input": 5.0,
+      "member": "VesselConfig/7111HaroldHeath_PPK.hvf",
+      "member_sha256": "95d0a5e9b8ce2e47539289f970b6dce916026909215a698dd0f8cfc29bdd6fd6",
+      "navigation_input": 0.1,
+      "navigation_timing_input": 0.001
+    }
+  ]
+}

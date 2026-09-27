@@ -634,6 +634,11 @@ jobs:
           python scripts/audit_bss03_caris_acquisition.py
           --output var/review/bss03-caris-acquisition-lead.json
           --verify dist/data/bss03-caris-acquisition-lead.json
+      - name: Recheck original Block 03 vessel TPU input settings
+        run: >-
+          python scripts/audit_bss03_vessel_settings.py
+          --output var/review/bss03-original-vessel-tpu-inputs.json
+          --verify dist/data/bss03-original-vessel-tpu-inputs.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@v4
@@ -646,6 +651,7 @@ jobs:
             var/review/bss02-accuracy-provenance.json
             var/review/bss02-video-grid-overlap.json
             var/review/bss03-video-grid-overlap.json
+            var/review/bss03-original-vessel-tpu-inputs.json
             var/review/bss03-cdfw-mpas.geojson
             var/review/bss03-federal-areas.json
             var/review/enc-hazards-bss03-original-camera.geojson

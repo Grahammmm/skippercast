@@ -24,6 +24,21 @@ TRACKS = (
     ("promotion-refresh", "Publish only after all release gates pass and retain rollback"),
 )
 
+# Region-independent acceptance contracts. A provider lead supplies evidence,
+# never an automatic pass; each proposed patch is reviewed against these tests.
+TRACK_PROTOCOLS = {
+    "native-cells": ("Original measured cells cover the entire candidate geometry after nodata masks; record survey, year, hash and native grid spacing.", "Monthly catalog discovery; rerun original-cell joins when source bytes change."),
+    "depth-uncertainty": ("Every cell plus positional buffer is within the legal depth band after documented chart-datum conversion and a conservative upper total-error bound.", "On original depth, processing, VDatum or regulation change."),
+    "independent-substrate": ("A separately observed substrate class overlaps the measured depth footprint within supported registration error; record class confusion and negative samples.", "On source classification or groundtruth update."),
+    "biological-observations": ("Species evidence is dated, open-reference and spatially linked at observation resolution, with method and detection limits stated.", "Quarterly observation discovery and reviewed imports."),
+    "sampling-scope": ("Store effort, zero detections, transect or trip unit, location error and protected/reference role; never count correlated windows as independent surveys.", "On every biological import."),
+    "current-fishery": ("Only consented dated trips with gear, depth, effort and failures contribute to effectiveness estimates; suppress individual tracks.", "After enough opt-in trips for held-out evaluation."),
+    "legal-chart-access": ("Current official rules clear the complete target, drift and approach/return geometry; chart hazards and security restrictions are separately reviewed.", "Before promotion and for each fishing date or authority update."),
+    "evidence-ladder": ("Research, depth/habitat-qualified, legal/chart-screened and field-verified states are disjoint in API, UI and exports.", "Every build and promotion."),
+    "calibration": ("Compare a preregistered species baseline with later held-out trips and coastline sectors, including zero-catch effort and abstentions.", "After new consenting trip cohorts."),
+    "promotion-refresh": ("A reviewed manifest passes all six release gates, reproducible build, geospatial regression and rollback snapshot before public ranks or exports change.", "Monthly source review; manual promotion only."),
+}
+
 RELEASE_GATES = (
     "native-cells", "depth-uncertainty", "independent-substrate",
     "biological-observations", "sampling-scope", "legal-chart-access",
@@ -106,6 +121,7 @@ def build(root):
     bss03_access_path = "dist/data/bss03-camera-access-triage.json"
     bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
+    bss03_vessel_path = "dist/data/bss03-original-vessel-tpu-inputs.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
@@ -118,6 +134,7 @@ def build(root):
     bss03_access = load(root, bss03_access_path)
     bss03_datum = load(root, bss03_datum_path)
     bss03_caris = load(root, bss03_caris_path)
+    bss03_vessel = load(root, bss03_vessel_path)
     estero_direct = load(root, estero_direct_path)
     estero_inventory = load(root, estero_inventory_path)
     buchon_ncei = load(root, buchon_ncei_path)
@@ -201,6 +218,14 @@ def build(root):
             or bss03_caris.get('cube_or_tpu_surface_confirmed') is not False
             or bss03_caris.get('depth_qualified') is not False):
         raise ValueError('Block03 datum or CARIS acquisition evidence changed')
+    if (bss03_vessel.get('scope') != 'bss03-original-vessel-tpu-inputs'
+            or len(bss03_vessel.get('vessel_configurations', [])) != 8
+            or bss03_vessel.get('line_to_configuration_assignment_verified') is not False
+            or bss03_vessel.get('survey_or_cell_total_propagated_uncertainty_verified') is not False
+            or bss03_vessel.get('released_grid_upper_error_verified') is not False
+            or bss03_vessel.get('depth_qualified') is not False
+            or bss03_vessel.get('fishing_target') is not False):
+        raise ValueError('Block03 original vessel uncertainty inputs changed')
     if (estero_direct.get('scope') != 'estero-2012-original-wgs84-direct-vdatum-research'
             or estero_direct.get('sample_count') != 60
             or estero_direct.get('source_product_upper_uncertainty_verified') is not False
@@ -238,6 +263,7 @@ def build(root):
             receipts.append(bss03_access_path)
             receipts.append(bss03_datum_path)
             receipts.append(bss03_caris_path)
+            receipts.append(bss03_vessel_path)
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             receipts.append(estero_direct_path)
@@ -333,8 +359,11 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
-        "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path)},
+        "release_gate_ids": list(RELEASE_GATES),
+        "tracks": [{"id": k, "requirement": v,
+                    "acceptance_test": TRACK_PROTOCOLS[k][0],
+                    "refresh_trigger": TRACK_PROTOCOLS[k][1]} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",
         "limitations": "This work queue does not certify a fishing spot, chartplotter coordinate, catch probability, safe navigation, or open season. Provider URLs are authoritative discovery entry points; only audited original cells and current rules can close gates.",

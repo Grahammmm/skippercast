@@ -17,7 +17,8 @@
     "dist/data/bss03-video-grid-overlap.json": "60c46229d5d20724ec2630320c6b3a527561abd68effbe52ae3419a4f3714124",
     "dist/data/bss03-camera-access-triage.json": "83dfc44bff60039347e7b519c5bc1061b9a93881c585692d5c57727989166f44",
     "dist/data/bss03-footprint-vdatum-diagnostic.json": "8b32b12cc112cb35cc2460daf4f7c19434c7d90d80dcbf31c8aa2f69b9c1a4e4",
-    "dist/data/bss03-caris-acquisition-lead.json": "88813ff6984b17e6c653a863631e6e999361ddb90d3940ebf672dbe6ceb2e9a0"
+    "dist/data/bss03-caris-acquisition-lead.json": "88813ff6984b17e6c653a863631e6e999361ddb90d3940ebf672dbe6ceb2e9a0",
+    "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1"
   },
   "release_gate_ids": [
     "native-cells",
@@ -30,43 +31,63 @@
   "tracks": [
     {
       "id": "native-cells",
-      "requirement": "Locate populated original cells over the full proposed patch"
+      "requirement": "Locate populated original cells over the full proposed patch",
+      "acceptance_test": "Original measured cells cover the entire candidate geometry after nodata masks; record survey, year, hash and native grid spacing.",
+      "refresh_trigger": "Monthly catalog discovery; rerun original-cell joins when source bytes change."
     },
     {
       "id": "depth-uncertainty",
-      "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch"
+      "requirement": "Establish MLLW depth plus horizontal and vertical error over the full patch",
+      "acceptance_test": "Every cell plus positional buffer is within the legal depth band after documented chart-datum conversion and a conservative upper total-error bound.",
+      "refresh_trigger": "On original depth, processing, VDatum or regulation change."
     },
     {
       "id": "independent-substrate",
-      "requirement": "Pair measured depth with surveyed substrate at supported resolution"
+      "requirement": "Pair measured depth with surveyed substrate at supported resolution",
+      "acceptance_test": "A separately observed substrate class overlaps the measured depth footprint within supported registration error; record class confusion and negative samples.",
+      "refresh_trigger": "On source classification or groundtruth update."
     },
     {
       "id": "biological-observations",
-      "requirement": "Link dated species observations at their actual spatial support"
+      "requirement": "Link dated species observations at their actual spatial support",
+      "acceptance_test": "Species evidence is dated, open-reference and spatially linked at observation resolution, with method and detection limits stated.",
+      "refresh_trigger": "Quarterly observation discovery and reviewed imports."
     },
     {
       "id": "sampling-scope",
-      "requirement": "Preserve effort, zero detections, method, and position uncertainty"
+      "requirement": "Preserve effort, zero detections, method, and position uncertainty",
+      "acceptance_test": "Store effort, zero detections, transect or trip unit, location error and protected/reference role; never count correlated windows as independent surveys.",
+      "refresh_trigger": "On every biological import."
     },
     {
       "id": "current-fishery",
-      "requirement": "Collect consented, dated trips with effort and unsuccessful drifts"
+      "requirement": "Collect consented, dated trips with effort and unsuccessful drifts",
+      "acceptance_test": "Only consented dated trips with gear, depth, effort and failures contribute to effectiveness estimates; suppress individual tracks.",
+      "refresh_trigger": "After enough opt-in trips for held-out evaluation."
     },
     {
       "id": "legal-chart-access",
-      "requirement": "Screen full patch, approach, drift, and return using current authorities"
+      "requirement": "Screen full patch, approach, drift, and return using current authorities",
+      "acceptance_test": "Current official rules clear the complete target, drift and approach/return geometry; chart hazards and security restrictions are separately reviewed.",
+      "refresh_trigger": "Before promotion and for each fishing date or authority update."
     },
     {
       "id": "evidence-ladder",
-      "requirement": "Keep research geometry separate from releasable targets and exports"
+      "requirement": "Keep research geometry separate from releasable targets and exports",
+      "acceptance_test": "Research, depth/habitat-qualified, legal/chart-screened and field-verified states are disjoint in API, UI and exports.",
+      "refresh_trigger": "Every build and promotion."
     },
     {
       "id": "calibration",
-      "requirement": "Evaluate future species-specific trips against a held-out baseline"
+      "requirement": "Evaluate future species-specific trips against a held-out baseline",
+      "acceptance_test": "Compare a preregistered species baseline with later held-out trips and coastline sectors, including zero-catch effort and abstentions.",
+      "refresh_trigger": "After new consenting trip cohorts."
     },
     {
       "id": "promotion-refresh",
-      "requirement": "Publish only after all release gates pass and retain rollback"
+      "requirement": "Publish only after all release gates pass and retain rollback",
+      "acceptance_test": "A reviewed manifest passes all six release gates, reproducible build, geospatial regression and rollback snapshot before public ranks or exports change.",
+      "refresh_trigger": "Monthly source review; manual promotion only."
     }
   ],
   "source_search_order": {
@@ -359,6 +380,7 @@
         "dist/data/bss03-camera-access-triage.json",
         "dist/data/bss03-caris-acquisition-lead.json",
         "dist/data/bss03-footprint-vdatum-diagnostic.json",
+        "dist/data/bss03-original-vessel-tpu-inputs.json",
         "dist/data/bss03-video-grid-overlap.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/csumb-bss-native-source-review.json"

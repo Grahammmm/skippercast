@@ -14,6 +14,9 @@ class QualificationPlanTests(unittest.TestCase):
         result = plan.build(ROOT)
         self.assertEqual(len(result["sectors"]), 6)
         self.assertEqual(len(result["tracks"]), 10)
+        self.assertEqual({track["id"] for track in result["tracks"]}, set(plan.TRACK_PROTOCOLS))
+        self.assertTrue(all(track["acceptance_test"] and track["refresh_trigger"]
+                            for track in result["tracks"]))
         self.assertEqual(len(result["release_gate_ids"]), 6)
         self.assertEqual({s["sector_id"] for s in result["sectors"]}, set(plan.SECTOR_OVERRIDES))
         for sector in result["sectors"]:
@@ -35,6 +38,7 @@ class QualificationPlanTests(unittest.TestCase):
         south_sur = next(s for s in result["sectors"] if s["sector_id"] == "sur-san-simeon")
         self.assertIn("dist/data/bss03-video-grid-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-camera-access-triage.json", south_sur["source_receipts"])
+        self.assertIn("dist/data/bss03-original-vessel-tpu-inputs.json", south_sur["source_receipts"])
         self.assertEqual(next(t for t in south_sur["tracks"] if t["id"] == "independent-substrate")["stage"], "research-evidence")
         self.assertEqual(next(t for t in south_sur["tracks"] if t["id"] == "legal-chart-access")["stage"], "partial-release-evidence")
         self.assertFalse(south_sur["independent_groundtruth_at_candidate_scale"])
