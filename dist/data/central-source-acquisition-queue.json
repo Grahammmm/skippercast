@@ -72,6 +72,7 @@
           "review_path": "dist/data/w00447-monterey-original-bag-overlap.json"
         }
       ],
+      "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -201,6 +202,15 @@
           "review_path": "dist/data/w00447-monterey-original-bag-overlap.json"
         }
       ],
+      "monterey_2013_merge_source_acquisition": {
+        "receipt": "dist/data/monterey-2013-merge-public-asset-access.json",
+        "source_id_to_resolve": "12241",
+        "public_supplemental_objects_checked": 3,
+        "requested_accuracy_inventory_or_acoustic_assets_found": [],
+        "next_gate": "Obtain NOAA's source-ID crosswalk, original source extents and accuracy/void products; then resolve survey datum and upper error on full research footprints",
+        "fishing_target": false,
+        "exportable": false
+      },
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -255,7 +265,7 @@
           "paired_original_products": true
         }
       ],
-      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "next_action": "Acquire NOAA 2013 merge source-ID 12241 crosswalk, original survey datum and vertical-accuracy/source-extent deliverables for the paired Monterey research cells; then test independent substrate and full-area clearance",
       "blocking_checks": [
         "valid measured cells within 300 ft plus uncertainty margin",
         "paired high-resolution substrate and independent groundtruth",
@@ -290,6 +300,7 @@
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
+      "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
         "W00433",
@@ -427,6 +438,7 @@
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
+      "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
         "H13151",
         "W00431",
@@ -553,6 +565,7 @@
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
+      "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
         "H13151",
@@ -806,6 +819,7 @@
         "exportable": false
       },
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
+      "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
         "F00844",
         "H13089",

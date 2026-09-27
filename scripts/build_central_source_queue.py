@@ -29,6 +29,13 @@ def build(root):
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
     bindings = read(root / "catalog/central-native-depth-review-bindings.json")
     monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
+    monterey_merge_assets = read(root / "dist/data/monterey-2013-merge-public-asset-access.json")
+    if (monterey_merge_assets.get("scope") != "noaa-2013-merge-m2612-published-supplemental-prefix-access"
+            or len(monterey_merge_assets.get("listings", [])) != 2
+            or monterey_merge_assets.get("candidate_accuracy_layer_obtained") is not False
+            or monterey_merge_assets.get("candidate_acoustic_source_extent_obtained") is not False
+            or monterey_merge_assets.get("fishing_target") is not False):
+        raise ValueError("NOAA 2013 merge asset-access gate changed")
     bluetopo = read(root / "dist/data/central-bluetopo-upstream-source-leads.json")
     bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
     multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
@@ -493,6 +500,15 @@ def build(root):
                 {"survey_id": sid, "review_path": monterey_no_overlap[sid]}
                 for sid in original_bag if sid in monterey_no_overlap
                 and sector_id in ("pigeon-monterey", "monterey-sur")],
+            "monterey_2013_merge_source_acquisition": ({
+                "receipt": "dist/data/monterey-2013-merge-public-asset-access.json",
+                "source_id_to_resolve": "12241",
+                "public_supplemental_objects_checked": sum(len(row["objects"]) for row in monterey_merge_assets["listings"]),
+                "requested_accuracy_inventory_or_acoustic_assets_found": monterey_merge_assets["requested_accuracy_inventory_or_acoustic_assets_found"],
+                "next_gate": "Obtain NOAA's source-ID crosswalk, original source extents and accuracy/void products; then resolve survey datum and upper error on full research footprints",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "monterey-sur" else None),
             "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted) - set(deep_refuted)),
             "noaa_original_300ft_depth_leads": ([{
                 "survey_id": "W00614", "review_path": "dist/data/w00614-original-300-pigeon-monterey-review.json",
@@ -563,6 +579,7 @@ def build(root):
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Resolve registration/independence of two H11952/H11953 4 m rugged-class research components and source fish observations; repeat dated GIS checks and screen security, rules and full routes before promotion" if sector_id == "morro-conception"
+                           else "Acquire NOAA 2013 merge source-ID 12241 crosswalk, original survey datum and vertical-accuracy/source-extent deliverables for the paired Monterey research cells; then test independent substrate and full-area clearance" if sector_id == "monterey-sur"
                            else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",

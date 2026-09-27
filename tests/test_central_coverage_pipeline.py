@@ -89,6 +89,11 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertGreater(pigeon["noaa_original_300ft_depth_leads"][0]["eligible_supergrid_center_bounds"][1], 37.1)
         self.assertEqual(pigeon["noaa_usgs_original_character_overlap"]["depth_qualified_cells"], 141331)
         self.assertEqual(pigeon["noaa_usgs_original_character_overlap"]["classified_cells_on_those_depth_cells"], 0)
+        monterey = result["sectors"][1]
+        self.assertEqual(monterey["sector_id"], "monterey-sur")
+        self.assertEqual(monterey["monterey_2013_merge_source_acquisition"]["source_id_to_resolve"], "12241")
+        self.assertEqual(monterey["monterey_2013_merge_source_acquisition"]["requested_accuracy_inventory_or_acoustic_assets_found"], [])
+        self.assertFalse(monterey["monterey_2013_merge_source_acquisition"]["exportable"])
         conception = result["sectors"][-1]
         self.assertEqual(conception["point_conception_original_bag_deep_gap"]["populated_200_300ft_cells"], 0)
         self.assertFalse(conception["point_conception_original_bag_deep_gap"]["fishing_target"])
