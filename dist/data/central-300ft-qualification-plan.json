@@ -22,7 +22,7 @@
     "dist/data/monterey-1995-original-multibeam-overlap.json": "6f9bfaacd1e553153182daee65874604acb42de945194390c0d6507ebe01895e",
     "dist/data/monterey-1998-original-em300-overlap.json": "2a59014c253b06393c2399a332d73dff7ca8da31cfec42cbeded190e01261513",
     "dist/data/monterey-2013-merge-lineage-gap.json": "ea3d26fc5112bdc129f94b68f1e666836f2a36b27652de2bcd298f5d508243fb",
-    "dist/data/monterey-noaa2612-acoustic-point-support.json": "7676a66623df41ff1340a48178848871c278b1781fbfc6576525eb8910ba1771",
+    "dist/data/monterey-noaa2612-acoustic-point-support.json": "e2af525b0a07abe4e5e8a27d23e46c635474b4aa641a972da2286ea2b7fec864",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",

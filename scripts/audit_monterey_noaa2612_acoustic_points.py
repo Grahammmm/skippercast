@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit measured-looking NOAA 2013 merge points inside Monterey research outlines.
+"""Audit acoustic-classified NOAA 2013 merge samples inside Monterey outlines.
 
 This is a *lineage/support* audit, never a depth, legal, habitat or fishing
 qualification. The COPC is part of the same 2013 merge family as the USGS 2 m
@@ -169,7 +169,7 @@ def build(root, fetch=False):
         "outlines": rows, "fishing_target": False, "exportable": False,
         "next_acquisition": "Map point_source_id to the NOAA 2013 Full_DataInventory and acoustic source extents; obtain source survey, vertical accuracy/TPU and MLLW transformation before cell-depth review. Recheck legal/ENC screens separately.",
         "limitations": [
-            "Class 13 denotes submerged acoustic points in the 2013 merged cloud; it does not by itself prove original sounding independence, positional accuracy, seabed material or fish presence.",
+            "Class 13 denotes submerged acoustic samples in the 2013 merged cloud; NOAA's processing report says some source BAG grid nodes were exported to ASCII and imported as points. These are not necessarily original sonar beams and do not prove survey independence, positional accuracy, seabed material or fish presence.",
             "The 2013 NOAA merged points and USGS 2016 2 m resample share lineage and cannot be treated as independent corroboration.",
             "The LAS gps_time field is uninitialized/inconsistent for sampled acoustic tiles; file names and tile-wide STAC dates are not per-point survey dates.",
             "Nominal NAVD88 elevations are not MLLW depths. No conservative upper error or chart-datum limit has been established.",

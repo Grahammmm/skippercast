@@ -117,7 +117,7 @@ jobs:
           --fetch
           --output var/review/monterey-2013-merge-lineage-gap.json
           --verify dist/data/monterey-2013-merge-lineage-gap.json
-      - name: Recheck original NOAA merge point classifications inside all 17 outlines
+      - name: Recheck NOAA merge acoustic-classified samples inside all 17 outlines
         env:
           PYTHONPATH: src:.
         run: >-
