@@ -345,8 +345,8 @@
   },
   "coverage": {
     "bathymetry": {
-      "status": "ready",
-      "reason": "Published targets have native 2 m USGS survey coverage; no claim of continuous regional coverage."
+      "status": "partial",
+      "reason": "Historical 2 m USGS terrain raster exists, but original output vertical datum and product uncertainty are unresolved; no chart-depth-qualified spot."
     },
     "substrate": {
       "status": "ready",
@@ -463,6 +463,7 @@
     "Morro Bay",
     "Avila"
   ],
+  "research_only_note": "The 132 published coordinates and bottom views are research-only. No Morro\u2013Avila spot is presently chart-depth qualified; validate original source datum and uncertainty before fishing-target promotion.",
   "coverage_note": "132 surveyed reef candidates and 12 sediment regions. Native public survey coverage ends at Point Estero; offshore areas are search references.",
   "jurisdiction_id": "california-central",
   "pipeline_sources": {
