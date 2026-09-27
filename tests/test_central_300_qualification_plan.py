@@ -44,6 +44,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/point-buchon-bluetopo-hard-cell-overlap.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-ncei-multibeam-lead.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-ncei-line-index.json", conception["source_receipts"])
+        self.assertIn("dist/data/point-buchon-2007-ncei-valid-beam-overlap.json", conception["source_receipts"])
         self.assertIn("processed GSF", conception["next_acquisition"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):

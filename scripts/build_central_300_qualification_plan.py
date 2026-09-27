@@ -110,6 +110,7 @@ def build(root):
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
     buchon_ncei_index_path = "dist/data/point-buchon-2007-ncei-line-index.json"
+    buchon_beams_path = "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -120,6 +121,18 @@ def build(root):
     estero_inventory = load(root, estero_inventory_path)
     buchon_ncei = load(root, buchon_ncei_path)
     buchon_ncei_index = load(root, buchon_ncei_index_path)
+    buchon_beams = load(root, buchon_beams_path)
+    if (buchon_beams.get("scope") != "point-buchon-2007-ncei-original-valid-beam-overlap"
+            or {row.get("survey_id") for row in buchon_beams.get("surveys", [])}
+            != {"PointBuchon", "PointBuchon_Control"}
+            or any(row.get("generated_inf_good_beams_match") is not True
+                   or row.get("generated_fnv_navigation_rows_match") is not True
+                   or row.get("valid_beams_both_nominal_depth_bands_and_usgs_hard_rugose", 0) <= 0
+                   for row in buchon_beams["surveys"])
+            or buchon_beams.get("qualified_waypoints") != 0
+            or buchon_beams.get("fishing_target") is not False
+            or buchon_beams.get("exportable") is not False):
+        raise ValueError("Point Buchon NCEI original-beam overlap changed")
     if (buchon_ncei_index.get("scope") != "point-buchon-2007-ncei-generated-line-depth-index"
             or {row.get("survey_id") for row in buchon_ncei_index.get("surveys", [])}
             != {"PointBuchon", "PointBuchon_Control"}
@@ -236,6 +249,7 @@ def build(root):
             receipts.append(buchon_path)
             receipts.append(buchon_ncei_path)
             receipts.append(buchon_ncei_index_path)
+            receipts.append(buchon_beams_path)
             catalog_gap = row.get("point_buchon_noaa_catalog_gap")
             if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
                     or catalog_gap["fishing_target"] is not False):
@@ -307,7 +321,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path)},
         "release_gate_ids": list(RELEASE_GATES), "tracks": [{"id": k, "requirement": v} for k, v in TRACKS],
         "source_search_order": PROVIDERS, "sectors": sectors,
         "promotion_rule": "A rank or export requires original measured full-patch depth with reviewed chart datum and uncertainty; independent surveyed substrate and spatially supported fish evidence; current full-footprint legal, access, hazard and route review. A future outcome model also needs held-out effort including zero catches.",

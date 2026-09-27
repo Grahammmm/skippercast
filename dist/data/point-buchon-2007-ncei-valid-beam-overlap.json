@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-2007-ncei-original-valid-beam-overlap",
+  "gsf_specification_url": "https://github.com/schwehr/generic-sensor-format/blob/master/doc/GSF_spec.md",
+  "usgs_original_bathymetry_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+  "usgs_original_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "source_vertical_datum": "Unknown for both processed GSF lines and published USGS raster",
+  "surveys": [
+    {
+      "survey_id": "PointBuchon",
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/PB129-2245.gsf.mb121.gz",
+      "gsf_compressed_sha256": "a3218f68647a8423bd395684044f88fc3b5ec19ab09e3bd4d87548f9d98efdb9",
+      "generated_inf_good_beams_match": true,
+      "generated_fnv_navigation_rows_match": true,
+      "generated_inf_sha256": "b1ec6b1f308c47ab28157ecf4f037365e3caeb61424e5105f0ed84731e4bdb5c",
+      "generated_fnv_sha256": "b774793b4152d33306955ac1d5f3ae17f2f2633893ac0a2beb780a3050b96785",
+      "ping_records": 3744,
+      "beam_records": 378144,
+      "flagged_or_zero_beams": 97840,
+      "valid_unflagged_beams": 280304,
+      "excluded_ping_records": 3,
+      "outside_original_usgs_raster": 0,
+      "valid_beams_inside_raster": 280304,
+      "unique_usgs_pixels_under_valid_beams": 142090,
+      "valid_beams_inside_raster_nominal_gsf_200_300ft_unknown_datum": 280213,
+      "valid_beams_on_paired_usgs_hard_rugose_200_300ft_source_datum": 979,
+      "valid_beams_both_nominal_depth_bands_and_usgs_hard_rugose": 979,
+      "unique_usgs_hard_rugose_200_300ft_pixels_under_valid_beams": 558,
+      "beam_vertical_error_95pct_m_range": [
+        0.148,
+        0.591
+      ],
+      "beam_horizontal_error_95pct_m_range": [
+        0.461,
+        0.807
+      ],
+      "same_pixel_gsf_minus_usgs_source_depth_m_median": -0.014,
+      "same_pixel_gsf_minus_usgs_source_depth_m_p95_absolute": 0.661
+    },
+    {
+      "survey_id": "PointBuchon_Control",
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/MB299-1555.gsf.mb121.gz",
+      "gsf_compressed_sha256": "a093e49ea552da7128e6e22b423b523f40c0bb29996fbab1214db04a09d664e8",
+      "generated_inf_good_beams_match": true,
+      "generated_fnv_navigation_rows_match": true,
+      "generated_inf_sha256": "feafdf18577e67bf9068741e23c296a83f96169e2ac17a1b24b3a2d1abac0f52",
+      "generated_fnv_sha256": "a96a7b0e367b9e81d75999b03f1b1838059dc8f725f1cedfc2b8a3a206df3c10",
+      "ping_records": 10253,
+      "beam_records": 1035553,
+      "flagged_or_zero_beams": 323185,
+      "valid_unflagged_beams": 712368,
+      "excluded_ping_records": 3,
+      "outside_original_usgs_raster": 154769,
+      "valid_beams_inside_raster": 557599,
+      "unique_usgs_pixels_under_valid_beams": 213823,
+      "valid_beams_inside_raster_nominal_gsf_200_300ft_unknown_datum": 526206,
+      "valid_beams_on_paired_usgs_hard_rugose_200_300ft_source_datum": 37501,
+      "valid_beams_both_nominal_depth_bands_and_usgs_hard_rugose": 37169,
+      "unique_usgs_hard_rugose_200_300ft_pixels_under_valid_beams": 13992,
+      "beam_vertical_error_95pct_m_range": [
+        0.148,
+        0.617
+      ],
+      "beam_horizontal_error_95pct_m_range": [
+        0.319,
+        0.845
+      ],
+      "same_pixel_gsf_minus_usgs_source_depth_m_median": 0.008,
+      "same_pixel_gsf_minus_usgs_source_depth_m_p95_absolute": 0.919
+    }
+  ],
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "Valid original GSF beam positions are computed from ping position, heading and per-beam across/along offsets, with decoded counts and navigation checked against NCEI generated summaries. Nominal 200\u2013300 ft overlap and same-pixel depth differences use two unresolved source datums and unverified horizontal registration. GSF error arrays are not verified total product uncertainty, and no current legal/safe-route/fish evidence is established. No spot rank or coordinate is authorized."
+}
