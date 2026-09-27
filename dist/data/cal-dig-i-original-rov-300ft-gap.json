@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scope": "cal-dig-i-original-rov-200-300ft-observation-gap",
+  "checked_at": "2026-09-27T04:06:21.168015+00:00",
+  "release_url": "https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9QQZ27U/",
+  "depth_band_m": [
+    60.96,
+    91.44
+  ],
+  "sources": {
+    "biotic": {
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/8676dd1cde47458caefd834bb3ed8a87/Cal_DIG_I_Biotic_Component.csv",
+      "sha256": "a2a88b91c9379e6d5db329861c2df4f03fb28861f2f79a969993e47f6dafe9ec",
+      "rows": 44429,
+      "missing_depth_rows": 0,
+      "negative_depth_rows_excluded": 0,
+      "minimum_nonnegative_observation_depth_m": 370.9,
+      "maximum_nonnegative_observation_depth_m": 1175.5,
+      "observations_in_200_300ft_depth_band": 0
+    },
+    "substrate": {
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/4334f486b0ae492697ee8215f6515f6f/Cal_DIG_I_Substrate_Component.csv",
+      "sha256": "45295ae4df988ad5751810744df9218734ea85a56b68516f7670d4acdb55b136",
+      "rows": 8332,
+      "missing_depth_rows": 0,
+      "negative_depth_rows_excluded": 691,
+      "minimum_nonnegative_observation_depth_m": 371.0,
+      "maximum_nonnegative_observation_depth_m": 1175.8,
+      "observations_in_200_300ft_depth_band": 0
+    }
+  },
+  "independent_substrate_gate_satisfied": false,
+  "biological_fish_gate_satisfied": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "The original ROV point tables contain no observations in 200\u2013300 ft. The 2026 derived CMECS polygons, if they cover additional depths, are not independent shallow-water video groundtruth; their metadata state substrate accuracy diminishes away from transects and is unquantified. Negative source depths were excluded as invalid, not interpreted as shallow observations. No conclusion about actual fish or habitat absence follows."
+}

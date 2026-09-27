@@ -99,7 +99,7 @@ SECTOR_OVERRIDES = {
     },
     "morro-conception": {
         "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Resolve the Block A3 2007-trackline to released-grid lineage with its custodian, then request upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition; obtain current Diablo/Vandenberg access and ENC route screens.",
+        "next": "Resolve the Block A3 2007-trackline to released-grid lineage with its custodian, then request upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition; obtain current Diablo/Vandenberg access and ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations; do not use their deepwater labels or 2026 inferred CMECS polygons as shallow groundtruth.",
         "hold": "The grid metadata establish NAVD88 Geoid03 but not independent 2009 acquisition, vertical accuracy or rights. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
     },
 }
@@ -139,6 +139,7 @@ def build(root):
     buchon_2009_terrain_path = "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json"
     buchon_2009_access_path = "dist/data/point-buchon-2009-csumb-access-triage.json"
     buchon_2009_vdatum_path = "dist/data/point-buchon-2009-conditional-vdatum-probes.json"
+    cal_dig_rov_path = "dist/data/cal-dig-i-original-rov-300ft-gap.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -148,6 +149,14 @@ def build(root):
     bss03_vessel = load(root, bss03_vessel_path)
     pigeon_video = load(root, pigeon_video_path)
     pigeon_noaa_rov = load(root, pigeon_noaa_rov_path)
+    cal_dig_rov = load(root, cal_dig_rov_path)
+    if (cal_dig_rov.get("scope") != "cal-dig-i-original-rov-200-300ft-observation-gap"
+            or any(cal_dig_rov.get("sources", {}).get(kind, {}).get("observations_in_200_300ft_depth_band") != 0
+                   for kind in ("biotic", "substrate"))
+            or cal_dig_rov.get("independent_substrate_gate_satisfied") is not False
+            or cal_dig_rov.get("biological_fish_gate_satisfied") is not False
+            or cal_dig_rov.get("fishing_target") is not False):
+        raise ValueError("Cal DIG I original ROV depth support changed")
     if (pigeon_noaa_rov.get("scope") != "w00614-noaa-sh1809-coral-sponge-observation-gap"
             or pigeon_noaa_rov.get("source_rows") != 8612
             or pigeon_noaa_rov.get("qualified_w00614_cells") != 141331
@@ -376,6 +385,7 @@ def build(root):
                 raise ValueError("Estero VDatum spatial evidence changed")
             receipts.append(spatial["receipt"])
         if sector_id == "morro-conception":
+            receipts.append(cal_dig_rov_path)
             receipts.append(buchon_path)
             receipts.append(buchon_ncei_path)
             receipts.append(buchon_ncei_index_path)
@@ -463,7 +473,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
