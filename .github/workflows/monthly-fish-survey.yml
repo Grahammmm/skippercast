@@ -70,9 +70,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pinned original-grid readers
-        run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2 pyshp==2.3.1
+        run: python -m pip install numpy==2.2.6 scipy==1.17.1 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2 pyshp==2.3.1
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_estero_camera_block_gap tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial tests.test_estero_wgs84_direct -v
+        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_estero_camera_block_gap tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial tests.test_estero_wgs84_direct tests.test_estero_wgs84_2008_character tests.test_estero_noaa_bag_catalog_gap -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python scripts/audit_point_estero_original_pair.py --fetch
@@ -124,6 +124,21 @@ jobs:
           --blocks var/review/estero-nominal-research-blocks.geojson
           --output var/review/estero-wgs84-direct-vdatum-review.json
           --verify dist/data/estero-wgs84-direct-vdatum-review.json
+      - name: Check WGS84 source cells against independent 2008 bottom classes
+        run: >-
+          python scripts/audit_estero_wgs84_2008_character.py
+          --blocks var/review/estero-nominal-research-blocks.geojson
+          --private-offsets var/review/estero-wgs84-direct-vdatum-blocks.json
+          --source-receipt var/review/estero-wgs84-direct-vdatum-review.json
+          --output var/review/estero-wgs84-2008-character-sensitivity.json
+          --verify dist/data/estero-wgs84-2008-character-sensitivity.json
+      - name: Recheck bounded NOAA BAG catalog coverage over Estero research blocks
+        run: >-
+          python scripts/audit_estero_noaa_bag_catalog_gap.py
+          --blocks var/review/estero-nominal-research-blocks.geojson
+          --source-receipt var/review/estero-wgs84-direct-vdatum-review.json
+          --output var/review/estero-noaa-bag-catalog-gap.json
+          --verify dist/data/estero-noaa-bag-catalog-gap.json
       - name: Recheck USGS report release inventory for newly available TPU
         run: >-
           python scripts/audit_estero_release_inventory.py
@@ -155,6 +170,8 @@ jobs:
             var/review/estero-2012-vdatum-frame-review.json
             var/review/estero-2012-vdatum-spatial-diagnostic.json
             var/review/estero-wgs84-direct-vdatum-review.json
+            var/review/estero-wgs84-2008-character-sensitivity.json
+            var/review/estero-noaa-bag-catalog-gap.json
             var/review/estero-2012-public-release-inventory.json
           retention-days: 30
   point-buchon-original-pair:

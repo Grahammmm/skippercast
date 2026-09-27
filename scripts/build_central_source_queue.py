@@ -94,6 +94,19 @@ def build(root):
     scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
     estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
     estero_direct = read(root / "dist/data/estero-wgs84-direct-vdatum-review.json")
+    estero_direct_character = read(root / "dist/data/estero-wgs84-2008-character-sensitivity.json")
+    estero_bag_gap = read(root / "dist/data/estero-noaa-bag-catalog-gap.json")
+    if (estero_bag_gap.get("scope") != "estero-60-research-block-noaa-nos-bag-catalog-gap"
+            or estero_bag_gap.get("bag_survey_count") != 0
+            or estero_bag_gap.get("fishing_target") is not False
+            or estero_bag_gap.get("exportable") is not False):
+        raise ValueError("Estero bounded NOAA BAG catalog gap changed")
+    if (estero_direct_character.get("scope") != "estero-wgs84-direct-vdatum-2008-independent-character-sensitivity"
+            or estero_direct_character.get("fishing_target") is not False
+            or estero_direct_character.get("exportable") is not False
+            or estero_direct_character.get("qualified_waypoints") != 0
+            or estero_direct_character.get("full_cellwise_mllw_surface_verified") is not False):
+        raise ValueError("Estero direct-frame independent-class screen changed")
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
@@ -603,11 +616,30 @@ def build(root):
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "cambria-morro" else None),
+            "estero_wgs84_independent_character_sensitivity": ({
+                "receipt": "dist/data/estero-wgs84-2008-character-sensitivity.json",
+                "nominal_class3_cells": sum(band["hard_rugose_cells"] for band in
+                                            estero_direct_character["by_prior_research_band"].values()),
+                "class3_cells_stable_within_25m": sum(
+                    band["rugose_class_stable_within_25m_cell_centers"] for band in
+                    estero_direct_character["by_prior_research_band"].values()),
+                "release_status": "nominal-block-center-datum-and-unbounded-registration-hold",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "cambria-morro" else None),
+            "estero_noaa_bag_catalog_gap": ({
+                "receipt": "dist/data/estero-noaa-bag-catalog-gap.json",
+                "bag_survey_count": estero_bag_gap["bag_survey_count"],
+                "scope": "NOS BAG catalog over 60 original research blocks only",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "cambria-morro" else None),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Resolve registration/independence of two H11952/H11953 4 m rugged-class research components and source fish observations; repeat dated GIS checks and screen security, rules and full routes before promotion" if sector_id == "morro-conception"
                            else "Acquire NOAA 2013 merge source-ID 12241 crosswalk, original survey datum and vertical-accuracy/source-extent deliverables for the paired Monterey research cells; then test independent substrate and full-area clearance" if sector_id == "monterey-sur"
                            else "Resolve Lopez Point original CUBE-source uncertainty and full-grid NAVD88-to-MLLW conversion, obtain independent rock observations and source-specific use permission; then review full access/chart geometry" if sector_id == "big-sur"
+                           else "Acquire 2012 Estero CARIS TPU and source coordinate epoch; convert every WGS84 source cell to MLLW, bound its uncertainty, and validate 2008 class registration plus independent bottom/fish observations before full-route review" if sector_id == "cambria-morro"
                            else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",
@@ -622,7 +654,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB BSS native-band pixel counts are nominal NAVD88 source evidence, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights. Big Creek/Lopez Point counts are interpolated processed DEM output cells, not independent soundings or rock observations; they remain on chart-datum, uncertainty and rights hold. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB BSS native-band pixel counts are nominal NAVD88 source evidence, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights. Big Creek/Lopez Point counts are interpolated processed DEM output cells, not independent soundings or rock observations; they remain on chart-datum, uncertainty and rights hold. The Estero WGS84 direct-frame/2008 class join uses 100 m block-center VDatum offsets and tests class stability, not a cellwise chart-MLLW/error surface or exact fishable geometry; its registration, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

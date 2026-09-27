@@ -1,0 +1,17 @@
+# Estero Bay 2012 original-survey records to request
+
+Prepared September 27, 2026; **not sent**. This is an acquisition brief for the 2012 Estero Bay multibeam release described in [USGS Open-File Report 2013-1225](https://pubs.usgs.gov/of/2013/1225/), focused on the already defined 60 private 100 m research blocks. Share exact research geometry with a custodian only through an agreed private channel. The public audit publishes only an envelope and aggregate results.
+
+## Ask the survey custodian
+
+1. Which original CARIS HIPS/BASE or CUBE surface produced `WGS84_utm10_EsteroBay.zip`? Request the final accepted sounding-to-cell lineage, source-line IDs and survey/acquisition dates, valid-data mask, gridding method, and any separate uncertainty or hypothesis-strength band.
+2. Request the **total propagated uncertainty** (TPU) and, if available, conservative upper vertical and horizontal errors at the released cells or source lines. Clarify confidence convention, datum contribution, tide/ellipsoid model contribution, crossline QC, shoal-selection and interpolation assumptions. Sounding spread within a cell is not a substitute for product TPU.
+3. Confirm the WGS84(G1150) ellipsoid-height frame, acquisition and output coordinate epochs, antenna/GNSS-to-sonar offsets and horizontal position QC. Specify whether the separately released CORS96/NAVD88 raster is a distinct processing branch of the same soundings, and whether either branch has a documented path to chart MLLW.
+4. Provide any independent check lines, bottom grabs, video or backscatter classification over the research envelope, including soft-bottom negatives, positioning uncertainty, camera-footprint/layback method and the native observation dates. State which observations trained the 2008 USGS seafloor-character product so training records are not reused as independent validation.
+5. State the redistribution and public-map terms for a derived habitat outline, aggregate class validation, source imagery and individual observation locations. Ask whether more recent native soundings cover the envelope even though the bounded NOAA NOS BAG catalog returned no ID.
+
+## Acceptance test before a fishing rank
+
+Reproduce every candidate footprint directly from populated native cells. Transform each cell through a documented frame/epoch path to MLLW, propagate survey plus transformation and registration uncertainty, and confirm the **deepest plausible cell** across a horizontally buffered patch is within 300 ft. Then require an independently positioned bottom observation or validated acoustic class across a contiguous usable area, current full-geometry MPA/chart/security review, and species evidence at its actual support scale. A historical ROV or catch record alone does not identify a present fishable rock pile. Failed or missing fields remain recorded as a hold, and no candidate enters the chartplotter export.
+
+The current [direct-frame cell/class receipt](../dist/data/estero-wgs84-2008-character-sensitivity.json) found 718 deeper class-3 cell centers stable under a 25 m *class-only* sensitivity screen; their connected area and true horizontal-error margin are unknown. The [bounded NOS BAG catalog receipt](../dist/data/estero-noaa-bag-catalog-gap.json) returned zero survey IDs for the research envelope. Those facts prioritize this request; they do not satisfy it.

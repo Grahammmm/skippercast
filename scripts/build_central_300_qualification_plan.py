@@ -97,9 +97,9 @@ SECTOR_OVERRIDES = {
         "hold": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
     },
     "cambria-morro": {
-        "lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples, plus 2008 video-supervised character overlap",
-        "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration. Seek a different independent video/grab survey on the 60 research blocks: the original C0212SC camera observations are all more than 250 m away. Then complete legal and route screens.",
-        "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
+        "lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples and a native-cell join to independent 2008 video-supervised character",
+        "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration. Seek a different independent video/grab survey on the 60 research blocks: the original C0212SC camera observations are all more than 250 m away. A bounded NOAA NOS BAG catalog query returned no lead over those blocks; prioritize the original USGS processing record while rechecking the catalog monthly. Then complete legal and route screens.",
+        "hold": "The direct WGS84/class join has 718 deeper class-3 cell centers stable under a 25 m class-only sensitivity test, but their connected patch geometry is unknown. Block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
         "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
@@ -157,6 +157,8 @@ def build(root):
     monterey_video_beam_path = "dist/data/monterey-2009-beam-2010-video-proximity.json"
     monterey_rov_path = "dist/data/monterey-rov-research-overlap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
+    estero_direct_character_path = "dist/data/estero-wgs84-2008-character-sensitivity.json"
+    estero_bag_gap_path = "dist/data/estero-noaa-bag-catalog-gap.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
     buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
@@ -417,6 +419,13 @@ def build(root):
             or pigeon_video.get('qualified_waypoints') != 0):
         raise ValueError('W00614 original USGS video observation coverage changed')
     estero_direct = load(root, estero_direct_path)
+    estero_direct_character = load(root, estero_direct_character_path)
+    estero_bag_gap = load(root, estero_bag_gap_path)
+    if (estero_bag_gap.get('scope') != 'estero-60-research-block-noaa-nos-bag-catalog-gap'
+            or estero_bag_gap.get('bag_survey_count') != 0
+            or estero_bag_gap.get('qualified_waypoints') != 0
+            or estero_bag_gap.get('fishing_target') is not False):
+        raise ValueError('Estero bounded BAG catalog status changed')
     estero_inventory = load(root, estero_inventory_path)
     estero_camera = load(root, estero_camera_path)
     if (estero_camera.get("scope") != "estero-original-camera-to-private-300ft-block-gap"
@@ -607,6 +616,15 @@ def build(root):
             or estero_direct.get('qualified_waypoints') != 0
             or estero_direct.get('fishing_target') is not False):
         raise ValueError('Original Estero direct-frame evidence changed')
+    deep_estero = estero_direct_character.get('by_prior_research_band', {}).get('250-300ft', {})
+    if (estero_direct_character.get('scope') != 'estero-wgs84-direct-vdatum-2008-independent-character-sensitivity'
+            or deep_estero.get('hard_rugose_cells') != 25046
+            or deep_estero.get('rugose_class_stable_within_25m_cell_centers') != 718
+            or estero_direct_character.get('source_product_upper_uncertainty_verified') is not False
+            or estero_direct_character.get('cross_survey_horizontal_registration_bounded') is not False
+            or estero_direct_character.get('qualified_waypoints') != 0
+            or estero_direct_character.get('fishing_target') is not False):
+        raise ValueError('Original Estero direct-frame character sensitivity changed')
     if queue.get("status") != "research-only" or ledger.get("depth_planning_ceiling_ft") != 300:
         raise ValueError("Central 300 ft source and coverage receipts are not current")
     if (buchon.get("fishing_target") is not False or buchon.get("qualified_waypoints") != 0
@@ -660,6 +678,8 @@ def build(root):
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             receipts.append(estero_direct_path)
+            receipts.append(estero_direct_character_path)
+            receipts.append(estero_bag_gap_path)
             receipts.append(estero_inventory_path)
             receipts.append(estero_camera_path)
             direct = row.get("estero_wgs84_direct_diagnostic")
@@ -676,6 +696,20 @@ def build(root):
                     or spatial["exportable"] is not False):
                 raise ValueError("Estero VDatum spatial evidence changed")
             receipts.append(spatial["receipt"])
+            character = row.get("estero_wgs84_independent_character_sensitivity")
+            if (not character or character["receipt"] != estero_direct_character_path
+                    or character["nominal_class3_cells"] != sum(
+                        band["hard_rugose_cells"] for band in estero_direct_character["by_prior_research_band"].values())
+                    or character["class3_cells_stable_within_25m"] != 718
+                    or character["fishing_target"] is not False
+                    or character["exportable"] is not False):
+                raise ValueError("Estero independent-class sensitivity queue changed")
+            catalog_gap = row.get("estero_noaa_bag_catalog_gap")
+            if (not catalog_gap or catalog_gap["receipt"] != estero_bag_gap_path
+                    or catalog_gap["bag_survey_count"] != 0
+                    or catalog_gap["fishing_target"] is not False
+                    or catalog_gap["exportable"] is not False):
+                raise ValueError("Estero bounded NOAA BAG catalog queue changed")
         if sector_id == "morro-conception":
             conception_gap = row.get("point_conception_original_bag_deep_gap")
             if (not conception_gap or conception_gap.get("populated_200_300ft_cells") != 0
@@ -807,7 +841,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_8m_path, conception_access_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_cmecs_path, buchon_cmecs_candidate_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_8m_path, conception_access_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_cmecs_path, buchon_cmecs_candidate_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_direct_character_path, estero_bag_gap_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
