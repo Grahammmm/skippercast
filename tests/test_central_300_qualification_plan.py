@@ -67,6 +67,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/central-deep-original-300-refutation.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-noaa-catalog-envelope-gap.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-bluetopo-hard-cell-overlap.json", conception["source_receipts"])
+        self.assertIn("dist/data/point-buchon-cmecs-block-review.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-ncei-multibeam-lead.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-ncei-line-index.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-ncei-valid-beam-overlap.json", conception["source_receipts"])
@@ -74,6 +75,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("processed GSF", conception["next_acquisition"])
         self.assertIn("2007", conception["reviewed_lead"])
         self.assertIn("not independent 2009 acquisition", conception["limiting_evidence"])
+        self.assertIn("invalid polygons", conception["limiting_evidence"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):
         original = plan.load
@@ -101,6 +103,20 @@ class QualificationPlanTests(unittest.TestCase):
 
         with patch.object(plan, "load", side_effect=changed):
             with self.assertRaisesRegex(ValueError, "changed status"):
+                plan.build(ROOT)
+
+    def test_point_buchon_geologic_topology_change_requires_review(self):
+        original = plan.load
+
+        def changed(root, relative):
+            data = original(root, relative)
+            if relative == "dist/data/point-buchon-cmecs-block-review.json":
+                data = copy.deepcopy(data)
+                data["groups"]["original_csumb_depth"]["invalid_polygons_with_possible_block_bbox_hit"] = 0
+            return data
+
+        with patch.object(plan, "load", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "geology or topology status changed"):
                 plan.build(ROOT)
 
     def test_pigeon_lander_lead_cannot_silently_become_spot_evidence(self):

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "usgs-point-buchon-cmecs",
+  "name": "USGS Point Buchon interpreted CMECS seafloor polygons",
+  "sector_ids": ["morro-conception"],
+  "need_ids": ["substrate", "groundtruth"],
+  "documentation_url": "https://www.usgs.gov/data/bathymetry-backscatter-intensity-and-benthic-habitat-offshore-point-buchon-california-ver-11",
+  "access_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/58f7e9655c85408db68ce2ca1d8cd560/CMECS_OffshorePointBuchon.zip",
+  "access_status": "accessible",
+  "rights": {
+    "license": "USGS public domain with source and metadata attribution",
+    "terms_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3bb89ac0e56a4c55a51e8faf88d5b6e1/CMECS_OffshorePointBuchon_metadata.xml",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-120.971297, 35.130766, -120.781542, 35.290852],
+    "resolution_m": 2,
+    "horizontal_crs": "WGS84 UTM zone 10N, EPSG:32610",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/58f7e9655c85408db68ce2ca1d8cd560/CMECS_OffshorePointBuchon.zip",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T13:49:45Z",
+    "update_cadence": "Monthly original-archive hash, schema, topology and private-block aggregate review",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3bb89ac0e56a4c55a51e8faf88d5b6e1/CMECS_OffshorePointBuchon_metadata.xml",
+      "supports": "USGS describes 2 m backscatter/bathymetry-derived and video-supervised geologic interpretation, public-domain use, unquantified polygon boundary accuracy and variable video positioning."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/58f7e9655c85408db68ce2ca1d8cd560/CMECS_OffshorePointBuchon.zip",
+      "supports": "Inspected shapefile has 193,015 polygons and five substrate codes; some polygons inside private candidate envelopes have invalid topology."
+    }
+  ],
+  "limitations": [
+    "CMECS polygons reuse acoustic and video inputs from the Point Buchon map family; they cannot count as independent habitat groundtruth against the paired USGS character raster.",
+    "Publisher cannot quantify polygon-boundary accuracy. Camera positions are highly variable around 10 m; 2 m raster derivation is not 2 m boundary certainty.",
+    "The inspected archive contains 193,015 polygons, while an overview line in the included XML says 66,987; use the inspected file count and hold an unexplained revision.",
+    "Invalid polygons may intersect reviewed research blocks; excluded valid-only area is incomplete, and absence of a valid bedrock polygon is not evidence of soft bottom.",
+    "No MLLW depth, total upper error, independent fish evidence, full legal/chart/route clearance, ranking or export is supplied by this source."
+  ],
+  "producer": {
+    "name": "U.S. Geological Survey, Pacific Coastal and Marine Science Center",
+    "url": "https://www.usgs.gov/centers/pcmsc"
+  },
+  "variables": ["cmecs_substrate", "substrate_induration", "geoform", "geology"],
+  "units": {"cmecs_substrate": null, "substrate_induration": null, "geoform": null, "geology": null},
+  "provenance": {
+    "access_service": "USGS CMGDS static shapefile release, version 1.1 January 2024",
+    "raw_sha256": "d7365bf5434ec49bc56dd5a87c49fe9f4c3413479dead10e3e6a7ca67c37e51a",
+    "transformations": [
+      "Inspect original shapefile fields and topology before any spatial comparison; do not repair invalid boundaries without review.",
+      "Intersect valid source polygons with private 100 m research blocks only and publish aggregate substrate areas without block coordinates.",
+      "Keep this same-lineage lithology refinement separate from independent bottom-camera or grab evidence; do not promote a fishing spot."
+    ]
+  }
+}

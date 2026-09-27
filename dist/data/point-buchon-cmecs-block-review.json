@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-cmecs-geologic-interpretation-private-block-review",
+  "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/58f7e9655c85408db68ce2ca1d8cd560/CMECS_OffshorePointBuchon.zip",
+  "source_archive_sha256": "d7365bf5434ec49bc56dd5a87c49fe9f4c3413479dead10e3e6a7ca67c37e51a",
+  "source_metadata_sha256": "3002086e46f1ec08077feadb1fdc0304f5e81bdfa8a424dc3e037caa36c7f4ab",
+  "source_total_polygons": 193015,
+  "source_metadata_overview_polygons": 66987,
+  "metadata_overview_count_matches_archive": false,
+  "private_block_sha256": {
+    "original_csumb_depth": "5e9c6b34c6e060425a36839a36b8f179f9a6d4c1c3c29b5d945fcf7d77fc46b4",
+    "historical_rov": "16556b736b9d4cae60c9e3d88a1023fc1cd5db4f01be44c856c3960fd6e8223c"
+  },
+  "groups": {
+    "original_csumb_depth": {
+      "private_research_blocks": 181,
+      "valid_source_polygons_in_review_envelope": 2670,
+      "invalid_source_polygons_in_review_envelope": 65,
+      "invalid_polygons_with_possible_block_bbox_hit": 56,
+      "blocks_with_source_coverage": 162,
+      "blocks_with_any_mapped_bedrock": 155,
+      "blocks_with_at_least_1000m2_mapped_bedrock": 73,
+      "historical_lingcod_positive_blocks_with_at_least_1000m2_mapped_bedrock": 0,
+      "valid_polygon_intersected_area_m2_by_cmecs_substrate": {
+        "S1.1.1": 208412.1,
+        "S1.2.1.2.1": 58321.2,
+        "S1.2.1.3.1": 196.0,
+        "S1.2.2.2": 0,
+        "S1.2.2.4.2": 39761.2
+      }
+    },
+    "historical_rov": {
+      "private_research_blocks": 26,
+      "valid_source_polygons_in_review_envelope": 1290,
+      "invalid_source_polygons_in_review_envelope": 34,
+      "invalid_polygons_with_possible_block_bbox_hit": 22,
+      "blocks_with_source_coverage": 25,
+      "blocks_with_any_mapped_bedrock": 22,
+      "blocks_with_at_least_1000m2_mapped_bedrock": 16,
+      "historical_lingcod_positive_blocks_with_at_least_1000m2_mapped_bedrock": 4,
+      "valid_polygon_intersected_area_m2_by_cmecs_substrate": {
+        "S1.1.1": 47421.1,
+        "S1.2.1.2.1": 6032.3,
+        "S1.2.1.3.1": 36.0,
+        "S1.2.2.2": 0,
+        "S1.2.2.4.2": 16771.9
+      }
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "fishing_rank": null,
+  "limitations": [
+    "CMECS bedrock is an interpreted polygon from 2 m backscatter, bathymetry derivatives and reused video; it is not an independent survey or measured rock-size layer.",
+    "The publisher cannot quantify polygon boundary accuracy; video positions are highly variable, about 10 m. Intersection with a private 100 m research square does not locate an individual boulder.",
+    "Invalid source polygons possibly intersect private blocks. They are excluded from area counts rather than silently repaired; valid-only area is incomplete and absence cannot be inferred.",
+    "The research squares are not fishing areas or chart-depth-qualified footprints. Source coverage is sparse within many squares, and portions outside polygons are unknown rather than soft bottom.",
+    "Historical ROV detections share program lineage with other ROV summaries and do not establish present fish presence, effort-normalized catch odds, or legal access.",
+    "MLLW depth/upper uncertainty, independent bottom confirmation and full route/legal/chart review remain required before any rank, public spot or export."
+  ]
+}
