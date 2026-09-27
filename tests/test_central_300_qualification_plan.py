@@ -43,6 +43,7 @@ class QualificationPlanTests(unittest.TestCase):
         south_sur = next(s for s in result["sectors"] if s["sector_id"] == "sur-san-simeon")
         self.assertIn("catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json", south_sur["source_receipts"])
         self.assertIn("dist/data/ciap-2016-central-rov-public-service-audit.json", south_sur["source_receipts"])
+        self.assertIn("dist/data/ciap-2016-central-video-private-block-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-video-grid-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-camera-access-triage.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-original-vessel-tpu-inputs.json", south_sur["source_receipts"])

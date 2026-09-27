@@ -31,7 +31,8 @@
     "dist/data/w00614-noaa-sh1809-observation-gap.json": "6c100bcbb08c55fed2380c957ac04ca24da527f7a6183a63ca01a90e1f599c71",
     "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "74dc4340fb0b540bb497e0ad3dfe22b9844dbe2738314d44b8f2287a7ec1dfab",
     "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json": "4babf6cea10eb3b6cc7928b8437e959f0d1a6a52f5d88e931693ff3ea7071a75",
-    "dist/data/ciap-2016-central-rov-public-service-audit.json": "612d4cf2a8f0e3b51a3261127d41af5734b9953fb27dc9d73be145f44eff51a5"
+    "dist/data/ciap-2016-central-rov-public-service-audit.json": "612d4cf2a8f0e3b51a3261127d41af5734b9953fb27dc9d73be145f44eff51a5",
+    "dist/data/ciap-2016-central-video-private-block-overlap.json": "4e693469345646e8e7bc82df7d2835f55632c71cea5a500b5fb90b333dcb055a"
   },
   "release_gate_ids": [
     "native-cells",
@@ -256,7 +257,8 @@
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
-        "dist/data/ciap-2016-central-rov-public-service-audit.json"
+        "dist/data/ciap-2016-central-rov-public-service-audit.json",
+        "dist/data/ciap-2016-central-video-private-block-overlap.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,
@@ -337,6 +339,7 @@
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/ciap-2016-central-rov-public-service-audit.json",
+        "dist/data/ciap-2016-central-video-private-block-overlap.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -425,6 +428,7 @@
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/ciap-2016-central-rov-public-service-audit.json",
+        "dist/data/ciap-2016-central-video-private-block-overlap.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -506,6 +510,7 @@
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/ciap-2016-central-rov-public-service-audit.json",
+        "dist/data/ciap-2016-central-video-private-block-overlap.json",
         "dist/data/estero-2012-public-release-inventory.json",
         "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
         "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
@@ -594,6 +599,7 @@
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/ciap-2016-central-rov-public-service-audit.json",
+        "dist/data/ciap-2016-central-video-private-block-overlap.json",
         "dist/data/point-buchon-2007-caris-prefix-lead.json",
         "dist/data/point-buchon-2007-ncei-line-index.json",
         "dist/data/point-buchon-2007-ncei-multibeam-lead.json",

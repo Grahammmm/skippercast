@@ -134,6 +134,7 @@ def build(root):
     pigeon_lander_path = "catalog/candidates/tnc-mlml-pigeon-video-lander.json"
     mare_2016_path = "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json"
     mare_2016_service_path = "dist/data/ciap-2016-central-rov-public-service-audit.json"
+    mare_2016_overlap_path = "dist/data/ciap-2016-central-video-private-block-overlap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -210,6 +211,16 @@ def build(root):
             or mare_2016_service.get("biological_fish_gate_satisfied") is not False
             or mare_2016_service.get("qualified_waypoints") != 0):
         raise ValueError("CIAP ROV WFS evidence scope changed; review before promotion")
+    mare_2016_overlap = load(root, mare_2016_overlap_path)
+    if (mare_2016_overlap.get("scope") != "ciap-2016-central-video-to-private-300ft-research-blocks"
+            or mare_2016_overlap.get("groups", {}).get("point-buchon-rov", {}).get("video_fix_counts", {}).get("inside") != 1644
+            or mare_2016_overlap.get("groups", {}).get("point-buchon-terrain", {}).get("video_fix_counts", {}).get("inside") != 1167
+            or mare_2016_overlap.get("groups", {}).get("estero", {}).get("video_fix_counts", {}).get("within_250m") != 0
+            or mare_2016_overlap.get("groups", {}).get("big-sur-block03", {}).get("video_fix_counts", {}).get("within_250m") != 0
+            or mare_2016_overlap.get("original_fish_substrate_observation_table_joined") is not False
+            or mare_2016_overlap.get("biological_fish_gate_satisfied") is not False
+            or mare_2016_overlap.get("qualified_waypoints") != 0):
+        raise ValueError("CIAP video/block overlap changed; review before promotion")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -480,6 +491,7 @@ def build(root):
         if sector_id in mare_2016["sector_ids"]:
             receipts.append(mare_2016_path)
             receipts.append(mare_2016_service_path)
+            receipts.append(mare_2016_overlap_path)
         tracks = []
         for key, requirement in TRACKS:
             stage = "research-evidence" if key == "native-cells" and measured else "missing-release-evidence"
@@ -517,7 +529,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

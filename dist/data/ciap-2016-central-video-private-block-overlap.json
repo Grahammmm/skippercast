@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "scope": "ciap-2016-central-video-to-private-300ft-research-blocks",
+  "checked_at": "2026-09-27T05:08:20.176695+00:00",
+  "source_wfs": "https://data.axds.co/gs/ciap_seafloor/wfs",
+  "source_layer": "ciap_seafloor:cruise_e_videopoints",
+  "source_kind": "timecoded-video-position-not-fish-observation",
+  "groups": {
+    "big-sur-block03": {
+      "research_blocks": 3,
+      "downloaded_video_fixes_in_query_window": 0,
+      "nearest_video_fix_to_block_m": null,
+      "video_fix_counts": {
+        "inside": 0,
+        "within_100m": 0,
+        "within_250m": 0
+      },
+      "distinct_site_dive_line_units_within_250m": 0,
+      "distinct_site_dive_units_within_250m": 0
+    },
+    "estero": {
+      "research_blocks": 60,
+      "downloaded_video_fixes_in_query_window": 2675,
+      "nearest_video_fix_to_block_m": 340.5,
+      "video_fix_counts": {
+        "inside": 0,
+        "within_100m": 0,
+        "within_250m": 0
+      },
+      "distinct_site_dive_line_units_within_250m": 0,
+      "distinct_site_dive_units_within_250m": 0
+    },
+    "point-buchon-rov": {
+      "research_blocks": 26,
+      "downloaded_video_fixes_in_query_window": 4145,
+      "nearest_video_fix_to_block_m": 0.0,
+      "video_fix_counts": {
+        "inside": 1644,
+        "within_100m": 2299,
+        "within_250m": 3435
+      },
+      "distinct_site_dive_line_units_within_250m": 4,
+      "distinct_site_dive_units_within_250m": 1
+    },
+    "point-buchon-terrain": {
+      "research_blocks": 181,
+      "downloaded_video_fixes_in_query_window": 2953,
+      "nearest_video_fix_to_block_m": 0.0,
+      "video_fix_counts": {
+        "inside": 1167,
+        "within_100m": 1857,
+        "within_250m": 2127
+      },
+      "distinct_site_dive_line_units_within_250m": 3,
+      "distinct_site_dive_units_within_250m": 1
+    }
+  },
+  "original_fish_substrate_observation_table_joined": false,
+  "video_position_total_error_verified": false,
+  "source_depth_and_mllw_qualified": false,
+  "independent_substrate_gate_satisfied": false,
+  "biological_fish_gate_satisfied": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Distances use the WFS precise lon/lat attributes to whole private 100 m research blocks. Nearby frames from a few transect lines are highly correlated; their count is not fish count, independent sampling, bottom-class validation or fishing success. The displayed site/location names are not used for geography. Depth, datum, cleaned-track error, position gaps, fish and substrate annotations, current legal access and full routes remain unverified. A zero within the bounded query means this particular WFS layer has no video fix nearby, not that habitat or fish are absent."
+}
