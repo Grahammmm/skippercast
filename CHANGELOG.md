@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Search plans for five Central Coast preview regions now include their surveyed habitat footprints (575 in total); they had been built before those inputs existed.
+- The live conditions feed is monitored hourly and reports when it stops refreshing.
+
 ## 0.3.0 — 2026-09-20
 
 - Mobile-first map with Map, Spots, Forecast, and Guide navigation; no long page scroll to reach the map or weather.
