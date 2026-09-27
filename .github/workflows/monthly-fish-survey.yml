@@ -9,6 +9,35 @@ permissions:
   contents: read
 
 jobs:
+  central-dataone-rov-spot-precision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check rounded-position and changed-source safeguards
+        run: python -m unittest tests.test_dataone_rov_spot_precision -v
+      - name: Download original OPC DataONE ROV fish-count object
+        run: |
+          mkdir -p var/review
+          curl --fail --location --silent --show-error --retry 2 --max-time 600 \
+            'https://cn.dataone.org/cn/v2/resolve/urn%3Auuid%3Abc58965f-f3b1-421e-8b2a-45690bb695fb' \
+            --output var/review/central-dataone-rov-fish-count.csv
+      - name: Verify source precision before any spot promotion
+        run: >-
+          python scripts/audit_dataone_rov_spot_precision.py
+          --input var/review/central-dataone-rov-fish-count.csv
+          --output var/review/central-dataone-rov-300ft-spot-precision.json
+          --verify dist/data/central-dataone-rov-300ft-spot-precision.json
+      - name: Upload aggregate review without observation coordinates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-dataone-rov-spot-precision
+          path: var/review/central-dataone-rov-300ft-spot-precision.json
+          retention-days: 30
   estero-original-depth-and-independent-character:
     runs-on: ubuntu-latest
     timeout-minutes: 55

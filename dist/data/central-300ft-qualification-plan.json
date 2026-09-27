@@ -16,6 +16,7 @@
     "dist/data/point-buchon-2009-csumb-access-triage.json": "6e4c532037fe896ec7e5bc6ab37443f73001afe2d78265993d3c9b97276752ef",
     "dist/data/point-buchon-2009-conditional-vdatum-probes.json": "7eb211ca559e406d6855962ad7390d1fbb84fc42af0f8fb668f897ba96e82d30",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
+    "dist/data/central-dataone-rov-300ft-spot-precision.json": "496dca56661830c495d503964c011811f0283934969fdd64cb38798fac372f39",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
     "dist/data/estero-wgs84-direct-vdatum-review.json": "12bdc1257618b3287eb402a958c2e513b73256724809a382b95ba53407afc0f3",
     "dist/data/estero-2012-public-release-inventory.json": "4ba445ae24d1baccc7f8ea26a96599bc7172b6c3847a29f94819f8f9b36e0514",
@@ -136,6 +137,11 @@
         "request": "Original 2016 Soquel Canyon\u2013Point Buchon one-second cleaned ROV positions, fish and substrate annotations, effort/transect-width table, survey-line shapefiles, protected/reference roles, positional error and reuse terms; report maps alone cannot qualify a spot"
       },
       {
+        "publisher": "California OPC DataONE",
+        "url": "https://opc.dataone.org/view/urn:uuid:7353f779-b722-4064-8074-3e9c651ed38e",
+        "request": "Use the audited public CC BY 4.0 ROV count table for historical region/depth context only; its at-most-two-decimal coordinates cannot locate a 200\u2013300 ft pile and independence from earlier ROV releases is unverified"
+      },
+      {
         "publisher": "The Nature Conservancy / Moss Landing Marine Laboratories",
         "url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
         "request": "Locate the original Pigeon Point Reef video-lander drop table: bottom/ship positions and offsets, dates, depth, taxon, rock/soft observations, no-fish drops, effort and reuse terms; compare actual drop footprints with W00614 cells before treating it as support"
@@ -244,7 +250,9 @@
       "next_acquisition": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then seek another original depth survey on the same class pixels.",
       "limiting_evidence": "No chart-datum depth and uncertainty over the reviewed rock outlines.",
       "native_cell_evidence": "source-datum-only",
-      "source_receipts": [],
+      "source_receipts": [
+        "dist/data/central-dataone-rov-300ft-spot-precision.json"
+      ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,
       "qualified_200_to_300ft_targets": 0,
@@ -321,6 +329,7 @@
       "limiting_evidence": "Datum, upper uncertainty, source rights and independent substrate remain unresolved.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -404,6 +413,7 @@
         "dist/data/bss03-footprint-vdatum-diagnostic.json",
         "dist/data/bss03-original-vessel-tpu-inputs.json",
         "dist/data/bss03-video-grid-overlap.json",
+        "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
@@ -568,6 +578,7 @@
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "dist/data/cal-dig-i-original-rov-300ft-gap.json",
+        "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
         "dist/data/point-buchon-2007-caris-prefix-lead.json",
         "dist/data/point-buchon-2007-ncei-line-index.json",

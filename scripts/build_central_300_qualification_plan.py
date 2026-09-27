@@ -62,6 +62,8 @@ PROVIDERS = {
          "request": "Georeferenced ROV transects, species observations and zero-observation effort, retaining protected/reference roles and positional error"},
         {"publisher": "CDFW / MARÉ", "url": "https://mareresearch.org/?p=1798",
          "request": "Original 2016 Soquel Canyon–Point Buchon one-second cleaned ROV positions, fish and substrate annotations, effort/transect-width table, survey-line shapefiles, protected/reference roles, positional error and reuse terms; report maps alone cannot qualify a spot"},
+        {"publisher": "California OPC DataONE", "url": "https://opc.dataone.org/view/urn:uuid:7353f779-b722-4064-8074-3e9c651ed38e",
+         "request": "Use the audited public CC BY 4.0 ROV count table for historical region/depth context only; its at-most-two-decimal coordinates cannot locate a 200–300 ft pile and independence from earlier ROV releases is unverified"},
         {"publisher": "The Nature Conservancy / Moss Landing Marine Laboratories", "url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
          "request": "Locate the original Pigeon Point Reef video-lander drop table: bottom/ship positions and offsets, dates, depth, taxon, rock/soft observations, no-fish drops, effort and reuse terms; compare actual drop footprints with W00614 cells before treating it as support"},
     ],
@@ -142,6 +144,7 @@ def build(root):
     buchon_2009_access_path = "dist/data/point-buchon-2009-csumb-access-triage.json"
     buchon_2009_vdatum_path = "dist/data/point-buchon-2009-conditional-vdatum-probes.json"
     cal_dig_rov_path = "dist/data/cal-dig-i-original-rov-300ft-gap.json"
+    dataone_rov_path = "dist/data/central-dataone-rov-300ft-spot-precision.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -152,6 +155,13 @@ def build(root):
     pigeon_video = load(root, pigeon_video_path)
     pigeon_noaa_rov = load(root, pigeon_noaa_rov_path)
     cal_dig_rov = load(root, cal_dig_rov_path)
+    dataone_rov = load(root, dataone_rov_path)
+    if (dataone_rov.get("scope") != "central-opc-dataone-rov-fish-count-300ft-spot-precision"
+            or dataone_rov.get("central_location_date_depth_habitat_units_200_300ft") != 370
+            or dataone_rov.get("native_spot_position_and_swath_verified") is not False
+            or dataone_rov.get("independent_new_fish_survey") is not False
+            or dataone_rov.get("fishing_target") is not False):
+        raise ValueError("OPC DataONE ROV spatial support changed; review before promotion")
     if (cal_dig_rov.get("scope") != "cal-dig-i-original-rov-200-300ft-observation-gap"
             or any(cal_dig_rov.get("sources", {}).get(kind, {}).get("observations_in_200_300ft_depth_band") != 0
                    for kind in ("biotic", "substrate"))
@@ -361,6 +371,8 @@ def build(root):
         receipts.extend(lead["review_path"] for lead in deep_refutations)
         if csumb:
             receipts.append(row["csumb_native_band_receipt"])
+        if sector_id in ("monterey-sur", "big-sur", "sur-san-simeon", "morro-conception"):
+            receipts.append(dataone_rov_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -475,7 +487,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

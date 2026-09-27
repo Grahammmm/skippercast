@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "scope": "central-opc-dataone-rov-fish-count-300ft-spot-precision",
+  "checked_at": "2026-09-27T04:35:36.646467+00:00",
+  "package_url": "https://opc.dataone.org/view/urn:uuid:7353f779-b722-4064-8074-3e9c651ed38e",
+  "object_url": "https://cn.dataone.org/cn/v2/resolve/urn%3Auuid%3Abc58965f-f3b1-421e-8b2a-45690bb695fb",
+  "object_sha256": "e984fc0e17043583947e3545adeafd5adf79560d68c6b44db2d94ea915598855",
+  "source_license": "CC BY 4.0 (package metadata)",
+  "all_region_rows": 1146633,
+  "all_region_zero_count_rows": 1099365,
+  "central_rows_with_missing_depth": 128,
+  "central_rows_200_300ft": 47225,
+  "central_location_date_depth_habitat_units_200_300ft": 370,
+  "central_observation_years_by_unit_200_300ft": {
+    "2007": 6,
+    "2008": 49,
+    "2009": 38,
+    "2012": 16,
+    "2016": 121,
+    "2019": 131,
+    "2020": 9
+  },
+  "central_site_designation_units_200_300ft": [
+    {
+      "mpa_group": "Big Creek",
+      "designation": "Reference",
+      "units": 28
+    },
+    {
+      "mpa_group": "N/A",
+      "designation": "N/A",
+      "units": 15
+    },
+    {
+      "mpa_group": "Piedras Blancas",
+      "designation": "MPA",
+      "units": 12
+    },
+    {
+      "mpa_group": "Point Buchon",
+      "designation": "Reference",
+      "units": 10
+    },
+    {
+      "mpa_group": "Point Lobos",
+      "designation": "MPA",
+      "units": 91
+    },
+    {
+      "mpa_group": "Point Lobos",
+      "designation": "Reference",
+      "units": 69
+    },
+    {
+      "mpa_group": "Point Sur",
+      "designation": "MPA",
+      "units": 67
+    },
+    {
+      "mpa_group": "Point Sur",
+      "designation": "Reference",
+      "units": 15
+    },
+    {
+      "mpa_group": "Portuguese Ledge",
+      "designation": "MPA",
+      "units": 28
+    },
+    {
+      "mpa_group": "Portuguese Ledge",
+      "designation": "Reference",
+      "units": 35
+    }
+  ],
+  "open_reference_detection_units_200_300ft": [
+    {
+      "mpa_group": "Big Creek",
+      "sampled_units": 28,
+      "lingcod_positive_units": 23,
+      "rockfish_group_positive_units": 27
+    },
+    {
+      "mpa_group": "Point Buchon",
+      "sampled_units": 10,
+      "lingcod_positive_units": 4,
+      "rockfish_group_positive_units": 7
+    },
+    {
+      "mpa_group": "Point Lobos",
+      "sampled_units": 69,
+      "lingcod_positive_units": 18,
+      "rockfish_group_positive_units": 55
+    },
+    {
+      "mpa_group": "Point Sur",
+      "sampled_units": 15,
+      "lingcod_positive_units": 5,
+      "rockfish_group_positive_units": 11
+    },
+    {
+      "mpa_group": "Portuguese Ledge",
+      "sampled_units": 35,
+      "lingcod_positive_units": 13,
+      "rockfish_group_positive_units": 30
+    }
+  ],
+  "coordinate_decimal_places_in_band": [
+    {
+      "lat": 1,
+      "lon": 2,
+      "rows": 7040
+    },
+    {
+      "lat": 2,
+      "lon": 0,
+      "rows": 1152
+    },
+    {
+      "lat": 2,
+      "lon": 1,
+      "rows": 5813
+    },
+    {
+      "lat": 2,
+      "lon": 2,
+      "rows": 33220
+    }
+  ],
+  "fractional_positive_count_rows_in_band": 265,
+  "independence_from_prior_rov_release_verified": false,
+  "native_spot_position_and_swath_verified": false,
+  "independent_new_fish_survey": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "The public table provides historical species/count, habitat, depth and protected/reference context, but coordinates are at most two decimal places (about kilometer scale) and rows repeat a location/depth/habitat unit across species. Some positive counts are fractional, so Count cannot be assumed to be raw individual detections. It lacks original one-second bottom fixes, per-row swath/effort and positional error. Its underlying records may overlap earlier analyzed ROV releases; independence has not been verified, so it is not counted as a second fish survey. It cannot identify an exact fishing spot or resolve chart datum, current access or catch probability."
+}
