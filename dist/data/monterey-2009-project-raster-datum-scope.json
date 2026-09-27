@@ -1,0 +1,36 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitation": "The XML describes the northern cmb_n_2mbathy raster, whose stated bounds exclude priority outlines 023 and 046. Its general final-product datum and depth-varying accuracy text cannot be assigned to the selected GSF files or used as an upper error bound.",
+  "mllw_depth_qualified": false,
+  "priority_outlines": {
+    "023": {
+      "fishing_target": false,
+      "selected_gsf_line_datum_proven": false,
+      "within_documented_raster_bbox": false
+    },
+    "046": {
+      "fishing_target": false,
+      "selected_gsf_line_datum_proven": false,
+      "within_documented_raster_bbox": false
+    }
+  },
+  "schema_version": 1,
+  "scope": "monterey-2009-original-csumb-project-raster-datum-scope",
+  "selected_processed_gsf_line_datum_proven": false,
+  "source_documented_bounds_wgs84": [
+    -121.909884,
+    36.709699,
+    -121.791489,
+    36.802455
+  ],
+  "source_process_summary": "CARIS HIPS and POSPAC SBET; finished x/y/z soundings, CUBE surface and derived raster described as NAVD88 Geoid09.",
+  "source_product": "cmb_n_2mbathy",
+  "source_reported_accuracy": {
+    "conservative_upper_product_error_bounded": false,
+    "horizontal": "\u00b12 m horizontal, but varies with depth",
+    "vertical": "\u00b1 20 cm vertical, but varies with depth"
+  },
+  "source_sha256": "36ca10ff75830005baeb4338a03ea51d080fc1cb2d793660730cfecda37cb8c3",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version1/metadata/CentralMontereyBay_Project.xml"
+}

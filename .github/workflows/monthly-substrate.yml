@@ -144,6 +144,11 @@ jobs:
           python scripts/audit_monterey_2009_producer_metadata.py
           --output var/review/monterey-2009-producer-metadata-review.json
           --verify dist/data/monterey-2009-producer-metadata-review.json
+      - name: Bound the original CSUMB project XML to its northern raster
+        run: >-
+          python scripts/audit_monterey_2009_project_raster_metadata.py
+          --output var/review/monterey-2009-project-raster-datum-scope.json
+          --verify dist/data/monterey-2009-project-raster-datum-scope.json
       - name: Recheck original 2009 beams against native USGS depth and character cells
         env:
           PYTHONPATH: src:.
@@ -163,7 +168,7 @@ jobs:
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_project_raster_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -176,6 +181,7 @@ jobs:
             var/review/monterey-noaa2612-acoustic-point-support.json
             var/review/monterey-17-ncei-trackline-leads.json
             var/review/monterey-2009-centralmontereybay-valid-beam-review.json
+            var/review/monterey-2009-project-raster-datum-scope.json
             var/review/monterey-2009-beam-usgs-cell-screen.json
             var/review/monterey-2009-beam-2010-video-proximity.json
           retention-days: 30
