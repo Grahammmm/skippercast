@@ -1,0 +1,76 @@
+{
+  "cdfw_mpa_features": 155,
+  "components": [
+    {
+      "exportable": false,
+      "fishing_target": false,
+      "full_component_area_m2": 4736,
+      "full_component_native_cells": 296,
+      "inside_approximate_vandenberg_zone_7_with_100m_margin": true,
+      "launch_closure_status_for_trip_date": "unverified",
+      "nearest_cdfw_mpa_m": 985.9,
+      "nearest_noaa_enc_charted_danger_m": 5175.2,
+      "nearest_noaa_gea_m": 137128.2,
+      "survey_id": "H11952",
+      "within_100m_review_buffer": false
+    },
+    {
+      "exportable": false,
+      "fishing_target": false,
+      "full_component_area_m2": 3616,
+      "full_component_native_cells": 226,
+      "inside_approximate_vandenberg_zone_7_with_100m_margin": true,
+      "launch_closure_status_for_trip_date": "unverified",
+      "nearest_cdfw_mpa_m": 6184.8,
+      "nearest_noaa_enc_charted_danger_m": 4436.5,
+      "nearest_noaa_gea_m": 142363.8,
+      "survey_id": "H11953",
+      "within_100m_review_buffer": false
+    }
+  ],
+  "components_held_by_mapped_gis": 0,
+  "exportable": false,
+  "fishing_target": false,
+  "input_sha256": {
+    "cdfw_mpas": "18b70e4f5e54eeb94072a6b3c03259b8bdae2970d6ccf792ca660bbaaba171b0",
+    "noaa_enc": "e6bb88d395f0d52a337abe7d4f0930fed0ddf9e7dd5db2bb3f8632ea15b52e92",
+    "noaa_federal": "ff60b4e92c8a5dc85c9256d12d45e5a1a81e2d021d1f6010de86797880e0d3cd",
+    "rugged_overlap": "76baacdc9411792b410c0eee6e9575cf19186d85684a21ee59b0cc835fa2f16a"
+  },
+  "limitations": [
+    "An official GIS proximity screen does not establish legal permission or chart clearance.",
+    "Zone 7 launch closure status, other security notices, current method/species regulations and departure/return routes are not screened for a trip date.",
+    "ENC Direct queried danger classes are not a complete navigational chart or route safety check.",
+    "Source registration, independent habitat/fish evidence and current observations remain unresolved.",
+    "Research component geometry is withheld from this aggregate receipt."
+  ],
+  "noaa_enc_danger_features": 87,
+  "noaa_gea_features": 10,
+  "projected_crs": "EPSG:26910",
+  "review_margin_m": 100,
+  "schema_version": 1,
+  "scope": "point-conception-two-original-4m-components-current-gis-screen",
+  "source_checked_at": {
+    "cdfw_mpa": "2026-09-27T11:31:13.961099+00:00",
+    "noaa_enc": "2026-09-27T11:28:23.684934+00:00",
+    "noaa_federal": "2026-09-27T11:28:17.941380+00:00"
+  },
+  "source_feature_sha256": {
+    "cdfw_mpa": "04af6bedf8480f477665a0792c7becfc49b97a6a93ab6020b506c41a0d61aae7",
+    "noaa_enc": "228ccec89e96323fa21788a7603e55c1a8d34ba441370ba93494c2f022006c1f",
+    "noaa_federal": "7eecb01c212b8bd11511993b36bda608acf9989a2e419da7523da61f6122f77f"
+  },
+  "source_urls": {
+    "cdfw_mpa": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+    "noaa_enc": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+    "noaa_federal": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+    "vandenberg_live_notice": "https://www.vandenberg.spaceforce.mil/About-Us/Environmental/Vandenberg-SFB-Maritime-Updates/",
+    "vandenberg_zone_rule": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1130"
+  },
+  "vandenberg_rule_review": {
+    "geometry_note": "Static regulation perimeter uses a straight closing segment between shoreline endpoints; candidate inclusion is a research classification only.",
+    "meaning": "Zone 7 ordinarily permits fishing and navigation, subject to announced launch closures; no trip-date clearance is inferred.",
+    "section": "33 CFR 334.1130(a)(2)(vii), (b)(1), (b)(3)\u2013(5)",
+    "source_up_to_date_as_of": "2026-09-24"
+  }
+}

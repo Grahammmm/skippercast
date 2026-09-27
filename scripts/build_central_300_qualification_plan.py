@@ -103,7 +103,7 @@ SECTOR_OVERRIDES = {
     },
     "morro-conception": {
         "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
-        "next": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. At Point Conception, investigate the two original 4 m depth/USGS rugged-class research components for registration, independent groundtruth, fish observations and full access before ranking. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations.",
+        "next": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. At Point Conception, a dated official GIS screen found neither of the two 4 m research components within 100 m of mapped MPAs, GEAs or queried ENC dangers; registration, independent groundtruth, fish observations, security, rules and full routes remain open. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations.",
         "hold": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
     },
 }
@@ -125,6 +125,7 @@ def build(root):
     conception_gap_path = "dist/data/point-conception-original-bag-200-300ft-gap.json"
     conception_ladder_path = "dist/data/point-conception-original-bag-depth-ladder.json"
     conception_rugged_path = "dist/data/point-conception-original-4m-rugged-overlap.json"
+    conception_access_path = "dist/data/point-conception-original-4m-access-screen.json"
     estero_path = "dist/data/estero-independent-2012-depth-2008-character-overlap.json"
     bss03_video_path = "dist/data/bss03-video-grid-overlap.json"
     bss03_access_path = "dist/data/bss03-camera-access-triage.json"
@@ -670,6 +671,12 @@ def build(root):
                     or conception_rugged.get("fishing_target") is not False):
                 raise ValueError("Point Conception 4 m rugged overlap status changed")
             receipts.append(conception_rugged["receipt"])
+            conception_access = row.get("point_conception_original_4m_access_screen")
+            if (not conception_access or conception_access.get("mapped_gis_held_components_at_review") != 0
+                    or conception_access.get("status") != "point-in-time research screen; no legal or route clearance"
+                    or conception_access.get("fishing_target") is not False):
+                raise ValueError("Point Conception dated GIS access status changed")
+            receipts.append(conception_access["receipt"])
             receipts.append(buchon_private_access_path)
             receipts.append(buchon_grid_bridge_path)
             receipts.append(cal_dig_rov_path)
@@ -767,7 +774,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_access_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

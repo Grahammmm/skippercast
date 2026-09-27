@@ -44,6 +44,7 @@ def build(root):
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
+    conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
         raise ValueError("Central NBS audit incomplete; coverage ledger cannot be published")
@@ -64,6 +65,10 @@ def build(root):
             or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
             or conception_rugged.get("fishing_target") is not False):
         raise ValueError("Point Conception 4 m rugged overlap changed")
+    if (conception_access.get("scope") != "point-conception-two-original-4m-components-current-gis-screen"
+            or len(conception_access.get("components", [])) != 2
+            or conception_access.get("fishing_target") is not False):
+        raise ValueError("Point Conception 4 m point-in-time access screen changed")
     rows = []
     for region_id in REGIONS:
         package = root / "dist/regions" / region_id
@@ -121,6 +126,12 @@ def build(root):
                 "inset_components_at_least_2500m2": 2,
                 "status": "research-only; source registration and independence unverified",
             } if region_id == "point-arguello-conception" else None),
+            "original_4m_point_in_time_access": ({
+                "receipt": "dist/data/point-conception-original-4m-access-screen.json",
+                "mapped_gis_held_components_at_review": conception_access["components_held_by_mapped_gis"],
+                "reviewed_at": conception_access["source_checked_at"],
+                "status": "dated research screen only; recheck before any promotion",
+            } if region_id == "point-arguello-conception" else None),
             "remaining_gates": [
                 "Original measured depth at candidate cell and surrounding drift patch",
                 "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -143,6 +154,7 @@ def build(root):
             "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
             "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
             "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
+            "point_conception_4m_point_in_time_access": "data/point-conception-original-4m-access-screen.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",
         },
         "source_audit_times": {"nbs": nbs["reviewed_at"], "closures": closure["audited_at"], "original_noaa": hard["generated_at"]},
