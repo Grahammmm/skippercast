@@ -4,10 +4,11 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "5a1ca5690376b1b973b41a2c265053f0f387004c6bd8cfc97c6c470c8bb8549b",
-    "dist/data/central-coverage-ledger-v1.json": "0f51acede2515df31e8fa1c87ce8e1c08eaeba0de4b456c35cc7220ea173628e",
+    "dist/data/central-source-acquisition-queue.json": "15946816ab6c14a6cdbe3a6189856403be9f0558b9dfb986ef2c4d02e9c8bf16",
+    "dist/data/central-coverage-ledger-v1.json": "20c758c3835922b97d70ccc70e6e18faa500a1e25ab4d87cdb6dffd4226aebac",
     "dist/data/point-conception-original-bag-200-300ft-gap.json": "3f88eac95f0d3ea0d96a85f522a18f46c6b06f3bb08d1c2a954cf5af25d42d54",
-    "dist/data/point-conception-original-bag-depth-ladder.json": "45e4034b42eb2e88d2278a45243516f6d4f0a8f508de05a35c24dd00360e939f",
+    "dist/data/point-conception-original-bag-depth-ladder.json": "e72e347d576f60c9d636cfccf5f0fccf44d2c98cf19ed636803124b6fb4b131d",
+    "dist/data/point-conception-original-4m-rugged-overlap.json": "76baacdc9411792b410c0eee6e9575cf19186d85684a21ee59b0cc835fa2f16a",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "40278e9f3ddfbdb4cacacfd28cffc9eb360e06e77fdcc5b8291aa1a8edd806b9",
     "dist/data/point-buchon-2007-ncei-multibeam-lead.json": "f24c4e053f461a7b9c85fa04d5f079cba5032065cec48f5f97a72f95a8392da0",
     "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json": "e7a73843f121c359b8c0d683ab30cca2e364f5930cf4b7ab9a68f3f00b5d3cf8",
@@ -623,7 +624,7 @@
       "sector_id": "morro-conception",
       "source_review_priority_tier": 1,
       "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
-      "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. At Point Conception, the original H11952/H11953 4 m and 8 m BAG tiers have nominal 200\u2013300 ft MLLW cells; spatially screen their full depth-plus-uncertainty patches, independent substrate and access before ranking. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
+      "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. At Point Conception, investigate the two original 4 m depth/USGS rugged-class research components for registration, independent groundtruth, fish observations and full access before ranking. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
       "limiting_evidence": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
@@ -650,6 +651,7 @@
         "dist/data/point-buchon-rov-access-triage.json",
         "dist/data/point-buchon-rov-original-cell-join.json",
         "dist/data/point-buchon-vdatum-grid-api-bridge.json",
+        "dist/data/point-conception-original-4m-rugged-overlap.json",
         "dist/data/point-conception-original-bag-200-300ft-gap.json",
         "dist/data/point-conception-original-bag-depth-ladder.json"
       ],

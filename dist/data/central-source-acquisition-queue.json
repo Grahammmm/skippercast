@@ -51,6 +51,7 @@
       "noaa_original_200_300ft_sector_refutations": [],
       "point_conception_original_bag_deep_gap": null,
       "point_conception_original_bag_deep_lead": null,
+      "point_conception_original_4m_rugged_overlap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -177,6 +178,7 @@
       "noaa_original_200_300ft_sector_refutations": [],
       "point_conception_original_bag_deep_gap": null,
       "point_conception_original_bag_deep_lead": null,
+      "point_conception_original_4m_rugged_overlap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -280,6 +282,7 @@
       "noaa_original_200_300ft_sector_refutations": [],
       "point_conception_original_bag_deep_gap": null,
       "point_conception_original_bag_deep_lead": null,
+      "point_conception_original_4m_rugged_overlap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
@@ -414,6 +417,7 @@
       "noaa_original_200_300ft_sector_refutations": [],
       "point_conception_original_bag_deep_gap": null,
       "point_conception_original_bag_deep_lead": null,
+      "point_conception_original_4m_rugged_overlap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13151",
@@ -537,6 +541,7 @@
       "noaa_original_200_300ft_sector_refutations": [],
       "point_conception_original_bag_deep_gap": null,
       "point_conception_original_bag_deep_lead": null,
+      "point_conception_original_4m_rugged_overlap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
@@ -762,6 +767,13 @@
         "fishing_target": false,
         "exportable": false
       },
+      "point_conception_original_4m_rugged_overlap": {
+        "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
+        "inset_components_at_least_2500m2": 2,
+        "next_gate": "Resolve USGS/NOAA registration and class accuracy at these components, then independent fish and full access evidence",
+        "fishing_target": false,
+        "exportable": false
+      },
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "F00844",
@@ -805,7 +817,7 @@
           "paired_original_products": false
         }
       ],
-      "next_action": "Spatially screen original H11952/H11953 4 m and 8 m 200\u2013300 ft MLLW cells with product uncertainty, independent substrate, closures and routes; keep Point Buchon lineage separate",
+      "next_action": "Resolve registration/independence of two H11952/H11953 4 m rugged-class research components, then source fish observations and fresh closures/ENC/route screens; keep Point Buchon lineage separate",
       "blocking_checks": [
         "valid measured cells within 300 ft plus uncertainty margin",
         "paired high-resolution substrate and independent groundtruth",

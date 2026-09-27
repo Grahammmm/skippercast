@@ -1,0 +1,47 @@
+{
+  "class_interpretation": "USGS class 3: hard/rugged; mapped class, not an observed boulder size or independent fish sighting",
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "Rugged-class overlap is a terrain/substrate research lead; acoustic source independence is unverified.",
+    "The two-cell (8 m) inset tests boundary sensitivity, not achieved source registration or horizontal uncertainty.",
+    "No fresh MPA, security, ENC danger, drift or route clearance is included.",
+    "No dated fish observation or effort is spatially linked to these components.",
+    "Aggregate counts intentionally omit coordinates, polygons and chartplotter exports."
+  ],
+  "rows": [
+    {
+      "bag_file": "H11952_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "depth_cells_on_nearest_usgs_class3": 21210,
+      "depth_cells_on_two_cell_inset_class3": 4514,
+      "depth_uncertainty_screen_cells": 1470200,
+      "exportable": false,
+      "fishing_target": false,
+      "inset_components_at_least_2500m2": 1,
+      "inset_contiguous_components": 436,
+      "largest_inset_component_m2": 4736,
+      "native_resolution_m": 4,
+      "survey_id": "H11952"
+    },
+    {
+      "bag_file": "H11953_MB_4m_MLLW_3of4.bag",
+      "bag_sha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+      "depth_cells_on_nearest_usgs_class3": 517,
+      "depth_cells_on_two_cell_inset_class3": 236,
+      "depth_uncertainty_screen_cells": 1848507,
+      "exportable": false,
+      "fishing_target": false,
+      "inset_components_at_least_2500m2": 1,
+      "inset_contiguous_components": 4,
+      "largest_inset_component_m2": 3616,
+      "native_resolution_m": 4,
+      "survey_id": "H11953"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "point-conception-original-4m-mllw-usgs-class3-aggregate-overlap",
+  "total_inset_components_at_least_2500m2": 2,
+  "usgs_character_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+  "usgs_character_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip"
+}

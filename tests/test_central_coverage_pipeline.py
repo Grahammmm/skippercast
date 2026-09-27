@@ -26,6 +26,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(conception["original_200_300ft_gap"]["populated_depth_band_cells"], 0)
         self.assertIn("two BAG files only", conception["original_200_300ft_gap"]["scope"])
         self.assertEqual(conception["original_200_300ft_native_lead"]["nominal_4m_depth_cells"], 3318707)
+        self.assertEqual(conception["original_4m_rugged_overlap"]["inset_components_at_least_2500m2"], 2)
         self.assertEqual(conception["qualified_targets_200_to_300ft"], 0)
 
     def test_failed_closure_screen_blocks_ledger(self):
@@ -91,6 +92,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertFalse(conception["point_conception_original_bag_deep_gap"]["fishing_target"])
         self.assertEqual(conception["point_conception_original_bag_deep_lead"]["native_4m_nominal_200_300ft_cells"], 3318707)
         self.assertFalse(conception["point_conception_original_bag_deep_lead"]["exportable"])
+        self.assertEqual(conception["point_conception_original_4m_rugged_overlap"]["inset_components_at_least_2500m2"], 2)
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
         self.assertEqual({row["survey_id"] for row in conception["noaa_original_deepwater_300ft_refutations"]},
                          {"H13152", "W00479"})

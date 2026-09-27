@@ -6,6 +6,7 @@
     "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
     "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
     "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
+    "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
     "existing_target_closures": "data/central-atlas-300-current-closure-screen.json"
   },
   "source_audit_times": {
@@ -48,6 +49,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -82,6 +84,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -116,6 +119,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -150,6 +154,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -184,6 +189,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -218,6 +224,7 @@
       ],
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
+      "original_4m_rugged_overlap": null,
       "remaining_gates": [
         "No newly qualified 200\u2013300 ft source footprint",
         "Independent fish-presence/catch-effort evidence remains absent"
@@ -261,6 +268,11 @@
         "nominal_native_depth_cells": 3990509,
         "nominal_4m_depth_cells": 3318707,
         "status": "research-only; no ranked or exportable deeper targets"
+      },
+      "original_4m_rugged_overlap": {
+        "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
+        "inset_components_at_least_2500m2": 2,
+        "status": "research-only; source registration and independence unverified"
       },
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",

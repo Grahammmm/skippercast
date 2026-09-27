@@ -37,6 +37,7 @@ def build(root):
     regular_native = read(root / "dist/data/noaa-regular-native-depth-review.json")
     conception_two_bag_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
+    conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
     if (conception_two_bag_gap.get("scope") != "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap"
             or conception_two_bag_gap.get("combined_200_to_300ft_cells") != 0
             or {row.get("survey_id") for row in conception_two_bag_gap.get("sources", [])} != {"H11952", "H11953"}
@@ -50,6 +51,10 @@ def build(root):
             or conception_ladder.get("nominal_200_to_300ft_4m_cells") != 3318707
             or conception_ladder.get("fishing_target") is not False):
         raise ValueError("Point Conception original BAG deep-cell lead changed")
+    if (conception_rugged.get("scope") != "point-conception-original-4m-mllw-usgs-class3-aggregate-overlap"
+            or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
+            or conception_rugged.get("fishing_target") is not False):
+        raise ValueError("Point Conception 4 m rugged overlap changed")
     extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
     extra_bag = read(root / "dist/data/f00844-original-fifth-bag-review.json")
     estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
@@ -451,6 +456,12 @@ def build(root):
                 "next_gate": "Map whole measured cell patches with product uncertainty and independent substrate; then full legal/chart/route screens",
                 "fishing_target": False, "exportable": False,
             } if sector_id == "morro-conception" else None),
+            "point_conception_original_4m_rugged_overlap": ({
+                "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
+                "inset_components_at_least_2500m2": 2,
+                "next_gate": "Resolve USGS/NOAA registration and class accuracy at these components, then independent fish and full access evidence",
+                "fishing_target": False, "exportable": False,
+            } if sector_id == "morro-conception" else None),
             "noaa_no_measured_cells_in_17_monterey_outlines": [
                 {"survey_id": sid, "review_path": monterey_no_overlap[sid]}
                 for sid in original_bag if sid in monterey_no_overlap
@@ -524,7 +535,7 @@ def build(root):
             } if sector_id == "cambria-morro" else None),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
-            "next_action": "Spatially screen original H11952/H11953 4 m and 8 m 200–300 ft MLLW cells with product uncertainty, independent substrate, closures and routes; keep Point Buchon lineage separate" if sector_id == "morro-conception"
+            "next_action": "Resolve registration/independence of two H11952/H11953 4 m rugged-class research components, then source fish observations and fresh closures/ENC/route screens; keep Point Buchon lineage separate" if sector_id == "morro-conception"
                            else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",

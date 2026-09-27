@@ -43,6 +43,7 @@ def build(root):
     hard = read(root / "dist/data/point-conception-native-hard-300-review-summary.json")
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
+    conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
         raise ValueError("Central NBS audit incomplete; coverage ledger cannot be published")
@@ -59,6 +60,10 @@ def build(root):
             or conception_ladder.get("nominal_200_to_300ft_4m_cells") != 3318707
             or conception_ladder.get("fishing_target") is not False):
         raise ValueError("Point Conception original deep BAG ladder changed")
+    if (conception_rugged.get("scope") != "point-conception-original-4m-mllw-usgs-class3-aggregate-overlap"
+            or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
+            or conception_rugged.get("fishing_target") is not False):
+        raise ValueError("Point Conception 4 m rugged overlap changed")
     rows = []
     for region_id in REGIONS:
         package = root / "dist/regions" / region_id
@@ -111,6 +116,11 @@ def build(root):
                 "nominal_4m_depth_cells": conception_ladder["nominal_200_to_300ft_4m_cells"],
                 "status": "research-only; no ranked or exportable deeper targets",
             } if region_id == "point-arguello-conception" else None),
+            "original_4m_rugged_overlap": ({
+                "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
+                "inset_components_at_least_2500m2": 2,
+                "status": "research-only; source registration and independence unverified",
+            } if region_id == "point-arguello-conception" else None),
             "remaining_gates": [
                 "Original measured depth at candidate cell and surrounding drift patch",
                 "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -132,6 +142,7 @@ def build(root):
             "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
             "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
             "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
+            "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",
         },
         "source_audit_times": {"nbs": nbs["reviewed_at"], "closures": closure["audited_at"], "original_noaa": hard["generated_at"]},
