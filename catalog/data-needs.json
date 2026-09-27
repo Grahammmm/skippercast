@@ -399,6 +399,26 @@
       "must_not_infer": "Landing totals, reported limits and successful posts lack the denominator needed for bite probability."
     },
     {
+      "id": "historical-charter-grounds",
+      "name": "Documented historical charter fishing grounds",
+      "question": "Which broad areas did charter captains report using for a target fishery, and when?",
+      "fields": [
+        "target_fishery",
+        "survey_year",
+        "interview_method",
+        "reported_area",
+        "spatial_precision",
+        "aggregation_method",
+        "publication_rights"
+      ],
+      "units": {},
+      "cadence": "Review original studies and rights when a region is added; do not imply live coverage.",
+      "gates": [
+        "historical-fishing-context"
+      ],
+      "must_not_infer": "Interviewed historical grounds are not AIS tracks, exact dwell sites, current catch rates or verified fish habitat."
+    },
+    {
       "id": "charter-identity",
       "name": "Verified charter vessel identities",
       "question": "Does this MMSI belong to a local sportfishing operator?",

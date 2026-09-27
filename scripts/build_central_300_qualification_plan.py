@@ -125,6 +125,7 @@ def build(root):
     conception_gap_path = "dist/data/point-conception-original-bag-200-300ft-gap.json"
     conception_ladder_path = "dist/data/point-conception-original-bag-depth-ladder.json"
     conception_rugged_path = "dist/data/point-conception-original-4m-rugged-overlap.json"
+    conception_8m_path = "dist/data/point-conception-original-8m-hard-overlap.json"
     conception_access_path = "dist/data/point-conception-original-4m-access-screen.json"
     estero_path = "dist/data/estero-independent-2012-depth-2008-character-overlap.json"
     bss03_video_path = "dist/data/bss03-video-grid-overlap.json"
@@ -671,6 +672,13 @@ def build(root):
                     or conception_rugged.get("fishing_target") is not False):
                 raise ValueError("Point Conception 4 m rugged overlap status changed")
             receipts.append(conception_rugged["receipt"])
+            conception_8m = row.get("point_conception_original_8m_hard_overlap")
+            if (not conception_8m or conception_8m.get("requested_region_rugged_inset_cells") != 41
+                    or conception_8m.get("retained_rugged_patches_at_least_2500m2") != 0
+                    or conception_8m.get("retained_flat_patches_inside_requested_region") != 0
+                    or conception_8m.get("fishing_target") is not False):
+                raise ValueError("Point Conception 8 m research scope changed")
+            receipts.append(conception_8m["receipt"])
             conception_access = row.get("point_conception_original_4m_access_screen")
             if (not conception_access or conception_access.get("mapped_gis_held_components_at_review") != 0
                     or conception_access.get("status") != "point-in-time research screen; no legal or route clearance"
@@ -774,7 +782,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_access_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_8m_path, conception_access_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

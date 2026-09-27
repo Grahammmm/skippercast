@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "cdfw-ecotrust-central-cpfv-2011-grounds",
+  "name": "Ecotrust 2011 Central Coast rockfish/lingcod CPFV reported ground value",
+  "sector_ids": ["monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception"],
+  "need_ids": ["historical-charter-grounds"],
+  "producer": {
+    "name": "Ecotrust, distributed through California Department of Fish and Wildlife BIOS",
+    "url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html"
+  },
+  "documentation_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html",
+  "access_url": "https://filelib.wildlife.ca.gov/Public/BDB/GIS/BIOS/Public_Datasets/1000_1099/ds1091.zip",
+  "access_status": "partial",
+  "variables": ["interview_reported_relative_rockfish_lingcod_cpfv_ground_value"],
+  "units": {"interview_reported_relative_rockfish_lingcod_cpfv_ground_value": "relative weighted value; not trips or catch per unit effort"},
+  "rights": {
+    "license": null,
+    "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-123.564094, 33.860526, -120.375973, 37.328461],
+    "resolution_m": null,
+    "horizontal_crs": "EPSG:3857",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": null,
+    "resolution_basis": "unknown"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T00:00:00Z",
+    "update_cadence": "Historical one-time interview study; no current update claimed.",
+    "coverage_start": "2011-01-01",
+    "coverage_end": "2011-12-31"
+  },
+  "provenance": {
+    "access_service": "CDFW BIOS public metadata for DS1091; downloadable archive not verified",
+    "raw_sha256": null,
+    "transformations": []
+  },
+  "evidence": [
+    {
+      "url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html",
+      "supports": "Metadata identifies Ecotrust's spring 2012 captain interviews, 2011 rockfish/lingcod CPFV ground values, source methods, geographic extent and the contact-for-use limitation."
+    }
+  ],
+  "limitations": [
+    "The source is interviews and relative economic value, not AIS vessel history or exact charter dwell points.",
+    "Captains described grounds at varying precision; the combined raster was smoothed for confidentiality. The catalog envelope is not a verified fishing footprint.",
+    "The observations concern 2011 and cannot establish current species presence, successful catches or legal access.",
+    "Metadata states 'Contact Ecotrust about using this data.' Rights and redistribution are unresolved; no raster or derived geometry may be publicly ingested or published yet.",
+    "The linked ZIP and its native grid, nodata mask and cell resolution have not been inspected; source access remains partial."
+  ]
+}

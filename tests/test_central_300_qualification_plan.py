@@ -38,6 +38,8 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/monterey-1995-original-multibeam-overlap.json", monterey["source_receipts"])
         self.assertIn("dist/data/monterey-1998-original-em300-overlap.json", monterey["source_receipts"])
         self.assertIn("dist/data/monterey-2013-merge-lineage-gap.json", monterey["source_receipts"])
+        conception = next(s for s in result["sectors"] if s["sector_id"] == "morro-conception")
+        self.assertIn("dist/data/point-conception-original-8m-hard-overlap.json", conception["source_receipts"])
         self.assertIn("Full_DataInventory.xlsx", monterey["next_acquisition"])
         self.assertIn("catalog/candidates/tnc-mlml-pigeon-video-lander.json", pigeon["source_receipts"])
         self.assertIn("video-lander drop table", pigeon["next_acquisition"])

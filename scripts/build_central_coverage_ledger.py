@@ -44,6 +44,7 @@ def build(root):
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
+    conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
@@ -65,6 +66,13 @@ def build(root):
             or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
             or conception_rugged.get("fishing_target") is not False):
         raise ValueError("Point Conception 4 m rugged overlap changed")
+    if (conception_8m.get("scope") != "point-conception-original-8m-mllw-usgs-class2-class3-aggregate-overlap"
+            or sum(row["class3_hard_rugged_two_cell_inset"]["inset_components_at_least_2500m2"]
+                   for row in conception_8m.get("rows", [])) != 0
+            or sum(row["class2_hard_flat_two_cell_inset"]["retained_components_intersecting_requested_region"]
+                   for row in conception_8m.get("rows", [])) != 0
+            or conception_8m.get("fishing_target") is not False):
+        raise ValueError("Point Conception 8 m regional overlap changed")
     if (conception_access.get("scope") != "point-conception-two-original-4m-components-current-gis-screen"
             or len(conception_access.get("components", [])) != 2
             or conception_access.get("fishing_target") is not False):
@@ -126,6 +134,12 @@ def build(root):
                 "inset_components_at_least_2500m2": 2,
                 "status": "research-only; source registration and independence unverified",
             } if region_id == "point-arguello-conception" else None),
+            "original_8m_hard_overlap": ({
+                "receipt": "dist/data/point-conception-original-8m-hard-overlap.json",
+                "retained_rugged_patches_at_least_2500m2": 0,
+                "retained_hard_flat_patches_inside_requested_region": 0,
+                "status": "research-only; 8 m class cannot resolve narrow reef",
+            } if region_id == "point-arguello-conception" else None),
             "original_4m_point_in_time_access": ({
                 "receipt": "dist/data/point-conception-original-4m-access-screen.json",
                 "mapped_gis_held_components_at_review": conception_access["components_held_by_mapped_gis"],
@@ -154,6 +168,7 @@ def build(root):
             "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
             "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
             "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
+            "point_conception_8m_hard_overlap": "data/point-conception-original-8m-hard-overlap.json",
             "point_conception_4m_point_in_time_access": "data/point-conception-original-4m-access-screen.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",
         },

@@ -27,6 +27,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertIn("two BAG files only", conception["original_200_300ft_gap"]["scope"])
         self.assertEqual(conception["original_200_300ft_native_lead"]["nominal_4m_depth_cells"], 3318707)
         self.assertEqual(conception["original_4m_rugged_overlap"]["inset_components_at_least_2500m2"], 2)
+        self.assertEqual(conception["original_8m_hard_overlap"]["retained_hard_flat_patches_inside_requested_region"], 0)
         self.assertEqual(conception["original_4m_point_in_time_access"]["mapped_gis_held_components_at_review"], 0)
         self.assertEqual(conception["qualified_targets_200_to_300ft"], 0)
 
@@ -94,6 +95,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(conception["point_conception_original_bag_deep_lead"]["native_4m_nominal_200_300ft_cells"], 3318707)
         self.assertFalse(conception["point_conception_original_bag_deep_lead"]["exportable"])
         self.assertEqual(conception["point_conception_original_4m_rugged_overlap"]["inset_components_at_least_2500m2"], 2)
+        self.assertEqual(conception["point_conception_original_8m_hard_overlap"]["requested_region_rugged_inset_cells"], 41)
         self.assertEqual(conception["point_conception_original_4m_access_screen"]["mapped_gis_held_components_at_review"], 0)
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
         self.assertEqual({row["survey_id"] for row in conception["noaa_original_deepwater_300ft_refutations"]},

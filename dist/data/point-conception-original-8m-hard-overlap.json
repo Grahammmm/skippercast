@@ -1,0 +1,92 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "The USGS class may reuse the 2008 Fugro acoustic soundings behind the NOAA BAG; independent acoustic validation is not established.",
+    "Nearest-neighbor reprojection from 2 m to 8 m can omit narrow rock bands. A zero retained component is not proof that no rock exists.",
+    "The two-cell (16 m) inset is a boundary sensitivity test, not an achieved registration-error bound.",
+    "A broad class-2 hard/flat area is not a discrete rock pile or species observation; edges, substrate truth and fish effort remain unverified.",
+    "The retained 8 m class-2 areas are outside the requested Point Conception region. Regional survey-file overlap alone cannot promote them into the Central Coast map.",
+    "No current full-footprint MPA, security, chart, route or species-rule clearance is included."
+  ],
+  "requested_region_id": "point-arguello-conception",
+  "requested_region_southern_latitude": 34.45,
+  "rows": [
+    {
+      "bag_file": "H11952_MB_8m_MLLW_4of4.bag",
+      "bag_sha256": "7a726128f5d4ee4b5f761f5544d16b2b9e9ddcbe0c80f7bb79573e3659e2afd1",
+      "class2_hard_flat_raw_overlap_cells": 17289,
+      "class2_hard_flat_two_cell_inset": {
+        "inset_cells": 8788,
+        "inset_components": 119,
+        "inset_components_at_least_2500m2": 3,
+        "largest_five_retained_component_areas_m2": [
+          516544,
+          13632,
+          8128
+        ],
+        "largest_inset_component_m2": 516544,
+        "retained_component_northmost_latitude": 34.40746,
+        "retained_components_intersecting_requested_region": 0
+      },
+      "class3_hard_rugged_raw_overlap_cells": 7852,
+      "class3_hard_rugged_two_cell_inset": {
+        "inset_cells": 365,
+        "inset_components": 122,
+        "inset_components_at_least_2500m2": 0,
+        "largest_five_retained_component_areas_m2": [],
+        "largest_inset_component_m2": 1920,
+        "retained_component_northmost_latitude": null,
+        "retained_components_intersecting_requested_region": 0
+      },
+      "depth_uncertainty_screen_cells": 317830,
+      "exportable": false,
+      "fishing_target": false,
+      "native_resolution_m": 8,
+      "requested_region_class2_inset_cells": 0,
+      "requested_region_class2_raw_cells": 0,
+      "requested_region_class3_inset_cells": 41,
+      "requested_region_class3_raw_cells": 564,
+      "survey_id": "H11952"
+    },
+    {
+      "bag_file": "H11953_MB_8m_MLLW_4of4.bag",
+      "bag_sha256": "e70772d2bbfcb310f7a997f0a58a148baa742b79c242b3f0794d6e5a442b97a2",
+      "class2_hard_flat_raw_overlap_cells": 0,
+      "class2_hard_flat_two_cell_inset": {
+        "inset_cells": 0,
+        "inset_components": 0,
+        "inset_components_at_least_2500m2": 0,
+        "largest_five_retained_component_areas_m2": [],
+        "largest_inset_component_m2": 0,
+        "retained_component_northmost_latitude": null,
+        "retained_components_intersecting_requested_region": 0
+      },
+      "class3_hard_rugged_raw_overlap_cells": 0,
+      "class3_hard_rugged_two_cell_inset": {
+        "inset_cells": 0,
+        "inset_components": 0,
+        "inset_components_at_least_2500m2": 0,
+        "largest_five_retained_component_areas_m2": [],
+        "largest_inset_component_m2": 0,
+        "retained_component_northmost_latitude": null,
+        "retained_components_intersecting_requested_region": 0
+      },
+      "depth_uncertainty_screen_cells": 305817,
+      "exportable": false,
+      "fishing_target": false,
+      "native_resolution_m": 8,
+      "requested_region_class2_inset_cells": 0,
+      "requested_region_class2_raw_cells": 0,
+      "requested_region_class3_inset_cells": 0,
+      "requested_region_class3_raw_cells": 0,
+      "survey_id": "H11953"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "point-conception-original-8m-mllw-usgs-class2-class3-aggregate-overlap",
+  "usgs_character_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+  "usgs_character_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+  "usgs_class2": "Interpreted hard/flat, not photographed bedrock or large boulders",
+  "usgs_class3": "Interpreted hard/rugged, not an independently verified fish site"
+}

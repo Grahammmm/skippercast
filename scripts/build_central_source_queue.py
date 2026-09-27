@@ -38,6 +38,7 @@ def build(root):
     conception_two_bag_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
+    conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
     if (conception_two_bag_gap.get("scope") != "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap"
             or conception_two_bag_gap.get("combined_200_to_300ft_cells") != 0
@@ -56,6 +57,12 @@ def build(root):
             or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
             or conception_rugged.get("fishing_target") is not False):
         raise ValueError("Point Conception 4 m rugged overlap changed")
+    if (conception_8m.get("scope") != "point-conception-original-8m-mllw-usgs-class2-class3-aggregate-overlap"
+            or [row["requested_region_class3_inset_cells"] for row in conception_8m.get("rows", [])] != [41, 0]
+            or sum(row["class2_hard_flat_two_cell_inset"]["retained_components_intersecting_requested_region"]
+                   for row in conception_8m["rows"]) != 0
+            or conception_8m.get("fishing_target") is not False):
+        raise ValueError("Point Conception 8 m deeper class scope changed")
     if (conception_access.get("scope") != "point-conception-two-original-4m-components-current-gis-screen"
             or len(conception_access.get("components", [])) != 2
             or conception_access.get("fishing_target") is not False):
@@ -465,6 +472,14 @@ def build(root):
                 "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
                 "inset_components_at_least_2500m2": 2,
                 "next_gate": "Resolve USGS/NOAA registration and class accuracy at these components, then independent fish and full access evidence",
+                "fishing_target": False, "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_conception_original_8m_hard_overlap": ({
+                "receipt": "dist/data/point-conception-original-8m-hard-overlap.json",
+                "requested_region_rugged_inset_cells": 41,
+                "retained_rugged_patches_at_least_2500m2": 0,
+                "retained_flat_patches_inside_requested_region": 0,
+                "next_gate": "Seek measured finer-resolution depth and independent bottom observations; 8 m cells cannot validate small reef",
                 "fishing_target": False, "exportable": False,
             } if sector_id == "morro-conception" else None),
             "point_conception_original_4m_access_screen": ({
