@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-2007-ncei-generated-line-depth-index",
+  "source_datum": "Unknown; nominal line-depth-envelope triage only",
+  "surveys": [
+    {
+      "survey_id": "PointBuchon",
+      "archive_page_url": "https://www.ngdc.noaa.gov/ships/ventresca/PointBuchon_mb.html",
+      "processed_line_count": 73,
+      "all_generated_line_summaries_sha256": "0ddba16de644cda2fe2d3ded26f0f000858946e10270e6b1fc5813bd9f6a731a",
+      "nominal_200_300ft_unknown_datum_envelope_line_count": 17,
+      "nominal_envelope_candidate_lines": [
+        {
+          "line": "PB129-1914.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-1914.gsf.mb121.inf",
+          "inf_sha256": "4ac8b711e1994c19a1120e30b21c5b39d5a238c247db0c44537725a08a664921",
+          "minimum_depth_m_unknown_datum": 83.675,
+          "maximum_depth_m_unknown_datum": 102.7083
+        },
+        {
+          "line": "PB129-2014.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2014.gsf.mb121.inf",
+          "inf_sha256": "240b867e6d935e016f1b4cc68cb8f97261edc144119cd7e6c7dc4d295282ab3b",
+          "minimum_depth_m_unknown_datum": 82.3433,
+          "maximum_depth_m_unknown_datum": 98.9367
+        },
+        {
+          "line": "PB129-2108.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2108.gsf.mb121.inf",
+          "inf_sha256": "e2637447636de2c03851446e9881ffda7148e6a114646443a89782b91c4782c0",
+          "minimum_depth_m_unknown_datum": 76.1957,
+          "maximum_depth_m_unknown_datum": 94.4933
+        },
+        {
+          "line": "PB129-2212.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2212.gsf.mb121.inf",
+          "inf_sha256": "75f7223e565572af10ecab484cf1825c9e375b7e6f6a7a82c5d8dc67e5054322",
+          "minimum_depth_m_unknown_datum": 70.3475,
+          "maximum_depth_m_unknown_datum": 87.1786
+        },
+        {
+          "line": "PB129-2245.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB129-2245.gsf.mb121.inf",
+          "inf_sha256": "b1ec6b1f308c47ab28157ecf4f037365e3caeb61424e5105f0ed84731e4bdb5c",
+          "minimum_depth_m_unknown_datum": 78.64,
+          "maximum_depth_m_unknown_datum": 91.7086
+        },
+        {
+          "line": "PB130-1339.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1339.gsf.mb121.inf",
+          "inf_sha256": "acff13a8dc0df258faa08b346239e101db97b5f42d4ec1c2e8b94e49a3950d82",
+          "minimum_depth_m_unknown_datum": 63.7075,
+          "maximum_depth_m_unknown_datum": 89.5071
+        },
+        {
+          "line": "PB130-1438.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1438.gsf.mb121.inf",
+          "inf_sha256": "810d158f60038820652f744299a378b42c8bec6b4a9a79ead8434f923c669bc7",
+          "minimum_depth_m_unknown_datum": 60.8567,
+          "maximum_depth_m_unknown_datum": 86.8514
+        },
+        {
+          "line": "PB130-1536.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1536.gsf.mb121.inf",
+          "inf_sha256": "449ee2a795db9f57d820d045cce5ff492e531a0f553d6a732bddd3a5bce710dc",
+          "minimum_depth_m_unknown_datum": 56.2867,
+          "maximum_depth_m_unknown_datum": 83.8243
+        },
+        {
+          "line": "PB130-1622.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1622.gsf.mb121.inf",
+          "inf_sha256": "1a8da32d54389fccdf9e2e6ba6b2c210b8ec989d4e73a00425af16280dcdf51c",
+          "minimum_depth_m_unknown_datum": 61.2056,
+          "maximum_depth_m_unknown_datum": 81.8671
+        },
+        {
+          "line": "PB130-1653.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1653.gsf.mb121.inf",
+          "inf_sha256": "ab594c2b4a0f3b44a2296a52f709f7d50d40bc9c6aefdd5d4ed9fa51f78c5f55",
+          "minimum_depth_m_unknown_datum": 53.319,
+          "maximum_depth_m_unknown_datum": 66.1622
+        },
+        {
+          "line": "PB130-1723.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1723.gsf.mb121.inf",
+          "inf_sha256": "42926e4b75a4c852245cdaee10b1bc58069272e35b2b5505cec96437e89b572d",
+          "minimum_depth_m_unknown_datum": 50.681,
+          "maximum_depth_m_unknown_datum": 80.0288
+        },
+        {
+          "line": "PB130-1810.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1810.gsf.mb121.inf",
+          "inf_sha256": "371385914f12c0bfd58f962afbef72c14211fbde0ea661c28542100ebddf7ccc",
+          "minimum_depth_m_unknown_datum": 48.781,
+          "maximum_depth_m_unknown_datum": 78.23
+        },
+        {
+          "line": "PB130-1903.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1903.gsf.mb121.inf",
+          "inf_sha256": "b6c729aaa87733c4e7d8468015c37f6ccb76f35e0acc90061736bcc787320f46",
+          "minimum_depth_m_unknown_datum": 46.445,
+          "maximum_depth_m_unknown_datum": 72.7163
+        },
+        {
+          "line": "PB130-1945.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-1945.gsf.mb121.inf",
+          "inf_sha256": "276abd15ed5f120648891bf167cd6107ba05a0ec61f22edd1ef6f006dc1042a8",
+          "minimum_depth_m_unknown_datum": 44.282,
+          "maximum_depth_m_unknown_datum": 70.5222
+        },
+        {
+          "line": "PB130-2036.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-2036.gsf.mb121.inf",
+          "inf_sha256": "aa642d5aa1a9e095eb12ae116037c614990f84f519b7c6d3bf90886dcd71ccaa",
+          "minimum_depth_m_unknown_datum": 43.147,
+          "maximum_depth_m_unknown_datum": 68.3822
+        },
+        {
+          "line": "PB130-2119.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-2119.gsf.mb121.inf",
+          "inf_sha256": "742f39bae16fb18fa26aee0fe62f1b3d7e957cf420174fb4dfe7ae94af208484",
+          "minimum_depth_m_unknown_datum": 31.333,
+          "maximum_depth_m_unknown_datum": 65.1967
+        },
+        {
+          "line": "PB130-2214.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/MB/reson8101/generated/PB130-2214.gsf.mb121.inf",
+          "inf_sha256": "8df58d898ed94e6ab937a902db1b14159802fabadfe700403e70033312f9ce30",
+          "minimum_depth_m_unknown_datum": 28.275,
+          "maximum_depth_m_unknown_datum": 62.401
+        }
+      ]
+    },
+    {
+      "survey_id": "PointBuchon_Control",
+      "archive_page_url": "https://www.ngdc.noaa.gov/ships/ventresca/PointBuchon_Control_mb.html",
+      "processed_line_count": 113,
+      "all_generated_line_summaries_sha256": "3e5a4a4430a4521eb769be55e82424030a27479eb3e94819cb0833e8396fad45",
+      "nominal_200_300ft_unknown_datum_envelope_line_count": 28,
+      "nominal_envelope_candidate_lines": [
+        {
+          "line": "MB298-2044.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2044.gsf.mb121.inf",
+          "inf_sha256": "3c17e2bc1ff34afa0b6951a8fed747d2350d17559db0f23b557f6080a33e41b5",
+          "minimum_depth_m_unknown_datum": 35.503,
+          "maximum_depth_m_unknown_datum": 62.361
+        },
+        {
+          "line": "MB298-2111.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2111.gsf.mb121.inf",
+          "inf_sha256": "c1a2a420e989f858f1f8fb9293343ec151c7fcfd89277ec80e0154adc7dc78c4",
+          "minimum_depth_m_unknown_datum": 36.052,
+          "maximum_depth_m_unknown_datum": 64.378
+        },
+        {
+          "line": "MB298-2135.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2135.gsf.mb121.inf",
+          "inf_sha256": "66d4baddeb5f4da1d3c04015e6321a4694ff21bd2256536d447261de66f44b96",
+          "minimum_depth_m_unknown_datum": 40.218,
+          "maximum_depth_m_unknown_datum": 67.6422
+        },
+        {
+          "line": "MB298-2202.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2202.gsf.mb121.inf",
+          "inf_sha256": "bd50563bc99bfcf18ceff91e92c70c150e3b3eb78efe95f8db80165bfb85c47d",
+          "minimum_depth_m_unknown_datum": 42.775,
+          "maximum_depth_m_unknown_datum": 70.5256
+        },
+        {
+          "line": "MB298-2229.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2229.gsf.mb121.inf",
+          "inf_sha256": "77bc9c4ea803b45a0d95087011b81df90c6ae06690e2a56fd4266863aca1729f",
+          "minimum_depth_m_unknown_datum": 43.844,
+          "maximum_depth_m_unknown_datum": 73.9575
+        },
+        {
+          "line": "MB298-2258.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2258.gsf.mb121.inf",
+          "inf_sha256": "4db3593ff6e220313e4ce18f6242749250d533e128658cc60c69f0a86d853746",
+          "minimum_depth_m_unknown_datum": 43.916,
+          "maximum_depth_m_unknown_datum": 77.4613
+        },
+        {
+          "line": "MB298-2331.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB298-2331.gsf.mb121.inf",
+          "inf_sha256": "53366bfc861ee2da4da1ada6cbcead1b6c3a7fd7d772956f20df429935c738c5",
+          "minimum_depth_m_unknown_datum": 45.212,
+          "maximum_depth_m_unknown_datum": 82.0029
+        },
+        {
+          "line": "MB299-1420.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1420.gsf.mb121.inf",
+          "inf_sha256": "f134397ecc4b329f7ed76c527015e9d3155c074ff0e7601a67d1091b459724f3",
+          "minimum_depth_m_unknown_datum": 45.69,
+          "maximum_depth_m_unknown_datum": 85.3571
+        },
+        {
+          "line": "MB299-1455.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1455.gsf.mb121.inf",
+          "inf_sha256": "2d12fa44702bcc49e3fe005049fbd79047f0e98f866228b217d9b843c14eb6fe",
+          "minimum_depth_m_unknown_datum": 46.327,
+          "maximum_depth_m_unknown_datum": 88.4557
+        },
+        {
+          "line": "MB299-1524.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1524.gsf.mb121.inf",
+          "inf_sha256": "89c69dc88e2164d3d324be0efdab832c084d1e29d368f1a17884cd5d9266c162",
+          "minimum_depth_m_unknown_datum": 50.441,
+          "maximum_depth_m_unknown_datum": 91.4543
+        },
+        {
+          "line": "MB299-1555.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1555.gsf.mb121.inf",
+          "inf_sha256": "feafdf18577e67bf9068741e23c296a83f96169e2ac17a1b24b3a2d1abac0f52",
+          "minimum_depth_m_unknown_datum": 49.8256,
+          "maximum_depth_m_unknown_datum": 93.8767
+        },
+        {
+          "line": "MB299-1625.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1625.gsf.mb121.inf",
+          "inf_sha256": "fb9e9f6b3c5ef4307b2470a47a1d901eca3d7cf5aac82c9b1a0db543cf017282",
+          "minimum_depth_m_unknown_datum": 58.244,
+          "maximum_depth_m_unknown_datum": 96.1483
+        },
+        {
+          "line": "MB299-1656.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1656.gsf.mb121.inf",
+          "inf_sha256": "0fb9307172048e9f3a0e2d03dab0a6d9c79694ab25d9ca9703fab21c52714792",
+          "minimum_depth_m_unknown_datum": 59.9133,
+          "maximum_depth_m_unknown_datum": 97.935
+        },
+        {
+          "line": "MB299-1732.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1732.gsf.mb121.inf",
+          "inf_sha256": "047c0da7db179b052bb8b96a5f2e46b1a03150661a1862c0142bdf81b9c20c62",
+          "minimum_depth_m_unknown_datum": 61.7056,
+          "maximum_depth_m_unknown_datum": 100.6367
+        },
+        {
+          "line": "MB299-1808.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1808.gsf.mb121.inf",
+          "inf_sha256": "0f82031bc7dd6a6d9edb9a166e6809c5f6627823a12b23a5fbfac4bfbfdb3955",
+          "minimum_depth_m_unknown_datum": 63.4188,
+          "maximum_depth_m_unknown_datum": 102.3817
+        },
+        {
+          "line": "MB299-1841.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1841.gsf.mb121.inf",
+          "inf_sha256": "0f1491d221bef951eaddb5f44b1b601b8b326d0e176419b8e88b8b34361a923d",
+          "minimum_depth_m_unknown_datum": 66.7275,
+          "maximum_depth_m_unknown_datum": 105.0233
+        },
+        {
+          "line": "MB299-1912.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1912.gsf.mb121.inf",
+          "inf_sha256": "c978440fe2cc1966904cbc8a0677a70f672197ec0dff01a0479b02e9e84b7227",
+          "minimum_depth_m_unknown_datum": 68.4862,
+          "maximum_depth_m_unknown_datum": 106.926
+        },
+        {
+          "line": "MB299-1944.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-1944.gsf.mb121.inf",
+          "inf_sha256": "7ec01cfce276a337d4b0bdfe41e4f7a5bd6d4aaee19e8e72094907e15bda6e34",
+          "minimum_depth_m_unknown_datum": 69.7763,
+          "maximum_depth_m_unknown_datum": 108.846
+        },
+        {
+          "line": "MB299-2014.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2014.gsf.mb121.inf",
+          "inf_sha256": "8cd1890f00808a6266e760d7791662430e8e468ce94ecec39e089dbd3b988ca2",
+          "minimum_depth_m_unknown_datum": 70.61,
+          "maximum_depth_m_unknown_datum": 110.958
+        },
+        {
+          "line": "MB299-2050.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2050.gsf.mb121.inf",
+          "inf_sha256": "b69eb6653ea6295d31a2efc520ce28a344df1cc7e4154f71067b6d3838deee12",
+          "minimum_depth_m_unknown_datum": 71.5775,
+          "maximum_depth_m_unknown_datum": 107.756
+        },
+        {
+          "line": "MB299-2125.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2125.gsf.mb121.inf",
+          "inf_sha256": "78387057d4a75d0174ef35c8858c56146f663ece6036c2c51427636bcd7ca28a",
+          "minimum_depth_m_unknown_datum": 83.1014,
+          "maximum_depth_m_unknown_datum": 109.526
+        },
+        {
+          "line": "MB299-2149.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2149.gsf.mb121.inf",
+          "inf_sha256": "da8ba9a925f82d42aeacdbdd34c92a0b8062a9462060e7eff423881c9056b810",
+          "minimum_depth_m_unknown_datum": 78.7375,
+          "maximum_depth_m_unknown_datum": 93.5757
+        },
+        {
+          "line": "MB299-2159.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2159.gsf.mb121.inf",
+          "inf_sha256": "b86723a526c036c27e620c186a41c68e3f39d270f736ef40ffe455e3871ffef1",
+          "minimum_depth_m_unknown_datum": 80.9829,
+          "maximum_depth_m_unknown_datum": 92.4986
+        },
+        {
+          "line": "MB299-2205.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2205.gsf.mb121.inf",
+          "inf_sha256": "e9342dc02c0e43aaf33bad5ea6c05da0852ae880f237c91ec361cf6477c92402",
+          "minimum_depth_m_unknown_datum": 78.8657,
+          "maximum_depth_m_unknown_datum": 90.4786
+        },
+        {
+          "line": "MB299-2210.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2210.gsf.mb121.inf",
+          "inf_sha256": "1572db29e648834e054726f6822787f14dccc670101eb6d9b77a82574ee71eb3",
+          "minimum_depth_m_unknown_datum": 79.6114,
+          "maximum_depth_m_unknown_datum": 90.2729
+        },
+        {
+          "line": "MB299-2214.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2214.gsf.mb121.inf",
+          "inf_sha256": "c6930cf6d2a84f16b1ff6f58f33528ed3ea2a0d17c6699925be3f6c502a0dbd0",
+          "minimum_depth_m_unknown_datum": 77.0225,
+          "maximum_depth_m_unknown_datum": 95.4083
+        },
+        {
+          "line": "MB299-2222.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2222.gsf.mb121.inf",
+          "inf_sha256": "80e93e00e2c8f8dd1ea194fb93b67609bd1a19b4ad757e0e13647d11209786cf",
+          "minimum_depth_m_unknown_datum": 73.3671,
+          "maximum_depth_m_unknown_datum": 95.3383
+        },
+        {
+          "line": "MB299-2238.gsf.mb121.gz",
+          "inf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/MB/reson8101/generated/MB299-2238.gsf.mb121.inf",
+          "inf_sha256": "bed9aa3fc7518918ee5dbfe187d5b9e9012c67dfc2ff30976a929adbac777c0a",
+          "minimum_depth_m_unknown_datum": 8.724,
+          "maximum_depth_m_unknown_datum": 88.2186
+        }
+      ]
+    }
+  ],
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "limitation": "A whole-line depth range does not locate an individual beam in the band, confirm chart datum or uncertainty, or establish rock, lawful access or fish. Candidate lines require valid sounding-position, datum, uncertainty and cross-survey registration checks."
+}
