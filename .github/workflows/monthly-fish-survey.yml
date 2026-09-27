@@ -210,7 +210,7 @@ jobs:
           --verify dist/data/point-buchon-2009-csumb-access-triage.json
       - name: Recheck historical ROV against original depth and character cells
         run: >-
-          python scripts/audit_point_buchon_rov_cell_join.py --fetch-rov
+          python -m scripts.audit_point_buchon_rov_cell_join --fetch-rov
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --access var/review/point-buchon-2009-csumb-access-triage.json
           --output var/review/point-buchon-rov-original-cell-join.json
