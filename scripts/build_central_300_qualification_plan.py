@@ -125,6 +125,7 @@ def build(root):
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     bss03_vessel_path = "dist/data/bss03-original-vessel-tpu-inputs.json"
     pigeon_video_path = "dist/data/w00614-usgs-video-observation-gap.json"
+    pigeon_lander_path = "catalog/candidates/tnc-mlml-pigeon-video-lander.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -145,6 +146,13 @@ def build(root):
     bss03_caris = load(root, bss03_caris_path)
     bss03_vessel = load(root, bss03_vessel_path)
     pigeon_video = load(root, pigeon_video_path)
+    pigeon_lander = load(root, pigeon_lander_path)
+    if (pigeon_lander.get("id") != "tnc-mlml-pigeon-video-lander"
+            or pigeon_lander.get("access_status") != "original-drop-data-not-located"
+            or pigeon_lander.get("spatial", {}).get("w00614_cell_overlap_verified") is not False
+            or pigeon_lander.get("fishing_target") is not False
+            or pigeon_lander.get("exportable") is not False):
+        raise ValueError("Pigeon Point original lander source status changed; review before promotion")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -406,6 +414,7 @@ def build(root):
             receipts.append(class_lead["receipt"])
         if sector_id == 'pigeon-monterey':
             receipts.append(pigeon_video_path)
+            receipts.append(pigeon_lander_path)
         tracks = []
         for key, requirement in TRACKS:
             stage = "research-evidence" if key == "native-cells" and measured else "missing-release-evidence"
@@ -443,7 +452,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_lander_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

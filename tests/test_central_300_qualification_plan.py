@@ -31,6 +31,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/w00614-original-300-pigeon-monterey-review.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-pigeon-original-character-overlap.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-usgs-video-observation-gap.json", pigeon["source_receipts"])
+        self.assertIn("catalog/candidates/tnc-mlml-pigeon-video-lander.json", pigeon["source_receipts"])
         self.assertIn("video-lander drop table", pigeon["next_acquisition"])
         self.assertIn("actual", pigeon["next_acquisition"])
         estero = next(s for s in result["sectors"] if s["sector_id"] == "cambria-morro")
@@ -83,6 +84,20 @@ class QualificationPlanTests(unittest.TestCase):
 
         with patch.object(plan, "load", side_effect=changed):
             with self.assertRaisesRegex(ValueError, "changed status"):
+                plan.build(ROOT)
+
+    def test_pigeon_lander_lead_cannot_silently_become_spot_evidence(self):
+        original = plan.load
+
+        def changed(root, relative):
+            data = original(root, relative)
+            if relative == "catalog/candidates/tnc-mlml-pigeon-video-lander.json":
+                data = copy.deepcopy(data)
+                data["spatial"]["w00614_cell_overlap_verified"] = True
+            return data
+
+        with patch.object(plan, "load", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "original lander source status changed"):
                 plan.build(ROOT)
 
 

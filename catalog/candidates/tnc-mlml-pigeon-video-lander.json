@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "tnc-mlml-pigeon-video-lander",
+  "name": "Original Pigeon Point Reef video-lander drops",
+  "sector_ids": ["pigeon-monterey"],
+  "need_ids": ["substrate", "fish_observations", "sampling_effort"],
+  "producer": {
+    "name": "The Nature Conservancy and Moss Landing Marine Laboratories",
+    "url": "https://mlml.sjsu.edu/fisheries/video-surveys-of-continental-shelf-fishes/"
+  },
+  "documentation_url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
+  "access_url": null,
+  "access_status": "original-drop-data-not-located",
+  "variables_requested": [
+    "drop_id", "deployment_id", "survey_date", "bottom_position", "ship_position",
+    "position_method_and_error", "depth_and_datum", "substrate_observation",
+    "species_detection_and_count", "zero_detection_effort", "camera_minutes",
+    "visibility", "mpa_or_open_reference_role"
+  ],
+  "rights": {
+    "license": null,
+    "redistribution_reviewed": false,
+    "requested_review": "Raw-drop access and any public derivative or coordinate-sharing terms"
+  },
+  "spatial": {
+    "site_name": "Pigeon Point Reef",
+    "bounds": null,
+    "footprint_kind": "named-reef-only",
+    "w00614_cell_overlap_verified": false,
+    "position_uncertainty_verified": false
+  },
+  "temporal": {
+    "source_time": null,
+    "documentation_year": 2016,
+    "update_cadence": "Static historical survey; quarterly discovery until original table or custodian response is reviewed"
+  },
+  "evidence": [
+    {
+      "url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
+      "supports": "TNC reports video-lander fish observations at named Pigeon Point Reef, without the original georeferenced drop table."
+    },
+    {
+      "url": "https://www.frontiersin.org/journals/marine-science/articles/10.3389/fmars.2024.1368083/full",
+      "supports": "MLML/TNC method records GPS at drops, fish MaxN and effort, but published analysis groups study locations too broadly for W00614 cell overlap. This paper is a method lead, not proof that its samples are the same 2016 drops."
+    }
+  ],
+  "promotion_blockers": [
+    "Original drop coordinates and their bottom-position errors are unavailable.",
+    "No drop has been shown to intersect W00614's measured 200–300 ft cells.",
+    "No zero-detection effort or exact taxon/habitat table has been reviewed.",
+    "Reuse and public-coordinate terms are unreviewed."
+  ],
+  "fishing_target": false,
+  "exportable": false
+}
