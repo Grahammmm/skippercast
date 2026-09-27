@@ -1,0 +1,436 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-17-research-outlines-bluetopo-pixel-contributor-screen",
+  "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
+  "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+  "source_sha256": {
+    "matrix": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+    "context": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39"
+  },
+  "research_outline_count": 17,
+  "historical_rockfish_positive_outline_count": 4,
+  "camera_positive_outlines_with_measured_nominal_band_pixels": 2,
+  "highest_priority_two_camera_outlines_with_measured_nominal_band_pixels": 0,
+  "outlines_with_any_measured_nominal_band_pixel": 2,
+  "per_tile_measured_nominal_band_pixel_count": 3,
+  "measured_nominal_band_survey_year_at_least_1940": false,
+  "tiles": [
+    {
+      "tile_id": "BC24S26W",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24S26W/BlueTopo_BC24S26W_20260820.tiff",
+      "raster_sha256": "498090ce119a302dd266a577f1d3624b7a871f0a99dd3d933871a863a3d5ebf6",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24S26W/BlueTopo_BC24S26W_20260820.tiff.aux.xml",
+      "rat_sha256": "32234934628bddabb3210f0710ce088d85f420590176aa52d2d8928efc902f7d"
+    },
+    {
+      "tile_id": "BH44N5CJ",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CJ/BlueTopo_BH44N5CJ_20260820.tiff",
+      "raster_sha256": "dfef9ef859f187f8a79cda6cb820155c36910f60b9f7b9432513aab80f76b5ca",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CJ/BlueTopo_BH44N5CJ_20260820.tiff.aux.xml",
+      "rat_sha256": "10e81ba52fc71e6a1b1e37d36e6d605c958294701463bf10e9ba7ff748bcb66f"
+    },
+    {
+      "tile_id": "BH44N5CK",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CK/BlueTopo_BH44N5CK_20260820.tiff",
+      "raster_sha256": "37198515dbbeca66ed1e4dba61bc3e82025c42d8330fd2097fbc66acb239d278",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CK/BlueTopo_BH44N5CK_20260820.tiff.aux.xml",
+      "rat_sha256": "eb02d6761ee04585cbe5344df13dbc18ce188f5a6d90527a2509b33aba9bae58"
+    },
+    {
+      "tile_id": "BH44P5CK",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CK/BlueTopo_BH44P5CK_20260820.tiff",
+      "raster_sha256": "05b2a661b6da374a0db2c5cfdc6306f101c60f9fa708e743d53a665f1cd935b8",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CK/BlueTopo_BH44P5CK_20260820.tiff.aux.xml",
+      "rat_sha256": "9b09038bb06b01f6577fbd7326c1ccdf6f5ffffa95384a3c5c17274921babaa2"
+    },
+    {
+      "tile_id": "BH44P5CL",
+      "raster_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CL/BlueTopo_BH44P5CL_20260820.tiff",
+      "raster_sha256": "0b703c08db790766c6f271290aa9667394a1c5493c3797ce5435d8c972c59548",
+      "rat_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CL/BlueTopo_BH44P5CL_20260820.tiff.aux.xml",
+      "rat_sha256": "5081b421dcb8570f339d0f52b590af4fe025fd5fa512ba9da6c7903a616304a8"
+    }
+  ],
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "tile_pixel_count": {
+        "BH44P5CL": 5632
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 5632
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 5632,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "tile_pixel_count": {
+        "BH44P5CL": 950
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 950
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 950,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "tile_pixel_count": {
+        "BH44P5CL": 2375
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 2375
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 2375,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "tile_pixel_count": {
+        "BH44N5CK": 2305
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CK": 2305
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CK": {
+          "H05278.interpolated": {
+            "pixels": 2305,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "tile_pixel_count": {
+        "BH44P5CK": 1650
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CK": 1650
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CK": {
+          "H05278.interpolated": {
+            "pixels": 1650,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "tile_pixel_count": {
+        "BH44N5CK": 1325
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CK": 0
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CK": {}
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "tile_pixel_count": {
+        "BH44P5CL": 770
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 770
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 770,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "tile_pixel_count": {
+        "BH44N5CK": 31320
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CK": 750
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CK": {
+          "H05278.interpolated": {
+            "pixels": 750,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "tile_pixel_count": {
+        "BH44P5CK": 255,
+        "BH44P5CL": 160
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CK": 255,
+        "BH44P5CL": 160
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CK": 0,
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CK": {
+          "H05278.interpolated": {
+            "pixels": 255,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        },
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 160,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "tile_pixel_count": {
+        "BH44P5CL": 415
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 415
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 415,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "tile_pixel_count": {
+        "BH44P5CL": 430
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CL": 430
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CL": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CL": {
+          "H05278.interpolated": {
+            "pixels": 430,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "tile_pixel_count": {
+        "BH44N5CK": 350
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CK": 350
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CK": {
+          "H05278.interpolated": {
+            "pixels": 350,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "tile_pixel_count": {
+        "BH44P5CK": 395
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CK": 51
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CK": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CK": {
+          "H05278.interpolated": {
+            "pixels": 51,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "tile_pixel_count": {
+        "BH44P5CK": 3157
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44P5CK": 1443
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44P5CK": 2
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44P5CK": {
+          "H05278.interpolated": {
+            "pixels": 1441,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          },
+          "H05278": {
+            "pixels": 2,
+            "measured": true,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "tile_pixel_count": {
+        "BH44N5CJ": 184439
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CJ": 115
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CJ": 1
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CJ": {
+          "H05313.interpolated": {
+            "pixels": 5,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          },
+          "H05414.interpolated": {
+            "pixels": 20,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          },
+          "H05453": {
+            "pixels": 1,
+            "measured": true,
+            "survey_date_end": "1933-01-01"
+          },
+          "H05453.interpolated": {
+            "pixels": 89,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "tile_pixel_count": {
+        "BH44N5CJ": 790
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CJ": 696
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CJ": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CJ": {
+          "H05453.interpolated": {
+            "pixels": 696,
+            "measured": false,
+            "survey_date_end": "1933-01-01"
+          }
+        }
+      }
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "tile_pixel_count": {
+        "BH44N5CJ": 1087
+      },
+      "nominal_navd88_200_300ft_pixels_by_tile": {
+        "BH44N5CJ": 0
+      },
+      "measured_nominal_band_pixels_by_tile": {
+        "BH44N5CJ": 0
+      },
+      "nominal_band_contributors_by_tile": {
+        "BH44N5CJ": {}
+      }
+    }
+  ],
+  "full_original_cell_depth_and_uncertainty_verified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Per-tile center-pixel counts may overlap at raster tile boundaries and cannot be summed as unique chart cells. The 200\u2013300 ft band is NAVD88, not MLLW. BlueTopo contributor labels show compilation lineage, not independent reef/fish evidence, original-source accuracy, legal access or navigable fishing spots.",
+  "checked_at": "2026-09-27T05:44:32.602232+00:00"
+}

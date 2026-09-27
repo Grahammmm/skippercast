@@ -34,6 +34,14 @@ jobs:
           python scripts/audit_monterey_noaa_bag_catalog_gap.py
           --output var/review/monterey-17-noaa-bag-catalog-gap.json
           --verify dist/data/monterey-17-noaa-bag-catalog-gap.json
+      - name: Recheck exact BlueTopo contributor pixels in Monterey research outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_monterey_bluetopo_context_pixels.py
+          --fetch
+          --output var/review/monterey-17-bluetopo-contributor-pixels.json
+          --verify dist/data/monterey-17-bluetopo-contributor-pixels.json
       - name: Recheck NOAA Monterey regional VDatum model package and conditional probes
         env:
           PYTHONPATH: src:.
@@ -75,6 +83,7 @@ jobs:
             var/review/monterey-300-conditional-vdatum-probes.json
             var/review/monterey-bag-overlap/*-fresh-overlap.json
             var/review/monterey-17-noaa-bag-catalog-gap.json
+            var/review/monterey-17-bluetopo-contributor-pixels.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

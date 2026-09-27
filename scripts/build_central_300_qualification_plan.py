@@ -82,9 +82,9 @@ SECTOR_OVERRIDES = {
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
-        "lead": "USGS Offshore Monterey bathymetry, character and video; a fresh NOAA NOS BAG-catalog query returned no downloadable BAG leads over any of the 17 buffered research outlines",
-        "next": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then search original non-NOS or unpublished depth surveys and their processing records on the same class pixels. Recheck the NOAA catalog if its coverage changes.",
-        "hold": "The NOS BAG catalog path has no lead at these 17 outlines, and no chart-datum depth plus source uncertainty is qualified over the reviewed rock footprints.",
+        "lead": "USGS Offshore Monterey bathymetry, character and video; no NOS BAG-catalog leads over the 17 outlines and only three 1933-survey measured BlueTopo contributor pixels in their nominal NAVD88 200–300 ft bands",
+        "next": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then seek original non-NOS or unpublished multibeam processing on the same class pixels. BlueTopo's interpolated 1933 contributor cells are not an independent original-depth cross-check; recheck source lineage when tiles change.",
+        "hold": "The NOS BAG catalog path has no lead at these 17 outlines; the two highest-priority historical-camera outlines have only interpolated BlueTopo cells, and no chart-datum depth plus source uncertainty is qualified.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
@@ -138,6 +138,7 @@ def build(root):
     buchon_private_access_path = "dist/data/point-buchon-private-block-access-screen.json"
     buchon_grid_bridge_path = "dist/data/point-buchon-vdatum-grid-api-bridge.json"
     monterey_bag_gap_path = "dist/data/monterey-17-noaa-bag-catalog-gap.json"
+    monterey_bluetopo_path = "dist/data/monterey-17-bluetopo-contributor-pixels.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -254,6 +255,16 @@ def build(root):
             or monterey_bag_gap.get("depth_uncertainty_gate_satisfied") is not False
             or monterey_bag_gap.get("fishing_target") is not False):
         raise ValueError("Monterey NOAA NOS BAG catalog gap changed; review before promotion")
+    monterey_bluetopo = load(root, monterey_bluetopo_path)
+    if (monterey_bluetopo.get("scope") != "monterey-17-research-outlines-bluetopo-pixel-contributor-screen"
+            or monterey_bluetopo.get("research_outline_count") != 17
+            or monterey_bluetopo.get("historical_rockfish_positive_outline_count") != 4
+            or monterey_bluetopo.get("camera_positive_outlines_with_measured_nominal_band_pixels") != 2
+            or monterey_bluetopo.get("highest_priority_two_camera_outlines_with_measured_nominal_band_pixels") != 0
+            or monterey_bluetopo.get("per_tile_measured_nominal_band_pixel_count") != 3
+            or monterey_bluetopo.get("full_original_cell_depth_and_uncertainty_verified") is not False
+            or monterey_bluetopo.get("fishing_target") is not False):
+        raise ValueError("Monterey BlueTopo pixel contributor evidence changed; review before promotion")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -445,6 +456,7 @@ def build(root):
             receipts.append(dataone_rov_path)
         if sector_id == "monterey-sur":
             receipts.append(monterey_bag_gap_path)
+            receipts.append(monterey_bluetopo_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -566,7 +578,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

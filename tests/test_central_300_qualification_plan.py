@@ -34,6 +34,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/w00614-noaa-sh1809-observation-gap.json", pigeon["source_receipts"])
         monterey = next(s for s in result["sectors"] if s["sector_id"] == "monterey-sur")
         self.assertIn("dist/data/monterey-17-noaa-bag-catalog-gap.json", monterey["source_receipts"])
+        self.assertIn("dist/data/monterey-17-bluetopo-contributor-pixels.json", monterey["source_receipts"])
         self.assertIn("non-NOS", monterey["next_acquisition"])
         self.assertIn("catalog/candidates/tnc-mlml-pigeon-video-lander.json", pigeon["source_receipts"])
         self.assertIn("video-lander drop table", pigeon["next_acquisition"])
