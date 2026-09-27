@@ -16,8 +16,19 @@ class Bss03VesselSettingsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'configurations missing'):
             audit.inspect(stream.getvalue())
 
-    def test_current_original_archive_is_input_evidence_only(self):
-        receipt = audit.inspect(audit.fetch())
+    def test_vessel_inputs_cannot_be_promoted_to_product_uncertainty(self):
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode='w:gz') as archive:
+            for name in audit.EXPECTED_FILES:
+                raw = (b'<HIPSVesselConfig><StandardDeviation>'
+                       b'<Motion Heave="0.05" HeavePercAmplitude="5" />'
+                       b'<Position Navigation="0.1" />'
+                       b'<Timing Navigation="0.001" />'
+                       b'</StandardDeviation></HIPSVesselConfig>')
+                member = tarfile.TarInfo('VesselConfig/' + name)
+                member.size = len(raw)
+                archive.addfile(member, io.BytesIO(raw))
+        receipt = audit.inspect(stream.getvalue())
         self.assertEqual(len(receipt['vessel_configurations']), 8)
         self.assertFalse(receipt['line_to_configuration_assignment_verified'])
         self.assertFalse(receipt['survey_or_cell_total_propagated_uncertainty_verified'])
