@@ -92,8 +92,8 @@ SECTOR_OVERRIDES = {
     },
     "cambria-morro": {
         "lead": "Original 2012 WGS84(G1150) ellipsoid-height cells with direct NOAA VDatum block samples, plus 2008 video-supervised character overlap",
-        "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration before full legal and route screens.",
-        "hold": "Direct block-center VDatum removes the CORS96 frame shortcut but does not bound product error or every 2 m cell; the 2010 independent cross-check reaches four shallow blocks and no deeper blocks.",
+        "next": "Confirm the WGS84 source coordinate epoch and obtain original 2012 CARIS TPU; build a bounded cellwise ellipsoid-to-MLLW surface and verify 2008 character registration. Seek a different independent video/grab survey on the 60 research blocks: the original C0212SC camera observations are all more than 250 m away. Then complete legal and route screens.",
+        "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
         "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
@@ -125,6 +125,7 @@ def build(root):
     pigeon_video_path = "dist/data/w00614-usgs-video-observation-gap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
+    estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
     buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
     buchon_ncei_index_path = "dist/data/point-buchon-2007-ncei-line-index.json"
     buchon_beams_path = "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json"
@@ -147,6 +148,15 @@ def build(root):
         raise ValueError('W00614 original USGS video observation coverage changed')
     estero_direct = load(root, estero_direct_path)
     estero_inventory = load(root, estero_inventory_path)
+    estero_camera = load(root, estero_camera_path)
+    if (estero_camera.get("scope") != "estero-original-camera-to-private-300ft-block-gap"
+            or estero_camera.get("research_block_count") != 60
+            or estero_camera.get("camera_records") != 5936
+            or estero_camera.get("distance_counts", {}).get("within_250m", {}).get("all") != 0
+            or estero_camera.get("independent_substrate_gate_satisfied") is not False
+            or estero_camera.get("biological_observation_gate_satisfied") is not False
+            or estero_camera.get("qualified_waypoints") != 0):
+        raise ValueError("Estero original camera-to-block support changed")
     buchon_ncei = load(root, buchon_ncei_path)
     buchon_ncei_index = load(root, buchon_ncei_index_path)
     buchon_beams = load(root, buchon_beams_path)
@@ -278,6 +288,7 @@ def build(root):
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
             receipts.append(estero_direct_path)
             receipts.append(estero_inventory_path)
+            receipts.append(estero_camera_path)
             direct = row.get("estero_wgs84_direct_diagnostic")
             if (not direct or direct["sample_points"] != 60
                     or direct["nominal_center_offset_200_300ft_cells"] != sum(
@@ -371,7 +382,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

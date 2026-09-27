@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "scope": "estero-original-camera-to-private-300ft-block-gap",
+  "research_block_count": 60,
+  "research_block_size_m": 100,
+  "camera_cruise": "c0212sc",
+  "camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+  "camera_archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+  "camera_position_accuracy": "Highly variable on the order of 10 meters (original metadata)",
+  "camera_records": 5936,
+  "nearest_camera_to_any_block_m": 437.3,
+  "distance_counts": {
+    "within_0m": {
+      "all": 0,
+      "interpreted_bottom": 0,
+      "rock_boulder_cobble": 0,
+      "rockfish_positive": 0,
+      "lingcod_positive": 0
+    },
+    "within_100m": {
+      "all": 0,
+      "interpreted_bottom": 0,
+      "rock_boulder_cobble": 0,
+      "rockfish_positive": 0,
+      "lingcod_positive": 0
+    },
+    "within_250m": {
+      "all": 0,
+      "interpreted_bottom": 0,
+      "rock_boulder_cobble": 0,
+      "rockfish_positive": 0,
+      "lingcod_positive": 0
+    }
+  },
+  "independent_substrate_gate_satisfied": false,
+  "biological_observation_gate_satisfied": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "The blocks are 100 m bins of nominal NAVD88 depth and older 2008 hard/rugose class, not exact rock footprints. Distances are to entire block polygons, so a negative proximity result also excludes contained candidate cell centers at the same radius. Camera position accuracy is order 10 m, not a strict bound. Historical video absence is not absence of rock or fish. Product TPU, MLLW depth, registration, current legal access and full routes remain unresolved."
+}
