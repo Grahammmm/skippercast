@@ -1,0 +1,375 @@
+{
+  "cellwise_upper_uncertainty_obtained": false,
+  "context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "These are 2017 CoNED compilation source polygons, not observed acoustic cells or an inventory of the 2013 merge's contributing surveys.",
+    "The 2009 date label for 2013 merge polygons is not a date for every source sounding.",
+    "Outline 001 intersects a void-fill source footprint; exact cell overlap and interpolation mask are not supplied by this vector source.",
+    "No newer independent measured source footprint intersects these 17 research outlines in this release; the spatial metadata is not a complete catalog of all possible surveys."
+  ],
+  "mllw_depth_qualified": false,
+  "original_noaa_2013_merge_inventory_obtained": false,
+  "outlines": {
+    "001": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 0.5312,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 6,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        },
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 0.4609,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        },
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 0.0079,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 29,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Topobathy Void Fill"
+        }
+      ]
+    },
+    "003": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 6,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "011": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "023": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "026": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "033": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "034": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "038": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "040": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "046": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "056": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 6,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "059": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "070": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "071": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "072": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "076": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    },
+    "086": {
+      "fishing_target": false,
+      "independent_newer_measured_source_established": false,
+      "source_cell_or_survey_lineage_verified": false,
+      "source_footprints": [
+        {
+          "data_type": "Topobathy",
+          "date_acquired_label": "2009",
+          "outline_area_fraction": 1.0,
+          "source_geoid_label": "GEOID09",
+          "source_object_id": 10,
+          "source_project": "NOAA CSC",
+          "source_publication": "https://coast.noaa.gov/dataviewer/#/lidar/search/where:ID=2612",
+          "source_resolution_label": "1m",
+          "source_vertical_datum_label": "NAVD88",
+          "title": "Coastal California Data Merge Project"
+        }
+      ]
+    }
+  },
+  "research_matrix_sha256": "4c208643619f0ad5aed44e3a78de1a9c341279e970d0df423f4df59edefdcf48",
+  "research_outlines_checked": 17,
+  "schema_version": 1,
+  "scope": "monterey-2017-coned-original-source-footprints-over-17-research-outlines",
+  "source_footprints_checked": 67,
+  "source_object_ids_intersecting_outlines": [
+    6,
+    10,
+    29
+  ],
+  "source_sha256": "721c073303b60a09d479256b1ccb1d1e3b7088232f7a6a3f8837ef0fd3feb379",
+  "source_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Central_CoNED_DEM_2017_8657/CentCA_Topobathy_DEM_Spatial_Metadata.gpkg"
+}

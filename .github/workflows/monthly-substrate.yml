@@ -117,6 +117,14 @@ jobs:
           --fetch
           --output var/review/monterey-2013-merge-lineage-gap.json
           --verify dist/data/monterey-2013-merge-lineage-gap.json
+      - name: Recheck NOAA CoNED source polygons against all original Monterey outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_monterey_coned_source_footprints.py
+          --fetch
+          --output var/review/monterey-coned-source-footprint-audit.json
+          --verify dist/data/monterey-coned-source-footprint-audit.json
       - name: Recheck NOAA merge acoustic-classified samples inside all 17 outlines
         env:
           PYTHONPATH: src:.
@@ -168,7 +176,7 @@ jobs:
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_project_raster_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_coned_source_footprints tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_project_raster_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -178,6 +186,7 @@ jobs:
             var/review/monterey-1995-original-multibeam-overlap.json
             var/review/monterey-1998-original-em300-overlap.json
             var/review/monterey-2013-merge-lineage-gap.json
+            var/review/monterey-coned-source-footprint-audit.json
             var/review/monterey-noaa2612-acoustic-point-support.json
             var/review/monterey-17-ncei-trackline-leads.json
             var/review/monterey-2009-centralmontereybay-valid-beam-review.json
