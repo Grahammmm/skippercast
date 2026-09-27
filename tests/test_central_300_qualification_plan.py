@@ -31,6 +31,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/w00614-original-300-pigeon-monterey-review.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-pigeon-original-character-overlap.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-usgs-video-observation-gap.json", pigeon["source_receipts"])
+        self.assertIn("dist/data/w00614-noaa-sh1809-observation-gap.json", pigeon["source_receipts"])
         self.assertIn("catalog/candidates/tnc-mlml-pigeon-video-lander.json", pigeon["source_receipts"])
         self.assertIn("video-lander drop table", pigeon["next_acquisition"])
         self.assertIn("actual", pigeon["next_acquisition"])

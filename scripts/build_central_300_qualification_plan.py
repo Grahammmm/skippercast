@@ -74,7 +74,7 @@ PROVIDERS = {
 SECTOR_OVERRIDES = {
     "pigeon-monterey": {
         "lead": "W00614 measured 200–300 ft MLLW cells near Pigeon Point",
-        "next": "Request the original TNC/MLML Pigeon Point Reef video-lander drop table mentioned to PFMC, including bottom positions, position error, substrate, taxon, dates, effort, no-fish drops and reuse terms. Test actual drops against W00614's qualifying cells; the 13 published USGS video archives have no observation within 100 m of the measured-cell envelope. Seek separate groundtruth for W00614 backscatter and check any full candidate patch against MPAs and ENC.",
+        "next": "Request the original TNC/MLML Pigeon Point Reef video-lander drop table mentioned to PFMC, including bottom positions, position error, substrate, taxon, dates, effort, no-fish drops and reuse terms. Test actual drops against W00614's qualifying cells; neither 13 published USGS video archives nor the NOAA SH-18-09 published coral/sponge occurrences reach within 100 m of the measured-cell envelope. Seek separate groundtruth for W00614 backscatter and check any full candidate patch against MPAs and ENC.",
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
@@ -125,6 +125,7 @@ def build(root):
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     bss03_vessel_path = "dist/data/bss03-original-vessel-tpu-inputs.json"
     pigeon_video_path = "dist/data/w00614-usgs-video-observation-gap.json"
+    pigeon_noaa_rov_path = "dist/data/w00614-noaa-sh1809-observation-gap.json"
     pigeon_lander_path = "catalog/candidates/tnc-mlml-pigeon-video-lander.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
@@ -146,6 +147,15 @@ def build(root):
     bss03_caris = load(root, bss03_caris_path)
     bss03_vessel = load(root, bss03_vessel_path)
     pigeon_video = load(root, pigeon_video_path)
+    pigeon_noaa_rov = load(root, pigeon_noaa_rov_path)
+    if (pigeon_noaa_rov.get("scope") != "w00614-noaa-sh1809-coral-sponge-observation-gap"
+            or pigeon_noaa_rov.get("source_rows") != 8612
+            or pigeon_noaa_rov.get("qualified_w00614_cells") != 141331
+            or pigeon_noaa_rov.get("points_within_100m_of_envelope") != 0
+            or pigeon_noaa_rov.get("independent_substrate_gate_satisfied") is not False
+            or pigeon_noaa_rov.get("biological_fish_gate_satisfied") is not False
+            or pigeon_noaa_rov.get("fishing_target") is not False):
+        raise ValueError("NOAA SH-18-09 original occurrence support changed")
     pigeon_lander = load(root, pigeon_lander_path)
     if (pigeon_lander.get("id") != "tnc-mlml-pigeon-video-lander"
             or pigeon_lander.get("access_status") != "original-drop-data-not-located"
@@ -414,6 +424,7 @@ def build(root):
             receipts.append(class_lead["receipt"])
         if sector_id == 'pigeon-monterey':
             receipts.append(pigeon_video_path)
+            receipts.append(pigeon_noaa_rov_path)
             receipts.append(pigeon_lander_path)
         tracks = []
         for key, requirement in TRACKS:
@@ -452,7 +463,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_lander_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

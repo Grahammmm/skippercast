@@ -25,6 +25,7 @@
     "dist/data/bss03-caris-acquisition-lead.json": "88813ff6984b17e6c653a863631e6e999361ddb90d3940ebf672dbe6ceb2e9a0",
     "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1",
     "dist/data/w00614-usgs-video-observation-gap.json": "903db015ef0747b7c0ff75a542dd7cb723d31ebb938fcb7e663929deee45329b",
+    "dist/data/w00614-noaa-sh1809-observation-gap.json": "6c100bcbb08c55fed2380c957ac04ca24da527f7a6183a63ca01a90e1f599c71",
     "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "74dc4340fb0b540bb497e0ad3dfe22b9844dbe2738314d44b8f2287a7ec1dfab"
   },
   "release_gate_ids": [
@@ -152,11 +153,12 @@
       "sector_id": "pigeon-monterey",
       "source_review_priority_tier": 1,
       "reviewed_lead": "W00614 measured 200\u2013300 ft MLLW cells near Pigeon Point",
-      "next_acquisition": "Request the original TNC/MLML Pigeon Point Reef video-lander drop table mentioned to PFMC, including bottom positions, position error, substrate, taxon, dates, effort, no-fish drops and reuse terms. Test actual drops against W00614's qualifying cells; the 13 published USGS video archives have no observation within 100 m of the measured-cell envelope. Seek separate groundtruth for W00614 backscatter and check any full candidate patch against MPAs and ENC.",
+      "next_acquisition": "Request the original TNC/MLML Pigeon Point Reef video-lander drop table mentioned to PFMC, including bottom positions, position error, substrate, taxon, dates, effort, no-fish drops and reuse terms. Test actual drops against W00614's qualifying cells; neither 13 published USGS video archives nor the NOAA SH-18-09 published coral/sponge occurrences reach within 100 m of the measured-cell envelope. Seek separate groundtruth for W00614 backscatter and check any full candidate patch against MPAs and ENC.",
       "limiting_evidence": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
       "native_cell_evidence": "measured-mllw-substrate-unpaired",
       "source_receipts": [
         "catalog/candidates/tnc-mlml-pigeon-video-lander.json",
+        "dist/data/w00614-noaa-sh1809-observation-gap.json",
         "dist/data/w00614-original-300-pigeon-monterey-review.json",
         "dist/data/w00614-pigeon-original-character-overlap.json",
         "dist/data/w00614-usgs-video-observation-gap.json"

@@ -98,6 +98,11 @@ jobs:
           --bag var/review/W00614_MB_VR_MLLW_1of1.bag
           --output var/review/w00614-usgs-video-observation-gap.json
           --verify dist/data/w00614-usgs-video-observation-gap.json
+      - name: Recheck NOAA 2018 ROV coral/sponge occurrences near W00614
+        run: >-
+          python scripts/audit_w00614_noaa_sh1809_observations.py
+          --output var/review/w00614-noaa-sh1809-observation-gap.json
+          --verify dist/data/w00614-noaa-sh1809-observation-gap.json
       - name: Recheck original H13152 and W00479 active MLLW cells
         env:
           PYTHONPATH: src:.
@@ -105,7 +110,7 @@ jobs:
           python scripts/audit_central_deep_original_300.py --fetch --output var/review/central-deep-original-300-refutation.json
           cmp var/review/central-deep-original-300-refutation.json dist/data/central-deep-original-300-refutation.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_central_deep_original_300 -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -125,6 +130,7 @@ jobs:
             var/review/f00844-original-fifth-bag-review.json
             var/review/w00614-pigeon-original-character-overlap.json
             var/review/w00614-usgs-video-observation-gap.json
+            var/review/w00614-noaa-sh1809-observation-gap.json
             var/review/central-deep-original-300-refutation.json
             var/review/central-coverage-ledger-v1.json
             var/review/central-source-acquisition-queue.json

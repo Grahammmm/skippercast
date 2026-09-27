@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "scope": "w00614-noaa-sh1809-coral-sponge-observation-gap",
+  "checked_at": "2026-09-27T03:55:17.127361+00:00",
+  "source_url": "https://www.ncei.noaa.gov/erddap/tabledap/deep_sea_corals.csv?DatasetID,CatalogNumber,latitude,longitude,DepthInMeters,Locality,Substrate,Habitat,ObservationDate,SampleID,EventID,LocationAccuracy,NavType,RecordType&DatasetID=%22NOAA_GFNMS_CBNMS_SH-18-09%22",
+  "dashboard_url": "https://www.ncei.noaa.gov/waf/dsc-data/dashboards/NOAA_GFNMS_CBNMS_SH-18-09.html",
+  "dashboard_database_version_at_review": "20260416-1",
+  "source_sha256": "77767610f3aa968890ab14f3acba0600e2a087e80a7ac76160a7aadef2f603ed",
+  "source_rows": 8612,
+  "record_types": {
+    "specimen": 26,
+    "video observation": 8586
+  },
+  "depth_receipt": "dist/data/w00614-original-300-pigeon-monterey-review.json",
+  "depth_bag_sha256": "561eedd13f6cec795f276933ca04b04e22af36659d56bd77ebba06104f7f4077",
+  "qualified_w00614_cells": 141331,
+  "qualified_cell_center_envelope_wgs84": [
+    -122.48471501095197,
+    37.11379580042955,
+    -122.44314979036514,
+    37.1629021179983
+  ],
+  "pigeon_point_locality_rows": 414,
+  "pigeon_point_unique_record_positions": 296,
+  "pigeon_point_observation_dates": [
+    "2018-08-03"
+  ],
+  "pigeon_point_depth_range_m": [
+    85.0,
+    96.0
+  ],
+  "pigeon_point_rows_in_200_300ft_depth_band": 170,
+  "pigeon_point_location_accuracy_terms": {
+    "20m": 414
+  },
+  "pigeon_point_nav_terms": {
+    "USBL": 414
+  },
+  "points_in_qualified_cell_center_envelope": 0,
+  "points_within_100m_of_envelope": 0,
+  "points_within_500m_of_envelope": 0,
+  "approx_nearest_point_to_envelope_m": 514,
+  "independent_substrate_gate_satisfied": false,
+  "biological_fish_gate_satisfied": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "The dataset contains coral/sponge occurrence records, not fish observations, full ROV transects or zero-observation effort. None falls within 100 m of W00614's eligible-cell rectangle. The approximate rectangle distance is a rejection screen only; it cannot establish absence of rock, fish, coral or sponge, or qualify a fishing waypoint."
+}
