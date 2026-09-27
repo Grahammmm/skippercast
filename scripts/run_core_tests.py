@@ -10,7 +10,9 @@ The classification used to be a hand-maintained list; new GIS tests were added
 without being listed, which broke both CI and the live-conditions refresh.
 """
 from pathlib import Path
+import argparse
 import importlib
+import re
 import sys
 import unittest
 
@@ -38,11 +40,29 @@ def classify(names):
     return core, deferred
 
 
+# Code the scheduled live-conditions job actually runs. Its pre-publish tests
+# are limited to modules exercising this code, so an unrelated survey-science
+# test can never stop the 30-minute public feed from refreshing.
+LIVE_CODE = re.compile(r'skippercast\.pipeline|skippercast import pipeline|scripts[./](refresh_regions|'
+                       r'check_saved_trips|prune_habitat_tiles)')
+
+
+def select(root, scope):
+    paths = sorted((root / 'tests').glob('test_*.py'))
+    if scope == 'live':
+        paths = [p for p in paths if LIVE_CODE.search(p.read_text(encoding='utf-8'))]
+    return [p.stem for p in paths]
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--scope', choices=('core', 'live'), default='core',
+                        help='live: only tests covering the scheduled conditions pipeline')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(root))
     sys.path.insert(0, str(root / 'src'))
-    names = [p.stem for p in sorted((root / 'tests').glob('test_*.py'))]
+    names = select(root, args.scope)
     core, deferred = classify(names)
     if deferred:
         print(f'Deferring {len(deferred)} module(s) to the survey-science job '
