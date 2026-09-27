@@ -96,9 +96,9 @@ SECTOR_OVERRIDES = {
         "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
-        "lead": "Original Point Buchon 2 m USGS depth/character pair and open-reference ROV context; reviewed H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Establish Point Buchon output datum and upper uncertainty from USGS/CSUMB records; inspect NCEI's 2007 PointBuchon/Control processed GSF sounding positions and processing lineage over the candidate hard cells, then obtain current Diablo/Vandenberg access and ENC route screens.",
-        "hold": "NCEI's processed soundings have unknown vertical datum in the public ISO metadata; catalog-footprint overlap is not measured cell overlap. BlueTopo is mostly interpolated; historical class and fish observations cannot replace chart-datum depth, safe access or current legal review.",
+        "lead": "2009 CSUMB Block A3 original NAVD88 Geoid03 grids overlap the independent 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells, alongside 2007 original GSF beam leads; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
+        "next": "Request the 2009 Block A3 released-grid upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms; derive a bounded MLLW surface over full candidate patches. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition, then obtain current Diablo/Vandenberg access and ENC route screens.",
+        "hold": "The 2009 grid's inner metadata establish NAVD88 Geoid03 but leave vertical accuracy and rights unresolved. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
     },
 }
 
@@ -130,6 +130,7 @@ def build(root):
     buchon_ncei_index_path = "dist/data/point-buchon-2007-ncei-line-index.json"
     buchon_beams_path = "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json"
     buchon_caris_path = "dist/data/point-buchon-2007-caris-prefix-lead.json"
+    buchon_2009_path = "dist/data/point-buchon-2009-csumb-original-overlap.json"
     queue, ledger = load(root, queue_path), load(root, ledger_path)
     buchon, estero = load(root, buchon_path), load(root, estero_path)
     bss03_video = load(root, bss03_video_path)
@@ -161,6 +162,17 @@ def build(root):
     buchon_ncei_index = load(root, buchon_ncei_index_path)
     buchon_beams = load(root, buchon_beams_path)
     buchon_caris = load(root, buchon_caris_path)
+    buchon_2009 = load(root, buchon_2009_path)
+    if (buchon_2009.get("scope") != "point-buchon-2009-csumb-original-products-vs-2008-usgs-character"
+            or buchon_2009.get("inner_grid_survey_year") != 2009
+            or buchon_2009.get("inner_grid_native_vertical_datum") != "NAVD88 Geoid03 (inner original processing metadata)"
+            or sum(band["usgs_hard_rugose_cells"]
+                   for grid in buchon_2009.get("grid_summaries", {}).values()
+                   for band in grid["bands"].values()) != 87257
+            or buchon_2009.get("source_product_upper_uncertainty_verified") is not False
+            or buchon_2009.get("reuse_rights_resolved") is not False
+            or buchon_2009.get("qualified_waypoints") != 0):
+        raise ValueError("Original 2009 CSUMB Block A3 research evidence changed")
     if (buchon_caris.get("scope") != "point-buchon-2007-original-caris-prefix-acquisition-lead"
             or {row.get("survey_id") for row in buchon_caris.get("surveys", [])}
             != {"PointBuchon", "PointBuchon_Control"}
@@ -309,6 +321,7 @@ def build(root):
             receipts.append(buchon_ncei_index_path)
             receipts.append(buchon_beams_path)
             receipts.append(buchon_caris_path)
+            receipts.append(buchon_2009_path)
             catalog_gap = row.get("point_buchon_noaa_catalog_gap")
             if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
                     or catalog_gap["fishing_target"] is not False):
@@ -382,7 +395,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
