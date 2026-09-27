@@ -34,6 +34,8 @@ def build(root):
             or len(monterey_merge_assets.get("listings", [])) != 2
             or monterey_merge_assets.get("full_archive", {}).get("objects", 0) < 8000
             or monterey_merge_assets["full_archive"].get("requested_accuracy_inventory_or_acoustic_assets_found")
+            or monterey_merge_assets.get("dem_archive", {}).get("objects", 0) < 8000
+            or monterey_merge_assets["dem_archive"].get("requested_accuracy_inventory_or_acoustic_assets_found")
             or monterey_merge_assets.get("candidate_accuracy_layer_obtained") is not False
             or monterey_merge_assets.get("candidate_acoustic_source_extent_obtained") is not False
             or monterey_merge_assets.get("fishing_target") is not False):
@@ -507,6 +509,7 @@ def build(root):
                 "source_id_to_resolve": "12241",
                 "public_supplemental_objects_checked": sum(len(row["objects"]) for row in monterey_merge_assets["listings"]),
                 "public_full_distribution_objects_checked": monterey_merge_assets["full_archive"]["objects"],
+                "public_dem_distribution_objects_checked": monterey_merge_assets["dem_archive"]["objects"],
                 "requested_accuracy_inventory_or_acoustic_assets_found": monterey_merge_assets["requested_accuracy_inventory_or_acoustic_assets_found"],
                 "next_gate": "Obtain NOAA's source-ID crosswalk, original source extents and accuracy/void products; then resolve survey datum and upper error on full research footprints",
                 "fishing_target": False,

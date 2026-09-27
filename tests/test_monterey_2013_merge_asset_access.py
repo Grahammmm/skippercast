@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from urllib.parse import parse_qs, urlsplit
 
-from scripts.audit_monterey_2013_merge_asset_access import FULL_PREFIX, PREFIXES, audit, parse_listing
+from scripts.audit_monterey_2013_merge_asset_access import DEM_PREFIX, FULL_PREFIX, PREFIXES, audit, parse_listing
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,9 @@ class PublishedAssetAccess(unittest.TestCase):
         self.assertEqual([item["prefix"] for item in saved["listings"]], list(PREFIXES))
         self.assertEqual(saved["requested_accuracy_inventory_or_acoustic_assets_found"], [])
         self.assertEqual(saved["full_archive"]["objects"], 16050)
-        self.assertEqual(saved["full_archive"]["copc_laz_objects"], 8018)
+        self.assertEqual(saved["full_archive"]["data_tile_objects"], 8018)
+        self.assertEqual(saved["dem_archive"]["objects"], 16132)
+        self.assertEqual(saved["dem_archive"]["data_tile_objects"], 8040)
         self.assertFalse(saved["candidate_accuracy_layer_obtained"])
         self.assertFalse(saved["fishing_target"])
 
@@ -31,11 +33,11 @@ class PublishedAssetAccess(unittest.TestCase):
         def fake(url):
             query = parse_qs(urlsplit(url).query)
             prefix = query["prefix"][0]
-            keys = [prefix + "Vertical_Accuracy_Layer.zip"] if prefix == FULL_PREFIX else []
+            keys = [prefix + "Vertical_Accuracy_Layer.zip"] if prefix == DEM_PREFIX else []
             return listing(prefix, keys)
         found = audit(fake)
         self.assertEqual(found["requested_accuracy_inventory_or_acoustic_assets_found"],
-                         [FULL_PREFIX + "Vertical_Accuracy_Layer.zip"])
+                         [DEM_PREFIX + "Vertical_Accuracy_Layer.zip"])
         self.assertFalse(found["candidate_accuracy_layer_obtained"])
 
     def test_truncated_listing_fails_closed(self):

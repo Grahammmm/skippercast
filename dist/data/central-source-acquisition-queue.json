@@ -207,6 +207,7 @@
         "source_id_to_resolve": "12241",
         "public_supplemental_objects_checked": 3,
         "public_full_distribution_objects_checked": 16050,
+        "public_dem_distribution_objects_checked": 16132,
         "requested_accuracy_inventory_or_acoustic_assets_found": [],
         "next_gate": "Obtain NOAA's source-ID crosswalk, original source extents and accuracy/void products; then resolve survey datum and upper error on full research footprints",
         "fishing_target": false,
