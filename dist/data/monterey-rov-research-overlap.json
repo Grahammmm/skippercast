@@ -1,0 +1,127 @@
+{
+  "central_open_reference_rows_checked": 10811,
+  "context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "depth_interpretation": "ROV-observed metres, not MLLW-qualified chart depth",
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "The 10 m subunits and transects are correlated, not independent trips or catch rates.",
+    "This is the same underlying CDFW/MARE ROV program as other processed releases; do not double count it as independent survey evidence.",
+    "A 25 m inset is a sensitivity check, not a measured ROV location-error bound.",
+    "Historical fish observations do not establish present-day fish presence, a precise pile, legal access or a safe route.",
+    "Original subunit coordinates and fishing waypoints are intentionally absent from this research receipt."
+  ],
+  "outlines": {
+    "023": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 12,
+          "in_200_300ft_source_depth": 113,
+          "lingcod_positive_subunits": 16,
+          "majority_observed_hard": 68,
+          "observation_years": [
+            2016,
+            2019,
+            2021
+          ],
+          "rockfish_positive_subunits": 23,
+          "source_survey_groups": [
+            "Portuguese Ledge"
+          ],
+          "subunits": 113,
+          "usable_camera_area_m2": 2459.0
+        },
+        "10": {
+          "distinct_transect_labels": 12,
+          "in_200_300ft_source_depth": 72,
+          "lingcod_positive_subunits": 13,
+          "majority_observed_hard": 56,
+          "observation_years": [
+            2016,
+            2019,
+            2021
+          ],
+          "rockfish_positive_subunits": 15,
+          "source_survey_groups": [
+            "Portuguese Ledge"
+          ],
+          "subunits": 72,
+          "usable_camera_area_m2": 1575.6
+        },
+        "25": {
+          "distinct_transect_labels": 10,
+          "in_200_300ft_source_depth": 28,
+          "lingcod_positive_subunits": 5,
+          "majority_observed_hard": 24,
+          "observation_years": [
+            2016,
+            2019,
+            2021
+          ],
+          "rockfish_positive_subunits": 4,
+          "source_survey_groups": [
+            "Portuguese Ledge"
+          ],
+          "subunits": 28,
+          "usable_camera_area_m2": 629.5
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 0.0,
+      "source_position_error_bounded": false
+    },
+    "046": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 149.8,
+      "source_position_error_bounded": false
+    }
+  },
+  "position_method_limit": "MARE describes USBL/ship GPS positioning for its program, but this is not a measured achieved error bound for these historical subunits.",
+  "position_method_source_url": "https://mareresearch.org/?p=1798",
+  "schema_version": 1,
+  "scope": "monterey-zenodo-rov-to-original-research-outline-overlap",
+  "source_coordinate_interpretation": "Published analysis code treats Avg.X/Avg.Y as UTM zone 10 GRS80 kilometers; source positional error and bottom-camera offset are not bounded here.",
+  "source_doi": "10.5281/zenodo.10929417",
+  "source_file_sha256": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8",
+  "source_rows_checked": 133506,
+  "source_url": "https://zenodo.org/records/10929417"
+}

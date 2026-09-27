@@ -261,6 +261,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install spatial join dependencies
+        run: python -m pip install pyproj==3.7.1 shapely==2.1.2
       - name: Verify depth and protected-site gates
         run: python -m unittest tests.test_central_rov_depth_evidence -v
       - name: Recheck published ROV object and open-reference summary
@@ -269,12 +271,25 @@ jobs:
           --output var/review/central-rov-200-300ft-evidence.json
       - name: Detect changed deeper biological context
         run: cmp dist/data/central-rov-200-300ft-evidence.json var/review/central-rov-200-300ft-evidence.json
+      - name: Recheck original ROV subunits against Monterey research outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_monterey_rov_research_overlap.py
+          --output var/review/monterey-rov-research-overlap.json
+          --verify dist/data/monterey-rov-research-overlap.json
+      - name: Verify biological proximity remains research-only
+        env:
+          PYTHONPATH: src:.
+        run: python -m unittest tests.test_monterey_rov_research_overlap -v
       - name: Upload research-only ROV summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: central-rov-200-300ft-evidence
-          path: var/review/central-rov-200-300ft-evidence.json
+          path: |
+            var/review/central-rov-200-300ft-evidence.json
+            var/review/monterey-rov-research-overlap.json
           retention-days: 30
   ccfrp-open-reference-context:
     runs-on: ubuntu-latest
