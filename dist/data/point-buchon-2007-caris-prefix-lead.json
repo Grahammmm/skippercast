@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-2007-original-caris-prefix-acquisition-lead",
+  "surveys": [
+    {
+      "survey_id": "PointBuchon",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon/multibeam/data/version2/ancillary/Point_Buchon_caris.tar.gz",
+      "archive_total_bytes": 3593471369,
+      "inspected_compressed_prefix_bytes": 8388608,
+      "compressed_prefix_sha256": "c022c4d9f8d7b51d3dfb2b5627298acf8c2eed98d0d279389d8351a1076217a8",
+      "project_definition_projection": "AUTO_UTM,WG84_10N",
+      "project_definition_sha256": "1da7b41867743bd41fb8145c49f6a618bb9a9eefabf73b4541667d2dc4bf9a7d",
+      "complete_tar_headers_visible_in_prefix": 11,
+      "tpe_member_names_visible_in_prefix": [],
+      "tide_member_names_visible_in_prefix": [],
+      "prefix_not_complete_archive": true
+    },
+    {
+      "survey_id": "PointBuchon_Control",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/ancillary/Point_Buchon_Cntrl_caris.tar.gz",
+      "archive_total_bytes": 5117036653,
+      "inspected_compressed_prefix_bytes": 8388608,
+      "compressed_prefix_sha256": "df01ebb5872bffe6b15c006149d864625439ad270b95c409dfa9915e4e9be5a6",
+      "project_definition_projection": "AUTO_UTM,WG84_10N",
+      "project_definition_sha256": "378bd1e65ceab41df99f63caacb229fc3b973c317cf99bc2c44dfff03de48e7e",
+      "complete_tar_headers_visible_in_prefix": 18,
+      "tpe_member_names_visible_in_prefix": [
+        "PtBuchonCntrl_07/VenTresca/2007-299/MB299-1656/TPE"
+      ],
+      "tide_member_names_visible_in_prefix": [
+        "PtBuchonCntrl_07/VenTresca/2007-299/MB299-1656/Tide"
+      ],
+      "prefix_not_complete_archive": true
+    }
+  ],
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "The bounded compressed prefixes show project definitions and a few early tar members only. WGS84 UTM is a horizontal project frame, not a vertical datum. A visible TPE member is an undecoded binary and does not prove total uncertainty for the selected GSF line or later USGS raster. Obtain a targeted custodian extract or process the full CARIS projects before depth qualification."
+}

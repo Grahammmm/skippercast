@@ -10,6 +10,7 @@
     "dist/data/point-buchon-2007-ncei-multibeam-lead.json": "f24c4e053f461a7b9c85fa04d5f079cba5032065cec48f5f97a72f95a8392da0",
     "dist/data/point-buchon-2007-ncei-line-index.json": "16ee16e349ebb7da19ed1de137c8c5f03b71c3b060d37d45721438d923561bf7",
     "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json": "e7a73843f121c359b8c0d683ab30cca2e364f5930cf4b7ab9a68f3f00b5d3cf8",
+    "dist/data/point-buchon-2007-caris-prefix-lead.json": "868d2a9db182e6f931ac4a7c1a102f62a5de4fec675c2c26550cff3608604da5",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
     "dist/data/estero-wgs84-direct-vdatum-review.json": "12bdc1257618b3287eb402a958c2e513b73256724809a382b95ba53407afc0f3",
     "dist/data/estero-2012-public-release-inventory.json": "4ba445ae24d1baccc7f8ea26a96599bc7172b6c3847a29f94819f8f9b36e0514",
@@ -522,6 +523,7 @@
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "dist/data/central-deep-original-300-refutation.json",
+        "dist/data/point-buchon-2007-caris-prefix-lead.json",
         "dist/data/point-buchon-2007-ncei-line-index.json",
         "dist/data/point-buchon-2007-ncei-multibeam-lead.json",
         "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json",
