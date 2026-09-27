@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-2009-beam-to-2010-video-proximity-research",
+  "original_beam_receipt_sha256": "c0105bb4de37695fb90daf552575248f163e4c1325302a1c973fd65ff600a103",
+  "original_camera_receipt_sha256": "53baf8dcb2b20da92ad5b0cefa88db9b6a8913a87ee8cc27196ffc43c26ed01c",
+  "usgs_camera_archive_url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+  "usgs_camera_archive_sha256": "48283dc9362a1f3654ec24452f72cb84c25092157f2867d9cb6c060393bb44a6",
+  "camera_position_accuracy_report": "Highly variable on the order of 10 meters.",
+  "minimum_outline_interior_clearance_m": 25,
+  "outlines": {
+    "023": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "interior_camera_windows": 5,
+      "rock_boulder_cobble_windows": 5,
+      "rockfish_positive_windows": 1,
+      "lingcod_positive_windows": 0,
+      "distinct_camera_transects": 1,
+      "observation_dates": [
+        "2010-10-31"
+      ],
+      "nearest_valid_2009_beam_distance_m_range": [
+        0.13,
+        0.38
+      ],
+      "nearest_valid_2009_beam_distance_m_median": 0.2,
+      "camera_windows_with_valid_2009_beam_within_2m": 5,
+      "camera_windows_with_valid_2009_beam_within_10m": 5,
+      "rockfish_positive_windows_with_beam_within_10m": 1,
+      "independent_current_fish_presence_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    "046": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "interior_camera_windows": 2,
+      "rock_boulder_cobble_windows": 2,
+      "rockfish_positive_windows": 1,
+      "lingcod_positive_windows": 0,
+      "distinct_camera_transects": 1,
+      "observation_dates": [
+        "2010-10-27"
+      ],
+      "nearest_valid_2009_beam_distance_m_range": [
+        0.09,
+        0.21
+      ],
+      "nearest_valid_2009_beam_distance_m_median": 0.15,
+      "camera_windows_with_valid_2009_beam_within_2m": 2,
+      "camera_windows_with_valid_2009_beam_within_10m": 2,
+      "rockfish_positive_windows_with_beam_within_10m": 1,
+      "independent_current_fish_presence_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "Camera windows were recorded in 2010 and are not present-day fish occurrence or catch-rate evidence. Consecutive windows on one transect are correlated.",
+    "The original USGS camera metadata calls positions highly variable on the order of 10 m; a nearest-beam distance is not an independently verified bottom-camera footprint or registration bound.",
+    "The 2009 beam survey and 2010 camera are separate acquisitions, but both may contribute to later USGS/NOAA interpretations. This proximity audit does not establish independent gridded depth, MLLW, uncertainty or legal access.",
+    "No original beam coordinates, camera positions or fishing waypoints are published."
+  ],
+  "checked_at": "2026-09-27T08:45:42.978797+00:00"
+}
