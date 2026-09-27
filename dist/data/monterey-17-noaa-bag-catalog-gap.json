@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-17-research-outlines-noaa-nos-bag-catalog-gap",
+  "source_catalog": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer/0",
+  "research_outline_count": 17,
+  "historical_rockfish_positive_outline_count": 4,
+  "buffer_degrees_for_catalog_discovery": 0.002,
+  "outlines_with_downloadable_bag_catalog_leads": 0,
+  "catalog_rows": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "bag_survey_ids": [],
+      "response_sha256": "3b0935ad7e5c7d7abe99759646988c22d119b12e181fa3db1526e50d79c36bdd"
+    }
+  ],
+  "original_measured_mllw_cells_verified_on_outlines": false,
+  "depth_uncertainty_gate_satisfied": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "NOAA's dynamic NOS survey footprint layer, filtered to BAG downloads, returned no leads over these 17 buffered context outlines. The result is not an exhaustive NOAA or non-NOAA survey inventory, a source-cell join, or proof of no bathymetry. USGS NAVD88 raster cells remain research-only without a validated MLLW transform and full source uncertainty.",
+  "source_sha256": {
+    "matrix": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+    "context": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39"
+  },
+  "checked_at": "2026-09-27T05:26:44.124988+00:00"
+}

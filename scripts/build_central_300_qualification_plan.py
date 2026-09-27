@@ -82,9 +82,9 @@ SECTOR_OVERRIDES = {
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
-        "lead": "USGS Offshore Monterey bathymetry, character and video; cataloged NOAA BAGs do not overlap the 17 researched outlines at measured cells",
-        "next": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then seek another original depth survey on the same class pixels.",
-        "hold": "No chart-datum depth and uncertainty over the reviewed rock outlines.",
+        "lead": "USGS Offshore Monterey bathymetry, character and video; a fresh NOAA NOS BAG-catalog query returned no downloadable BAG leads over any of the 17 buffered research outlines",
+        "next": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then search original non-NOS or unpublished depth surveys and their processing records on the same class pixels. Recheck the NOAA catalog if its coverage changes.",
+        "hold": "The NOS BAG catalog path has no lead at these 17 outlines, and no chart-datum depth plus source uncertainty is qualified over the reviewed rock footprints.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
@@ -137,6 +137,7 @@ def build(root):
     mare_2016_overlap_path = "dist/data/ciap-2016-central-video-private-block-overlap.json"
     buchon_private_access_path = "dist/data/point-buchon-private-block-access-screen.json"
     buchon_grid_bridge_path = "dist/data/point-buchon-vdatum-grid-api-bridge.json"
+    monterey_bag_gap_path = "dist/data/monterey-17-noaa-bag-catalog-gap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -244,6 +245,15 @@ def build(root):
             or buchon_grid_bridge.get("source_depth_upper_uncertainty_verified") is not False
             or buchon_grid_bridge.get("fishing_target") is not False):
         raise ValueError("Point Buchon VDatum grid/API bridge changed; review before promotion")
+    monterey_bag_gap = load(root, monterey_bag_gap_path)
+    if (monterey_bag_gap.get("scope") != "monterey-17-research-outlines-noaa-nos-bag-catalog-gap"
+            or monterey_bag_gap.get("research_outline_count") != 17
+            or monterey_bag_gap.get("outlines_with_downloadable_bag_catalog_leads") != 0
+            or len(monterey_bag_gap.get("catalog_rows", [])) != 17
+            or monterey_bag_gap.get("original_measured_mllw_cells_verified_on_outlines") is not False
+            or monterey_bag_gap.get("depth_uncertainty_gate_satisfied") is not False
+            or monterey_bag_gap.get("fishing_target") is not False):
+        raise ValueError("Monterey NOAA NOS BAG catalog gap changed; review before promotion")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -433,6 +443,8 @@ def build(root):
             receipts.append(row["csumb_native_band_receipt"])
         if sector_id in ("monterey-sur", "big-sur", "sur-san-simeon", "morro-conception"):
             receipts.append(dataone_rov_path)
+        if sector_id == "monterey-sur":
+            receipts.append(monterey_bag_gap_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -554,7 +566,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
