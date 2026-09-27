@@ -1,0 +1,90 @@
+{
+  "area_summary": {
+    "estero": {
+      "nearest_sample_description": "SD,BRN,F",
+      "nearest_sample_m": 29.8,
+      "nearest_sample_source": "NMNH",
+      "nearest_sample_survey": "H10531",
+      "nearest_sample_year": 1994,
+      "research_areas": 60,
+      "samples_inside": 0,
+      "samples_within_100m": 4,
+      "samples_within_500m": 6,
+      "within_100m_descriptions": {
+        "MUD,BRN,F": 1,
+        "MUD,DK GY": 1,
+        "SD,BRN,F": 1,
+        "SD,GY,F": 1
+      },
+      "within_100m_survey_years": {
+        "H10531 (1994)": 3,
+        "H10532 (1994)": 1
+      }
+    },
+    "monterey": {
+      "nearest_sample_description": "NO SAMPLE OBTAINED",
+      "nearest_sample_m": 3695.1,
+      "nearest_sample_source": "NMNH",
+      "nearest_sample_survey": "DA-50-8-85",
+      "nearest_sample_year": 1985,
+      "research_areas": 17,
+      "samples_inside": 0,
+      "samples_within_100m": 0,
+      "samples_within_500m": 0,
+      "within_100m_descriptions": {},
+      "within_100m_survey_years": {}
+    },
+    "point_buchon": {
+      "nearest_sample_description": "MUD,DK GY",
+      "nearest_sample_m": 1214.7,
+      "nearest_sample_source": "NMNH",
+      "nearest_sample_survey": "H10532",
+      "nearest_sample_year": 1994,
+      "research_areas": 181,
+      "samples_inside": 0,
+      "samples_within_100m": 0,
+      "samples_within_500m": 0,
+      "within_100m_descriptions": {},
+      "within_100m_survey_years": {}
+    }
+  },
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "Historic point descriptions are sparse and may have unbounded horizontal error.",
+    "A nearby sample cannot validate a small reef or fish presence without survey precision and direct overlap.",
+    "No exact sample or private research coordinates are published by this audit."
+  ],
+  "query_envelope_wgs84": [
+    -122.3,
+    34.3,
+    -120.0,
+    36.9
+  ],
+  "retrieved_at_utc": "2026-09-27T13:57:10+00:00",
+  "returned_samples": 250,
+  "schema_version": 1,
+  "scope": "central-coast-nos-seabed-historic-research-gap",
+  "source_counts": {
+    "NMNH": 250
+  },
+  "source_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_seabed_dynamic/MapServer/0",
+  "survey_counts": {
+    "DA-50-7-85": 2,
+    "DA-50-8-85": 8,
+    "H09737": 13,
+    "H10161": 50,
+    "H10171": 55,
+    "H10531": 77,
+    "H10532": 44,
+    "PHP-30-80": 1
+  },
+  "year_counts": {
+    "1978": 13,
+    "1980": 1,
+    "1984": 50,
+    "1985": 65,
+    "1993": 6,
+    "1994": 115
+  }
+}
