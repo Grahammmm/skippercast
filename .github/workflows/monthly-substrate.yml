@@ -111,10 +111,16 @@ jobs:
           --fetch
           --output var/review/monterey-1998-original-em300-overlap.json
           --verify dist/data/monterey-1998-original-em300-overlap.json
-      - name: Verify both historical source receipts keep fishing release gates closed
+      - name: Recheck NOAA 2013 merge provenance and missing accuracy deliverables
+        run: >-
+          python scripts/audit_monterey_2013_merge_lineage.py
+          --fetch
+          --output var/review/monterey-2013-merge-lineage-gap.json
+          --verify dist/data/monterey-2013-merge-lineage-gap.json
+      - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -123,6 +129,7 @@ jobs:
           path: |
             var/review/monterey-1995-original-multibeam-overlap.json
             var/review/monterey-1998-original-em300-overlap.json
+            var/review/monterey-2013-merge-lineage-gap.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

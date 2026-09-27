@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "noaa-2013-ca-merge-source-accuracy-deliverables",
+  "name": "NOAA 2013 California topo-bathy merge source inventory and vertical-accuracy layers",
+  "region_ids": ["santa-cruz-monterey-bay", "monterey-point-sur"],
+  "sector_ids": ["monterey-sur"],
+  "need_ids": ["bathymetry"],
+  "producer": {
+    "name": "NOAA Office for Coastal Management; Dewberry California Coastal Data Merge Project",
+    "url": "https://www.fisheries.noaa.gov/inport/item/49649"
+  },
+  "documentation_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612_final_report.pdf",
+  "access_url": null,
+  "access_status": "partial",
+  "variables": ["acoustic_source_footprint", "source_survey_date", "reported_vertical_accuracy", "accuracy_missingness", "void_mask"],
+  "units": {
+    "acoustic_source_footprint": null,
+    "source_survey_date": null,
+    "reported_vertical_accuracy": "RMSEz where available; acoustic BAG values generalized; not a conservative upper bound",
+    "accuracy_missingness": null,
+    "void_mask": null
+  },
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.fisheries.noaa.gov/inport/item/49649",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": null,
+    "resolution_m": null,
+    "horizontal_crs": "NAD83 NSRS2007 UTM zones 10/11 in the project report; deliverables not inspected",
+    "vertical_datum": "NAVD88 Geoid09 in the project report; per-cell provenance not inspected",
+    "footprint_kind": "unknown",
+    "footprint_url": null,
+    "resolution_basis": "unknown"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T06:59:14+00:00",
+    "update_cadence": "Historical 2013 project; monthly discovery and original-file integrity check",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Official NOAA processing report and USGS Offshore Monterey bathymetry XML",
+    "raw_sha256": "71d08d9dcb748b077ea6ff7b2c166816c2c5461bce637c2bee7532369a948de5",
+    "transformations": [
+      "Hash-pinned official NOAA 2013 project report and USGS 2016 Offshore Monterey bathymetry metadata.",
+      "Extracted NOAA's documented deliverable types and missing-data semantics; no original accuracy or source-inventory values have been acquired or attached to research cells."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612_final_report.pdf",
+      "supports": "NOAA's 2013 report lists Full_DataInventory.xlsx, acoustic-source extent FGDB, vertical-accuracy raster/vector, void mask and seamlines; acoustic accuracy varies or is unavailable, with undefined raster values -9999."
+    },
+    {
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+      "supports": "USGS states its 2 m Monterey bathymetry was downloaded from the 2013 NOAA merge and resampled, rather than independently surveyed as a new 2016 grid."
+    }
+  ],
+  "limitations": [
+    "The project report documents accuracy and source-inventory deliverables, but their original per-cell values and exact download locations were not found in the checked public supplemental listing.",
+    "The 2013 NOAA merge may reuse the 1995 or 1998 sources; close agreement with the 2016 USGS resample is not independent validation.",
+    "Source-reported RMSE or generalized BAG uncertainty, where present, is not automatically a conservative all-cell upper bound after datum transformation, gridding and position uncertainty.",
+    "No original accuracy-layer values have been intersected with the 17 Monterey research outlines; this candidate cannot qualify a 300 ft MLLW target."
+  ]
+}

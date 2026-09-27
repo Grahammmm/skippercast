@@ -83,8 +83,8 @@ SECTOR_OVERRIDES = {
     },
     "monterey-sur": {
         "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17, including previously uncovered camera outline 001. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
-        "next": "Request original 1995 and 1998 tide, vertical-datum, navigation and sounding-uncertainty records, plus the 2016 composite source-line crosswalk and upper error. Resolve 1995 versus 1998 disagreement on outline 040; seek a genuinely independent later measured survey on the camera-supported cells.",
-        "hold": "Both older grids lack documented vertical datum and upper error; independence from the 2016 composite is unproven. The 1998 cells on camera outline 001 are nominally shallower than 200 ft, and outline 040's older sources disagree. No conservative MLLW 200–300 ft depth is qualified.",
+        "next": "Locate NOAA's 2013 topo-bathy merge Full_DataInventory.xlsx, acoustic-source extent FGDB and vertical-accuracy raster/vector, then intersect actual entries with the Monterey cells. Obtain 1995/1998 tide, datum and TPU records for any contributing survey; resolve outline 040's discrepancy and seek a genuinely independent later measured survey.",
+        "hold": "The USGS 2 m grid is a resample of NOAA's 2013 multi-source merge, so agreement with an older source is not independent validation. Both older grids lack documented vertical datum and upper error; NOAA acoustic-source accuracy may be undefined. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200–300 ft depth is qualified.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
@@ -141,6 +141,7 @@ def build(root):
     monterey_bluetopo_path = "dist/data/monterey-17-bluetopo-contributor-pixels.json"
     monterey_1995_path = "dist/data/monterey-1995-original-multibeam-overlap.json"
     monterey_1998_path = "dist/data/monterey-1998-original-em300-overlap.json"
+    monterey_merge_path = "dist/data/monterey-2013-merge-lineage-gap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -288,6 +289,15 @@ def build(root):
             or monterey_1998.get("independence_from_2016_composite_established") is not False
             or monterey_1998.get("fishing_target") is not False):
         raise ValueError("Monterey 1998 EM300 original-source research status changed")
+    monterey_merge = load(root, monterey_merge_path)
+    if (monterey_merge.get("scope") != "monterey-usgs-2m-noaa-2013-merge-lineage-gap"
+            or monterey_merge.get("public_accuracy_layer_at_research_cells_obtained") is not False
+            or monterey_merge.get("public_source_inventory_at_research_cells_obtained") is not False
+            or monterey_merge.get("usgs_20cm_phrase_is_conservative_upper_bound") is not False
+            or monterey_merge.get("independent_of_1995_or_1998_survey_established") is not False
+            or monterey_merge.get("chart_datum_depth_qualified") is not False
+            or monterey_merge.get("fishing_target") is not False):
+        raise ValueError("Monterey NOAA 2013 merge lineage or hold status changed")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -482,6 +492,7 @@ def build(root):
             receipts.append(monterey_bluetopo_path)
             receipts.append(monterey_1995_path)
             receipts.append(monterey_1998_path)
+            receipts.append(monterey_merge_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -603,7 +614,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

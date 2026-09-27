@@ -21,6 +21,7 @@
     "dist/data/monterey-17-bluetopo-contributor-pixels.json": "2d605f765a40fe5bc5d9206c1fe8694469ef1bd5a10160a2c34dfcad31a9501b",
     "dist/data/monterey-1995-original-multibeam-overlap.json": "6f9bfaacd1e553153182daee65874604acb42de945194390c0d6507ebe01895e",
     "dist/data/monterey-1998-original-em300-overlap.json": "2a59014c253b06393c2399a332d73dff7ca8da31cfec42cbeded190e01261513",
+    "dist/data/monterey-2013-merge-lineage-gap.json": "ea3d26fc5112bdc129f94b68f1e666836f2a36b27652de2bcd298f5d508243fb",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
@@ -257,8 +258,8 @@
       "sector_id": "monterey-sur",
       "source_review_priority_tier": 1,
       "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17, including previously uncovered camera outline 001. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
-      "next_acquisition": "Request original 1995 and 1998 tide, vertical-datum, navigation and sounding-uncertainty records, plus the 2016 composite source-line crosswalk and upper error. Resolve 1995 versus 1998 disagreement on outline 040; seek a genuinely independent later measured survey on the camera-supported cells.",
-      "limiting_evidence": "Both older grids lack documented vertical datum and upper error; independence from the 2016 composite is unproven. The 1998 cells on camera outline 001 are nominally shallower than 200 ft, and outline 040's older sources disagree. No conservative MLLW 200\u2013300 ft depth is qualified.",
+      "next_acquisition": "Locate NOAA's 2013 topo-bathy merge Full_DataInventory.xlsx, acoustic-source extent FGDB and vertical-accuracy raster/vector, then intersect actual entries with the Monterey cells. Obtain 1995/1998 tide, datum and TPU records for any contributing survey; resolve outline 040's discrepancy and seek a genuinely independent later measured survey.",
+      "limiting_evidence": "The USGS 2 m grid is a resample of NOAA's 2013 multi-source merge, so agreement with an older source is not independent validation. Both older grids lack documented vertical datum and upper error; NOAA acoustic-source accuracy may be undefined. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200\u2013300 ft depth is qualified.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
@@ -268,7 +269,8 @@
         "dist/data/monterey-17-bluetopo-contributor-pixels.json",
         "dist/data/monterey-17-noaa-bag-catalog-gap.json",
         "dist/data/monterey-1995-original-multibeam-overlap.json",
-        "dist/data/monterey-1998-original-em300-overlap.json"
+        "dist/data/monterey-1998-original-em300-overlap.json",
+        "dist/data/monterey-2013-merge-lineage-gap.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,

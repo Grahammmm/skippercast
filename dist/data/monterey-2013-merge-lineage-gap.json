@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-usgs-2m-noaa-2013-merge-lineage-gap",
+  "usgs_metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+  "usgs_metadata_sha256": "1c12c1df827d8071565d655368ec35d8c276dc8e6f2c40d45ce4263b15081b12",
+  "noaa_processing_report_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/supplemental/ca2013_noaa_topobathy_merge_m2612_final_report.pdf",
+  "noaa_processing_report_sha256": "71d08d9dcb748b077ea6ff7b2c166816c2c5461bce637c2bee7532369a948de5",
+  "usgs_2m_source": "NOAA 2013 Coastal California TopoBathy Merge data resampled to 2 m; separate deeper MBARI 5 m grid not merged",
+  "noaa_merge_reference_frame": "NAD83 NSRS2007 UTM 10/11; NAVD88 Geoid09, per 2013 NOAA report",
+  "noaa_report_deliverables": [
+    "Full_DataInventory.xlsx identifying source dates and dataset inventory",
+    "File geodatabase of acoustic-source spatial extents",
+    "Raster and vector vertical-accuracy layers, plus void mask and seamlines"
+  ],
+  "noaa_report_acoustic_accuracy": "Varies by source or unavailable; undefined values encoded as -9999 in raster accuracy layer",
+  "noaa_report_accuracy_is_cellwise_upper_bound": false,
+  "public_accuracy_layer_at_research_cells_obtained": false,
+  "public_source_inventory_at_research_cells_obtained": false,
+  "usgs_20cm_phrase_is_conservative_upper_bound": false,
+  "independent_of_1995_or_1998_survey_established": false,
+  "chart_datum_depth_qualified": false,
+  "next_acquisition": "Locate NOAA's original 2013 Full_DataInventory.xlsx, acoustic-source extent FGDB and vertical-accuracy raster/vector; intersect their actual records with Monterey research cells, then obtain any missing contributing survey's tide, datum and TPU records. Source-reported RMSE or undefined accuracy cannot be treated as an upper safety bound without a justified conversion and transformation error.",
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The NOAA project report documents deliverable types, not their cell values or public retrieval path; no accuracy value has been sampled on a candidate.",
+    "The 2013 merge may incorporate either historical USGS/MBARI multibeam source, so agreement with the USGS 2016 resample is not independent validation.",
+    "The USGS metadata's 'no less than 20 cm' wording is not a maximum vertical error and cannot close the 300 ft release gate.",
+    "NOAA's accuracy layer uses source-reported RMSE where available and undefined values for some acoustic data; neither is automatically a conservative all-cell upper error."
+  ],
+  "checked_at": "2026-09-27T06:54:37.096292+00:00"
+}
