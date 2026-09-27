@@ -9,9 +9,136 @@
     "This is the same underlying CDFW/MARE ROV program as other processed releases; do not double count it as independent survey evidence.",
     "A 25 m inset is a sensitivity check, not a measured ROV location-error bound.",
     "Historical fish observations do not establish present-day fish presence, a precise pile, legal access or a safe route.",
-    "Original subunit coordinates and fishing waypoints are intentionally absent from this research receipt."
+    "Original subunit coordinates and fishing waypoints are intentionally absent from this research receipt.",
+    "Outline 072 has no source-depth ROV centroid remaining after a 25 m inset; it needs original position-error records before candidate-scale use."
   ],
   "outlines": {
+    "001": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 0.0,
+      "source_position_error_bounded": false
+    },
+    "003": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 2051.1,
+      "source_position_error_bounded": false
+    },
+    "011": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 5470.1,
+      "source_position_error_bounded": false
+    },
     "023": {
       "exportable": false,
       "fishing_target": false,
@@ -72,6 +199,216 @@
       "nearest_open_reference_subunit_centroid_m": 0.0,
       "source_position_error_bounded": false
     },
+    "026": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 3935.9,
+      "source_position_error_bounded": false
+    },
+    "033": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 306.8,
+      "source_position_error_bounded": false
+    },
+    "034": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 5152.7,
+      "source_position_error_bounded": false
+    },
+    "038": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 3261.7,
+      "source_position_error_bounded": false
+    },
+    "040": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 4999.1,
+      "source_position_error_bounded": false
+    },
     "046": {
       "exportable": false,
       "fishing_target": false,
@@ -113,10 +450,315 @@
       "mllw_depth_qualified": false,
       "nearest_open_reference_subunit_centroid_m": 149.8,
       "source_position_error_bounded": false
+    },
+    "056": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 2502.3,
+      "source_position_error_bounded": false
+    },
+    "059": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 557.5,
+      "source_position_error_bounded": false
+    },
+    "070": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 385.5,
+      "source_position_error_bounded": false
+    },
+    "071": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 596.9,
+      "source_position_error_bounded": false
+    },
+    "072": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 2,
+          "in_200_300ft_source_depth": 15,
+          "lingcod_positive_subunits": 2,
+          "majority_observed_hard": 6,
+          "observation_years": [
+            2016,
+            2019
+          ],
+          "rockfish_positive_subunits": 8,
+          "source_survey_groups": [
+            "Portuguese Ledge"
+          ],
+          "subunits": 15,
+          "usable_camera_area_m2": 344.1
+        },
+        "10": {
+          "distinct_transect_labels": 2,
+          "in_200_300ft_source_depth": 3,
+          "lingcod_positive_subunits": 1,
+          "majority_observed_hard": 1,
+          "observation_years": [
+            2016,
+            2019
+          ],
+          "rockfish_positive_subunits": 2,
+          "source_survey_groups": [
+            "Portuguese Ledge"
+          ],
+          "subunits": 3,
+          "usable_camera_area_m2": 69.3
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 0.0,
+      "source_position_error_bounded": false
+    },
+    "076": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 4393.0,
+      "source_position_error_bounded": false
+    },
+    "086": {
+      "exportable": false,
+      "fishing_target": false,
+      "interior_sensitivity": {
+        "0": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "10": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        },
+        "25": {
+          "distinct_transect_labels": 0,
+          "in_200_300ft_source_depth": 0,
+          "lingcod_positive_subunits": 0,
+          "majority_observed_hard": 0,
+          "observation_years": [],
+          "rockfish_positive_subunits": 0,
+          "source_survey_groups": [],
+          "subunits": 0,
+          "usable_camera_area_m2": 0
+        }
+      },
+      "mllw_depth_qualified": false,
+      "nearest_open_reference_subunit_centroid_m": 5078.8,
+      "source_position_error_bounded": false
     }
   },
   "position_method_limit": "MARE describes USBL/ship GPS positioning for its program, but this is not a measured achieved error bound for these historical subunits.",
   "position_method_source_url": "https://mareresearch.org/?p=1798",
+  "research_matrix_sha256": "4c208643619f0ad5aed44e3a78de1a9c341279e970d0df423f4df59edefdcf48",
   "schema_version": 1,
   "scope": "monterey-zenodo-rov-to-original-research-outline-overlap",
   "source_coordinate_interpretation": "Published analysis code treats Avg.X/Avg.Y as UTM zone 10 GRS80 kilometers; source positional error and bottom-camera offset are not bounded here.",

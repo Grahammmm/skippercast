@@ -11,11 +11,16 @@ class HistoricalRovOverlapTest(unittest.TestCase):
             self.skipTest("run after fetching the pinned original ROV release")
         result = build(source)
         self.assertEqual(result["source_rows_checked"], 133506)
+        self.assertEqual(len(result["outlines"]), 17)
         self.assertEqual(result["outlines"]["023"]["interior_sensitivity"]["25"]["subunits"], 28)
         self.assertEqual(result["outlines"]["023"]["interior_sensitivity"]["25"]["distinct_transect_labels"], 10)
+        self.assertEqual(result["outlines"]["072"]["interior_sensitivity"]["0"]["subunits"], 15)
+        self.assertEqual(result["outlines"]["072"]["interior_sensitivity"]["10"]["subunits"], 3)
+        self.assertEqual(result["outlines"]["072"]["interior_sensitivity"]["25"]["subunits"], 0)
         self.assertEqual(result["outlines"]["046"]["interior_sensitivity"]["0"]["subunits"], 0)
         self.assertFalse(result["fishing_target"])
         self.assertFalse(result["outlines"]["023"]["mllw_depth_qualified"])
+        self.assertFalse(result["outlines"]["072"]["source_position_error_bounded"])
 
 
 if __name__ == "__main__":

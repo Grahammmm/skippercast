@@ -20,6 +20,7 @@ from scripts.build_central_rov_depth_evidence import ROOT, fetch, source_bytes
 
 
 CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
+MATRIX = ROOT / "dist/data/monterey-original-300-paired-review.json"
 PIN = ROOT / "catalog/central-rov-2024-source.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
@@ -27,22 +28,27 @@ MARGINS = (0, 10, 25)
 LOWER_M, UPPER_M = 60.96, 91.44
 
 
-def build(source: Path, context_path: Path = CONTEXT, pin_path: Path = PIN) -> dict:
+def build(source: Path, context_path: Path = CONTEXT, pin_path: Path = PIN,
+          matrix_path: Path = MATRIX) -> dict:
     pin = json.loads(pin_path.read_text())
     source_bytes(source, pin)
     context = json.loads(context_path.read_text())
+    matrix = json.loads(matrix_path.read_text())
+    candidate_ids = {row["context_id"] for row in matrix["outlines"]}
+    if len(candidate_ids) != 17 or matrix.get("fishing_target") is not False:
+        raise ValueError("Original Monterey research matrix changed")
     if context.get("type") != "FeatureCollection":
         raise ValueError("Monterey research geometry changed")
     project = Transformer.from_crs("EPSG:4326", "EPSG:32610", always_xy=True)
     outlines = {}
     for feature in context["features"]:
         ident = feature["properties"].get("id", "")
-        if ident.endswith(("-023", "-046")):
+        if ident in candidate_ids:
             if feature["properties"].get("fishing_target") is not False:
                 raise ValueError("Research-only outline changed")
             outlines[ident[-3:]] = transform(project.transform, shape(feature["geometry"]))
-    if set(outlines) != {"023", "046"}:
-        raise ValueError("Priority Monterey outlines changed")
+    if set(outlines) != {ident[-3:] for ident in candidate_ids}:
+        raise ValueError("Original Monterey research outlines changed")
     counts = {ident: {margin: Counter() for margin in MARGINS} for ident in outlines}
     transects = {ident: {margin: set() for margin in MARGINS} for ident in outlines}
     years = {ident: {margin: set() for margin in MARGINS} for ident in outlines}
@@ -130,6 +136,7 @@ def build(source: Path, context_path: Path = CONTEXT, pin_path: Path = PIN) -> d
         "source_url": pin["source_url"],
         "source_file_sha256": pin["file_sha256"],
         "context_sha256": hashlib.sha256(context_path.read_bytes()).hexdigest(),
+        "research_matrix_sha256": hashlib.sha256(matrix_path.read_bytes()).hexdigest(),
         "source_rows_checked": source_rows,
         "central_open_reference_rows_checked": reference_rows,
         "source_coordinate_interpretation": "Published analysis code treats Avg.X/Avg.Y as UTM zone 10 GRS80 kilometers; source positional error and bottom-camera offset are not bounded here.",
@@ -145,6 +152,7 @@ def build(source: Path, context_path: Path = CONTEXT, pin_path: Path = PIN) -> d
             "A 25 m inset is a sensitivity check, not a measured ROV location-error bound.",
             "Historical fish observations do not establish present-day fish presence, a precise pile, legal access or a safe route.",
             "Original subunit coordinates and fishing waypoints are intentionally absent from this research receipt.",
+            "Outline 072 has no source-depth ROV centroid remaining after a 25 m inset; it needs original position-error records before candidate-scale use.",
         ],
     }
 
@@ -164,7 +172,7 @@ def main() -> None:
         raise SystemExit("ROV research overlap changed; review before any rank")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print("Joined historical ROV subunits to two Monterey research outlines; zero fishing targets")
+    print("Joined historical ROV subunits to 17 Monterey research outlines; zero fishing targets")
 
 
 if __name__ == "__main__":
