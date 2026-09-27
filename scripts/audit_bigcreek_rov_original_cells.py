@@ -11,6 +11,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 import tarfile
 import tempfile
@@ -19,6 +20,7 @@ import zipfile
 import numpy as np
 from pyproj import Transformer
 import rasterio
+from rasterio.windows import Window
 from shapely.geometry import Point, shape
 from shapely.ops import transform
 
@@ -36,6 +38,7 @@ ARCHIVE = ROOT / "var/noaa-native-cache/BigCreek_additional_products.tar.gz"
 OUTPUT = ROOT / "dist/data/bigcreek-lopez-rov-original-cell-join.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
+SENSITIVITY_RADII_M = (10, 25)
 
 
 def _product(original: tarfile.TarFile, kind: str) -> bytes:
@@ -45,6 +48,31 @@ def _product(original: tarfile.TarFile, kind: str) -> bytes:
     if len(matches) != 1 or matches[0].size > 50_000_000:
         raise ValueError(f"Original Lopez {kind} product changed")
     return original.extractfile(matches[0]).read()
+
+
+def neighborhood_consistent(depth_grid, habitat_grid, point, radius_m: int,
+                            category: int, spacing: int) -> bool:
+    """Check all native cell centers within radius; not a positional-error bound."""
+    x, y = point
+    row, col = depth_grid.index(x, y)
+    reach = math.ceil(radius_m / spacing) + 1
+    window = Window(col - reach, row - reach, 2 * reach + 1, 2 * reach + 1)
+    depth = depth_grid.read(1, window=window, masked=True, boundless=True)
+    habitat = habitat_grid.read(1, window=window, masked=True, boundless=True)
+    rows, cols = np.indices(depth.shape)
+    affine = depth_grid.window_transform(window)
+    centers_x = affine.c + (cols + 0.5) * affine.a
+    centers_y = affine.f + (rows + 0.5) * affine.e
+    circle = (centers_x - x) ** 2 + (centers_y - y) ** 2 <= radius_m ** 2
+    if not circle.any():
+        return False
+    minimum, maximum = (60.96, 80.0) if spacing == 2 else (80.0, 91.44)
+    band = (depth <= -minimum) & (depth >= -maximum) if spacing == 2 else \
+        (depth < -minimum) & (depth >= -maximum)
+    return bool((~np.ma.getmaskarray(depth)[circle]).all()
+                and (~np.ma.getmaskarray(habitat)[circle]).all()
+                and np.asarray(band)[circle].all()
+                and np.asarray(habitat == category)[circle].all())
 
 
 def build(rov_path: Path, archive_path: Path, mpas: dict, mpa_sha: str) -> dict:
@@ -143,6 +171,11 @@ def build(rov_path: Path, archive_path: Path, mpas: dict, mpa_sha: str) -> dict:
                 c["visual_majority_hard_subunits"] += visual_hard
                 c["lingcod_positive_subunits"] += lingcod
                 c["rockfish_positive_subunits"] += rockfish
+                depth_grid, habitat_grid = (d2, h2) if spacing == 2 else (d5, h5)
+                for radius in SENSITIVITY_RADII_M:
+                    if neighborhood_consistent(depth_grid, habitat_grid, point, radius,
+                                               category, spacing):
+                        c[f"same_class_and_band_within_{radius}m_cell_centers"] += 1
                 differences.append(grid_depth - depth_observed)
                 years.add(int(row["SurveyYear"]))
                 transects.add(ident.rsplit("_", 1)[0])
@@ -159,12 +192,17 @@ def build(rov_path: Path, archive_path: Path, mpas: dict, mpa_sha: str) -> dict:
         "source_depth_band_m": [60.96, 91.44],
         "source_vertical_datum": "NAVD88 Geoid09",
         "tier_rule": "2 m for 60.96–80 m source depth; 5 m for >80–91.44 m; each subunit counted once",
+        "neighborhood_sensitivity_radii_m": list(SENSITIVITY_RADII_M),
         "mpa_review_buffer_m": 75,
         "counts": dict(sorted(counts.items())),
         "historical_observation_years_outside_screen": sorted(years),
         "distinct_transect_labels_outside_screen": len(transects),
-        "outside_screen_by_derived_class": {key: dict(sorted(class_counts[key].items()))
-                                            for key in ("derived_rough", "derived_smooth")},
+        "outside_screen_by_derived_class": {
+            key: {**dict(sorted(class_counts[key].items())),
+                  **{f"same_class_and_band_within_{radius}m_cell_centers":
+                     class_counts[key][f"same_class_and_band_within_{radius}m_cell_centers"]
+                     for radius in SENSITIVITY_RADII_M}}
+            for key in ("derived_rough", "derived_smooth")},
         "grid_minus_rov_observed_depth_m_range": [round(min(differences), 2), round(max(differences), 2)] if differences else None,
         "rov_bottom_position_error_bounded": False,
         "cross_survey_registration_bounded": False,
@@ -176,6 +214,7 @@ def build(rov_path: Path, archive_path: Path, mpas: dict, mpa_sha: str) -> dict:
         "limitations": [
             "Historical ROV 10 m subunits are correlated within transects and do not measure catch rates or current fish presence.",
             "A subunit average position sampled against a raster cell does not prove the camera imaged that cell; position and cross-survey error bounds are unavailable.",
+            "The 10 m and 25 m circular native-cell-center checks are sensitivity tests, not measured camera position error or complete-footprint clearance.",
             "The 75 m MPA proximity screen is research-only, not a legal fishing boundary or current trip clearance.",
             "The source depth is NAVD88 rather than MLLW, and the bathymetry/habitat cells are processed and interpolated, not independent soundings or rock observations.",
             "Only aggregate evidence is published; no historical observation positions or fishing coordinates are released.",
