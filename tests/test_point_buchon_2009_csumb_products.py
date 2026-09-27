@@ -34,7 +34,9 @@ class PointBuchon2009ProductsTests(unittest.TestCase):
     def test_published_receipt_does_not_promote_source_datum_overlap(self):
         report = json.loads((Path(__file__).resolve().parents[1] /
                              "dist/data/point-buchon-2009-csumb-original-overlap.json").read_text())
-        self.assertEqual(report["inner_grid_survey_year"], 2009)
+        self.assertEqual(report["inner_grid_metadata_survey_year"], 2009)
+        self.assertEqual(report["bundled_bathy_trackline_year"], 2007)
+        self.assertFalse(report["cell_acquisition_year_verified"])
         self.assertEqual(report["archive_label_cruise_year"], 2007)
         self.assertEqual(report["inner_grid_native_vertical_datum"],
                          "NAVD88 Geoid03 (inner original processing metadata)")

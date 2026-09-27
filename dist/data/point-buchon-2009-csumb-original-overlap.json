@@ -7,7 +7,10 @@
   "archive_label_cruise_year": 2007,
   "inner_grid_member": "CC_BlkA3_2m.5m_bathygrids.zip",
   "inner_grid_sha256": "2a32196f18af1b2ce2332e397f42c153d393d31d41c7434fa7ffc8f511616376",
-  "inner_grid_survey_year": 2009,
+  "inner_grid_metadata_survey_year": 2009,
+  "bundled_bathy_trackline_year": 2007,
+  "cell_acquisition_year_verified": false,
+  "acquisition_lineage_receipt": "dist/data/point-buchon-block-a3-trackline-lineage.json",
   "inner_metadata_sha256": {
     "cc_ba3_2mbthy": "def9d0abdd0b1259f8606ff8b27468a8fd3e94fb061826804afeae9e21abf95a",
     "cc_ba3_5mbthy": "3f27e2bc9d5b8d2b78fafdc93def4d652c4c343cf557d5d90be527fb3242323a"
@@ -80,7 +83,7 @@
   "fishing_target": false,
   "exportable": false,
   "limitations": [
-    "The NOAA 2007 PointBuchon_Control products link contains 2009 CC_BlockA3 grids. The inner metadata, not the containing cruise label, identifies source date and NAVD88 Geoid03 datum.",
+    "The NOAA 2007 PointBuchon_Control products link contains a later CC_BlockA3 delivery whose metadata mention 2009 block surveys, but its bundled bathymetry tracklines are all dated October 2007. Package processing date is not a verified acquisition year at these cells; only NAVD88 Geoid03 is explicitly declared for the delivered grid.",
     "The 2 m grid is used only through 85 m and the 5 m grid beyond 85 m to avoid double counting resampled overlapping depth slices.",
     "Nominal cross-survey class counts use a nearest-cell EPSG:32610-to-EPSG:26910 transform; horizontal realization, epoch and registration error remain unverified.",
     "Original metadata leave vertical accuracy empty and access/use constraints to be determined. Neither per-cell TPU nor a conservative released-grid upper error is available.",

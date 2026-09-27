@@ -16,6 +16,9 @@
     "cc_ba3_5mhab": "4c6f173e6352c38dff254f4c0235c04156d60394c772838f79a8a3450777af7d"
   },
   "independent_survey_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "delivered_product_metadata_year": 2009,
+  "bundled_bathymetry_trackline_year": 2007,
+  "cell_acquisition_year_verified": false,
   "grid_summaries": {
     "cc_ba3_2mbthy": {
       "native_spacing_m": 2,
@@ -86,7 +89,7 @@
   },
   "usgs_hard_rugose_cells_with_csumb_class": 87115,
   "usgs_hard_rugose_cells_also_csumb_rough": 66133,
-  "method": "CSUMB rough/smooth is subjectively thresholded bathymetric rugosity with hand-drawn artifact masks; separate 2008 USGS terrain class is a cross-survey comparison, not biological or in-situ rock validation.",
+  "method": "CSUMB rough/smooth is subjectively thresholded bathymetric rugosity with hand-drawn artifact masks. The delivered package's bathymetry tracklines date to 2007; the separate 2008 USGS terrain class is a cross-survey comparison, not biological or in-situ rock validation.",
   "independent_rock_groundtruth": false,
   "depth_mllw_and_upper_uncertainty_verified": false,
   "cross_survey_registration_verified": false,

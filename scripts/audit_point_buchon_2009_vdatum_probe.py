@@ -122,6 +122,9 @@ def audit(archive, block_path):
         "official_regional_archive_sha256": ARCHIVE_SHA256,
         "regional_grid_tidal_epoch": meta["tidal_epoch"],
         "regional_grid_tidal_release_date": meta["tidal.released_date"],
+        "delivered_product_metadata_year": 2009,
+        "bundled_bathymetry_trackline_year": 2007,
+        "cell_acquisition_year_verified": False,
         "private_block_count": len(blocks["features"]),
         "sample_count": len(samples),
         "conditional_navd88_zero_to_mllw_offset_m": [min(offsets), max(offsets)],
@@ -133,7 +136,7 @@ def audit(archive, block_path):
         "source_product_upper_uncertainty_verified": False,
         "qualified_waypoints": 0, "fishing_target": False, "exportable": False,
         "limitations": [
-            "The 2009 CSUMB raster declares NAD83 UTM10 and NAVD88 Geoid03, but not the NAD83 realization or coordinate epoch. The accepted NAD83_2011 API path is conditional on an unverified source-frame identity.",
+            "The Block A3 delivered raster declares NAD83 UTM10 and NAVD88 Geoid03, but not the NAD83 realization or coordinate epoch. Its bundled bathymetry tracklines date to 2007 despite metadata mentioning 2009 block surveys. The accepted NAD83_2011 API path is conditional on an unverified source-frame identity.",
             "Twelve actual private research-block centers sample a NOAA model field; they do not convert every measured depth cell or prove interpolation error over all blocks.",
             "VDatum uncertainty describes the transformation, not the original CSUMB bathymetry total propagated uncertainty. The source metadata leave vertical accuracy empty.",
             "No original-depth cell, rock substrate, fish presence, legal route or fishing date is qualified by this probe.",

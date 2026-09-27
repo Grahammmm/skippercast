@@ -131,6 +131,7 @@ def build(root):
     buchon_beams_path = "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json"
     buchon_caris_path = "dist/data/point-buchon-2007-caris-prefix-lead.json"
     buchon_2009_path = "dist/data/point-buchon-2009-csumb-original-overlap.json"
+    buchon_a3_lineage_path = "dist/data/point-buchon-block-a3-trackline-lineage.json"
     buchon_2009_terrain_path = "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json"
     buchon_2009_access_path = "dist/data/point-buchon-2009-csumb-access-triage.json"
     buchon_2009_vdatum_path = "dist/data/point-buchon-2009-conditional-vdatum-probes.json"
@@ -166,11 +167,14 @@ def build(root):
     buchon_beams = load(root, buchon_beams_path)
     buchon_caris = load(root, buchon_caris_path)
     buchon_2009 = load(root, buchon_2009_path)
+    buchon_a3_lineage = load(root, buchon_a3_lineage_path)
     buchon_2009_terrain = load(root, buchon_2009_terrain_path)
     buchon_2009_access = load(root, buchon_2009_access_path)
     buchon_2009_vdatum = load(root, buchon_2009_vdatum_path)
     if (buchon_2009.get("scope") != "point-buchon-2009-csumb-original-products-vs-2008-usgs-character"
-            or buchon_2009.get("inner_grid_survey_year") != 2009
+            or buchon_2009.get("inner_grid_metadata_survey_year") != 2009
+            or buchon_2009.get("bundled_bathy_trackline_year") != 2007
+            or buchon_2009.get("cell_acquisition_year_verified") is not False
             or buchon_2009.get("inner_grid_native_vertical_datum") != "NAVD88 Geoid03 (inner original processing metadata)"
             or sum(band["usgs_hard_rugose_cells"]
                    for grid in buchon_2009.get("grid_summaries", {}).values()
@@ -179,6 +183,14 @@ def build(root):
             or buchon_2009.get("reuse_rights_resolved") is not False
             or buchon_2009.get("qualified_waypoints") != 0):
         raise ValueError("Original 2009 CSUMB Block A3 research evidence changed")
+    if (buchon_a3_lineage.get("scope") != "point-buchon-block-a3-trackline-acquisition-lineage"
+            or buchon_a3_lineage.get("tracklines", {}).get("bathy", {}).get("count") != 112
+            or buchon_a3_lineage.get("tracklines", {}).get("bathy", {}).get("date_counts") != {
+                "24 Oct 2007": 72, "25 Oct 2007": 20, "26 Oct 2007": 20}
+            or buchon_a3_lineage.get("catalog_2009_survey_intersects_envelope") is not False
+            or buchon_a3_lineage.get("cell_acquisition_year_verified") is not False
+            or buchon_a3_lineage.get("qualified_waypoints") != 0):
+        raise ValueError("Block A3 delivered-grid acquisition lineage changed")
     if (buchon_2009_terrain.get("usgs_hard_rugose_cells_with_csumb_class") != 87115
             or buchon_2009_terrain.get("usgs_hard_rugose_cells_also_csumb_rough") != 66133
             or buchon_2009_terrain.get("independent_rock_groundtruth") is not False
@@ -350,6 +362,7 @@ def build(root):
             receipts.append(buchon_beams_path)
             receipts.append(buchon_caris_path)
             receipts.append(buchon_2009_path)
+            receipts.append(buchon_a3_lineage_path)
             receipts.append(buchon_2009_terrain_path)
             receipts.append(buchon_2009_access_path)
             receipts.append(buchon_2009_vdatum_path)
@@ -428,7 +441,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

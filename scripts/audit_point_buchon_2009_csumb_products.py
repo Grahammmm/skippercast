@@ -1,6 +1,7 @@
-"""Audit original CSUMB Block A3 grids archived under NOAA's 2007 cruise.
+"""Audit CSUMB Block A3 delivered grids archived under NOAA's 2007 cruise.
 
-The inner products identify a 2009 survey, not the containing 2007 cruise.
+The inner metadata mention 2009 block surveys, but the bundled Block A3 bathy
+tracklines are dated 2007. Acquisition year at the counted cells is unverified.
 The public result has area counts only and cannot create fishing coordinates.
 """
 import argparse
@@ -145,7 +146,10 @@ def audit(archive, class_zip):
         "archive_url": URL, "archive_sha256": ARCHIVE_SHA256,
         "archive_label_cruise_year": 2007,
         "inner_grid_member": MEMBER, "inner_grid_sha256": MEMBER_SHA256,
-        "inner_grid_survey_year": 2009,
+        "inner_grid_metadata_survey_year": 2009,
+        "bundled_bathy_trackline_year": 2007,
+        "cell_acquisition_year_verified": False,
+        "acquisition_lineage_receipt": "dist/data/point-buchon-block-a3-trackline-lineage.json",
         "inner_metadata_sha256": metadata_hashes,
         "inner_grid_native_vertical_datum": "NAVD88 Geoid03 (inner original processing metadata)",
         "inner_grid_horizontal_crs": "NAD83 / UTM zone 10N, realization/epoch not specified",
@@ -156,7 +160,7 @@ def audit(archive, class_zip):
         "reuse_rights_resolved": False,
         "qualified_waypoints": 0, "fishing_target": False, "exportable": False,
         "limitations": [
-            "The NOAA 2007 PointBuchon_Control products link contains 2009 CC_BlockA3 grids. The inner metadata, not the containing cruise label, identifies source date and NAVD88 Geoid03 datum.",
+            "The NOAA 2007 PointBuchon_Control products link contains a later CC_BlockA3 delivery whose metadata mention 2009 block surveys, but its bundled bathymetry tracklines are all dated October 2007. Package processing date is not a verified acquisition year at these cells; only NAVD88 Geoid03 is explicitly declared for the delivered grid.",
             "The 2 m grid is used only through 85 m and the 5 m grid beyond 85 m to avoid double counting resampled overlapping depth slices.",
             "Nominal cross-survey class counts use a nearest-cell EPSG:32610-to-EPSG:26910 transform; horizontal realization, epoch and registration error remain unverified.",
             "Original metadata leave vertical accuracy empty and access/use constraints to be determined. Neither per-cell TPU nor a conservative released-grid upper error is available.",

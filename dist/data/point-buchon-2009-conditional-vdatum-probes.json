@@ -1,12 +1,15 @@
 {
   "schema_version": 1,
   "scope": "point-buchon-2009-csumb-conditional-geoid03-vdatum-model-probes",
-  "checked_at": "2026-09-27T02:41:42.079674+00:00",
+  "checked_at": "2026-09-27T03:11:23.976740+00:00",
   "official_api": "https://vdatum.noaa.gov/vdatumweb/api/convert",
   "official_regional_archive_url": "https://vdatum.noaa.gov/download/data/CAmorrob01_8301.zip",
   "official_regional_archive_sha256": "64f586db40ba0776ca38d7bce6762e2138594f31f8d96fe6f8e3b4f7b7b53984",
   "regional_grid_tidal_epoch": "1983-2001",
   "regional_grid_tidal_release_date": "06/20/2019",
+  "delivered_product_metadata_year": 2009,
+  "bundled_bathymetry_trackline_year": 2007,
+  "cell_acquisition_year_verified": false,
   "private_block_count": 181,
   "sample_count": 12,
   "conditional_navd88_zero_to_mllw_offset_m": [
@@ -43,7 +46,7 @@
   "fishing_target": false,
   "exportable": false,
   "limitations": [
-    "The 2009 CSUMB raster declares NAD83 UTM10 and NAVD88 Geoid03, but not the NAD83 realization or coordinate epoch. The accepted NAD83_2011 API path is conditional on an unverified source-frame identity.",
+    "The Block A3 delivered raster declares NAD83 UTM10 and NAVD88 Geoid03, but not the NAD83 realization or coordinate epoch. Its bundled bathymetry tracklines date to 2007 despite metadata mentioning 2009 block surveys. The accepted NAD83_2011 API path is conditional on an unverified source-frame identity.",
     "Twelve actual private research-block centers sample a NOAA model field; they do not convert every measured depth cell or prove interpolation error over all blocks.",
     "VDatum uncertainty describes the transformation, not the original CSUMB bathymetry total propagated uncertainty. The source metadata leave vertical accuracy empty.",
     "No original-depth cell, rock substrate, fish presence, legal route or fishing date is qualified by this probe."

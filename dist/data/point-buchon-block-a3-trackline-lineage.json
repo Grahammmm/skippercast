@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-block-a3-trackline-acquisition-lineage",
+  "checked_at": "2026-09-27T03:12:48.752029+00:00",
+  "source_archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/Point_Buchon_Control/multibeam/data/version2/products/Pt_Buchon_control_additional_products.tar.gz",
+  "source_archive_sha256": "4677c538c50a8bacb1e8ca61ed2cdcde5aa9259143f27fe16c146e54d8243a5c",
+  "trackline_member": "CC_BlkA3_tracklines.zip",
+  "trackline_member_sha256": "1f6767482c1cd1d4ac996f4e7591fc4120af4a3c4f1def66a84a1d470feed4b6",
+  "tracklines": {
+    "bathy": {
+      "count": 112,
+      "date_counts": {
+        "24 Oct 2007": 72,
+        "25 Oct 2007": 20,
+        "26 Oct 2007": 20
+      },
+      "source_name_sha256": "af28068829e6af1f6c2d836f7c19180f586189d47b02724563171f13766ba0e5",
+      "bounds_utm10_m": [
+        684933.59,
+        3903004.1,
+        692694.44,
+        3910207.35
+      ],
+      "projection_sha256": "58482e7f92a96406e66ee73bca507a9a34e4b4351ace97e1168143c9ad372ea5"
+    },
+    "all": {
+      "count": 113,
+      "date_counts": {
+        "24 Oct 2007": 72,
+        "25 Oct 2007": 20,
+        "26 Oct 2007": 21
+      },
+      "source_name_sha256": "e35d138a54fd596c70fce6c0bc892591fccf4937a41bd0d1358af05b90a63a83",
+      "bounds_utm10_m": [
+        684933.59,
+        3903004.1,
+        692694.44,
+        3910207.35
+      ],
+      "projection_sha256": "58482e7f92a96406e66ee73bca507a9a34e4b4351ace97e1168143c9ad372ea5"
+    }
+  },
+  "noaa_multibeam_footprint_catalog": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/multibeam_dynamic/MapServer/0",
+  "catalog_surveys_intersecting_private_block_envelope": [
+    {
+      "survey_id": "PointBuchon",
+      "survey_year": 2007,
+      "ncei_id": "NEW2833"
+    },
+    {
+      "survey_id": "PointBuchon_Control",
+      "survey_year": 2007,
+      "ncei_id": "NEW2834"
+    },
+    {
+      "survey_id": "RR1710",
+      "survey_year": 2017,
+      "ncei_id": "NEW2662"
+    },
+    {
+      "survey_id": "SR1802",
+      "survey_year": 2018,
+      "ncei_id": "NEW2785"
+    },
+    {
+      "survey_id": "WEST15MV",
+      "survey_year": 1995,
+      "ncei_id": "15020169"
+    }
+  ],
+  "catalog_2009_survey_intersects_envelope": false,
+  "delivery_metadata_2009_not_cell_acquisition_proof": true,
+  "cell_acquisition_year_verified": false,
+  "source_line_to_grid_cell_crosswalk_verified": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The Block A3 bathymetry-trackline file in the same delivered package lists only 24-26 October 2007 lines. This contradicts treating the 2009 package metadata as the acquisition date of every grid cell.",
+    "The current bounded NOAA multibeam-footprint catalog query intersects the private block envelope but is not an exhaustive line-cell source inventory. No 2009 survey appears in that bounded response.",
+    "Trackline bounding boxes and dates do not identify which soundings contributed to each finished grid cell. Obtain the CARIS/BASE line-cell crosswalk and uncertainty surface before assigning acquisition dates or depth confidence."
+  ]
+}

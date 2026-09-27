@@ -1,4 +1,4 @@
-"""Compare original 2009 CSUMB terrain classes with separate 2008 USGS classes.
+"""Compare CSUMB Block A3 terrain classes with separate 2008 USGS classes.
 
 Both classes are terrain interpretations; agreement is not independent rock or fish
 groundtruth. The receipt contains aggregate counts, never fishing coordinates.
@@ -125,10 +125,13 @@ def audit(archive, class_zip):
         "depth_metadata_sha256": depth_metadata,
         "habitat_metadata_sha256": habitat_metadata,
         "independent_survey_character_sha256": EXPECTED_CLASS,
+        "delivered_product_metadata_year": 2009,
+        "bundled_bathymetry_trackline_year": 2007,
+        "cell_acquisition_year_verified": False,
         "grid_summaries": summaries,
         "usgs_hard_rugose_cells_with_csumb_class": hard_rugose,
         "usgs_hard_rugose_cells_also_csumb_rough": repeat_rough,
-        "method": "CSUMB rough/smooth is subjectively thresholded bathymetric rugosity with hand-drawn artifact masks; separate 2008 USGS terrain class is a cross-survey comparison, not biological or in-situ rock validation.",
+        "method": "CSUMB rough/smooth is subjectively thresholded bathymetric rugosity with hand-drawn artifact masks. The delivered package's bathymetry tracklines date to 2007; the separate 2008 USGS terrain class is a cross-survey comparison, not biological or in-situ rock validation.",
         "independent_rock_groundtruth": False,
         "depth_mllw_and_upper_uncertainty_verified": False,
         "cross_survey_registration_verified": False,
