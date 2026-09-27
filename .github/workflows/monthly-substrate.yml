@@ -125,10 +125,24 @@ jobs:
           --fetch
           --output var/review/monterey-noaa2612-acoustic-point-support.json
           --verify dist/data/monterey-noaa2612-acoustic-point-support.json
+      - name: Recheck NCEI survey footprints against actual trackline leads
+        run: >-
+          python scripts/audit_monterey_ncei_trackline_leads.py
+          --fetch
+          --output var/review/monterey-17-ncei-trackline-leads.json
+          --verify dist/data/monterey-17-ncei-trackline-leads.json
+      - name: Recheck 2009 original processed beams in priority Monterey outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_monterey_2009_ncei_valid_beams.py
+          --fetch
+          --output var/review/monterey-2009-centralmontereybay-valid-beam-review.json
+          --verify dist/data/monterey-2009-centralmontereybay-valid-beam-review.json
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -139,6 +153,8 @@ jobs:
             var/review/monterey-1998-original-em300-overlap.json
             var/review/monterey-2013-merge-lineage-gap.json
             var/review/monterey-noaa2612-acoustic-point-support.json
+            var/review/monterey-17-ncei-trackline-leads.json
+            var/review/monterey-2009-centralmontereybay-valid-beam-review.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

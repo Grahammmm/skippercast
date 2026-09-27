@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-2009-centralmontereybay-original-valid-beam-research",
+  "source_cruise_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html",
+  "ncei_file_layer_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/multibeam_files/MapServer/0/query",
+  "research_context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "research_matrix_sha256": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+  "ncei_file_layer": {
+    "023": {
+      "processed_file_ids": [
+        4181191,
+        4181192,
+        4181221
+      ],
+      "response_sha256": "e92bcec4917cc984eb208e964f6a0542550e0d15ad4b5c7066f2f87db46d3bcc"
+    },
+    "046": {
+      "processed_file_ids": [
+        4181196,
+        4181220
+      ],
+      "response_sha256": "b4a7cb391f9423f33f474587de431bcd9629f9f9901e2f9330b41ba5d931b761"
+    }
+  },
+  "processed_files_audited": 5,
+  "processing_parameters_common": [
+    "GEOID=WGS-84",
+    "TIDAL_DATUM=UNKNOWN",
+    "TIDE_COMPENSATED=YES"
+  ],
+  "outlines": {
+    "023": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "valid_beams_inside_outline": 314362,
+      "valid_beams_nominal_200_300ft_unknown_datum": 314362,
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_of_2013_merge_established": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    "046": {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "valid_beams_inside_outline": 72083,
+      "valid_beams_nominal_200_300ft_unknown_datum": 72083,
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_of_2013_merge_established": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  },
+  "lines": [
+    {
+      "ncei_file_id": 4181191,
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/20091103_191445_ventresca7125.gsf.mb121.gz",
+      "gsf_sha256": "6c2cbc1bf2b9557f44abd3dd15f6048ff300c124ef4681e06fb17c103f36dbbe",
+      "inf_sha256": "c17f55c67e558747329fb98f6a6c29e12917bb00646cc8aaa3a732a4d496903c",
+      "fnv_sha256": "a17e71038a83be9178329df5a16e80264e7ec99836e9d6aaad9111704a8a0fef",
+      "counts": {
+        "ping_records": 3500,
+        "beam_records": 1788664,
+        "beam_flags_good_including_ignored_pings": 1046857,
+        "ignored_ping_records": 3,
+        "valid_unflagged_beams": 1045808
+      },
+      "generated_companion_checks": {
+        "generated_inf_good_beams_match": true,
+        "generated_fnv_navigation_rows_match": true,
+        "generated_inf_sha256": "c17f55c67e558747329fb98f6a6c29e12917bb00646cc8aaa3a732a4d496903c",
+        "generated_fnv_sha256": "a17e71038a83be9178329df5a16e80264e7ec99836e9d6aaad9111704a8a0fef",
+        "generated_inf_includes_ignored_ping_beams": true
+      },
+      "outlines": {
+        "023": {
+          "valid_beams_inside_outline": 165359,
+          "valid_beams_nominal_200_300ft_unknown_datum": 165359,
+          "source_depth_m_range_unknown_datum": [
+            75.388,
+            84.656
+          ],
+          "reported_beam_vertical_error_95pct_m_range": [
+            0.176,
+            0.509
+          ],
+          "reported_beam_horizontal_error_95pct_m_range": [
+            0.552,
+            0.797
+          ]
+        },
+        "046": {
+          "valid_beams_inside_outline": 0,
+          "valid_beams_nominal_200_300ft_unknown_datum": 0,
+          "source_depth_m_range_unknown_datum": null,
+          "reported_beam_vertical_error_95pct_m_range": null,
+          "reported_beam_horizontal_error_95pct_m_range": null
+        }
+      }
+    },
+    {
+      "ncei_file_id": 4181192,
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/20091103_193335_ventresca7125.gsf.mb121.gz",
+      "gsf_sha256": "7ed3ed3ea6816d2fdaeeda8f673c95bcce2d266e710df92c0e45d9c76fcdf45b",
+      "inf_sha256": "9e5a10e04caf74b77ef82880818182a0a69fccab3f47b3cc36b78ad5eaf76042",
+      "fnv_sha256": "b66957419f7f207a7cbffc8808b88e96490baaadd2557a0d4e82d2ba43baaae3",
+      "counts": {
+        "ping_records": 3808,
+        "beam_records": 1946780,
+        "beam_flags_good_including_ignored_pings": 1181290,
+        "ignored_ping_records": 3,
+        "valid_unflagged_beams": 1180246
+      },
+      "generated_companion_checks": {
+        "generated_inf_good_beams_match": true,
+        "generated_fnv_navigation_rows_match": true,
+        "generated_inf_sha256": "9e5a10e04caf74b77ef82880818182a0a69fccab3f47b3cc36b78ad5eaf76042",
+        "generated_fnv_sha256": "b66957419f7f207a7cbffc8808b88e96490baaadd2557a0d4e82d2ba43baaae3",
+        "generated_inf_includes_ignored_ping_beams": true
+      },
+      "outlines": {
+        "023": {
+          "valid_beams_inside_outline": 97857,
+          "valid_beams_nominal_200_300ft_unknown_datum": 97857,
+          "source_depth_m_range_unknown_datum": [
+            76.371,
+            84.744
+          ],
+          "reported_beam_vertical_error_95pct_m_range": [
+            0.176,
+            0.548
+          ],
+          "reported_beam_horizontal_error_95pct_m_range": [
+            0.571,
+            0.8
+          ]
+        },
+        "046": {
+          "valid_beams_inside_outline": 0,
+          "valid_beams_nominal_200_300ft_unknown_datum": 0,
+          "source_depth_m_range_unknown_datum": null,
+          "reported_beam_vertical_error_95pct_m_range": null,
+          "reported_beam_horizontal_error_95pct_m_range": null
+        }
+      }
+    },
+    {
+      "ncei_file_id": 4181196,
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/20091103_210239_ventresca7125.gsf.mb121.gz",
+      "gsf_sha256": "e25a78a99b1ecdccbdcb8a1ed2e04a3cfcdcf362ac327b3e617b6579233deebc",
+      "inf_sha256": "ee5da57ab136f64d974caade1db0ebc2aab46f9add388d62ace8a71c86d24a82",
+      "fnv_sha256": "fbda5bd5876d3811b7cae44be3cd1cfe68bf0637a1c954a1255bbf310c05e0be",
+      "counts": {
+        "ping_records": 3841,
+        "beam_records": 1963155,
+        "beam_flags_good_including_ignored_pings": 1160956,
+        "ignored_ping_records": 2,
+        "valid_unflagged_beams": 1160270
+      },
+      "generated_companion_checks": {
+        "generated_inf_good_beams_match": true,
+        "generated_fnv_navigation_rows_match": true,
+        "generated_inf_sha256": "ee5da57ab136f64d974caade1db0ebc2aab46f9add388d62ace8a71c86d24a82",
+        "generated_fnv_sha256": "fbda5bd5876d3811b7cae44be3cd1cfe68bf0637a1c954a1255bbf310c05e0be",
+        "generated_inf_includes_ignored_ping_beams": true
+      },
+      "outlines": {
+        "023": {
+          "valid_beams_inside_outline": 0,
+          "valid_beams_nominal_200_300ft_unknown_datum": 0,
+          "source_depth_m_range_unknown_datum": null,
+          "reported_beam_vertical_error_95pct_m_range": null,
+          "reported_beam_horizontal_error_95pct_m_range": null
+        },
+        "046": {
+          "valid_beams_inside_outline": 37354,
+          "valid_beams_nominal_200_300ft_unknown_datum": 37354,
+          "source_depth_m_range_unknown_datum": [
+            80.804,
+            86.451
+          ],
+          "reported_beam_vertical_error_95pct_m_range": [
+            0.176,
+            0.489
+          ],
+          "reported_beam_horizontal_error_95pct_m_range": [
+            0.583,
+            0.784
+          ]
+        }
+      }
+    },
+    {
+      "ncei_file_id": 4181220,
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/20091105_200442_ventresca7125.gsf.mb121.gz",
+      "gsf_sha256": "7c17a5ab71d941afd8f7ee639bde09aab02bc62695dc7a27bb8c63d1be30ea05",
+      "inf_sha256": "9137c4ff0757e61fcba2666f7a64c24ebfcd280809562c3a0eb2a1208cc368f5",
+      "fnv_sha256": "fb34e3ed94b1842106d50ecca6441ed1f311d97ecbb22cf961f1cfa7cd91ac85",
+      "counts": {
+        "ping_records": 2317,
+        "beam_records": 1169792,
+        "beam_flags_good_including_ignored_pings": 688503,
+        "ignored_ping_records": 2,
+        "valid_unflagged_beams": 687910
+      },
+      "generated_companion_checks": {
+        "generated_inf_good_beams_match": true,
+        "generated_fnv_navigation_rows_match": true,
+        "generated_inf_sha256": "9137c4ff0757e61fcba2666f7a64c24ebfcd280809562c3a0eb2a1208cc368f5",
+        "generated_fnv_sha256": "fb34e3ed94b1842106d50ecca6441ed1f311d97ecbb22cf961f1cfa7cd91ac85",
+        "generated_inf_includes_ignored_ping_beams": true
+      },
+      "outlines": {
+        "023": {
+          "valid_beams_inside_outline": 0,
+          "valid_beams_nominal_200_300ft_unknown_datum": 0,
+          "source_depth_m_range_unknown_datum": null,
+          "reported_beam_vertical_error_95pct_m_range": null,
+          "reported_beam_horizontal_error_95pct_m_range": null
+        },
+        "046": {
+          "valid_beams_inside_outline": 34729,
+          "valid_beams_nominal_200_300ft_unknown_datum": 34729,
+          "source_depth_m_range_unknown_datum": [
+            80.489,
+            86.938
+          ],
+          "reported_beam_vertical_error_95pct_m_range": [
+            0.176,
+            0.458
+          ],
+          "reported_beam_horizontal_error_95pct_m_range": [
+            0.596,
+            0.759
+          ]
+        }
+      }
+    },
+    {
+      "ncei_file_id": 4181221,
+      "gsf_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/20091105_211608_ventresca7125.gsf.mb121.gz",
+      "gsf_sha256": "5ce8d4324968728754bbd53f3e1095084b20edf6de1fb8114401de2f802afefe",
+      "inf_sha256": "6f325832b628d38624b2abe52afefaed2ac9bba9e4c3f23fecd52fdc6496acb9",
+      "fnv_sha256": "4b659ef0e7706fa50528bf24d7a4bd379eacf285614f49ac4f1ab0798f34100a",
+      "counts": {
+        "ping_records": 3009,
+        "beam_records": 1530199,
+        "beam_flags_good_including_ignored_pings": 910488,
+        "ignored_ping_records": 2,
+        "valid_unflagged_beams": 909875
+      },
+      "generated_companion_checks": {
+        "generated_inf_good_beams_match": true,
+        "generated_fnv_navigation_rows_match": true,
+        "generated_inf_sha256": "6f325832b628d38624b2abe52afefaed2ac9bba9e4c3f23fecd52fdc6496acb9",
+        "generated_fnv_sha256": "4b659ef0e7706fa50528bf24d7a4bd379eacf285614f49ac4f1ab0798f34100a",
+        "generated_inf_includes_ignored_ping_beams": true
+      },
+      "outlines": {
+        "023": {
+          "valid_beams_inside_outline": 51146,
+          "valid_beams_nominal_200_300ft_unknown_datum": 51146,
+          "source_depth_m_range_unknown_datum": [
+            77.468,
+            85.085
+          ],
+          "reported_beam_vertical_error_95pct_m_range": [
+            0.176,
+            0.458
+          ],
+          "reported_beam_horizontal_error_95pct_m_range": [
+            0.562,
+            0.752
+          ]
+        },
+        "046": {
+          "valid_beams_inside_outline": 0,
+          "valid_beams_nominal_200_300ft_unknown_datum": 0,
+          "source_depth_m_range_unknown_datum": null,
+          "reported_beam_vertical_error_95pct_m_range": null,
+          "reported_beam_horizontal_error_95pct_m_range": null
+        }
+      }
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_acquisition": "Get the 2009 Ventresca/CSUMB processing report and tide-zone/vertical-datum record, horizontal registration, uncertainty budget and source-to-2013-merge point_source_id crosswalk. Compare actual original beam positions to paired USGS 2 m depth/character cells before any patch review.",
+  "limitations": [
+    "GSF valid-beam flags and positions are original processed-line evidence, but tide compensation is labeled YES while TIDAL_DATUM is UNKNOWN; nominal GSF depths cannot establish MLLW 300 ft compliance.",
+    "The 95% per-beam error arrays are source-reported values, not a demonstrated conservative upper product-depth error; datum transformation, tides, horizontal registration, gridding and seabed change are unbounded here.",
+    "Survey line overlaps are correlated and not separate species observations or proof of a contiguous rock patch. The 2013 merge may reuse this cruise, so independence from that resample is unresolved.",
+    "No source-based fish presence, complete MPA/legal/access/ENC/route review or current catch validation is supplied. The receipt omits original beam and fishing coordinates."
+  ],
+  "checked_at": "2026-09-27T08:07:47.155359+00:00"
+}

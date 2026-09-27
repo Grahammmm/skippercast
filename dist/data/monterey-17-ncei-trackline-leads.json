@@ -1,0 +1,629 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-17-ncei-footprint-vs-trackline-survey-leads",
+  "service_query_urls": {
+    "footprint": "https://gis.ngdc.noaa.gov/arcgis/rest/services/multibeam_footprints/MapServer/0/query",
+    "trackline": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/multibeam_dynamic/MapServer/0/query"
+  },
+  "research_matrix_sha256": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+  "research_context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "outlines_reviewed": 17,
+  "unique_footprint_survey_ids": 14,
+  "unique_trackline_survey_ids": 9,
+  "camera_positive_outlines_with_2009_central_monterey_trackline": 2,
+  "highest_priority_023_and_046_trackline_survey_ids": {
+    "023": [
+      "CentralMontereyBay"
+    ],
+    "046": [
+      "CentralMontereyBay"
+    ]
+  },
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "5458fe8cf933de9c66b3d43f18de00cca2065ad53567318155f8048e3201cf53",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "5458fe8cf933de9c66b3d43f18de00cca2065ad53567318155f8048e3201cf53",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "3a13d0d345998e93ce4db1c2d7ad6e4bc71b357c2dfcdf27f065a2d506700d8b",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405",
+        "Monterey"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405",
+        "Monterey"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "50aa8b7b7a3d2f326d9c798da3d8432017f7df75ffae938ce36ac78c89b6dd43",
+      "trackline_response_sha256": "a4ca720eabb71bffec83e6502d1e3374d9fd4a058ec88b2a467f071db28d2247",
+      "footprint_survey_ids": [
+        "MV1405",
+        "Monterey",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [
+        "Monterey"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 126191,
+          "ncei_id": "12410001",
+          "survey_id": "Monterey",
+          "survey_year": 1998,
+          "instrument": "Simrad EM300",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ocean_alert/Monterey_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "055d440effecee43f89ede6ab1f3c380296fa2af85989df4f3660ce4f81ff778",
+      "trackline_response_sha256": "a283a83cc7082f0800677fab3e06d9b7f728c74ff5c033e29c23cbf5bf8d3f27",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405"
+      ],
+      "footprint_only_survey_ids": [
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677108,
+          "ncei_id": "NEW2506",
+          "survey_id": "MV1405",
+          "survey_year": 2014,
+          "instrument": "Kongsberg EM122",
+          "download_url": "https://www.ngdc.noaa.gov/ships/melville/MV1405_mb.html"
+        },
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "1e659eb0977bd1a07e1b1c5728112a7148bb1d814c35c6778422dc357261c63e",
+      "trackline_response_sha256": "cd3763fd5e5e869d8de996d6a686b66e92b61494cb55a67a0c58a6b203047c2c",
+      "footprint_survey_ids": [
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [],
+      "footprint_only_survey_ids": [
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "0959bb10fa9c80f19a93bd8a7a70d395e4e6fe2938d139bd1b277286d298abdb",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "05a5db4fa35ad18d915fd424b90bb534b4a302e685c512a666b008bab814261c",
+      "trackline_response_sha256": "cd3763fd5e5e869d8de996d6a686b66e92b61494cb55a67a0c58a6b203047c2c",
+      "footprint_survey_ids": [
+        "MV1405",
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [],
+      "footprint_only_survey_ids": [
+        "MV1405",
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "5458fe8cf933de9c66b3d43f18de00cca2065ad53567318155f8048e3201cf53",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "5458fe8cf933de9c66b3d43f18de00cca2065ad53567318155f8048e3201cf53",
+      "trackline_response_sha256": "98ed2407300b319d22327ad2a60817847e00729a97ba61e8b891794bef1e4163",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405"
+      ],
+      "trackline_survey_ids": [
+        "CentralMontereyBay"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677503,
+          "ncei_id": "NEW2895",
+          "survey_id": "CentralMontereyBay",
+          "survey_year": 2009,
+          "instrument": "Reson 7125; Sea Swathplus",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ventresca/CentralMontereyBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "3a13d0d345998e93ce4db1c2d7ad6e4bc71b357c2dfcdf27f065a2d506700d8b",
+      "trackline_response_sha256": "cd3763fd5e5e869d8de996d6a686b66e92b61494cb55a67a0c58a6b203047c2c",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405",
+        "Monterey"
+      ],
+      "trackline_survey_ids": [],
+      "footprint_only_survey_ids": [
+        "CentralMontereyBay",
+        "MV1405",
+        "Monterey"
+      ],
+      "trackline_surveys": [],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "50aa8b7b7a3d2f326d9c798da3d8432017f7df75ffae938ce36ac78c89b6dd43",
+      "trackline_response_sha256": "a4ca720eabb71bffec83e6502d1e3374d9fd4a058ec88b2a467f071db28d2247",
+      "footprint_survey_ids": [
+        "MV1405",
+        "Monterey",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [
+        "Monterey"
+      ],
+      "footprint_only_survey_ids": [
+        "MV1405",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 126191,
+          "ncei_id": "12410001",
+          "survey_id": "Monterey",
+          "survey_year": 1998,
+          "instrument": "Simrad EM300",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ocean_alert/Monterey_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": false,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "4b211f42e51d47f6fd26b53d5e18905c7b2984efc13598939309ed9a87d58277",
+      "trackline_response_sha256": "cd3763fd5e5e869d8de996d6a686b66e92b61494cb55a67a0c58a6b203047c2c",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "HopkinsDeepReef",
+        "LoversPoint_Hopkins",
+        "MV1405",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [],
+      "footprint_only_survey_ids": [
+        "CentralMontereyBay",
+        "HopkinsDeepReef",
+        "LoversPoint_Hopkins",
+        "MV1405",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "historical_rockfish_positive_windows": 2,
+      "prior_mpa_or_gea_hold": true,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "22422da368d75080065d64bb33e123e02cd34d968cb08a014dc1ceafb95de73d",
+      "trackline_response_sha256": "e5c9f3966363bb0adc1efa6f03172fe1983ee8d809948c2eb53927abc71cad67",
+      "footprint_survey_ids": [
+        "CentralMontereyBay",
+        "LoversPoint_Hopkins",
+        "MV1405",
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [
+        "MontereyBay_HoleFill"
+      ],
+      "footprint_only_survey_ids": [
+        "CentralMontereyBay",
+        "LoversPoint_Hopkins",
+        "MV1405",
+        "Monterey",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677510,
+          "ncei_id": "NEW2903",
+          "survey_id": "MontereyBay_HoleFill",
+          "survey_year": 2003,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/MontereyBay_HoleFill_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mpa_or_gea_hold": true,
+      "prior_enc_danger_hold": true,
+      "footprint_response_sha256": "7fb7c583a40038edabdfe124e93611cbfcd3a73b1ebf461f76172a4b56845ad7",
+      "trackline_response_sha256": "6b665a7c19b90958b4798a631945cc65977657799d9b97a65190896537525130",
+      "footprint_survey_ids": [
+        "B00079",
+        "CarmelBay",
+        "CarmelBay_ventresca",
+        "Monterey",
+        "MontereyBay_HoleFill",
+        "Pinnacles",
+        "PtJoe_CypressPoint",
+        "SCypressPoint",
+        "SKQ201513T",
+        "StillwaterCove"
+      ],
+      "trackline_survey_ids": [
+        "Monterey",
+        "Pinnacles",
+        "PtJoe_CypressPoint",
+        "SCypressPoint",
+        "SKQ201513T"
+      ],
+      "footprint_only_survey_ids": [
+        "B00079",
+        "CarmelBay",
+        "CarmelBay_ventresca",
+        "MontereyBay_HoleFill",
+        "StillwaterCove"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 126191,
+          "ncei_id": "12410001",
+          "survey_id": "Monterey",
+          "survey_year": 1998,
+          "instrument": "Simrad EM300",
+          "download_url": "https://www.ngdc.noaa.gov/ships/ocean_alert/Monterey_mb.html"
+        },
+        {
+          "object_id": 677122,
+          "ncei_id": "NEW2518",
+          "survey_id": "SKQ201513T",
+          "survey_year": 2015,
+          "instrument": "Kongsberg EM302",
+          "download_url": "https://www.ngdc.noaa.gov/ships/sikuliaq/SKQ201513T_mb.html"
+        },
+        {
+          "object_id": 677513,
+          "ncei_id": "NEW2906",
+          "survey_id": "Pinnacles",
+          "survey_year": 2000,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/Pinnacles_mb.html"
+        },
+        {
+          "object_id": 677516,
+          "ncei_id": "NEW2909",
+          "survey_id": "PtJoe_CypressPoint",
+          "survey_year": 2000,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/PtJoe_CypressPoint_mb.html"
+        },
+        {
+          "object_id": 677517,
+          "ncei_id": "NEW2910",
+          "survey_id": "SCypressPoint",
+          "survey_year": 2000,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/SCypressPoint_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": true,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "ac054f33ebc175153d166e202389928998182de22abe242864ab1aaf274739bc",
+      "trackline_response_sha256": "f42be3a8f23b0570e39222432329df6dfd88cb0f3dc5262b05db321fdf16aa34",
+      "footprint_survey_ids": [
+        "B00079",
+        "CarmelBay",
+        "Monterey",
+        "Pinnacles"
+      ],
+      "trackline_survey_ids": [
+        "CarmelBay"
+      ],
+      "footprint_only_survey_ids": [
+        "B00079",
+        "Monterey",
+        "Pinnacles"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677500,
+          "ncei_id": "NEW2894",
+          "survey_id": "CarmelBay",
+          "survey_year": 2000,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/CarmelBay_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mpa_or_gea_hold": true,
+      "prior_enc_danger_hold": false,
+      "footprint_response_sha256": "b7ae78028e8aed165ec34788609f383ee1c1edf4f48a747d5bccefedbe299ff4",
+      "trackline_response_sha256": "bf4353105dd16662229be5dbc75d7e2edb8866af152ef7c0b6010bb9ce63b593",
+      "footprint_survey_ids": [
+        "B00079",
+        "Monterey",
+        "Pinnacles",
+        "SKQ201513T"
+      ],
+      "trackline_survey_ids": [
+        "Pinnacles"
+      ],
+      "footprint_only_survey_ids": [
+        "B00079",
+        "Monterey",
+        "SKQ201513T"
+      ],
+      "trackline_surveys": [
+        {
+          "object_id": 677513,
+          "ncei_id": "NEW2906",
+          "survey_id": "Pinnacles",
+          "survey_year": 2000,
+          "instrument": "Reson 8101",
+          "download_url": "https://www.ngdc.noaa.gov/ships/macginitie/Pinnacles_mb.html"
+        }
+      ],
+      "survey_has_native_200_300ft_cells_verified": false,
+      "chart_datum_and_upper_error_verified": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_acquisition": "Inspect original 2009 CentralMontereyBay survey line files and processing; test valid beams and metadata-derived depth at the actual research cells. The NCEI trackline is a centerline lead, not an acoustic swath. Trace NOAA 2013 merge point-source IDs separately and obtain per-cell MLLW and conservative upper uncertainty before any release.",
+  "limitations": [
+    "A broad cruise polygon can intersect an outline even where that cruise has no trackline; polygon hits are not evidence of measured cells.",
+    "A generalized centerline can miss an adjacent acoustic swath, and a crossing centerline does not establish valid beams or the 200\u2013300 ft band. Only original sounding or gridded valid-cell review can do so.",
+    "NCEI trackline year and survey ID do not map NOAA 2013 merge point_source_id to the contributing acoustic source.",
+    "The research outlines are not navigable fishing patches; no legal, MPA, hazard, route, independent substrate, fish-presence or rank gate is cleared by these catalog results."
+  ],
+  "checked_at": "2026-09-27T07:42:00.822331+00:00"
+}

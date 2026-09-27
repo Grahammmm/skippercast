@@ -82,9 +82,9 @@ SECTOR_OVERRIDES = {
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
-        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic points inside all 17 outlines, including four historical rockfish-positive camera outlines. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage on the highest-priority camera outlines.",
-        "next": "Map NOAA 2013 merge point_source_id values to its Full_DataInventory.xlsx and acoustic-source extent FGDB, then obtain the vertical-accuracy raster/vector and original surveys' tide, datum and TPU records. Resolve outline 040's 1995-vs-1998 discrepancy and seek a genuinely independent later measured survey. Only then attempt full-footprint MLLW depth qualification.",
-        "hold": "The NOAA acoustic points and USGS 2 m resample share the 2013 merge lineage; point presence is not independent validation, chart MLLW depth or an upper error bound. Both older grids lack documented vertical datum and upper error; NOAA acoustic-source accuracy may be undefined. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200–300 ft depth is qualified.",
+        "lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 EM1000 cells overlap 14/17 research outlines and original 1998 EM300 cells overlap 7/17. NOAA's 2013 merge has class-13 submerged-acoustic samples inside all 17 outlines. Five original processed 2009 CentralMontereyBay GSF files have 314,362 valid beams inside priority outline 023 and 72,083 inside 046, all in the nominal 200–300 ft band. Neither NOS BAG catalog nor BlueTopo supplies modern measured coverage there.",
+        "next": "Obtain the 2009 CentralMontereyBay processing report and actual tide-zone/vertical-datum, horizontal registration and upper uncertainty records; compare original beams to paired USGS 2 m cells and the 2013 merge source-ID inventory. Separately obtain the NOAA merge accuracy layer, resolve outline 040's 1995-vs-1998 discrepancy, and seek genuinely independent later measured coverage. Only then attempt full-footprint MLLW depth qualification.",
+        "hold": "Original processed 2009 beams prove spatial sounding support at two research outlines, but the GSF processing record says TIDAL_DATUM=UNKNOWN. Beam error arrays are not a conservative product-depth bound, and beams may share the 2013 merge lineage with USGS 2 m bathymetry. Neither the merge samples nor older grids establish independent MLLW depth or an upper error. Outline 001 also fails bounded MPA/ENC screens. No conservative MLLW 200–300 ft depth is qualified.",
     },
     "big-sur": {
         "lead": "CSUMB BSS 2–5 m NAVD88 cells and original USGS/CSUMB habitat context",
@@ -143,6 +143,8 @@ def build(root):
     monterey_1998_path = "dist/data/monterey-1998-original-em300-overlap.json"
     monterey_merge_path = "dist/data/monterey-2013-merge-lineage-gap.json"
     monterey_points_path = "dist/data/monterey-noaa2612-acoustic-point-support.json"
+    monterey_tracks_path = "dist/data/monterey-17-ncei-trackline-leads.json"
+    monterey_2009_beams_path = "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -311,6 +313,29 @@ def build(root):
                    or row.get("fishing_target") is not False
                    for row in monterey_points.get("outlines", []))):
         raise ValueError("Monterey acoustic-point support or hold status changed")
+    monterey_tracks = load(root, monterey_tracks_path)
+    if (monterey_tracks.get("scope") != "monterey-17-ncei-footprint-vs-trackline-survey-leads"
+            or monterey_tracks.get("outlines_reviewed") != 17
+            or monterey_tracks.get("camera_positive_outlines_with_2009_central_monterey_trackline") != 2
+            or any(monterey_tracks.get("highest_priority_023_and_046_trackline_survey_ids", {}).get(ident) != ["CentralMontereyBay"]
+                   for ident in ("023", "046"))
+            or monterey_tracks.get("fishing_target") is not False
+            or any(row.get("survey_has_native_200_300ft_cells_verified") is not False
+                   or row.get("chart_datum_and_upper_error_verified") is not False
+                   or row.get("fishing_target") is not False
+                   for row in monterey_tracks.get("outlines", []))):
+        raise ValueError("Monterey NCEI survey trackline lead or hold status changed")
+    monterey_2009_beams = load(root, monterey_2009_beams_path)
+    if (monterey_2009_beams.get("scope") != "monterey-2009-centralmontereybay-original-valid-beam-research"
+            or monterey_2009_beams.get("processed_files_audited") != 5
+            or [(monterey_2009_beams.get("outlines", {}).get(ident, {}).get("valid_beams_inside_outline"),
+                 monterey_2009_beams.get("outlines", {}).get(ident, {}).get("valid_beams_nominal_200_300ft_unknown_datum"))
+                for ident in ("023", "046")] != [(314362, 314362), (72083, 72083)]
+            or any(monterey_2009_beams.get("outlines", {}).get(ident, {}).get("fishing_target") is not False
+                   or monterey_2009_beams.get("outlines", {}).get(ident, {}).get("mllw_depth_qualified") is not False
+                   for ident in ("023", "046"))
+            or monterey_2009_beams.get("fishing_target") is not False):
+        raise ValueError("Monterey original 2009 valid-beam support or hold status changed")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -507,6 +532,8 @@ def build(root):
             receipts.append(monterey_1998_path)
             receipts.append(monterey_merge_path)
             receipts.append(monterey_points_path)
+            receipts.append(monterey_tracks_path)
+            receipts.append(monterey_2009_beams_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -628,7 +655,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
