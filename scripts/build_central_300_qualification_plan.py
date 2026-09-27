@@ -60,6 +60,8 @@ PROVIDERS = {
     "fish": [
         {"publisher": "CDFW MPA Monitoring", "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Management/monitoring/ROV",
          "request": "Georeferenced ROV transects, species observations and zero-observation effort, retaining protected/reference roles and positional error"},
+        {"publisher": "CDFW / MARÉ", "url": "https://mareresearch.org/?p=1798",
+         "request": "Original 2016 Soquel Canyon–Point Buchon one-second cleaned ROV positions, fish and substrate annotations, effort/transect-width table, survey-line shapefiles, protected/reference roles, positional error and reuse terms; report maps alone cannot qualify a spot"},
         {"publisher": "The Nature Conservancy / Moss Landing Marine Laboratories", "url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
          "request": "Locate the original Pigeon Point Reef video-lander drop table: bottom/ship positions and offsets, dates, depth, taxon, rock/soft observations, no-fish drops, effort and reuse terms; compare actual drop footprints with W00614 cells before treating it as support"},
     ],
