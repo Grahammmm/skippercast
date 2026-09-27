@@ -52,6 +52,7 @@ def build(root=ROOT):
   out={'schema_version':1,'region_id':r['id'],'method':methods['method'],'reviewed_at':methods['reviewed_at'],
        'profiles':profiles,'features':features,'input_receipts':receipts,'rejected':rejected,
        'coverage_note':'Source footprints, not complete species distribution. No habitat is invented where a regional dataset is absent.'}
+  if r.get('search_plans_note'):out['datum_correction_note']=r['search_plans_note']
   target=root/'dist/regions'/r['id']/'search-plans.json';temp=target.with_suffix('.json.tmp');temp.write_text(json.dumps(out,separators=(',',':'))+'\n');temp.replace(target)
   plans='regions/'+r['id']+'/search-plans.json'
   # Rewrite the hand-maintained region file only when its content changes, so

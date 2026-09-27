@@ -23,6 +23,13 @@ jobs:
         run: |
           python scripts/build_search_plans.py
           python -m unittest discover -s tests -p test_search_plan_geometry.py -v
+      - name: Committed search plans match their sources
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::Rebuilt search plans differ from the commit. Run 'python scripts/build_search_plans.py' and commit the result; do not edit dist/ by hand."
+            git diff --stat
+            exit 1
+          fi
       - name: Native depth, uncertainty and closure fixtures
         env:
           PYTHONPATH: src
