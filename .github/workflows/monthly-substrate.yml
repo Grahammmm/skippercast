@@ -291,8 +291,16 @@ jobs:
           --download-missing
           --verify dist/data/point-conception-original-4m-camera-gap.json
           --output var/review/point-conception-original-4m-camera-gap.json
+      - name: Recheck NOAA survey datum, BAG cell uncertainty and USGS source dependence
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python -m scripts.audit_point_conception_4m_lineage
+          --fetch
+          --verify dist/data/point-conception-original-4m-source-lineage.json
+          --output var/review/point-conception-original-4m-source-lineage.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_point_conception_original_300_ladder tests.test_point_conception_4m_hard_overlap tests.test_point_conception_4m_access tests.test_point_conception_4m_camera_gap tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_point_conception_original_300_ladder tests.test_point_conception_4m_hard_overlap tests.test_point_conception_4m_access tests.test_point_conception_4m_camera_gap tests.test_point_conception_4m_lineage tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -324,6 +332,7 @@ jobs:
             var/review/point-conception-current-enc.geojson
             var/review/point-conception-original-4m-access-screen.json
             var/review/point-conception-original-4m-camera-gap.json
+            var/review/point-conception-original-4m-source-lineage.json
             var/review/central-coverage-ledger-v1.json
             var/review/central-source-acquisition-queue.json
             var/review/central-300ft-qualification-plan.json

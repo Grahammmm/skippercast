@@ -1,0 +1,17 @@
+# Point Conception 200–300 ft source request — prepared, not sent
+
+The two H11952/H11953 research components have original MLLW BAG cells and a dated official GIS proximity screen. The [lineage receipt](../dist/data/point-conception-original-4m-source-lineage.json) and [camera-gap receipt](../dist/data/point-conception-original-4m-camera-gap.json) show why neither is yet a fishing spot. A custodian reply is useful only if it can answer the following at **component/cell scale**, with source identifiers and permitted reuse terms.
+
+## NOAA NCEI / Office of Coast Survey
+
+Request the processing and release crosswalk for `H11952_MB_4m_MLLW_3of4.bag` and `H11953_MB_4m_MLLW_3of4.bag`, including the cited `Processed_Public/CARIS/HDCS_DATA` line/field-sheet inputs, the 2022 metadata/release history, and the `productUncert` definition and confidence level. The distributed 4 m BAGs have retained cells at **61–73 m MLLW**, while the 2008 descriptive reports name a historical 4 m fieldsheet tier of **80–100 m**; ask how those products relate. Request actual horizontal uncertainty or position residuals at the two candidate components, cell provenance/valid-sounding masks, CUBE/BASE hypothesis and density fields, crossline residuals and any later superseding survey. Do not substitute a survey-wide specification for a cell-scale bound.
+
+## USGS / CSUMB seafloor-character custodians
+
+Request the original training/validation sediment and video observations for `SeafloorCharacter_OffshorePointConception`, their bottom-position uncertainty and IDs, any held-out confusion matrix for class 3 in the **60–80 m** band, and a source-line/pixel crosswalk for the bathymetry and backscatter used in that classifier. The USGS map report and NOAA surveys both identify Fugro Pelagos acoustics from 2008; shared exact source lines are plausible but not proven. Ask for the achieved registration residual between the USGS 2 m character raster and NOAA H11952/H11953 BAGs. The two-cell inset is a sensitivity test, not this residual.
+
+## Independent bottom and fish observations
+
+Seek a documented camera, grab, or ROV traverse over each *full* component, including vehicle/bottom track, depth, time, classification, position error and negative observations. Request any CDFW/MARE open-reference ROV transects with fish taxon, swath/effort, zero detections and redistribution terms. The published USGS video catalog has **no** camera observation within either component; a 2012 line 146 m from H11953 is nearby context only. A record from inside an MPA may inform habitat science but never becomes a fishable coordinate.
+
+No request has been transmitted. On receipt, hash the original files, document survey date and license, reproduce full-footprint joins with registration margins, then rerun current legal, chart, security and route screens before any rank or export promotion.
