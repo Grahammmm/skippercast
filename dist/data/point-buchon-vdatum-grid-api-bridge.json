@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-geoid03-vdatum-raw-grid-vs-api-diagnostic",
+  "official_api": "https://vdatum.noaa.gov/vdatumweb/api/convert",
+  "official_regional_archive_sha256": "64f586db40ba0776ca38d7bce6762e2138594f31f8d96fe6f8e3b4f7b7b53984",
+  "private_block_count": 181,
+  "sample_count": 12,
+  "sampling": "12 spatially spread 100 m private-block representative points; nearest GTX pixel; API source NAD83(2011)/NAVD88 Geoid03, target IGS14/LMSL or MLLW",
+  "source_sha256": {
+    "private_blocks": "5e9c6b34c6e060425a36839a36b8f179f9a6d4c1c3c29b5d945fcf7d77fc46b4",
+    "tss_gtx": "6e71a0fa0b6e760e8e016e0c18123d0bb2cf206b96b42abcb030350c26f03d3b",
+    "mllw_gtx": "d795f03d0ce27850523e3b2f838950c9d8d25b337c01b1fa327eec3315d2b172"
+  },
+  "api_response_sha256": [
+    "f3a09ef4b60fa1a456a03845db0a307affc80a345a42892831a5d7fd5fa7d85e",
+    "c7f9a0f3acf14676268a7713036b45d5d4c9a93ab2d44a81be251a6a47c98753",
+    "26adfab753f58a5f1d9c1d0899ec72d0bd73dd2c3b09426541c4c52b635e473d",
+    "0983903e62678dbd1a39adcb8313e1b702d67a8db0fa9eeb289ff7572c3a44aa",
+    "9af16a971e01ae07b5fcc78e1ce53a08d2eb38979abd1d27d81fb47c658f3962",
+    "33207d6c7f0882996b681e05dc19611c31b94cf1b7b8d1591a8e53ee12fd7d97",
+    "1da1e30c7e8239f58fcea79bfd854d30a4e4ebaa93d5458833f55672b880727e",
+    "8d670317debe9931cd812378ee09f0725bd683a182ece9674041fb26b7871789",
+    "7e13890e48690fd75dac2f844fba16b97bef115969e2901399566f4c00276edf",
+    "34e8d7187a7870b463ab08cd036c94e70c2e4a090c4173a952d7c56abadb2224",
+    "6cd6ac19ad061d7dac2d4199dfea953dd3732bf3d5f0358b8aa6cb690580f250",
+    "5a28ee9b172b4086f97fd1a7055eb7a4ea1ad907ce5a5d7e1244caca354e35ce",
+    "e79eb2a16a5026fb6abd02282e0c30f23fa422bd86e5ffecc6ea7c2c1989f302",
+    "1905832cc1031911d72d997e7d29f6e16480dfe866b244252f12ff6aecfd04a0",
+    "d4a6d0f09590b72a5d89cee0019212f37a7dfb9c10ba1bb71273bf266203fee2",
+    "9570cf31590d3a1d8e480c7fe3475fd0e55271b9b2169aa7141b934a877c8e56",
+    "979fd4de6532808ff551b59b33440cc2e9387cf453d19a323abf28ae2f772035",
+    "226fdfaabfc0a43466b4a32c45418bd038b4f165facbd1b4ff12cc5d1aeefa89",
+    "d02122f5a5fedaabf8043950583c85469a676f78b01c0b18ddc890f4818033ae",
+    "37b7a977034c966d73c1b8dbce5553e7c33488cd6fb7281c236a54b61d0010a8",
+    "eb46543bf28bb90f9ab8684ff35d1513178414e8a34182a1484c3ed7b907484c",
+    "47d3675e465f524c1bbf4bf7bc296f92a4698a7cbb36ad1f42b56d4cea4748ac",
+    "33278bd7e88feeb485eea656f7ae28e32b6a3749a919a0479af0f0a2be9b0b61",
+    "0d03900724f2408ea724b9a44e705dc1f3b59fb075ed965816d99f8c1b74393b"
+  ],
+  "source_horizontal_realization_verified": false,
+  "full_cellwise_depth_conversion": false,
+  "source_depth_upper_uncertainty_verified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "A raw GTX subtraction does not reproduce the official multi-frame VDatum API path; its residual is diagnostic, not an uncertainty bound or a fitted correction. The source horizontal realization/epoch and raster vertical accuracy remain unknown. Twelve nearest-pixel samples do not certify all 2 m/5 m source cells, substrate, fish, legal access or routes.",
+  "api_navd88_to_mllw_range_m": [
+    0.129,
+    0.149
+  ],
+  "api_navd88_to_lmsl_range_m": [
+    -0.716,
+    -0.695
+  ],
+  "api_lmsl_to_mllw_step_range_m": [
+    0.843,
+    0.845
+  ],
+  "raw_grid_mllw_minus_tss_range_m": [
+    -0.00062,
+    0.00274
+  ],
+  "api_minus_raw_grid_shortcut_range_m": [
+    0.12869,
+    0.14708
+  ],
+  "raw_grid_negative_mllw_range_m": [
+    0.8635,
+    0.8646
+  ],
+  "api_tidal_step_minus_raw_grid_negative_mllw_range_m": [
+    -0.0207,
+    -0.0188
+  ],
+  "checked_at": "2026-09-27T05:21:10.098842+00:00"
+}

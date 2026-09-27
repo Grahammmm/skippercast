@@ -16,6 +16,7 @@
     "dist/data/point-buchon-2009-csumb-access-triage.json": "6e4c532037fe896ec7e5bc6ab37443f73001afe2d78265993d3c9b97276752ef",
     "dist/data/point-buchon-2009-conditional-vdatum-probes.json": "7eb211ca559e406d6855962ad7390d1fbb84fc42af0f8fb668f897ba96e82d30",
     "dist/data/point-buchon-private-block-access-screen.json": "8dd672aad37c1c901ec3ee4dc4303b4a9851e70bdcc0fe613f5c1bdb0ab6a026",
+    "dist/data/point-buchon-vdatum-grid-api-bridge.json": "6aba0851e690987e5841bc24e959b2684a81c14182b8a1d366480fb6946a242b",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
@@ -615,7 +616,8 @@
         "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
         "dist/data/point-buchon-original-paired-200-300ft-review.json",
         "dist/data/point-buchon-private-block-access-screen.json",
-        "dist/data/point-buchon-rov-access-triage.json"
+        "dist/data/point-buchon-rov-access-triage.json",
+        "dist/data/point-buchon-vdatum-grid-api-bridge.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,

@@ -136,6 +136,7 @@ def build(root):
     mare_2016_service_path = "dist/data/ciap-2016-central-rov-public-service-audit.json"
     mare_2016_overlap_path = "dist/data/ciap-2016-central-video-private-block-overlap.json"
     buchon_private_access_path = "dist/data/point-buchon-private-block-access-screen.json"
+    buchon_grid_bridge_path = "dist/data/point-buchon-vdatum-grid-api-bridge.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -234,6 +235,15 @@ def build(root):
             or buchon_private_access.get("fishing_target") is not False
             or buchon_private_access.get("exportable") is not False):
         raise ValueError("Point Buchon private block MPA/ENC screen changed; review before promotion")
+    buchon_grid_bridge = load(root, buchon_grid_bridge_path)
+    residual = buchon_grid_bridge.get("api_minus_raw_grid_shortcut_range_m", [])
+    if (buchon_grid_bridge.get("scope") != "point-buchon-geoid03-vdatum-raw-grid-vs-api-diagnostic"
+            or buchon_grid_bridge.get("sample_count") != 12
+            or len(residual) != 2 or not (0.12 < residual[0] <= residual[1] < 0.16)
+            or buchon_grid_bridge.get("full_cellwise_depth_conversion") is not False
+            or buchon_grid_bridge.get("source_depth_upper_uncertainty_verified") is not False
+            or buchon_grid_bridge.get("fishing_target") is not False):
+        raise ValueError("Point Buchon VDatum grid/API bridge changed; review before promotion")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -451,6 +461,7 @@ def build(root):
             receipts.append(spatial["receipt"])
         if sector_id == "morro-conception":
             receipts.append(buchon_private_access_path)
+            receipts.append(buchon_grid_bridge_path)
             receipts.append(cal_dig_rov_path)
             receipts.append(buchon_path)
             receipts.append(buchon_ncei_path)
@@ -543,7 +554,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
