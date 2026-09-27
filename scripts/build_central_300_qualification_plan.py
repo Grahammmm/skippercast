@@ -102,9 +102,9 @@ SECTOR_OVERRIDES = {
         "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
-        "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Resolve the Block A3 2007-trackline to released-grid lineage with its custodian, then request upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition; obtain current Diablo/Vandenberg access and ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations; do not use their deepwater labels or 2026 inferred CMECS polygons as shallow groundtruth.",
-        "hold": "The grid metadata establish NAVD88 Geoid03 but not independent 2009 acquisition, vertical accuracy or rights. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
+        "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 of those land on mapped hard classes, across only five correlated transect labels. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
+        "next": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations.",
+        "hold": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
     },
 }
 
@@ -162,6 +162,7 @@ def build(root):
     buchon_a3_lineage_path = "dist/data/point-buchon-block-a3-trackline-lineage.json"
     buchon_2009_terrain_path = "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json"
     buchon_2009_access_path = "dist/data/point-buchon-2009-csumb-access-triage.json"
+    buchon_rov_cell_path = "dist/data/point-buchon-rov-original-cell-join.json"
     buchon_2009_vdatum_path = "dist/data/point-buchon-2009-conditional-vdatum-probes.json"
     cal_dig_rov_path = "dist/data/cal-dig-i-original-rov-300ft-gap.json"
     dataone_rov_path = "dist/data/central-dataone-rov-300ft-spot-precision.json"
@@ -425,6 +426,19 @@ def build(root):
     buchon_a3_lineage = load(root, buchon_a3_lineage_path)
     buchon_2009_terrain = load(root, buchon_2009_terrain_path)
     buchon_2009_access = load(root, buchon_2009_access_path)
+    buchon_rov_cell = load(root, buchon_rov_cell_path)
+    cell_join = buchon_rov_cell.get("inward_block_sensitivity_m", {})
+    if (buchon_rov_cell.get("scope") != "point-buchon-independent-original-cell-historical-rov-research-join"
+            or [(cell_join.get(str(m), {}).get("subunits_in_blocks"),
+                 cell_join.get(str(m), {}).get("original_grid_cell_in_source_depth_band"))
+                for m in (0, 10, 25)] != [(138, 94), (91, 62), (37, 26)]
+            or cell_join.get("0", {}).get("hard_class_subunits") != 62
+            or cell_join.get("0", {}).get("distinct_transect_labels") != 5
+            or any(buchon_rov_cell.get(key) is not False for key in (
+                "rov_bottom_position_error_bounded", "cross_survey_horizontal_registration_bounded",
+                "chart_mllw_depth_and_upper_uncertainty_verified", "full_route_and_fishing_date_cleared",
+                "fishing_target", "exportable"))):
+        raise ValueError("Point Buchon historical ROV original-cell status changed")
     buchon_2009_vdatum = load(root, buchon_2009_vdatum_path)
     if (buchon_2009.get("scope") != "point-buchon-2009-csumb-original-products-vs-2008-usgs-character"
             or buchon_2009.get("inner_grid_metadata_survey_year") != 2009
@@ -641,6 +655,7 @@ def build(root):
             receipts.append(buchon_a3_lineage_path)
             receipts.append(buchon_2009_terrain_path)
             receipts.append(buchon_2009_access_path)
+            receipts.append(buchon_rov_cell_path)
             receipts.append(buchon_2009_vdatum_path)
             catalog_gap = row.get("point_buchon_noaa_catalog_gap")
             if (not catalog_gap or catalog_gap["catalog_bag_survey_ids"] != ["W00479"]
@@ -697,6 +712,8 @@ def build(root):
                 stage = 'partial-release-evidence'
             if sector_id == 'morro-conception' and key == 'legal-chart-access':
                 stage = 'partial-release-evidence'
+            if sector_id == 'morro-conception' and key in ('independent-substrate', 'biological-observations', 'sampling-scope'):
+                stage = 'research-evidence'
             if key == "evidence-ladder":
                 stage = "implemented-hold"
             if key == "promotion-refresh":
@@ -723,7 +740,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

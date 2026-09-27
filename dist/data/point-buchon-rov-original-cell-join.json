@@ -1,0 +1,133 @@
+{
+  "central_open_reference_rows_checked": 10811,
+  "chart_mllw_depth_and_upper_uncertainty_verified": false,
+  "cross_survey_horizontal_registration_bounded": false,
+  "exportable": false,
+  "fishing_target": false,
+  "full_route_and_fishing_date_cleared": false,
+  "historical_rov_doi": "10.5281/zenodo.10929417",
+  "historical_rov_sha256": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8",
+  "inward_block_sensitivity_m": {
+    "0": {
+      "distinct_research_blocks": 17,
+      "distinct_transect_labels": 5,
+      "grid_2m_subunits": 94,
+      "hard_class_lingcod_positive_subunits": 2,
+      "hard_class_rockfish_positive_subunits": 3,
+      "hard_class_subunits": 62,
+      "no_original_grid_cell_in_source_depth_band": 44,
+      "observation_years": [
+        2008,
+        2012,
+        2016,
+        2019
+      ],
+      "original_grid_cell_in_source_depth_band": 94,
+      "original_grid_minus_rov_observed_depth_m_range": [
+        -4.16,
+        0.96
+      ],
+      "partial_access_clear_blocks": 17,
+      "partial_access_clear_subunits": 138,
+      "rugose_class_subunits": 18,
+      "source_class_1_subunits": 32,
+      "source_class_1_visual_majority_hard_subunits": 0,
+      "source_class_2_subunits": 44,
+      "source_class_2_visual_majority_hard_subunits": 0,
+      "source_class_3_subunits": 18,
+      "source_class_3_visual_majority_hard_subunits": 7,
+      "source_lingcod_positive_subunits": 5,
+      "source_observed_majority_hard_subunits": 25,
+      "source_rockfish_positive_subunits": 7,
+      "subunits_in_blocks": 138
+    },
+    "10": {
+      "distinct_research_blocks": 13,
+      "distinct_transect_labels": 5,
+      "grid_2m_subunits": 62,
+      "hard_class_lingcod_positive_subunits": 1,
+      "hard_class_rockfish_positive_subunits": 1,
+      "hard_class_subunits": 41,
+      "no_original_grid_cell_in_source_depth_band": 29,
+      "observation_years": [
+        2008,
+        2012,
+        2016,
+        2019
+      ],
+      "original_grid_cell_in_source_depth_band": 62,
+      "original_grid_minus_rov_observed_depth_m_range": [
+        -4.16,
+        0.96
+      ],
+      "partial_access_clear_blocks": 13,
+      "partial_access_clear_subunits": 91,
+      "rugose_class_subunits": 11,
+      "source_class_1_subunits": 21,
+      "source_class_1_visual_majority_hard_subunits": 0,
+      "source_class_2_subunits": 30,
+      "source_class_2_visual_majority_hard_subunits": 0,
+      "source_class_3_subunits": 11,
+      "source_class_3_visual_majority_hard_subunits": 4,
+      "source_lingcod_positive_subunits": 2,
+      "source_observed_majority_hard_subunits": 14,
+      "source_rockfish_positive_subunits": 3,
+      "subunits_in_blocks": 91
+    },
+    "25": {
+      "distinct_research_blocks": 9,
+      "distinct_transect_labels": 5,
+      "grid_2m_subunits": 26,
+      "hard_class_lingcod_positive_subunits": 1,
+      "hard_class_rockfish_positive_subunits": 0,
+      "hard_class_subunits": 17,
+      "no_original_grid_cell_in_source_depth_band": 11,
+      "observation_years": [
+        2008,
+        2012,
+        2016,
+        2019
+      ],
+      "original_grid_cell_in_source_depth_band": 26,
+      "original_grid_minus_rov_observed_depth_m_range": [
+        -4.16,
+        0.37
+      ],
+      "partial_access_clear_blocks": 9,
+      "partial_access_clear_subunits": 37,
+      "rugose_class_subunits": 6,
+      "source_class_1_subunits": 9,
+      "source_class_1_visual_majority_hard_subunits": 0,
+      "source_class_2_subunits": 11,
+      "source_class_2_visual_majority_hard_subunits": 0,
+      "source_class_3_subunits": 6,
+      "source_class_3_visual_majority_hard_subunits": 3,
+      "source_lingcod_positive_subunits": 1,
+      "source_observed_majority_hard_subunits": 5,
+      "source_rockfish_positive_subunits": 1,
+      "subunits_in_blocks": 37
+    }
+  },
+  "limitations": [
+    "ROV 10 m subunits and transects are correlated historical samples, not trips, catch rates or current fish predictions.",
+    "A centroid on a source grid cell is not proof that the ROV camera imaged that exact cell; position and cross-survey registration errors are unbounded.",
+    "The 2009-labeled CSUMB grid is packaged with 2007 bathymetry tracklines, so individual cell acquisition years remain unverified.",
+    "The 2008 USGS character class is interpreted habitat; visual-majority-hard counts do not validate the full class map without positional support and negative-sample analysis.",
+    "The 0, 10 and 25 m inward block tests are sensitivity checks, not measured ROV position-error bounds.",
+    "The MPA, federal and ENC results are partial block screens; source-datum depth is not a chart MLLW depth and no full route or current rule has been cleared.",
+    "The receipt publishes aggregate counts only, without ROV coordinates, block IDs or fishing waypoints."
+  ],
+  "original_csumb_archive_sha256": "4677c538c50a8bacb1e8ca61ed2cdcde5aa9259143f27fe16c146e54d8243a5c",
+  "original_usgs_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+  "partial_access_screen_sha256": "d469ee0be7ed95cda5040446cf0eb3405759a5b4427afd7754df8944bf42b76e",
+  "private_research_blocks_sha256": "5e9c6b34c6e060425a36839a36b8f179f9a6d4c1c3c29b5d945fcf7d77fc46b4",
+  "rov_bottom_position_error_bounded": false,
+  "schema_version": 1,
+  "scope": "point-buchon-independent-original-cell-historical-rov-research-join",
+  "source_acquisition_year_at_grid_cells_verified": false,
+  "source_depth_band_m": [
+    60.96,
+    91.44
+  ],
+  "source_rows_checked": 133506
+}

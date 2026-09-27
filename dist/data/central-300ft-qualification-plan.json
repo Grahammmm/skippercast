@@ -14,6 +14,7 @@
     "dist/data/point-buchon-block-a3-trackline-lineage.json": "e9876419882da953e176c87ad99eff8efe2f8104986174eb954c4c79d81d6b45",
     "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json": "ad00384120a0dc183d260c9b16347ea04a5812f450af422c0f935d67da990226",
     "dist/data/point-buchon-2009-csumb-access-triage.json": "6e4c532037fe896ec7e5bc6ab37443f73001afe2d78265993d3c9b97276752ef",
+    "dist/data/point-buchon-rov-original-cell-join.json": "012a4e3a26c26454cadf88688d92e2f7046ede6f0b6b8fbbd3e0bd65102ed2f6",
     "dist/data/point-buchon-2009-conditional-vdatum-probes.json": "7eb211ca559e406d6855962ad7390d1fbb84fc42af0f8fb668f897ba96e82d30",
     "dist/data/point-buchon-private-block-access-screen.json": "8dd672aad37c1c901ec3ee4dc4303b4a9851e70bdcc0fe613f5c1bdb0ab6a026",
     "dist/data/point-buchon-vdatum-grid-api-bridge.json": "6aba0851e690987e5841bc24e959b2684a81c14182b8a1d366480fb6946a242b",
@@ -619,9 +620,9 @@
     {
       "sector_id": "morro-conception",
       "source_review_priority_tier": 1,
-      "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-      "next_acquisition": "Resolve the Block A3 2007-trackline to released-grid lineage with its custodian, then request upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition; obtain current Diablo/Vandenberg access and ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations; do not use their deepwater labels or 2026 inferred CMECS polygons as shallow groundtruth.",
-      "limiting_evidence": "The grid metadata establish NAVD88 Geoid03 but not independent 2009 acquisition, vertical accuracy or rights. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
+      "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 of those land on mapped hard classes, across only five correlated transect labels. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
+      "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
+      "limiting_evidence": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
@@ -645,6 +646,7 @@
         "dist/data/point-buchon-original-paired-200-300ft-review.json",
         "dist/data/point-buchon-private-block-access-screen.json",
         "dist/data/point-buchon-rov-access-triage.json",
+        "dist/data/point-buchon-rov-original-cell-join.json",
         "dist/data/point-buchon-vdatum-grid-api-bridge.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -668,19 +670,19 @@
         {
           "id": "independent-substrate",
           "requirement": "Pair measured depth with surveyed substrate at supported resolution",
-          "stage": "missing-release-evidence",
+          "stage": "research-evidence",
           "release_gate_satisfied": false
         },
         {
           "id": "biological-observations",
           "requirement": "Link dated species observations at their actual spatial support",
-          "stage": "missing-release-evidence",
+          "stage": "research-evidence",
           "release_gate_satisfied": false
         },
         {
           "id": "sampling-scope",
           "requirement": "Preserve effort, zero detections, method, and position uncertainty",
-          "stage": "missing-release-evidence",
+          "stage": "research-evidence",
           "release_gate_satisfied": false
         },
         {
