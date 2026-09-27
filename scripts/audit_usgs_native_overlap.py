@@ -21,7 +21,7 @@ from shapely.geometry import Point, shape
 from shapely.ops import transform
 from shapely.strtree import STRtree
 
-from audit_usgs_video_observations import first_field, load_archive, open_original_zip
+from scripts.audit_usgs_video_observations import first_field, load_archive, open_original_zip
 
 
 CONTEXTS = (
