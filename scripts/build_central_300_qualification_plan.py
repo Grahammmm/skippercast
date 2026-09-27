@@ -102,7 +102,7 @@ SECTOR_OVERRIDES = {
         "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
-        "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 of those land on mapped hard classes, across only five correlated transect labels. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
+        "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
         "next": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200–300 ft observations.",
         "hold": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
     },
@@ -428,12 +428,17 @@ def build(root):
     buchon_2009_access = load(root, buchon_2009_access_path)
     buchon_rov_cell = load(root, buchon_rov_cell_path)
     cell_join = buchon_rov_cell.get("inward_block_sensitivity_m", {})
+    publisher_accuracy = buchon_rov_cell.get("publisher_character_accuracy", {})
     if (buchon_rov_cell.get("scope") != "point-buchon-independent-original-cell-historical-rov-research-join"
             or [(cell_join.get(str(m), {}).get("subunits_in_blocks"),
                  cell_join.get(str(m), {}).get("original_grid_cell_in_source_depth_band"))
                 for m in (0, 10, 25)] != [(138, 94), (91, 62), (37, 26)]
             or cell_join.get("0", {}).get("hard_class_subunits") != 62
+            or cell_join.get("0", {}).get("rugose_class_subunits") != 18
             or cell_join.get("0", {}).get("distinct_transect_labels") != 5
+            or publisher_accuracy.get("hard_flat", {}).get("majority_percent") != 45.33
+            or publisher_accuracy.get("hard_rugose", {}).get("majority_percent") != 78.75
+            or publisher_accuracy.get("held_out_validation") is not False
             or any(buchon_rov_cell.get(key) is not False for key in (
                 "rov_bottom_position_error_bounded", "cross_survey_horizontal_registration_bounded",
                 "chart_mllw_depth_and_upper_uncertainty_verified", "full_route_and_fishing_date_cleared",
@@ -578,6 +583,7 @@ def build(root):
         raise ValueError("Central 300 ft source and coverage receipts are not current")
     if (buchon.get("fishing_target") is not False or buchon.get("qualified_waypoints") != 0
             or buchon.get("native_depth_datum") != "unresolved"
+            or buchon.get("publisher_character_accuracy") != publisher_accuracy
             or estero.get("fishing_target") is not False):
         raise ValueError("A deeper source changed status; review the plan before publishing")
     if ledger["totals"]["qualified_targets_200_to_300ft"] != 0:

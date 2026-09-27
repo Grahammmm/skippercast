@@ -32,6 +32,8 @@ class PointBuchonRovCellJoinTests(unittest.TestCase):
         self.assertEqual(receipt["inward_block_sensitivity_m"]["0"]["original_grid_cell_in_source_depth_band"], 94)
         self.assertEqual(receipt["inward_block_sensitivity_m"]["25"]["original_grid_cell_in_source_depth_band"], 26)
         self.assertEqual(receipt["inward_block_sensitivity_m"]["0"]["distinct_transect_labels"], 5)
+        self.assertEqual(receipt["publisher_character_accuracy"]["hard_flat"]["majority_percent"], 45.33)
+        self.assertFalse(receipt["publisher_character_accuracy"]["held_out_validation"])
         self.assertFalse(receipt["rov_bottom_position_error_bounded"])
         self.assertFalse(receipt["chart_mllw_depth_and_upper_uncertainty_verified"])
         self.assertFalse(receipt["fishing_target"])

@@ -7,6 +7,7 @@
   "fishing_target": false,
   "limitations": [
     "USGS class 2 is hard/flat; class 3 is hard/rugose boulder, megaclast and bedrock; neither is an individual boulder measurement.",
+    "Publisher-reported class agreement uses 10 m buffers around 304 video observations and reuses some training observations; it is not independent held-out accuracy or a point-specific probability. Hard-flat majority agreement is only 45.33 percent.",
     "ROV center overlay is nominal; independent survey coordinate accuracy, datum realization, epoch, and 10 m observation support are unresolved.",
     "USGS bathymetry lacks an established MLLW output datum and per-cell upper uncertainty bound; nominal 200\u2013300 ft is not a fishing-depth clearance.",
     "The published 2 m bathymetry mosaic includes 5 m gridded source data deeper than 80 m; its 2 m pixel spacing is not 2 m independent depth detail there.",
@@ -103,6 +104,25 @@
     }
   },
   "published_grid_resolution_m": 2,
+  "publisher_character_accuracy": {
+    "comparison_buffer_radius_m": 10,
+    "hard_flat": {
+      "majority_percent": 45.33,
+      "presence_percent": 86.67
+    },
+    "hard_rugose": {
+      "majority_percent": 78.75,
+      "presence_percent": 93.75
+    },
+    "held_out_validation": false,
+    "point_specific_probability": false,
+    "soft_flat": {
+      "majority_percent": 83.89,
+      "presence_percent": 93.96
+    },
+    "training_observations_reused_for_accuracy": true,
+    "video_observations": 304
+  },
   "qualified_waypoints": 0,
   "rov_source_doi": "10.5281/zenodo.10929417",
   "rov_source_sha256": "745406c081e79b6bc9e31685382efa69c3690a801b0bd57524b30bd9d20b72c8",

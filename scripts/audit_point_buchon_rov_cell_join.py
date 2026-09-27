@@ -21,7 +21,9 @@ from shapely.strtree import STRtree
 from scripts.audit_point_buchon_2009_csumb_products import (
     ARCHIVE_SHA256, GRIDS, extract_grids, sha256_file,
 )
-from scripts.audit_point_buchon_original_pair import EXPECTED_CLASS, original_tiff
+from scripts.audit_point_buchon_original_pair import (
+    EXPECTED_CLASS, original_tiff, published_character_accuracy,
+)
 from scripts.build_central_rov_depth_evidence import fetch, source_bytes
 
 
@@ -29,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PIN = ROOT / "catalog/central-rov-2024-source.json"
 ARCHIVE = ROOT / "var/review/point-buchon-additional-products/Pt_Buchon_control_additional_products.tar.gz"
 CHARACTER = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon.zip"
+CHARACTER_METADATA = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon_metadata.xml"
 ROV = ROOT / "var/review/rov-zenodo-10929417.csv"
 BLOCKS = ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson"
 ACCESS = ROOT / "dist/data/point-buchon-2009-csumb-access-triage.json"
@@ -63,11 +66,12 @@ def source_depth_at(point, shallow, deep):
 
 def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
           character: Path = CHARACTER, block_path: Path = BLOCKS,
-          access_path: Path = ACCESS) -> dict:
+          access_path: Path = ACCESS, character_metadata: Path = CHARACTER_METADATA) -> dict:
     pin = json.loads(PIN.read_text())
     source_bytes(rov_path, pin)
     if sha256_file(archive) != ARCHIVE_SHA256 or sha256_file(character) != EXPECTED_CLASS:
         raise ValueError("Original Point Buchon depth or character changed")
+    class_accuracy = published_character_accuracy(character_metadata)
     access = json.loads(access_path.read_text())
     if (access.get("scope") != "point-buchon-2009-csumb-original-100m-access-triage"
             or access.get("totals", {}).get("blocks") != 181
@@ -187,6 +191,7 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
         "historical_rov_sha256": pin["file_sha256"],
         "original_csumb_archive_sha256": ARCHIVE_SHA256,
         "original_usgs_character_sha256": EXPECTED_CLASS,
+        "publisher_character_accuracy": class_accuracy,
         "private_research_blocks_sha256": hashlib.sha256(block_path.read_bytes()).hexdigest(),
         "partial_access_screen_sha256": hashlib.sha256(json.dumps({
             key: value for key, value in access.items()
@@ -207,7 +212,7 @@ def build(rov_path: Path = ROV, archive: Path = ARCHIVE,
             "ROV 10 m subunits and transects are correlated historical samples, not trips, catch rates or current fish predictions.",
             "A centroid on a source grid cell is not proof that the ROV camera imaged that exact cell; position and cross-survey registration errors are unbounded.",
             "The 2009-labeled CSUMB grid is packaged with 2007 bathymetry tracklines, so individual cell acquisition years remain unverified.",
-            "The 2008 USGS character class is interpreted habitat. Class 2 hard-flat can include coarse sand and gravel, so its subunits are not evidence of boulders; class 3 hard-rugose is tracked separately. Visual-majority-hard counts do not validate the full class map without positional support and negative-sample analysis.",
+            "The 2008 USGS character class is interpreted habitat. Class 2 hard-flat can include coarse sand and gravel, so its subunits are not evidence of boulders; class 3 hard-rugose is tracked separately. Publisher accuracy reused some training video observations and hard-flat majority agreement is 45.33 percent; neither that rate nor these ROV overlays validate a point without positional support and negative-sample analysis.",
             "The 0, 10 and 25 m inward block tests are sensitivity checks, not measured ROV position-error bounds.",
             "The MPA, federal and ENC results are partial block screens; source-datum depth is not a chart MLLW depth and no full route or current rule has been cleared.",
             "The receipt publishes aggregate counts only, without ROV coordinates, block IDs or fishing waypoints.",
@@ -221,6 +226,7 @@ def main() -> None:
     parser.add_argument("--rov", type=Path, default=ROV)
     parser.add_argument("--archive", type=Path, default=ARCHIVE)
     parser.add_argument("--character", type=Path, default=CHARACTER)
+    parser.add_argument("--character-metadata", type=Path, default=CHARACTER_METADATA)
     parser.add_argument("--blocks", type=Path, default=BLOCKS)
     parser.add_argument("--access", type=Path, default=ACCESS)
     parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-rov-original-cell-join.json")
@@ -228,7 +234,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.fetch_rov:
         fetch(json.loads(PIN.read_text()), args.rov)
-    report = build(args.rov, args.archive, args.character, args.blocks, args.access)
+    report = build(args.rov, args.archive, args.character, args.blocks, args.access,
+                   args.character_metadata)
     if args.verify and report != json.loads(args.verify.read_text()):
         raise SystemExit("Original-cell historical ROV evidence changed; review before ranking")
     args.output.parent.mkdir(parents=True, exist_ok=True)

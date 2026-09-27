@@ -27,6 +27,7 @@
       "limitations": [
         "2008 survey; present sand and vegetation can differ.",
         "2 m cells do not provide an individual-boulder catalog.",
+        "Publisher-reported 10 m video-buffer majority agreement was 45.33% for hard-flat and 78.75% for hard-rugged across 304 observations; some training observations were reused for accuracy assessment, so these are not held-out probabilities.",
         "Original bathymetry output datum and per-cell upper uncertainty are unresolved; do not use this source alone to qualify a 300 ft fishing depth."
       ],
       "native_resolution_m": 2,

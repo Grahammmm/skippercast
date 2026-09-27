@@ -6,7 +6,7 @@
   "source_sha256": {
     "dist/data/central-source-acquisition-queue.json": "e8048c7ff091ad9a22b57f494bff1de260a13df849c528a985285712154f9498",
     "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
-    "dist/data/point-buchon-original-paired-200-300ft-review.json": "8904b11fb07b822e55acf0dcde7433bc80b3013e379e7b2ed9868afc2ffcc6a0",
+    "dist/data/point-buchon-original-paired-200-300ft-review.json": "40278e9f3ddfbdb4cacacfd28cffc9eb360e06e77fdcc5b8291aa1a8edd806b9",
     "dist/data/point-buchon-2007-ncei-multibeam-lead.json": "f24c4e053f461a7b9c85fa04d5f079cba5032065cec48f5f97a72f95a8392da0",
     "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json": "e7a73843f121c359b8c0d683ab30cca2e364f5930cf4b7ab9a68f3f00b5d3cf8",
     "dist/data/point-buchon-2007-caris-prefix-lead.json": "868d2a9db182e6f931ac4a7c1a102f62a5de4fec675c2c26550cff3608604da5",
@@ -14,7 +14,7 @@
     "dist/data/point-buchon-block-a3-trackline-lineage.json": "e9876419882da953e176c87ad99eff8efe2f8104986174eb954c4c79d81d6b45",
     "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json": "ad00384120a0dc183d260c9b16347ea04a5812f450af422c0f935d67da990226",
     "dist/data/point-buchon-2009-csumb-access-triage.json": "6e4c532037fe896ec7e5bc6ab37443f73001afe2d78265993d3c9b97276752ef",
-    "dist/data/point-buchon-rov-original-cell-join.json": "d0a7e21ebf21fe5acbcce509d71809489d3b2aa961b869cfef2d59dc010da67e",
+    "dist/data/point-buchon-rov-original-cell-join.json": "d8f568e8633c88fcd2aa36b8a31bd3a29485b2db9051b3262f6ab2c20386f56e",
     "dist/data/point-buchon-2009-conditional-vdatum-probes.json": "7eb211ca559e406d6855962ad7390d1fbb84fc42af0f8fb668f897ba96e82d30",
     "dist/data/point-buchon-private-block-access-screen.json": "8dd672aad37c1c901ec3ee4dc4303b4a9851e70bdcc0fe613f5c1bdb0ab6a026",
     "dist/data/point-buchon-vdatum-grid-api-bridge.json": "6aba0851e690987e5841bc24e959b2684a81c14182b8a1d366480fb6946a242b",
@@ -620,7 +620,7 @@
     {
       "sector_id": "morro-conception",
       "source_review_priority_tier": 1,
-      "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 of those land on mapped hard classes, across only five correlated transect labels. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
+      "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
       "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
       "limiting_evidence": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
       "native_cell_evidence": "source-datum-only",

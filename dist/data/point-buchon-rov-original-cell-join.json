@@ -112,7 +112,7 @@
     "ROV 10 m subunits and transects are correlated historical samples, not trips, catch rates or current fish predictions.",
     "A centroid on a source grid cell is not proof that the ROV camera imaged that exact cell; position and cross-survey registration errors are unbounded.",
     "The 2009-labeled CSUMB grid is packaged with 2007 bathymetry tracklines, so individual cell acquisition years remain unverified.",
-    "The 2008 USGS character class is interpreted habitat. Class 2 hard-flat can include coarse sand and gravel, so its subunits are not evidence of boulders; class 3 hard-rugose is tracked separately. Visual-majority-hard counts do not validate the full class map without positional support and negative-sample analysis.",
+    "The 2008 USGS character class is interpreted habitat. Class 2 hard-flat can include coarse sand and gravel, so its subunits are not evidence of boulders; class 3 hard-rugose is tracked separately. Publisher accuracy reused some training video observations and hard-flat majority agreement is 45.33 percent; neither that rate nor these ROV overlays validate a point without positional support and negative-sample analysis.",
     "The 0, 10 and 25 m inward block tests are sensitivity checks, not measured ROV position-error bounds.",
     "The MPA, federal and ENC results are partial block screens; source-datum depth is not a chart MLLW depth and no full route or current rule has been cleared.",
     "The receipt publishes aggregate counts only, without ROV coordinates, block IDs or fishing waypoints."
@@ -121,6 +121,25 @@
   "original_usgs_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
   "partial_access_screen_sha256": "d469ee0be7ed95cda5040446cf0eb3405759a5b4427afd7754df8944bf42b76e",
   "private_research_blocks_sha256": "5e9c6b34c6e060425a36839a36b8f179f9a6d4c1c3c29b5d945fcf7d77fc46b4",
+  "publisher_character_accuracy": {
+    "comparison_buffer_radius_m": 10,
+    "hard_flat": {
+      "majority_percent": 45.33,
+      "presence_percent": 86.67
+    },
+    "hard_rugose": {
+      "majority_percent": 78.75,
+      "presence_percent": 93.75
+    },
+    "held_out_validation": false,
+    "point_specific_probability": false,
+    "soft_flat": {
+      "majority_percent": 83.89,
+      "presence_percent": 93.96
+    },
+    "training_observations_reused_for_accuracy": true,
+    "video_observations": 304
+  },
   "rov_bottom_position_error_bounded": false,
   "schema_version": 1,
   "scope": "point-buchon-independent-original-cell-historical-rov-research-join",

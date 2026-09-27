@@ -7,8 +7,9 @@ The USGS bathymetry has no established MLLW datum or cell uncertainty.
 
 import argparse
 import csv
-import hashlib
 import json
+import hashlib
+import re
 from collections import defaultdict
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -52,6 +53,29 @@ def verify_semantics(metadata):
         if phrase not in text:
             raise ValueError("USGS character meaning or video audit changed")
     return hashlib.sha256(raw).hexdigest()
+
+
+def published_character_accuracy(metadata):
+    """Retain publisher's video-buffer agreement, not a held-out class skill score."""
+    verify_semantics(metadata)
+    text = metadata.read_text(encoding="utf-8")
+    match = re.search(r"There were (\d+) observations in the study area\. "
+                      r"For soft-flat class the presence accuracy was ([\d.]+) percent and the majority accuracy was ([\d.]+) percent\. "
+                      r"For the hard-flat class the presence accuracy was ([\d.]+) percent and the majority accuracy was ([\d.]+) percent\. "
+                      r"For the hard-rugged class the presence accuracy was ([\d.]+) percent and the majority accuracy was ([\d.]+) percent\.", text)
+    if not match or int(match[1]) != 304:
+        raise ValueError("USGS character accuracy text changed")
+    values = [float(value) for value in match.groups()[1:]]
+    return {
+        "video_observations": 304,
+        "comparison_buffer_radius_m": 10,
+        "soft_flat": {"presence_percent": values[0], "majority_percent": values[1]},
+        "hard_flat": {"presence_percent": values[2], "majority_percent": values[3]},
+        "hard_rugose": {"presence_percent": values[4], "majority_percent": values[5]},
+        "training_observations_reused_for_accuracy": True,
+        "held_out_validation": False,
+        "point_specific_probability": False,
+    }
 
 
 def verify_bathy_processing(metadata):
@@ -205,6 +229,7 @@ def aggregate(bathy_zip, class_zip, class_metadata, bathy_metadata, rov_csv, rov
             "source_release": "https://doi.org/10.5066/P9KBGELE",
             "bathy_archive_sha256": EXPECTED_BATHY, "character_archive_sha256": EXPECTED_CLASS,
             "character_metadata_sha256": metadata_hash,
+            "publisher_character_accuracy": published_character_accuracy(class_metadata),
             "bathymetry_metadata_sha256": bathy_metadata_hash,
             "rov_source_doi": rov_pin["doi"], "rov_source_sha256": rov_pin["file_sha256"],
             "published_grid_resolution_m": 2,
@@ -216,6 +241,7 @@ def aggregate(bathy_zip, class_zip, class_metadata, bathy_metadata, rov_csv, rov
             "open_reference_rov_at_nominal_centers": rows,
             "limitations": [
                 "USGS class 2 is hard/flat; class 3 is hard/rugose boulder, megaclast and bedrock; neither is an individual boulder measurement.",
+                "Publisher-reported class agreement uses 10 m buffers around 304 video observations and reuses some training observations; it is not independent held-out accuracy or a point-specific probability. Hard-flat majority agreement is only 45.33 percent.",
                 "ROV center overlay is nominal; independent survey coordinate accuracy, datum realization, epoch, and 10 m observation support are unresolved.",
                 "USGS bathymetry lacks an established MLLW output datum and per-cell upper uncertainty bound; nominal 200–300 ft is not a fishing-depth clearance.",
                 "The published 2 m bathymetry mosaic includes 5 m gridded source data deeper than 80 m; its 2 m pixel spacing is not 2 m independent depth detail there.",
