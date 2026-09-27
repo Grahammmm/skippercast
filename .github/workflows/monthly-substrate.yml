@@ -245,8 +245,15 @@ jobs:
         run: |
           python scripts/audit_central_deep_original_300.py --fetch --output var/review/central-deep-original-300-refutation.json
           cmp var/review/central-deep-original-300-refutation.json dist/data/central-deep-original-300-refutation.json
+      - name: Recheck Point Conception original BAG depth-band gap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python -m scripts.audit_point_conception_original_300_gap --fetch
+          --output var/review/point-conception-original-bag-200-300ft-gap.json
+          --verify dist/data/point-conception-original-bag-200-300ft-gap.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -270,6 +277,7 @@ jobs:
             var/review/w00614-noaa-sh1809-observation-gap.json
             var/review/cal-dig-i-original-rov-300ft-gap.json
             var/review/central-deep-original-300-refutation.json
+            var/review/point-conception-original-bag-200-300ft-gap.json
             var/review/central-coverage-ledger-v1.json
             var/review/central-source-acquisition-queue.json
             var/review/central-300ft-qualification-plan.json

@@ -21,6 +21,10 @@ class CentralCoveragePipelineTests(unittest.TestCase):
             if region["region_id"] != "morro-bay":
                 self.assertEqual(region["fishing_coordinate_status"], "none-qualified")
             self.assertIn("not a survey footprint", region["bounds_meaning"])
+        conception = next(region for region in result["regions"]
+                          if region["region_id"] == "point-arguello-conception")
+        self.assertEqual(conception["original_200_300ft_gap"]["populated_depth_band_cells"], 0)
+        self.assertIn("two BAG files only", conception["original_200_300ft_gap"]["scope"])
 
     def test_failed_closure_screen_blocks_ledger(self):
         original = coverage.read
@@ -34,6 +38,20 @@ class CentralCoveragePipelineTests(unittest.TestCase):
 
         with patch.object(coverage, "read", side_effect=bad_read):
             with self.assertRaisesRegex(ValueError, "closure screen failed"):
+                coverage.build(ROOT)
+
+    def test_new_deep_cells_in_point_conception_source_block_ledger(self):
+        original = coverage.read
+
+        def changed_read(path):
+            result = original(path)
+            if str(path).endswith("point-conception-original-bag-200-300ft-gap.json"):
+                result = copy.deepcopy(result)
+                result["combined_200_to_300ft_cells"] = 1
+            return result
+
+        with patch.object(coverage, "read", side_effect=changed_read):
+            with self.assertRaisesRegex(ValueError, "exact-file deep-band gap changed"):
                 coverage.build(ROOT)
 
     def test_source_queue_keeps_native_band_leads_on_hold(self):
@@ -53,6 +71,8 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(pigeon["noaa_usgs_original_character_overlap"]["depth_qualified_cells"], 141331)
         self.assertEqual(pigeon["noaa_usgs_original_character_overlap"]["classified_cells_on_those_depth_cells"], 0)
         conception = result["sectors"][-1]
+        self.assertEqual(conception["point_conception_original_bag_deep_gap"]["populated_200_300ft_cells"], 0)
+        self.assertFalse(conception["point_conception_original_bag_deep_gap"]["fishing_target"])
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
         self.assertEqual({row["survey_id"] for row in conception["noaa_original_deepwater_300ft_refutations"]},
                          {"H13152", "W00479"})

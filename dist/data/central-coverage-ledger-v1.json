@@ -4,6 +4,7 @@
   "source_audits": {
     "nbs_300ft": "data/nbs-central-300-depth-screen.json",
     "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
+    "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
     "existing_target_closures": "data/central-atlas-300-current-closure-screen.json"
   },
   "source_audit_times": {
@@ -44,6 +45,7 @@
         "USGS DS 781 Aptos and Monterey Bay original bathymetry/character pairs",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -76,6 +78,7 @@
         "USGS Offshore Monterey original grids and video",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -108,6 +111,7 @@
         "USGS DS 781 Big Sur blocks and camera observations",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -140,6 +144,7 @@
         "USGS DS 781 southern Big Sur blocks",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -172,6 +177,7 @@
         "USGS original bathymetry/character survey pairs",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -204,6 +210,7 @@
         "USGS original surveys beyond the 200 ft source screen",
         "NOAA NOS original BAGs"
       ],
+      "original_200_300ft_gap": null,
       "remaining_gates": [
         "No newly qualified 200\u2013300 ft source footprint",
         "Independent fish-presence/catch-effort evidence remains absent"
@@ -230,9 +237,18 @@
       },
       "fishing_coordinate_status": "none-qualified",
       "next_source_leads": [
-        "NOAA H11952/H11953 original BAGs plus USGS character",
-        "Additional original NOS hydrographic survey footprints"
+        "NOAA H11952/H11953 original BAGs plus USGS character only in their measured shallow files",
+        "Other original surveys with populated 200\u2013300 ft cells and paired substrate"
       ],
+      "original_200_300ft_gap": {
+        "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
+        "exact_bag_survey_ids": [
+          "H11952",
+          "H11953"
+        ],
+        "populated_depth_band_cells": 0,
+        "scope": "these two BAG files only, not complete surveys or adjacent coast"
+      },
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",

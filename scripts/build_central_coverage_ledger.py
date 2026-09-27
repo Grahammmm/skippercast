@@ -28,7 +28,7 @@ SOURCE_LEADS = {
     "south-big-sur-san-simeon": ("USGS DS 781 southern Big Sur blocks", "NOAA NOS original BAGs"),
     "cambria-san-simeon": ("USGS original bathymetry/character survey pairs", "NOAA NOS original BAGs"),
     "morro-bay": ("USGS original surveys beyond the 200 ft source screen", "NOAA NOS original BAGs"),
-    "point-arguello-conception": ("NOAA H11952/H11953 original BAGs plus USGS character", "Additional original NOS hydrographic survey footprints"),
+    "point-arguello-conception": ("NOAA H11952/H11953 original BAGs plus USGS character only in their measured shallow files", "Other original surveys with populated 200–300 ft cells and paired substrate"),
 }
 
 
@@ -41,11 +41,17 @@ def build(root):
     existing = read(root / "dist/data/atlas.json")
     nbs = read(root / "dist/data/nbs-central-300-depth-screen.json")
     hard = read(root / "dist/data/point-conception-native-hard-300-review-summary.json")
+    conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
         raise ValueError("Central NBS audit incomplete; coverage ledger cannot be published")
     if not closure["all_geometry_clear_of_screen_buffers"]:
         raise ValueError("Current atlas closure screen failed")
+    if (conception_deep_gap.get("scope") != "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap"
+            or {row.get("survey_id") for row in conception_deep_gap.get("sources", [])} != {"H11952", "H11953"}
+            or conception_deep_gap.get("combined_200_to_300ft_cells") != 0
+            or any(row.get("deeper_than_200ft_cells") != 0 for row in conception_deep_gap["sources"])):
+        raise ValueError("Point Conception exact-file deep-band gap changed")
     rows = []
     for region_id in REGIONS:
         package = root / "dist/regions" / region_id
@@ -86,6 +92,12 @@ def build(root):
             "bottom_evidence_status": needs,
             "fishing_coordinate_status": "qualified-reviewed" if targets else "none-qualified",
             "next_source_leads": SOURCE_LEADS[region_id],
+            "original_200_300ft_gap": ({
+                "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
+                "exact_bag_survey_ids": ["H11952", "H11953"],
+                "populated_depth_band_cells": 0,
+                "scope": "these two BAG files only, not complete surveys or adjacent coast",
+            } if region_id == "point-arguello-conception" else None),
             "remaining_gates": [
                 "Original measured depth at candidate cell and surrounding drift patch",
                 "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -105,6 +117,7 @@ def build(root):
         "source_audits": {
             "nbs_300ft": "data/nbs-central-300-depth-screen.json",
             "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
+            "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",
         },
         "source_audit_times": {"nbs": nbs["reviewed_at"], "closures": closure["audited_at"], "original_noaa": hard["generated_at"]},

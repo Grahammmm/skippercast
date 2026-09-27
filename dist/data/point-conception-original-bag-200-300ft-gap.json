@@ -1,0 +1,68 @@
+{
+  "combined_200_to_300ft_cells": 0,
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "Only these two hash-pinned BAG files are checked, not every H11952/H11953 file or every Point Conception survey.",
+    "The result does not imply rockfish/lingcod habitat is absent nearby; it removes these exact files as 200\u2013300 ft depth sources.",
+    "Original MLLW depth and product-uncertainty metadata do not themselves establish fish, legal access, chart safety or a route."
+  ],
+  "schema_version": 1,
+  "scope": "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap",
+  "sources": [
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "a23f24509355c3eece8b785d3d69af9df4bd1dd4a9f49bd890d08088d88210ee",
+      "exportable": false,
+      "file_name": "H11952_MB_2m_MLLW_2of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        10495,
+        10034
+      ],
+      "sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "survey_dates": [
+        "2008-08-26T00:00:00",
+        "2008-09-04T00:00:00"
+      ],
+      "survey_id": "H11952",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "valid_depth_and_uncertainty_cells": 5411412,
+      "valid_depth_m_range": [
+        18.0,
+        40.0
+      ],
+      "valid_elevation_cells": 5411412,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "c23bef1f880b772c46763be7d6303223401ce31c58563270653537c720d1256a",
+      "exportable": false,
+      "file_name": "H11953_MB_1m_MLLW_1of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        18513,
+        18224
+      ],
+      "sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "survey_dates": [
+        "2008-08-29T15:13:58",
+        "2008-09-05T01:14:20"
+      ],
+      "survey_id": "H11953",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "valid_depth_and_uncertainty_cells": 6417802,
+      "valid_depth_m_range": [
+        4.617,
+        20.0
+      ],
+      "valid_elevation_cells": 6417802,
+      "vertical_datum": "MLLW"
+    }
+  ]
+}

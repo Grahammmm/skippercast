@@ -35,6 +35,14 @@ def build(root):
     csumb = read(root / "dist/data/csumb-bss-native-source-review.json")
     vr_native = read(root / "dist/data/noaa-vr-native-depth-review.json")
     regular_native = read(root / "dist/data/noaa-regular-native-depth-review.json")
+    conception_two_bag_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
+    if (conception_two_bag_gap.get("scope") != "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap"
+            or conception_two_bag_gap.get("combined_200_to_300ft_cells") != 0
+            or {row.get("survey_id") for row in conception_two_bag_gap.get("sources", [])} != {"H11952", "H11953"}
+            or [row.get("valid_depth_m_range", [None, None])[1]
+                for row in conception_two_bag_gap["sources"]] != [40.0, 20.0]
+            or conception_two_bag_gap.get("fishing_target") is not False):
+        raise ValueError("Point Conception original BAG deep-band status changed")
     extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
     extra_bag = read(root / "dist/data/f00844-original-fifth-bag-review.json")
     estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
@@ -419,6 +427,13 @@ def build(root):
             "noaa_original_200_300ft_sector_refutations": [
                 {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
                 for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],
+            "point_conception_original_bag_deep_gap": ({
+                "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
+                "exact_files_checked": [row["file_name"] for row in conception_two_bag_gap["sources"]],
+                "populated_200_300ft_cells": 0,
+                "claim": "These two specific original MLLW BAG files reach only 40 m and 20 m; seek different original cells for deeper Point Conception targets.",
+                "fishing_target": False, "exportable": False,
+            } if sector_id == "morro-conception" else None),
             "noaa_no_measured_cells_in_17_monterey_outlines": [
                 {"survey_id": sid, "review_path": monterey_no_overlap[sid]}
                 for sid in original_bag if sid in monterey_no_overlap
@@ -492,7 +507,8 @@ def build(root):
             } if sector_id == "cambria-morro" else None),
             "usgs_map_areas": [{"name": m["name"], "catalog_url": m["resolved_url"],
                                 "paired_original_products": m in paired} for m in usgs_areas],
-            "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
+            "next_action": "Seek other measured 200–300 ft original surveys near Point Conception, while resolving Point Buchon depth and habitat lineage and security routes" if sector_id == "morro-conception"
+                           else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",
                                 "paired high-resolution substrate and independent groundtruth",

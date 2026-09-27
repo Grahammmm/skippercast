@@ -49,6 +49,7 @@
       "point_buchon_source_gridding_resolution": null,
       "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
+      "point_conception_original_bag_deep_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -173,6 +174,7 @@
       "point_buchon_source_gridding_resolution": null,
       "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
+      "point_conception_original_bag_deep_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -274,6 +276,7 @@
       "point_buchon_source_gridding_resolution": null,
       "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
+      "point_conception_original_bag_deep_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "W00431",
@@ -406,6 +409,7 @@
       "point_buchon_source_gridding_resolution": null,
       "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
+      "point_conception_original_bag_deep_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13151",
@@ -527,6 +531,7 @@
       "point_buchon_source_gridding_resolution": null,
       "point_buchon_datum_provenance_lead": null,
       "noaa_original_200_300ft_sector_refutations": [],
+      "point_conception_original_bag_deep_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "H13089",
@@ -729,6 +734,17 @@
           ]
         }
       ],
+      "point_conception_original_bag_deep_gap": {
+        "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
+        "exact_files_checked": [
+          "H11952_MB_2m_MLLW_2of4.bag",
+          "H11953_MB_1m_MLLW_1of4.bag"
+        ],
+        "populated_200_300ft_cells": 0,
+        "claim": "These two specific original MLLW BAG files reach only 40 m and 20 m; seek different original cells for deeper Point Conception targets.",
+        "fishing_target": false,
+        "exportable": false
+      },
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "noaa_coarse_or_unresolved_leads": [
         "F00844",
@@ -772,7 +788,7 @@
           "paired_original_products": false
         }
       ],
-      "next_action": "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen",
+      "next_action": "Seek other measured 200\u2013300 ft original surveys near Point Conception, while resolving Point Buchon depth and habitat lineage and security routes",
       "blocking_checks": [
         "valid measured cells within 300 ft plus uncertainty margin",
         "paired high-resolution substrate and independent groundtruth",

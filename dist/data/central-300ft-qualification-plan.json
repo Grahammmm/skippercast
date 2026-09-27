@@ -4,8 +4,9 @@
   "status": "research-only",
   "depth_ceiling_ft": 300,
   "source_sha256": {
-    "dist/data/central-source-acquisition-queue.json": "e8048c7ff091ad9a22b57f494bff1de260a13df849c528a985285712154f9498",
-    "dist/data/central-coverage-ledger-v1.json": "46d86784bc77a93685879ca1df0cb28ba21492ed9f80120faf7329a1d39eceaf",
+    "dist/data/central-source-acquisition-queue.json": "162be75229bf97022514607cb0f1184a560e3e108ddd15c9c07dbc47b1c0cd04",
+    "dist/data/central-coverage-ledger-v1.json": "dd77e2af1987c9fff9c27d929db9308605097b47df915b779de1a34fba62d160",
+    "dist/data/point-conception-original-bag-200-300ft-gap.json": "3f88eac95f0d3ea0d96a85f522a18f46c6b06f3bb08d1c2a954cf5af25d42d54",
     "dist/data/point-buchon-original-paired-200-300ft-review.json": "40278e9f3ddfbdb4cacacfd28cffc9eb360e06e77fdcc5b8291aa1a8edd806b9",
     "dist/data/point-buchon-2007-ncei-multibeam-lead.json": "f24c4e053f461a7b9c85fa04d5f079cba5032065cec48f5f97a72f95a8392da0",
     "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json": "e7a73843f121c359b8c0d683ab30cca2e364f5930cf4b7ab9a68f3f00b5d3cf8",
@@ -621,7 +622,7 @@
       "sector_id": "morro-conception",
       "source_review_priority_tier": 1,
       "reviewed_lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200\u2013300 ft source-datum cells. A separately published CDFW/MARE historical ROV table has 94 open-reference subunits whose recorded centroids hit original grid cells in that source-depth band inside 17 research blocks; 62 land on mapped hard classes but only 18 on class-3 rugged bottom, across five correlated transect labels. USGS reports just 45.33 percent majority agreement for hard-flat versus 78.75 percent for rugged in a non-held-out video assessment. H13152/W00479 MLLW cells are entirely deeper than 300 ft.",
-      "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
+      "next_acquisition": "Obtain bottom-camera position-error and offset records, original transect effort/zero detections and source reuse terms; validate grid-to-ROV and 2008-class registration before interpreting subunit overlap as a patch. Resolve Block A3's 2007-trackline to released-grid lineage, upper uncertainty and NAD83 realization/epoch; continue processed GSF and CARIS datum/TPU acquisition, then run full-cell VDatum and current Diablo/Vandenberg access plus ENC route screens. The original H11952/H11953 Point Conception BAG files reach only 40 m and 20 m, so seek other measured 200\u2013300 ft cells there. The original Cal DIG I ROV biotic/substrate point tables have no 200\u2013300 ft observations.",
       "limiting_evidence": "The historical ROV join improves search priority, not current catch odds or precise fish-location evidence. Recorded centroids have unbounded bottom-camera position error; the source grid's later label is not independent 2009 acquisition evidence and lacks upper depth accuracy and rights. No full-patch MLLW depth, safe route or current legal review is complete.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
@@ -647,7 +648,8 @@
         "dist/data/point-buchon-private-block-access-screen.json",
         "dist/data/point-buchon-rov-access-triage.json",
         "dist/data/point-buchon-rov-original-cell-join.json",
-        "dist/data/point-buchon-vdatum-grid-api-bridge.json"
+        "dist/data/point-buchon-vdatum-grid-api-bridge.json",
+        "dist/data/point-conception-original-bag-200-300ft-gap.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,
