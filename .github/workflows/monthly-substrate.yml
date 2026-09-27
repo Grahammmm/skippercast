@@ -565,7 +565,7 @@ jobs:
       - name: Install pinned native-grid reader
         run: python -m pip install -r requirements-survey.txt
       - name: Verify native-grid receipts stay out of fishing targets
-        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_bss03_access_blocks tests.test_csumb_vdatum_bridge -v
+        run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_bss03_access_blocks tests.test_bss03_caris_tpe_member tests.test_csumb_vdatum_bridge -v
       - name: Reuse original CSUMB archives
         uses: actions/cache@v4
         with:
@@ -655,6 +655,13 @@ jobs:
           python scripts/audit_bss03_caris_acquisition.py
           --output var/review/bss03-caris-acquisition-lead.json
           --verify dist/data/bss03-caris-acquisition-lead.json
+      - name: Recheck complete original Block 03 per-line TPE member
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_bss03_caris_tpe_member.py
+          --output var/review/bss03-caris-original-tpe-member-lead.json
+          --verify dist/data/bss03-caris-original-tpe-member-lead.json
       - name: Recheck original Block 03 vessel TPU input settings
         run: >-
           python scripts/audit_bss03_vessel_settings.py
@@ -680,6 +687,7 @@ jobs:
             var/review/csumb-vdatum-bridge-review.json
             var/review/bss03-footprint-vdatum-diagnostic.json
             var/review/bss03-caris-acquisition-lead.json
+            var/review/bss03-caris-original-tpe-member-lead.json
           retention-days: 30
   central-deepwater:
     runs-on: ubuntu-latest

@@ -44,6 +44,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/bss03-video-grid-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-camera-access-triage.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-original-vessel-tpu-inputs.json", south_sur["source_receipts"])
+        self.assertIn("dist/data/bss03-caris-original-tpe-member-lead.json", south_sur["source_receipts"])
         self.assertEqual(next(t for t in south_sur["tracks"] if t["id"] == "independent-substrate")["stage"], "research-evidence")
         self.assertEqual(next(t for t in south_sur["tracks"] if t["id"] == "legal-chart-access")["stage"], "partial-release-evidence")
         self.assertFalse(south_sur["independent_groundtruth_at_candidate_scale"])

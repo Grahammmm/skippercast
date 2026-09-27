@@ -93,7 +93,7 @@ SECTOR_OVERRIDES = {
     },
     "sur-san-simeon": {
         "lead": "CSUMB BSS Block03 2 m NAVD88 cells nominally overlap 46 USGS camera windows at 221–238 ft source-datum depth, including 11 rock/boulder windows on one camera line",
-        "next": "Request a targeted extract from the official 42 GB CARIS project for original TPU/CUBE, horizontal realization and epoch. Only then transform and bound every candidate cell; review video positioning, source rights, current rules and full access routes.",
+        "next": "A bounded original CARIS read contains one complete per-line HDCS TPE member, but that October line predates the released grid's listed November/December surveys and may not contribute. Locate the actual contributing lines; obtain a documented CARIS ExportHIPS depth/position TPU and accepted-sounding extract plus a CUBE/BASE surface, horizontal realization and epoch. Then transform and bound every candidate cell; review video positioning, source rights, current rules and full access routes.",
         "hold": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
     },
     "cambria-morro": {
@@ -127,6 +127,7 @@ def build(root):
     bss03_access_path = "dist/data/bss03-camera-access-triage.json"
     bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
+    bss03_tpe_path = "dist/data/bss03-caris-original-tpe-member-lead.json"
     bss03_vessel_path = "dist/data/bss03-original-vessel-tpu-inputs.json"
     pigeon_video_path = "dist/data/w00614-usgs-video-observation-gap.json"
     pigeon_noaa_rov_path = "dist/data/w00614-noaa-sh1809-observation-gap.json"
@@ -151,6 +152,14 @@ def build(root):
     bss03_access = load(root, bss03_access_path)
     bss03_datum = load(root, bss03_datum_path)
     bss03_caris = load(root, bss03_caris_path)
+    bss03_tpe = load(root, bss03_tpe_path)
+    if (bss03_tpe.get("scope") != "bss03-original-caris-complete-single-line-tpe-member"
+            or bss03_tpe.get("tpe_member_bytes") != 37668488
+            or bss03_tpe.get("tpe_line_date_matches_released_grid_metadata_dates") is not False
+            or bss03_tpe.get("tpe_values_decoded") is not False
+            or bss03_tpe.get("grid_cell_upper_uncertainty_verified") is not False
+            or bss03_tpe.get("fishing_target") is not False):
+        raise ValueError("BSS03 original CARIS TPE member status changed")
     bss03_vessel = load(root, bss03_vessel_path)
     pigeon_video = load(root, pigeon_video_path)
     pigeon_noaa_rov = load(root, pigeon_noaa_rov_path)
@@ -378,6 +387,7 @@ def build(root):
             receipts.append(bss03_access_path)
             receipts.append(bss03_datum_path)
             receipts.append(bss03_caris_path)
+            receipts.append(bss03_tpe_path)
             receipts.append(bss03_vessel_path)
         if estero_lead:
             receipts.extend((estero_lead["depth_receipt"], estero_lead["overlap_receipt"]))
@@ -487,7 +497,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

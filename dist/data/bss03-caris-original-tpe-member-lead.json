@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "bss03-original-caris-complete-single-line-tpe-member",
+  "checked_at": "2026-09-27T04:43:53.573389+00:00",
+  "archive_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/ancillary/BSSBlock03_caris.tar.gz",
+  "full_archive_bytes": 42090312342,
+  "bounded_prefix_bytes": 67108864,
+  "bounded_prefix_sha256": "03481360f8e1b245a6f33d792f0a3718a2ba970078cfc80cf7453ceb9f730429",
+  "complete_tpe_member": "BSS_Block03/45HaroldHeath_PPK/2011-277/20111004_140647_Harold_Heath7125/TPE",
+  "tpe_line_date_from_member_path": "2011-10-04",
+  "released_grid_metadata_survey_dates": [
+    "2011-11-03",
+    "2011-11-04",
+    "2011-11-14",
+    "2011-11-15",
+    "2011-12-08"
+  ],
+  "tpe_line_date_matches_released_grid_metadata_dates": false,
+  "tpe_member_bytes": 37668488,
+  "tpe_member_sha256": "ac37931e0619a9b75e1abfb888250ed306aca5477f5a49ebf4ef8880535a5c19",
+  "tpe_magic": "HDCS",
+  "following_member_header": "BSS_Block03/45HaroldHeath_PPK/2011-277/20111004_140647_Harold_Heath7125/NavigationLineSegments",
+  "official_export_documentation_url": "https://docs.teledynecaris.com/docs/8.0/hips%20and%20sips/CARIS%20HIPS%20and%20SIPS%20Help/CARISBatch_HIPS.42.18.html",
+  "tpe_values_decoded": false,
+  "tpe_confidence_or_units_verified": false,
+  "tpe_to_released_grid_lineage_verified": false,
+  "grid_cell_upper_uncertainty_verified": false,
+  "mllw_depth_qualified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "One complete per-line HDCS TPE member is present near the beginning of the 42 GB official CARIS archive. Its path dates to October 4, 2011, whereas released Block 03 grid metadata list November and December survey dates; the line is not shown to contribute to that grid. It has not been decoded into sounding TPU values, mapped to accepted depth soundings, or shown to include a full tide/datum uncertainty bound. A complete single line does not cover a candidate patch. CARIS ExportHIPS can export DEPTH_TPU and POSITION_TPU, but an actual licensed export from contributing lines and source-to-grid crosswalk are still needed."
+}
