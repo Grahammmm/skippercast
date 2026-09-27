@@ -60,6 +60,14 @@ def build(root):
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
     conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
+    conception_enc_seabed = read(root / "dist/data/point-conception-original-4m-enc-seabed-gap.json")
+    if (conception_enc_seabed.get("scope") != "point-conception-two-original-4m-patches-enc-seabed-feature-gap"
+            or {key: row.get("charted_seabed_features_in_100m_envelope")
+                for key, row in conception_enc_seabed.get("by_survey", {}).items()}
+            != {"H11952": 0, "H11953": 0}
+            or conception_enc_seabed.get("fishing_target") is not False
+            or conception_enc_seabed.get("exportable") is not False):
+        raise ValueError("Point Conception bounded ENC seabed status changed")
     if (conception_two_bag_gap.get("scope") != "point-conception-two-original-noaa-bags-200-300ft-exact-file-gap"
             or conception_two_bag_gap.get("combined_200_to_300ft_cells") != 0
             or {row.get("survey_id") for row in conception_two_bag_gap.get("sources", [])} != {"H11952", "H11953"}
@@ -520,6 +528,13 @@ def build(root):
                 "mapped_gis_held_components_at_review": conception_access["components_held_by_mapped_gis"],
                 "source_checked_at": conception_access["source_checked_at"],
                 "status": "point-in-time research screen; no legal or route clearance",
+                "fishing_target": False, "exportable": False,
+            } if sector_id == "morro-conception" else None),
+            "point_conception_original_4m_enc_seabed_gap": ({
+                "receipt": "dist/data/point-conception-original-4m-enc-seabed-gap.json",
+                "charted_seabed_features_in_100m_envelope": 0,
+                "scope": "Three ENC scale bands, eight seabed point/line/area layers at each of two private original-cell patches",
+                "next_gate": "Obtain source survey SBDARE/S57 or independently positioned camera/grab observations; current ENC has no seabed feature in these bounded envelopes",
                 "fishing_target": False, "exportable": False,
             } if sector_id == "morro-conception" else None),
             "noaa_no_measured_cells_in_17_monterey_outlines": [

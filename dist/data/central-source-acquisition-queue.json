@@ -55,6 +55,7 @@
       "point_conception_original_4m_rugged_overlap": null,
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
+      "point_conception_original_4m_enc_seabed_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -188,6 +189,7 @@
       "point_conception_original_4m_rugged_overlap": null,
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
+      "point_conception_original_4m_enc_seabed_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [
         {
           "survey_id": "W00431",
@@ -308,6 +310,7 @@
       "point_conception_original_4m_rugged_overlap": null,
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
+      "point_conception_original_4m_enc_seabed_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
@@ -457,6 +460,7 @@
       "point_conception_original_4m_rugged_overlap": null,
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
+      "point_conception_original_4m_enc_seabed_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
@@ -587,6 +591,7 @@
       "point_conception_original_4m_rugged_overlap": null,
       "point_conception_original_8m_hard_overlap": null,
       "point_conception_original_4m_access_screen": null,
+      "point_conception_original_4m_enc_seabed_gap": null,
       "noaa_no_measured_cells_in_17_monterey_outlines": [],
       "monterey_2013_merge_source_acquisition": null,
       "noaa_coarse_or_unresolved_leads": [
@@ -855,6 +860,14 @@
           "noaa_federal": "2026-09-27T11:28:17.941380+00:00"
         },
         "status": "point-in-time research screen; no legal or route clearance",
+        "fishing_target": false,
+        "exportable": false
+      },
+      "point_conception_original_4m_enc_seabed_gap": {
+        "receipt": "dist/data/point-conception-original-4m-enc-seabed-gap.json",
+        "charted_seabed_features_in_100m_envelope": 0,
+        "scope": "Three ENC scale bands, eight seabed point/line/area layers at each of two private original-cell patches",
+        "next_gate": "Obtain source survey SBDARE/S57 or independently positioned camera/grab observations; current ENC has no seabed feature in these bounded envelopes",
         "fishing_target": false,
         "exportable": false
       },
