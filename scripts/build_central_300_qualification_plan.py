@@ -60,6 +60,8 @@ PROVIDERS = {
     "fish": [
         {"publisher": "CDFW MPA Monitoring", "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Management/monitoring/ROV",
          "request": "Georeferenced ROV transects, species observations and zero-observation effort, retaining protected/reference roles and positional error"},
+        {"publisher": "The Nature Conservancy / Moss Landing Marine Laboratories", "url": "https://www.pcouncil.org/documents/2020/01/f5c_sup_pubcom4_apr2016bb.pdf/",
+         "request": "Locate the original Pigeon Point Reef video-lander drop table: bottom/ship positions and offsets, dates, depth, taxon, rock/soft observations, no-fish drops, effort and reuse terms; compare actual drop footprints with W00614 cells before treating it as support"},
     ],
     "legal": [
         {"publisher": "CDFW", "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs",
@@ -72,7 +74,7 @@ PROVIDERS = {
 SECTOR_OVERRIDES = {
     "pigeon-monterey": {
         "lead": "W00614 measured 200–300 ft MLLW cells near Pigeon Point",
-        "next": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; the 13 published USGS video archives have no observation within 100 m of this measured-cell envelope. Inspect W00614's archived backscatter as a classification input only after new groundtruth, then check full patch against MPAs and ENC.",
+        "next": "Request the original TNC/MLML Pigeon Point Reef video-lander drop table mentioned to PFMC, including bottom positions, position error, substrate, taxon, dates, effort, no-fish drops and reuse terms. Test actual drops against W00614's qualifying cells; the 13 published USGS video archives have no observation within 100 m of the measured-cell envelope. Seek separate groundtruth for W00614 backscatter and check any full candidate patch against MPAs and ENC.",
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
@@ -96,9 +98,9 @@ SECTOR_OVERRIDES = {
         "hold": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
     },
     "morro-conception": {
-        "lead": "2009 CSUMB Block A3 original NAVD88 Geoid03 grids overlap the independent 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells, alongside 2007 original GSF beam leads; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
-        "next": "Request the 2009 Block A3 released-grid upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms; derive a bounded MLLW surface over full candidate patches. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition, then obtain current Diablo/Vandenberg access and ENC route screens.",
-        "hold": "The 2009 grid's inner metadata establish NAVD88 Geoid03 but leave vertical accuracy and rights unresolved. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
+        "lead": "CSUMB Block A3 NAVD88 Geoid03 grids, with metadata labeled 2009 but bundled bathymetry tracklines dated 2007, overlap the 2008 USGS hard/rugose class at 87,257 nominal 200–300 ft source-datum cells; H13152/W00479 MLLW cells are entirely deeper than 300 ft",
+        "next": "Resolve the Block A3 2007-trackline to released-grid lineage with its custodian, then request upper uncertainty, NAD83 realization/epoch, 2008-class registration and written reuse terms. Continue targeted 2007 CARIS and processed GSF datum/TPU acquisition; obtain current Diablo/Vandenberg access and ENC route screens.",
+        "hold": "The grid metadata establish NAVD88 Geoid03 but not independent 2009 acquisition, vertical accuracy or rights. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
     },
 }
 

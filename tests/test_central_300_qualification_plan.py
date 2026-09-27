@@ -31,6 +31,8 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/w00614-original-300-pigeon-monterey-review.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-pigeon-original-character-overlap.json", pigeon["source_receipts"])
         self.assertIn("dist/data/w00614-usgs-video-observation-gap.json", pigeon["source_receipts"])
+        self.assertIn("video-lander drop table", pigeon["next_acquisition"])
+        self.assertIn("actual", pigeon["next_acquisition"])
         estero = next(s for s in result["sectors"] if s["sector_id"] == "cambria-morro")
         self.assertEqual(estero["native_cell_evidence"], "source-datum-only")
         self.assertIn("CARIS TPU", estero["next_acquisition"])
@@ -52,6 +54,8 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/point-buchon-2007-ncei-valid-beam-overlap.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-2007-caris-prefix-lead.json", conception["source_receipts"])
         self.assertIn("processed GSF", conception["next_acquisition"])
+        self.assertIn("2007", conception["reviewed_lead"])
+        self.assertIn("not independent 2009 acquisition", conception["limiting_evidence"])
 
     def test_new_deep_waypoint_requires_manual_reconciliation(self):
         original = plan.load
