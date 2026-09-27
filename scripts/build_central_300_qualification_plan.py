@@ -142,6 +142,7 @@ def build(root):
     monterey_1995_path = "dist/data/monterey-1995-original-multibeam-overlap.json"
     monterey_1998_path = "dist/data/monterey-1998-original-em300-overlap.json"
     monterey_merge_path = "dist/data/monterey-2013-merge-lineage-gap.json"
+    monterey_points_path = "dist/data/monterey-noaa2612-acoustic-point-support.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     estero_camera_path = "dist/data/estero-original-camera-block-gap.json"
@@ -298,6 +299,18 @@ def build(root):
             or monterey_merge.get("chart_datum_depth_qualified") is not False
             or monterey_merge.get("fishing_target") is not False):
         raise ValueError("Monterey NOAA 2013 merge lineage or hold status changed")
+    monterey_points = load(root, monterey_points_path)
+    if (monterey_points.get("scope") != "monterey-noaa-2013-merge-acoustic-point-support"
+            or monterey_points.get("outlines_reviewed") != 17
+            or monterey_points.get("outlines_with_class13_points") != 17
+            or monterey_points.get("camera_positive_outlines_with_class13_points") != 4
+            or monterey_points.get("fishing_target") is not False
+            or any(row.get("mllw_depth_qualified") is not False
+                   or row.get("upper_vertical_error_qualified") is not False
+                   or row.get("independent_survey_qualified") is not False
+                   or row.get("fishing_target") is not False
+                   for row in monterey_points.get("outlines", []))):
+        raise ValueError("Monterey acoustic-point support or hold status changed")
     if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
             or pigeon_video.get('qualified_cells') != 141331
             or len(pigeon_video.get('archives', [])) != 13
@@ -493,6 +506,7 @@ def build(root):
             receipts.append(monterey_1995_path)
             receipts.append(monterey_1998_path)
             receipts.append(monterey_merge_path)
+            receipts.append(monterey_points_path)
         if sector_id == 'sur-san-simeon':
             receipts.append(bss03_video_path)
             receipts.append(bss03_access_path)
@@ -614,7 +628,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

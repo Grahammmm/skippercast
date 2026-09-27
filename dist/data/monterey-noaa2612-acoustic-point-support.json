@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-noaa-2013-merge-acoustic-point-support",
+  "tile_index_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/tileindex_2013_CA_TopoBathy_m2612.zip",
+  "tile_index_sha256": "d926181c9c9d37f57b3bd816d33f2adc4be80fccc6542ff50362eea22131abc5",
+  "copc_tile_sha256": {
+    "20121123_10SEF895470.copc.laz": "c4e838d9665c5e96dbb2243bf7359dfcf3ca0444033ed8f44ff0e7110d2723fd",
+    "20121123_10SEF895485.copc.laz": "9d053a6f161c72fda5c21a0ae4ee25886aef5768c3e5b8b81d2af26ca4ccd154",
+    "20121123_10SEF910455.copc.laz": "b1d85921d512ad4d74b8a1ac2ed74d695b50d72aca09ed17667c4d8d13274716",
+    "20121123_10SEF910470.copc.laz": "2a048898385b6c7f2b2a67a6b506c94132dc17c57320d10380b09ab5d2312e13",
+    "20121123_10SEF910485.copc.laz": "b2f5eb1169c5ecc6483d04ecbb7ad7358421eb39debd129b9cf5768be083dc37",
+    "20121123_10SEF910500.copc.laz": "6f8b60d325ff4ef3c9d84310f43c4e8a9ba8a416b5644ecad87aedcc62db1894",
+    "20121123_10SEF910530.copc.laz": "2389424b644f6624687818ef3e7fc7422c24c9da77bccc651d449336f919bf96",
+    "20121123_10SEF910545.copc.laz": "4afa1a816fc67b8a0b9168c03422262d1feff2c8c7444de4cce238e5d51593dc",
+    "20121123_10SEF925455.copc.laz": "088da7c7fc16be560e51dedca030b19c4d3c216bf2c91632886e5840da19065b",
+    "20121123_10SEF925470.copc.laz": "2b712dfb92cd752604f58db83edf85fe0044af8b97483c60cf00c0c61d09452d",
+    "20121123_10SEF925545.copc.laz": "ea8e087b87aa3d18384f230acf56afafb2dc70205f835588bc6975ee675eb5bd",
+    "20121123_10SEF925560.copc.laz": "5b0dcd4461b9c9bb8eec3e6a9496437e38f0d0430bc205deedd79e61b88e5965",
+    "20121123_10SEF940560.copc.laz": "fb572a99dd323f2d4ea81192ee4412a2407d0b7be2e11b3fd4a64829ec132f21",
+    "20121123_10SEF970545.copc.laz": "0502b069f330613acb321e313a86a1917f3ce3311389e25f886dff94649e7465",
+    "20121123_10SEF970560.copc.laz": "977926ee278d75fb667ef64aa9fbd41f0c07521618232a9019b231f94eba2079",
+    "20121123_10SEF970590.copc.laz": "ceb0ecc9e37bc7f5d0f499748cf0a9048066b83347096c71de501e3ac6dca36b",
+    "20121123_10SEF970605.copc.laz": "6c3d1a628a912937d635065cfc4ef4e160218d0712e1cf42b837aa0949bcc90b",
+    "20121123_10SEF985545.copc.laz": "e769774b2323a35e81545be7d8d791dc34feea19b7affc0c355a84363b179f4e"
+  },
+  "copc_tile_urls": {
+    "20121123_10SEF895470.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF895470.copc.laz",
+    "20121123_10SEF895485.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF895485.copc.laz",
+    "20121123_10SEF910455.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910455.copc.laz",
+    "20121123_10SEF910470.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910470.copc.laz",
+    "20121123_10SEF910485.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910485.copc.laz",
+    "20121123_10SEF910500.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910500.copc.laz",
+    "20121123_10SEF910530.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910530.copc.laz",
+    "20121123_10SEF910545.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF910545.copc.laz",
+    "20121123_10SEF940560.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF940560.copc.laz",
+    "20121123_10SEF925455.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF925455.copc.laz",
+    "20121123_10SEF925470.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF925470.copc.laz",
+    "20121123_10SEF925545.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF925545.copc.laz",
+    "20121123_10SEF925560.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF925560.copc.laz",
+    "20121123_10SEF970545.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF970545.copc.laz",
+    "20121123_10SEF970560.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF970560.copc.laz",
+    "20121123_10SEF970590.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF970590.copc.laz",
+    "20121123_10SEF970605.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF970605.copc.laz",
+    "20121123_10SEF985545.copc.laz": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/geoid18/2612/20121123_10SEF985545.copc.laz"
+  },
+  "research_matrix_sha256": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+  "research_context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "point_horizontal_crs": "EPSG:3717",
+  "point_vertical_crs": "EPSG:5703 NAVD88 height",
+  "acoustic_class": 13,
+  "ignored_acoustic_class": 16,
+  "outlines_reviewed": 17,
+  "tiles_reviewed": 18,
+  "outlines_with_class13_points": 17,
+  "camera_positive_outlines_with_class13_points": 4,
+  "outlines_with_nominal_200_300ft_navd88_points": 17,
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970590.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970590.copc.laz"
+      ],
+      "class13_acoustic_points": 22509,
+      "class13_nominal_200_300ft_navd88_points": 22509,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 22509
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970590.copc.laz",
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970590.copc.laz",
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "class13_acoustic_points": 3800,
+      "class13_nominal_200_300ft_navd88_points": 3800,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 3800
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "class13_acoustic_points": 9500,
+      "class13_nominal_200_300ft_navd88_points": 9500,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 9500
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "class13_acoustic_points": 5360,
+      "class13_nominal_200_300ft_navd88_points": 5337,
+      "class16_ignored_acoustic_points": 5063,
+      "class13_point_source_id_counts": {
+        "12235": 4638,
+        "12287": 722
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970545.copc.laz",
+        "20121123_10SEF970560.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970545.copc.laz",
+        "20121123_10SEF970560.copc.laz"
+      ],
+      "class13_acoustic_points": 6569,
+      "class13_nominal_200_300ft_navd88_points": 6569,
+      "class16_ignored_acoustic_points": 1476,
+      "class13_point_source_id_counts": {
+        "12251": 6569
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF910530.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF910530.copc.laz"
+      ],
+      "class13_acoustic_points": 864,
+      "class13_nominal_200_300ft_navd88_points": 432,
+      "class16_ignored_acoustic_points": 5025,
+      "class13_point_source_id_counts": {
+        "12287": 864
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "class13_acoustic_points": 3093,
+      "class13_nominal_200_300ft_navd88_points": 3093,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 3093
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF910545.copc.laz",
+        "20121123_10SEF925545.copc.laz",
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF910545.copc.laz",
+        "20121123_10SEF925545.copc.laz",
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "class13_acoustic_points": 110116,
+      "class13_nominal_200_300ft_navd88_points": 1802,
+      "class16_ignored_acoustic_points": 21136,
+      "class13_point_source_id_counts": {
+        "12235": 107289,
+        "12287": 2827
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970590.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970590.copc.laz"
+      ],
+      "class13_acoustic_points": 1685,
+      "class13_nominal_200_300ft_navd88_points": 1685,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 1685
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "class13_acoustic_points": 1690,
+      "class13_nominal_200_300ft_navd88_points": 1690,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 1690
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF970605.copc.laz"
+      ],
+      "class13_acoustic_points": 1710,
+      "class13_nominal_200_300ft_navd88_points": 1710,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12241": 1710
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF925560.copc.laz"
+      ],
+      "class13_acoustic_points": 765,
+      "class13_nominal_200_300ft_navd88_points": 765,
+      "class16_ignored_acoustic_points": 830,
+      "class13_point_source_id_counts": {
+        "12235": 649,
+        "12287": 116
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": false,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF985545.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF985545.copc.laz"
+      ],
+      "class13_acoustic_points": 1597,
+      "class13_nominal_200_300ft_navd88_points": 157,
+      "class16_ignored_acoustic_points": 0,
+      "class13_point_source_id_counts": {
+        "12251": 1597
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "historical_rockfish_positive_windows": 2,
+      "prior_mapped_mpa_or_gea_review_hold": true,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF940560.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF940560.copc.laz"
+      ],
+      "class13_acoustic_points": 12426,
+      "class13_nominal_200_300ft_navd88_points": 6040,
+      "class16_ignored_acoustic_points": 22904,
+      "class13_point_source_id_counts": {
+        "12235": 29,
+        "12237": 8391,
+        "12251": 4006
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-001",
+      "historical_rockfish_positive_windows": 1,
+      "prior_mapped_mpa_or_gea_review_hold": true,
+      "prior_enc_danger_review_hold": true,
+      "intersecting_tiles": [
+        "20121123_10SEF895470.copc.laz",
+        "20121123_10SEF895485.copc.laz",
+        "20121123_10SEF910455.copc.laz",
+        "20121123_10SEF910470.copc.laz",
+        "20121123_10SEF910485.copc.laz",
+        "20121123_10SEF910500.copc.laz",
+        "20121123_10SEF925455.copc.laz",
+        "20121123_10SEF925470.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF895470.copc.laz",
+        "20121123_10SEF895485.copc.laz",
+        "20121123_10SEF910455.copc.laz",
+        "20121123_10SEF910470.copc.laz",
+        "20121123_10SEF910485.copc.laz",
+        "20121123_10SEF910500.copc.laz",
+        "20121123_10SEF925455.copc.laz",
+        "20121123_10SEF925470.copc.laz"
+      ],
+      "class13_acoustic_points": 723778,
+      "class13_nominal_200_300ft_navd88_points": 1249,
+      "class16_ignored_acoustic_points": 81872,
+      "class13_point_source_id_counts": {
+        "12237": 163936,
+        "12247": 559842
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-056",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": true,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF925455.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF925455.copc.laz"
+      ],
+      "class13_acoustic_points": 3175,
+      "class13_nominal_200_300ft_navd88_points": 2803,
+      "class16_ignored_acoustic_points": 222,
+      "class13_point_source_id_counts": {
+        "12247": 3175
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-003",
+      "historical_rockfish_positive_windows": 0,
+      "prior_mapped_mpa_or_gea_review_hold": true,
+      "prior_enc_danger_review_hold": false,
+      "intersecting_tiles": [
+        "20121123_10SEF910455.copc.laz"
+      ],
+      "tiles_with_any_points_in_outline": [
+        "20121123_10SEF910455.copc.laz"
+      ],
+      "class13_acoustic_points": 4294,
+      "class13_nominal_200_300ft_navd88_points": 409,
+      "class16_ignored_acoustic_points": 677,
+      "class13_point_source_id_counts": {
+        "12247": 4294
+      },
+      "mllw_depth_qualified": false,
+      "upper_vertical_error_qualified": false,
+      "independent_survey_qualified": false,
+      "fishing_target": false,
+      "exportable": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "next_acquisition": "Map point_source_id to the NOAA 2013 Full_DataInventory and acoustic source extents; obtain source survey, vertical accuracy/TPU and MLLW transformation before cell-depth review. Recheck legal/ENC screens separately.",
+  "limitations": [
+    "Class 13 denotes submerged acoustic points in the 2013 merged cloud; it does not by itself prove original sounding independence, positional accuracy, seabed material or fish presence.",
+    "The 2013 NOAA merged points and USGS 2016 2 m resample share lineage and cannot be treated as independent corroboration.",
+    "The LAS gps_time field is uninitialized/inconsistent for sampled acoustic tiles; file names and tile-wide STAC dates are not per-point survey dates.",
+    "Nominal NAVD88 elevations are not MLLW depths. No conservative upper error or chart-datum limit has been established.",
+    "The outline is research context, not a navigable or fishable patch; no exact coordinates or point geometries are published."
+  ],
+  "checked_at": "2026-09-27T07:29:13.395289+00:00"
+}

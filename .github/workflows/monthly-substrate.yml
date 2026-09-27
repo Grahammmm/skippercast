@@ -87,7 +87,7 @@ jobs:
           retention-days: 30
   monterey-original-multibeam-crosssurvey:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -117,10 +117,18 @@ jobs:
           --fetch
           --output var/review/monterey-2013-merge-lineage-gap.json
           --verify dist/data/monterey-2013-merge-lineage-gap.json
+      - name: Recheck original NOAA merge point classifications inside all 17 outlines
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_monterey_noaa2612_acoustic_points.py
+          --fetch
+          --output var/review/monterey-noaa2612-acoustic-point-support.json
+          --verify dist/data/monterey-noaa2612-acoustic-point-support.json
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage -v
+        run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_noaa2612_acoustic_points -v
       - name: Upload historical source receipts even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,6 +138,7 @@ jobs:
             var/review/monterey-1995-original-multibeam-overlap.json
             var/review/monterey-1998-original-em300-overlap.json
             var/review/monterey-2013-merge-lineage-gap.json
+            var/review/monterey-noaa2612-acoustic-point-support.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

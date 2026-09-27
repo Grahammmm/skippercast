@@ -11,3 +11,5 @@ h5py==3.15.1
 affine==3.0.1
 pylerc==4.2.0
 pyshp==3.1.6
+laspy[lazrs]==2.6.1
+lazrs==0.7.0
