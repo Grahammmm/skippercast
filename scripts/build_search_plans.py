@@ -53,6 +53,10 @@ def build(root=ROOT):
        'profiles':profiles,'features':features,'input_receipts':receipts,'rejected':rejected,
        'coverage_note':'Source footprints, not complete species distribution. No habitat is invented where a regional dataset is absent.'}
   target=root/'dist/regions'/r['id']/'search-plans.json';temp=target.with_suffix('.json.tmp');temp.write_text(json.dumps(out,separators=(',',':'))+'\n');temp.replace(target)
-  r['assets']['search_plans']='regions/'+r['id']+'/search-plans.json';path.write_text(json.dumps(r,indent=2)+'\n')
+  plans='regions/'+r['id']+'/search-plans.json'
+  # Rewrite the hand-maintained region file only when its content changes, so
+  # its bytes (and the hashes other reviews pin) stay stable across rebuilds.
+  if r['assets'].get('search_plans')!=plans:
+   r['assets']['search_plans']=plans;path.write_text(json.dumps(r,indent=2,ensure_ascii=False)+'\n')
   print(r['id'],len(features),'footprints;',len(out['profiles']),'species methods')
 if __name__=='__main__':build()

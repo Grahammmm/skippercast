@@ -1,72 +1,79 @@
 """Run dependency-light app tests on every supported core Python version.
 
-The separate survey-science CI job installs pinned GIS packages and runs the
-entire suite, including the modules excluded here.
+Test modules are classified automatically: a module that cannot be imported
+because one of the pinned scientific/GIS packages is absent is reported and
+left to the separate survey-science CI job, which installs those packages and
+runs the entire suite. Any other import failure (a typo, a missing project
+module, a non-GIS dependency) still fails this run.
+
+The classification used to be a hand-maintained list; new GIS tests were added
+without being listed, which broke both CI and the live-conditions refresh.
 """
 from pathlib import Path
+import argparse
+import importlib
+import re
 import sys
 import unittest
 
 
-GIS_TEST_MODULES = {
-    'test_big_sur_region',
-    'test_bluetopo_source',
-    'test_bottom_targets',
-    'test_camera_native_terrain',
-    'test_cdfw_substrate_pipeline',
-    'test_central_sediment_context',
-    'test_csumb_bss_native',
-    'test_csumb_scc_native',
-    'test_enc_hazard_refresh',
-    'test_native_hard_context',
-    'test_native_sector_leads',
-    'test_nbs_bag_reconciliation',
-    'test_nbs_modeling_tile',
-    'test_nbs_scheme_check',
-    'test_monterey_point_sur_region',
-    'test_nbs_statewide_camera_tiles',
-    'test_noaa_induration_camera',
-    'test_noaa_chlorophyll',
-    'test_noaa_hfr',
-    'test_noaa_sst',
-    'test_original_camera_chart_lead',
-    'test_original_class_nbs_tiles',
-    'test_region_bag_coverage',
-    'test_regular_bag_camera',
-    'test_regular_native_depth',
-    'test_regular_bag_hard',
-    'test_sansimeon_bedrock_overlap',
-    'test_santa_cruz_region',
-    'test_search_plan_geometry',
-    'test_shelter_cove_region',
-    'test_san_diego_substrate_lead',
-    'test_statewide_camera_dedup',
-    'test_statewide_regular_report_review',
-    'test_usgs_context_pipeline',
-    'test_usgs_caldig_v2',
-    'test_usgs_csmp_sources',
-    'test_usgs_depth_datum_ledger',
-    'test_usgs_doi_pipeline',
-    'test_usgs_video_audit',
-    'test_vr_camera_overlap',
-    'test_vr_hard_context',
-    'test_vr_native_depth',
-    'test_vr_region_protection',
-    'test_vdatum_samples',
-}
+# Top-level import names installed only by requirements-survey/-sst/-ocean.txt.
+SCIENTIFIC_PACKAGES = frozenset({
+    'affine', 'eccodes', 'h5py', 'laspy', 'lazrs', 'lerc', 'netCDF4', 'numpy',
+    'pyproj', 'pypdf', 'rasterio', 'scipy', 'shapefile', 'shapely',
+})
+
+
+def classify(names):
+    """Return (core modules, {module: missing scientific package})."""
+    core, deferred = [], {}
+    for name in names:
+        try:
+            importlib.import_module('tests.' + name)
+        except ModuleNotFoundError as error:
+            missing = (error.name or '').split('.')[0]
+            if missing not in SCIENTIFIC_PACKAGES:
+                raise
+            deferred[name] = missing
+        else:
+            core.append(name)
+    return core, deferred
+
+
+# Code the scheduled live-conditions job actually runs. Its pre-publish tests
+# are limited to modules exercising this code, so an unrelated survey-science
+# test can never stop the 30-minute public feed from refreshing.
+LIVE_CODE = re.compile(r'skippercast\.pipeline|skippercast import pipeline|scripts[./](refresh_regions|'
+                       r'check_saved_trips|prune_habitat_tiles)')
+
+
+def select(root, scope):
+    paths = sorted((root / 'tests').glob('test_*.py'))
+    if scope == 'live':
+        paths = [p for p in paths if LIVE_CODE.search(p.read_text(encoding='utf-8'))]
+    return [p.stem for p in paths]
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--scope', choices=('core', 'live'), default='core',
+                        help='live: only tests covering the scheduled conditions pipeline')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(root))
     sys.path.insert(0, str(root / 'src'))
-    names = [p.stem for p in sorted((root / 'tests').glob('test_*.py'))]
-    missing = GIS_TEST_MODULES - set(names)
-    if missing:
-        raise SystemExit(f'GIS test classification is stale: {sorted(missing)}')
+    names = select(root, args.scope)
+    core, deferred = classify(names)
+    if deferred:
+        print(f'Deferring {len(deferred)} module(s) to the survey-science job '
+              '(scientific packages not installed):', file=sys.stderr)
+        for name, package in sorted(deferred.items()):
+            print(f'  {name}  (needs {package})', file=sys.stderr)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromName('tests.' + name)
-                               for name in names if name not in GIS_TEST_MODULES)
+                               for name in core)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
+    if result.testsRun == 0:
+        raise SystemExit('No core tests ran')
     raise SystemExit(0 if result.wasSuccessful() else 1)
 
 

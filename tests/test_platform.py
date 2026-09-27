@@ -146,3 +146,17 @@ class RegionalContracts(TestCase):
             cells=struct.unpack("<16641h",base64.b64decode(tile["elevations"]))
             self.assertNotEqual(cells[64*129+64],-32768)
             self.assertAlmostEqual(-cells[64*129+64]/10*3.28084,target["recorded_validation"]["native_center_depth_ft"],delta=1)
+
+
+class ResearchOnlyPublication(TestCase):
+    """A research-only atlas must never be reported as depth-qualified."""
+
+    def test_research_only_targets_are_not_counted_as_qualified(self):
+        atlas = read_json(REPO / "dist/data/atlas.json")
+        coverage = read_json(REPO / "dist/regions/morro-bay/coverage.json")
+        if all(t.get("research_only") for t in atlas["targets"]):
+            self.assertEqual(coverage["qualified_bottom_views"], 0)
+            self.assertFalse(coverage["capabilities"]["fishing-exports"]["ready"])
+            self.assertIn("research-only", coverage["note"])
+        self.assertLessEqual(coverage["qualified_bottom_views"],
+                             sum(not t.get("research_only") for t in atlas["targets"]))

@@ -1,0 +1,65 @@
+name: Live feed freshness
+
+# Opens (or updates) a GitHub issue when the public conditions feed stops
+# refreshing, and closes it once publication resumes.
+on:
+  schedule:
+    - cron: "52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: live-feed-freshness
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check the published feed age
+        id: age
+        run: |
+          set +e
+          message="$(python scripts/check_feed_freshness.py --max-age-hours 3)"
+          status=$?
+          echo "$message"
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "message<<EOF"
+            echo "$message"
+            echo "EOF"
+            echo "stale=$([ $status -ne 0 ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Open or update the stale-feed issue
+        if: steps.age.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          gh label create feed-stale --color B60205 --description "Live conditions feed stopped refreshing" 2>/dev/null || true
+          existing="$(gh issue list --label feed-stale --state open --json number --jq '.[0].number')"
+          runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/live-conditions.yml"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$MESSAGE"
+          else
+            gh issue create --label feed-stale --title "Live conditions feed is stale" \
+              --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"
+          fi
+          exit 1
+      - name: Close the stale-feed issue after recovery
+        if: steps.age.outputs.stale == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          for number in $(gh issue list --label feed-stale --state open --json number --jq '.[].number'); do
+            gh issue close "$number" --comment "Recovered. $MESSAGE"
+          done

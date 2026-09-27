@@ -78,8 +78,11 @@ def build(root=REPO):
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)
         if qualified:report['qualified_subset']=qualified
+        research_only = bool(atlas["targets"]) and all(
+            t.get("research_only") is True and t.get("depth_qualified") is False and t.get("fishing_export") is False
+            for t in atlas["targets"])
         if (atlas["targets"] and not report["capabilities"]["surveyed-bottom-targets"]["ready"]
-                and not qualified_subset_satisfies(report, qualified)):
+                and not qualified_subset_satisfies(report, qualified) and not research_only):
             raise ValueError("Fishing targets cannot be published before their source requirements are met")
         west, south, east, north = region["fishing_bounds"]
         ids=set()
@@ -91,7 +94,12 @@ def build(root=REPO):
             if target["neighborhood_depth_ft"][1] > region["boat"]["bottom_depth_limit_ft"]:
                 raise ValueError("Target exceeds the configured fishing depth limit")
         report["published_targets"] = len(atlas["targets"])
-        report['qualified_bottom_views']=len(atlas['targets'])
+        # Count only depth-qualified coordinates; research-only candidates never qualify.
+        report['qualified_bottom_views']=sum(t.get("depth_qualified") is not False and not t.get("research_only")
+                                             for t in atlas['targets'])
+        if research_only:
+            report["note"] = region.get("research_only_note") or (
+                f"The {len(atlas['targets'])} published coordinates are research-only; none is chart-depth qualified.")
         report["published_bottom_views"] = sum(v["status"] == "surveyed" for v in read_json(within(root / "dist", region["assets"]["bottom_index"]))["views"].values())
         atomic_json(output / "coverage.json", report)
         atomic_json(output / "region.json", region)

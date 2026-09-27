@@ -10,11 +10,14 @@ from scripts.audit_bss03_datum_footprint import compile_review, stable
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PRIVATE_BLOCKS = ROOT / 'var/review/bss03-camera-100m-blocks.geojson'
 
 
 class Bss03DatumAcquisitionTests(unittest.TestCase):
+    @unittest.skipUnless(PRIVATE_BLOCKS.exists(),
+                         'Private review blocks (var/review, gitignored) are only on the maintainer machine')
     def test_footprint_probe_stays_private_and_unqualified(self):
-        blocks = json.loads((ROOT / 'var/review/bss03-camera-100m-blocks.geojson').read_text())
+        blocks = json.loads(PRIVATE_BLOCKS.read_text())
         access = json.loads((ROOT / 'dist/data/bss03-camera-access-triage.json').read_text())
 
         def get(params):
@@ -37,6 +40,15 @@ class Bss03DatumAcquisitionTests(unittest.TestCase):
         self.assertEqual(stable(report), stable(dict(report, checked_at='later')))
         with self.assertRaises(ValueError):
             compile_review(blocks, dict(access, private_block_fingerprint='changed'), get=get)
+
+    def test_published_diagnostic_stays_unqualified(self):
+        report = json.loads((ROOT / 'dist/data/bss03-footprint-vdatum-diagnostic.json').read_text())
+        text = json.dumps(report)
+        self.assertNotIn('longitude', text)
+        self.assertNotIn('request_url', text)
+        self.assertFalse(report['mllw_raster_converted'])
+        self.assertFalse(report['upper_bounded_mllw_depth_verified'])
+        self.assertEqual(report['qualified_waypoints'], 0)
 
     def test_archive_head_is_lead_only(self):
         contents = {
