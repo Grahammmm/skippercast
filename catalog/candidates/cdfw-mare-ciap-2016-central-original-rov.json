@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "id": "cdfw-mare-ciap-2016-central-original-rov",
+  "name": "2016 Soquel Canyon–Point Buchon ROV observation and effort tables",
+  "sector_ids": ["monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception"],
+  "need_ids": ["groundtruth", "species-occurrence", "substrate"],
+  "producer": {
+    "name": "Marine Applied Research and Exploration for California Department of Fish and Wildlife",
+    "url": "https://mareresearch.org/?p=1798"
+  },
+  "documentation_url": "https://www.cencoos.org/wp-content/uploads/2024/02/Appendix-F1.5-Coastal-Impact-Assistance-Program-CIAP-ROV-Survey-State-of-California-Data-Stream-Plan.pdf",
+  "access_url": "https://data.cencoos.org/#module-metadata/234576d4-347b-4c69-a986-1792c3023c8e/80b77bf3-273b-4fad-b660-22e3226d0547",
+  "access_status": "partial",
+  "rights": {
+    "license": null,
+    "terms_url": null,
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": null,
+    "resolution_m": null,
+    "horizontal_crs": null,
+    "vertical_datum": null,
+    "footprint_kind": "unknown",
+    "footprint_url": null,
+    "resolution_basis": "unknown",
+    "original_bottom_positions_available_to_pipeline": false,
+    "candidate_cell_overlap_verified": false,
+    "position_uncertainty_verified": false
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T04:51:51Z",
+    "update_cadence": "Static survey; quarterly access discovery until original row-level tables are reviewed",
+    "coverage_start": "2016-09-16",
+    "coverage_end": "2016-10-14"
+  },
+  "variables": [
+    "fish_density", "fish_count", "transect_effort_area", "depth", "temperature",
+    "substrate_percent_cover", "raw_and_cleaned_rov_position", "survey_line"
+  ],
+  "units": {
+    "fish_density": null,
+    "fish_count": "individuals",
+    "transect_effort_area": null,
+    "depth": null,
+    "temperature": null,
+    "substrate_percent_cover": "percent",
+    "raw_and_cleaned_rov_position": null,
+    "survey_line": null
+  },
+  "provenance": {
+    "access_service": "CeNCOOS historical data portal and advertised WFS/CSV downloads",
+    "raw_sha256": null,
+    "transformations": ["CeNCOOS data-stream plan reports original CDFW .mdb conversion to CSV and PostgreSQL; transformed rows have not been inspected here."]
+  },
+  "evidence": [
+    {
+      "url": "https://mareresearch.org/?p=1798",
+      "supports": "Producer reports 97.4 km post-processed at 33 sites and 12 study locations; original Access database, cleaned ROV tracks, sensor records, fish and substrate observations, effort and GIS lines were delivered to CDFW. These are report-wide totals, not qualified target counts."
+    },
+    {
+      "url": "https://www.cencoos.org/wp-content/uploads/2024/02/Appendix-F1.5-Coastal-Impact-Assistance-Program-CIAP-ROV-Survey-State-of-California-Data-Stream-Plan.pdf",
+      "supports": "CeNCOOS says CDFW .mdb observation and GIS data were made public through its portal, WFS and CSV; the plan distinguishes fish count, effort, depth and substrate fields. The current row-level download has not been verified."
+    },
+    {
+      "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Management/monitoring/ROV",
+      "supports": "CDFW describes the statewide ROV survey design and MPA monitoring context, not candidate-scale 2016 observation locations."
+    },
+    {
+      "url": "https://data.axds.co/gs/ciap_seafloor/wfs?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application/json&typeName=ciap_seafloor%3Acruise_e_videopoints&maxFeatures=2",
+      "supports": "Live WFS reports 236,960 timecoded 2016 Central Coast video-position features, with site, dive, line and coordinates; it is not a fish-observation table."
+    },
+    {
+      "url": "https://data.axds.co/gs/ciap_hex/wfs?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application/json&typeName=ciap_hex%3Afish_wms&maxFeatures=2",
+      "supports": "Live WFS reports 49,076 aggregate fish-display features with count and taxa fields; it does not expose raw fish detections at video positions."
+    }
+  ],
+  "limitations": [
+    "Public WFS video-position and aggregate fish-display layers are accessible, but the exact 2016 row-level fish/substrate table, cleaned track-quality record and source bytes have not been obtained or hashed.",
+    "No open-reference 200–300 ft observation has been joined to a qualified original bathymetry and habitat footprint.",
+    "Request raw/cleaned bottom position, position-gap and filter flags, uncertainty, taxon, timecode, depth datum, substrate, zero-detection segments, swept area, visibility and MPA/reference role before any spot-level use.",
+    "Publisher's historical public-access statement does not establish an exact redistribution license for SkipperCast derivatives."
+  ]
+}

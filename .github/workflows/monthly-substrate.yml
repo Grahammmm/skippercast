@@ -108,6 +108,11 @@ jobs:
           python scripts/audit_cal_dig_shallow_300_gap.py
           --output var/review/cal-dig-i-original-rov-300ft-gap.json
           --verify dist/data/cal-dig-i-original-rov-300ft-gap.json
+      - name: Recheck CIAP Central ROV public video and aggregate fish layers
+        run: >-
+          python scripts/audit_ciap_rov_portal.py
+          --output var/review/ciap-2016-central-rov-public-service-audit.json
+          --verify dist/data/ciap-2016-central-rov-public-service-audit.json
       - name: Recheck original H13152 and W00479 active MLLW cells
         env:
           PYTHONPATH: src:.
@@ -115,7 +120,7 @@ jobs:
           python scripts/audit_central_deep_original_300.py --fetch --output var/review/central-deep-original-300-refutation.json
           cmp var/review/central-deep-original-300-refutation.json dist/data/central-deep-original-300-refutation.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -133,6 +138,7 @@ jobs:
           name: central-coast-source-gaps
           path: |
             var/review/f00844-original-fifth-bag-review.json
+            var/review/ciap-2016-central-rov-public-service-audit.json
             var/review/w00614-pigeon-original-character-overlap.json
             var/review/w00614-usgs-video-observation-gap.json
             var/review/w00614-noaa-sh1809-observation-gap.json

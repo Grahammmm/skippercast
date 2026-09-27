@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "scope": "ciap-2016-central-public-wfs-service-access",
+  "checked_at": "2026-09-27T04:55:37.790100+00:00",
+  "source_documentation_url": "https://www.cencoos.org/wp-content/uploads/2024/02/Appendix-F1.5-Coastal-Impact-Assistance-Program-CIAP-ROV-Survey-State-of-California-Data-Stream-Plan.pdf",
+  "central_video": {
+    "url": "https://data.axds.co/gs/ciap_seafloor/wfs?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application%2Fjson&typeName=ciap_seafloor%3Acruise_e_videopoints&maxFeatures=2",
+    "total_features_reported": 236960,
+    "sample_property_fields": [
+      "count",
+      "datetime",
+      "dive",
+      "duration",
+      "frame",
+      "id",
+      "lat",
+      "line",
+      "location",
+      "lon",
+      "photo_date",
+      "photoname",
+      "picasa_album_id",
+      "picasa_id",
+      "site",
+      "survey_date",
+      "survey_timestamp",
+      "tc",
+      "timestamp",
+      "video",
+      "video_name",
+      "youtube_id"
+    ],
+    "sample_geometry_types": [
+      "Point"
+    ],
+    "response_crs": "urn:ogc:def:crs:EPSG::4326",
+    "interpretation": "Timecoded 2016 cruise E video positions; not fish detections or independent substrate annotations."
+  },
+  "fish_display": {
+    "url": "https://data.axds.co/gs/ciap_hex/wfs?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application%2Fjson&typeName=ciap_hex%3Afish_wms&maxFeatures=2",
+    "total_features_reported": 49076,
+    "sample_property_fields": [
+      "area_fish",
+      "area_invert",
+      "count",
+      "taxa"
+    ],
+    "sample_geometry_types": [
+      "Point"
+    ],
+    "response_crs": "urn:ogc:def:crs:EPSG::3857",
+    "interpretation": "Aggregated fish-display features; not verified row-level fish observations or exact ROV bottom positions."
+  },
+  "original_row_level_fish_and_substrate_tables_retrieved": false,
+  "position_uncertainty_verified": false,
+  "independent_substrate_gate_satisfied": false,
+  "biological_fish_gate_satisfied": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "WFS counts are server-reported historical layer totals; the audit intentionally omits sample coordinates and does not infer a 200\u2013300 ft open-reference count. Obtain and review the original fish/substrate and effort tables, cleaned position error and sample roles before a candidate-scale join."
+}

@@ -41,6 +41,8 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertIn("dist/data/estero-2012-vdatum-spatial-diagnostic.json", estero["source_receipts"])
         self.assertIn("dist/data/estero-2012-public-release-inventory.json", estero["source_receipts"])
         south_sur = next(s for s in result["sectors"] if s["sector_id"] == "sur-san-simeon")
+        self.assertIn("catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json", south_sur["source_receipts"])
+        self.assertIn("dist/data/ciap-2016-central-rov-public-service-audit.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-video-grid-overlap.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-camera-access-triage.json", south_sur["source_receipts"])
         self.assertIn("dist/data/bss03-original-vessel-tpu-inputs.json", south_sur["source_receipts"])
@@ -101,6 +103,20 @@ class QualificationPlanTests(unittest.TestCase):
 
         with patch.object(plan, "load", side_effect=changed):
             with self.assertRaisesRegex(ValueError, "original lander source status changed"):
+                plan.build(ROOT)
+
+    def test_mare_report_cannot_silently_become_candidate_scale_evidence(self):
+        original = plan.load
+
+        def changed(root, relative):
+            data = original(root, relative)
+            if relative == "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json":
+                data = copy.deepcopy(data)
+                data["spatial"]["candidate_cell_overlap_verified"] = True
+            return data
+
+        with patch.object(plan, "load", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "CDFW/MARE original 2016 ROV source status changed"):
                 plan.build(ROOT)
 
 

@@ -29,7 +29,9 @@
     "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1",
     "dist/data/w00614-usgs-video-observation-gap.json": "903db015ef0747b7c0ff75a542dd7cb723d31ebb938fcb7e663929deee45329b",
     "dist/data/w00614-noaa-sh1809-observation-gap.json": "6c100bcbb08c55fed2380c957ac04ca24da527f7a6183a63ca01a90e1f599c71",
-    "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "74dc4340fb0b540bb497e0ad3dfe22b9844dbe2738314d44b8f2287a7ec1dfab"
+    "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "74dc4340fb0b540bb497e0ad3dfe22b9844dbe2738314d44b8f2287a7ec1dfab",
+    "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json": "4babf6cea10eb3b6cc7928b8437e959f0d1a6a52f5d88e931693ff3ea7071a75",
+    "dist/data/ciap-2016-central-rov-public-service-audit.json": "612d4cf2a8f0e3b51a3261127d41af5734b9953fb27dc9d73be145f44eff51a5"
   },
   "release_gate_ids": [
     "native-cells",
@@ -252,7 +254,9 @@
       "limiting_evidence": "No chart-datum depth and uncertainty over the reviewed rock outlines.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
-        "dist/data/central-dataone-rov-300ft-spot-precision.json"
+        "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
+        "dist/data/central-dataone-rov-300ft-spot-precision.json",
+        "dist/data/ciap-2016-central-rov-public-service-audit.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,
@@ -330,7 +334,9 @@
       "limiting_evidence": "Datum, upper uncertainty, source rights and independent substrate remain unresolved.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
+        "dist/data/ciap-2016-central-rov-public-service-audit.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -409,6 +415,7 @@
       "limiting_evidence": "One historical camera line cannot define a full rock patch or current catch odds; chart-datum depth, upper uncertainty, rights and access remain unresolved.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/bss03-camera-access-triage.json",
         "dist/data/bss03-caris-acquisition-lead.json",
         "dist/data/bss03-caris-original-tpe-member-lead.json",
@@ -417,6 +424,7 @@
         "dist/data/bss03-video-grid-overlap.json",
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
+        "dist/data/ciap-2016-central-rov-public-service-audit.json",
         "dist/data/csumb-bss-native-source-review.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
@@ -495,7 +503,9 @@
       "limiting_evidence": "Direct block-center VDatum does not bound product error or every 2 m cell; the 2010 depth cross-check reaches four shallow blocks and no deeper blocks, while the reviewed C0212SC camera survey has no nearby groundtruth.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/central-deep-original-300-refutation.json",
+        "dist/data/ciap-2016-central-rov-public-service-audit.json",
         "dist/data/estero-2012-public-release-inventory.json",
         "dist/data/estero-2012-vdatum-spatial-diagnostic.json",
         "dist/data/estero-independent-2012-depth-2008-character-overlap.json",
@@ -579,9 +589,11 @@
       "limiting_evidence": "The grid metadata establish NAVD88 Geoid03 but not independent 2009 acquisition, vertical accuracy or rights. Nominal overlap can include protected or inaccessible areas; no full-patch MLLW depth, independent fish support, safe access or current legal review is complete.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
+        "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
         "dist/data/cal-dig-i-original-rov-300ft-gap.json",
         "dist/data/central-dataone-rov-300ft-spot-precision.json",
         "dist/data/central-deep-original-300-refutation.json",
+        "dist/data/ciap-2016-central-rov-public-service-audit.json",
         "dist/data/point-buchon-2007-caris-prefix-lead.json",
         "dist/data/point-buchon-2007-ncei-line-index.json",
         "dist/data/point-buchon-2007-ncei-multibeam-lead.json",
