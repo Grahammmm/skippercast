@@ -52,6 +52,7 @@ class QualificationPlanTests(unittest.TestCase):
         self.assertEqual(next(t for t in south_sur["tracks"] if t["id"] == "legal-chart-access")["stage"], "partial-release-evidence")
         self.assertFalse(south_sur["independent_groundtruth_at_candidate_scale"])
         conception = next(s for s in result["sectors"] if s["sector_id"] == "morro-conception")
+        self.assertIn("dist/data/point-buchon-private-block-access-screen.json", conception["source_receipts"])
         self.assertIn("dist/data/central-dataone-rov-300ft-spot-precision.json", conception["source_receipts"])
         self.assertIn("dist/data/central-deep-original-300-refutation.json", conception["source_receipts"])
         self.assertIn("dist/data/point-buchon-noaa-catalog-envelope-gap.json", conception["source_receipts"])

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "scope": "point-buchon-private-100m-blocks-cdfw-mpa-noaa-enc-research-screen",
+  "cdfw_checked_at": "2026-09-27T02:11:48.140370+00:00",
+  "cdfw_source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.02%2C35.1%2C-120.79%2C35.33&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson",
+  "noaa_enc_checked_at": "2026-09-27T02:11:53.196976+00:00",
+  "noaa_enc_source_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect",
+  "noaa_enc_feature_count": 1062,
+  "noaa_enc_layer_count": 18,
+  "cdfw_query_bounds": [
+    -121.02,
+    35.1,
+    -120.79,
+    35.33
+  ],
+  "projected_crs": "EPSG:32610",
+  "groups": {
+    "rov_blocks": {
+      "block_count": 26,
+      "mpa": {
+        "Morro Bay SMRMA": {
+          "intersects": 0,
+          "within_100m": 0
+        },
+        "Point Buchon SMCA": {
+          "intersects": 0,
+          "within_100m": 0
+        },
+        "Point Buchon SMR": {
+          "intersects": 0,
+          "within_100m": 0
+        }
+      },
+      "any_mpa_intersection": 0,
+      "any_mpa_within_100m": 0,
+      "any_enc_feature_within_100m": 0,
+      "any_enc_feature_within_250m": 0,
+      "legal_route_hazard_gate_satisfied": false,
+      "fishing_target": false
+    },
+    "terrain_blocks": {
+      "block_count": 181,
+      "mpa": {
+        "Morro Bay SMRMA": {
+          "intersects": 0,
+          "within_100m": 0
+        },
+        "Point Buchon SMCA": {
+          "intersects": 5,
+          "within_100m": 7
+        },
+        "Point Buchon SMR": {
+          "intersects": 0,
+          "within_100m": 2
+        }
+      },
+      "any_mpa_intersection": 5,
+      "any_mpa_within_100m": 8,
+      "any_enc_feature_within_100m": 0,
+      "any_enc_feature_within_250m": 0,
+      "legal_route_hazard_gate_satisfied": false,
+      "fishing_target": false
+    }
+  },
+  "full_footprint_legal_chart_access_verified": false,
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": "Proximity to three CDFW MPA polygons and this NOAA ENC Direct danger-layer snapshot only. Other state/federal closures, security areas, regulations by species/date/method, chart completeness, approaches and return routes have not been cleared. ENC Direct is not certified navigation data. No depth, substrate, fish or position-error qualification is inferred.",
+  "source_sha256": {
+    "rov_blocks": "16556b736b9d4cae60c9e3d88a1023fc1cd5db4f01be44c856c3960fd6e8223c",
+    "terrain_blocks": "5e9c6b34c6e060425a36839a36b8f179f9a6d4c1c3c29b5d945fcf7d77fc46b4",
+    "cdfw_mpas": "2407add0f290ef9f478f00577b575406493f1449c35dd288fc96af2c75f173aa",
+    "noaa_enc": "9abc8f93cef41118834efe5b9fbee399528f41e1d4c69adc4e93e38c1a2cdeae"
+  },
+  "audited_at": "2026-09-27T05:16:16.556086+00:00"
+}
