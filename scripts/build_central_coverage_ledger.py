@@ -44,6 +44,7 @@ def build(root):
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
     conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
+    conception_patch = read(root / "dist/data/point-conception-original-4m-patch-robustness.json")
     conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
@@ -66,6 +67,11 @@ def build(root):
             or conception_rugged.get("total_inset_components_at_least_2500m2") != 2
             or conception_rugged.get("fishing_target") is not False):
         raise ValueError("Point Conception 4 m rugged overlap changed")
+    if (conception_patch.get("scope") != "point-conception-original-4m-class3-patch-depth-boundary-sensitivity"
+            or {row.get("survey_id") for row in conception_patch.get("rows", [])} != {"H11952", "H11953"}
+            or sum(len(row["eight_meter_inset_patches"]) for row in conception_patch["rows"]) != 2
+            or conception_patch.get("fishing_target") is not False):
+        raise ValueError("Point Conception full-patch depth or boundary screen changed")
     if (conception_8m.get("scope") != "point-conception-original-8m-mllw-usgs-class2-class3-aggregate-overlap"
             or sum(row["class3_hard_rugged_two_cell_inset"]["inset_components_at_least_2500m2"]
                    for row in conception_8m.get("rows", [])) != 0
@@ -134,6 +140,11 @@ def build(root):
                 "inset_components_at_least_2500m2": 2,
                 "status": "research-only; source registration and independence unverified",
             } if region_id == "point-arguello-conception" else None),
+            "original_4m_patch_robustness": ({
+                "receipt": "dist/data/point-conception-original-4m-patch-robustness.json",
+                "eight_meter_inset_research_patches": 2,
+                "status": "research-only; no measured horizontal registration or independent groundtruth",
+            } if region_id == "point-arguello-conception" else None),
             "original_8m_hard_overlap": ({
                 "receipt": "dist/data/point-conception-original-8m-hard-overlap.json",
                 "retained_rugged_patches_at_least_2500m2": 0,
@@ -168,6 +179,7 @@ def build(root):
             "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
             "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
             "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
+            "point_conception_4m_patch_robustness": "data/point-conception-original-4m-patch-robustness.json",
             "point_conception_8m_hard_overlap": "data/point-conception-original-8m-hard-overlap.json",
             "point_conception_4m_point_in_time_access": "data/point-conception-original-4m-access-screen.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",

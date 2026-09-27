@@ -1,0 +1,96 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "BAG productUncert is reported as supplied; no confidence interval or horizontal error bound is inferred.",
+    "Boundary insets test class sensitivity, not actual registration accuracy or positional uncertainty.",
+    "USGS class 3 may share acoustic source lineage with NOAA and is not independent bottom or fish groundtruth.",
+    "The 2 m allowance is a planning screen, not a water-level or vessel-draft forecast.",
+    "No trip-specific security, full-route, drift or biological qualification is implied."
+  ],
+  "rows": [
+    {
+      "boundary_inset_sensitivity_m": {
+        "0": {
+          "components_at_least_2500m2": 29,
+          "largest_component_area_m2": 19616
+        },
+        "12": {
+          "components_at_least_2500m2": 1,
+          "largest_component_area_m2": 2960
+        },
+        "16": {
+          "components_at_least_2500m2": 0,
+          "largest_component_area_m2": 1664
+        },
+        "4": {
+          "components_at_least_2500m2": 7,
+          "largest_component_area_m2": 7072
+        },
+        "8": {
+          "components_at_least_2500m2": 1,
+          "largest_component_area_m2": 4736
+        }
+      },
+      "eight_meter_inset_patches": [
+        {
+          "all_cells_deeper_than_200ft_after_supplied_uncertainty": true,
+          "area_m2": 4736,
+          "maximum_depth_plus_uncertainty_and_2m_allowance_m": 76.09,
+          "maximum_mllw_depth_m": 73.473,
+          "maximum_supplied_product_uncertainty_m": 0.617,
+          "minimum_clearance_to_300ft_after_allowance_m": 15.35,
+          "minimum_depth_minus_supplied_uncertainty_m": 68.854,
+          "minimum_mllw_depth_m": 69.408,
+          "native_cells": 296
+        }
+      ],
+      "survey_id": "H11952"
+    },
+    {
+      "boundary_inset_sensitivity_m": {
+        "0": {
+          "components_at_least_2500m2": 1,
+          "largest_component_area_m2": 6752
+        },
+        "12": {
+          "components_at_least_2500m2": 0,
+          "largest_component_area_m2": 2384
+        },
+        "16": {
+          "components_at_least_2500m2": 0,
+          "largest_component_area_m2": 800
+        },
+        "4": {
+          "components_at_least_2500m2": 1,
+          "largest_component_area_m2": 5120
+        },
+        "8": {
+          "components_at_least_2500m2": 1,
+          "largest_component_area_m2": 3616
+        }
+      },
+      "eight_meter_inset_patches": [
+        {
+          "all_cells_deeper_than_200ft_after_supplied_uncertainty": false,
+          "area_m2": 3616,
+          "maximum_depth_plus_uncertainty_and_2m_allowance_m": 64.686,
+          "maximum_mllw_depth_m": 62.32,
+          "maximum_supplied_product_uncertainty_m": 0.381,
+          "minimum_clearance_to_300ft_after_allowance_m": 26.754,
+          "minimum_depth_minus_supplied_uncertainty_m": 60.679,
+          "minimum_mllw_depth_m": 61.046,
+          "native_cells": 226
+        }
+      ],
+      "survey_id": "H11953"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "point-conception-original-4m-class3-patch-depth-boundary-sensitivity",
+  "source_bag_surveys": [
+    "H11952",
+    "H11953"
+  ],
+  "usgs_character_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip"
+}

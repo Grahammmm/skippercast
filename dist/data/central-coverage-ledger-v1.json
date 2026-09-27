@@ -7,6 +7,7 @@
     "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
     "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
     "point_conception_4m_rugged_overlap": "data/point-conception-original-4m-rugged-overlap.json",
+    "point_conception_4m_patch_robustness": "data/point-conception-original-4m-patch-robustness.json",
     "point_conception_8m_hard_overlap": "data/point-conception-original-8m-hard-overlap.json",
     "point_conception_4m_point_in_time_access": "data/point-conception-original-4m-access-screen.json",
     "existing_target_closures": "data/central-atlas-300-current-closure-screen.json"
@@ -52,6 +53,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -89,6 +91,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -126,6 +129,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -163,6 +167,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -200,6 +205,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -237,6 +243,7 @@
       "original_200_300ft_gap": null,
       "original_200_300ft_native_lead": null,
       "original_4m_rugged_overlap": null,
+      "original_4m_patch_robustness": null,
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
@@ -287,6 +294,11 @@
         "receipt": "dist/data/point-conception-original-4m-rugged-overlap.json",
         "inset_components_at_least_2500m2": 2,
         "status": "research-only; source registration and independence unverified"
+      },
+      "original_4m_patch_robustness": {
+        "receipt": "dist/data/point-conception-original-4m-patch-robustness.json",
+        "eight_meter_inset_research_patches": 2,
+        "status": "research-only; no measured horizontal registration or independent groundtruth"
       },
       "original_8m_hard_overlap": {
         "receipt": "dist/data/point-conception-original-8m-hard-overlap.json",

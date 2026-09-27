@@ -27,6 +27,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertIn("two BAG files only", conception["original_200_300ft_gap"]["scope"])
         self.assertEqual(conception["original_200_300ft_native_lead"]["nominal_4m_depth_cells"], 3318707)
         self.assertEqual(conception["original_4m_rugged_overlap"]["inset_components_at_least_2500m2"], 2)
+        self.assertEqual(conception["original_4m_patch_robustness"]["eight_meter_inset_research_patches"], 2)
         self.assertEqual(conception["original_8m_hard_overlap"]["retained_hard_flat_patches_inside_requested_region"], 0)
         self.assertEqual(conception["original_4m_point_in_time_access"]["mapped_gis_held_components_at_review"], 0)
         self.assertEqual(conception["qualified_targets_200_to_300ft"], 0)

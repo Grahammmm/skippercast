@@ -272,6 +272,13 @@ jobs:
           python -m scripts.audit_point_conception_4m_hard_overlap --fetch
           --output var/review/point-conception-original-4m-rugged-overlap.json
           --verify dist/data/point-conception-original-4m-rugged-overlap.json
+      - name: Recheck full patch depth bounds and boundary sensitivity
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python -m scripts.audit_point_conception_4m_patch_robustness
+          --output var/review/point-conception-original-4m-patch-robustness.json
+          --verify dist/data/point-conception-original-4m-patch-robustness.json
       - name: Recheck Point Conception original 8 m hard-class overlap and regional scope
         env:
           PYTHONPATH: src:.
@@ -313,7 +320,7 @@ jobs:
           --verify dist/data/point-conception-original-4m-source-lineage.json
           --output var/review/point-conception-original-4m-source-lineage.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
-        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_point_conception_original_300_ladder tests.test_point_conception_4m_hard_overlap tests.test_point_conception_8m_hard_overlap tests.test_point_conception_4m_access tests.test_point_conception_4m_camera_gap tests.test_point_conception_4m_lineage tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
+        run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_point_conception_original_300_ladder tests.test_point_conception_4m_hard_overlap tests.test_point_conception_4m_patch_robustness tests.test_point_conception_8m_hard_overlap tests.test_point_conception_4m_access tests.test_point_conception_4m_camera_gap tests.test_point_conception_4m_lineage tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
       - name: Rebuild deterministic Central Coast coverage and source priorities
         run: |
           python scripts/build_central_coverage_ledger.py --output var/review/central-coverage-ledger-v1.json
@@ -340,6 +347,7 @@ jobs:
             var/review/point-conception-original-bag-200-300ft-gap.json
             var/review/point-conception-original-bag-depth-ladder.json
             var/review/point-conception-original-4m-rugged-overlap.json
+            var/review/point-conception-original-4m-patch-robustness.json
             var/review/point-conception-original-8m-hard-overlap.json
             var/review/point-conception-current-cdfw-mpas.json
             var/review/point-conception-current-federal-areas.json
