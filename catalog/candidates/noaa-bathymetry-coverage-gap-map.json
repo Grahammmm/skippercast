@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "noaa-bathymetry-coverage-gap-map",
+  "name": "NOAA U.S. bathymetry coverage and gap analysis",
+  "region_ids": ["santa-cruz-monterey-bay", "monterey-point-sur", "big-sur-coast", "south-big-sur-san-simeon", "cambria-san-simeon", "morro-bay", "point-arguello-conception"],
+  "sector_ids": ["pigeon-monterey", "monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception"],
+  "need_ids": ["bathymetry"],
+  "producer": {
+    "name": "NOAA Integrated Ocean and Coastal Mapping, NCEI and Office of Coast Survey",
+    "url": "https://iocm.noaa.gov/seabed-2030-bathymetry.html"
+  },
+  "documentation_url": "https://iocm.noaa.gov/seabed-2030-bathymetry.html",
+  "access_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/bathy_gap_analysis/MapServer",
+  "access_status": "accessible",
+  "variables": ["archived_bathymetry_coverage_class"],
+  "units": {"archived_bathymetry_coverage_class": "approximately 100 m cell; 1-2 soundings versus 3+ soundings or source footprint"},
+  "rights": {
+    "license": null,
+    "terms_url": "https://www.arcgis.com/sharing/rest/content/items/4d7d925fc96d47d9ace970dd5040df0a?f=json",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-123.5, 34.45, -119.8, 37.18333333333333],
+    "resolution_m": 100,
+    "horizontal_crs": "WGS84 geographic service extent; source tiles approximately 100 m",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/bathy_gap_analysis/MapServer",
+    "resolution_basis": "advertised"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T15:11:13+00:00",
+    "update_cadence": "NOAA indicates biannual compilation; check item modified timestamp monthly and review changes",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "provenance": {
+    "access_service": "Official NOAA ArcGIS item and MapServer identify",
+    "raw_sha256": "280f3585bb195af7881101a1c3717a4404ac29ef8545618d1da5d2e588cfb0c5",
+    "transformations": [
+      "Checked NOAA's two-class service schema and four isolated Central Coast probes; receipt dist/data/noaa-central-bathymetry-gap-discovery.json",
+      "No elevation, native survey cell, fishing polygon or coverage percentage inferred from the class image"
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://iocm.noaa.gov/seabed-2030-bathymetry.html",
+      "supports": "NOAA documents ~100 m classes from post-1960 archived soundings and survey footprints, with source-specific supersession rules."
+    },
+    {
+      "url": "https://www.arcgis.com/sharing/rest/content/items/4d7d925fc96d47d9ace970dd5040df0a?f=json",
+      "supports": "Official public item identifies this MapServer and says the bathymetry inputs were processed in August 2026."
+    },
+    {
+      "url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/bathy_gap_analysis/MapServer?f=json",
+      "supports": "Live service exposes separate 3-plus-or-footprint and 1-2 sounding-density raster layers."
+    }
+  ],
+  "limitations": [
+    "Discovery aid only: it does not satisfy the bathymetry need for a fishing spot because it has no elevation, native resolution, datum, uncertainty or valid survey-cell mask.",
+    "A 3-plus class may come from a survey footprint assigned that class rather than three observed soundings at the displayed cell.",
+    "The four audited point probes do not establish sector-wide coverage. A transparent result is not proof that an area was never surveyed.",
+    "No source-grid redistribution or public display is authorized by this source review."
+  ]
+}

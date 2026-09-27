@@ -1082,6 +1082,13 @@ jobs:
           python scripts/audit_csumb_source_policy.py
           --output var/review/csumb-original-source-policy-review.json
           --verify dist/data/csumb-original-source-policy-review.json
+      - name: Recheck NOAA bathymetry coverage discovery service
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_noaa_bathymetry_gap.py
+          --output var/review/noaa-central-bathymetry-gap-discovery.json
+          --verify dist/data/noaa-central-bathymetry-gap-discovery.json
       - name: Reopen original H11876 side-scan mosaic and companion files
         run: |
           mkdir -p var/noaa-native-cache
