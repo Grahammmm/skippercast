@@ -25,6 +25,8 @@ class CentralCoveragePipelineTests(unittest.TestCase):
                           if region["region_id"] == "point-arguello-conception")
         self.assertEqual(conception["original_200_300ft_gap"]["populated_depth_band_cells"], 0)
         self.assertIn("two BAG files only", conception["original_200_300ft_gap"]["scope"])
+        self.assertEqual(conception["original_200_300ft_native_lead"]["nominal_4m_depth_cells"], 3318707)
+        self.assertEqual(conception["qualified_targets_200_to_300ft"], 0)
 
     def test_failed_closure_screen_blocks_ledger(self):
         original = coverage.read
@@ -54,6 +56,20 @@ class CentralCoveragePipelineTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exact-file deep-band gap changed"):
                 coverage.build(ROOT)
 
+    def test_changed_point_conception_depth_ladder_blocks_queue(self):
+        original = sources.read
+
+        def changed_read(path):
+            result = original(path)
+            if str(path).endswith("point-conception-original-bag-depth-ladder.json"):
+                result = copy.deepcopy(result)
+                result["nominal_200_to_300ft_4m_cells"] += 1
+            return result
+
+        with patch.object(sources, "read", side_effect=changed_read):
+            with self.assertRaisesRegex(ValueError, "deep-cell lead changed"):
+                sources.build(ROOT)
+
     def test_source_queue_keeps_native_band_leads_on_hold(self):
         result = sources.build(ROOT)
         self.assertEqual(result["status"], "research-only")
@@ -73,6 +89,8 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         conception = result["sectors"][-1]
         self.assertEqual(conception["point_conception_original_bag_deep_gap"]["populated_200_300ft_cells"], 0)
         self.assertFalse(conception["point_conception_original_bag_deep_gap"]["fishing_target"])
+        self.assertEqual(conception["point_conception_original_bag_deep_lead"]["native_4m_nominal_200_300ft_cells"], 3318707)
+        self.assertFalse(conception["point_conception_original_bag_deep_lead"]["exportable"])
         self.assertEqual(conception["noaa_original_200_300ft_sector_refutations"][0]["survey_id"], "H11951")
         self.assertEqual({row["survey_id"] for row in conception["noaa_original_deepwater_300ft_refutations"]},
                          {"H13152", "W00479"})

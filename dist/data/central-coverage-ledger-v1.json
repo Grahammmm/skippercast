@@ -5,6 +5,7 @@
     "nbs_300ft": "data/nbs-central-300-depth-screen.json",
     "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
     "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
+    "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
     "existing_target_closures": "data/central-atlas-300-current-closure-screen.json"
   },
   "source_audit_times": {
@@ -46,6 +47,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -79,6 +81,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -112,6 +115,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -145,6 +149,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -178,6 +183,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",
         "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -211,6 +217,7 @@
         "NOAA NOS original BAGs"
       ],
       "original_200_300ft_gap": null,
+      "original_200_300ft_native_lead": null,
       "remaining_gates": [
         "No newly qualified 200\u2013300 ft source footprint",
         "Independent fish-presence/catch-effort evidence remains absent"
@@ -237,8 +244,8 @@
       },
       "fishing_coordinate_status": "none-qualified",
       "next_source_leads": [
-        "NOAA H11952/H11953 original BAGs plus USGS character only in their measured shallow files",
-        "Other original surveys with populated 200\u2013300 ft cells and paired substrate"
+        "NOAA H11952/H11953 original 4 m and 8 m MLLW BAG depth cells",
+        "Cellwise uncertainty, independent substrate and full access review before target promotion"
       ],
       "original_200_300ft_gap": {
         "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
@@ -248,6 +255,12 @@
         ],
         "populated_depth_band_cells": 0,
         "scope": "these two BAG files only, not complete surveys or adjacent coast"
+      },
+      "original_200_300ft_native_lead": {
+        "receipt": "dist/data/point-conception-original-bag-depth-ladder.json",
+        "nominal_native_depth_cells": 3990509,
+        "nominal_4m_depth_cells": 3318707,
+        "status": "research-only; no ranked or exportable deeper targets"
       },
       "remaining_gates": [
         "Original measured depth at candidate cell and surrounding drift patch",

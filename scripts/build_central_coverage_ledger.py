@@ -28,7 +28,7 @@ SOURCE_LEADS = {
     "south-big-sur-san-simeon": ("USGS DS 781 southern Big Sur blocks", "NOAA NOS original BAGs"),
     "cambria-san-simeon": ("USGS original bathymetry/character survey pairs", "NOAA NOS original BAGs"),
     "morro-bay": ("USGS original surveys beyond the 200 ft source screen", "NOAA NOS original BAGs"),
-    "point-arguello-conception": ("NOAA H11952/H11953 original BAGs plus USGS character only in their measured shallow files", "Other original surveys with populated 200–300 ft cells and paired substrate"),
+    "point-arguello-conception": ("NOAA H11952/H11953 original 4 m and 8 m MLLW BAG depth cells", "Cellwise uncertainty, independent substrate and full access review before target promotion"),
 }
 
 
@@ -42,6 +42,7 @@ def build(root):
     nbs = read(root / "dist/data/nbs-central-300-depth-screen.json")
     hard = read(root / "dist/data/point-conception-native-hard-300-review-summary.json")
     conception_deep_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
+    conception_ladder = read(root / "dist/data/point-conception-original-bag-depth-ladder.json")
     closure = read(root / "dist/data/central-atlas-300-current-closure-screen.json")
     if nbs["screened_unique_tiles"] != nbs["requested_unique_tiles"] or nbs["failed_tiles"]:
         raise ValueError("Central NBS audit incomplete; coverage ledger cannot be published")
@@ -52,6 +53,12 @@ def build(root):
             or conception_deep_gap.get("combined_200_to_300ft_cells") != 0
             or any(row.get("deeper_than_200ft_cells") != 0 for row in conception_deep_gap["sources"])):
         raise ValueError("Point Conception exact-file deep-band gap changed")
+    if (conception_ladder.get("scope") != "point-conception-h11952-h11953-eight-original-mllw-bag-depth-tiers"
+            or len(conception_ladder.get("sources", [])) != 8
+            or conception_ladder.get("nominal_200_to_300ft_cells") != 3990509
+            or conception_ladder.get("nominal_200_to_300ft_4m_cells") != 3318707
+            or conception_ladder.get("fishing_target") is not False):
+        raise ValueError("Point Conception original deep BAG ladder changed")
     rows = []
     for region_id in REGIONS:
         package = root / "dist/regions" / region_id
@@ -98,6 +105,12 @@ def build(root):
                 "populated_depth_band_cells": 0,
                 "scope": "these two BAG files only, not complete surveys or adjacent coast",
             } if region_id == "point-arguello-conception" else None),
+            "original_200_300ft_native_lead": ({
+                "receipt": "dist/data/point-conception-original-bag-depth-ladder.json",
+                "nominal_native_depth_cells": conception_ladder["nominal_200_to_300ft_cells"],
+                "nominal_4m_depth_cells": conception_ladder["nominal_200_to_300ft_4m_cells"],
+                "status": "research-only; no ranked or exportable deeper targets",
+            } if region_id == "point-arguello-conception" else None),
             "remaining_gates": [
                 "Original measured depth at candidate cell and surrounding drift patch",
                 "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
@@ -118,6 +131,7 @@ def build(root):
             "nbs_300ft": "data/nbs-central-300-depth-screen.json",
             "point_conception_300ft": "data/point-conception-native-hard-300-review-summary.json",
             "point_conception_two_bag_deep_gap": "data/point-conception-original-bag-200-300ft-gap.json",
+            "point_conception_eight_bag_depth_ladder": "data/point-conception-original-bag-depth-ladder.json",
             "existing_target_closures": "data/central-atlas-300-current-closure-screen.json",
         },
         "source_audit_times": {"nbs": nbs["reviewed_at"], "closures": closure["audited_at"], "original_noaa": hard["generated_at"]},

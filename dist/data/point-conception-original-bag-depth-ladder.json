@@ -1,0 +1,249 @@
+{
+  "exportable": false,
+  "fishing_target": false,
+  "limitations": [
+    "Counts are populated native grid cells, not independent fishing patches or survey area; depth tiers have different native resolutions.",
+    "These nominal MLLW cells still need full-patch depth-plus-uncertainty, position, habitat, MPA/security, chart and route checks.",
+    "The preliminary 4 m count applies only the project's existing per-cell depth, BAG uncertainty and 2 m planning allowance; it does not include spatial or legal clearance.",
+    "Survey acquisition is historical; source timestamps and cell counts do not establish present fish or catch probability."
+  ],
+  "nominal_200_to_300ft_4m_cells": 3318707,
+  "nominal_200_to_300ft_cells": 3990509,
+  "preliminary_4m_depth_uncertainty_screen_cells": 3318707,
+  "schema_version": 1,
+  "scope": "point-conception-h11952-h11953-eight-original-mllw-bag-depth-tiers",
+  "sources": [
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "b6577719b6fef2b14175e2408219ca5c25c66bc627c75f6e7d37704e35b646c3",
+      "exportable": false,
+      "file_name": "H11952_MB_1m_MLLW_1of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        19144,
+        17890
+      ],
+      "native_resolution_m": 1,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+      "survey_dates": [
+        "2008-08-26T00:00:00",
+        "2008-09-04T00:00:00"
+      ],
+      "survey_id": "H11952",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
+      "valid_depth_and_uncertainty_cells": 9845485,
+      "valid_depth_m_range": [
+        4.238,
+        20.0
+      ],
+      "valid_elevation_cells": 9845485,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "a23f24509355c3eece8b785d3d69af9df4bd1dd4a9f49bd890d08088d88210ee",
+      "exportable": false,
+      "file_name": "H11952_MB_2m_MLLW_2of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        10495,
+        10034
+      ],
+      "native_resolution_m": 2,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "survey_dates": [
+        "2008-08-26T00:00:00",
+        "2008-09-04T00:00:00"
+      ],
+      "survey_id": "H11952",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "valid_depth_and_uncertainty_cells": 5411412,
+      "valid_depth_m_range": [
+        18.0,
+        40.0
+      ],
+      "valid_elevation_cells": 5411412,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 1470200,
+      "deeper_than_200ft_cells": 1470200,
+      "embedded_metadata_sha256": "263aa857e3ffc87c4834327769796efb45b558c545feb1ebd0134914e210bfe5",
+      "exportable": false,
+      "file_name": "H11952_MB_4m_MLLW_3of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        4806,
+        4354
+      ],
+      "native_resolution_m": 4,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 1470200,
+      "sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "survey_dates": [
+        "2008-08-26T05:23:33",
+        "2008-09-04T23:56:13"
+      ],
+      "survey_id": "H11952",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "valid_depth_and_uncertainty_cells": 3356171,
+      "valid_depth_m_range": [
+        36.0,
+        80.0
+      ],
+      "valid_elevation_cells": 3356171,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 364369,
+      "deeper_than_200ft_cells": 632326,
+      "embedded_metadata_sha256": "f62fdcfbf80340b682f353790a53c986d817775e1fde83feb17eafa15c1f413e",
+      "exportable": false,
+      "file_name": "H11952_MB_8m_MLLW_4of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        2353,
+        2188
+      ],
+      "native_resolution_m": 8,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "7a726128f5d4ee4b5f761f5544d16b2b9e9ddcbe0c80f7bb79573e3659e2afd1",
+      "survey_dates": [
+        "2008-08-26T03:30:42",
+        "2008-09-04T23:56:13"
+      ],
+      "survey_id": "H11952",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_8m_MLLW_4of4.bag",
+      "valid_depth_and_uncertainty_cells": 632326,
+      "valid_depth_m_range": [
+        72.0,
+        157.271
+      ],
+      "valid_elevation_cells": 632326,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "c23bef1f880b772c46763be7d6303223401ce31c58563270653537c720d1256a",
+      "exportable": false,
+      "file_name": "H11953_MB_1m_MLLW_1of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        18513,
+        18224
+      ],
+      "native_resolution_m": 1,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "survey_dates": [
+        "2008-08-29T15:13:58",
+        "2008-09-05T01:14:20"
+      ],
+      "survey_id": "H11953",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "valid_depth_and_uncertainty_cells": 6417802,
+      "valid_depth_m_range": [
+        4.617,
+        20.0
+      ],
+      "valid_elevation_cells": 6417802,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 0,
+      "deeper_than_200ft_cells": 0,
+      "embedded_metadata_sha256": "148fac097035e1d47db29a01cb56153542766a7ddcc1128b7c3cf80e4102d0db",
+      "exportable": false,
+      "file_name": "H11953_MB_2m_MLLW_2of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        8780,
+        8660
+      ],
+      "native_resolution_m": 2,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+      "survey_dates": [
+        "2008-08-29T15:13:58",
+        "2008-09-05T21:08:25"
+      ],
+      "survey_id": "H11953",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag",
+      "valid_depth_and_uncertainty_cells": 6281842,
+      "valid_depth_m_range": [
+        18.0,
+        40.0
+      ],
+      "valid_elevation_cells": 6281842,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 1848507,
+      "deeper_than_200ft_cells": 1848507,
+      "embedded_metadata_sha256": "c417db03393023f2bb65199d67a798bb41cfe9371371dee918d2c4fde0630d2b",
+      "exportable": false,
+      "file_name": "H11953_MB_4m_MLLW_3of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        4399,
+        4173
+      ],
+      "native_resolution_m": 4,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 1848507,
+      "sha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+      "survey_dates": [
+        "2008-08-29T00:00:00",
+        "2008-09-05T00:00:00"
+      ],
+      "survey_id": "H11953",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_4m_MLLW_3of4.bag",
+      "valid_depth_and_uncertainty_cells": 4666652,
+      "valid_depth_m_range": [
+        36.0,
+        80.0
+      ],
+      "valid_elevation_cells": 4666652,
+      "vertical_datum": "MLLW"
+    },
+    {
+      "200_to_300ft_depth_cells": 307433,
+      "deeper_than_200ft_cells": 307433,
+      "embedded_metadata_sha256": "ee91925b8d28f942c80a7a972d981d38922f4b3fdf2fc3d3edddade36487ee67",
+      "exportable": false,
+      "file_name": "H11953_MB_8m_MLLW_4of4.bag",
+      "fishing_target": false,
+      "grid_shape": [
+        2144,
+        2062
+      ],
+      "native_resolution_m": 8,
+      "preliminary_200_to_300ft_depth_uncertainty_screen_cells": 0,
+      "sha256": "e70772d2bbfcb310f7a997f0a58a148baa742b79c242b3f0794d6e5a442b97a2",
+      "survey_dates": [
+        "2008-08-29T00:00:00",
+        "2008-09-05T00:00:00"
+      ],
+      "survey_id": "H11953",
+      "uncertainty_type": "productUncert",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_8m_MLLW_4of4.bag",
+      "valid_depth_and_uncertainty_cells": 307433,
+      "valid_depth_m_range": [
+        72.0,
+        90.851
+      ],
+      "valid_elevation_cells": 307433,
+      "vertical_datum": "MLLW"
+    }
+  ]
+}
