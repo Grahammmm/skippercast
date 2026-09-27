@@ -7,9 +7,15 @@ import {speciesFit} from '../dist/species-fit.js';
 const atlasBytes = readFileSync('dist/data/atlas.json');
 const atlas = JSON.parse(atlasBytes);
 const screen = JSON.parse(readFileSync('dist/data/central-atlas-300-current-closure-screen.json', 'utf8'));
+const geometryDigest = createHash('sha256').update(JSON.stringify({
+  targets:atlas.targets.map(t=>[t.id,t.latitude,t.longitude]),
+  areas:atlas.areas.map(a=>[a.id,a.geometry]),
+  drifts:atlas.drifts.map(d=>[d.id,d.geometry]),
+})).digest('hex');
 if (atlas.fishing_depth_limit_ft !== 200 || atlas.targets.length !== 132 ||
     screen.atlas_source_depth_ceiling_ft !== 200 ||
-    screen.input_sha256?.atlas !== createHash('sha256').update(atlasBytes).digest('hex') ||
+    screen.input_geometry_sha256 !== geometryDigest ||
+    atlas.targets.some(t=>!t.research_only || t.depth_qualified !== false || t.vertical_datum !== 'unverified source datum') ||
     !Number.isFinite(Date.parse(screen.audited_at)) ||
     Date.now() < Date.parse(screen.audited_at) ||
     Date.now() - Date.parse(screen.audited_at) > 36 * 3600_000 ||
@@ -37,13 +43,14 @@ const rank_counts = Object.fromEntries(['lingcod','rockfish'].map(species => [sp
   Object.fromEntries([1,2,3].map(rank => [rank,targets.filter(t => t[`${species}_fit_rank`] === rank).length]))]));
 const result = {schema_version:1, scope:'central-surveyed-rocky-species-fit',
   source_atlas_edition:atlas.edition, source_depth_ceiling_ft:200,
+  chart_depth_qualified:false, source_output_vertical_datum:'unverified',
   boat_planning_depth_ceiling_ft:300, target_count:targets.length,
   closure_audited_at:screen.audited_at, rank_counts,
   rank_thresholds:{strong:{minimum_index:0.9,minimum_rough_cover_fraction:0.7},
     intermediate:{minimum_index:0.7}},
   rank_meaning:{1:'Stronger relative mapped habitat fit',2:'Intermediate relative mapped habitat fit',3:'Lower relative mapped habitat fit'},
   limitations:['These are historical surveyed habitat candidates, not verified catches or fish-presence probabilities.',
-    'The existing target inventory ends at 200 ft. The 300-ft planning ceiling adds no newly qualified coordinates.',
+    'The original raster output datum and product uncertainty are unresolved. The old nominal 200 ft raster filter is not a chart-depth qualification, and none of these 132 coordinates passes the current fishing-spot gate.',
     'Fresh state/federal GIS screening does not certify current chart, local access, route or season/method clearance.'],
   targets};
 writeFileSync('dist/data/central-rocky-species-rankings.json', JSON.stringify(result,null,2)+'\n');

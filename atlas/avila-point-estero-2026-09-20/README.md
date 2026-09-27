@@ -21,7 +21,7 @@ Download the raw file rather than saving GitHub's preview page. Follow the [iNav
 
 ## Coverage and evidence
 
-The public edition contains 40 Point Buchon, 47 Morro Bay, and 45 Point Estero targets from USGS survey releases. Survey acquisition is dated 2008; included depths are relative to **MLLW**. Actual sounder depth can exceed a source-datum value as water level changes. Recheck the complete fishing footprint and current restrictions before a trip.
+The public edition contains 40 Point Buchon, 47 Morro Bay, and 45 Point Estero targets from USGS survey releases. Survey acquisition is dated 2008; the raster output vertical datum is **unverified** in the audited original metadata. The September 27, 2026 correction withdrew earlier MLLW and 200-foot chart-depth qualification claims. These candidates are research-only; actual sounder depth requires chart and on-water verification. Recheck the complete fishing footprint and current restrictions before a trip.
 
 The original private research covered Avila–Cambria with 143 targets. This public edition omits its 11 Cambria targets, 10 Cambria outlines, and two Cambria alignments because those source terms are unresolved. It also excludes all sampled historical charter-ground annotations. The [source register](../../docs/data-sources.md) documents these decisions. The public edition does not replace an existing private iPad atlas.
 

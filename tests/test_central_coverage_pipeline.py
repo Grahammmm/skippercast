@@ -13,9 +13,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 class CentralCoveragePipelineTests(unittest.TestCase):
     def test_ledger_separates_research_outlines_from_exportable_targets(self):
         result = coverage.build(ROOT)
-        self.assertEqual(result["totals"]["qualified_targets_at_or_under_200ft"], 132)
+        self.assertEqual(result["totals"]["qualified_targets_at_or_under_200ft"], 0)
+        self.assertEqual(result["totals"]["legacy_research_candidates"], 132)
         self.assertEqual(result["totals"]["qualified_targets_200_to_300ft"], 0)
-        self.assertEqual(result["totals"]["regions_without_qualified_targets"], 6)
+        self.assertEqual(result["totals"]["regions_without_qualified_targets"], 7)
         self.assertGreater(result["totals"]["research_only_outlines"], 0)
         for region in result["regions"]:
             if region["region_id"] != "morro-bay":
@@ -32,6 +33,20 @@ class CentralCoveragePipelineTests(unittest.TestCase):
         self.assertEqual(conception["original_8m_hard_overlap"]["retained_hard_flat_patches_inside_requested_region"], 0)
         self.assertEqual(conception["original_4m_point_in_time_access"]["mapped_gis_held_components_at_review"], 0)
         self.assertEqual(conception["qualified_targets_200_to_300ft"], 0)
+
+    def test_legacy_candidate_cannot_reclaim_mllw_without_source_review(self):
+        original = coverage.read
+
+        def false_datum(path):
+            result = original(path)
+            if str(path).endswith("dist/data/atlas.json"):
+                result = copy.deepcopy(result)
+                result["targets"][0]["vertical_datum"] = "MLLW"
+            return result
+
+        with patch.object(coverage, "read", side_effect=false_datum):
+            with self.assertRaisesRegex(ValueError, "Contradictory research-only depth status"):
+                coverage.build(ROOT)
 
     def test_failed_closure_screen_blocks_ledger(self):
         original = coverage.read
@@ -221,6 +236,8 @@ class CentralCoveragePipelineTests(unittest.TestCase):
                 result = copy.deepcopy(result)
                 result["fishing_depth_limit_ft"] = 300
                 result["targets"][0]["neighborhood_depth_ft"] = [210, 250]
+                result["targets"][0]["research_only"] = False
+                result["targets"][0]["depth_qualified"] = True
             return result
 
         with patch.object(coverage, "read", side_effect=deeper_read):

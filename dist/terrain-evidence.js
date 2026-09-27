@@ -1,7 +1,7 @@
 import {esc,num} from './marine-charts.js?v=8.14';
 export function terrainSource(target) {
   const originalUSGS=String(target.id).startsWith('SC26-');
-  return {producer:target.producer||(originalUSGS?'USGS':'Survey provider'),datum:target.vertical_datum||(originalUSGS?'MLLW':'not recorded'),
+  return {producer:target.producer||(originalUSGS?'USGS':'Survey provider'),datum:target.vertical_datum||(originalUSGS?'unverified source datum':'not recorded'),
     grid:target.native_resolution_range_m?`${target.native_resolution_range_m.join('–')} m native survey cells; ${target.analysis_cell_m} m analysis grid`:originalUSGS?'10 m analysis grid (about 33 ft)':'Grid resolution not recorded'};
 }
 export function terrainMetricsHTML(target) {

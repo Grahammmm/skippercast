@@ -5,7 +5,7 @@
   "depth_ceiling_ft": 300,
   "source_sha256": {
     "dist/data/central-source-acquisition-queue.json": "f31a62e142b7b130fc58f371fca41501443abe4ae88cafb7c2d2c49615eba552",
-    "dist/data/central-coverage-ledger-v1.json": "95e7f94d1629d726f877622032ce0006bc75f8ebe6e2552f031fe4bb13b76a7f",
+    "dist/data/central-coverage-ledger-v1.json": "5fd791f7e954e44dec28963085a20aec01642ba58f870c182445363af9d82266",
     "dist/data/point-conception-original-bag-200-300ft-gap.json": "3f88eac95f0d3ea0d96a85f522a18f46c6b06f3bb08d1c2a954cf5af25d42d54",
     "dist/data/point-conception-original-bag-depth-ladder.json": "e72e347d576f60c9d636cfccf5f0fccf44d2c98cf19ed636803124b6fb4b131d",
     "dist/data/point-conception-original-4m-rugged-overlap.json": "76baacdc9411792b410c0eee6e9575cf19186d85684a21ee59b0cc835fa2f16a",
@@ -53,7 +53,7 @@
     "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1",
     "dist/data/w00614-usgs-video-observation-gap.json": "903db015ef0747b7c0ff75a542dd7cb723d31ebb938fcb7e663929deee45329b",
     "dist/data/w00614-noaa-sh1809-observation-gap.json": "6c100bcbb08c55fed2380c957ac04ca24da527f7a6183a63ca01a90e1f599c71",
-    "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "74dc4340fb0b540bb497e0ad3dfe22b9844dbe2738314d44b8f2287a7ec1dfab",
+    "catalog/candidates/tnc-mlml-pigeon-video-lander.json": "874310bdf1619ce82e69df6d20d8ad583b85695793591589f6979ef70eee47a9",
     "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json": "4babf6cea10eb3b6cc7928b8437e959f0d1a6a52f5d88e931693ff3ea7071a75",
     "dist/data/ciap-2016-central-rov-public-service-audit.json": "612d4cf2a8f0e3b51a3261127d41af5734b9953fb27dc9d73be145f44eff51a5",
     "dist/data/ciap-2016-central-video-private-block-overlap.json": "4e693469345646e8e7bc82df7d2835f55632c71cea5a500b5fb90b333dcb055a"

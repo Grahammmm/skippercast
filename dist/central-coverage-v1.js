@@ -29,7 +29,7 @@ export async function initCentralCoverage(map) {
     const detail = document.createElement('p');
     detail.textContent = qualified
       ? `${qualified} qualified surveyed candidates at or under 200 ft; none newly qualified in 200–300 ft.`
-      : `No depth-qualified fishing coordinates yet. ${region.research_only_habitat_outlines} research-only habitat outlines.`;
+      : `No depth-qualified fishing coordinates yet. ${region.legacy_research_candidates || 0} legacy candidates and ${region.research_only_habitat_outlines} research-only habitat outlines.`;
     const caution = document.createElement('p');
     caution.textContent = 'Outline is a browsing envelope, not surveyed seabed or a fishing area.';
     const popup = document.createElement('div');
@@ -37,6 +37,6 @@ export async function initCentralCoverage(map) {
     rectangle.bindPopup(popup);
     rectangle.addTo(layer);
   }
-  note.textContent = `${ledger.totals.qualified_targets_at_or_under_200ft} existing surveyed targets in one package; six neighboring packages still need qualified source coverage. Orange outlines mark gaps, not reef.`;
+  note.textContent = `${ledger.totals.qualified_targets_at_or_under_200ft} depth-qualified Central Coast targets. ${ledger.totals.legacy_research_candidates || 0} older Morro–Avila candidates have unverified raster datum. All seven packages need qualification; orange outlines mark gaps, not reef.`;
   toggle.addEventListener('change', () => toggle.checked ? layer.addTo(map) : map.removeLayer(layer));
 }

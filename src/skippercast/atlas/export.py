@@ -48,6 +48,11 @@ def validate(data):
     for row in targets.values():
         coordinate([row["longitude"], row["latitude"]])
         require(row["source_id"] in sources, "Unknown target source")
+        require(row["vertical_datum"] == sources[row["source_id"]]["datum"],
+                "Target datum disagrees with source provenance")
+        require(row.get("research_only") is True and row.get("depth_qualified") is False
+                and row["vertical_datum"] == "unverified source datum",
+                "Legacy atlas requires research-only status and unverified output datum")
         score = habitat_score(row["metrics"])
         require(row["habitat_score"] == score, "Stored habitat score disagrees with metrics")
         require(row["habitat_grade"] == habitat_grade(score), "Stored habitat grade disagrees")
@@ -108,7 +113,7 @@ def target_note(row, data):
     parts = [
         f"Habitat search priority {row['habitat_grade']} ({row['habitat_score']}/100); tied rank {row['rank']} of {len(data['targets'])}. Not a catch prediction.",
         row["terrain_interpretation"],
-        f"Source depth: center {row['center_depth_ft']} ft; 100-m neighborhood {low}–{high} ft below {row['vertical_datum']}. Confirm actual depth <=200 ft with a sounder.",
+        f"Historical source raster depth: center {row['center_depth_ft']} ft; 100-m neighborhood {low}–{high} ft. Vertical datum unverified; this is not a chart-depth or <=200 ft qualification. Confirm actual depth with an official chart and sounder.",
         f"Local relief {metrics['relief_210m_m'] / 0.3048:.0f} ft; mapped rough habitat {metrics['rugose_or_bedrock_fraction_210m']:.0%}; usable nearby rough habitat {metrics['rough_habitat_within_250m_ha'] * 2.47105:.1f} acres.",
     ]
     if row["area_ids"]:
@@ -146,7 +151,7 @@ def gpx_document(data, components):
     root = ET.Element(f"{{{GPX}}}gpx", version="1.1", creator="SkipperCast 0.1.0")
     metadata = element(root, "metadata")
     element(metadata, "name", data["title"])
-    element(metadata, "desc", "Dated survey-derived habitat candidates and optional fishing alignments. Source-datum depth screen <=200 ft. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.")
+    element(metadata, "desc", "Research-only historical habitat candidates and optional structure alignments. Source raster vertical datum is unverified: no chart-depth or <=200 ft qualification. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.")
     for source in data["sources"]:
         link = element(metadata, "link", href=source["url"])
         element(link, "text", source["id"] + " source survey and metadata")
@@ -154,7 +159,7 @@ def gpx_document(data, components):
         for row in data["targets"]:
             waypoint = element(root, "wpt", lat=f"{row['latitude']:.6f}", lon=f"{row['longitude']:.6f}")
             element(waypoint, "name", row["name"])
-            element(waypoint, "cmt", f"Habitat priority {row['habitat_grade']}; source depth {row['center_depth_ft']} ft MLLW; AIS unverified.")
+            element(waypoint, "cmt", f"Research-only terrain priority {row['habitat_grade']}; source raster depth {row['center_depth_ft']} ft, datum unverified; AIS unverified.")
             element(waypoint, "desc", target_note(row, data))
             link = element(waypoint, "link", href=row["source_url"])
             element(link, "text", row["source_id"] + " USGS survey")
@@ -207,7 +212,7 @@ def notes_document(data):
 <title>{escape(data['title'])}</title>
 <style>body{{font:17px/1.55 system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 20px;color:#163747;background:#f7fbfc}}h1,h2{{line-height:1.2}}h2{{font-size:1.2rem}}article{{border-top:1px solid #c4d4dc;padding:20px 0}}input{{font:inherit;padding:12px;width:100%;box-sizing:border-box}}.coordinates{{font-family:monospace}}[hidden]{{display:none}}</style>
 <h1>SkipperCast habitat notes</h1><p>{escape(data['coverage'])}</p>
-<p>{len(data['targets'])} candidates · {escape(data['edition'])}. Habitat priorities are not catch predictions. Source depths are below MLLW; confirm actual depth and current restrictions. These fishing alignments are not passage routes.</p>
+<p>{len(data['targets'])} research-only candidates · {escape(data['edition'])}. Habitat priorities are not catch predictions. Source raster vertical datum is unverified, so depths are not chart-depth qualifications. Confirm actual depth and current restrictions. These alignments are not passage routes.</p>
 <label for="search">Filter by ID, priority, depth, area, or note</label><input id="search" type="search" placeholder="Example: SC26-001 or priority A">
 <p id="count" aria-live="polite">{len(data['targets'])} targets</p>
 {''.join(articles)}

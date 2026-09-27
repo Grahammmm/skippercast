@@ -101,7 +101,7 @@ def build(root):
         targets = atlas.get("targets", [])
         if coverage["region_id"] != region_id or coverage["published_targets"] != len(targets):
             raise ValueError(f"Package target count mismatch: {region_id}")
-        shallow, deeper = 0, 0
+        shallow, deeper, legacy_research = 0, 0, 0
         for target in targets:
             neighborhood = target.get("neighborhood_depth_ft")
             if not isinstance(neighborhood, list) or len(neighborhood) != 2 or not all(
@@ -109,6 +109,13 @@ def build(root):
             ):
                 raise ValueError(f"Target lacks complete depth patch: {region_id}/{target.get('id')}")
             upper = neighborhood[1]
+            if target.get("research_only") or target.get("depth_qualified") is False:
+                if (target.get("research_only") is not True
+                        or target.get("depth_qualified") is not False
+                        or target.get("vertical_datum") != "unverified source datum"):
+                    raise ValueError(f"Contradictory research-only depth status: {region_id}/{target.get('id')}")
+                legacy_research += 1
+                continue
             if upper <= 200:
                 shallow += 1
             elif upper <= 300 and atlas.get("fishing_depth_limit_ft", 0) >= 300 and target.get(
@@ -125,9 +132,10 @@ def build(root):
             "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
             "qualified_targets_at_or_under_200ft": shallow,
             "qualified_targets_200_to_300ft": deeper,
+            "legacy_research_candidates": legacy_research,
             "research_only_habitat_outlines": research_count,
             "bottom_evidence_status": needs,
-            "fishing_coordinate_status": "qualified-reviewed" if targets else "none-qualified",
+            "fishing_coordinate_status": "qualified-reviewed" if shallow or deeper else "none-qualified",
             "next_source_leads": SOURCE_LEADS[region_id],
             "original_200_300ft_gap": ({
                 "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
@@ -173,12 +181,13 @@ def build(root):
                 "Paired high-resolution substrate plus dated independent groundtruth",
                 "Fresh MPA/federal/security and chart-danger screen of full geometry",
                 "Current species, season, method and harbor/approach checks",
-            ] if not targets else (["No newly qualified 200–300 ft source footprint"] if not deeper else []) + [
+            ] if not shallow and not deeper else (["No newly qualified 200–300 ft source footprint"] if not deeper else []) + [
                 "Independent fish-presence/catch-effort evidence remains absent",
             ],
         }
         rows.append(row)
-    if rows[5]["qualified_targets_at_or_under_200ft"] + rows[5]["qualified_targets_200_to_300ft"] != len(existing["targets"]):
+    if (rows[5]["qualified_targets_at_or_under_200ft"] + rows[5]["qualified_targets_200_to_300ft"]
+            + rows[5]["legacy_research_candidates"] != len(existing["targets"])):
         raise ValueError("Morro Bay target count differs from its published atlas")
     return {
         "schema_version": 1,
@@ -197,15 +206,16 @@ def build(root):
         },
         "source_audit_times": {"nbs": nbs["reviewed_at"], "closures": closure["audited_at"], "original_noaa": hard["generated_at"]},
         "depth_planning_ceiling_ft": 300,
-        "qualification_ceiling_of_published_targets_ft": 300 if any(r["qualified_targets_200_to_300ft"] for r in rows) else 200,
+        "qualification_ceiling_of_published_targets_ft": 300 if any(r["qualified_targets_200_to_300ft"] for r in rows) else (200 if any(r["qualified_targets_at_or_under_200ft"] for r in rows) else None),
         "totals": {
             "qualified_targets_at_or_under_200ft": sum(r["qualified_targets_at_or_under_200ft"] for r in rows),
             "qualified_targets_200_to_300ft": sum(r["qualified_targets_200_to_300ft"] for r in rows),
+            "legacy_research_candidates": sum(r["legacy_research_candidates"] for r in rows),
             "research_only_outlines": sum(r["research_only_habitat_outlines"] for r in rows),
             "regions_without_qualified_targets": sum(not r["qualified_targets_at_or_under_200ft"] for r in rows),
         },
         "regions": rows,
-        "warning": "Browsing extents do not measure seabed survey coverage. Research outlines are not fishing coordinates. " +
+        "warning": "Browsing extents do not measure seabed survey coverage. Research outlines and legacy candidates are not depth-qualified fishing coordinates. The 132 Morro–Avila source-raster vertical datums remain unresolved. " +
                    ("Zero new >200 ft targets have passed all source and legal gates." if not any(r["qualified_targets_200_to_300ft"] for r in rows)
                     else "Any >200 ft targets require individual depth-qualification receipts and current legal/chart checks."),
     }

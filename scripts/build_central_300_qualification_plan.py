@@ -215,10 +215,12 @@ def build(root):
         raise ValueError("NOAA SH-18-09 original occurrence support changed")
     pigeon_lander = load(root, pigeon_lander_path)
     if (pigeon_lander.get("id") != "tnc-mlml-pigeon-video-lander"
-            or pigeon_lander.get("access_status") != "original-drop-data-not-located"
-            or pigeon_lander.get("spatial", {}).get("w00614_cell_overlap_verified") is not False
-            or pigeon_lander.get("fishing_target") is not False
-            or pigeon_lander.get("exportable") is not False):
+            or pigeon_lander.get("access_status") != "not-tested"
+            or pigeon_lander.get("access_url") is not None
+            or pigeon_lander.get("spatial", {}).get("footprint_kind") != "unknown"
+            or "w00614_cell_overlap_verified" in pigeon_lander.get("spatial", {})
+            or "fishing_target" in pigeon_lander
+            or "exportable" in pigeon_lander):
         raise ValueError("Pigeon Point original lander source status changed; review before promotion")
     mare_2016 = load(root, mare_2016_path)
     if (mare_2016.get("id") != "cdfw-mare-ciap-2016-central-original-rov"

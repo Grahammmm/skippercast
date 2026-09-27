@@ -2,7 +2,7 @@
 <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="SkipperCast 0.1.0">
   <metadata>
     <name>SkipperCast Avila–Point Estero habitat atlas</name>
-    <desc>Dated survey-derived habitat candidates and optional fishing alignments. Source-datum depth screen &lt;=200 ft. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.</desc>
+    <desc>Research-only historical habitat candidates and optional structure alignments. Source raster vertical datum is unverified: no chart-depth or &lt;=200 ft qualification. Not for passage navigation. Derived from public-domain USGS surveys; credit USGS, CSUMB Seafloor Mapping Lab, and University of California Center for Integrated Spatial Research. Underlying source rights remain unchanged. See repository NOTICE.md for original-material terms.</desc>
     <link href="https://doi.org/10.5066/P9KBGELE">
       <text>PointBuchon source survey and metadata</text>
     </link>

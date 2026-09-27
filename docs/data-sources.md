@@ -15,7 +15,7 @@ The [Avila–Point Estero edition](../atlas/avila-point-estero-2026-09-20/) is a
 
 These are **habitat candidates**, not verified fishing spots. Scores compare mapped relief, rough-rock coverage, detrended terrain complexity, and nearby usable habitat. A large mapped patch does not establish large boulders, fish presence, or catch success. Reef outlines are partial processed footprints, not complete reef boundaries. Drift lines describe a possible alignment over structure; actual wind and current determine whether a boat can follow it. They are not passage routes.
 
-The retained surveys were collected in **2008**. Their depth datum is **mean lower low water (MLLW)**. The source-datum depth screen is at most 200 feet; it cannot guarantee that the depth shown by a sounder at another tide is at most 200 feet. Source resolution, survey age, classification error, and the later processing all limit precision. The original datasets explicitly are not intended for navigation.
+The retained surveys were collected in **2008**. The reviewed original raster metadata does **not establish the output vertical datum** for these three releases. Earlier MLLW and 200-foot qualification claims were withdrawn on September 27, 2026. Nominal raster values are historical research context, not chart-depth screening. Source resolution, survey age, classification error, and the later processing all limit precision. The original datasets explicitly are not intended for navigation.
 
 ## USGS terrain data
 

@@ -38,7 +38,7 @@ export function featuresGPX(atlas,features,title,options={}) {
     t.label,
     t.terrain_interpretation,
     `Terrain ${t.habitat_grade} ${t.habitat_score}/100; not catch probability.`,
-    `Center ${t.center_depth_ft} ft; nearby ${t.neighborhood_depth_ft.join("–")} ft MLLW.`,
+    `Center ${t.center_depth_ft} ft; nearby ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum === 'MLLW' ? 'MLLW' : 'source raster, vertical datum unverified; research only, not chart-depth qualified'}.`,
     t.evidence_status,
     t.ais_status,
     `Survey ${t.survey_year}; screen ${atlas.source_validation_date}.`,

@@ -31,11 +31,13 @@
     "The 132 targets retain historical recorded 200-ft survey evidence; this is not a new native-depth survey.",
     "Approximate GIS polygon clearance is not an official legal-boundary or navigation determination.",
     "Current ENC hazards, Diablo security limits, Vandenberg access, drift route and season/method rules need separate checks.",
-    "No new 200\u2013300-ft targets were qualified by this audit."
+    "No new 200–300-ft targets were qualified by this audit."
   ],
   "input_sha256": {
     "atlas": "f3f623e16fb55ad6161198c11aa98a629a8b2921ff4bb9d7af657b975089688c",
     "mpas": "c29339ccef85f7c40c096d61690c911aa3d70abebd6d4d11ff88f436c6f4e6bd",
     "federal": "933b09625d1fa10200d8c57632d5dc4e88c6a20bc1f2feca8211042e399984b3"
-  }
+  },
+  "input_geometry_sha256": "3b6341efffaffffe0906ffd9593533773cb8153e1f1c730026d5c33604a33b9a",
+  "metadata_only_audit_correction": "2026-09-27: original closure-screen geometry is bytewise unchanged; revised atlas corrects unverified vertical datum and research-only status. Prior whole-atlas hash remains the originally screened version."
 }

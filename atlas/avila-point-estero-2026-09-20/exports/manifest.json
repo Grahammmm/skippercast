@@ -8,37 +8,37 @@
     "C": 23
   },
   "validation_scope": "Structure and recorded survey evidence only; no current legal, depth, or navigation clearance.",
-  "edition": "2026-09-20-public-1",
+  "edition": "2026-09-27-datum-audit-2",
   "files": [
     {
       "name": "atlas.geojson",
-      "bytes": 538678,
-      "sha256": "da499f2d2648426c057dd3cfd394bbcb203eee5c8dd656aeca1245fae8d493cc"
+      "bytes": 580368,
+      "sha256": "e82d2fd5c00ebf2314af154ef0db7cb83ef222082e7323f5bcf90c9ff92c5b1a"
     },
     {
       "name": "complete.gpx",
-      "bytes": 572576,
-      "sha256": "4457031dd767c854a10632b80abfeb131652227ec1f9073b6962c900d12154a7"
+      "bytes": 612911,
+      "sha256": "56c2c1eb960bc02a53b9b8fdaa3a1f5f9ba3dd7d5e608edf26d0680467f724c0"
     },
     {
       "name": "drift-lines.gpx",
-      "bytes": 22010,
-      "sha256": "9bda0bb35592f98fcf3c4b95b91aa55769bf701dc90ceedff2d806973569a951"
+      "bytes": 22066,
+      "sha256": "6a3f3227220aff2a4b5875b6e6962c4071193cf86f110c0d3da2ce38ecffb60b"
     },
     {
       "name": "reef-outlines.gpx",
-      "bytes": 362008,
-      "sha256": "112192b9df91ef4a4e4c3f3c076083e428efbf4844f8cb9375e71013a28d78d6"
+      "bytes": 362064,
+      "sha256": "ff96b81dad6e40ed8e17bf8b13ace612297e9125424984d15ff2b8e11811fbf5"
     },
     {
       "name": "spot-notes.html",
-      "bytes": 166217,
-      "sha256": "5086f0695b68a037a0e450f3e9690ccdc11895f435d4c3b781a551292e603ed6"
+      "bytes": 202388,
+      "sha256": "99c6014072bbf74804d3f89eaf804e89fab7f1675367c79b055bdb18a7ca5825"
     },
     {
       "name": "waypoints.gpx",
-      "bytes": 190542,
-      "sha256": "db1f6a3542e64f665695782b2a69ac81d2d2ceb4256aa06b922e3868665d9f28"
+      "bytes": 230877,
+      "sha256": "204b969fe7ae3277016244bb295d46c471b554ea6241b62327a9ca53706e45e5"
     }
   ]
 }

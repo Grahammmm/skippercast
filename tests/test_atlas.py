@@ -25,6 +25,9 @@ class PublicAtlas(unittest.TestCase):
         self.assertEqual(result["grades"], {"A": 35, "B": 74, "C": 23})
         self.assertEqual({r["source_id"] for r in self.data["targets"]},
                          {"PointBuchon", "MorroBay", "PointEstero"})
+        self.assertTrue(all(r["research_only"] and not r["depth_qualified"]
+                            and r["vertical_datum"] == "unverified source datum"
+                            for r in self.data["targets"]))
         excluded = {f"MB26-{i:03d}" for i in (13, 14, 15, 16, *range(137, 144))}
         self.assertFalse(excluded & {r["legacy_id"] for r in self.data["targets"]})
         self.assertNotIn("historical_charter_context", DATA.read_text(encoding="utf-8"))
@@ -33,6 +36,13 @@ class PublicAtlas(unittest.TestCase):
         data = deepcopy(self.data)
         data["targets"][0]["area_ids"] = ["unknown"]
         with self.assertRaisesRegex(ValueError, "target-to-area"):
+            validate(data)
+
+    def test_old_mllw_claim_cannot_be_reintroduced(self):
+        data = deepcopy(self.data)
+        data["targets"][0]["vertical_datum"] = "MLLW"
+        data["sources"][0]["datum"] = "MLLW"
+        with self.assertRaisesRegex(ValueError, "research-only status"):
             validate(data)
 
     def test_missing_native_evidence_and_excess_depth_rejected(self):
@@ -56,7 +66,8 @@ class PublicAtlas(unittest.TestCase):
             self.assertEqual({(r.attrib["lat"], r.attrib["lon"]) for r in points}, expected)
             for point in points:
                 note = point.findtext(f"{{{GPX}}}desc")
-                self.assertIn("MLLW", note)
+                self.assertIn("Vertical datum unverified", note)
+                self.assertNotIn("ft MLLW", note)
                 self.assertIn("Not a catch prediction", note)
                 self.assertIn("https://doi.org/", note)
             for track in tracks:

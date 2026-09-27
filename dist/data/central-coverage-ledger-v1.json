@@ -19,12 +19,13 @@
     "original_noaa": "2026-09-26T15:00:05.712962+00:00"
   },
   "depth_planning_ceiling_ft": 300,
-  "qualification_ceiling_of_published_targets_ft": 200,
+  "qualification_ceiling_of_published_targets_ft": null,
   "totals": {
-    "qualified_targets_at_or_under_200ft": 132,
+    "qualified_targets_at_or_under_200ft": 0,
     "qualified_targets_200_to_300ft": 0,
+    "legacy_research_candidates": 132,
     "research_only_outlines": 579,
-    "regions_without_qualified_targets": 6
+    "regions_without_qualified_targets": 7
   },
   "regions": [
     {
@@ -39,6 +40,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 231,
       "bottom_evidence_status": {
         "bathymetry": "research",
@@ -78,6 +80,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 33,
       "bottom_evidence_status": {
         "bathymetry": "research",
@@ -117,6 +120,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 265,
       "bottom_evidence_status": {
         "bathymetry": "research",
@@ -156,6 +160,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 43,
       "bottom_evidence_status": {
         "bathymetry": "research",
@@ -195,6 +200,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 3,
       "bottom_evidence_status": {
         "bathymetry": "partial",
@@ -232,16 +238,17 @@
         35.85
       ],
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
-      "qualified_targets_at_or_under_200ft": 132,
+      "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 132,
       "research_only_habitat_outlines": 0,
       "bottom_evidence_status": {
-        "bathymetry": "ready",
+        "bathymetry": "partial",
         "substrate": "ready",
         "groundtruth": "research",
         "protected-areas": "ready"
       },
-      "fishing_coordinate_status": "qualified-reviewed",
+      "fishing_coordinate_status": "none-qualified",
       "next_source_leads": [
         "USGS original surveys beyond the 200 ft source screen",
         "NOAA NOS original BAGs"
@@ -254,8 +261,11 @@
       "original_8m_hard_overlap": null,
       "original_4m_point_in_time_access": null,
       "remaining_gates": [
-        "No newly qualified 200\u2013300 ft source footprint",
-        "Independent fish-presence/catch-effort evidence remains absent"
+        "Original measured depth at candidate cell and surrounding drift patch",
+        "Reviewed MLLW-equivalent vertical transform and supplied uncertainty",
+        "Paired high-resolution substrate plus dated independent groundtruth",
+        "Fresh MPA/federal/security and chart-danger screen of full geometry",
+        "Current species, season, method and harbor/approach checks"
       ]
     },
     {
@@ -270,6 +280,7 @@
       "bounds_meaning": "Regional browsing envelope, not a survey footprint, MPA boundary, or fishing area",
       "qualified_targets_at_or_under_200ft": 0,
       "qualified_targets_200_to_300ft": 0,
+      "legacy_research_candidates": 0,
       "research_only_habitat_outlines": 4,
       "bottom_evidence_status": {
         "bathymetry": "research",
@@ -336,5 +347,5 @@
       ]
     }
   ],
-  "warning": "Browsing extents do not measure seabed survey coverage. Research outlines are not fishing coordinates. Zero new >200 ft targets have passed all source and legal gates."
+  "warning": "Browsing extents do not measure seabed survey coverage. Research outlines and legacy candidates are not depth-qualified fishing coordinates. The 132 Morro\u2013Avila source-raster vertical datums remain unresolved. Zero new >200 ft targets have passed all source and legal gates."
 }
