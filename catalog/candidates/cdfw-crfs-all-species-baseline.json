@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "cdfw-crfs-all-species-baseline",
+  "name": "CDFW CRFS all-species and all-effort historical catch-per-angler blocks",
+  "sector_ids": ["del-norte", "crescent-city-humboldt", "humboldt-cape", "north-mendocino", "fort-bragg-arena", "arena-bodega", "bodega-reyes", "reyes-pigeon", "pigeon-monterey", "monterey-sur", "big-sur", "sur-san-simeon", "cambria-morro", "morro-conception", "conception-ventura", "ventura-los-angeles", "los-angeles-orange", "orange-san-diego", "san-diego-border"],
+  "need_ids": ["catch-effort"],
+  "documentation_url": "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-all-species-and-all-effort-r",
+  "access_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3186_fpu/FeatureServer/0",
+  "access_status": "accessible",
+  "rights": {
+    "license": "CC BY (version not specified by California open-data catalog)",
+    "terms_url": "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-all-species-and-all-effort-r",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": null,
+    "resolution_m": null,
+    "horizontal_crs": "Service EPSG:3857, transformed to WGS84 for approximate browse-sector review",
+    "vertical_datum": null,
+    "footprint_kind": "measured-geometry",
+    "footprint_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3186_fpu/FeatureServer/0",
+    "resolution_basis": "inspected"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T13:25:02Z",
+    "update_cadence": "Monthly full-page edition and schema check; human review before any derived public context",
+    "coverage_start": "2004-01-01",
+    "coverage_end": "2024-12-31"
+  },
+  "evidence": [
+    {
+      "url": "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-all-species-and-all-effort-r",
+      "supports": "CDFW metadata defines all-species/all-effort scope, one-minute interview-reported blocks, multi-block allocation, five-year bins, three-trip inclusion rule and CC BY catalog license."
+    },
+    {
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds3186_fpu/FeatureServer/0",
+      "supports": "Direct service inspection found 6,936 records, Catch=All and Trip=All, 2021–2024 CPUA fields and one oversized public polygon."
+    }
+  ],
+  "limitations": [
+    "Both catch and trip categories combine every species and fishing method. This source cannot provide lingcod or rockfish-specific evidence or validate an individual habitat patch.",
+    "The geometry is one-minute interview-reported area, not a catch coordinate. Multi-block trips divide reported catch across their listed blocks.",
+    "2021–2024 CPUA is a four-year aggregate. Samples is for the entire 2004–2024 period, not its recent denominator. -9999 is unavailable rather than zero.",
+    "One public polygon, OBJECTID 4098 BlockBox 489-233, spans about 0.044 degrees longitude and is excluded from the spatial review pending clarification.",
+    "Blocks with fewer than three reported trips over the full period are omitted. This dataset is historical sampling-coverage context only; no fishing target, rank, route or export derives from it."
+  ],
+  "producer": {
+    "name": "California Department of Fish and Wildlife, California Recreational Fisheries Survey",
+    "url": "https://wildlife.ca.gov/Conservation/Marine/CRFS"
+  },
+  "variables": ["reported_block", "all_species_catch_per_angler", "survey_samples_all_periods"],
+  "units": {
+    "reported_block": null,
+    "all_species_catch_per_angler": "fish per angler",
+    "survey_samples_all_periods": "survey samples"
+  },
+  "provenance": {
+    "access_service": "CDFW ArcGIS FeatureServer for BIOS ds3186",
+    "raw_sha256": null,
+    "transformations": [
+      "Pin source edit timestamp, required fields, 6,936-record count and every ordered page digest.",
+      "Transform valid public polygons to WGS84 and group only into broad approximate latitude browse sectors; exclude the reviewed oversized polygon.",
+      "Count positive, zero and unavailable 2021–2024 all/kept CPUA separately; keep raw blocks unpublished and out of spot rankings."
+    ]
+  }
+}
