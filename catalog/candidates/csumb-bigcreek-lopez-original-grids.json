@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "id": "csumb-bigcreek-lopez-original-grids",
+  "name": "CSUMB Big Creek and Lopez Point 2009\u20132010 processed bathymetry and terrain grids",
+  "region_ids": [
+    "big-sur-coast"
+  ],
+  "sector_ids": [
+    "big-sur"
+  ],
+  "need_ids": [
+    "bathymetry",
+    "substrate"
+  ],
+  "producer": {
+    "name": "California State University Monterey Bay Seafloor Mapping Lab; archived by NOAA NCEI",
+    "url": "https://csumb.edu/undersea/sfml-data-library/"
+  },
+  "documentation_url": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+  "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+  "access_status": "accessible",
+  "variables": [
+    "processed_dem_elevation",
+    "terrain_derived_roughness_class"
+  ],
+  "units": {
+    "processed_dem_elevation": "m NAVD88 Geoid09, signed elevation",
+    "terrain_derived_roughness_class": "derived class -31 rough, -30 smooth in the 30\u2013100 m stratum"
+  },
+  "rights": {
+    "license": null,
+    "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [
+      -121.6685924,
+      36.0099561,
+      -121.5314454,
+      36.1272209
+    ],
+    "resolution_m": 2,
+    "horizontal_crs": "EPSG:26910, NAD83 UTM zone 10",
+    "vertical_datum": "NAVD88 Geoid09",
+    "footprint_kind": "native-raster-envelope-with-nodata",
+    "footprint_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+    "resolution_basis": "inspected",
+    "note": "The original release has 2 m output for nominal 0\u201385 m depths and 5 m output for 80\u2013250 m. Published grid spacing is not independent sounding spacing or positional accuracy."
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-09-27T15:46:04+00:00",
+    "update_cadence": "Static survey; monthly source-byte and official protected-area recheck",
+    "coverage_start": "2009-08-19",
+    "coverage_end": "2010-05-18"
+  },
+  "provenance": {
+    "access_service": "NOAA NCEI original multibeam processed-product archive",
+    "raw_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+    "transformations": [
+      "Opened nested original ESRI bathymetry and habitat grids for Big Creek North, Big Creek South and Lopez Point; retained valid-cell masks and two disjoint 2 m/5 m comparison bands.",
+      "Joined the grid cells to current official CDFW Big Creek SMCA and SMR geometry with a 75 m research buffer; no MLLW transformation or fish target promotion.",
+      "Detailed file hashes, per-area counts and official MPA source hash are in dist/data/bigcreek-lopez-original-300-research.json."
+    ]
+  },
+  "evidence": [
+    {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "supports": "NCEI's Big Creek archive lists original processed products and survey metadata."
+    },
+    {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "supports": "Downloaded hash-pinned archive contains paired original product depth and habitat grids at 2 m and 5 m for three survey areas."
+    },
+    {
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0",
+      "supports": "Official CDFW geometry used for research proximity screen of Big Creek SMCA and SMR."
+    },
+    {
+      "url": "https://csumb.edu/undersea/sfml-data-library/",
+      "supports": "CSUMB states non-navigation use, attribution request and no for-profit use without express permission. Original product metadata leave use constraints to producer review."
+    }
+  ],
+  "limitations": [
+    "Nominal NAVD88 200\u2013300 ft grid band is not a chart-depth band; full-grid NAVD88-to-MLLW transform and a conservative combined uncertainty bound remain missing.",
+    "Published DEM cells were interpolated from decimated CUBE soundings. Terrain-derived rough class shares the same bathymetry and is not independent rock groundtruth.",
+    "The official Big Creek SMCA/SMR boundary is screened only as a research exclusion. Individual activity rules, ENC dangers, full approach/drift geometry and trip-date notices remain unreviewed.",
+    "No species presence, catch rate, rank or navigation/export waypoint follows from this source. Public grid redistribution and for-profit use are on hold pending source-specific permission."
+  ]
+}

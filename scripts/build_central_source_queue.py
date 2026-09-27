@@ -44,6 +44,15 @@ def build(root):
     bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
     multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
     csumb = read(root / "dist/data/csumb-bss-native-source-review.json")
+    bigcreek = read(root / "dist/data/bigcreek-lopez-original-300-research.json")
+    if (bigcreek.get("scope") != "original-bigcreek-lopez-300ft-dem-habitat-research"
+            or bigcreek.get("source_grid_vertical_datum") != "NAVD88 Geoid09"
+            or bigcreek.get("fishing_target") is not False
+            or bigcreek.get("exportable") is not False
+            or bigcreek.get("cdfw_mpa_names") != ["Big Creek SMCA", "Big Creek SMR"]
+            or {area["survey_area"] for area in bigcreek.get("areas", [])}
+            != {"BigCreekN", "BigCreekS", "LopezPt"}):
+        raise ValueError("Big Creek original DEM/class research receipt changed")
     vr_native = read(root / "dist/data/noaa-vr-native-depth-review.json")
     regular_native = read(root / "dist/data/noaa-regular-native-depth-review.json")
     conception_two_bag_gap = read(root / "dist/data/point-conception-original-bag-200-300ft-gap.json")
@@ -401,7 +410,7 @@ def build(root):
         coastal_dem = sorted(upstream_ids - set(historical_hydrography))
         region_gaps = [r["region_id"] for r in ledger["regions"] if not r["qualified_targets_at_or_under_200ft"]]
         # Priority is a *source-review* queue, not a predicted fish-density map.
-        tier = 1 if paired else 2 if fine_leads else 3
+        tier = 1 if paired else 2 if fine_leads or sector_id == "big-sur" else 3
         source_rows.append({
             "sector_id": sector_id,
             "priority_tier": tier,
@@ -539,6 +548,18 @@ def build(root):
             "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
             "csumb_native_band_leads": csumb_leads,
             "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+            "bigcreek_lopez_original_grids": ({
+                "receipt": "dist/data/bigcreek-lopez-original-300-research.json",
+                "archive_sha256": bigcreek["source_archive_sha256"],
+                "source_datum": "NAVD88 Geoid09",
+                "lopez_rough_dem_cells_outside_current_mpa_plus_75m": sum(
+                    tier["derived_rough_cells_outside_mpa_plus_75m"]
+                    for area in bigcreek["areas"] if area["survey_area"] == "LopezPt"
+                    for tier in area["tiers"]),
+                "release_status": "full-grid-chart-datum-total-uncertainty-independent-bottom-rights-hold",
+                "fishing_target": False,
+                "exportable": False,
+            } if sector_id == "big-sur" else None),
             "estero_independent_depth_character_lead": ({
                 "depth_source": estero_depth["source_report"],
                 "depth_receipt": "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json",
@@ -586,6 +607,7 @@ def build(root):
                                 "paired_original_products": m in paired} for m in usgs_areas],
             "next_action": "Resolve registration/independence of two H11952/H11953 4 m rugged-class research components and source fish observations; repeat dated GIS checks and screen security, rules and full routes before promotion" if sector_id == "morro-conception"
                            else "Acquire NOAA 2013 merge source-ID 12241 crosswalk, original survey datum and vertical-accuracy/source-extent deliverables for the paired Monterey research cells; then test independent substrate and full-area clearance" if sector_id == "monterey-sur"
+                           else "Resolve Lopez Point original CUBE-source uncertainty and full-grid NAVD88-to-MLLW conversion, obtain independent rock observations and source-specific use permission; then review full access/chart geometry" if sector_id == "big-sur"
                            else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",
@@ -600,7 +622,7 @@ def build(root):
         "status": "research-only",
         "region_gaps": region_gaps,
         "sectors": source_rows,
-        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion.",
+        "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB BSS native-band pixel counts are nominal NAVD88 source evidence, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights. Big Creek/Lopez Point counts are interpolated processed DEM output cells, not independent soundings or rock observations; they remain on chart-datum, uncertainty and rights hold. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion.",
     }
 
 

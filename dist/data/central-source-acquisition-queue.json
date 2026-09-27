@@ -13,6 +13,7 @@
     "big-sur-coast",
     "south-big-sur-san-simeon",
     "cambria-san-simeon",
+    "morro-bay",
     "point-arguello-conception"
   ],
   "sectors": [
@@ -109,6 +110,7 @@
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": null,
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
@@ -251,6 +253,7 @@
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": null,
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
@@ -276,7 +279,7 @@
     },
     {
       "sector_id": "big-sur",
-      "priority_tier": 3,
+      "priority_tier": 2,
       "noaa_catalog_lead_count": 4,
       "noaa_catalog_leads_with_bag_links": 4,
       "noaa_survey_ids": [
@@ -383,6 +386,15 @@
         }
       ],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": {
+        "receipt": "dist/data/bigcreek-lopez-original-300-research.json",
+        "archive_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "source_datum": "NAVD88 Geoid09",
+        "lopez_rough_dem_cells_outside_current_mpa_plus_75m": 36869,
+        "release_status": "full-grid-chart-datum-total-uncertainty-independent-bottom-rights-hold",
+        "fishing_target": false,
+        "exportable": false
+      },
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
@@ -394,7 +406,7 @@
           "paired_original_products": false
         }
       ],
-      "next_action": "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
+      "next_action": "Resolve Lopez Point original CUBE-source uncertainty and full-grid NAVD88-to-MLLW conversion, obtain independent rock observations and source-specific use permission; then review full access/chart geometry",
       "blocking_checks": [
         "valid measured cells within 300 ft plus uncertainty margin",
         "paired high-resolution substrate and independent groundtruth",
@@ -508,6 +520,7 @@
         }
       ],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": null,
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
@@ -588,6 +601,7 @@
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": null,
       "estero_independent_depth_character_lead": {
         "depth_source": "https://doi.org/10.3133/ofr20131225",
         "depth_receipt": "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json",
@@ -843,6 +857,7 @@
       "ncei_multibeam_footprint_receipt": "dist/data/noaa-central-multibeam-footprint-leads.json",
       "csumb_native_band_leads": [],
       "csumb_native_band_receipt": "dist/data/csumb-bss-native-source-review.json",
+      "bigcreek_lopez_original_grids": null,
       "estero_independent_depth_character_lead": null,
       "csumb_scc_estero_2010_crosscheck": null,
       "estero_vdatum_spatial_diagnostic": null,
@@ -872,5 +887,5 @@
       ]
     }
   ],
-  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB native-band pixel counts are measured in NAVD88, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights; they are not qualified fishing targets. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion."
+  "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25\u2013300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB BSS native-band pixel counts are nominal NAVD88 source evidence, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights. Big Creek/Lopez Point counts are interpolated processed DEM output cells, not independent soundings or rock observations; they remain on chart-datum, uncertainty and rights hold. The independent Estero depth/class overlap is a nominal source-datum cell count, not exact fishable geometry; its registration, chart-datum, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion."
 }
