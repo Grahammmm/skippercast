@@ -18,7 +18,8 @@
     "dist/data/bss03-camera-access-triage.json": "83dfc44bff60039347e7b519c5bc1061b9a93881c585692d5c57727989166f44",
     "dist/data/bss03-footprint-vdatum-diagnostic.json": "8b32b12cc112cb35cc2460daf4f7c19434c7d90d80dcbf31c8aa2f69b9c1a4e4",
     "dist/data/bss03-caris-acquisition-lead.json": "88813ff6984b17e6c653a863631e6e999361ddb90d3940ebf672dbe6ceb2e9a0",
-    "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1"
+    "dist/data/bss03-original-vessel-tpu-inputs.json": "f0b5e1a60416fdc74627e9353c123617d2fe9213c2b2868c358860f08ef7d9a1",
+    "dist/data/w00614-usgs-video-observation-gap.json": "903db015ef0747b7c0ff75a542dd7cb723d31ebb938fcb7e663929deee45329b"
   },
   "release_gate_ids": [
     "native-cells",
@@ -140,12 +141,13 @@
       "sector_id": "pigeon-monterey",
       "source_review_priority_tier": 1,
       "reviewed_lead": "W00614 measured 200\u2013300 ft MLLW cells near Pigeon Point",
-      "next_acquisition": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; inspect W00614's archived backscatter as a classification input only after groundtruth, then check full patch against MPAs and ENC.",
+      "next_acquisition": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; the 13 published USGS video archives have no observation within 100 m of this measured-cell envelope. Inspect W00614's archived backscatter as a classification input only after new groundtruth, then check full patch against MPAs and ENC.",
       "limiting_evidence": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
       "native_cell_evidence": "measured-mllw-substrate-unpaired",
       "source_receipts": [
         "dist/data/w00614-original-300-pigeon-monterey-review.json",
-        "dist/data/w00614-pigeon-original-character-overlap.json"
+        "dist/data/w00614-pigeon-original-character-overlap.json",
+        "dist/data/w00614-usgs-video-observation-gap.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,

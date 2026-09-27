@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "scope": "w00614-original-usgs-video-observation-gap",
+  "checked_at": "2026-09-27T01:39:01.837297+00:00",
+  "catalog_url": "https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html",
+  "depth_receipt": "dist/data/w00614-original-300-pigeon-monterey-review.json",
+  "bag_sha256": "561eedd13f6cec795f276933ca04b04e22af36659d56bd77ebba06104f7f4077",
+  "qualified_cells": 141331,
+  "qualified_cell_center_envelope_wgs84": [
+    -122.48471501095197,
+    37.11379580042955,
+    -122.44314979036514,
+    37.1629021179983
+  ],
+  "archives": [
+    {
+      "name": "Benthic_Biological_Interpretation.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/Benthic_Biological_Interpretation.zip",
+      "sha256": "8d5b062c32fb881aad027e0421daf11b5bc698c6c120263ecdd1d77187a0e63d",
+      "observation_points": 6677,
+      "source_bbox_wgs84": [
+        -124.530459,
+        33.280913,
+        -118.277097,
+        40.538886
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 2763
+    },
+    {
+      "name": "c0111sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0111sc_video_observations.zip",
+      "sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+      "observation_points": 4688,
+      "source_bbox_wgs84": [
+        -118.80264999999997,
+        32.55741000000006,
+        -117.15542799999997,
+        34.03594400000003
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 483510
+    },
+    {
+      "name": "c0212sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
+      "sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+      "observation_points": 5936,
+      "source_bbox_wgs84": [
+        -122.34794699999998,
+        34.50236200000006,
+        -120.56153199999994,
+        37.09740400000004
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 8866
+    },
+    {
+      "name": "c109nc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c109nc_video_observations.zip",
+      "sha256": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
+      "observation_points": 1615,
+      "source_bbox_wgs84": [
+        -124.411145,
+        40.69168,
+        -124.10421,
+        41.996925
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 423328
+    },
+    {
+      "name": "c210nc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c210nc_video_observations.zip",
+      "sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+      "observation_points": 2718,
+      "source_bbox_wgs84": [
+        -124.53051199999999,
+        38.93720200000007,
+        -123.70767199999995,
+        40.80716300000006
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 225892
+    },
+    {
+      "name": "f208nc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+      "sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+      "observation_points": 1103,
+      "source_bbox_wgs84": [
+        -123.751261,
+        37.847433,
+        -122.582776,
+        38.920457
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 77048
+    },
+    {
+      "name": "f307nc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+      "sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+      "observation_points": 2790,
+      "source_bbox_wgs84": [
+        -123.06489,
+        37.07877,
+        -122.34078999999998,
+        38.04581
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 2747
+    },
+    {
+      "name": "l908nc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/l908nc_video_observations.zip",
+      "sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+      "observation_points": 1917,
+      "source_bbox_wgs84": [
+        -123.385458,
+        38.036613,
+        -122.969477,
+        38.599295
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 108343
+    },
+    {
+      "name": "s1c08sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/s1c08sc_video_observations.zip",
+      "sha256": "7ff0ba29a3d0b6cdae6052f40a0fd6217c435fa74c971b0ab808a97d947b8f37",
+      "observation_points": 1722,
+      "source_bbox_wgs84": [
+        -120.464473,
+        34.067408,
+        -119.091449,
+        34.465902
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 351226
+    },
+    {
+      "name": "s2210mb_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/s2210mb_video_observations.zip",
+      "sha256": "48283dc9362a1f3654ec24452f72cb84c25092157f2867d9cb6c060393bb44a6",
+      "observation_points": 1848,
+      "source_bbox_wgs84": [
+        -122.32481311530302,
+        36.228358903004136,
+        -121.81169000729099,
+        37.09770494687807
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 10819
+    },
+    {
+      "name": "sw109sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/sw109sc_video_observations.zip",
+      "sha256": "58d202b3b8b74f2a1e12640a6293312fb7bf4f7431ad4094bccd5390f43724f7",
+      "observation_points": 2380,
+      "source_bbox_wgs84": [
+        -120.552933,
+        33.28081,
+        -118.276947,
+        34.513517
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 337575
+    },
+    {
+      "name": "z107sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/z107sc_video_observations.zip",
+      "sha256": "d7dd49f9a97183506111309a8f6ac957af3554c03d23ee56282a8b31470e54a7",
+      "observation_points": 667,
+      "source_bbox_wgs84": [
+        -120.296705,
+        34.065623,
+        -119.127344,
+        34.449593
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 356492
+    },
+    {
+      "name": "z206sc_video_observations.zip",
+      "url": "https://pubs.usgs.gov/ds/781/video_observations/data/z206sc_video_observations.zip",
+      "sha256": "6cd03626573042381c678facbfe54058bf6e9aa3fe4344de3dfcd630cad5bcec",
+      "observation_points": 603,
+      "source_bbox_wgs84": [
+        -119.90762,
+        34.220287,
+        -119.271926,
+        34.40752
+      ],
+      "points_in_qualified_cell_center_envelope": 0,
+      "points_within_100m_of_envelope": 0,
+      "approx_min_distance_to_envelope_m": 381787
+    }
+  ],
+  "total_cataloged_point_records_not_deduplicated": 34664,
+  "points_on_or_within_100m_of_envelope": 0,
+  "independent_substrate_gate_satisfied": false,
+  "biological_observation_gate_satisfied": false,
+  "qualified_waypoints": 0,
+  "fishing_target": false,
+  "exportable": false,
+  "limitation": "The USGS video-point catalog has no observations within 100 m of the qualifying W00614 cell-center envelope. This does not establish absence of rock or fish; another local substrate/biological source is required. Rectangle distance is an approximate exclusion check, not a positional-error model. The aggregate interpretation archive may repeat cruise records; the point-record total is not independent sampling effort."
+}

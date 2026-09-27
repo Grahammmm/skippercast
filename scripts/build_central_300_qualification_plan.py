@@ -72,7 +72,7 @@ PROVIDERS = {
 SECTOR_OVERRIDES = {
     "pigeon-monterey": {
         "lead": "W00614 measured 200–300 ft MLLW cells near Pigeon Point",
-        "next": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; inspect W00614's archived backscatter as a classification input only after groundtruth, then check full patch against MPAs and ENC.",
+        "next": "Seek a different independent surveyed rock class and dated open-reference fish observations over those exact BAG cells; the 13 published USGS video archives have no observation within 100 m of this measured-cell envelope. Inspect W00614's archived backscatter as a classification input only after new groundtruth, then check full patch against MPAs and ENC.",
         "hold": "Measured depth is geographically narrow and no paired rock/fish patch is qualified.",
     },
     "monterey-sur": {
@@ -122,6 +122,7 @@ def build(root):
     bss03_datum_path = "dist/data/bss03-footprint-vdatum-diagnostic.json"
     bss03_caris_path = "dist/data/bss03-caris-acquisition-lead.json"
     bss03_vessel_path = "dist/data/bss03-original-vessel-tpu-inputs.json"
+    pigeon_video_path = "dist/data/w00614-usgs-video-observation-gap.json"
     estero_direct_path = "dist/data/estero-wgs84-direct-vdatum-review.json"
     estero_inventory_path = "dist/data/estero-2012-public-release-inventory.json"
     buchon_ncei_path = "dist/data/point-buchon-2007-ncei-multibeam-lead.json"
@@ -135,6 +136,15 @@ def build(root):
     bss03_datum = load(root, bss03_datum_path)
     bss03_caris = load(root, bss03_caris_path)
     bss03_vessel = load(root, bss03_vessel_path)
+    pigeon_video = load(root, pigeon_video_path)
+    if (pigeon_video.get('scope') != 'w00614-original-usgs-video-observation-gap'
+            or pigeon_video.get('qualified_cells') != 141331
+            or len(pigeon_video.get('archives', [])) != 13
+            or pigeon_video.get('points_on_or_within_100m_of_envelope') != 0
+            or pigeon_video.get('independent_substrate_gate_satisfied') is not False
+            or pigeon_video.get('biological_observation_gate_satisfied') is not False
+            or pigeon_video.get('qualified_waypoints') != 0):
+        raise ValueError('W00614 original USGS video observation coverage changed')
     estero_direct = load(root, estero_direct_path)
     estero_inventory = load(root, estero_inventory_path)
     buchon_ncei = load(root, buchon_ncei_path)
@@ -324,6 +334,8 @@ def build(root):
                     or class_lead["fishing_target"] is not False):
                 raise ValueError("Pigeon Point independent substrate claim changed")
             receipts.append(class_lead["receipt"])
+        if sector_id == 'pigeon-monterey':
+            receipts.append(pigeon_video_path)
         tracks = []
         for key, requirement in TRACKS:
             stage = "research-evidence" if key == "native-cells" and measured else "missing-release-evidence"
@@ -359,7 +371,7 @@ def build(root):
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path)},
+        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, buchon_path, buchon_ncei_path, buchon_ncei_index_path, buchon_beams_path, buchon_caris_path, estero_path, estero_direct_path, estero_inventory_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_vessel_path, pigeon_video_path)},
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],
