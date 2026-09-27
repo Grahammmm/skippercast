@@ -464,6 +464,7 @@
     "Avila"
   ],
   "research_only_note": "The 132 published coordinates and bottom views are research-only. No Morro\u2013Avila spot is presently chart-depth qualified; validate original source datum and uncertainty before fishing-target promotion.",
+  "search_plans_note": "September 27, 2026: source atlas metadata corrected to unverified output datum; search geometry unchanged and research-only.",
   "coverage_note": "132 surveyed reef candidates and 12 sediment regions. Native public survey coverage ends at Point Estero; offshore areas are search references.",
   "jurisdiction_id": "california-central",
   "pipeline_sources": {

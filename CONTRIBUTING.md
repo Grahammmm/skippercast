@@ -4,6 +4,8 @@ SkipperCast is source-available for personal use under [LICENSE](LICENSE). Contr
 
 ## Get oriented
 
+AI agents (Codex, Claude) and people follow the branch, pull-request and rebuild rules in [AGENTS.md](AGENTS.md).
+
 Read [README.md](README.md), the [architecture](docs/architecture.md), and the [quickstart](docs/quickstart.md). Core runtime code uses Python 3.11+ and the standard library. Keep the dated atlas and reusable software separate.
 
 ## Check a change
