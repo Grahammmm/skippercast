@@ -19,6 +19,7 @@
     "dist/data/point-buchon-vdatum-grid-api-bridge.json": "6aba0851e690987e5841bc24e959b2684a81c14182b8a1d366480fb6946a242b",
     "dist/data/monterey-17-noaa-bag-catalog-gap.json": "bdcae655617ea1d3c12b2034d68c5b12206bd69ff7c414d2b1db89f0af0d74ac",
     "dist/data/monterey-17-bluetopo-contributor-pixels.json": "2d605f765a40fe5bc5d9206c1fe8694469ef1bd5a10160a2c34dfcad31a9501b",
+    "dist/data/monterey-1995-original-multibeam-overlap.json": "6f9bfaacd1e553153182daee65874604acb42de945194390c0d6507ebe01895e",
     "dist/data/cal-dig-i-original-rov-300ft-gap.json": "62b5dc04d9bf6f223f8a706603591d99ac3bfaaaf4398736fa760be5b807f1ad",
     "dist/data/central-dataone-rov-300ft-spot-precision.json": "22552b55ac0b57a354b9eda85d5b157f35a19d40462c985e34bef2eb57955518",
     "dist/data/estero-independent-2012-depth-2008-character-overlap.json": "72685d69beb7d4975178b408ef747d39dbb01f2d9e7ec3b5d913f88d5844c98f",
@@ -254,9 +255,9 @@
     {
       "sector_id": "monterey-sur",
       "source_review_priority_tier": 1,
-      "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; no NOS BAG-catalog leads over the 17 outlines and only three 1933-survey measured BlueTopo contributor pixels in their nominal NAVD88 200\u2013300 ft bands",
-      "next_acquisition": "Resolve the USGS NAVD88-to-MLLW surface and upper error, then seek original non-NOS or unpublished multibeam processing on the same class pixels. BlueTopo's interpolated 1933 contributor cells are not an independent original-depth cross-check; recheck source lineage when tiles change.",
-      "limiting_evidence": "The NOS BAG catalog path has no lead at these 17 outlines; the two highest-priority historical-camera outlines have only interpolated BlueTopo cells, and no chart-datum depth plus source uncertainty is qualified.",
+      "reviewed_lead": "USGS Offshore Monterey bathymetry, character and video; original 1995 multibeam has populated 5 m cells in 14/17 research outlines, while no NOS BAG-catalog leads overlap the outlines and BlueTopo's nominal band has only three measured pixels from 1933",
+      "next_acquisition": "Request the original 1995 multibeam tide, vertical-datum, navigation and sounding-uncertainty records, plus the 2016 composite source-line crosswalk and upper error; resolve the large discrepancy on outline 040. Test any genuinely independent measured survey against all class pixels before a depth gate can pass.",
+      "limiting_evidence": "The 1995 grid lacks a documented vertical datum or upper error, its independence from the 2016 composite is unproven, and outline 040 has a large mismatch. No MLLW depth plus conservative upper uncertainty is qualified.",
       "native_cell_evidence": "source-datum-only",
       "source_receipts": [
         "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json",
@@ -264,7 +265,8 @@
         "dist/data/ciap-2016-central-rov-public-service-audit.json",
         "dist/data/ciap-2016-central-video-private-block-overlap.json",
         "dist/data/monterey-17-bluetopo-contributor-pixels.json",
-        "dist/data/monterey-17-noaa-bag-catalog-gap.json"
+        "dist/data/monterey-17-noaa-bag-catalog-gap.json",
+        "dist/data/monterey-1995-original-multibeam-overlap.json"
       ],
       "independent_groundtruth_at_candidate_scale": false,
       "full_patch_current_legal_chart_access_review": false,

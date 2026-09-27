@@ -42,6 +42,14 @@ jobs:
           --fetch
           --output var/review/monterey-17-bluetopo-contributor-pixels.json
           --verify dist/data/monterey-17-bluetopo-contributor-pixels.json
+      - name: Recheck original 1995 USGS multibeam research overlap
+        env:
+          PYTHONPATH: src:.
+        run: >-
+          python scripts/audit_mont95_monterey_original_overlap.py
+          --fetch
+          --output var/review/monterey-1995-original-multibeam-overlap.json
+          --verify dist/data/monterey-1995-original-multibeam-overlap.json
       - name: Recheck NOAA Monterey regional VDatum model package and conditional probes
         env:
           PYTHONPATH: src:.
@@ -84,6 +92,7 @@ jobs:
             var/review/monterey-bag-overlap/*-fresh-overlap.json
             var/review/monterey-17-noaa-bag-catalog-gap.json
             var/review/monterey-17-bluetopo-contributor-pixels.json
+            var/review/monterey-1995-original-multibeam-overlap.json
           retention-days: 30
   central-coverage-and-source-queue:
     runs-on: ubuntu-latest

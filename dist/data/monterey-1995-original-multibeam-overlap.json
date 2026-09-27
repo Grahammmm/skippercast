@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "scope": "monterey-1995-original-multibeam-research-overlap",
+  "source_urls": {
+    "mont95.txt": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95.txt",
+    "mont95ng/dblbnd.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/dblbnd.adf",
+    "mont95ng/hdr.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/hdr.adf",
+    "mont95ng/log": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/log",
+    "mont95ng/prj.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/prj.adf",
+    "mont95ng/sta.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/sta.adf",
+    "mont95ng/w001001.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/w001001.adf",
+    "mont95ng/w001001x.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95ng/w001001x.adf",
+    "mont95sg/dblbnd.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/dblbnd.adf",
+    "mont95sg/hdr.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/hdr.adf",
+    "mont95sg/log": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/log",
+    "mont95sg/prj.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/prj.adf",
+    "mont95sg/sta.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/sta.adf",
+    "mont95sg/vat.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/vat.adf",
+    "mont95sg/w001001.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/w001001.adf",
+    "mont95sg/w001001x.adf": "https://pubs.usgs.gov/of/2001/0179/data/battopo/mont95sg/w001001x.adf"
+  },
+  "source_sha256": {
+    "mont95.txt": "581df812be8931ea5ba5c25fe2a130d00b89b178152d25d3e03dfd871d079e4e",
+    "mont95ng/dblbnd.adf": "f1af55a10ba07301ed12334ecd4b1bfc743f57c36aefdbbd77c07c43322576d2",
+    "mont95ng/hdr.adf": "1bd9d4a6452c2a7a7e3897827fcded6740317690b19478140ffb67d83545d627",
+    "mont95ng/log": "9a3f836764333f5d29c8494f18979cf3be4bb0f00b0868a802fa97ec2f5d0089",
+    "mont95ng/prj.adf": "dc0f7bcf5cc4d38869512256e57f044e34b913fc6b5618476504a4ffaca198e2",
+    "mont95ng/sta.adf": "db42b5b2380fdcbb4567260da509810036e8d1c317261852e8105db1537eb8a7",
+    "mont95ng/w001001.adf": "116508796cc9f0789abb8e66d364cad4ae0d6f03c3400e6fbcc739804f4c2f9c",
+    "mont95ng/w001001x.adf": "da51a0c4ce03b767b591ee92e78349aaec249b1bc05e6985e3a7520d0bd778ac",
+    "mont95sg/dblbnd.adf": "5951d30f4be38864534200bb1787149dce040fa18cbbab3d500c2aaa5f96e46b",
+    "mont95sg/hdr.adf": "35cb89d429bf3b5303c3e6bd21fd690128bf350ad3ee41aa552876720a9f24c0",
+    "mont95sg/log": "60083bd745f40562e9d090be2a3ca9a3a7da81d25ce270961fb80a5af209cbfe",
+    "mont95sg/prj.adf": "dc0f7bcf5cc4d38869512256e57f044e34b913fc6b5618476504a4ffaca198e2",
+    "mont95sg/sta.adf": "d29854d65cebe836fb4c09c2d3fc1e46333d0bd8828a670d98f0ced885b6eb70",
+    "mont95sg/vat.adf": "40ad3b32fc59ceb955246155be5f75d24f7614607b6294ee061d69a6ea81af1a",
+    "mont95sg/w001001.adf": "ba1903dc6b0d1a7af8b3a86bab67df8485fd9024ae5b28239173ac37449aed8c",
+    "mont95sg/w001001x.adf": "336894e304741eb7f6857cab4cef954db21c448cd2298e9ab97ccc8a8d322dd0"
+  },
+  "newer_usgs_archive_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+  "review_matrix_sha256": "f9cb3a394b918a7484321eb332094fda62b1417aed09359b6beb9047d9c5bb9d",
+  "research_context_sha256": "40c5ff0869cbd9731f7c44665ae144a6adf9ec849fe90e13663682145bd01e39",
+  "survey_year": 1995,
+  "original_grid_spacing_m": 5,
+  "original_vertical_datum_documented": false,
+  "original_upper_vertical_error_documented": false,
+  "independence_from_2016_composite_established": false,
+  "outlines_reviewed": 17,
+  "outlines_with_original_cells": 14,
+  "rockfish_camera_positive_outlines_with_original_cells": 3,
+  "outlines": [
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-023",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 3600,
+      "original_nominal_200_300ft_cells_unknown_datum": 3600,
+      "paired_2016_cells": 3600,
+      "recent_minus_1995_median_m": -0.516,
+      "recent_minus_1995_p90_abs_m": 1.343,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-046",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 612,
+      "original_nominal_200_300ft_cells_unknown_datum": 612,
+      "paired_2016_cells": 612,
+      "recent_minus_1995_median_m": -0.429,
+      "recent_minus_1995_p90_abs_m": 1.168,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-033",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 1520,
+      "original_nominal_200_300ft_cells_unknown_datum": 1520,
+      "paired_2016_cells": 1520,
+      "recent_minus_1995_median_m": -0.542,
+      "recent_minus_1995_p90_abs_m": 1.32,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-034",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 1472,
+      "original_nominal_200_300ft_cells_unknown_datum": 1338,
+      "paired_2016_cells": 1472,
+      "recent_minus_1995_median_m": -1.543,
+      "recent_minus_1995_p90_abs_m": 2.639,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-038",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 1056,
+      "original_nominal_200_300ft_cells_unknown_datum": 1056,
+      "paired_2016_cells": 1056,
+      "recent_minus_1995_median_m": -0.83,
+      "recent_minus_1995_p90_abs_m": 1.411,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-040",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 852,
+      "original_nominal_200_300ft_cells_unknown_datum": 0,
+      "paired_2016_cells": 852,
+      "recent_minus_1995_median_m": -13.944,
+      "recent_minus_1995_p90_abs_m": 25.835,
+      "large_difference_over_5m": true
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-059",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 492,
+      "original_nominal_200_300ft_cells_unknown_datum": 492,
+      "paired_2016_cells": 492,
+      "recent_minus_1995_median_m": -0.394,
+      "recent_minus_1995_p90_abs_m": 1.057,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-011",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 20048,
+      "original_nominal_200_300ft_cells_unknown_datum": 305,
+      "paired_2016_cells": 20048,
+      "recent_minus_1995_median_m": -0.956,
+      "recent_minus_1995_p90_abs_m": 2.055,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-072",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 280,
+      "original_nominal_200_300ft_cells_unknown_datum": 280,
+      "paired_2016_cells": 280,
+      "recent_minus_1995_median_m": -0.461,
+      "recent_minus_1995_p90_abs_m": 1.683,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-070",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 268,
+      "original_nominal_200_300ft_cells_unknown_datum": 268,
+      "paired_2016_cells": 268,
+      "recent_minus_1995_median_m": -0.299,
+      "recent_minus_1995_p90_abs_m": 1.134,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-071",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 272,
+      "original_nominal_200_300ft_cells_unknown_datum": 272,
+      "paired_2016_cells": 272,
+      "recent_minus_1995_median_m": -0.592,
+      "recent_minus_1995_p90_abs_m": 1.244,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-086",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 220,
+      "original_nominal_200_300ft_cells_unknown_datum": 220,
+      "paired_2016_cells": 220,
+      "recent_minus_1995_median_m": -1.671,
+      "recent_minus_1995_p90_abs_m": 2.389,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-076",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 256,
+      "original_nominal_200_300ft_cells_unknown_datum": 21,
+      "paired_2016_cells": 256,
+      "recent_minus_1995_median_m": -0.714,
+      "recent_minus_1995_p90_abs_m": 1.342,
+      "large_difference_over_5m": false
+    },
+    {
+      "context_id": "usgs-OffshoreMonterey-8ca813f1-026",
+      "original_grid": "mont95sg",
+      "original_valid_5m_cells": 882,
+      "original_nominal_200_300ft_cells_unknown_datum": 800,
+      "paired_2016_cells": 882,
+      "recent_minus_1995_median_m": -0.281,
+      "recent_minus_1995_p90_abs_m": 1.485,
+      "large_difference_over_5m": false
+    }
+  ],
+  "fishing_target": false,
+  "exportable": false,
+  "limitations": [
+    "The 1995 ArcInfo grids have no stated vertical datum or defensible upper vertical-error bound; nominal depth bands cannot be used as 300 ft release tests.",
+    "The paired difference is not total propagated uncertainty, chart-datum conversion, or evidence of survey independence; source reuse, offsets, terrain change and registration remain unresolved.",
+    "Large paired discrepancies require separate original-line review; do not average them into a tolerance.",
+    "Old 5 m cells and a later 2 m composite do not establish species presence, current habitat, MPA access or a fishing waypoint."
+  ],
+  "checked_at": "2026-09-27T06:06:20.311560+00:00"
+}
