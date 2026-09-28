@@ -87,3 +87,37 @@ test('watchdog dispatches only for a stale feed with no refresh running', async 
   assert.equal((await watchdog({}, now)).action, 'no-token');
   useBucket({});
 });
+
+test('seafloor archives require a fresh matching revision and never fall back to assets', async () => {
+  const path = '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles';
+  const control = 'tiles/seafloor/manifest-morro-bay.json';
+  const manifest = {region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64),
+    expires_at: new Date(Date.now() + 3600000).toISOString()};
+  const make = (m, digest = 'a'.repeat(64), archive = true) => ({async get(key) {
+    if (key === control) return m ? {json: async () => m} : null;
+    return archive ? {body: new Blob(['PMTiles']).stream(), size: 7, httpEtag: '"a"', customMetadata: {sha256: digest}} : null;
+  }});
+  try {
+    for (const m of [null, {...manifest, status: 'updating'}, {...manifest, region: 'other'},
+      {...manifest, expires_at: '2000-01-01'}, {...manifest, archive_sha256: null}]) {
+      useBucket({FEEDS: make(m)});
+      const r = await serveFeed(new Request('https://s'+path), path);
+      assert.equal(r.status, 503);
+      assert.equal(r.headers.get('Cache-Control'), 'no-store');
+    }
+    useBucket({FEEDS: make(manifest, 'b'.repeat(64))});
+    assert.equal((await serveFeed(new Request('https://s'+path), path)).status, 503);
+    useBucket({FEEDS: make(manifest)});
+    let r = await serveFeed(new Request('https://s'+path), path);
+    assert.equal(r.status, 200);
+    assert.ok(r.headers.get('Access-Control-Expose-Headers').includes('ETag'));
+    assert.equal(r.headers.get('Cache-Control'), 'no-store');
+    const internal = '/feeds/tiles/seafloor/regions/morro-bay/seafloor-morro-bay.pmtiles';
+    assert.equal((await serveFeed(new Request('https://s'+internal), internal)).status, 404);
+    useBucket({FEEDS: make(manifest, 'a'.repeat(64), false)});
+    r = await serveFeed(new Request('https://s'+path), path, {fetch() {throw new Error('Must not use bundled stale tiles');}});
+    assert.equal(r.status, 404);
+    assert.equal(feedKey('/feeds/seafloor-cache/source.bag'), null);
+    assert.equal(feedKey('/feeds/seafloor-review/run.json'), null);
+  } finally { useBucket({}); }
+});

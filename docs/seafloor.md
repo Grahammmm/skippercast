@@ -527,3 +527,134 @@ All three repeat runs are no-ops, and the original 1,812 m r02 survey seam and
 legacy-overlap comparisons remain recorded. The new ledger and private receipts
 are proposed in the screening PR; M3 acceptance is satisfied on main only after
 that PR merges. This result does not mean the layer is already served as tiles.
+
+## Regional publication contract (M4)
+
+M3 is accepted on main at `56ae67410f35336414b4efd989c72d4efe4f24cf`
+(PR #17). M4 adds publication; it does not add surveyed area or change grading.
+The initial ledger remains 100.713125 km² tier 1 and 16.611764 km² tier 2.
+Only three of 46 Central Coast reaches are assessed. These are habitat planning
+fits, not likelihoods of a catch.
+
+```
+reviewed catalogs + private original grids + fresh restriction inventory
+  → per-reach run / hash-checked no-op → private recovery and review receipts
+  → regional cells + screened habitat → pinned PMTiles encoder
+  → isolated R2 bundle → held alias → archive byte read-back → ready manifest
+  → Worker freshness/revision gate → public HTTP Range verification
+  → small ledger PR (no direct push to main)
+```
+
+### URLs and layers
+
+For a catalog region such as `morro-bay`:
+
+- `/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles`: PMTiles v3, MVT,
+  zooms 8–15; supports HTTP Range. Layer names are `cells` and `habitat`.
+- `/feeds/tiles/seafloor/manifest-morro-bay.json`: publication status, absolute
+  `expires_at`, source-run input hashes, archive SHA-256/size and feature counts.
+- `/feeds/tiles/seafloor/regions/morro-bay/ledger.json`: regional reach summaries;
+  the committed counterpart is `dist/data/seafloor-ledger.json`.
+
+`cells` contains the entire region's provisional reference band, including
+unassessed cells, with `id`, `reach`, `tier`, `source_id`, `band_area_m2`,
+`reference_band` and a planning notice. It is not a measured depth contour.
+`habitat` contains only passed tier-2 polygons, with stable `id`, nominal depth
+range, source IDs/year/resolution/datum, terrain grade/score, species planning
+fits and screening provenance. `terrain_grade`, `terrain_score` and
+`fit_lingcod` / `fit_rockfish_reef` / other `fit_<group>` scalars support styling.
+Nested evidence objects (`terrain`, `fit`, `screen`, `substrate`, source IDs,
+independent evidence and hold reasons) are canonical JSON strings in MVT;
+parse them when displaying provenance. Unknown values remain unknown.
+
+Show **“Habitat candidate, unverified”** and **“Nominal depth; verify on your
+sounder.”** with the required planning notice. Terrain A/B/C and species fit
+1–3 are separate assessments; do not relabel them catch probability. Same-survey
+bathymetry and substrate remain one independent evidence family.
+
+Tiles retain tiny polygons and unsimplified edges, but MVT quantizes geometry
+to its tile grid and may split polygons across tiles. Deduplicate by `id`.
+**Tile geometry is for display, not navigation or GPX boundary export.** Use
+canonical screened geometry through a separately reviewed export path.
+
+### Failure behavior and storage
+
+The publisher re-runs input validation and checks output hashes before encoding.
+The alias is held during refresh and upload, and is promoted only after the
+uploaded archive's full SHA-256 matches. R2 object metadata records that hash;
+the Worker requires it to match the ready control manifest. An interrupted job
+leaves the layer unavailable, not falsely fresh. No archive falls back to bundled
+assets. Seafloor responses use `no-store` so caches cannot bypass the expiry
+check; R2 still supports efficient range requests.
+
+Expiry is the earliest of the snapshot, layer retrieval dates and eCFR's actual
+availability date plus the existing 35-day policy. An expired/missing/updating
+manifest or mismatched archive returns 503. Internal archive copies are not
+served by the Worker. This is a permanent-spatial-screen freshness rule, not a
+claim that seasonal regulations or temporary notices are current.
+
+Raw originals, normalized grids, held candidates and review receipts stay in
+private `seafloor-cache/` and `seafloor-review/` R2 prefixes. They are never feed
+keys. Use the private bucket bound as `FEEDS`; do not enable a public R2 bucket
+URL, which would bypass the Worker gates. Restore inventories allow only known
+pipeline paths and their owning scope, reject traversal/symlinks, and verify
+content hashes. Existing correct local files are not downloaded again.
+Regional public synchronization uses its own prefix and cannot delete other
+regions or existing app tile layers. Credentials use the existing CI secret
+names (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); absent or invalid
+credentials fail the job visibly.
+
+### Run and schedule
+
+```
+# Local build; no network publication or credentials needed after source recovery:
+PYTHONPATH=src:. TIPPECANOE=/path/to/tippecanoe python -m skippercast.seafloor publish --region morro-bay
+# Main only, with existing R2 credentials; explicit upload:
+PYTHONPATH=src:. TIPPECANOE=/path/to/tippecanoe python -m skippercast.seafloor publish --region morro-bay --upload
+```
+
+`.github/workflows/seafloor.yml` runs Mondays at 10:23 UTC, on relevant main
+changes, or by manual dispatch. Dispatch `region=morro-bay` for the pilot;
+blank means all processed regions. Optional `reach` reprocesses that reach and
+its region's assessed peers. Fresh restriction inventories change the screening
+input; unchanged original surveys reuse the content-addressed cache. Matrix
+workers are limited to three. Publishing is serialized and main-only.
+
+A cold runner restores private state or fetches reviewed original files and
+reconstructs the pinned reference baseline. A different baseline checksum stops
+publication rather than silently replacing it. Recovery currently needs about
+1 GB of pilot survey/state storage (including originals and derived grids);
+the first bootstrap may take substantially longer than subsequent cached runs.
+The encoder is [felt/tippecanoe](https://github.com/felt/tippecanoe) v2.82.0,
+pinned to commit `4f2621186acfec33b63ddf636f665623c0fef2dd`.
+
+The pipeline opens a ledger-only PR showing before/after tier areas. GitHub must
+allow Actions to create pull requests. PRs created by the default Actions token
+do not trigger another Actions run automatically; a maintainer must trigger
+normal PR checks through a new authorized push, or configure a separately
+scoped PR-creation token before unattended ledger review. They are never
+auto-merged. R2 permissions and the production Worker's
+`FEEDS` binding must be configured. The live probe uses the existing `CLOUDFLARE_SITE_URL` repository variable
+(or skippercast.com if unset) and records the exact URL in its receipt. As
+documented in [Cloudflare hosting](cloudflare.md), the .com site remains on
+Sites pending its separate migration. A staging Worker pass proves that
+endpoint only; it does not mean the layer appears in the .com app. The app
+integration issue must identify the actual tested feed host. The final probe
+checks the public manifest,
+PMTiles v3 header, 206 range response, byte size and Worker cache policy; private
+R2 success alone does not count as a successful website deployment.
+
+### Local validation and remaining live acceptance
+
+The September 28 local archive is 6,941,072 bytes, with 10,101 cells and 1,006
+habitat polygons. Decoding zoom 15 reproduces every input habitat ID. Rebuilding
+with the pinned encoder gives the identical SHA-256
+`153b7f61381270128d0f7d6ef479e70f90ed49f661a0c649ee7c13eb9e2128a1`.
+Offline tests cover stale/held inputs, corruption, interrupted promotion, private
+scope/path restrictions, missing credentials and public response verification.
+
+**M4 is not accepted yet:** after this implementation merges, deploy the Worker
+from main, dispatch `morro-bay`, and verify the live URL and nonzero regional
+ledger. Local credentials are unavailable; no R2 upload is claimed here. Once
+that passes, open “Seafloor tiers layer in the app” for Claude, linking this
+contract, before beginning M5 reach expansion.
