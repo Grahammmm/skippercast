@@ -1,4 +1,4 @@
-import {esc,num} from './marine-charts.js?v=8.14';
+import {esc,num} from './marine-charts.js';
 export function terrainSource(target) {
   const originalUSGS=String(target.id).startsWith('SC26-');
   return {producer:target.producer||(originalUSGS?'USGS':'Survey provider'),datum:target.vertical_datum||(originalUSGS?'unverified source datum':'not recorded'),

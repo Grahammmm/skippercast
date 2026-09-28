@@ -118,11 +118,10 @@ export default {async fetch(request,env){
   const url=new URL(request.url),path=url.pathname;
   if(!path.startsWith('/api/')){
     if(!env.ASSETS)return new Response('Not found',{status:404});
-    // The Sites edge can retain a previously deployed asset at a stable URL.
-    // Resolve the shell and its changed modules through versioned asset paths.
-    const current={'/':'/index-v200','/index.html':'/index-v200',
-      '/boot-coastwide-v3.js':'/boot-coastwide-v200.js',
-      '/app.js':'/app-v200.js','/survey-habitat.js':'/survey-habitat-v195.js'}[path];
+    // The Sites edge can retain a previously deployed asset at a stable URL, so
+    // scripts, styles and pages are published under content-hashed names
+    // (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
+    const current=SHELLS[path];
     if(!current)return env.ASSETS.fetch(request);
     const assetUrl=new URL(request.url);assetUrl.pathname=current;assetUrl.search='';
     const response=await env.ASSETS.fetch(new Request(assetUrl,request));
@@ -142,7 +141,7 @@ export default {async fetch(request,env){
         const response=json(data);response.headers.set('Cache-Control','public,max-age=300');return response;
       }catch(error){if(error instanceof QueryError)return json({error:true,reason:error.message},400);throw error;}
     }
-    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
+    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
       const claims=await verifyJobToken(token,deployment);if(!claims)return json({error:'Unauthorized'},401);
