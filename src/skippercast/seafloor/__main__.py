@@ -10,6 +10,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
+    publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
+    publication.add_argument('--region', required=True)
+    publication.add_argument('--upload', action='store_true')
     add = commands.add_parser('add-survey', help='Inspect an original URL and write a private candidate draft')
     add.add_argument('--url', required=True)
     add.add_argument('--id')
@@ -33,6 +36,14 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'publish':
+            from .publish import build, upload
+            if args.upload:
+                print(json.dumps(upload(args.region), indent=2))
+            else:
+                folder, manifest = build(args.region)
+                print(json.dumps({'directory': str(folder), **manifest}, indent=2))
+            return
         if args.command == 'refresh-screen':
             from .screen_sources import refresh
             result = refresh()

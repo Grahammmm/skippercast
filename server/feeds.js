@@ -57,11 +57,30 @@ export function rangeResponse(bytes, request, headers) {
 export async function serveFeed(request, path, assets) {
   const key = feedKey(path);
   if (!key) return null;
-  const headers = new Headers({'Content-Type': contentType(key), 'Cache-Control': `public, max-age=${cacheFor(key)}`,
+  // Seafloor source/cache/review prefixes are never feeds. Public archives
+  // require a current publication receipt, even when old R2 bytes still exist.
+  const seafloor = key.startsWith('tiles/seafloor/');
+  let publication = null;
+  if (seafloor && key.endsWith('.pmtiles')) {
+    const match = /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
+    if (!match || !bucket) return new Response('Not found', {status: 404});
+    let manifest;
+    try { manifest = await (await bucket.get(`tiles/seafloor/manifest-${match[1]}.json`))?.json(); }
+    catch { manifest = null; }
+    publication = manifest;
+    const expires = Date.parse(manifest?.expires_at);
+    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(manifest?.archive_sha256 || '')) {
+      return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
+    }
+  }
+  const headers = new Headers({'Content-Type': contentType(key), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(key)}`,
     'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*'});
   if (bucket) {
     const object = await bucket.get(key, {range: request.headers, onlyIf: request.headers});
     if (object) {
+      if (publication && object.customMetadata?.sha256 !== publication.archive_sha256) {
+        return new Response('Seafloor archive revision unavailable', {status: 503, headers});
+      }
       headers.set('ETag', object.httpEtag);
       headers.set('X-Feed-Source', 'r2');
       headers.set('Accept-Ranges', 'bytes');
@@ -76,6 +95,7 @@ export async function serveFeed(request, path, assets) {
       return new Response(object.body, {status: 200, headers});
     }
   }
+  if (seafloor) return new Response('Not found', {status: 404, headers});
   if (key.startsWith('tiles/')) {  // map tiles ship with the site until R2 is connected
     const response = assets ? await assets.fetch(new Request(new URL('/' + key, request.url))) : null;
     if (!response?.ok) return new Response('Not found', {status: 404, headers});

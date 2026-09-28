@@ -24,6 +24,37 @@ ROOT = Path(__file__).resolve().parents[1]
 TILES = ROOT / 'dist/tiles'
 
 
+def build_vector_archive(tool, layers, output, *, title, attribution, description,
+                         minzoom=8, maxzoom=15, precise=False):
+    """Shared deterministic PMTiles builder; callers own data qualification."""
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        args = []
+        for name, features in sorted(layers.items()):
+            if not name.isidentifier():
+                raise ValueError('Invalid vector layer name')
+            path = Path(tmp)/f'{name}.geojson'
+            path.write_text(json.dumps({'type': 'FeatureCollection', 'features': features}, sort_keys=True))
+            args += ['-L', f'{name}:{path.name}']
+        env = {**os.environ, 'PATH': f"{Path(tool).resolve().parent}{os.pathsep}{os.environ.get('PATH', '')}",
+               'TIPPECANOE_MAX_THREADS': '1'}
+        flags = (['--no-line-simplification', '--no-tiny-polygon-reduction', '--full-detail=15', '--low-detail=15']
+                 if precise else ['--detect-shared-borders'])
+        subprocess.run(['tippecanoe', '--quiet', '--force', '-o', output.name,
+                        '-Z', str(minzoom), '-z', str(maxzoom), '--no-tile-size-limit', '--no-feature-limit',
+                        *flags, '--name', title, '--attribution', attribution, '--description', description, *args],
+                       check=True, cwd=tmp, env=env)
+        built = Path(tmp)/output.name
+        with built.open('rb') as stream:
+            if stream.read(8) != b'PMTiles\x03':
+                raise ValueError('Builder did not produce PMTiles v3')
+        temporary = output.with_suffix('.part')
+        shutil.copyfile(built, temporary)
+        temporary.replace(output)
+    return output
+
+
 def morro_bay_reefs():
     for area in json.loads((ROOT / 'dist/data/atlas.json').read_text())['areas']:
         yield {'type': 'Feature', 'geometry': area['geometry'], 'properties': {
