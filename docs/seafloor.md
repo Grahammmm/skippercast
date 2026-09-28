@@ -6,7 +6,7 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M2, original-survey adapters
+## Current stage: M3 part 1, native coverage and terrain
 
 The [candidate manifest](../catalog/surveys.json) contains 385 source products.
 The runtime loader validates its [row schema](../catalog/survey.schema.json),
@@ -19,8 +19,9 @@ The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
 packages into **46 reaches**, approximately 10 km alongshore, ordered outward
 from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
 **55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
-Every cell starts at tier 0. Tier 1 and tier 2 are **0 km² in every reach** because
-coverage and habitat processing arrive in M3. This does not
+Cells start at tier 0. M3 now classifies original-survey coverage for the first
+two Morro Bay reaches; current totals are in the ledger. Tier 2 remains zero
+until habitat extraction and a fresh whole-polygon legal screen are complete. This does not
 mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
 remains a separate research receipt; it is not reclassified as new coverage.
 
@@ -83,8 +84,8 @@ cannot share a cell. Centers projecting to terminal endpoints are excluded.
 
 Full cell assignments, sample receipts and run hashes stay in ignored
 `var/seafloor/reference/`; only reach geometry and the small summary ledger are
-committed. There are no habitat tiles or front-end changes in M2. The 46 reach totals
-remain unchanged: tier 1 = 0 → 0 km² and tier 2 = 0 → 0 km² in every reach.
+committed. There are no new habitat tiles or front-end changes in M3 part 1. The first
+coverage runs update tier 1; all tier-2 totals remain zero.
 
 ## Original-survey ingestion
 
@@ -147,19 +148,88 @@ explicitly states CC0/public-domain reuse. NOAA H11953's embedded metadata recor
 2008-08-29 through 2008-09-05 and product uncertainty. Neither source supports
 navigation clearance or independent corroboration just by being gridded.
 
-**M2 geographic acceptance is still pending an owner decision.** The milestone
-calls for a NOAA BAG covering Morro Bay. Eight nearby regular-grid files tested
-at native resolution (W00431 8/16 m, W00433 8/16 m, W00443 16 m, W00444 8/16 m,
-W00447 16 m) had no -100 to 0 m elevation cells in the Morro search window
-[-121.15, 35.05, -120.6, 35.53]. This bounded search is not proof of a regional
-survey gap. H11953 validates the adapter at Point Conception, not Morro Bay.
-The proposed acceptance-location substitution does not change tier rules; do
-not start M3 until that decision and M2 acceptance on main are complete.
+**M2 acceptance location resolved on 2026-09-28.** After the owner delegated the
+choice, Codex selected the original H11953 regular BAG near Point Conception to
+validate the reader, retaining USGS for Morro Bay. [NOAA's survey record](https://www.ngdc.noaa.gov/nos/H10001-H12000/H11953.html)
+confirms the survey, products and rights. Reading depth, masks and uncertainty is
+a format test; it does not require co-location. Eight nearby regular BAG files
+previously tested had no -100 to 0 m elevation cells in the bounded Morro search
+[-121.15, 35.05, -120.6, 35.53]. That is not proof of a regional gap.
+
+The benefit is progressing with usable originals without substituting a
+compilation. The cost is that this check does not establish Morro Bay NOAA
+coverage, cross-survey agreement or support for every BAG variant. H11953 is
+credited only to its own inspected window. M3's actual coverage and real seam
+checks and M4's legal screening remain required. PR #14 is merged and all 34
+M2 seafloor checks passed on that main revision.
 
 `fetch.py` also supplies tested, streaming private-object cache hooks accepting
 an externally configured S3-compatible client. They have not been deployed or
 connected to credentials. Weekly scheduling, R2 publication and the legal gate
 remain M4 work.
+
+## Coverage and terrain runs (M3 part 1)
+
+```bash
+PYTHONPATH=src python -m skippercast.seafloor run --reach morro-bay-r03
+PYTHONPATH=src python -m skippercast.seafloor run --reach morro-bay-r04
+PYTHONPATH=src python -m skippercast.seafloor ledger --region morro-bay
+```
+
+On a fresh checkout with a processed ledger, first run
+`PYTHONPATH=src python -m skippercast.seafloor restore-reference --fetch`.
+It rebuilds the pinned reference baseline in isolation and installs private
+cells only when their exact hash and reach geometry match the committed
+baseline. It never overwrites coverage totals. Omitting `--fetch` requires
+cached reference assets. Original source caches can then be restored with the
+M2 `add-survey --fetch` commands. Remote source access failures remain explicit.
+
+Run reaches serially until M4 introduces coordinated scheduled publication.
+`run` requires the hash-verified M1 reference-cell cache and the reviewed source
+cache. It neither downloads sources implicitly nor expands the manifest's
+inspected geographic windows. Missing or corrupt inputs fail the run. A repeat
+verifies originals, COGs and output hashes, then skips footprint and terrain
+computation. Removing a usable source invalidates the run and removes its credit.
+
+Coverage uses source-resolution valid depth pixels from normalized original
+surveys, not file envelopes. Depth is nominal 0–91.44 m; land, no-data and depths
+beyond the limit are excluded. Pixel boundaries are polygonized and projected
+to EPSG:3310 before intersection with disjoint 250 m cells. A cell qualifies
+when one usable source covers at least 25% of its full square. Among qualifying
+sources, finer spacing wins, then newer acquisition year, then stable source ID.
+A fine sliver cannot hide a qualifying coarser source. Overlaps are never summed.
+
+The ledger reports two deliberately distinct areas:
+
+- `tier1_km2`: the provisional reference-band share of **qualified planning
+  cells**. This threshold-based classification does not mean every square meter
+  in those cells was surveyed.
+- `selected_valid_km2`: actual selected native-footprint area inside all tested
+  cells, including below-threshold partial cells. This is nominal-depth surveyed
+  area; it is not guaranteed to match the approximate reference-band denominator.
+
+The original products are producer-gridded surveys. Their absent interpolation
+masks remain `unknown`, not a claim that every pixel is a raw sounding. The mask
+contract excludes explicitly identified filled/interpolated pixels; it does not
+invent flags where the publisher provided none. Preserve this limitation in all
+later habitat evidence. Unknown source datum is recorded without conversion.
+
+`var/seafloor/reaches/<reach>/cells.json` records source choice, valid area and
+fraction for every cell. `terrain.json` holds private per-cell summaries of
+slope, 3×3 VRM and fine/broad BPI. Derivatives use a nearest-sampled projection
+at source spacing into EPSG:3310, with separate source neighborhoods and no
+blending across surveys. BPI uses square windows approximating 25/100 m radii;
+raised ground has positive BPI. Complete valid neighborhoods are required, so
+holes and borders stay unknown. Coverage areas themselves use original pixel
+footprints, not the derivative resampling. `run.json` hashes source rows, grids,
+requirements, implementation and outputs. All detailed artifacts remain private.
+
+**Remaining M3 work:** substrate joins, connected rough-bottom patches, existing
+A/B/C terrain scoring and cited species fits, a genuine source-seam run, and
+≥50% overlap comparison with the applicable legacy atlas polygons. The two
+current Morro runs use one source and do **not** satisfy the seam requirement.
+Unscreened candidate polygons cannot increase tier 2. M4 publishes only after
+fresh MPA, federal and security checks. This part introduces no new fish spots.
 
 ## Tiers and units
 
@@ -267,7 +337,7 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 | --- | --- |
 | M0 | This document and candidate seed; offline schema and evidence checks. |
 | M1 | Seven Central Coast regions subdivided into reaches; disjoint grid, manifest loader and tier-0 ledger with band km². |
-| M2 | Cached original Morro/Estero USGS grid and local NOAA BAG usable through two adapters; second fetch downloads nothing. |
+| M2 | Cached original Morro USGS grid and Point Conception H11953 regular BAG usable in their own windows; second fetch downloads nothing. |
 | M3 | One Morro reach and one survey-seam reach produce tiers 1–2, run receipts and a no-op repeat; report ≥50% overlap reproduction against the applicable 132 atlas areas and explain misses. |
 | M4 | Fresh legal screen, dispatchable publishing workflow, live Morro PMTiles and nonzero ledger; no MPA overlap. Open “Seafloor tiers layer in the app” issue for Claude. |
 | M5 | Batch remaining reaches; each has mapped coverage or explicit holds/true gaps, and usable fine sources yield habitat tiles. |
@@ -275,8 +345,8 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
-`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger` and `add-survey` are implemented; `run` and `publish`
-arrive at their milestone gates.
+`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger`, `add-survey` and the coverage/terrain stage of `run` are
+implemented. Habitat extraction and `publish` arrive at their milestone gates.
 
 The later workflow runs weekly, on dispatch, and relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
