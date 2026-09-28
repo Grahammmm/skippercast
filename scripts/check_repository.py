@@ -12,7 +12,7 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-IGNORED = {".git", ".venv", "var", "__pycache__", "build", "node_modules", ".sites-runtime"}
+IGNORED = {".git", ".venv", "var", "__pycache__", "build", "node_modules", ".sites-runtime", ".wrangler"}
 PATTERNS = {
     "private home path": re.compile(r"/(?:Users|home)/[A-Za-z0-9_.-]+/"),
     "private tailnet address": re.compile(r"\b100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.\d+\.\d+\b"),

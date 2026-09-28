@@ -521,7 +521,7 @@ export async function initCoastalDiscovery(catalog,coast) {
   }
   map.on('moveend',drawFederal);
   void (async()=>{
-    for(const url of ['https://raw.githubusercontent.com/Grahammmm/skippercast/data/noaa-federal-areas.json','data/noaa-federal-areas.json']){
+    for(const url of ['/feeds/data/noaa-federal-areas.json','data/noaa-federal-areas.json']){
       try{
         const response=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(9000)});if(!response.ok)continue;
         const data=await response.json();

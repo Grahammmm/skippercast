@@ -44,6 +44,7 @@ if git -C "$pub" diff --cached --name-only | grep -qv -e '^index.json$' -e '^REA
   git -C "$pub" push -q --force origin "$commit:refs/heads/forecasts"
   git -C "$pub" reset -q --soft "$commit"
   echo "Published new forecast tiles."
+  bash scripts/publish_branch_r2.sh "$pub" forecasts
 else
   git -C "$pub" reset -q
   echo "Forecast tiles unchanged."

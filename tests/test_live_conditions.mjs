@@ -59,7 +59,7 @@ test("airport observations convert validated units and reject invalid quality", 
 
 test("partial provider outages preserve other observations and cannot clear alerts", async () => {
   const r = await loadObservations(async url => {
-    if (url.includes("raw.githubusercontent")) return feed();
+    if (url.startsWith("/feeds/conditions/")) return feed();  // published feeds route through the site
     throw new Error("test source outage");
   }, now);
   assert.equal(r.buoys.schema_version, 1);

@@ -1,0 +1,2 @@
+# Publishing feeds to Cloudflare R2 (scripts/publish_r2.py).
+boto3==1.43.103

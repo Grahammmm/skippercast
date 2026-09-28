@@ -14,6 +14,8 @@ Schedules can be delayed. Freshness uses actual source/run times, not the schedu
 
 ## Deploy and configure
 
+SkipperCast can also deploy to its own Cloudflare account with feeds in R2; see [Cloudflare](cloudflare.md). skippercast.com stays on Sites until sign-in moves off ChatGPT.
+
 1. Edit reviewed region/source/jurisdiction/ecology configuration. Run the region compiler and offline tests.
 2. `pnpm install --frozen-lockfile`, then `pnpm build`. Authored web files remain in `dist/`; generated `dist/client`, `dist/server` and `dist/.openai` are ignored. The build copies committed Drizzle migrations into `dist/.openai/drizzle`.
 3. Publish the exact committed source through Sites. `.openai/hosting.json` declares logical binding `DB`; the platform provisions it and applies migrations. Never create tables in request handlers. Add migrations rather than rewriting a deployed one.

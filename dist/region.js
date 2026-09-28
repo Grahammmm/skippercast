@@ -1,6 +1,7 @@
 import defaultRegion from "./region-default.js";
+import {withFeeds} from "./feeds.js";
 import {loadCoasts,coastForPackage,coastURL} from './coasts.js';
-let active = defaultRegion;
+let active = withFeeds(defaultRegion);
 let directory = [];
 export const getRegion = () => active;
 export const getRegionDirectory = () => directory;
@@ -18,7 +19,7 @@ export function renderTargetOptions(select, options, value) {
 export const assetURL = (key) => active.assets[key] || null;
 export function setRegion(region) {
   if (region?.schema_version !== 1 || !/^[a-z][a-z0-9-]{1,63}$/.test(region.id) || !region.forecast_points?.length) throw new Error("Invalid regional configuration");
-  active = region;
+  active = withFeeds(region);
 }
 export function acceptsFeed(data, region=active) {
   return data?.region_id === region.id || (!data?.region_id && region.id === "morro-bay");

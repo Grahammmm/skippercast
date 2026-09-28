@@ -1,4 +1,5 @@
 // Planning sectors are discovery extents, never fishing spots or legal boundaries.
+import {withFeeds} from "./feeds.js";
 let packet;
 const NOAA_HOSTS=new Set(['www.ngdc.noaa.gov','data.ngdc.noaa.gov','www.ncei.noaa.gov']);
 export function trustedNoaaLink(value,id,kind='product') {
@@ -14,7 +15,7 @@ export async function loadCoastalSectors() {
   if(!response.ok) throw Error('Coastal sector index unavailable');
   const value=await response.json();
   if(value.schema_version!==1 || !Array.isArray(value.sectors) || !value.sectors.length) throw Error('Invalid coastal sector index');
-  packet=value;return value;
+  packet=withFeeds(value);return packet;
 }
 export function sectorsForCoast(value,coastId) {
   return (value?.sectors||[]).filter(sector=>sector.coast===coastId);
