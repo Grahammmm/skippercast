@@ -44,8 +44,10 @@ if git -C "$pub" diff --cached --name-only | grep -qv -e '^index.json$' -e '^REA
   git -C "$pub" push -q --force origin "$commit:refs/heads/forecasts"
   git -C "$pub" reset -q --soft "$commit"
   echo "Published new forecast tiles."
-  bash scripts/publish_branch_r2.sh "$pub" forecasts
 else
   git -C "$pub" reset -q
   echo "Forecast tiles unchanged."
 fi
+# Sync R2 every run, not only when tiles changed, so a new or emptied bucket fills
+# on the next run. The sync is hash-indexed, so unchanged files are not re-uploaded.
+bash scripts/publish_branch_r2.sh "$pub" forecasts

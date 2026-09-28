@@ -61,5 +61,13 @@ class SyncTests(unittest.TestCase):
             self.assertEqual(obj['CacheControl'], 'public, max-age=60')
 
 
+class WiringTests(unittest.TestCase):
+    def test_forecast_job_syncs_r2_even_when_tiles_are_unchanged(self):
+        script = (Path(__file__).resolve().parents[1] / 'scripts' / 'publish_forecasts.sh').read_text()
+        # The sync must sit after the if/else, or a new bucket stays empty until tiles change.
+        self.assertGreater(script.index('publish_branch_r2.sh "$pub" forecasts'),
+                           script.index('echo "Forecast tiles unchanged."'))
+
+
 if __name__ == '__main__':
     unittest.main()
