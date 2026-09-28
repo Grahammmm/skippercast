@@ -24,3 +24,22 @@ test('every regional target has its own search requirements and explicit unconfi
  assert.ok(d.features.some(f=>f.properties.species.includes('yellowtail')));
  assert.equal(d.features.some(f=>f.properties.species.includes('spotted-bass')),false);
 });
+test('offshore envelope, meaningful transitions, uncertainty and clock gates',()=>{
+ const offshore={...region,bounds:[-122,32,-117,35],fishing_bounds:[-119,32,-118,35]};
+ assert.equal(oceanSearchAreas(frame,{},offshore).length,1);
+ assert.equal(oceanSearchAreas({...frame,rows:frame.rows.map(r=>[r[0],r[1],17])},{},region).length,0);
+ assert.equal(oceanSearchAreas({...frame,selectedTime:frame.time+7200},{},region).length,0);
+ assert.equal(oceanSearchAreas({...frame,step:[0,.04]},{},region).length,0);
+ const satellite={...frame,layerId:'sst-analysis',selectedTime:100,fields:[...frame.fields,'analysis_error_c'],rows:frame.rows.map(r=>[...r,.1])};
+ assert.equal(oceanSearchAreas(satellite,{},region)[0].properties.search_priority,1);
+ assert.equal(oceanSearchAreas({...satellite,selectedTime:100+49*3600},{},region).length,0);
+ assert.equal(oceanSearchAreas({...satellite,rows:frame.rows.map(r=>[...r,2])},{},region).length,0);
+ assert.equal(oceanSearchAreas({...satellite,rows:frame.rows.map(r=>[...r,null])},{},region).length,0);
+});
+test('species context and current differences have explicit independent meanings',()=>{
+ const flow={...frame,fields:[...frame.fields,'u_mps','v_mps'],rows:frame.rows.map((r,i)=>[...r,i*.1,0])};
+ assert.equal(oceanSearchAreas(flow,{},region)[0].properties.search_priority,1);
+ assert.equal(oceanSearchAreas(flow,{thermal_range_c:[20,25]},region)[0].properties.search_priority,3);
+ assert.equal(oceanSearchAreas(frame,{},region)[0].properties.search_priority,2);
+ assert.equal(oceanSearchAreas(flow,{},region)[0].properties.evidence_confidence,'Low');
+});
