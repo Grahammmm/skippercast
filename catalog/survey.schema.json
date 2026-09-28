@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkipperCast seafloor survey row",
+  "description": "M0 candidate contract; M1 adds runtime status-transition validation. Evidence references are repository path plus JSON Pointer. Unknown measurements use the literal string unknown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "publisher",
+    "title",
+    "horizontal_crs",
+    "notes",
+    "id",
+    "url",
+    "landing_page",
+    "format",
+    "kind",
+    "year",
+    "resolution_m",
+    "vertical_datum",
+    "license",
+    "sha256",
+    "bytes",
+    "derived_from",
+    "status",
+    "hold_reason",
+    "archive_member",
+    "evidence",
+    "field_evidence",
+    "inspection_level",
+    "lineage_status"
+  ],
+  "properties": {
+    "publisher": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "horizontal_crs": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]+$"
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https?://[^ ]+$"
+    },
+    "landing_page": {
+      "anyOf": [
+        {
+          "const": "unknown"
+        },
+        {
+          "type": "string",
+          "pattern": "^https?://[^ ]+$"
+        }
+      ]
+    },
+    "format": {
+      "enum": [
+        "bag",
+        "usgs-geotiff",
+        "arcgrid",
+        "csumb",
+        "vector",
+        "unknown"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "bathymetry",
+        "substrate",
+        "backscatter"
+      ]
+    },
+    "year": {
+      "anyOf": [
+        {
+          "const": "unknown"
+        },
+        {
+          "type": "integer",
+          "minimum": 1800,
+          "maximum": 2100
+        }
+      ]
+    },
+    "resolution_m": {
+      "anyOf": [
+        {
+          "const": "unknown"
+        },
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      ]
+    },
+    "vertical_datum": {
+      "enum": [
+        "MLLW",
+        "NAVD88",
+        "MSL",
+        "unknown"
+      ]
+    },
+    "license": {
+      "enum": [
+        "public-domain-us-gov",
+        "unknown"
+      ]
+    },
+    "sha256": {
+      "anyOf": [
+        {
+          "const": "unknown"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      ]
+    },
+    "bytes": {
+      "anyOf": [
+        {
+          "const": "unknown"
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ]
+    },
+    "derived_from": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "usable",
+        "hold",
+        "withdrawn"
+      ]
+    },
+    "hold_reason": {
+      "enum": [
+        "unknown",
+        "access-failed",
+        "format-unsupported",
+        "license-unclear",
+        "no-valid-cells",
+        "coarse-only",
+        "duplicate",
+        "datum-unknown"
+      ]
+    },
+    "archive_member": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^#]+#/"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "field_evidence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[^#]+#/"
+      }
+    },
+    "inspection_level": {
+      "enum": [
+        "catalog",
+        "metadata",
+        "native"
+      ]
+    },
+    "lineage_status": {
+      "enum": [
+        "unknown",
+        "linked-family"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "hold"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "hold_reason": {
+            "not": {
+              "const": "unknown"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "usable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "license": {
+            "const": "public-domain-us-gov"
+          }
+        }
+      }
+    }
+  ]
+}

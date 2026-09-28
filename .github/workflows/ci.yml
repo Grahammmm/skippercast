@@ -18,7 +18,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-survey.txt
       - name: Install pinned native survey tools
-        run: python -m pip install -r requirements-survey.txt
+        run: python -m pip install -r requirements-survey.txt -r requirements-test.txt
       - name: Rebuild and validate species search footprints
         run: |
           python scripts/build_search_plans.py

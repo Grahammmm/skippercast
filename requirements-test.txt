@@ -1,0 +1,3 @@
+# Standard JSON Schema validation required by the seafloor M0 acceptance gate.
+# Test-only; the application and dependency-light core runner remain stdlib.
+jsonschema==4.26.0
