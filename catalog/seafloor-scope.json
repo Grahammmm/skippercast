@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "central-coast",
+  "rule_version": "seafloor-reference-v1",
+  "grid_crs": "EPSG:3310",
+  "cell_size_m": 250,
+  "reference_pixel_m": 25,
+  "reference_depth_m": [0, 100],
+  "tile_sample_m": 32,
+  "bounds": [-123, 34.4, -120.3, 37.2],
+  "reach_length_m": 10000,
+  "priority_anchor": [-120.856, 35.367],
+  "blue_topo_pin": "catalog/bluetopo-sample.json",
+  "coastline": {
+    "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_coastline.zip",
+    "sha256": "bfa04cdbcbef07ef90dfca1dabb48062eca29900a113df0f389303e255484017",
+    "member": "ne_10m_coastline",
+    "documentation_url": "https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-coastline/",
+    "rights_url": "https://www.naturalearthdata.com/about/terms-of-use/",
+    "license": "public-domain",
+    "scale": "1:10 million; not 10 meter resolution",
+    "use": "Generalized alongshore planning spine only; not a shoreline, land mask, depth source or navigation boundary."
+  },
+  "regions": [
+    {"id": "santa-cruz-monterey-bay", "start_anchor": [-122.395, 37.183333]},
+    {"id": "monterey-point-sur", "start_anchor": [-121.958, 36.6]},
+    {"id": "big-sur-coast", "start_anchor": [-121.894, 36.3]},
+    {"id": "south-big-sur-san-simeon", "start_anchor": [-121.462, 35.9]},
+    {"id": "cambria-san-simeon", "start_anchor": [-121.27, 35.66]},
+    {"id": "morro-bay", "start_anchor": [-121.091, 35.53]},
+    {"id": "point-arguello-conception", "start_anchor": [-120.638, 35.05]}
+  ],
+  "end_anchor": [-120.471, 34.449],
+  "notes": [
+    "Anchors are explicit planning partitions, not CDFW regulatory boundaries.",
+    "The seven existing regional packages include the Monterey Bay coast north to Pigeon Point.",
+    "BlueTopo is a provisional reference denominator only; it never establishes surveyed or habitat coverage."
+  ]
+}

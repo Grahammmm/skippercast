@@ -6,24 +6,15 @@ measured bathymetry. The raster contributor RAT is checked pixel by pixel.
 import argparse
 from collections import Counter
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 import sqlite3
-from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 
 import numpy as np
 import rasterio
 from skippercast.platform.bottom_targets import cells_qualified
-
-
-def sha256(path):
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+from skippercast.seafloor.io import sha256, verified_file
 
 
 def scheme_row(scheme, tile):
@@ -37,35 +28,6 @@ def scheme_row(scheme, tile):
         if row is None or not row["GeoTIFF_Link"] or not row["RAT_Link"]:
             raise ValueError(f"Tile {tile} has no published raster and RAT")
         return dict(row)
-
-
-def verified_file(url, expected, destination, fetch, *, max_bytes=128 * 1024 * 1024):
-    if not destination.exists():
-        if not fetch:
-            raise FileNotFoundError(destination)
-        if not url.startswith("https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/"):
-            raise ValueError("Unexpected NBS file host")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_suffix(destination.suffix + ".part")
-        try:
-            with urlopen(url, timeout=60) as response, temporary.open("wb") as output:
-                declared = response.headers.get("Content-Length")
-                if declared and int(declared) > max_bytes:
-                    raise ValueError(f"NBS file exceeds {max_bytes} byte limit")
-                size = 0
-                for chunk in iter(lambda: response.read(1024 * 1024), b""):
-                    size += len(chunk)
-                    if size > max_bytes:
-                        raise ValueError(f"NBS file exceeds {max_bytes} byte limit")
-                    output.write(chunk)
-        except Exception:
-            temporary.unlink(missing_ok=True)
-            raise
-        temporary.replace(destination)
-    actual = sha256(destination)
-    if actual.lower() != expected.lower():
-        raise ValueError(f"SHA-256 mismatch for {destination}")
-    return actual
 
 
 def contributors(rat_path):
