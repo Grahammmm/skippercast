@@ -1,6 +1,7 @@
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {assessTrip,alertDecision,alertMessage,dateInZone} from './alert-policy.js';
 import {verifyJobToken} from './job-auth.js';
+import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
 const regions=REGIONS;
@@ -130,6 +131,17 @@ export default {async fetch(request,env){
     return fresh;
   }
   try{
+    // SkipperCast's own NOAA/ECMWF forecast service, answering Open-Meteo-style queries.
+    const om=path.match(/^\/api\/om\/(?:v1\/(forecast|marine)|data\/([a-z0-9_]+)\/static\/meta\.json)$/);
+    if(request.method==='GET'&&om){
+      const base=deployment.forecast_feed,store={
+        manifest:model=>FORECAST_MODELS[model]?readFeed(`${base}/${model}/manifest.json`):null,
+        tile:(model,key)=>FORECAST_MODELS[model]&&/^-?\d{1,3}_-?\d{1,3}$/.test(key)?readFeed(`${base}/${model}/tiles/${key}.json`):null};
+      try{
+        const data=om[1]?await modelAnswer(om[1],url.searchParams,store):await modelMeta(om[2],store);
+        const response=json(data);response.headers.set('Cache-Control','public,max-age=300');return response;
+      }catch(error){if(error instanceof QueryError)return json({error:true,reason:error.message},400);throw error;}
+    }
     if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
