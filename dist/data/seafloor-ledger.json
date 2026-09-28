@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope": "central-coast",
-  "stage": "M1-reference-baseline",
+  "stage": "M3-coverage-terrain-preview",
   "input_hash": "80c2170832dd781329ae87526e220b7994f6a4aae156a747cf0f55d7ef86068b",
   "reference_rule_version": "seafloor-reference-v1",
   "reference": {
@@ -3319,22 +3319,23 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3307.514375,
-    "tier1_km2": 0,
+    "tier0_km2": 3290.33625,
+    "tier1_km2": 17.178125,
     "tier2_km2": 0,
     "tier3_km2": 0,
-    "unknown_reference_within_band_cells_km2": 5.018125
+    "unknown_reference_within_band_cells_km2": 5.018125,
+    "selected_valid_km2": 16.037686
   },
   "reaches": [
     {
       "id": "morro-bay-r04",
       "region": "morro-bay",
       "order": 1,
-      "status": "unassessed",
+      "status": "coverage-processed",
       "cell_count": 373,
       "band_km2": 20.520625,
-      "tier0_km2": 20.520625,
-      "tier1_km2": 0,
+      "tier0_km2": 15.395625,
+      "tier1_km2": 5.125,
       "tier2_km2": 0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.074375,
@@ -3344,20 +3345,25 @@
         "C": 0
       },
       "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
+      "surveys_used": [
+        "bathymetry-offshoremorrobay-zip-fad659557e"
+      ],
+      "last_survey_run": "2026-09-28T22:07:17.562491+00:00",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Native survey-cell classification and terrain only. Unsurveyed portions remain unknown. No habitat grade, legal clearance or fish presence asserted; interpolation-mask availability is unknown.",
+      "selected_valid_km2": 4.815736082,
+      "coverage_rule_version": "native-coverage-terrain-v1",
+      "survey_run_hash": "80789bfce389af7573e7cde66c877357b9c4eb5446ea0c17b0d608371a4561b0"
     },
     {
       "id": "morro-bay-r03",
       "region": "morro-bay",
       "order": 2,
-      "status": "unassessed",
+      "status": "coverage-processed",
       "cell_count": 589,
       "band_km2": 35.340625,
-      "tier0_km2": 35.340625,
-      "tier1_km2": 0,
+      "tier0_km2": 23.2875,
+      "tier1_km2": 12.053125,
       "tier2_km2": 0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.105625,
@@ -3367,10 +3373,15 @@
         "C": 0
       },
       "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
+      "surveys_used": [
+        "bathymetry-offshoremorrobay-zip-fad659557e"
+      ],
+      "last_survey_run": "2026-09-28T22:07:16.355411+00:00",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Native survey-cell classification and terrain only. Unsurveyed portions remain unknown. No habitat grade, legal clearance or fish presence asserted; interpolation-mask availability is unknown.",
+      "selected_valid_km2": 11.221949865,
+      "coverage_rule_version": "native-coverage-terrain-v1",
+      "survey_run_hash": "2abc44fff61ec1efeaffa65960b27c68193362e7339e2c69021fbb247fcd3e7b"
     },
     {
       "id": "morro-bay-r05",
@@ -3393,7 +3404,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r02",
@@ -3416,7 +3428,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r06",
@@ -3439,7 +3452,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r01",
@@ -3462,7 +3476,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r07",
@@ -3485,7 +3500,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "cambria-san-simeon-r02",
@@ -3508,7 +3524,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r08",
@@ -3531,7 +3548,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "cambria-san-simeon-r01",
@@ -3554,7 +3572,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r09",
@@ -3577,7 +3596,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "morro-bay-r10",
@@ -3600,7 +3620,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "south-big-sur-san-simeon-r03",
@@ -3623,7 +3644,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r01",
@@ -3646,7 +3668,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "south-big-sur-san-simeon-r02",
@@ -3669,7 +3692,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r02",
@@ -3692,7 +3716,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "south-big-sur-san-simeon-r01",
@@ -3715,7 +3740,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r03",
@@ -3738,7 +3764,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r06",
@@ -3761,7 +3788,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r04",
@@ -3784,7 +3812,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r05",
@@ -3807,7 +3836,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r05",
@@ -3830,7 +3860,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r04",
@@ -3853,7 +3884,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r06",
@@ -3876,7 +3908,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r03",
@@ -3899,7 +3932,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r07",
@@ -3922,7 +3956,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r02",
@@ -3945,7 +3980,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "point-arguello-conception-r08",
@@ -3968,7 +4004,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "big-sur-coast-r01",
@@ -3991,7 +4028,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "monterey-point-sur-r04",
@@ -4014,7 +4052,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "monterey-point-sur-r03",
@@ -4037,7 +4076,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "monterey-point-sur-r02",
@@ -4060,7 +4100,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "monterey-point-sur-r01",
@@ -4083,7 +4124,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r13",
@@ -4106,7 +4148,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r12",
@@ -4129,7 +4172,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r11",
@@ -4152,7 +4196,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r10",
@@ -4175,7 +4220,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r09",
@@ -4198,7 +4244,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r08",
@@ -4221,7 +4268,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r07",
@@ -4244,7 +4292,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r06",
@@ -4267,7 +4316,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r05",
@@ -4290,7 +4340,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r04",
@@ -4313,7 +4364,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r03",
@@ -4336,7 +4388,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r02",
@@ -4359,7 +4412,8 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     },
     {
       "id": "santa-cruz-monterey-bay-r01",
@@ -4382,7 +4436,10 @@
       "surveys_used": [],
       "last_survey_run": "unknown",
       "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
+      "selected_valid_km2": 0
     }
-  ]
+  ],
+  "coverage_method": "Tier 1 credits the provisional reference-band area in cells where one usable original source covers at least 25% of the full 250 m square at nominal 0–300 ft. It is a cell classification, not a claim that the entire credited area is surveyed. selected_valid_km2 separately sums selected native footprint intersections. Known filled pixels are excluded; absent producer interpolation masks remain unknown. Tier 2 stays zero until habitat extraction and a current whole-polygon legal screen.",
+  "reference_cells_sha256": "8de292a4fd7cd299d789958454bed47d2bc186bbd6e80f9f6137cc788f22d490"
 }

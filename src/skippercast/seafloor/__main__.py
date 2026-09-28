@@ -17,6 +17,11 @@ def main():
     add.add_argument('--member', default='unknown')
     add.add_argument('--local', type=Path)
     add.add_argument('--fetch', action='store_true')
+    restore = commands.add_parser('restore-reference', help='Rebuild verified private cells without changing the ledger')
+    restore.add_argument('--fetch', action='store_true')
+    process = commands.add_parser('run', help='Measure native coverage and terrain; no habitat publication')
+    process.add_argument('--reach', required=True)
+    process.add_argument('--force', action='store_true')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
         sub.add_argument('--region', default='central-coast')
@@ -26,6 +31,15 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'restore-reference':
+            from .restore import restore_reference
+            print(f'Restored verified reference cells: {restore_reference(fetch=args.fetch)}')
+            return
+        if args.command == 'run':
+            from .run import run
+            receipt, reused = run(args.reach, force=args.force)
+            print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
+            return
         if args.command == 'add-survey':
             from .draft import add_survey
             path = add_survey(args.url, args.bounds, ident=args.id, format_name=args.format,
@@ -45,7 +59,7 @@ def main():
         if getattr(args, 'json', False):
             print(json.dumps({'reference': ledger['reference'], 'reaches': records}, indent=2))
             return
-        print('Provisional band km² | original surveys not yet processed')
+        print('Provisional band km² | tier 1 = survey-qualified cells; tier 2 = screened habitat')
         print(f'{"Reach":48} {"Band":>9} {"Tier 1":>9} {"Tier 2":>9}')
         for row in records:
             print(f'{row["id"]:48} {row["band_km2"]:9.3f} {row["tier1_km2"]:9.3f} {row["tier2_km2"]:9.3f}')

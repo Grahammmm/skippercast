@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LedgerTests(unittest.TestCase):
-    def test_all_seven_regions_have_disjoint_reaches_and_zero_claims(self):
+    def test_all_seven_regions_have_disjoint_reaches_and_supported_claims(self):
         ledger = json.loads((ROOT / 'dist/data/seafloor-ledger.json').read_text())
         catalog = json.loads((ROOT / 'catalog/reaches.json').read_text())
         config = json.loads((ROOT / 'catalog/seafloor-scope.json').read_text())
@@ -29,14 +29,48 @@ class LedgerTests(unittest.TestCase):
             self.assertAlmostEqual(total, sum(r[key] for r in reaches), places=6)
         for reach in reaches:
             self.assertGreater(reach['band_km2'], 0)
-            self.assertEqual(reach['band_km2'], reach['tier0_km2'])
-            self.assertEqual([reach[k] for k in ('tier1_km2', 'tier2_km2', 'tier3_km2')], [0, 0, 0])
-            self.assertEqual(reach['surveys_used'], [])
-            self.assertEqual(reach['status'], 'unassessed')
+            self.assertAlmostEqual(reach['band_km2'], reach['tier0_km2'] + reach['tier1_km2'], places=7)
+            self.assertEqual([reach[k] for k in ('tier2_km2', 'tier3_km2')], [0, 0])
+            if reach['status'] == 'unassessed':
+                self.assertEqual(reach['tier1_km2'], 0)
+                self.assertEqual(reach['surveys_used'], [])
+            else:
+                self.assertEqual(reach['status'], 'coverage-processed')
+                self.assertEqual(reach['coverage_rule_version'], 'native-coverage-terrain-v1')
+                self.assertRegex(reach['survey_run_hash'], '^[a-f0-9]{64}$')
+                self.assertGreaterEqual(reach['selected_valid_km2'], 0)
+                manifest = json.loads((ROOT / 'catalog/surveys.json').read_text())
+                usable = {r['id'] for r in manifest['surveys'] if r['status'] == 'usable'}
+                self.assertLessEqual(set(reach['surveys_used']), usable)
         self.assertEqual(ledger['reference']['status'], 'provisional')
         self.assertEqual(ledger['reference']['outside_reference_band_status'], 'unknown')
         self.assertEqual(ledger['input_hash'], catalog['input_hash'])
         self.assertEqual(len(ledger['reference']['tiles']), len({t['id'] for t in ledger['reference']['tiles']}))
+
+    def test_reference_restore_cannot_overwrite_ledger_or_accept_changed_cells(self):
+        from skippercast.seafloor.restore import install_verified
+        with tempfile.TemporaryDirectory() as directory:
+            root, staged = Path(directory)/'root', Path(directory)/'staged'
+            for base in (root, staged):
+                (base/'catalog').mkdir(parents=True)
+                (base/'var/seafloor/reference').mkdir(parents=True)
+                (base/'catalog/reaches.json').write_text('same reaches')
+            cells=staged/'var/seafloor/reference/cells.json'
+            cells.write_text(json.dumps({'input_hash':'baseline', 'cells':[]}))
+            expected=hashlib.sha256(cells.read_bytes()).hexdigest()
+            (staged/'var/seafloor/reference/run.json').write_text(json.dumps(
+                {'input_hash':'baseline','output_hashes':{'cells.json':expected}}))
+            (root/'dist/data').mkdir(parents=True)
+            ledger=root/'dist/data/seafloor-ledger.json'
+            ledger.write_text(json.dumps({'input_hash':'baseline','reference_cells_sha256':expected,'tier1_km2':12}))
+            before=ledger.read_bytes()
+            install_verified(root,staged)
+            self.assertEqual(ledger.read_bytes(),before)
+            self.assertEqual((root/'var/seafloor/reference/cells.json').read_bytes(),cells.read_bytes())
+            cells.write_text('changed')
+            with self.assertRaisesRegex(ValueError,'differs'):
+                install_verified(root,staged)
+            self.assertEqual(ledger.read_bytes(),before)
 
     def test_ledger_cli_needs_no_gis_or_cache(self):
         result = subprocess.run([sys.executable, '-m', 'skippercast.seafloor', 'ledger', '--region', 'morro-bay'],
