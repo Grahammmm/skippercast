@@ -418,19 +418,15 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 | M5 | Batch remaining reaches; each has mapped coverage or explicit holds/true gaps, and usable fine sources yield habitat tiles. |
 | M6 | Move unused receipts to private storage and retire scripts only after consumer/workflow/test checks; app asset checks pass. |
 
-**M3 acceptance is outstanding.** PR #16 adds extraction and ranking, but its
-held candidates have not passed the legal screen required for tier 2. The
-prescribed milestone order puts that screen in M4, while requiring M3 acceptance
-on main before M4 starts. The proposed resolution is to move only whole-polygon
-MPA, federal-area and security-zone screening into M3, leaving publication and
-scheduling in M4. This proposal awaits the owner's decision; no tier rule or
-milestone acceptance requirement has been waived. Green CI and held candidates
-do not establish completion of M3 or permission to publish.
+**Owner-approved sequencing (2026-09-28).** Whole-polygon MPA, federal-area
+and security-zone screening moves into M3. Publication and scheduling remain
+in M4. No tier rule or acceptance check is waived. PR #16 is merged; M3 still
+requires screened tier-2 outputs on main before M4 begins.
 
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
 `point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger`, `add-survey` and `run` are
-implemented, including held habitat extraction. `publish` arrives with M4's legal screen.
+implemented, including held habitat extraction. `publish` arrives in M4; the legal screen is part of M3.
 
 The later workflow runs weekly, on dispatch, and relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
@@ -453,3 +449,81 @@ Validate M0 offline with `python -m pip install -r requirements-test.txt`, then
 also runs this validation; core-only tests check inventory invariants without
 requiring GIS or JSON Schema packages. M0 changes no map UI or existing release
 gates. Revisit tier rules only with the owner's decision.
+
+
+## Whole-polygon spatial screen (M3)
+
+The owner approved moving this prerequisite into M3 on September 28, 2026.
+Publication and scheduled updates stay in M4. Tier thresholds are unchanged.
+
+```
+PYTHONPATH=src:. python -m skippercast.seafloor refresh-screen
+PYTHONPATH=src:. python -m skippercast.seafloor run --reach morro-bay-r03
+```
+
+`screen_sources.py` reuses the complete-inventory CDFW MPA and NOAA federal-area
+collectors. Its private snapshot points to content-addressed geometry files;
+retrieval dates and file hashes are checked on every run. The first security
+review covers only the three Morro Bay pilot reaches listed in
+`catalog/seafloor-screen.json`. Other reaches remain held until their local
+security restrictions are reviewed. The scope is explicit and is never inferred
+from a provider's program name.
+
+- CDFW: [original ds582 service](https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0),
+  155 features retrieved September 28. Every MPA and special closure is excluded
+  conservatively, even when particular fishing methods might be allowed.
+- NOAA: [West Coast original federal-area service](https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer),
+  29 non-aggregate GEA/CCA/YRCA features retrieved September 28. All are excluded
+  conservatively; this does not assert every category applies to every fishery.
+  Commercial RCA geometry is not used to imply a recreational closure.
+- Security: [33 CFR 165.1155](https://www.ecfr.gov/current/title-33/section-165.1155),
+  fetched through the official eCFR versioner API using the titles endpoint's
+  `up_to_date_as_of` date (September 24), not the retrieval date. The reviewed
+  Diablo Canyon circle is 2,000 yards around the statute's NAD83 position.
+  A geodesic boundary with a documented one-meter outward planning margin avoids
+  chords cutting inside that circle. Changed legal text invalidates the reviewed
+  hash and requires a new boundary review. These public government geometries and
+  statutory facts retain publisher links; private raw receipts are not shipped.
+
+Every full habitat polygon is intersected with the exclusions in EPSG:3310,
+including boundary touches. A conflicting candidate is held in its entirety;
+no centroid-only test or clipping-away of the conflict is used. CDFW's three
+nested-shell MultiPolygons are normalized only by unioning their individually
+valid parts, so excluded area cannot be removed. Invalid components still fail
+closed. Original source files remain unchanged and their hashes are retained.
+
+A missing layer, source-byte mismatch, changed policy, failed refresh,
+future timestamp, snapshot older than 35 days, unreviewed reach or polygon
+outside the reviewed coverage holds output. Current eCFR availability must also
+be within 35 days. A failed refresh retains the previous snapshot for diagnosis
+but writes a failure marker that prevents its use for promotion. A successful
+refresh clears that marker. Freshness state enters the run hash, so an expired
+snapshot cannot reuse yesterday's pass through the no-op path.
+
+`candidates.geojson` retains extraction evidence, `habitat.geojson` contains only
+screened tier-2 output, and `held.geojson` retains failures with reasons. All three
+remain private until the M4 publication path. The ledger reports the union of
+passed polygon areas (not a sum of overlapping sources), grade counts, held
+reasons, source hashes and snapshot dates. Unknown grades cannot be promoted.
+
+This screen covers permanent spatial restrictions in the reviewed scope. It is
+not a declaration that fishing is currently open, a navigation clearance, or a
+check of temporary USCG notices, moving-vessel security zones, seasonal depth
+rules, gear, bag limits or species restrictions. Those still require the app's
+trip-date regulations and current notices. The map/export planning label remains
+required. No fish presence or catch probability is inferred.
+
+### Pilot screening result — September 28, 2026
+
+| Reach | Tier 1 km² (unchanged) | Tier 2 km² (previously zero) | Passed / held |
+| --- | ---: | ---: | ---: |
+| morro-bay-r02 | 56.887500 | 11.535873 | 745 / 24 |
+| morro-bay-r03 | 31.651250 | 4.273268 | 205 / 3 |
+| morro-bay-r04 | 12.174375 | 0.802624 | 56 / 1 |
+
+Total tier 2 is 16.611764 km². All 28 held patches lack sufficient metric support;
+none of the 1,006 passed polygons touches the screened restriction geometries.
+All three repeat runs are no-ops, and the original 1,812 m r02 survey seam and
+legacy-overlap comparisons remain recorded. The new ledger and private receipts
+are proposed in the screening PR; M3 acceptance is satisfied on main only after
+that PR merges. This result does not mean the layer is already served as tiles.
