@@ -37,7 +37,7 @@ def target_prefix(config: dict) -> str:
     return prefix
 
 
-def bag_metadata(xml: str, survey_id: str) -> dict:
+def bag_metadata(xml: str, survey_id: str, *, strict=True) -> dict:
     """Read the embedded datum and native uncertainty meaning; fail closed."""
     if len(xml.encode()) > 1_000_000 or "<!DOCTYPE" in xml.upper():
         raise ValueError("Unsupported BAG metadata")
@@ -46,6 +46,22 @@ def bag_metadata(xml: str, survey_id: str) -> dict:
     codes = [text for name, text in leaves if name == "CharacterString"]
     horizontal = next((v for v in codes if v.startswith("PROJCS[")), None)
     vertical = next((v for v in codes if v.startswith("VERT_CS[")), None)
+    if not strict:
+        if not any(survey_id in v for v in codes):
+            raise ValueError('Survey identity does not match original BAG metadata')
+        datum = 'unknown'
+        for label, pattern in [('MLLW', r'VERT_DATUM\["(?:MLLW(?: depth)?|Mean Lower Low Water)"'),
+                               ('NAVD88', r'VERT_DATUM\["(?:NAVD88|North American Vertical Datum 1988)"'),
+                               ('MSL', r'VERT_DATUM\["(?:MSL|Mean Sea Level)"')]:
+            if vertical and re.search(pattern, vertical):
+                datum = label
+        dates = {k: v for k, v in leaves if k in ('beginPosition', 'endPosition')}
+        return {'horizontal_wkt': horizontal or 'unknown', 'vertical_wkt': vertical or 'unknown',
+                'vertical_datum': datum,
+                'uncertainty_type': next((v for k, v in leaves if k == 'BAG_VertUncertCode'), 'unknown'),
+                'survey_start': dates.get('beginPosition', 'unknown'),
+                'survey_end': dates.get('endPosition', 'unknown'),
+                'metadata_sha256': hashlib.sha256(xml.encode()).hexdigest()}
     if not horizontal or not vertical or not re.search(r'VERT_DATUM\["(?:MLLW(?: depth)?|Mean Lower Low Water)"', vertical):
         raise ValueError("A named MLLW vertical datum is required; unknown/ellipsoid grids are held")
     if not any(survey_id in v for v in codes):
