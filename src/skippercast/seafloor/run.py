@@ -25,6 +25,7 @@ from .manifest import load_manifest
 from .terrain import derivatives, summarize
 from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
+from .screen import load_snapshot, input_identity, screen_candidates
 
 VERSION = 'native-coverage-habitat-v1'
 
@@ -75,7 +76,7 @@ def apply_ledger(root, reach_id, summary):
         row.setdefault('selected_valid_km2', 0)
         if row['id'] == reach_id:
             row.update(summary)
-    ledger['stage'] = 'M3-habitat-review'
+    ledger['stage'] = 'M3-habitat-screen'
     ledger['reference_cells_sha256'] = sha256(root / 'var/seafloor/reference/cells.json')
     ledger['coverage_method'] = (
         'Tier 1 credits the provisional reference-band area in cells where one usable original source '
@@ -83,7 +84,8 @@ def apply_ledger(root, reach_id, summary):
         'It is a cell classification, not a claim that the entire credited area is surveyed. '
         'selected_valid_km2 separately sums selected native footprint intersections. '
         'Known filled pixels are excluded; absent producer interpolation masks remain unknown. '
-        'Tier 2 stays zero until habitat extraction and a current whole-polygon legal screen.')
+        'Tier 2 measures the deduplicated footprint of graded habitat polygons passing a current '
+        'whole-polygon spatial restriction screen. It is a subset of mapped cells, not additional surveyed area.')
     keys = list(ledger['totals']) + ([] if 'selected_valid_km2' in ledger['totals'] else ['selected_valid_km2'])
     ledger['totals'] = {key: round(sum(r[key] for r in ledger['reaches']), 6) for key in keys}
     atomic_json(path, ledger, indent=2)
@@ -133,20 +135,23 @@ def run(reach_id, *, root=REPO, force=False, fetch=False):
     bindings = {key: value for key, value in bindings.items() if key in source_ids}
     verify_sources(bindings, root=root, fetch=fetch)
     atlas_path = root / 'dist/data/atlas.json'
+    screen = load_snapshot(root, reach_id)
     inputs = {'rule_version': VERSION, 'reach_id': reach_id,
               'reference_cells_sha256': sha256(baseline_path),
               'reaches_sha256': sha256(root / 'catalog/reaches.json'),
               'sources': [s['row'] for s in sources],
               'habitat_rules': rules, 'substrate_bindings': bindings,
+              'screen': input_identity(screen),
               'atlas_sha256': sha256(atlas_path),
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py', 'screen.py')}}
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     folder = root / 'var/seafloor/reaches' / reach_id
     receipt_path = folder / 'run.json'
-    outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json')]
+    outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json',
+                                        'held.geojson', 'candidates.geojson')]
     if receipt_path.exists() and not force:
         previous = read_json(receipt_path)
         if previous['input_hash'] == digest and all(p.exists() for p in outputs):
@@ -168,26 +173,30 @@ def run(reach_id, *, root=REPO, force=False, fetch=False):
         cell_geometry(c) for c in classified if c['tier'] == 1 and c['source_id'] == source['row']['id']]))
         for source in sources])
     comparison = compare_atlas(read_json(atlas_path), candidates, scope, selected_coverage)
+    habitat, held, screened = screen_candidates(candidates, screen)
     habitat_seconds = monotonic() - habitat_started
     tier1 = sum(c['band_area_m2'] for c in classified if c['tier'] == 1)/1e6
     band = sum(c['band_area_m2'] for c in classified)/1e6
     used = sorted({c['source_id'] for c in classified if c['source_id'] != 'unknown'})
-    summary = {'status': 'habitat-held-for-screen', 'tier0_km2': round(band-tier1, 9),
+    summary = {'status': 'habitat-screened' if screen['status'] == 'ready' else 'habitat-held-for-screen', 'tier0_km2': round(band-tier1, 9),
         'tier1_km2': round(tier1, 9), 'tier2_km2': 0, 'tier3_km2': 0,
         'selected_valid_km2': round(sum(c['valid_area_m2'] for c in classified)/1e6, 9),
         'surveys_used': used, 'last_survey_run': datetime.now(timezone.utc).isoformat(),
         'coverage_rule_version': VERSION, 'survey_run_hash': digest,
-        'held_candidate_count': len(candidates['features']),
+        **screened,
         'habitat_rule_version': rules['rule_version'], 'roughness_thresholds': candidates['thresholds'],
         'atlas_comparison': {key: value for key, value in comparison.items() if key != 'areas'},
-        'note': 'Original survey coverage and private ranked habitat candidates. All candidates held pending '
-                'whole-polygon legal screening; no tier-2 publication or export. Unknown interpolation masks remain unknown.'}
+        'note': 'Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial '
+                'restrictions; missing evidence or overlaps held. Publication remains M4. '
+                'Season, gear and current notices still apply. Unknown interpolation masks remain unknown.'}
     atomic_json(outputs[0], {'reach': reach_id, 'input_hash': digest, 'cells': classified})
     atomic_json(outputs[1], {'reach': reach_id, 'input_hash': digest, 'cells': terrain,
         'method': 'Nearest native-spacing projection into EPSG:3310 for derivatives; no cross-source blending. '
                   '3x3 VRM; BPI square windows approximate 25/100 m radii. Full valid neighborhoods required.'})
-    atomic_json(outputs[2], candidates)
+    atomic_json(outputs[2], habitat)
     atomic_json(outputs[3], comparison)
+    atomic_json(outputs[4], held)
+    atomic_json(outputs[5], candidates)
     receipt = {'input_hash': digest, 'inputs': inputs, 'ledger_summary': summary,
                'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds, 'habitat': habitat_seconds,
                                    'total': monotonic() - started},

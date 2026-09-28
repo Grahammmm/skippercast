@@ -9,6 +9,7 @@ from skippercast.platform.contracts import REPO, read_json
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
+    commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
     add = commands.add_parser('add-survey', help='Inspect an original URL and write a private candidate draft')
     add.add_argument('--url', required=True)
     add.add_argument('--id')
@@ -32,6 +33,11 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'refresh-screen':
+            from .screen_sources import refresh
+            result = refresh()
+            print(json.dumps({'checked_at': result['checked_at'], 'layers': list(result['layers'])}))
+            return
         if args.command == 'restore-reference':
             from .restore import restore_reference
             print(f'Restored verified reference cells: {restore_reference(fetch=args.fetch)}')

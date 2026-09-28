@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "reviewed_reaches": [
+    "morro-bay-r02",
+    "morro-bay-r03",
+    "morro-bay-r04"
+  ],
+  "bounds_wgs84": [
+    -121.3,
+    35.05,
+    -120.6,
+    35.65
+  ],
+  "scope_note": "Morro Bay pilot permanent spatial-restriction planning screen only. New reaches require review of applicable security boundaries. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons are conservatively excluded; this is not a seasonal or method-specific fishing permission. Dynamic USCG notices and vessel security zones require trip-time checks.",
+  "security_zones": [
+    {
+      "id": "diablo-canyon",
+      "section": "165.1155",
+      "geometry_method": "nad83-geodesic-circle",
+      "center_nad83": [
+        -120.85638888888889,
+        35.20638888888889
+      ],
+      "radius_m": 1828.8,
+      "reviewed_xml_sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+      "source_url": "https://www.ecfr.gov/current/title-33/section-165.1155",
+      "reviewed_at": "2026-09-28",
+      "source_up_to_date_as_of": "2026-09-24"
+    }
+  ]
+}

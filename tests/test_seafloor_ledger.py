@@ -30,12 +30,20 @@ class LedgerTests(unittest.TestCase):
         for reach in reaches:
             self.assertGreater(reach['band_km2'], 0)
             self.assertAlmostEqual(reach['band_km2'], reach['tier0_km2'] + reach['tier1_km2'], places=7)
-            self.assertEqual([reach[k] for k in ('tier2_km2', 'tier3_km2')], [0, 0])
+            self.assertGreaterEqual(reach['tier2_km2'], 0)
+            self.assertLessEqual(reach['tier2_km2'], reach['selected_valid_km2'])
+            self.assertEqual(reach['tier3_km2'], 0)
             if reach['status'] == 'unassessed':
                 self.assertEqual(reach['tier1_km2'], 0)
                 self.assertEqual(reach['surveys_used'], [])
             else:
-                self.assertEqual(reach['status'], 'habitat-held-for-screen')
+                self.assertIn(reach['status'], ('habitat-held-for-screen', 'habitat-screened'))
+                if reach['tier2_km2'] > 0:
+                    self.assertEqual(reach['screen']['status'], 'ready')
+                    self.assertEqual({s['id'] for s in reach['screen']['layers']},
+                                     {'cdfw-mpa', 'noaa-federal', 'security'})
+                    self.assertEqual(sum(reach['habitat_by_grade'].values()), reach['habitat_count'])
+                    self.assertGreater(reach['habitat_count'], 0)
                 self.assertEqual(reach['coverage_rule_version'], 'native-coverage-habitat-v1')
                 self.assertGreaterEqual(reach['held_candidate_count'], 0)
                 self.assertLessEqual(reach['atlas_comparison']['reproduced_count'],
