@@ -26,6 +26,14 @@ if [ -f var/live-published/latest.json ]; then
   cp var/live-published/latest.json var/live/previous.json
 fi
 
+# SkipperCast's own NOAA/ECMWF forecast tiles; a failure keeps the last published tiles.
+if ! bash scripts/publish_forecasts.sh; then
+  echo "::warning title=Forecast tiles::build or publish failed; models keep their last published tiles"
+fi
+if [ -f var/forecasts/index.json ]; then
+  export SKIPPERCAST_FORECAST_ROOT=var/forecasts
+fi
+
 python scripts/refresh_regions.py live --output var/live --previous-root var/live-published
 if [ "$intelligence" = 1 ] || [ ! -f var/live/intelligence-health.json ]; then
   python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published

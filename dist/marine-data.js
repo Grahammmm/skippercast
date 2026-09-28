@@ -11,7 +11,7 @@ export const MODELS = [
     kind: "wind",
     resolution: m.id === "gfs_global" ? "~13 km" : "~25 km",
   })),
-  ...WAVE_MODELS.map((m) => ({ ...m, kind: "wave", resolution: m.id === "ncep_gfswave016" ? "~16 km" : "~9 km" })),
+  ...WAVE_MODELS.map((m) => ({ ...m, kind: "wave", resolution: m.id === "ncep_gfswave016" ? "~18 km" : "~25 km" })),
   {
     id: "meteofrance_currents",
     name: "Météo-France / Copernicus ocean",
@@ -63,7 +63,9 @@ export function modelURL(model, points = POINTS) {
   if (marine) q.set("length_unit", "imperial");
   else q.set("wind_speed_unit", "kn");
   q.set("temperature_unit", "fahrenheit");
-  return `https://${marine ? "marine-api" : "api"}.open-meteo.com/v1/${marine ? "marine" : "forecast"}?${q}`;
+  // Wind and waves come from SkipperCast's own NOAA/ECMWF service; ocean currents still from Open-Meteo.
+  if (model.kind === "ocean") return `https://marine-api.open-meteo.com/v1/marine?${q}`;
+  return `/api/om/v1/${marine ? "marine" : "forecast"}?${q}`;
 }
 export function sample(data, variable, epoch, unit, meta) {
   const h = data?.hourly,

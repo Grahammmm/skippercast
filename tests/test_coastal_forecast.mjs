@@ -5,11 +5,11 @@ import {modelURLs,morningRows,gridDistanceNm} from '../dist/coastal-forecast.js'
 test('statewide model requests use the chosen map location and independent model pairs',()=>{
   for(const [lat,lon] of [[41.7,-124.5],[38.2,-123.1],[36.6,-122.1],[34.1,-119.3],[32.6,-117.2]]){
     const urls=modelURLs(lat,lon);
-    assert.equal(new URL(urls.wind).searchParams.get('latitude'),lat.toFixed(2));
-    assert.equal(new URL(urls.wave).searchParams.get('longitude'),lon.toFixed(2));
-    assert.equal(new URL(urls.wind).searchParams.get('models'),'ecmwf_ifs025,gfs_global');
-    assert.equal(new URL(urls.wave).searchParams.get('models'),'ecmwf_wam,ncep_gfswave016');
-    assert.equal(new URL(urls.wave).searchParams.get('cell_selection'),'sea');
+    assert.equal(new URL(urls.wind,'https://skippercast.com').searchParams.get('latitude'),lat.toFixed(2));
+    assert.equal(new URL(urls.wave,'https://skippercast.com').searchParams.get('longitude'),lon.toFixed(2));
+    assert.equal(new URL(urls.wind,'https://skippercast.com').searchParams.get('models'),'ecmwf_ifs025,gfs_global');
+    assert.equal(new URL(urls.wave,'https://skippercast.com').searchParams.get('models'),'ecmwf_wam,ncep_gfswave016');
+    assert.equal(new URL(urls.wave,'https://skippercast.com').searchParams.get('cell_selection'),'sea');
   }
   assert.throws(()=>modelURLs(20,-110));
   assert.ok(gridDistanceNm({latitude:36.25,longitude:-121.9},{latitude:36.25,longitude:-122})<6);
