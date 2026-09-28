@@ -26,10 +26,14 @@ on:
       - "src/skippercast/pipeline/wave_ensemble.py"
       - "scripts/check_saved_trips.py"
       - "scripts/run_core_tests.py"
+      - "scripts/live_loop.py"
+      - "scripts/live_cycle.sh"
+      - "scripts/report_conditions.py"
       - "requirements-ocean.txt"
       - "deployments/**"
 
 permissions:
+  actions: write
   contents: write
   id-token: write
 
@@ -40,7 +44,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -56,95 +60,22 @@ jobs:
         env:
           PYTHONPATH: src
         run: python scripts/run_core_tests.py --scope live
-      - name: Load previous buoy feed
+      - name: Record loop start
+        run: echo "LOOP_STARTED=$(date +%s)" >> "$GITHUB_ENV"
+      # One job refreshes every 30 minutes for about 5.5 hours; pushes run one cycle.
+      # Degraded individual sources are warnings; a failed cycle means no publication.
+      - name: Refresh and publish every 30 minutes
+        run: python scripts/live_loop.py ${{ github.event_name == 'push' && '--once' || '--budget-minutes 330' }}
+      # Scheduled runs are throttled by GitHub (they started only every 3-5 hours);
+      # dispatched runs are not, so each loop starts its successor.
+      - name: Start the next loop
+        if: always() && !cancelled() && github.event_name != 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p var/live
-          if git ls-remote --exit-code --heads origin conditions >/dev/null; then
-            git fetch origin conditions --depth=1
-            git worktree add --detach var/live-published FETCH_HEAD
-            cp var/live-published/latest.json var/live/previous.json
+          elapsed=$(( $(date +%s) - LOOP_STARTED ))
+          if [ "$elapsed" -lt 3600 ]; then
+            echo "::warning::Loop ended after ${elapsed}s; not chaining so a fast failure cannot repeat. The schedule or freshness check will restart it."
+            exit 0
           fi
-      - name: Collect current NOAA observations
-        env:
-          PYTHONPATH: src
-        run: python scripts/refresh_regions.py live --output var/live --previous-root var/live-published
-      - name: Collect regional currents, ensembles and prospective verification
-        env:
-          PYTHONPATH: src
-        run: python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published
-      - name: Refresh dated habitat grids with six-hour provider caches
-        env:
-          PYTHONPATH: src
-        run: python scripts/refresh_regions.py habitat --output var/live --previous-root var/live-published
-      - name: Publish the conditions feed
-        id: publish
-        run: |
-          if [ ! -d var/live-published ]; then
-            mkdir -p var/live-published
-            git -C var/live-published init -b conditions
-            git -C var/live-published remote add origin "$(git remote get-url origin)"
-            git -C var/live-published config http.https://github.com/.extraheader "$(git config --get http.https://github.com/.extraheader)"
-          fi
-          cp var/live/latest.json var/live-published/
-          cp var/live/intelligence-health.json var/live-published/
-          cp var/live/habitat-health.json var/live-published/
-          mkdir -p var/live-published/regions
-          python scripts/prune_habitat_tiles.py var/live-published var/live
-          cp -R var/live/regions/. var/live-published/regions/
-          PYTHONPATH=src python - <<'PY'
-          from pathlib import Path
-          from skippercast.pipeline.verification_archive import prune_archive
-          for region in Path('var/live-published/regions').iterdir():
-              if region.is_dir() and (region/'verification-state.json').exists():
-                  prune_archive(region)
-          PY
-          cp docs/live-conditions.md var/live-published/README.md
-          git -C var/live-published config user.name 'github-actions[bot]'
-          git -C var/live-published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/live-published add latest.json intelligence-health.json habitat-health.json regions README.md
-          git -C var/live-published diff --cached --quiet || git -C var/live-published commit -m 'Refresh regional ocean evidence and forecast archive'
-          git -C var/live-published push origin HEAD:refs/heads/conditions
-      - name: Check private saved trips with workflow identity
-        run: python scripts/check_saved_trips.py
-      - name: Report source access and publication outcome
-        if: always()
-        env:
-          PUBLICATION_OUTCOME: ${{ steps.publish.outcome }}
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          outcome = os.environ.get('PUBLICATION_OUTCOME', 'unknown')
-          lines, failures = ['## Regional evidence publication', 'Publication: ' + outcome], []
-          if outcome != 'success':
-              lines.append('This run did not confirm a new publication. The existing public feed remains the last confirmed generation.')
-              failures.append('Publication was not confirmed')
-          for name in ('latest.json', 'regions/index.json', 'intelligence-health.json', 'habitat-health.json'):
-              path = Path('var/live') / name
-              if not path.is_file():
-                  failures.append(name + ' was not produced')
-                  continue
-              data = json.loads(path.read_text())
-              if name == 'latest.json':
-                  lines.append('Buoy feed collected ' + data['completed_at'])
-                  for source in data['sources'].values():
-                      sample = (source.get('data') or {}).get('sample_at', 'unavailable')
-                      lines.append(f"- {source['name']}: {source['status']}; observed {sample}")
-                  failures.extend(data['health']['issues'])
-              else:
-                  lines.append('\n### ' + name)
-                  for region in data['regions']:
-                      lines.append('- ' + region['region_id'] + ': ' + region['status'])
-                      coverage = region.get('forecast_coverage')
-                      if coverage:
-                          lines.append(f"  - Seven-day wind + seas: {coverage['rated_point_days']}/{coverage['point_days']} point-days; two-model comparison: {coverage['two_model_point_days']}/{coverage['point_days']}")
-                      lines.extend('  - Source issue: ' + str(issue) for issue in region['issues'])
-                      lines.extend('  - Coverage gap: ' + str(gap) for gap in region.get('coverage_gaps', []))
-                      failures.extend(region['issues'])
-          if failures:
-              lines.append('\nUnavailable or degraded sources require attention; inspect the publication step before assuming status was published.')
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write('\n'.join(lines))
-          if failures:
-              raise SystemExit('Regional source failures or missing products: ' + '; '.join(map(str, failures)))
-          PY
+          gh workflow run live-conditions.yml --ref main
