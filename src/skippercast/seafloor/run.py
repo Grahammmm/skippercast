@@ -1,4 +1,4 @@
-"""M3 coverage/terrain stage. Does not promote or publish habitat polygons."""
+"""M3 original survey coverage, terrain and held habitat candidates."""
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -23,8 +23,10 @@ from .ingest import ingest
 from .io import sha256
 from .manifest import load_manifest
 from .terrain import derivatives, summarize
+from .habitat import build_candidates, compare_atlas, validate_rules
+from .substrate import resolve_bindings, verify_sources
 
-VERSION = 'native-coverage-terrain-v1'
+VERSION = 'native-coverage-habitat-v1'
 
 
 def terrain_cells(cells, sources):
@@ -73,7 +75,7 @@ def apply_ledger(root, reach_id, summary):
         row.setdefault('selected_valid_km2', 0)
         if row['id'] == reach_id:
             row.update(summary)
-    ledger['stage'] = 'M3-coverage-terrain-preview'
+    ledger['stage'] = 'M3-habitat-review'
     ledger['reference_cells_sha256'] = sha256(root / 'var/seafloor/reference/cells.json')
     ledger['coverage_method'] = (
         'Tier 1 credits the provisional reference-band area in cells where one usable original source '
@@ -87,7 +89,7 @@ def apply_ledger(root, reach_id, summary):
     atomic_json(path, ledger, indent=2)
 
 
-def run(reach_id, *, root=REPO, force=False):
+def run(reach_id, *, root=REPO, force=False, fetch=False):
     started = monotonic()
     root = Path(root)
     catalog = read_json(root / 'catalog/reaches.json')
@@ -105,13 +107,14 @@ def run(reach_id, *, root=REPO, force=False):
     scope = unary_union([cell_geometry(c) for c in cells])
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
     sources = []
-    for row in load_manifest(root)['surveys']:
+    manifest = load_manifest(root)
+    for row in manifest['surveys']:
         if row['status'] != 'usable' or row['kind'] != 'bathymetry':
             continue
         bounds = row['adapter_review']['requested_bounds_wgs84']
         if not transform(project, box(*bounds)).intersects(scope):
             continue
-        receipt, _, _ = ingest(row, bounds, root=root)
+        receipt, _, _ = ingest(row, bounds, root=root, fetch=fetch)
         if receipt['cog_sha256'] != row['adapter_review']['cog_sha256']:
             raise ValueError('Normalized source differs from reviewed manifest')
         folder = root / 'var/seafloor/cache' / row['sha256']
@@ -124,17 +127,26 @@ def run(reach_id, *, root=REPO, force=False):
         if sha256(selected_path) != receipt['cog_sha256']:
             raise ValueError('Selected normalized COG failed hash verification')
         sources.append({'row': row, 'path': selected_path, 'receipt': receipt})
+    rules = validate_rules(read_json(root / 'catalog/habitat-rules.json'))
+    bindings = resolve_bindings(rules, manifest)
+    source_ids = {s['row']['id'] for s in sources}
+    bindings = {key: value for key, value in bindings.items() if key in source_ids}
+    verify_sources(bindings, root=root, fetch=fetch)
+    atlas_path = root / 'dist/data/atlas.json'
     inputs = {'rule_version': VERSION, 'reach_id': reach_id,
               'reference_cells_sha256': sha256(baseline_path),
               'reaches_sha256': sha256(root / 'catalog/reaches.json'),
               'sources': [s['row'] for s in sources],
+              'habitat_rules': rules, 'substrate_bindings': bindings,
+              'atlas_sha256': sha256(atlas_path),
+              'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py')}}
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     folder = root / 'var/seafloor/reaches' / reach_id
     receipt_path = folder / 'run.json'
-    outputs = [folder / 'cells.json', folder / 'terrain.json']
+    outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json')]
     if receipt_path.exists() and not force:
         previous = read_json(receipt_path)
         if previous['input_hash'] == digest and all(p.exists() for p in outputs):
@@ -150,22 +162,34 @@ def run(reach_id, *, root=REPO, force=False):
     terrain_started = monotonic()
     terrain = terrain_cells(classified, sources)
     terrain_seconds = monotonic() - terrain_started
+    habitat_started = monotonic()
+    candidates = build_candidates(sources, classified, bindings, rules, reach, root=root)
+    selected_coverage = unary_union([source['geometry'].intersection(unary_union([
+        cell_geometry(c) for c in classified if c['tier'] == 1 and c['source_id'] == source['row']['id']]))
+        for source in sources])
+    comparison = compare_atlas(read_json(atlas_path), candidates, scope, selected_coverage)
+    habitat_seconds = monotonic() - habitat_started
     tier1 = sum(c['band_area_m2'] for c in classified if c['tier'] == 1)/1e6
     band = sum(c['band_area_m2'] for c in classified)/1e6
     used = sorted({c['source_id'] for c in classified if c['source_id'] != 'unknown'})
-    summary = {'status': 'coverage-processed', 'tier0_km2': round(band-tier1, 9),
+    summary = {'status': 'habitat-held-for-screen', 'tier0_km2': round(band-tier1, 9),
         'tier1_km2': round(tier1, 9), 'tier2_km2': 0, 'tier3_km2': 0,
         'selected_valid_km2': round(sum(c['valid_area_m2'] for c in classified)/1e6, 9),
         'surveys_used': used, 'last_survey_run': datetime.now(timezone.utc).isoformat(),
         'coverage_rule_version': VERSION, 'survey_run_hash': digest,
-        'note': 'Native survey-cell classification and terrain only. Unsurveyed portions remain unknown. '
-                'No habitat grade, legal clearance or fish presence asserted; interpolation-mask availability is unknown.'}
+        'held_candidate_count': len(candidates['features']),
+        'habitat_rule_version': rules['rule_version'], 'roughness_thresholds': candidates['thresholds'],
+        'atlas_comparison': {key: value for key, value in comparison.items() if key != 'areas'},
+        'note': 'Original survey coverage and private ranked habitat candidates. All candidates held pending '
+                'whole-polygon legal screening; no tier-2 publication or export. Unknown interpolation masks remain unknown.'}
     atomic_json(outputs[0], {'reach': reach_id, 'input_hash': digest, 'cells': classified})
     atomic_json(outputs[1], {'reach': reach_id, 'input_hash': digest, 'cells': terrain,
         'method': 'Nearest native-spacing projection into EPSG:3310 for derivatives; no cross-source blending. '
                   '3x3 VRM; BPI square windows approximate 25/100 m radii. Full valid neighborhoods required.'})
+    atomic_json(outputs[2], candidates)
+    atomic_json(outputs[3], comparison)
     receipt = {'input_hash': digest, 'inputs': inputs, 'ledger_summary': summary,
-               'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds,
+               'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds, 'habitat': habitat_seconds,
                                    'total': monotonic() - started},
                'outputs': {p.name: sha256(p) for p in outputs},
                'source_receipts': [s['receipt'] for s in sources]}

@@ -35,8 +35,11 @@ class LedgerTests(unittest.TestCase):
                 self.assertEqual(reach['tier1_km2'], 0)
                 self.assertEqual(reach['surveys_used'], [])
             else:
-                self.assertEqual(reach['status'], 'coverage-processed')
-                self.assertEqual(reach['coverage_rule_version'], 'native-coverage-terrain-v1')
+                self.assertEqual(reach['status'], 'habitat-held-for-screen')
+                self.assertEqual(reach['coverage_rule_version'], 'native-coverage-habitat-v1')
+                self.assertGreaterEqual(reach['held_candidate_count'], 0)
+                self.assertLessEqual(reach['atlas_comparison']['reproduced_count'],
+                                     reach['atlas_comparison']['applicable_outline_count'])
                 self.assertRegex(reach['survey_run_hash'], '^[a-f0-9]{64}$')
                 self.assertGreaterEqual(reach['selected_valid_km2'], 0)
                 manifest = json.loads((ROOT / 'catalog/surveys.json').read_text())
