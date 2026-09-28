@@ -634,7 +634,13 @@ do not trigger another Actions run automatically; a maintainer must trigger
 normal PR checks through a new authorized push, or configure a separately
 scoped PR-creation token before unattended ledger review. They are never
 auto-merged. R2 permissions and the production Worker's
-`FEEDS` binding must be configured. The final probe checks the public manifest,
+`FEEDS` binding must be configured. The live probe uses the existing `CLOUDFLARE_SITE_URL` repository variable
+(or skippercast.com if unset) and records the exact URL in its receipt. As
+documented in [Cloudflare hosting](cloudflare.md), the .com site remains on
+Sites pending its separate migration. A staging Worker pass proves that
+endpoint only; it does not mean the layer appears in the .com app. The app
+integration issue must identify the actual tested feed host. The final probe
+checks the public manifest,
 PMTiles v3 header, 206 range response, byte size and Worker cache policy; private
 R2 success alone does not count as a successful website deployment.
 

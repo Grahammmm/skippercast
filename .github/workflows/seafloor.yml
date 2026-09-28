@@ -128,6 +128,8 @@ jobs:
               for key in d['published']: f.write('\nPublished /feeds/'+key+'\n')
           PY
       - name: Verify the public Worker serves the exact archive with HTTP Range
+        env:
+          SEAFLOOR_PUBLIC_BASE: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}
         run: python -m skippercast.seafloor.verify --matrix var/seafloor/matrix.json >> "$GITHUB_STEP_SUMMARY"
       - name: Propose the small ledger change (never push main)
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676

@@ -25,6 +25,7 @@ def verify_public(region, manifest, *, base='https://skippercast.com', opener=ur
 
 def main():
     import argparse
+    import os
     from pathlib import Path
     from skippercast.platform.contracts import atomic_json
     from .publish import credentials
@@ -35,7 +36,7 @@ def main():
     receipts = []
     for region in sorted({r['region'] for r in json.loads(args.matrix.read_text())['include']}):
         manifest = json.loads((Path('var/seafloor/public')/region/'manifest.json').read_text())
-        receipt = verify_public(region, manifest)
+        receipt = verify_public(region, manifest, base=os.environ.get('SEAFLOOR_PUBLIC_BASE', 'https://skippercast.com'))
         receipts.append(receipt)
         s3.put_object(Bucket=bucket, Key=f'seafloor-review/publication/{region}/{manifest["archive_sha256"]}.json',
                       Body=json.dumps(receipt).encode(), ContentType='application/json', CacheControl='private, no-store')

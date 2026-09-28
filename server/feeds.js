@@ -74,7 +74,8 @@ export async function serveFeed(request, path, assets) {
     }
   }
   const headers = new Headers({'Content-Type': contentType(key), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(key)}`,
-    'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*'});
+    'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges'});
   if (bucket) {
     const object = await bucket.get(key, {range: request.headers, onlyIf: request.headers});
     if (object) {

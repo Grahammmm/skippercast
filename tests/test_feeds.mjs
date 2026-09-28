@@ -110,6 +110,7 @@ test('seafloor archives require a fresh matching revision and never fall back to
     useBucket({FEEDS: make(manifest)});
     let r = await serveFeed(new Request('https://s'+path), path);
     assert.equal(r.status, 200);
+    assert.ok(r.headers.get('Access-Control-Expose-Headers').includes('ETag'));
     assert.equal(r.headers.get('Cache-Control'), 'no-store');
     const internal = '/feeds/tiles/seafloor/regions/morro-bay/seafloor-morro-bay.pmtiles';
     assert.equal((await serveFeed(new Request('https://s'+internal), internal)).status, 404);
