@@ -1,11 +1,11 @@
-import {initChart} from './chart-map.js?v=8.14';
-import {initNavigation} from './navigation.js?v=8.14';
-import {esc} from './marine-charts.js?v=8.14';
-import {viewFromURL} from './location-context.js?v=8.14';
-import {mappedPackageAt} from './map-response.js?v=8.14';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js?v=8.14';
-import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js?v=8.14';
-import {updateCoastalForecast} from './coastal-forecast.js?v=8.15';
+import {initChart} from './chart-map.js';
+import {initNavigation} from './navigation.js';
+import {esc} from './marine-charts.js';
+import {viewFromURL} from './location-context.js';
+import {mappedPackageAt} from './map-response.js';
+import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions} from './coasts.js';
+import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js';
+import {updateCoastalForecast} from './coastal-forecast.js';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
