@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "SkipperCast seafloor survey row",
-  "description": "M0 candidate contract; M1 adds runtime status-transition validation. Evidence references are repository path plus JSON Pointer. Unknown measurements use the literal string unknown.",
+  "description": "Original survey manifest with reviewed native-adapter promotion. Metadata candidates never establish coverage.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -201,6 +201,80 @@
         "unknown",
         "linked-family"
       ]
+    },
+    "adapter_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapter_version",
+        "source_sha256",
+        "cog_sha256",
+        "requested_bounds_wgs84",
+        "valid_pixels_in_requested_bounds",
+        "nominal_0_300ft_pixels_in_requested_bounds",
+        "native_resolution_m",
+        "vertical_datum",
+        "uncertainty_type",
+        "interpolation_mask",
+        "rights_source_url"
+      ],
+      "properties": {
+        "adapter_version": {
+          "const": "original-native-adapters-v1"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "cog_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "requested_bounds_wgs84": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "number"
+          }
+        },
+        "valid_pixels_in_requested_bounds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nominal_0_300ft_pixels_in_requested_bounds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "native_resolution_m": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "vertical_datum": {
+          "enum": [
+            "MLLW",
+            "NAVD88",
+            "MSL",
+            "unknown"
+          ]
+        },
+        "uncertainty_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interpolation_mask": {
+          "const": "unknown"
+        },
+        "rights_source_url": {
+          "type": "string",
+          "pattern": "^https://[^ ]+$"
+        }
+      }
     }
   },
   "allOf": [
@@ -239,7 +313,10 @@
           "license": {
             "const": "public-domain-us-gov"
           }
-        }
+        },
+        "required": [
+          "adapter_review"
+        ]
       }
     }
   ]

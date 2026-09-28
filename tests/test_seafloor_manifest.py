@@ -28,9 +28,13 @@ def resolve(reference):
 
 
 class InventoryTests(unittest.TestCase):
-    def test_seed_is_candidate_only_without_null_measurements(self):
+    def test_inventory_statuses_have_no_null_measurements(self):
         self.assertTrue(ROWS)
-        self.assertEqual({r['status'] for r in ROWS}, {'candidate'})
+        self.assertLessEqual({r['status'] for r in ROWS}, {'candidate', 'usable', 'hold', 'withdrawn'})
+        for row in ROWS:
+            if row['status'] == 'usable':
+                self.assertEqual(row['adapter_review']['source_sha256'], row['sha256'])
+                self.assertGreater(row['adapter_review']['nominal_0_300ft_pixels_in_requested_bounds'], 0)
         def visit(value):
             self.assertIsNotNone(value)
             if isinstance(value, dict):
@@ -101,6 +105,29 @@ class SchemaTests(unittest.TestCase):
     def test_runtime_loader_validates_the_same_inventory(self):
         from skippercast.seafloor.manifest import load_manifest
         self.assertEqual(load_manifest(ROOT), MANIFEST)
+
+    def test_usable_receipt_cannot_conflict_with_manifest(self):
+        from unittest.mock import patch
+        from skippercast.seafloor.manifest import load_manifest
+        for field, value in [('sha256', '0'*64), ('resolution_m', 999), ('vertical_datum', 'MSL')]:
+            document = deepcopy(MANIFEST)
+            row = next(r for r in document['surveys'] if r['status'] == 'usable')
+            row[field] = value
+            with patch('skippercast.seafloor.manifest.read_json', side_effect=[document, SCHEMA]):
+                with self.assertRaisesRegex(ValueError, 'conflicts'):
+                    load_manifest(ROOT)
+
+    def test_qualify_requires_rights_matching_source_and_shallow_pixels(self):
+        from skippercast.seafloor.manifest import qualify_row
+        row = deepcopy(next(r for r in ROWS if r['status'] == 'usable'))
+        receipt = dict(row['adapter_review'], source_id=row['id'], source_bytes=row['bytes'],
+                       horizontal_crs=row['horizontal_crs'])
+        for changes in ({'source_sha256': '0'*64}, {'nominal_0_300ft_pixels_in_requested_bounds': 0},
+                        {'valid_pixels_in_requested_bounds': 1}):
+            with self.assertRaisesRegex(ValueError, 'receipt'):
+                qualify_row(row, dict(receipt, **changes), rights_url=receipt['rights_source_url'])
+        with self.assertRaisesRegex(ValueError, 'rights'):
+            qualify_row(dict(row, license='unknown'), receipt, rights_url=receipt['rights_source_url'])
 
     def test_every_manifest_row(self):
         Draft202012Validator.check_schema(SCHEMA)

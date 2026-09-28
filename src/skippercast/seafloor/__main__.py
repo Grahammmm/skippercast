@@ -1,6 +1,7 @@
 """Rebuild the shared reference baseline or read the small committed ledger."""
 import argparse
 import json
+from pathlib import Path
 
 from skippercast.platform.contracts import REPO, read_json
 
@@ -8,6 +9,14 @@ from skippercast.platform.contracts import REPO, read_json
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
+    add = commands.add_parser('add-survey', help='Inspect an original URL and write a private candidate draft')
+    add.add_argument('--url', required=True)
+    add.add_argument('--id')
+    add.add_argument('--bounds', type=float, nargs=4, required=True, metavar=('W', 'S', 'E', 'N'))
+    add.add_argument('--format', choices=('bag', 'usgs-geotiff'))
+    add.add_argument('--member', default='unknown')
+    add.add_argument('--local', type=Path)
+    add.add_argument('--fetch', action='store_true')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
         sub.add_argument('--region', default='central-coast')
@@ -17,6 +26,12 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'add-survey':
+            from .draft import add_survey
+            path = add_survey(args.url, args.bounds, ident=args.id, format_name=args.format,
+                              member=args.member, local=args.local, fetch=args.fetch)
+            print(f'Candidate draft: {path}. Review rights and metadata before manifest promotion.')
+            return
         if args.command == 'reaches':
             from .grid import build
             ledger, unchanged = build(fetch=args.fetch, region=args.region)

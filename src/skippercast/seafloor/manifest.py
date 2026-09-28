@@ -1,5 +1,6 @@
 """Validate reviewed inventory, without promoting candidates on metadata alone."""
 from pathlib import Path
+from copy import deepcopy
 
 from skippercast.platform.contracts import REPO, read_json
 
@@ -21,9 +22,44 @@ def load_manifest(root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        if row['status'] == 'usable':
+            from skippercast.platform.contracts import bbox
+            receipt = row['adapter_review']
+            bbox(receipt['requested_bounds_wgs84'])
+            if (receipt['source_sha256'] != row['sha256']
+                    or receipt['vertical_datum'] != row['vertical_datum']
+                    or max(receipt['native_resolution_m']) != row['resolution_m']
+                    or receipt['nominal_0_300ft_pixels_in_requested_bounds'] > receipt['valid_pixels_in_requested_bounds']):
+                raise ValueError('Usable source conflicts with its native adapter receipt')
         if row['id'] in row['derived_from'] or not set(row['derived_from']) <= set(ids):
             raise ValueError('Invalid survey lineage')
         url = row['url'].lower()
         if 'bluetopo' in url or '/modeling/' in url:
             raise ValueError('Reference compilations cannot enter the survey manifest')
     return document
+
+
+def qualify_row(row, receipt, *, rights_url):
+    """Promote only after explicit rights review and a successful native adapter run."""
+    from skippercast.platform.contracts import public_url
+    public_url(rights_url)
+    if row['license'] != 'public-domain-us-gov':
+        raise ValueError('Source rights must be reviewed before usable status')
+    if (receipt['source_id'] != row['id'] or receipt['source_sha256'] != row['sha256']
+            or receipt['adapter_version'] != 'original-native-adapters-v1'
+            or not 0 < receipt['nominal_0_300ft_pixels_in_requested_bounds']
+                   <= receipt['valid_pixels_in_requested_bounds']):
+        raise ValueError('A matching native adapter receipt with shallow-water pixels is required')
+    result = deepcopy(row)
+    result.update(status='usable', hold_reason='unknown', bytes=receipt['source_bytes'],
+                  horizontal_crs=receipt['horizontal_crs'], vertical_datum=receipt['vertical_datum'],
+                  resolution_m=max(receipt['native_resolution_m']))
+    result['adapter_review'] = {key: receipt[key] for key in (
+        'adapter_version', 'source_sha256', 'cog_sha256', 'requested_bounds_wgs84',
+        'valid_pixels_in_requested_bounds', 'nominal_0_300ft_pixels_in_requested_bounds',
+        'native_resolution_m', 'vertical_datum', 'uncertainty_type', 'interpolation_mask')}
+    result['adapter_review']['rights_source_url'] = rights_url
+    result['notes'] = ('Opened through original-native-adapters-v1; native-resolution COG cached by source hash. '
+                       'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
+                       'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')
+    return result

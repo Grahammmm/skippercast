@@ -6,19 +6,21 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M1, reproducible coverage baseline
+## Current stage: M2, original-survey adapters
 
 The [candidate manifest](../catalog/surveys.json) contains 385 source products.
 The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Candidates remain unprocessed; metadata alone cannot
-promote them to usable survey coverage.
+identities and lineage. Two original bathymetry products have native-adapter receipts; the other 383
+remain candidates. Metadata alone cannot promote a source. `usable` means the
+reviewed source window can be processed, not that its whole file envelope has
+valid depth or that a reach has been mapped.
 
 The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
 packages into **46 reaches**, approximately 10 km alongshore, ordered outward
 from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
 **55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
 Every cell starts at tier 0. Tier 1 and tier 2 are **0 km² in every reach** because
-original-survey adapters and habitat processing arrive in M2–M3. This does not
+coverage and habitat processing arrive in M3. This does not
 mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
 remains a separate research receipt; it is not reclassified as new coverage.
 
@@ -81,8 +83,83 @@ cannot share a cell. Centers projecting to terminal endpoints are excluded.
 
 Full cell assignments, sample receipts and run hashes stay in ignored
 `var/seafloor/reference/`; only reach geometry and the small summary ledger are
-committed. There are no habitat tiles or front-end changes in M1. Next is M2:
-cache and open original USGS and NOAA BAG depth with format-specific adapters.
+committed. There are no habitat tiles or front-end changes in M2. The 46 reach totals
+remain unchanged: tier 1 = 0 → 0 km² and tier 2 = 0 → 0 km² in every reach.
+
+## Original-survey ingestion
+
+`add-survey` imports a hash-verified local original or fetches an approved USGS /
+NOAA NOS URL with `--fetch`. It writes a private draft, never automatically
+changes the manifest or grants reuse rights. Inspect the draft, review the
+publisher's rights, and use `manifest.qualify_row` before committing a usable
+row. A known SHA-256 permits offline reuse; a new unknown-hash discovery must
+be reviewed and pinned before repeat fetches are guaranteed to download nothing.
+
+```bash
+PYTHONPATH=src python -m skippercast.seafloor add-survey \
+  --url https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag \
+  --id h11953-mb-2m-mllw-2of4-bag-fd284baf0f \
+  --bounds -120.73 34.5 -120.58 34.65 --fetch
+```
+
+Use `--local /absolute/path/to/original` to import a previously downloaded file;
+its bytes and SHA-256 must match. Multi-GeoTIFF ZIPs require `--member` with the
+exact native product name. The transport-file hash covers the ZIP, while a
+separate private extraction receipt hashes its selected member. Original files,
+COGs, drafts and full receipts stay in ignored `var/seafloor/`. The manifest
+stores a small native inspection and rights receipt.
+
+Adapters read native 512-pixel chunks with a 100 m seam margin, preserve no-data
+and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
+positive down**; an optional band 2 is producer uncertainty in meters. Do not
+feed these normalized COGs back into an original elevation adapter. No datum
+conversion, reprojection, smoothing or interpolation is performed. The source
+is already a producer-gridded product, not raw soundings. Neither verified
+product supplies a separate interpolation mask; that remains explicitly unknown
+and must be addressed by the coverage-stage eligibility rules. Unknown datum
+alone does not block tiers 1–2.
+
+Variable-resolution BAG overviews are rejected until a native-refinement adapter
+exists. Coarse default overview pixels must never masquerade as fine native
+depth. The legacy strict BAG metadata parser is unchanged for existing callers;
+only this adapter permits unknown datum, dates and uncertainty metadata.
+
+### Native checks, 2026-09-28
+
+| Original product | Exact reviewed WGS84 window (west, south, east, north) | Native spacing / nominal datum | Valid 0–300 ft source pixels | Cached source / COG bytes |
+| --- | --- | --- | --- | --- |
+| [USGS Offshore Morro Bay](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip), member `Bathymetry_OffshoreMorroBay.tif` | -121.04, 35.32, -120.91, 35.45 | 2 m / unknown | 12,104,254 | 45,090,088 / 20,599,206 |
+| [NOAA H11953 2-of-4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag), Point Conception | -120.73, 34.5, -120.58, 34.65 | 2 m / MLLW | 5,517,962 | 42,325,273 / 37,465,806 |
+
+Counts exclude the seam margin and are source pixels, **not deduplicated habitat
+or reach area**. Both full original hashes match the existing inspected cache.
+Each stabilized second ingestion verifies hashes, downloads nothing and reuses
+the normalized COG. Synthetic tests independently check orientation, depth sign,
+no-data holes, uncertainty, archive selection, download caching and corruption.
+
+USGS's cached original metadata credits USGS, CSU Monterey Bay's Seafloor Mapping
+Lab and UC's Center for Integrated Spatial Research; the 2008 Fugro surveys were
+processed and mosaicked into the released grid. Its public-domain source and
+metadata must accompany reuse. A fresh fetch of the [publisher XML](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml)
+returned HTTP 403 during review; the cached publisher XML was inspected instead.
+The NOAA [NOS archive license](https://www.fisheries.noaa.gov/inport/item/39979)
+explicitly states CC0/public-domain reuse. NOAA H11953's embedded metadata records
+2008-08-29 through 2008-09-05 and product uncertainty. Neither source supports
+navigation clearance or independent corroboration just by being gridded.
+
+**M2 geographic acceptance is still pending an owner decision.** The milestone
+calls for a NOAA BAG covering Morro Bay. Eight nearby regular-grid files tested
+at native resolution (W00431 8/16 m, W00433 8/16 m, W00443 16 m, W00444 8/16 m,
+W00447 16 m) had no -100 to 0 m elevation cells in the Morro search window
+[-121.15, 35.05, -120.6, 35.53]. This bounded search is not proof of a regional
+survey gap. H11953 validates the adapter at Point Conception, not Morro Bay.
+The proposed acceptance-location substitution does not change tier rules; do
+not start M3 until that decision and M2 acceptance on main are complete.
+
+`fetch.py` also supplies tested, streaming private-object cache hooks accepting
+an externally configured S3-compatible client. They have not been deployed or
+connected to credentials. Weekly scheduling, R2 publication and the legal gate
+remain M4 work.
 
 ## Tiers and units
 
@@ -198,8 +275,8 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
-`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches` and `ledger` are
-implemented; `add-survey`, `run` and `publish` arrive at their milestone gates.
+`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger` and `add-survey` are implemented; `run` and `publish`
+arrive at their milestone gates.
 
 The later workflow runs weekly, on dispatch, and relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
