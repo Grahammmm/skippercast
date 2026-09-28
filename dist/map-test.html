@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+    <meta name="robots" content="noindex" />
+    <title>SkipperCast · MapLibre map test</title>
+    <link rel="stylesheet" href="vendor/maplibre-5.24.0/maplibre-gl.css" />
+    <link rel="stylesheet" href="map-test.css" />
+    <script src="vendor/maplibre-5.24.0/maplibre-gl-csp.js" defer></script>
+    <script src="vendor/pmtiles-4.5.0/pmtiles.js" defer></script>
+    <script type="module" src="map-test.js"></script>
+  </head>
+  <body>
+    <div id="map" aria-label="Test map of Morro Bay reef outlines"></div>
+    <div class="test-badge">MapLibre + PMTiles test · <a href="map-test-leaflet.html">compare with Leaflet</a> · <a href="index.html?region=morro-bay#map">back to SkipperCast</a></div>
+    <div class="test-note">Reef outlines are partial mapped rough-habitat footprints (USGS, research-only), not complete reefs or fishing spots. Planning use only; not a navigation chart.</div>
+  </body>
+</html>
