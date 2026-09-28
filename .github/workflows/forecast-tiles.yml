@@ -32,9 +32,11 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-ocean.txt
       - name: Install GRIB decoder
-        run: python -m pip install -r requirements-ocean.txt
+        run: python -m pip install -r requirements-ocean.txt -r requirements-publish.txt
       - name: Build and publish tiles
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FORCE: ${{ inputs.force && '1' || '' }}
         run: |
           time bash scripts/publish_forecasts.sh

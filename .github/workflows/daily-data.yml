@@ -54,7 +54,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-sst.txt
       - name: Install reviewed NOAA NetCDF decoder
-        run: python -m pip install -r requirements-sst.txt
+        run: python -m pip install -r requirements-sst.txt -r requirements-publish.txt
       - name: Load pinned last30days research engine
         uses: actions/checkout@v4
         with:
@@ -136,6 +136,9 @@ jobs:
         continue-on-error: true
         run: python scripts/audit_usgs_doi_metadata.py --releases var/daily/usgs-doi-releases.json --output var/daily/usgs-doi-metadata.json --previous var/published/usgs-doi-metadata.json --max-age-days 30
       - name: Publish an atomic data snapshot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -d var/published ]; then
             cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
@@ -186,6 +189,7 @@ jobs:
           if [ -f var/published/noaa-federal-areas.json ]; then git -C var/published add noaa-federal-areas.json; fi
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
+          bash scripts/publish_branch_r2.sh var/published data
       - name: Report source health
         run: |
           python - <<'PY'

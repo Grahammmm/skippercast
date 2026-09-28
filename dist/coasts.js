@@ -1,3 +1,4 @@
+import {withFeeds} from './feeds.js';
 // The five coastal browse regions are separate from survey-qualified packages.
 // Keep this module independent of regional modules: boot uses it before a package is selected.
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -8,7 +9,7 @@ export async function loadCoasts() {
   if(!r.ok)throw Error('Coastal directory unavailable');
   const data=await r.json();
   if(data.schema_version!==1 || data.regions?.length!==5)throw Error('Invalid coastal directory');
-  directory=data;return data;
+  directory=withFeeds(data);return directory;
 }
 export function coastAt(point,catalog=directory) {
   if(!Number.isFinite(point?.latitude)||!Number.isFinite(point?.longitude))return null;

@@ -2,12 +2,15 @@ import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {assessTrip,alertDecision,alertMessage,dateInZone} from './alert-policy.js';
 import {verifyJobToken} from './job-auth.js';
 import {lookupBoat,validQuery} from './boat-lookup.js';
+import {useBucket,readBucketJSON,serveFeed} from './feeds.js';
+import {watchdog} from './watchdog.js';
 import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
 const regions=REGIONS;
 const deployment=DEPLOYMENT;
 const origins=new Set(deployment.allowed_origins);
+let extraOrigins=new Set();
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
 const hash=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
 const db=env=>{if(!env.DB)throw Error('storage unavailable');return env.DB;};
@@ -20,11 +23,14 @@ async function body(request){
   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
   try{const value=JSON.parse(new TextDecoder().decode(bytes));if(!value||typeof value!=='object'||Array.isArray(value))throw Error();return value;}catch{throw Error('invalid JSON body');}
 }
-function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!origins.has(origin))throw Error('origin rejected');}
+function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!(origins.has(origin)||extraOrigins.has(origin)))throw Error('origin rejected');}
 async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>30)throw Error('rate limited');}
 async function readFeed(url){
-  let stage='cache';
+  let stage='r2';
   try{
+    // Published feeds come from R2 when the bucket is bound; GitHub otherwise.
+    const stored=await readBucketJSON(url);if(stored!==undefined)return stored;
+    stage='cache';
     const key=new Request(url);let cache,cached;
     // Sites isolates named caches. Its shared default cache is intentionally
     // unavailable; an optional cache failure must never disable public feeds.
@@ -115,8 +121,19 @@ export async function checkTrips(env,cursor=''){
   return {checked:trips.length,changes,delivered,held,in_app:inApp,next_cursor:trips.length===25?trips.at(-1).id:null};
 }
 
-export default {async fetch(request,env){
+function bind(env){
+  useBucket(env);
+  // Extra origins (e.g. a workers.dev staging copy) may post; production origins come from the deployment policy.
+  extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
+}
+export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(watchdog(env));},
+async fetch(request,env){
+  bind(env);
   const url=new URL(request.url),path=url.pathname;
+  if(request.method==='GET'&&path.startsWith('/feeds/')){
+    const served=await serveFeed(request,path,env.ASSETS);if(served)return served;
+    return new Response('Not found',{status:404});
+  }
   if(!path.startsWith('/api/')){
     if(!env.ASSETS)return new Response('Not found',{status:404});
     // The Sites edge can retain a previously deployed asset at a stable URL, so
@@ -124,7 +141,7 @@ export default {async fetch(request,env){
     // (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
     const current=SHELLS[path];
     if(!current)return env.ASSETS.fetch(request);
-    const assetUrl=new URL(request.url);assetUrl.pathname=current;assetUrl.search='';
+    const assetUrl=new URL(request.url);assetUrl.pathname=current.replace(/\.html$/,'');assetUrl.search=''; // hosts serve pages without .html
     const response=await env.ASSETS.fetch(new Request(assetUrl,request));
     const fresh=new Response(response.body,response);
     fresh.headers.set('Cache-Control','no-store');
@@ -142,7 +159,7 @@ export default {async fetch(request,env){
         const response=json(data);response.headers.set('Cache-Control','public,max-age=300');return response;
       }catch(error){if(error instanceof QueryError)return json({error:true,reason:error.message},400);throw error;}
     }
-    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
+    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,feeds:env.FEEDS?'r2':'github',notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
       const claims=await verifyJobToken(token,deployment);if(!claims)return json({error:'Unauthorized'},401);

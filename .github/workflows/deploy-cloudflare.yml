@@ -1,0 +1,56 @@
+name: Deploy to Cloudflare
+
+# Deploys main to SkipperCast's own Cloudflare account (staging on workers.dev
+# until sign-in moves off ChatGPT; see docs/cloudflare.md). Does nothing until
+# the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets exist.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Worker and fingerprinted site
+        run: |
+          pnpm build
+          node scripts/check_client.mjs
+      - name: Deploy
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
+          EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
+        run: |
+          mkdir -p var
+          bash scripts/cloudflare_deploy.sh
+      - name: Check the deployed site
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        env:
+          SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
+        run: |
+          if [ -z "$SITE" ]; then echo "Set the CLOUDFLARE_SITE_URL repository variable to check the deployment."; exit 0; fi
+          sleep 10
+          curl -fsS "$SITE/api/health" | tee /dev/stderr | grep -q '"service":"SkipperCast"'
+          curl -fsS -o /dev/null -w "home page %{http_code}\n" "$SITE/"
+          curl -fsS -o /dev/null -w "live feed %{http_code}\n" "$SITE/feeds/conditions/latest.json"

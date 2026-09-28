@@ -1,5 +1,5 @@
 // Public discussion links are research leads, never catch or location evidence.
-const FEED = 'https://raw.githubusercontent.com/Grahammmm/skippercast/data/recent-intel.json';
+const FEED = '/feeds/data/recent-intel.json';
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const formatDate = value => new Date(value).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'America/Los_Angeles'});
 const hoursSince = (value, now) => (now - Date.parse(value)) / 3600000;

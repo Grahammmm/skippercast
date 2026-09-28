@@ -65,6 +65,7 @@ git -C var/live-published add latest.json intelligence-health.json habitat-healt
 git -C var/live-published diff --cached --quiet || git -C var/live-published commit -q -m 'Refresh regional ocean evidence and forecast archive'
 git -C var/live-published push -q origin HEAD:refs/heads/conditions
 echo "published"
+bash scripts/publish_branch_r2.sh var/live-published conditions
 
 if [ "$trips" = 1 ]; then
   python scripts/check_saved_trips.py

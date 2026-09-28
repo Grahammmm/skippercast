@@ -41,3 +41,5 @@ node_modules/
 dist/client/
 dist/server/
 dist/.openai/
+wrangler.deploy.jsonc
+.wrangler/

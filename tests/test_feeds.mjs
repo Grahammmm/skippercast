@@ -1,0 +1,89 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.js';
+import {feedAgeMinutes, watchdog} from '../server/watchdog.js';
+import {feedURL, withFeeds} from '../dist/feeds.js';
+
+const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
+
+test('only published feed branches map to keys; traversal is refused', () => {
+  assert.equal(feedKey(RAW + 'conditions/regions/morro-bay/latest.json'), 'conditions/regions/morro-bay/latest.json');
+  assert.equal(feedKey('/feeds/forecasts/gfs_global/manifest.json'), 'forecasts/gfs_global/manifest.json');
+  assert.equal(feedKey('/feeds/main/README.md'), null);
+  assert.equal(feedKey('/feeds/conditions/../main/x'), null);
+  assert.equal(feedKey('https://example.com/conditions/x.json'), null);
+});
+
+test('browser feed URLs route through /feeds/ and leave everything else alone', () => {
+  assert.equal(feedURL(RAW + 'data/latest.json'), '/feeds/data/latest.json');
+  assert.equal(feedURL(RAW + 'main/README.md'), RAW + 'main/README.md');
+  assert.equal(feedURL('regions/x.json'), 'regions/x.json');
+  const region = withFeeds({id: 'x', daily_feed: RAW + 'data/regions/x/latest.json', name: 'X'});
+  assert.equal(region.daily_feed, '/feeds/data/regions/x/latest.json');
+  assert.equal(region.name, 'X');
+});
+
+test('range responses follow RFC 7233 for PMTiles reads', async () => {
+  const bytes = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const req = range => new Request('https://x/y', {headers: range ? {Range: range} : {}});
+  let r = rangeResponse(bytes, req('bytes=2-4'), new Headers());
+  assert.equal(r.status, 206);
+  assert.equal(r.headers.get('Content-Range'), 'bytes 2-4/10');
+  assert.deepEqual([...new Uint8Array(await r.arrayBuffer())], [2, 3, 4]);
+  r = rangeResponse(bytes, req('bytes=-3'), new Headers());
+  assert.deepEqual([...new Uint8Array(await r.arrayBuffer())], [7, 8, 9]);
+  assert.equal(rangeResponse(bytes, req('bytes=20-30'), new Headers()).status, 416);
+  assert.equal(rangeResponse(bytes, req(null), new Headers()).status, 200);
+});
+
+function fakeBucket(objects) {
+  return {async get(key) {
+    if (!(key in objects)) return null;
+    const text = objects[key];
+    return {size: text.length, httpEtag: '"e"', body: new Blob([text]).stream(), json: async () => JSON.parse(text)};
+  }};
+}
+
+test('feeds come from R2 when bound, GitHub otherwise', async () => {
+  useBucket({FEEDS: fakeBucket({'conditions/latest.json': '{"completed_at":"2026-09-28T13:00:00Z"}'})});
+  let r = await serveFeed(new Request('https://s/feeds/conditions/latest.json'), '/feeds/conditions/latest.json');
+  assert.equal(r.headers.get('X-Feed-Source'), 'r2');
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=60');
+  assert.deepEqual(await readBucketJSON(RAW + 'conditions/latest.json'), {completed_at: '2026-09-28T13:00:00Z'});
+  assert.equal(await serveFeed(new Request('https://s/feeds/main/x'), '/feeds/main/x'), null);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async url => (assert.equal(url, RAW + 'data/x.json'), new Response('{}', {status: 200}));
+  try {
+    useBucket({});
+    r = await serveFeed(new Request('https://s/feeds/data/x.json'), '/feeds/data/x.json');
+    assert.equal(r.headers.get('X-Feed-Source'), 'github');
+    assert.equal(await readBucketJSON(RAW + 'data/x.json'), undefined);
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test('watchdog dispatches only for a stale feed with no refresh running', async () => {
+  const now = Date.parse('2026-09-28T14:00:00Z');
+  assert.equal(Math.round(feedAgeMinutes({completed_at: '2026-09-28T13:00:00Z'}, now)), 60);
+  assert.equal(feedAgeMinutes({}, now), Infinity);
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  const run = async (completed, running) => {
+    calls.length = 0;
+    useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify({completed_at: completed})})});
+    globalThis.fetch = async (url, init = {}) => {
+      calls.push(`${init.method || 'GET'} ${url.replace('https://api.github.com/repos/Grahammmm/skippercast', '')}`);
+      if (url.includes('status=in_progress')) return new Response(JSON.stringify({total_count: running ? 1 : 0}));
+      if (url.includes('status=queued')) return new Response(JSON.stringify({total_count: 0}));
+      return new Response(null, {status: 204});
+    };
+    try { return await watchdog({GITHUB_TOKEN: 't'}, now); } finally { globalThis.fetch = realFetch; }
+  };
+  assert.equal((await run('2026-09-28T13:40:00Z', false)).action, 'none');
+  assert.equal(calls.length, 0);
+  assert.equal((await run('2026-09-28T12:30:00Z', true)).action, 'already-in_progress');
+  assert.equal((await run('2026-09-28T12:30:00Z', false)).action, 'dispatched');
+  assert.ok(calls.includes('POST /actions/workflows/live-conditions.yml/dispatches'));
+  useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify({completed_at: '2026-09-28T12:00:00Z'})})});
+  assert.equal((await watchdog({}, now)).action, 'no-token');
+  useBucket({});
+});

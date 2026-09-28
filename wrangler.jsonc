@@ -1,0 +1,27 @@
+{
+  // SkipperCast on its own Cloudflare account: the same Worker and static site
+  // that ChatGPT Sites serves today, plus R2 feeds and a cron watchdog.
+  // Deployed by .github/workflows/deploy-cloudflare.yml, which fills in the D1
+  // database id; see docs/cloudflare.md.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "skippercast",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "dist/client",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "skippercast",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FEEDS", "bucket_name": "skippercast-feeds" }
+  ],
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "observability": { "enabled": true }
+}
