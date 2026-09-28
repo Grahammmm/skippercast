@@ -97,6 +97,10 @@ class ReachRunTests(unittest.TestCase):
             (root/'catalog').mkdir(); (root/'var/seafloor/reference').mkdir(parents=True)
             (root/'dist/data').mkdir(parents=True)
             (root/'requirements-survey.txt').write_text('fixture')
+            rules=json.loads((ROOT/'catalog/habitat-rules.json').read_text())
+            rules['substrate_bindings']=[]
+            (root/'catalog/habitat-rules.json').write_text(json.dumps(rules))
+            (root/'dist/data/atlas.json').write_text('{"areas":[],"targets":[]}')
             (root/'catalog/survey.schema.json').write_text((ROOT/'catalog/survey.schema.json').read_text())
             native=root/'original.tif'
             with rasterio.open(native,'w',driver='GTiff',width=160,height=160,count=1,dtype='float32',
@@ -132,6 +136,11 @@ class ReachRunTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'hash verification'):
                 run('fixture-r01',root=root)
             output.write_bytes(saved)
+            rules['rule_version']='fixture-rule-change'
+            (root/'catalog/habitat-rules.json').write_text(json.dumps(rules))
+            changed,unchanged=run('fixture-r01',root=root)
+            self.assertFalse(unchanged)
+            self.assertNotEqual(changed['input_hash'],first['input_hash'])
             manifest['surveys'][0]['status']='withdrawn'
             (root/'catalog/surveys.json').write_text(json.dumps(manifest))
             third,unchanged=run('fixture-r01',root=root)

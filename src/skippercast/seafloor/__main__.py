@@ -19,9 +19,10 @@ def main():
     add.add_argument('--fetch', action='store_true')
     restore = commands.add_parser('restore-reference', help='Rebuild verified private cells without changing the ledger')
     restore.add_argument('--fetch', action='store_true')
-    process = commands.add_parser('run', help='Measure native coverage and terrain; no habitat publication')
+    process = commands.add_parser('run', help='Measure native coverage and rank held habitat candidates')
     process.add_argument('--reach', required=True)
     process.add_argument('--force', action='store_true')
+    process.add_argument('--fetch', action='store_true', help='Fetch missing reviewed originals; pinned hashes still required')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
         sub.add_argument('--region', default='central-coast')
@@ -37,7 +38,7 @@ def main():
             return
         if args.command == 'run':
             from .run import run
-            receipt, reused = run(args.reach, force=args.force)
+            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
             return
         if args.command == 'add-survey':

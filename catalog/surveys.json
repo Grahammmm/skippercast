@@ -223,15 +223,15 @@
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "1f215612bbd0bac0eed8b7738cfc608a8403ebdcb8d1705123e864fd81f24aed",
-        "cog_sha256": "1d89291ca22aae9e35e5583bb635c3e825c1884660cf0f92b2f41dd13a65374f",
+        "cog_sha256": "c57549d62416903fc2e24bf04cc9aaeb185d29aa43ce96723edcab07529c2eee",
         "requested_bounds_wgs84": [
-          -121.04,
-          35.32,
-          -120.91,
-          35.45
+          -120.98,
+          35.28,
+          -120.76,
+          35.46
         ],
-        "valid_pixels_in_requested_bounds": 12104254,
-        "nominal_0_300ft_pixels_in_requested_bounds": 12104254,
+        "valid_pixels_in_requested_bounds": 28337123,
+        "nominal_0_300ft_pixels_in_requested_bounds": 28337123,
         "native_resolution_m": [
           2.0,
           2.0
@@ -467,15 +467,15 @@
       "kind": "bathymetry",
       "year": 2008,
       "resolution_m": 2.0,
-      "horizontal_crs": "unknown",
+      "horizontal_crs": "EPSG:32610",
       "vertical_datum": "unknown",
       "license": "public-domain-us-gov",
       "sha256": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
-      "bytes": "unknown",
+      "bytes": 75792608,
       "derived_from": [],
-      "status": "candidate",
+      "status": "usable",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
       "archive_member": "unknown",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/52/archive_url",
@@ -492,7 +492,28 @@
         "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/28/native_resolution_m"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
+        "cog_sha256": "4faf6272e251771bc46a0c3404e9209a99351b4a242d8df4254ae660fa0d7d7a",
+        "requested_bounds_wgs84": [
+          -121.13,
+          35.37,
+          -120.92,
+          35.55
+        ],
+        "valid_pixels_in_requested_bounds": 31244953,
+        "nominal_0_300ft_pixels_in_requested_bounds": 26023976,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+      }
     },
     {
       "id": "seafloorcharacter-offshoreeelriver-zip-d33e9241f2",

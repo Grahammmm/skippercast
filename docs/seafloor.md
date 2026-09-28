@@ -6,11 +6,11 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M3 part 1, native coverage and terrain
+## Current stage: M3 part 2, held habitat candidates
 
 The [candidate manifest](../catalog/surveys.json) contains 385 source products.
 The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Two original bathymetry products have native-adapter receipts; the other 383
+identities and lineage. Three original bathymetry products have native-adapter receipts; the other 382
 remain candidates. Metadata alone cannot promote a source. `usable` means the
 reviewed source window can be processed, not that its whole file envelope has
 valid depth or that a reach has been mapped.
@@ -20,8 +20,8 @@ packages into **46 reaches**, approximately 10 km alongshore, ordered outward
 from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
 **55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
 Cells start at tier 0. M3 now classifies original-survey coverage for the first
-two Morro Bay reaches; current totals are in the ledger. Tier 2 remains zero
-until habitat extraction and a fresh whole-polygon legal screen are complete. This does not
+three Morro Bay reaches and produces ranked, private habitat candidates; current totals are in the ledger. Tier 2 remains zero
+until a fresh whole-polygon legal screen is complete. This does not
 mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
 remains a separate research receipt; it is not reclassified as new coverage.
 
@@ -84,8 +84,8 @@ cannot share a cell. Centers projecting to terminal endpoints are excluded.
 
 Full cell assignments, sample receipts and run hashes stay in ignored
 `var/seafloor/reference/`; only reach geometry and the small summary ledger are
-committed. There are no new habitat tiles or front-end changes in M3 part 1. The first
-coverage runs update tier 1; all tier-2 totals remain zero.
+committed. There are no new habitat tiles or front-end changes in M3. The
+coverage runs update tier 1; all tier-2 totals remain zero until screening.
 
 ## Original-survey ingestion
 
@@ -115,7 +115,7 @@ and producer uncertainty, and write a native-resolution COG. Band 1 is **meters
 positive down**; an optional band 2 is producer uncertainty in meters. Do not
 feed these normalized COGs back into an original elevation adapter. No datum
 conversion, reprojection, smoothing or interpolation is performed. The source
-is already a producer-gridded product, not raw soundings. Neither verified
+is already a producer-gridded product, not raw soundings. No verified
 product supplies a separate interpolation mask; that remains explicitly unknown
 and must be addressed by the coverage-stage eligibility rules. Unknown datum
 alone does not block tiers 1–2.
@@ -129,11 +129,12 @@ only this adapter permits unknown datum, dates and uncertainty metadata.
 
 | Original product | Exact reviewed WGS84 window (west, south, east, north) | Native spacing / nominal datum | Valid 0–300 ft source pixels | Cached source / COG bytes |
 | --- | --- | --- | --- | --- |
-| [USGS Offshore Morro Bay](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip), member `Bathymetry_OffshoreMorroBay.tif` | -121.04, 35.32, -120.91, 35.45 | 2 m / unknown | 12,104,254 | 45,090,088 / 20,599,206 |
+| [USGS Offshore Morro Bay](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip), member `Bathymetry_OffshoreMorroBay.tif` | -120.98, 35.28, -120.76, 35.46 | 2 m / unknown | 28,337,123 | 45,090,088 / 50,112,014 |
+| [USGS Offshore Point Estero](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip), member `Bathymetry_OffshorePointEstero.tif` | -121.13, 35.37, -120.92, 35.55 | 2 m / unknown | 26,023,976 | 75,792,608 / 55,820,740 |
 | [NOAA H11953 2-of-4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag), Point Conception | -120.73, 34.5, -120.58, 34.65 | 2 m / MLLW | 5,517,962 | 42,325,273 / 37,465,806 |
 
 Counts exclude the seam margin and are source pixels, **not deduplicated habitat
-or reach area**. Both full original hashes match the existing inspected cache.
+or reach area**. All three full original hashes match the existing inspected cache.
 Each stabilized second ingestion verifies hashes, downloads nothing and reuses
 the normalized COG. Synthetic tests independently check orientation, depth sign,
 no-data holes, uncertainty, archive selection, download caching and corruption.
@@ -168,10 +169,11 @@ an externally configured S3-compatible client. They have not been deployed or
 connected to credentials. Weekly scheduling, R2 publication and the legal gate
 remain M4 work.
 
-## Coverage and terrain runs (M3 part 1)
+## Coverage, terrain and habitat runs (M3)
 
 ```bash
 PYTHONPATH=src python -m skippercast.seafloor run --reach morro-bay-r03
+PYTHONPATH=src python -m skippercast.seafloor run --reach morro-bay-r02
 PYTHONPATH=src python -m skippercast.seafloor run --reach morro-bay-r04
 PYTHONPATH=src python -m skippercast.seafloor ledger --region morro-bay
 ```
@@ -186,8 +188,10 @@ M2 `add-survey --fetch` commands. Remote source access failures remain explicit.
 
 Run reaches serially until M4 introduces coordinated scheduled publication.
 `run` requires the hash-verified M1 reference-cell cache and the reviewed source
-cache. It neither downloads sources implicitly nor expands the manifest's
-inspected geographic windows. Missing or corrupt inputs fail the run. A repeat
+cache. `run --fetch` explicitly permits downloading missing reviewed depth and
+substrate originals, still requiring pinned hashes. Without that flag no network
+access is attempted. The runner never expands the manifest's inspected windows.
+Missing or corrupt inputs fail the run. A repeat
 verifies originals, COGs and output hashes, then skips footprint and terrain
 computation. Removing a usable source invalidates the run and removes its credit.
 
@@ -224,12 +228,83 @@ holes and borders stay unknown. Coverage areas themselves use original pixel
 footprints, not the derivative resampling. `run.json` hashes source rows, grids,
 requirements, implementation and outputs. All detailed artifacts remain private.
 
-**Remaining M3 work:** substrate joins, connected rough-bottom patches, existing
-A/B/C terrain scoring and cited species fits, a genuine source-seam run, and
-≥50% overlap comparison with the applicable legacy atlas polygons. The two
-current Morro runs use one source and do **not** satisfy the seam requirement.
-Unscreened candidate polygons cannot increase tier 2. M4 publishes only after
-fresh MPA, federal and security checks. This part introduces no new fish spots.
+### Habitat extraction and review
+
+[Habitat rules](../catalog/habitat-rules.json) pin original substrate hashes,
+reviewed class meanings, metadata URLs/digests, numerical rules and cited species
+planning bands. Substrate bindings qualify categorical semantics separately from
+the bathymetry adapter; their source rows remain candidates for that adapter.
+Held/withdrawn substrate rows are excluded. Changed source hashes fail closed.
+Both USGS character products use classes 1 (soft sediment), 2 (flat coarse
+sediment/bedrock), and 3 (hard rugose boulder/bedrock), verified in the original
+FGDC enumerations reviewed September 25. Their ZIPs lack raster value tables.
+This run reverified cached original ZIP hashes; it does not claim a new successful
+metadata fetch. Paired character and depth are **not independent evidence**.
+
+Each source gets its own native-spacing EPSG:3310 derivative grid. A reach window
+above 20 million pixels fails explicitly instead of downsampling. This is a
+bounded pilot implementation; larger reaches will need tiled extraction with
+halos and component stitching. Relative thresholds use all selected valid
+0–300 ft pixels: VRM at/above the 80th percentile or fine BPI above one standard
+deviation. Numerical zero tolerances keep a flat plane from qualifying merely
+because its 80th percentile is zero. Soft-class pixels, invalid depth and depth
+outside nominal 25–300 ft are excluded. Unknown substrate remains unknown.
+
+The pipeline closes one-pixel gaps, clips again to eligible pixels, groups with
+8-connectivity, drops patches below 0.1 ha and simplifies by at most half a pixel.
+Clipping simplified polygons back to their original support prevents expansion
+into no-data. Survey offsets are never differentiated across sources; patches
+remain separate at survey boundaries.
+
+The existing `atlas.scoring` formula supplies A/B/C. Metrics use a representative
+point **inside each patch**: 210 m square relief and rugose fraction, detrended
+plane RMS in a 250 m square, and extracted rough area within a 250 m radius.
+At least 80% depth support in both squares is required; otherwise grade and fits
+stay unknown with a separate hold. These are local-neighborhood metrics, not a
+claim that every part of a large patch has identical terrain. Known class 3
+supplies rugose cover; terrain supplies the proxy where substrate is unknown.
+Nearby rough area is limited to the selected source/reach, so edges can score
+conservatively. Thresholds and support fractions are retained for review.
+
+Species fits are **physical planning heuristics**, with 3 strongest. Lingcod uses
+the [ADF&G profile's typical 30–330 ft band](https://www.adfg.alaska.gov/index.cfm?adfg=lingcod.main),
+explicitly transferred from general West Coast guidance. The reef-rockfish entry
+uses the [CDFG NFMP copper-rockfish Big Sur observation band of 22–98 m](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=33863&inline=)
+as a labeled proxy, not an optimum for all rockfish. The same document supplies
+gopher's commonly occupied 9–37 m band and cabezon's broad 0–102 m occurrence
+envelope. Cabezon's band cannot establish a shallow-versus-deep preference.
+Grade A/B fully inside a band earns 3; overlap earns 2; outside earns 1 even
+for grade C. Temperature, prey, season and fish presence are not inferred.
+
+Private `habitat.geojson` contains held candidates (tier 1, `exportable:false`),
+not screened tier-2 features. `atlas-comparison.json` reports overlap against
+the **107 outline polygons attached to 132 atlas targets**, clipped to the reach.
+Missing reviewed coverage remains a miss, not removed from the denominator.
+`run.json` also pins the rule file, substrate rows, atlas and scoring code.
+
+September 28 pilot results (each compared with the prior main ledger):
+
+| Reach | Tier 1 km² before → after | Held patches | A / B / C / insufficient metrics | Old outlines reproduced ≥50% |
+| --- | ---: | ---: | ---: | ---: |
+| `morro-bay-r02` | 0 → 56.887500 | 769 | 7 / 202 / 536 / 24 | 19 / 33 |
+| `morro-bay-r03` | 12.053125 → 31.651250 | 208 | 2 / 10 / 193 / 3 | 12 / 12 |
+| `morro-bay-r04` | 5.125000 → 12.174375 | 57 | 1 / 1 / 54 / 1 | 2 / 2 |
+
+Total classified coverage rises **17.178125 → 100.713125 km²**; actual selected
+valid survey area is **98.151960 km²**, a separate measurement. All three reaches'
+tier-2 totals remain **0 → 0** pending M4. The Morro survey window was expanded
+to include its inshore grid; keeping the old narrow test window would have
+artificially missed 11 of r03's 12 comparison outlines.
+
+The r02 run uses both USGS products with a measured **1,812 m shared selected
+boundary**. Of its 14 outline misses, one has incomplete selected survey
+coverage; 13 remain below 50% under the new roughness/substrate/minimum-patch
+rule. Older generalized substrate outlines and newly extracted rough terrain
+are different products: these misses remain visible and were not tuned away.
+This is algorithm comparison, not independent validation of fish habitat.
+Repeat runs verify all original/output hashes and return unchanged without
+recomputing. M4 must still test full polygons against fresh MPA, federal and
+security layers before publishing any candidate.
 
 ## Tiers and units
 
@@ -338,15 +413,24 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 | M0 | This document and candidate seed; offline schema and evidence checks. |
 | M1 | Seven Central Coast regions subdivided into reaches; disjoint grid, manifest loader and tier-0 ledger with band km². |
 | M2 | Cached original Morro USGS grid and Point Conception H11953 regular BAG usable in their own windows; second fetch downloads nothing. |
-| M3 | One Morro reach and one survey-seam reach produce tiers 1–2, run receipts and a no-op repeat; report ≥50% overlap reproduction against the applicable 132 atlas areas and explain misses. |
+| M3 | One Morro reach and one survey-seam reach produce tier-1 and tier-2 outputs and run receipts, with a no-op repeat; compare applicable legacy outlines at ≥50% overlap and explain misses. Held candidates do not satisfy this acceptance check. |
 | M4 | Fresh legal screen, dispatchable publishing workflow, live Morro PMTiles and nonzero ledger; no MPA overlap. Open “Seafloor tiers layer in the app” issue for Claude. |
 | M5 | Batch remaining reaches; each has mapped coverage or explicit holds/true gaps, and usable fine sources yield habitat tiles. |
 | M6 | Move unused receipts to private storage and retire scripts only after consumer/workflow/test checks; app asset checks pass. |
 
+**M3 acceptance is outstanding.** PR #16 adds extraction and ranking, but its
+held candidates have not passed the legal screen required for tier 2. The
+prescribed milestone order puts that screen in M4, while requiring M3 acceptance
+on main before M4 starts. The proposed resolution is to move only whole-polygon
+MPA, federal-area and security-zone screening into M3, leaving publication and
+scheduling in M4. This proposal awaits the owner's decision; no tier rule or
+milestone acceptance requirement has been waived. Green CI and held candidates
+do not establish completion of M3 or permission to publish.
+
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
-`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger`, `add-survey` and the coverage/terrain stage of `run` are
-implemented. Habitat extraction and `publish` arrive at their milestone gates.
+`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger`, `add-survey` and `run` are
+implemented, including held habitat extraction. `publish` arrives with M4's legal screen.
 
 The later workflow runs weekly, on dispatch, and relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
