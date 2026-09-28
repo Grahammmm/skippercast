@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: read
   issues: write
 
@@ -38,6 +39,20 @@ jobs:
             echo "EOF"
             echo "stale=$([ $status -ne 0 ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
+      # The live job chains itself every ~5.5 hours; if the chain broke, restart it
+      # long before the 3-hour issue threshold.
+      - name: Restart the live loop if the feed is over 75 minutes old
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! python scripts/check_feed_freshness.py --max-age-hours 1.25; then
+            running=$(gh run list --workflow live-conditions.yml --status in_progress --json databaseId --jq 'length')
+            queued=$(gh run list --workflow live-conditions.yml --status queued --json databaseId --jq 'length')
+            if [ "$running" = 0 ] && [ "$queued" = 0 ]; then
+              gh workflow run live-conditions.yml --ref main
+              echo "Restarted the live loop." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
       - name: Open or update the stale-feed issue
         if: steps.age.outputs.stale == 'true'
         env:
