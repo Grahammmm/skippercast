@@ -98,6 +98,10 @@ class InventoryTests(unittest.TestCase):
 
 @unittest.skipUnless(Draft202012Validator, 'Install requirements-test.txt; required in survey-science CI')
 class SchemaTests(unittest.TestCase):
+    def test_runtime_loader_validates_the_same_inventory(self):
+        from skippercast.seafloor.manifest import load_manifest
+        self.assertEqual(load_manifest(ROOT), MANIFEST)
+
     def test_every_manifest_row(self):
         Draft202012Validator.check_schema(SCHEMA)
         validator = Draft202012Validator(SCHEMA)

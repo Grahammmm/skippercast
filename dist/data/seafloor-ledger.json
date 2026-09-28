@@ -1,0 +1,4388 @@
+{
+  "schema_version": 1,
+  "scope": "central-coast",
+  "stage": "M1-reference-baseline",
+  "input_hash": "80c2170832dd781329ae87526e220b7994f6a4aae156a747cf0f55d7ef86068b",
+  "reference_rule_version": "seafloor-reference-v1",
+  "reference": {
+    "status": "provisional",
+    "planning_limit_ft": 300,
+    "denominator_depth_m": [
+      0,
+      100
+    ],
+    "grid_crs": "EPSG:3310",
+    "cell_size_m": 250,
+    "reference_pixel_m": 25,
+    "requested_overview_spacing_m": 32,
+    "source": "NOAA BlueTopo",
+    "scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260924_191855.gpkg",
+    "scheme_sha256": "62db77bda8ce8deea24b4824c78e204f727ff434f1d91450cb8acfea5e188dcc",
+    "tiles": [
+      {
+        "id": "BC24R26T",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24R26T/BlueTopo_BC24R26T_20260716.tiff",
+        "publisher_sha256": "97ff227cdcef2254eeeb7817415881dd6d68280ac21c59ab52db1d6524e0fb43",
+        "delivered_date": "2026-08-28 13:28:16",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -123.6,
+          33.6,
+          -122.4,
+          34.8
+        ]
+      },
+      {
+        "id": "BC24R26V",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24R26V/BlueTopo_BC24R26V_20260716.tiff",
+        "publisher_sha256": "59394f28985f5e4b986faedf29b4e3c21656a859d530c840bfd2569be64cc3c0",
+        "delivered_date": "2026-08-27 21:13:43",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -123.6,
+          34.8,
+          -122.4,
+          36.0
+        ]
+      },
+      {
+        "id": "BC24R26W",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24R26W/BlueTopo_BC24R26W_20260716.tiff",
+        "publisher_sha256": "a589d16ad52ed61c606e570e9dbbd9fc028cc8560e845b73206ca34381309b98",
+        "delivered_date": "2026-08-27 16:43:45",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -123.6,
+          36.0,
+          -122.4,
+          37.2
+        ]
+      },
+      {
+        "id": "BC24R26X",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24R26X/BlueTopo_BC24R26X_20260917.tiff",
+        "publisher_sha256": "8584be49536de2161b0f69145df9ff9fb63bd5b999d4910d3282ea3dcb91e342",
+        "delivered_date": "2026-09-24 19:18:48",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -123.6,
+          37.2,
+          -122.7,
+          38.4
+        ]
+      },
+      {
+        "id": "BC24S26T",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24S26T/BlueTopo_BC24S26T_20260716.tiff",
+        "publisher_sha256": "11fc9e10a799494268fa6601f70948ee269df4e1616a5789107d782e9e52c1bd",
+        "delivered_date": "2026-08-28 13:28:11",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -122.4,
+          33.6,
+          -121.2,
+          34.8
+        ]
+      },
+      {
+        "id": "BC24S26V",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24S26V/BlueTopo_BC24S26V_20260716.tiff",
+        "publisher_sha256": "de1eb451bea772039437a7678f4cf71649162088433e12899286980187a0749e",
+        "delivered_date": "2026-08-27 21:13:51",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -122.4,
+          34.8,
+          -121.2,
+          36.0
+        ]
+      },
+      {
+        "id": "BC24S26W",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24S26W/BlueTopo_BC24S26W_20260820.tiff",
+        "publisher_sha256": "498090ce119a302dd266a577f1d3624b7a871f0a99dd3d933871a863a3d5ebf6",
+        "delivered_date": "2026-08-27 21:08:44",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -122.4,
+          36.0,
+          -121.95,
+          36.825
+        ]
+      },
+      {
+        "id": "BC24T26T",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24T26T/BlueTopo_BC24T26T_20260820.tiff",
+        "publisher_sha256": "b3384564486ed23cea7cf6bfaefea9974153a9abdde6051362796b0ec43b497c",
+        "delivered_date": "2026-08-28 13:29:19",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -121.2,
+          33.6,
+          -120.0,
+          34.8
+        ]
+      },
+      {
+        "id": "BC24T26V",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BC24T26V/BlueTopo_BC24T26V_20260820.tiff",
+        "publisher_sha256": "2b83fcbf9efeba30c29a69d4752ecc3974a76316e5fb27de61cfd59c4dc11470",
+        "delivered_date": "2026-08-28 13:29:16",
+        "native_resolution_m": 16.0,
+        "bounds": [
+          -121.2,
+          34.8,
+          -120.975,
+          35.175
+        ]
+      },
+      {
+        "id": "BH44C5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44C5CR/BlueTopo_BH44C5CR_20260716.tiff",
+        "publisher_sha256": "026255a2f6b8d83916c7a69af7ee7487b6b64eefa5e0362e98c3d57b78bccc61",
+        "delivered_date": "2026-08-27 21:05:41",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.7,
+          37.05,
+          -122.625,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44C5CS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44C5CS/BlueTopo_BH44C5CS_20260716.tiff",
+        "publisher_sha256": "0a644e2ad82f7c596cef83cf1e6a9d73c5d00f7a6628c054eed87dbf2225dfe5",
+        "delivered_date": "2026-08-27 21:05:20",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.7,
+          37.125,
+          -122.625,
+          37.2
+        ]
+      },
+      {
+        "id": "BH44C5CT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44C5CT/BlueTopo_BH44C5CT_20260820.tiff",
+        "publisher_sha256": "eb610e000847efdb99cf3e70ca81c3c42d7bc46d71f47d72eeae0a14e9c3c344",
+        "delivered_date": "2026-08-27 21:01:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.7,
+          37.2,
+          -122.625,
+          37.275
+        ]
+      },
+      {
+        "id": "BH44D5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44D5CQ/BlueTopo_BH44D5CQ_20260716.tiff",
+        "publisher_sha256": "f6dca02c47734dfac0d58ecdace1ef82a91f002d9c42d4f7b6b45649d0e85623",
+        "delivered_date": "2026-08-27 21:05:55",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.625,
+          36.975,
+          -122.55,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44D5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44D5CR/BlueTopo_BH44D5CR_20260716.tiff",
+        "publisher_sha256": "f75a625d11ef46c19d9df73400adbd2417f4b6306a950ed04167bb88cefde436",
+        "delivered_date": "2026-08-27 21:06:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.625,
+          37.05,
+          -122.55,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44D5CS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44D5CS/BlueTopo_BH44D5CS_20260716.tiff",
+        "publisher_sha256": "079718bf277b67d1b01d5c97777fa8e170998a2fcc4a063ee775d7c443b8a434",
+        "delivered_date": "2026-08-27 21:05:50",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.625,
+          37.125,
+          -122.55,
+          37.2
+        ]
+      },
+      {
+        "id": "BH44D5CT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44D5CT/BlueTopo_BH44D5CT_20260820.tiff",
+        "publisher_sha256": "20c315170c02325c0e9f851b2b2c3486d9f2956a49840da995552dc6edd97c1f",
+        "delivered_date": "2026-08-27 21:01:01",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.625,
+          37.2,
+          -122.55,
+          37.275
+        ]
+      },
+      {
+        "id": "BH44F5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44F5CP/BlueTopo_BH44F5CP_20260716.tiff",
+        "publisher_sha256": "71f64d8abe44f4a92b0c40cf368b209db3dae1d826a9764ccead770545f2b3b1",
+        "delivered_date": "2026-08-27 21:05:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.55,
+          36.9,
+          -122.475,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44F5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44F5CQ/BlueTopo_BH44F5CQ_20260716.tiff",
+        "publisher_sha256": "108b2b0378200d9a997d96e9036f3ed9e2701a389ff0f80fea9ffa1ff106bb9c",
+        "delivered_date": "2026-08-27 21:06:50",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.55,
+          36.975,
+          -122.475,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44F5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44F5CR/BlueTopo_BH44F5CR_20260716.tiff",
+        "publisher_sha256": "6063ffec800e05af28a926252e780876c68b639eb231bd431fc988873dd9e201",
+        "delivered_date": "2026-08-27 21:06:30",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.55,
+          37.05,
+          -122.475,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44F5CS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44F5CS/BlueTopo_BH44F5CS_20260716.tiff",
+        "publisher_sha256": "ea2e48d43b0a1a1bbcf8693989f519bded66f6e3eb5fb96a2c7aaa59854c9a49",
+        "delivered_date": "2026-08-27 21:06:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.55,
+          37.125,
+          -122.475,
+          37.2
+        ]
+      },
+      {
+        "id": "BH44F5CT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44F5CT/BlueTopo_BH44F5CT_20260820.tiff",
+        "publisher_sha256": "19800361b0351738fa38b3a432fe95b42fc4338bf0ce6fba8943d1fc03c969d1",
+        "delivered_date": "2026-08-27 21:02:16",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.55,
+          37.2,
+          -122.475,
+          37.275
+        ]
+      },
+      {
+        "id": "BH44G5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CN/BlueTopo_BH44G5CN_20260716.tiff",
+        "publisher_sha256": "43b0eaba03d563dbf79bbb8cb287c9803bebe8ed2aed960331afd0b78b3c1164",
+        "delivered_date": "2026-08-27 21:06:44",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          36.825,
+          -122.4,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44G5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CP/BlueTopo_BH44G5CP_20260716.tiff",
+        "publisher_sha256": "937ccb43cb358484e972ba1d308ee0cbd6b5f35863aeb6b0a2042d947e008b3c",
+        "delivered_date": "2026-08-27 21:06:18",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          36.9,
+          -122.4,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44G5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CQ/BlueTopo_BH44G5CQ_20260716.tiff",
+        "publisher_sha256": "8127a135b704e1d08b68a9f86304e70a02b7a0529b799c89f03349ec9c577813",
+        "delivered_date": "2026-08-27 21:06:33",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          36.975,
+          -122.4,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44G5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CR/BlueTopo_BH44G5CR_20260716.tiff",
+        "publisher_sha256": "9fc6acef63ee2475ee8289cdbfc01426449ce3a1bcc3e4929af9cc1b3243a904",
+        "delivered_date": "2026-08-27 21:06:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          37.05,
+          -122.4,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44G5CS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CS/BlueTopo_BH44G5CS_20260716.tiff",
+        "publisher_sha256": "5ccbe9736fa9a57d510a2c7b531bd447bb44cca58cc5473163e824bbbe9fec68",
+        "delivered_date": "2026-08-27 21:05:24",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          37.125,
+          -122.4,
+          37.2
+        ]
+      },
+      {
+        "id": "BH44G5CT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44G5CT/BlueTopo_BH44G5CT_20260820.tiff",
+        "publisher_sha256": "569fbcba5a1cfe4ed794beaf8d8a841f42d162c5f6bdc13d668526ea4fde1ea8",
+        "delivered_date": "2026-08-27 21:01:59",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.475,
+          37.2,
+          -122.4,
+          37.275
+        ]
+      },
+      {
+        "id": "BH44H5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44H5CN/BlueTopo_BH44H5CN_20260820.tiff",
+        "publisher_sha256": "f96880480bda37ed76ba53057ce53ff5cf39243d64fa3ce95295aff6c468da7b",
+        "delivered_date": "2026-08-27 21:10:26",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.4,
+          36.825,
+          -122.325,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44H5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44H5CP/BlueTopo_BH44H5CP_20260820.tiff",
+        "publisher_sha256": "f2426a8f9647f113faa9bb6f613398446d0d3254218121f6de26ca62aae77653",
+        "delivered_date": "2026-08-27 21:11:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.4,
+          36.9,
+          -122.325,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44H5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44H5CQ/BlueTopo_BH44H5CQ_20260820.tiff",
+        "publisher_sha256": "7e8d13107d85a596b0fe948b02c4723e260efa26a162b049fd56db8d362a8fb3",
+        "delivered_date": "2026-08-27 21:10:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.4,
+          36.975,
+          -122.325,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44H5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44H5CR/BlueTopo_BH44H5CR_20260820.tiff",
+        "publisher_sha256": "59a57d5c4d0ec1f9ec9fcc0037f01164203a28bf080005f2d672e3a973dcad38",
+        "delivered_date": "2026-08-27 21:11:25",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.4,
+          37.05,
+          -122.325,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44H5CS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44H5CS/BlueTopo_BH44H5CS_20260820.tiff",
+        "publisher_sha256": "cc04dfdc63f6f96eae6d8c3cbf541c9bf25536f83e5aa418709243075cc6c6f0",
+        "delivered_date": "2026-08-27 21:09:09",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.4,
+          37.125,
+          -122.325,
+          37.2
+        ]
+      },
+      {
+        "id": "BH44J5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44J5CM/BlueTopo_BH44J5CM_20260820.tiff",
+        "publisher_sha256": "c484c15710d5973ac663920cdb63e96da2194690287451143b8a28d066cbe2ff",
+        "delivered_date": "2026-08-27 21:09:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.325,
+          36.75,
+          -122.25,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44J5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44J5CN/BlueTopo_BH44J5CN_20260820.tiff",
+        "publisher_sha256": "961412d203dc5b89c52db623afd46e4238337deadd3ffa2ca5843738ebc7762b",
+        "delivered_date": "2026-08-27 21:11:14",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.325,
+          36.825,
+          -122.25,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44J5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44J5CP/BlueTopo_BH44J5CP_20260820.tiff",
+        "publisher_sha256": "60a24cd3f047e3b7a40358efee1c8e9310425a06366a14f894e67d66ae551d83",
+        "delivered_date": "2026-08-27 21:11:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.325,
+          36.9,
+          -122.25,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44J5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44J5CQ/BlueTopo_BH44J5CQ_20260820.tiff",
+        "publisher_sha256": "331c2e346c96f80ea13147fb8008f7e08be8c34288d83b6683a8c736dab85544",
+        "delivered_date": "2026-08-27 21:09:47",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.325,
+          36.975,
+          -122.25,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44J5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44J5CR/BlueTopo_BH44J5CR_20260820.tiff",
+        "publisher_sha256": "290f6a2eca2fe4a33f2bd8779aa320a0ad7f1a3b4dddf774b9a86216a2dd1f82",
+        "delivered_date": "2026-08-27 21:09:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.325,
+          37.05,
+          -122.25,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44K5CG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CG/BlueTopo_BH44K5CG_20260820.tiff",
+        "publisher_sha256": "6aa7b29a76c397dc7a6a0456d3e4ff9e7b78db530a4dcd289e3300a598f2ec5c",
+        "delivered_date": "2026-08-27 21:09:12",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.375,
+          -122.175,
+          36.45
+        ]
+      },
+      {
+        "id": "BH44K5CH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CH/BlueTopo_BH44K5CH_20260820.tiff",
+        "publisher_sha256": "df59800ed3456e8b947f93c1b481631c5c6b7666c3a7c1830d65bcb9a4f5f7b5",
+        "delivered_date": "2026-08-27 21:09:18",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.45,
+          -122.175,
+          36.525
+        ]
+      },
+      {
+        "id": "BH44K5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CJ/BlueTopo_BH44K5CJ_20260820.tiff",
+        "publisher_sha256": "b5213ff3a3a0a8e4f5d6a91dd5bf97a1110c2f0b1ef4a6aaf78eb4d5a155f7fe",
+        "delivered_date": "2026-08-27 21:10:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.525,
+          -122.175,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44K5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CK/BlueTopo_BH44K5CK_20260820.tiff",
+        "publisher_sha256": "2a5e176ffc43cdb78c72e4d406e22ca6fdcfc8b07ecc9ae63babc4d0501f4d82",
+        "delivered_date": "2026-08-27 21:11:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.6,
+          -122.175,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44K5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CL/BlueTopo_BH44K5CL_20260820.tiff",
+        "publisher_sha256": "476e66dbdefb1a0c514dc89940298eb4941cdd5335b8dfac1e237f5e53b731be",
+        "delivered_date": "2026-08-27 21:09:21",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.675,
+          -122.175,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44K5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CM/BlueTopo_BH44K5CM_20260820.tiff",
+        "publisher_sha256": "3d7590899271decdab29b4aefc9318dea43643d635ca3efd36fc53fd17ac43c3",
+        "delivered_date": "2026-08-27 21:11:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.75,
+          -122.175,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44K5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CN/BlueTopo_BH44K5CN_20260820.tiff",
+        "publisher_sha256": "1cfe265730a19d9a864458798b5ddec49c8c7bf42e41f11d340109cc6368d988",
+        "delivered_date": "2026-08-27 21:09:26",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.825,
+          -122.175,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44K5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CP/BlueTopo_BH44K5CP_20260820.tiff",
+        "publisher_sha256": "8cefe951ac21ebf1f34e621cd05d3b2592f36879fc2689ce70843be758056f46",
+        "delivered_date": "2026-08-27 21:10:14",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.9,
+          -122.175,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44K5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CQ/BlueTopo_BH44K5CQ_20260820.tiff",
+        "publisher_sha256": "b394450e639bc6b6bf3af9f789632dd8e1508639c1f2e295dac7dbfde6514cf7",
+        "delivered_date": "2026-08-27 21:09:50",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          36.975,
+          -122.175,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44K5CR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44K5CR/BlueTopo_BH44K5CR_20260820.tiff",
+        "publisher_sha256": "2a03cf9df23d793c77a414b83a23e1cc8bbe57e1ef8ea7b81fc7c92b3fa48beb",
+        "delivered_date": "2026-08-27 21:11:30",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.25,
+          37.05,
+          -122.175,
+          37.125
+        ]
+      },
+      {
+        "id": "BH44L5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CC/BlueTopo_BH44L5CC_20260820.tiff",
+        "publisher_sha256": "b858ad3c4326f7ec9923818dfc13ab89b48c2500b5dc69f50a69571ed81acfaf",
+        "delivered_date": "2026-08-27 21:09:59",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.15,
+          -122.1,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44L5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CD/BlueTopo_BH44L5CD_20260820.tiff",
+        "publisher_sha256": "b175efd5fda56e2c8f1826b1ed46fc47a6fdf844569b9cde8bc822fbc410fd4b",
+        "delivered_date": "2026-08-27 21:10:55",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.225,
+          -122.1,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44L5CF",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CF/BlueTopo_BH44L5CF_20260820.tiff",
+        "publisher_sha256": "1bf1ccce1339483b0ba02554f5365640e8816e63906cc903bff896e554963ad5",
+        "delivered_date": "2026-08-27 21:11:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.3,
+          -122.1,
+          36.375
+        ]
+      },
+      {
+        "id": "BH44L5CG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CG/BlueTopo_BH44L5CG_20260820.tiff",
+        "publisher_sha256": "da5ec7d7addc10786e880df0207364a0bd7e67e57a65568deb1b80093b702685",
+        "delivered_date": "2026-08-27 21:10:05",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.375,
+          -122.1,
+          36.45
+        ]
+      },
+      {
+        "id": "BH44L5CH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CH/BlueTopo_BH44L5CH_20260820.tiff",
+        "publisher_sha256": "564bef903157a9314c4061c4c7623d8cd26d0bbec72e122efcee262fd2015f8e",
+        "delivered_date": "2026-08-27 21:10:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.45,
+          -122.1,
+          36.525
+        ]
+      },
+      {
+        "id": "BH44L5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CJ/BlueTopo_BH44L5CJ_20260820.tiff",
+        "publisher_sha256": "0ab6747faf9b87da45c24fee19f43e412e71f8b2fd5516f6686125ab623bf908",
+        "delivered_date": "2026-08-27 21:08:52",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.525,
+          -122.1,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44L5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CK/BlueTopo_BH44L5CK_20260820.tiff",
+        "publisher_sha256": "0e83ecd6b7727860217ebf2e4c431d7cfa1e8461b870d897478ae9fed7444d3c",
+        "delivered_date": "2026-08-27 21:10:48",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.6,
+          -122.1,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44L5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CL/BlueTopo_BH44L5CL_20260820.tiff",
+        "publisher_sha256": "ac56e984d02630fecb1addadd55c48c2362d83c001c3e5417d4c073c30a91751",
+        "delivered_date": "2026-08-27 21:09:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.675,
+          -122.1,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44L5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CM/BlueTopo_BH44L5CM_20260820.tiff",
+        "publisher_sha256": "2302f49f5157eb6b0388f80d9107339bd3ab2039d1218cf9ac56a94cd4b62a79",
+        "delivered_date": "2026-08-27 21:10:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.75,
+          -122.1,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44L5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CN/BlueTopo_BH44L5CN_20260820.tiff",
+        "publisher_sha256": "9292e8fe4d274835ecc9505d36432f47e95dc3912aa16437e167bc20294c8ee0",
+        "delivered_date": "2026-08-27 21:11:22",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.825,
+          -122.1,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44L5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CP/BlueTopo_BH44L5CP_20260820.tiff",
+        "publisher_sha256": "8dfd32d6aed7274ac1878ff591dfa10f42268dbb4ae0e05603b240e80d6224e2",
+        "delivered_date": "2026-08-27 21:09:34",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.9,
+          -122.1,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44L5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44L5CQ/BlueTopo_BH44L5CQ_20260820.tiff",
+        "publisher_sha256": "12003bef91b5d9d2189aa457ea4e4d7f4da7c2b6a5aaca1f9438797e80f1bffa",
+        "delivered_date": "2026-08-27 21:09:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.175,
+          36.975,
+          -122.1,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44M5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CB/BlueTopo_BH44M5CB_20260820.tiff",
+        "publisher_sha256": "6763b5d56dbef81f27a2a2cc2d5aaf882ddc7b8bb19a73181a5bd9bb884c8fe1",
+        "delivered_date": "2026-08-27 21:08:47",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.075,
+          -122.025,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44M5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CC/BlueTopo_BH44M5CC_20260820.tiff",
+        "publisher_sha256": "ac50e10dd69d7beff08a5c6d42f497367dd431db380820d7e8144082a943aa0b",
+        "delivered_date": "2026-08-27 21:10:19",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.15,
+          -122.025,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44M5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CD/BlueTopo_BH44M5CD_20260820.tiff",
+        "publisher_sha256": "a184b4b27f83bd7d8040556d38f9ee708aae61592f7c3f0c103413b56477c51b",
+        "delivered_date": "2026-08-27 21:11:03",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.225,
+          -122.025,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44M5CF",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CF/BlueTopo_BH44M5CF_20260820.tiff",
+        "publisher_sha256": "a3aaf05ff23749d0315484f2c2574ff8d2bfb027846b389a138280d9435c20e8",
+        "delivered_date": "2026-08-27 21:10:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.3,
+          -122.025,
+          36.375
+        ]
+      },
+      {
+        "id": "BH44M5CG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CG/BlueTopo_BH44M5CG_20260820.tiff",
+        "publisher_sha256": "354bc6488438a13fc066e48a2bc5e7195f443f9258a367e8162291d538dee786",
+        "delivered_date": "2026-08-27 21:08:59",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.375,
+          -122.025,
+          36.45
+        ]
+      },
+      {
+        "id": "BH44M5CH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CH/BlueTopo_BH44M5CH_20260820.tiff",
+        "publisher_sha256": "a1c9b0d7fa5faf9f8c0b07a7338fb43ec844f1f6b4b6a0220eccab8c4240cf29",
+        "delivered_date": "2026-08-27 21:11:09",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.45,
+          -122.025,
+          36.525
+        ]
+      },
+      {
+        "id": "BH44M5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CJ/BlueTopo_BH44M5CJ_20260820.tiff",
+        "publisher_sha256": "b1b1b8fda2d700a6b6d1e202192cd2c96c8d4590ea389d6f3ff9b85535bf9994",
+        "delivered_date": "2026-08-27 21:08:22",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.525,
+          -122.025,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44M5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CK/BlueTopo_BH44M5CK_20260820.tiff",
+        "publisher_sha256": "7a53ed4417716f7fbd07e41fe032107a332895a274a2bffb5484415b4852432a",
+        "delivered_date": "2026-08-27 21:08:40",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.6,
+          -122.025,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44M5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CL/BlueTopo_BH44M5CL_20260820.tiff",
+        "publisher_sha256": "29660c106c5c9faaece5ba87de329fda66ab888ba5838a658d901230653bfd88",
+        "delivered_date": "2026-08-27 21:07:47",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.675,
+          -122.025,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44M5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CM/BlueTopo_BH44M5CM_20260820.tiff",
+        "publisher_sha256": "81d27324382fe948c0387a829f830cbb463f4b712a104869e8ffc079a5df91c9",
+        "delivered_date": "2026-08-27 21:07:10",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.75,
+          -122.025,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44M5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CN/BlueTopo_BH44M5CN_20260820.tiff",
+        "publisher_sha256": "cfa7839e3637425c3f6b6fd29b58ce1bbc6394542882d33cb7a447c69043f3d3",
+        "delivered_date": "2026-08-27 21:07:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.825,
+          -122.025,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44M5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44M5CP/BlueTopo_BH44M5CP_20260820.tiff",
+        "publisher_sha256": "5cf645cec2f90f97a3922080f5c215d16a60ad124133eeadcf958252ea685aaa",
+        "delivered_date": "2026-08-27 21:08:01",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.1,
+          36.9,
+          -122.025,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44N5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CB/BlueTopo_BH44N5CB_20260820.tiff",
+        "publisher_sha256": "6edfd8e77e4ff2411a8da250bd566c483278b936a62621c882b9096534949e55",
+        "delivered_date": "2026-08-27 21:12:26",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.075,
+          -121.95,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44N5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CC/BlueTopo_BH44N5CC_20260820.tiff",
+        "publisher_sha256": "2225d57c1c40cd476e8ca39ce3a419dea2cf6fbbc971ff4b54075010d7bf4db7",
+        "delivered_date": "2026-08-27 21:13:24",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.15,
+          -121.95,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44N5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CD/BlueTopo_BH44N5CD_20260820.tiff",
+        "publisher_sha256": "c55d611c92f3f003aed85bd1ab526928dc8671f110ec1962e03b0d8b117f6b59",
+        "delivered_date": "2026-08-27 21:12:57",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.225,
+          -121.95,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44N5CF",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CF/BlueTopo_BH44N5CF_20260820.tiff",
+        "publisher_sha256": "73f2ff7e8cd258df50be98d420f8c5811d9d8c2d928cfa19045fee8dcda94787",
+        "delivered_date": "2026-08-27 21:13:40",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.3,
+          -121.95,
+          36.375
+        ]
+      },
+      {
+        "id": "BH44N5CG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CG/BlueTopo_BH44N5CG_20260820.tiff",
+        "publisher_sha256": "aba5b95d1b5b4e37a834f017666c24858a22fc0ce9470a455da575f8ff129ddc",
+        "delivered_date": "2026-08-27 21:12:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.375,
+          -121.95,
+          36.45
+        ]
+      },
+      {
+        "id": "BH44N5CH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CH/BlueTopo_BH44N5CH_20260820.tiff",
+        "publisher_sha256": "f6e6e3a5c2b302a5b29b697114b14ccbb03665d3f4a795e18f5b249ef685b0c1",
+        "delivered_date": "2026-08-27 21:12:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.45,
+          -121.95,
+          36.525
+        ]
+      },
+      {
+        "id": "BH44N5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CJ/BlueTopo_BH44N5CJ_20260820.tiff",
+        "publisher_sha256": "dfef9ef859f187f8a79cda6cb820155c36910f60b9f7b9432513aab80f76b5ca",
+        "delivered_date": "2026-08-27 21:07:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.525,
+          -121.95,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44N5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CK/BlueTopo_BH44N5CK_20260820.tiff",
+        "publisher_sha256": "37198515dbbeca66ed1e4dba61bc3e82025c42d8330fd2097fbc66acb239d278",
+        "delivered_date": "2026-08-27 21:08:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.6,
+          -121.95,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44N5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CL/BlueTopo_BH44N5CL_20260820.tiff",
+        "publisher_sha256": "d416829a70cdd77ac7983022b6b077b435ac8475f042c1956fd64c478327a455",
+        "delivered_date": "2026-08-27 21:08:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.675,
+          -121.95,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44N5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CM/BlueTopo_BH44N5CM_20260820.tiff",
+        "publisher_sha256": "e6e908d8f22eaa98e6410caf824cba4b35151c3e22bf0b99133e3b0f517a2c97",
+        "delivered_date": "2026-08-27 21:08:16",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.75,
+          -121.95,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44N5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CN/BlueTopo_BH44N5CN_20260820.tiff",
+        "publisher_sha256": "c20cc89f45975a636caa77c1846c8b865c235cfa609376075747238f865ba721",
+        "delivered_date": "2026-08-27 21:07:44",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.825,
+          -121.95,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44N5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CP/BlueTopo_BH44N5CP_20260820.tiff",
+        "publisher_sha256": "b3e8d3815275d542d3ca6d2a8cff4aec6eb286add15ee9c389d61d20d49f4718",
+        "delivered_date": "2026-08-27 21:06:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.9,
+          -121.95,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44N5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44N5CQ/BlueTopo_BH44N5CQ_20260820.tiff",
+        "publisher_sha256": "a973ba12f5819a6c50dd2d39327dec2e5fdfbf714b0ba538b909b063be366f6d",
+        "delivered_date": "2026-08-27 21:07:01",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -122.025,
+          36.975,
+          -121.95,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44P5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5C9/BlueTopo_BH44P5C9_20260820.tiff",
+        "publisher_sha256": "cbe0355586a9395e5117b4c7469a0ffab43e2bb40057b1e1a21f48f765f34e5c",
+        "delivered_date": "2026-08-27 21:12:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.0,
+          -121.875,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44P5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CB/BlueTopo_BH44P5CB_20260820.tiff",
+        "publisher_sha256": "affd3b62cdcb605c4bff0e6f5e05cbdf2020a8a68a76d8034e584888cba9c0bc",
+        "delivered_date": "2026-08-27 21:13:02",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.075,
+          -121.875,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44P5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CC/BlueTopo_BH44P5CC_20260820.tiff",
+        "publisher_sha256": "86f2b0dea41e44b65c3b3d8fc8106b844a3caa68d316d5abc1b382067d71911d",
+        "delivered_date": "2026-08-27 21:13:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.15,
+          -121.875,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44P5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CD/BlueTopo_BH44P5CD_20260820.tiff",
+        "publisher_sha256": "7f8c7c5d3738dfc6b3ae33ed7ec22a408218f36e4e849a843979e21c088f6ce5",
+        "delivered_date": "2026-08-27 21:12:20",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.225,
+          -121.875,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44P5CF",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CF/BlueTopo_BH44P5CF_20260820.tiff",
+        "publisher_sha256": "b94f6dc52e44c9eba0234bc7cfbb563432fda7f7f28d219844d961e11ed64f38",
+        "delivered_date": "2026-08-27 21:12:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.3,
+          -121.875,
+          36.375
+        ]
+      },
+      {
+        "id": "BH44P5CG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CG/BlueTopo_BH44P5CG_20260820.tiff",
+        "publisher_sha256": "78b7d7477826bbb179d25bbc91fea61e1f14536fbe6e2df75c520171a49adeab",
+        "delivered_date": "2026-08-27 21:13:29",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.375,
+          -121.875,
+          36.45
+        ]
+      },
+      {
+        "id": "BH44P5CH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CH/BlueTopo_BH44P5CH_20260820.tiff",
+        "publisher_sha256": "81f00de64a3f71bfcbadca19fa5ee5f7d41b69a8000797cd625a399d9c0e45e8",
+        "delivered_date": "2026-08-27 21:13:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.45,
+          -121.875,
+          36.525
+        ]
+      },
+      {
+        "id": "BH44P5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CJ/BlueTopo_BH44P5CJ_20260820.tiff",
+        "publisher_sha256": "3fe408b0d746fb30e751a2dd78f44414977071f0b2d8b93644ff75d66e2cc0b1",
+        "delivered_date": "2026-08-27 21:06:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.525,
+          -121.875,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44P5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CK/BlueTopo_BH44P5CK_20260820.tiff",
+        "publisher_sha256": "05b2a661b6da374a0db2c5cfdc6306f101c60f9fa708e743d53a665f1cd935b8",
+        "delivered_date": "2026-08-27 21:07:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.6,
+          -121.875,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44P5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CL/BlueTopo_BH44P5CL_20260820.tiff",
+        "publisher_sha256": "0b703c08db790766c6f271290aa9667394a1c5493c3797ce5435d8c972c59548",
+        "delivered_date": "2026-08-27 21:06:56",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.675,
+          -121.875,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44P5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CM/BlueTopo_BH44P5CM_20260820.tiff",
+        "publisher_sha256": "aac6c5af3de4c6fa322ef1774567224cd58809d31248cb488c8f87c1ede433fe",
+        "delivered_date": "2026-08-27 21:07:16",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.75,
+          -121.875,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44P5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CN/BlueTopo_BH44P5CN_20260820.tiff",
+        "publisher_sha256": "a1e084e107baf7e1fe97b9566542845331357bcf8157d1fcd14ddfe4d9ee4b24",
+        "delivered_date": "2026-08-27 21:07:59",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.825,
+          -121.875,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44P5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CP/BlueTopo_BH44P5CP_20260820.tiff",
+        "publisher_sha256": "7cb8a2cc3794a3e96e213f2e531e8474bfac343eeba35b9dec2560288408cf15",
+        "delivered_date": "2026-08-27 21:07:03",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.9,
+          -121.875,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44P5CQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44P5CQ/BlueTopo_BH44P5CQ_20260820.tiff",
+        "publisher_sha256": "63ffdafdbdf83aa59c6cd7857b4585dd1707519e6e6717f84bcd5076c342f88e",
+        "delivered_date": "2026-08-27 21:08:33",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.95,
+          36.975,
+          -121.875,
+          37.05
+        ]
+      },
+      {
+        "id": "BH44Q5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5C8/BlueTopo_BH44Q5C8_20260716.tiff",
+        "publisher_sha256": "ade32ec33eebdf37c96f51a53eb3e89701f45ad1285d10febeebd0506d6d1866",
+        "delivered_date": "2026-08-27 21:16:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          35.925,
+          -121.8,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44Q5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5C9/BlueTopo_BH44Q5C9_20260820.tiff",
+        "publisher_sha256": "4bc7a843c7ce0c95245a0e26540443b716f3e8ad5fa4d01c0b9ae621415b9e26",
+        "delivered_date": "2026-08-27 21:12:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.0,
+          -121.8,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44Q5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CB/BlueTopo_BH44Q5CB_20260820.tiff",
+        "publisher_sha256": "d094d1be7691d11852bb493e707507c267f82d94ffaa06547b85a8ac1a0d4897",
+        "delivered_date": "2026-08-27 21:13:14",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.075,
+          -121.8,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44Q5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CC/BlueTopo_BH44Q5CC_20260820.tiff",
+        "publisher_sha256": "71bbcb3f98add78e7b6161b7db15dd49b831a9a9fa4942c57984380d1b845de7",
+        "delivered_date": "2026-08-27 21:11:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.15,
+          -121.8,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44Q5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CD/BlueTopo_BH44Q5CD_20260820.tiff",
+        "publisher_sha256": "133d37bd8c86aadb9f3e5986303333f74cc462c399d8a11d8054b6535b1bc2fc",
+        "delivered_date": "2026-08-27 21:13:09",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.225,
+          -121.8,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44Q5CJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CJ/BlueTopo_BH44Q5CJ_20260820.tiff",
+        "publisher_sha256": "af7c3bbfa039c5177d57f417424ca82a9c9ba47496eb7232886b53647802dd16",
+        "delivered_date": "2026-08-27 21:07:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.525,
+          -121.8,
+          36.6
+        ]
+      },
+      {
+        "id": "BH44Q5CK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CK/BlueTopo_BH44Q5CK_20260820.tiff",
+        "publisher_sha256": "d0679fb30c458fd0aac65431b87785ee8029eea8e03d6ba9f97f4c0df6cfa586",
+        "delivered_date": "2026-08-27 21:08:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.6,
+          -121.8,
+          36.675
+        ]
+      },
+      {
+        "id": "BH44Q5CL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CL/BlueTopo_BH44Q5CL_20260820.tiff",
+        "publisher_sha256": "2a28f2b408db5dd7981b2fadc1c36bbfd061246649a118e8b3e5fc777bf3b6b5",
+        "delivered_date": "2026-08-27 21:07:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.675,
+          -121.8,
+          36.75
+        ]
+      },
+      {
+        "id": "BH44Q5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CM/BlueTopo_BH44Q5CM_20260820.tiff",
+        "publisher_sha256": "566fc2374e76880064e75bc8ac16f6ec4901b3e3276731a1cd7ef66092cebac5",
+        "delivered_date": "2026-08-27 21:07:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.75,
+          -121.8,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44Q5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CN/BlueTopo_BH44Q5CN_20260820.tiff",
+        "publisher_sha256": "c0fd2c71e996b8b884dcebe61fb795f654878517ee730053dcb346e3aefadade",
+        "delivered_date": "2026-08-27 21:07:37",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.825,
+          -121.8,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44Q5CP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Q5CP/BlueTopo_BH44Q5CP_20260820.tiff",
+        "publisher_sha256": "d481290996c29da909cd87c72ad4fbcd4c6cc555ec0d4afb01ffa09db6ea091e",
+        "delivered_date": "2026-08-27 21:08:31",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.875,
+          36.9,
+          -121.8,
+          36.975
+        ]
+      },
+      {
+        "id": "BH44R5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5C7/BlueTopo_BH44R5C7_20260716.tiff",
+        "publisher_sha256": "608a42f2e7210dfa4c6235bed5c048c28c44b3e00480feb199dbe31dc900cc0e",
+        "delivered_date": "2026-08-27 21:15:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          35.85,
+          -121.725,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44R5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5C8/BlueTopo_BH44R5C8_20260716.tiff",
+        "publisher_sha256": "f1e33175007341ec15246e90d5a7dcfc985da660d3a0bd697b17fe85f3d412f6",
+        "delivered_date": "2026-08-27 21:16:52",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          35.925,
+          -121.725,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44R5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5C9/BlueTopo_BH44R5C9_20260820.tiff",
+        "publisher_sha256": "1ad7c26ce4c0194b0ab651595dfd17fbe1a3847571593e66f86d180212d5ed3c",
+        "delivered_date": "2026-08-27 21:13:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.0,
+          -121.725,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44R5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CB/BlueTopo_BH44R5CB_20260820.tiff",
+        "publisher_sha256": "c88aaf0550fdc4349aa371dd389e8da6d01aed60c9f706f9272d70064936eaf2",
+        "delivered_date": "2026-08-27 21:12:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.075,
+          -121.725,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44R5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CC/BlueTopo_BH44R5CC_20260820.tiff",
+        "publisher_sha256": "678ddb591a17406a364eab97df1a4e35640d8f78f56eb3c1b165b4bda5ec9124",
+        "delivered_date": "2026-08-27 21:12:30",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.15,
+          -121.725,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44R5CD",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CD/BlueTopo_BH44R5CD_20260820.tiff",
+        "publisher_sha256": "bd48facdd545f69f4f1deeeb82ba224170498f2647b207ac2c8af386b74a232b",
+        "delivered_date": "2026-08-27 21:13:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.225,
+          -121.725,
+          36.3
+        ]
+      },
+      {
+        "id": "BH44R5CM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CM/BlueTopo_BH44R5CM_20260820.tiff",
+        "publisher_sha256": "d33953c4614aa1dd7fa1875570c85c67a1d43396bd4490063e7920a8e3aa69b9",
+        "delivered_date": "2026-08-27 21:07:41",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.75,
+          -121.725,
+          36.825
+        ]
+      },
+      {
+        "id": "BH44R5CN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44R5CN/BlueTopo_BH44R5CN_20260820.tiff",
+        "publisher_sha256": "3926876c47aefd89bf8678dd22a0c8632da4229daf363eb5318295a729dc503e",
+        "delivered_date": "2026-08-27 21:08:13",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.8,
+          36.825,
+          -121.725,
+          36.9
+        ]
+      },
+      {
+        "id": "BH44S5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5C5/BlueTopo_BH44S5C5_20260716.tiff",
+        "publisher_sha256": "e0259517ea9038f48bd9b37eebe0971f7080a841cc3fb8203d406b3966573389",
+        "delivered_date": "2026-08-27 21:14:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          35.7,
+          -121.65,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44S5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5C6/BlueTopo_BH44S5C6_20260716.tiff",
+        "publisher_sha256": "38940f5eab5b0fe1b1e55927c99228e55d894737dfd3cae8f91772f40ca71e4c",
+        "delivered_date": "2026-08-27 21:16:49",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          35.775,
+          -121.65,
+          35.85
+        ]
+      },
+      {
+        "id": "BH44S5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5C7/BlueTopo_BH44S5C7_20260716.tiff",
+        "publisher_sha256": "4af13d9f26157fd0ab4f48fa306b2ed24cf2cca7be1876ce5f419762b782dfde",
+        "delivered_date": "2026-08-27 21:15:27",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          35.85,
+          -121.65,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44S5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5C8/BlueTopo_BH44S5C8_20260716.tiff",
+        "publisher_sha256": "2dc8037f0474775264eda82829f290812a051a4eb34533f605f91eee8c534b07",
+        "delivered_date": "2026-08-27 21:17:02",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          35.925,
+          -121.65,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44S5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5C9/BlueTopo_BH44S5C9_20260820.tiff",
+        "publisher_sha256": "4bb4e93838fbcd13d1381d56ed6f368c0222e31eccb353a2184b311f727888ee",
+        "delivered_date": "2026-08-27 21:11:54",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          36.0,
+          -121.65,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44S5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CB/BlueTopo_BH44S5CB_20260820.tiff",
+        "publisher_sha256": "38cb50e0a2c8386d37cbf90e378408cdc8d3fabed99ac64dc10689c05d233967",
+        "delivered_date": "2026-08-27 21:12:04",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          36.075,
+          -121.65,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44S5CC",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44S5CC/BlueTopo_BH44S5CC_20260820.tiff",
+        "publisher_sha256": "a89bc9d21e5bb95990cbcd2a39a6fc299684c610c314031a664ad1a9f2d6daad",
+        "delivered_date": "2026-08-27 21:13:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.725,
+          36.15,
+          -121.65,
+          36.225
+        ]
+      },
+      {
+        "id": "BH44T5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C5/BlueTopo_BH44T5C5_20260716.tiff",
+        "publisher_sha256": "91b119f18f953bf77237642696ee09db2fd0bbf8d6c714091b171cce1e041c13",
+        "delivered_date": "2026-08-27 21:16:29",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          35.7,
+          -121.575,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44T5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C6/BlueTopo_BH44T5C6_20260716.tiff",
+        "publisher_sha256": "789a126c296db49a8685f2b08c106dab36120ca5ab498f391c6b578da23fe2ee",
+        "delivered_date": "2026-08-27 21:15:13",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          35.775,
+          -121.575,
+          35.85
+        ]
+      },
+      {
+        "id": "BH44T5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C7/BlueTopo_BH44T5C7_20260716.tiff",
+        "publisher_sha256": "ea949e6fe37234b59a71fe0450ec9b8f7e53083a82ba40c39c7b6971b005b067",
+        "delivered_date": "2026-08-27 21:16:55",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          35.85,
+          -121.575,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44T5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C8/BlueTopo_BH44T5C8_20260716.tiff",
+        "publisher_sha256": "ef3c4c3d338f5f72dde10935ab0787f25bb6a58ca42792e3525b272e6af91d86",
+        "delivered_date": "2026-08-27 21:15:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          35.925,
+          -121.575,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44T5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5C9/BlueTopo_BH44T5C9_20260820.tiff",
+        "publisher_sha256": "7f4b195c27669e7fba7e38a097d95db1f776dabc4c17f068a538acb4594b4ac4",
+        "delivered_date": "2026-08-27 21:12:51",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          36.0,
+          -121.575,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44T5CB",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44T5CB/BlueTopo_BH44T5CB_20260820.tiff",
+        "publisher_sha256": "ae797e913e153d2730db9d17ac896bd741c8707ca39e2982d448eb07a5cd663c",
+        "delivered_date": "2026-08-27 21:12:36",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.65,
+          36.075,
+          -121.575,
+          36.15
+        ]
+      },
+      {
+        "id": "BH44V5C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C2/BlueTopo_BH44V5C2_20260716.tiff",
+        "publisher_sha256": "ad2bc1eaefdd7cf08bcb192f3495c22213b8ec1bc096a00118f2313ffcf9388b",
+        "delivered_date": "2026-08-27 21:14:07",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.55,
+          -121.5,
+          35.625
+        ]
+      },
+      {
+        "id": "BH44V5C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C4/BlueTopo_BH44V5C4_20260716.tiff",
+        "publisher_sha256": "07a622158ce997e9c5da639021100e80136cd3fafc58b11e3d2733366f3206ed",
+        "delivered_date": "2026-08-27 21:15:34",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.625,
+          -121.5,
+          35.7
+        ]
+      },
+      {
+        "id": "BH44V5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C5/BlueTopo_BH44V5C5_20260716.tiff",
+        "publisher_sha256": "ffe60e791dbd73cd8e8f7528da2962f8d1f1ec5d5553816560bc1a9e696a20fb",
+        "delivered_date": "2026-08-27 21:16:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.7,
+          -121.5,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44V5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C6/BlueTopo_BH44V5C6_20260716.tiff",
+        "publisher_sha256": "ad72a84b024f19a25306ddf28b89b76789ae23709a354147a356ccccbaa3c14a",
+        "delivered_date": "2026-08-27 21:14:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.775,
+          -121.5,
+          35.85
+        ]
+      },
+      {
+        "id": "BH44V5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C7/BlueTopo_BH44V5C7_20260716.tiff",
+        "publisher_sha256": "f7844e53e98dfcffb5a61d436359a67e8dc153696e01229aa53fbdcbfa137a20",
+        "delivered_date": "2026-08-27 21:14:31",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.85,
+          -121.5,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44V5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C8/BlueTopo_BH44V5C8_20260716.tiff",
+        "publisher_sha256": "6e1bb5ab46bc6b9734bfde0cd0aa52c9d3c77a2203124912a3b5ca542e9482bc",
+        "delivered_date": "2026-08-27 21:16:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          35.925,
+          -121.5,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44V5C9",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44V5C9/BlueTopo_BH44V5C9_20260820.tiff",
+        "publisher_sha256": "b9f80b507a8003ce948f6f14623ab4b5e526daea7dcb196863a581442360822d",
+        "delivered_date": "2026-08-27 21:11:50",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.575,
+          36.0,
+          -121.5,
+          36.075
+        ]
+      },
+      {
+        "id": "BH44W5BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5BZ/BlueTopo_BH44W5BZ_20260716.tiff",
+        "publisher_sha256": "a880c0f82152d3bb34392e5de4817a5f1d170b9215eafca6956e112da840d7ef",
+        "delivered_date": "2026-08-27 21:17:05",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.475,
+          -121.425,
+          35.55
+        ]
+      },
+      {
+        "id": "BH44W5C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C2/BlueTopo_BH44W5C2_20260716.tiff",
+        "publisher_sha256": "ba55a432c09a2bd7dbc5220c13de4d5992be644c9d1d9eba6cc556dc9d836092",
+        "delivered_date": "2026-08-27 21:14:22",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.55,
+          -121.425,
+          35.625
+        ]
+      },
+      {
+        "id": "BH44W5C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C4/BlueTopo_BH44W5C4_20260716.tiff",
+        "publisher_sha256": "c6c195b01c625a1ab40a5b33c59e660cf333826eb7113218acd47bd2ab075de6",
+        "delivered_date": "2026-08-27 21:14:16",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.625,
+          -121.425,
+          35.7
+        ]
+      },
+      {
+        "id": "BH44W5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C5/BlueTopo_BH44W5C5_20260716.tiff",
+        "publisher_sha256": "2568b2c8b71bcad89de9a934ccc2af44157cc3286674b15e8db6273f48ca5ca1",
+        "delivered_date": "2026-08-27 21:15:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.7,
+          -121.425,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44W5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C6/BlueTopo_BH44W5C6_20260716.tiff",
+        "publisher_sha256": "1adc84041519b2c0e7150057062e93ba7fba07b7c82ec5799e7aaa4198f1721d",
+        "delivered_date": "2026-08-27 21:14:13",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.775,
+          -121.425,
+          35.85
+        ]
+      },
+      {
+        "id": "BH44W5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C7/BlueTopo_BH44W5C7_20260716.tiff",
+        "publisher_sha256": "caabddfac1f912efb8fce0f0ca5d53545f8b714e52ba66be7ab5167956f9791b",
+        "delivered_date": "2026-08-27 21:14:46",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.85,
+          -121.425,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44W5C8",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44W5C8/BlueTopo_BH44W5C8_20260716.tiff",
+        "publisher_sha256": "e21613c7fe693edc3f4c3572797c640ab6a73d6e9c1fd1192e7c57ed4d1353be",
+        "delivered_date": "2026-08-27 21:15:56",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.5,
+          35.925,
+          -121.425,
+          36.0
+        ]
+      },
+      {
+        "id": "BH44X5BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5BZ/BlueTopo_BH44X5BZ_20260716.tiff",
+        "publisher_sha256": "d188f61927845ec293c920cea985dd39778ef8330a4f587b108a9a0b4985f0d5",
+        "delivered_date": "2026-08-27 21:17:11",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.475,
+          -121.35,
+          35.55
+        ]
+      },
+      {
+        "id": "BH44X5C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C2/BlueTopo_BH44X5C2_20260716.tiff",
+        "publisher_sha256": "e61b32016ce657d956729709b4e74431457bf68e23303e72fcfe59f1c00e0330",
+        "delivered_date": "2026-08-27 21:15:48",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.55,
+          -121.35,
+          35.625
+        ]
+      },
+      {
+        "id": "BH44X5C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C4/BlueTopo_BH44X5C4_20260716.tiff",
+        "publisher_sha256": "6f6353fa708856951f399e3c4a93168ac1b9a66ea283a0afea3800a51c8a8417",
+        "delivered_date": "2026-08-27 21:16:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.625,
+          -121.35,
+          35.7
+        ]
+      },
+      {
+        "id": "BH44X5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C5/BlueTopo_BH44X5C5_20260716.tiff",
+        "publisher_sha256": "a31ce4ade96903f37542f262b2e8708f89843a3a11c3a4b46cf1f3697b7f8cf6",
+        "delivered_date": "2026-08-27 21:14:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.7,
+          -121.35,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44X5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C6/BlueTopo_BH44X5C6_20260716.tiff",
+        "publisher_sha256": "b3e5334f3852b4b0aa32c0fbf1f1b3afa68847a5c5d1ac385dbbfc304bf10ed5",
+        "delivered_date": "2026-08-27 21:16:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.775,
+          -121.35,
+          35.85
+        ]
+      },
+      {
+        "id": "BH44X5C7",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44X5C7/BlueTopo_BH44X5C7_20260716.tiff",
+        "publisher_sha256": "e3118f24271d7d6f4e767c263846f201436049ac6cfa520f71d7227885dd9694",
+        "delivered_date": "2026-08-27 21:15:46",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.425,
+          35.85,
+          -121.35,
+          35.925
+        ]
+      },
+      {
+        "id": "BH44Z5BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5BX/BlueTopo_BH44Z5BX_20260716.tiff",
+        "publisher_sha256": "a869108c7fe41ce5b3e6d42dc75589331cbd32fde7682ebbe8d1f2db04e99daa",
+        "delivered_date": "2026-08-27 21:17:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.4,
+          -121.275,
+          35.475
+        ]
+      },
+      {
+        "id": "BH44Z5BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5BZ/BlueTopo_BH44Z5BZ_20260716.tiff",
+        "publisher_sha256": "c4c0023b687da2066eaa79c2cf8213bb1e8e07d362b92646624b3b8bd25ff7b7",
+        "delivered_date": "2026-08-27 21:17:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.475,
+          -121.275,
+          35.55
+        ]
+      },
+      {
+        "id": "BH44Z5C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C2/BlueTopo_BH44Z5C2_20260716.tiff",
+        "publisher_sha256": "12109bd683f78c641dc63a2ac533c61cec59a01e45b63ee5904f0f5a2fcad996",
+        "delivered_date": "2026-08-27 21:16:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.55,
+          -121.275,
+          35.625
+        ]
+      },
+      {
+        "id": "BH44Z5C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C4/BlueTopo_BH44Z5C4_20260716.tiff",
+        "publisher_sha256": "99d380ad16aa2377ff6892e1b444a92abe5a6b799f71863671b49dfdc2524320",
+        "delivered_date": "2026-08-27 21:16:05",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.625,
+          -121.275,
+          35.7
+        ]
+      },
+      {
+        "id": "BH44Z5C5",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C5/BlueTopo_BH44Z5C5_20260716.tiff",
+        "publisher_sha256": "367065a9d4baea52ee27dd06e9f2fcf51aecc84ebda59223c8c9523376bbca71",
+        "delivered_date": "2026-08-27 21:15:20",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.7,
+          -121.275,
+          35.775
+        ]
+      },
+      {
+        "id": "BH44Z5C6",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH44Z5C6/BlueTopo_BH44Z5C6_20260716.tiff",
+        "publisher_sha256": "0c93918e9dd66308db17ecf7d07bd3937c1ba085c6bd2d81dc0755eda043582a",
+        "delivered_date": "2026-08-27 21:16:41",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.35,
+          35.775,
+          -121.275,
+          35.85
+        ]
+      },
+      {
+        "id": "BH4525BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525BW/BlueTopo_BH4525BW_20260716.tiff",
+        "publisher_sha256": "d1300d5621b839119a207190355034123596f19cdbea94047336d119b3b33aae",
+        "delivered_date": "2026-08-27 21:17:29",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.275,
+          35.325,
+          -121.2,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4525BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525BX/BlueTopo_BH4525BX_20260716.tiff",
+        "publisher_sha256": "a0c7139f9f35749050fdd6c6e9c2045cb4f4b2015ea69e5490dd7bde47bd4322",
+        "delivered_date": "2026-08-27 21:17:13",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.275,
+          35.4,
+          -121.2,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4525BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525BZ/BlueTopo_BH4525BZ_20260716.tiff",
+        "publisher_sha256": "5677994bdcd952605ab9f7eb5ebb64d427bd5ca46cf7c7e14ace9f49ed710aaf",
+        "delivered_date": "2026-08-27 21:17:21",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.275,
+          35.475,
+          -121.2,
+          35.55
+        ]
+      },
+      {
+        "id": "BH4525C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525C2/BlueTopo_BH4525C2_20260716.tiff",
+        "publisher_sha256": "cf30305f62c950c082fed1a9539b12b315bd79074c031b791aa1c0f2c331524c",
+        "delivered_date": "2026-08-27 21:14:49",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.275,
+          35.55,
+          -121.2,
+          35.625
+        ]
+      },
+      {
+        "id": "BH4525C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4525C4/BlueTopo_BH4525C4_20260716.tiff",
+        "publisher_sha256": "1392522d6177aa2a709de81295b77a87bd3636864b52aed6fd43d1249703fc9f",
+        "delivered_date": "2026-08-27 21:14:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.275,
+          35.625,
+          -121.2,
+          35.7
+        ]
+      },
+      {
+        "id": "BH4545BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545BT/BlueTopo_BH4545BT_20260820.tiff",
+        "publisher_sha256": "4a4b2881deab87085393dd0f3f9b8e81052d9f74f54c06a1590da8e8342a9e17",
+        "delivered_date": "2026-08-28 13:29:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.175,
+          -121.125,
+          35.25
+        ]
+      },
+      {
+        "id": "BH4545BV",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545BV/BlueTopo_BH4545BV_20260820.tiff",
+        "publisher_sha256": "ef1333f43527a19b2384d12f71219e42d9ad9cd1e3d68085eaa653ddf0b2b7aa",
+        "delivered_date": "2026-08-28 13:29:44",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.25,
+          -121.125,
+          35.325
+        ]
+      },
+      {
+        "id": "BH4545BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545BW/BlueTopo_BH4545BW_20260820.tiff",
+        "publisher_sha256": "d84d70455a67078492b00accc617010730891ed3bd3119c28980ff500930aded",
+        "delivered_date": "2026-08-28 13:29:38",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.325,
+          -121.125,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4545BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545BX/BlueTopo_BH4545BX_20260820.tiff",
+        "publisher_sha256": "c1fa9952f6b32404358f3ad80fad52d02d17f52a891ebd2ea6693d1d1af7d911",
+        "delivered_date": "2026-08-28 13:29:41",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.4,
+          -121.125,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4545BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545BZ/BlueTopo_BH4545BZ_20260820.tiff",
+        "publisher_sha256": "29e87f16c9367ebad4b2fff2f02b47fa1c0b053958de1d82de9e40cd7afa9936",
+        "delivered_date": "2026-08-28 13:29:35",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.475,
+          -121.125,
+          35.55
+        ]
+      },
+      {
+        "id": "BH4545C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545C2/BlueTopo_BH4545C2_20260820.tiff",
+        "publisher_sha256": "d400eaf2eb2364aaa1c1b452343f60fc9cbaac472cd0224fea62f7f2d31c864b",
+        "delivered_date": "2026-08-27 21:15:05",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.55,
+          -121.125,
+          35.625
+        ]
+      },
+      {
+        "id": "BH4545C4",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4545C4/BlueTopo_BH4545C4_20260820.tiff",
+        "publisher_sha256": "449da8c5a6d6d6674b1c349ad215ba9c392b27db128eb767c6617cdcef44b404",
+        "delivered_date": "2026-08-27 21:14:40",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.2,
+          35.625,
+          -121.125,
+          35.7
+        ]
+      },
+      {
+        "id": "BH4555BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BS/BlueTopo_BH4555BS_20260820.tiff",
+        "publisher_sha256": "c3e3f50f1421191ed93ea52c72f22f08cfcf6f1cc51d7311ac3f15ff061ed009",
+        "delivered_date": "2026-08-28 17:42:25",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.1,
+          -121.05,
+          35.175
+        ]
+      },
+      {
+        "id": "BH4555BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BT/BlueTopo_BH4555BT_20260820.tiff",
+        "publisher_sha256": "4f8a7fc6c4c6495cb8c50e09d20846fc8c6e92704fa733c057edd2dbd7fd4a37",
+        "delivered_date": "2026-08-28 13:30:22",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.175,
+          -121.05,
+          35.25
+        ]
+      },
+      {
+        "id": "BH4555BV",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BV/BlueTopo_BH4555BV_20260820.tiff",
+        "publisher_sha256": "fdda6c41b6477e54a30bfaa2becae7560d2d143d6eea6e96bfeb2c3ef7631e1e",
+        "delivered_date": "2026-08-28 13:29:56",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.25,
+          -121.05,
+          35.325
+        ]
+      },
+      {
+        "id": "BH4555BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BW/BlueTopo_BH4555BW_20260820.tiff",
+        "publisher_sha256": "84630d322ffe0c5cce878bffb092b254b75f5a8cb11c055f4d107a51e8c41893",
+        "delivered_date": "2026-08-28 13:30:15",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.325,
+          -121.05,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4555BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BX/BlueTopo_BH4555BX_20260820.tiff",
+        "publisher_sha256": "4c55900d98a1bf861151acf3bef8711d8c08b8554df8e8e325b948a774b99da0",
+        "delivered_date": "2026-08-28 13:29:29",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.4,
+          -121.05,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4555BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555BZ/BlueTopo_BH4555BZ_20260820.tiff",
+        "publisher_sha256": "aea05afef260c474bf53ff23160355579651522135434a537bebb640e78fddae",
+        "delivered_date": "2026-08-28 13:29:50",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.475,
+          -121.05,
+          35.55
+        ]
+      },
+      {
+        "id": "BH4555C2",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4555C2/BlueTopo_BH4555C2_20260820.tiff",
+        "publisher_sha256": "262f1249a79057958ac0d3d1152b79abefb02bb0fd0263bb931fd61165dcabe8",
+        "delivered_date": "2026-08-27 21:14:43",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.125,
+          35.55,
+          -121.05,
+          35.625
+        ]
+      },
+      {
+        "id": "BH4565BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BR/BlueTopo_BH4565BR_20260820.tiff",
+        "publisher_sha256": "6483264eb145801f14aac2d410c2a10a8663d1a5212d535ef5e409a46c378465",
+        "delivered_date": "2026-08-28 17:42:23",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.025,
+          -120.975,
+          35.1
+        ]
+      },
+      {
+        "id": "BH4565BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BS/BlueTopo_BH4565BS_20260820.tiff",
+        "publisher_sha256": "b6b6b5b9186683422597698cb99de3cc18e006d2f963fb83bc1985716aca22a1",
+        "delivered_date": "2026-08-28 17:42:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.1,
+          -120.975,
+          35.175
+        ]
+      },
+      {
+        "id": "BH4565BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BT/BlueTopo_BH4565BT_20260820.tiff",
+        "publisher_sha256": "954cddf9bcfab35d5f929a99eed42dd299fe4e5f3a5a65d79b6fa8a7c0403675",
+        "delivered_date": "2026-08-28 13:30:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.175,
+          -120.975,
+          35.25
+        ]
+      },
+      {
+        "id": "BH4565BV",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BV/BlueTopo_BH4565BV_20260820.tiff",
+        "publisher_sha256": "b12e99800faf8f134fece262e2fbab656e26fbacc25abc3a872fe771088248d9",
+        "delivered_date": "2026-08-28 13:29:47",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.25,
+          -120.975,
+          35.325
+        ]
+      },
+      {
+        "id": "BH4565BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BW/BlueTopo_BH4565BW_20260820.tiff",
+        "publisher_sha256": "c14c0a269f34dfb298e7c10d53a26b3ef7bb869d27e3b8113b818157101593ed",
+        "delivered_date": "2026-08-28 13:30:10",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.325,
+          -120.975,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4565BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BX/BlueTopo_BH4565BX_20260820.tiff",
+        "publisher_sha256": "315016524dd87902468ac6c1f765e8e74ad8d002c1115a93bac9d6457447793d",
+        "delivered_date": "2026-08-28 13:29:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.4,
+          -120.975,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4565BZ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4565BZ/BlueTopo_BH4565BZ_20260820.tiff",
+        "publisher_sha256": "1414e474cb9dfb7b70fcbb1b11397582520c644e86033cd4a5089f008066e0f1",
+        "delivered_date": "2026-08-28 13:29:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -121.05,
+          35.475,
+          -120.975,
+          35.55
+        ]
+      },
+      {
+        "id": "BH4575BN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BN/BlueTopo_BH4575BN_20260820.tiff",
+        "publisher_sha256": "50edad3c8d706b9f3a5ab4a03f6bd4730276c2ba57bb2f10c27726008182f4fd",
+        "delivered_date": "2026-08-28 17:42:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          34.8,
+          -120.9,
+          34.875
+        ]
+      },
+      {
+        "id": "BH4575BP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BP/BlueTopo_BH4575BP_20260820.tiff",
+        "publisher_sha256": "8543a0e2da4e7d13fd94700e70ad87f8cdce2de93c5e558f5f9b94d669736990",
+        "delivered_date": "2026-08-28 17:42:31",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          34.875,
+          -120.9,
+          34.95
+        ]
+      },
+      {
+        "id": "BH4575BQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BQ/BlueTopo_BH4575BQ_20260820.tiff",
+        "publisher_sha256": "855e61ae452dfe0aebce6005469a78d62a83212765916e3e4fac4c5b3c818eaa",
+        "delivered_date": "2026-08-28 17:42:49",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          34.95,
+          -120.9,
+          35.025
+        ]
+      },
+      {
+        "id": "BH4575BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BR/BlueTopo_BH4575BR_20260820.tiff",
+        "publisher_sha256": "425544a54351de58d23c383bcb548136774431f5eccfbcaee83e8c675b7304c9",
+        "delivered_date": "2026-08-28 17:42:46",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.025,
+          -120.9,
+          35.1
+        ]
+      },
+      {
+        "id": "BH4575BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BS/BlueTopo_BH4575BS_20260820.tiff",
+        "publisher_sha256": "5886b434ce0f5c193c3b6bdef6d9fa343682504dff0cfcec6a79ae8987265f9c",
+        "delivered_date": "2026-08-28 17:42:20",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.1,
+          -120.9,
+          35.175
+        ]
+      },
+      {
+        "id": "BH4575BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BT/BlueTopo_BH4575BT_20260820.tiff",
+        "publisher_sha256": "9841a5de69e88919667fa3963eeb5a5fec9b7b797e26224b62f2e4714e60d2e4",
+        "delivered_date": "2026-08-28 13:30:18",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.175,
+          -120.9,
+          35.25
+        ]
+      },
+      {
+        "id": "BH4575BV",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BV/BlueTopo_BH4575BV_20260820.tiff",
+        "publisher_sha256": "8732a3570aab98764447be4009183d24977a9cdcd0f014bd386fc270eae7a528",
+        "delivered_date": "2026-08-28 13:29:26",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.25,
+          -120.9,
+          35.325
+        ]
+      },
+      {
+        "id": "BH4575BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BW/BlueTopo_BH4575BW_20260820.tiff",
+        "publisher_sha256": "ac0735fba8315d561e41e8a12492f8873c6463d75b8b941ae50070c7977e75f6",
+        "delivered_date": "2026-08-28 13:30:02",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.325,
+          -120.9,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4575BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4575BX/BlueTopo_BH4575BX_20260820.tiff",
+        "publisher_sha256": "aaa9730c1a5d1d1c5270b65eeea7696264f4bb03ccc58147796f37e353db5abc",
+        "delivered_date": "2026-08-28 13:30:07",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.975,
+          35.4,
+          -120.9,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4585BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BH/BlueTopo_BH4585BH_20260820.tiff",
+        "publisher_sha256": "43ff136ed15c4047fa3fee8f4e30d6073114505bcea2f8d894b7bb95701e28fb",
+        "delivered_date": "2026-08-28 17:43:09",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.425,
+          -120.825,
+          34.5
+        ]
+      },
+      {
+        "id": "BH4585BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BJ/BlueTopo_BH4585BJ_20260820.tiff",
+        "publisher_sha256": "7421ad7b8694af7d96af3583bbcbf7bb461e9e5b36b168690218c267b271932c",
+        "delivered_date": "2026-08-28 17:43:25",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.5,
+          -120.825,
+          34.575
+        ]
+      },
+      {
+        "id": "BH4585BK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BK/BlueTopo_BH4585BK_20260820.tiff",
+        "publisher_sha256": "19faa1548e0d28e3fb98fd33f899e9652d826d63d8ef9f70a39a4649136c989b",
+        "delivered_date": "2026-08-28 17:43:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.575,
+          -120.825,
+          34.65
+        ]
+      },
+      {
+        "id": "BH4585BL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BL/BlueTopo_BH4585BL_20260820.tiff",
+        "publisher_sha256": "b54fc78e7009f7e009880adceb448632acedc8b287d3ae3bf91765de520bbe82",
+        "delivered_date": "2026-08-28 17:42:54",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.65,
+          -120.825,
+          34.725
+        ]
+      },
+      {
+        "id": "BH4585BM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BM/BlueTopo_BH4585BM_20260820.tiff",
+        "publisher_sha256": "ead57cbcb4501380bece3c20e691d3e9105c333fc5683754e41850348d987a0e",
+        "delivered_date": "2026-08-28 17:42:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.725,
+          -120.825,
+          34.8
+        ]
+      },
+      {
+        "id": "BH4585BN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BN/BlueTopo_BH4585BN_20260820.tiff",
+        "publisher_sha256": "4404bedfc7bfa52f9ec0a3d173c725971540aeb84113359f5497d7bb8bf737bc",
+        "delivered_date": "2026-08-28 17:42:34",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.8,
+          -120.825,
+          34.875
+        ]
+      },
+      {
+        "id": "BH4585BP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BP/BlueTopo_BH4585BP_20260820.tiff",
+        "publisher_sha256": "23008b512e5c93807ef6febdaf663f9174030816a1aa18cc22c12f6f4a9d94d6",
+        "delivered_date": "2026-08-28 17:42:15",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.875,
+          -120.825,
+          34.95
+        ]
+      },
+      {
+        "id": "BH4585BQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BQ/BlueTopo_BH4585BQ_20260820.tiff",
+        "publisher_sha256": "0e8e392783773716f78101ca7f33093daeb3c80d3910d12b09be8b7059f0fd3d",
+        "delivered_date": "2026-08-28 17:42:40",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          34.95,
+          -120.825,
+          35.025
+        ]
+      },
+      {
+        "id": "BH4585BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BR/BlueTopo_BH4585BR_20260820.tiff",
+        "publisher_sha256": "7e0c56efd09129eb5630a344349875fafb36a057fff50c51e601a308890f46a8",
+        "delivered_date": "2026-08-28 17:42:37",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.025,
+          -120.825,
+          35.1
+        ]
+      },
+      {
+        "id": "BH4585BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BS/BlueTopo_BH4585BS_20260820.tiff",
+        "publisher_sha256": "399cd50d6c4b452e94f512e410395864cac1eb2703a69e181dc48758a20cac00",
+        "delivered_date": "2026-08-28 17:42:43",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.1,
+          -120.825,
+          35.175
+        ]
+      },
+      {
+        "id": "BH4585BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BT/BlueTopo_BH4585BT_20260820.tiff",
+        "publisher_sha256": "27a774b457c834b9aab0d8651c7c018a148d18f892c7fd0a235c045a069e196a",
+        "delivered_date": "2026-08-28 13:30:04",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.175,
+          -120.825,
+          35.25
+        ]
+      },
+      {
+        "id": "BH4585BV",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BV/BlueTopo_BH4585BV_20260820.tiff",
+        "publisher_sha256": "f6a1b2975c76d666fa973b959b4397f79832b98d75c139267921e87a15d3e6b6",
+        "delivered_date": "2026-08-28 13:30:26",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.25,
+          -120.825,
+          35.325
+        ]
+      },
+      {
+        "id": "BH4585BW",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BW/BlueTopo_BH4585BW_20260915.tiff",
+        "publisher_sha256": "eb96ce9aaf01fb871ab25adc29e7252e999800be3ecc00fd33849381909db538",
+        "delivered_date": "2026-09-17 18:20:21",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.325,
+          -120.825,
+          35.4
+        ]
+      },
+      {
+        "id": "BH4585BX",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4585BX/BlueTopo_BH4585BX_20260820.tiff",
+        "publisher_sha256": "d7c78270b23cca053d89afb5e3541029b44d42a450400bf05154ae5bf384a00b",
+        "delivered_date": "2026-08-28 13:29:24",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.9,
+          35.4,
+          -120.825,
+          35.475
+        ]
+      },
+      {
+        "id": "BH4595BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BG/BlueTopo_BH4595BG_20260820.tiff",
+        "publisher_sha256": "cf98ce7f2f1f0b759e817cb1302a3dd9988e7132c3e22f00edf9b271091a1522",
+        "delivered_date": "2026-08-28 17:46:08",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.35,
+          -120.75,
+          34.425
+        ]
+      },
+      {
+        "id": "BH4595BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BH/BlueTopo_BH4595BH_20260820.tiff",
+        "publisher_sha256": "bc8a1d0c1c936a98845c04a07d41023a95639e82c060c83b96286539773ce8ba",
+        "delivered_date": "2026-08-28 17:43:31",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.425,
+          -120.75,
+          34.5
+        ]
+      },
+      {
+        "id": "BH4595BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BJ/BlueTopo_BH4595BJ_20260820.tiff",
+        "publisher_sha256": "f6be9da8dc18465128c380c1192e3742c0d22124561c84d1691975fbcf66106f",
+        "delivered_date": "2026-08-28 17:43:03",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.5,
+          -120.75,
+          34.575
+        ]
+      },
+      {
+        "id": "BH4595BK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BK/BlueTopo_BH4595BK_20260820.tiff",
+        "publisher_sha256": "993bcf666f09ed24c58c406c32812e663a039933345d0883d17ee2fbaa0d643c",
+        "delivered_date": "2026-08-28 17:43:28",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.575,
+          -120.75,
+          34.65
+        ]
+      },
+      {
+        "id": "BH4595BL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BL/BlueTopo_BH4595BL_20260820.tiff",
+        "publisher_sha256": "188bae7386913cf8d11adfeafc1a8a6dacb9009cca6f4b2e2ec1ce927c471ece",
+        "delivered_date": "2026-08-28 17:43:14",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.65,
+          -120.75,
+          34.725
+        ]
+      },
+      {
+        "id": "BH4595BM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BM/BlueTopo_BH4595BM_20260820.tiff",
+        "publisher_sha256": "cb0b3a3eca5dff5e4896a5c12fef73be9cf28b348dc455775cf9657af1849083",
+        "delivered_date": "2026-08-28 17:43:12",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.725,
+          -120.75,
+          34.8
+        ]
+      },
+      {
+        "id": "BH4595BN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BN/BlueTopo_BH4595BN_20260820.tiff",
+        "publisher_sha256": "c86cc6c29e76864605cd58814d97152df896efef9a258511b67648cddfac7708",
+        "delivered_date": "2026-08-28 13:31:19",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.8,
+          -120.75,
+          34.875
+        ]
+      },
+      {
+        "id": "BH4595BP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BP/BlueTopo_BH4595BP_20260820.tiff",
+        "publisher_sha256": "142c4718b4fb2ca08047501b2e41b37db0a8a4a8baf94685900df0b57f828caf",
+        "delivered_date": "2026-08-28 13:30:55",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.875,
+          -120.75,
+          34.95
+        ]
+      },
+      {
+        "id": "BH4595BQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BQ/BlueTopo_BH4595BQ_20260820.tiff",
+        "publisher_sha256": "3a0ed099be868bb735939fb6920fa5b9f9992b74e214ec1a05011d8135fc3c55",
+        "delivered_date": "2026-08-28 13:31:09",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          34.95,
+          -120.75,
+          35.025
+        ]
+      },
+      {
+        "id": "BH4595BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BR/BlueTopo_BH4595BR_20260820.tiff",
+        "publisher_sha256": "5f2a6e50fcd26165bf2d7d4b6cf6cc5d253dc7869640e817dc3b22d7a34a01f0",
+        "delivered_date": "2026-08-28 13:30:37",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          35.025,
+          -120.75,
+          35.1
+        ]
+      },
+      {
+        "id": "BH4595BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BS/BlueTopo_BH4595BS_20260820.tiff",
+        "publisher_sha256": "49df1407e88caae7df04e85ae97c0b4d8bebaec7e26a654361a927aa38abf6aa",
+        "delivered_date": "2026-08-28 13:31:16",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          35.1,
+          -120.75,
+          35.175
+        ]
+      },
+      {
+        "id": "BH4595BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH4595BT/BlueTopo_BH4595BT_20260820.tiff",
+        "publisher_sha256": "6916adc706ab79a26f6168da0c08733d23f09383ccc64119056e35349ceb1e6a",
+        "delivered_date": "2026-08-28 13:31:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.825,
+          35.175,
+          -120.75,
+          35.25
+        ]
+      },
+      {
+        "id": "BH45B5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BG/BlueTopo_BH45B5BG_20260820.tiff",
+        "publisher_sha256": "e3c1e19fe3a90c7c72c6da4279e7f47a3da2294e68e28921a0470bf43880cc5e",
+        "delivered_date": "2026-08-28 17:45:32",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.35,
+          -120.675,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45B5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BH/BlueTopo_BH45B5BH_20260820.tiff",
+        "publisher_sha256": "4c88fac279e0ff6e2b2a4316aa05a9a4da95bbafb0e9e252d3c45c28d6e358c2",
+        "delivered_date": "2026-08-28 17:43:51",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.425,
+          -120.675,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45B5BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BJ/BlueTopo_BH45B5BJ_20260820.tiff",
+        "publisher_sha256": "a64b3b3d916a69b4501a22b3b8900b6f19613269d28d1dd35986bce8e87491f8",
+        "delivered_date": "2026-08-28 17:43:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.5,
+          -120.675,
+          34.575
+        ]
+      },
+      {
+        "id": "BH45B5BK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BK/BlueTopo_BH45B5BK_20260820.tiff",
+        "publisher_sha256": "7c0d07d02d31b4877d0a7356c492d5566ea58f846ae0232264e53bd903c05f10",
+        "delivered_date": "2026-08-28 17:43:37",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.575,
+          -120.675,
+          34.65
+        ]
+      },
+      {
+        "id": "BH45B5BL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BL/BlueTopo_BH45B5BL_20260820.tiff",
+        "publisher_sha256": "3079a6cc998585173dc82c8f0068c37e754e2efe7e4998f28d88d74aaa72ca2f",
+        "delivered_date": "2026-08-28 17:43:48",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.65,
+          -120.675,
+          34.725
+        ]
+      },
+      {
+        "id": "BH45B5BM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BM/BlueTopo_BH45B5BM_20260820.tiff",
+        "publisher_sha256": "69ddaa5741341b455397a2bab95e5026fc829c71b57301648dc28ca308ece54f",
+        "delivered_date": "2026-08-28 17:43:01",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.725,
+          -120.675,
+          34.8
+        ]
+      },
+      {
+        "id": "BH45B5BN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BN/BlueTopo_BH45B5BN_20260820.tiff",
+        "publisher_sha256": "9aeb5377d84673d9da537fd91ee03d1ad127bf4f7015686a883cd7cdb65f89d3",
+        "delivered_date": "2026-08-28 13:30:47",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.8,
+          -120.675,
+          34.875
+        ]
+      },
+      {
+        "id": "BH45B5BP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BP/BlueTopo_BH45B5BP_20260820.tiff",
+        "publisher_sha256": "ad566ac4d27eb8429f3a21ec293a1254109be8175ab95d2800b763d0775590d6",
+        "delivered_date": "2026-08-28 13:31:03",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.875,
+          -120.675,
+          34.95
+        ]
+      },
+      {
+        "id": "BH45B5BQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BQ/BlueTopo_BH45B5BQ_20260820.tiff",
+        "publisher_sha256": "80d6413bf3f7f16e17bc3657762d7dea8a52bec3990d69c3d992a56e208f75a4",
+        "delivered_date": "2026-08-28 13:30:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          34.95,
+          -120.675,
+          35.025
+        ]
+      },
+      {
+        "id": "BH45B5BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BR/BlueTopo_BH45B5BR_20260820.tiff",
+        "publisher_sha256": "b091464fbe426d441efd1f33d2ebf3394ff3c0c8eeed43e5d5961f5a70d8c502",
+        "delivered_date": "2026-08-28 13:30:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          35.025,
+          -120.675,
+          35.1
+        ]
+      },
+      {
+        "id": "BH45B5BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BS/BlueTopo_BH45B5BS_20260820.tiff",
+        "publisher_sha256": "39914da72b8cdbd5ae2f9b6e138b4371383e7ec8906110fcaed2139fd1664656",
+        "delivered_date": "2026-08-28 13:30:53",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          35.1,
+          -120.675,
+          35.175
+        ]
+      },
+      {
+        "id": "BH45B5BT",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45B5BT/BlueTopo_BH45B5BT_20260820.tiff",
+        "publisher_sha256": "26a46dc3ccc72cfcce78d57279293e808712466952412ee9b64825c852f8efa3",
+        "delivered_date": "2026-08-28 13:30:34",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.75,
+          35.175,
+          -120.675,
+          35.25
+        ]
+      },
+      {
+        "id": "BH45C5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BG/BlueTopo_BH45C5BG_20260820.tiff",
+        "publisher_sha256": "52119b50fd4977686158dbccd38d0484a8ff5958b959e3301eb70e9b92d11175",
+        "delivered_date": "2026-08-28 17:47:12",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.35,
+          -120.6,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45C5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BH/BlueTopo_BH45C5BH_20260820.tiff",
+        "publisher_sha256": "566fa8d0c9b0a0a074535ea6d1f8c8cc81d6bf63ff30266e3f28997390b1cb87",
+        "delivered_date": "2026-08-28 17:43:17",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.425,
+          -120.6,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45C5BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BJ/BlueTopo_BH45C5BJ_20260820.tiff",
+        "publisher_sha256": "a2ab793506b231a4a2fedf26599d79912ccd3093075e33db36ed7f991b451a9f",
+        "delivered_date": "2026-08-28 17:43:45",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.5,
+          -120.6,
+          34.575
+        ]
+      },
+      {
+        "id": "BH45C5BK",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BK/BlueTopo_BH45C5BK_20260820.tiff",
+        "publisher_sha256": "0649689a8b574a4ba3f1bf183f8fc13d30dcb4a4a3f29d13a5fb952dc138a1ea",
+        "delivered_date": "2026-08-28 17:42:51",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.575,
+          -120.6,
+          34.65
+        ]
+      },
+      {
+        "id": "BH45C5BL",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BL/BlueTopo_BH45C5BL_20260820.tiff",
+        "publisher_sha256": "0d72578ebc341d7a2472b626ae4068730c4e8d525ba9f7c20bac6d765cb3ce47",
+        "delivered_date": "2026-08-28 17:43:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.65,
+          -120.6,
+          34.725
+        ]
+      },
+      {
+        "id": "BH45C5BM",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BM/BlueTopo_BH45C5BM_20260820.tiff",
+        "publisher_sha256": "4a49dfc772427934abe94d76f06091cc68407a43486bb219d8d14973eeae2414",
+        "delivered_date": "2026-08-28 17:43:19",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.725,
+          -120.6,
+          34.8
+        ]
+      },
+      {
+        "id": "BH45C5BN",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BN/BlueTopo_BH45C5BN_20260820.tiff",
+        "publisher_sha256": "89d77a13308785d3441231e46beb2622d1614dd751b92e29f93ab140730b52e7",
+        "delivered_date": "2026-08-28 13:30:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.8,
+          -120.6,
+          34.875
+        ]
+      },
+      {
+        "id": "BH45C5BP",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BP/BlueTopo_BH45C5BP_20260820.tiff",
+        "publisher_sha256": "8b3400baa0aea0aacb1a3066926dd28bd1b0df1d010d2916a249111ac5408622",
+        "delivered_date": "2026-08-28 13:30:58",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.875,
+          -120.6,
+          34.95
+        ]
+      },
+      {
+        "id": "BH45C5BQ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BQ/BlueTopo_BH45C5BQ_20260820.tiff",
+        "publisher_sha256": "83a6bd2b43cb26b64efcd7bc1bc4fa4b04e0a8e4872fa80fc762a147d7cb4a98",
+        "delivered_date": "2026-08-28 13:31:12",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          34.95,
+          -120.6,
+          35.025
+        ]
+      },
+      {
+        "id": "BH45C5BR",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BR/BlueTopo_BH45C5BR_20260820.tiff",
+        "publisher_sha256": "4bff7bfa089b161f667cc0e460feae0f373cd33968e5c14906ccfa3c2b1fe9b8",
+        "delivered_date": "2026-08-28 13:30:51",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          35.025,
+          -120.6,
+          35.1
+        ]
+      },
+      {
+        "id": "BH45C5BS",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45C5BS/BlueTopo_BH45C5BS_20260820.tiff",
+        "publisher_sha256": "66091b93fdf9119e54d725cc567c98b4e4a11cac4a9273d57c1758b53dd99a94",
+        "delivered_date": "2026-08-28 13:31:01",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.675,
+          35.1,
+          -120.6,
+          35.175
+        ]
+      },
+      {
+        "id": "BH45D5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45D5BG/BlueTopo_BH45D5BG_20260820.tiff",
+        "publisher_sha256": "c17a45530a6c27329ffed74894e2cc0b8c32117c0bffc8e29cbb70e2e8a4d1b7",
+        "delivered_date": "2026-08-28 17:45:42",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.6,
+          34.35,
+          -120.525,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45D5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45D5BH/BlueTopo_BH45D5BH_20260820.tiff",
+        "publisher_sha256": "7fb2c09e5362625d486c096dea21e431ec26e64a8dc863a6558f99d6667898df",
+        "delivered_date": "2026-08-28 17:43:34",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.6,
+          34.425,
+          -120.525,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45D5BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45D5BJ/BlueTopo_BH45D5BJ_20260820.tiff",
+        "publisher_sha256": "4a48440d8e527706b2af4088de0b82c80528254b12bfccf6759feba6a205aa27",
+        "delivered_date": "2026-08-28 17:43:22",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.6,
+          34.5,
+          -120.525,
+          34.575
+        ]
+      },
+      {
+        "id": "BH45F5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45F5BG/BlueTopo_BH45F5BG_20260820.tiff",
+        "publisher_sha256": "ca3e2c5e5f5e14f264ffd141f3a52332a791b420f33354809a17f05e2339d089",
+        "delivered_date": "2026-08-28 17:45:12",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.525,
+          34.35,
+          -120.45,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45F5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45F5BH/BlueTopo_BH45F5BH_20260820.tiff",
+        "publisher_sha256": "a9e1c1bce4ef34f5765f05ef417e71c22c88490be273382ef97b8b9284b28f1d",
+        "delivered_date": "2026-08-28 17:44:39",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.525,
+          34.425,
+          -120.45,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45F5BJ",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45F5BJ/BlueTopo_BH45F5BJ_20260820.tiff",
+        "publisher_sha256": "b44d110d4b78d0784f1ce6c06dd063820d01e0c437812d0bce26a0ac4a2a002c",
+        "delivered_date": "2026-08-28 17:43:54",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.525,
+          34.5,
+          -120.45,
+          34.575
+        ]
+      },
+      {
+        "id": "BH45G5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45G5BG/BlueTopo_BH45G5BG_20260820.tiff",
+        "publisher_sha256": "a81153232354c2ced5efc3f8ee212ae83ea6269fcd96cae26cc55bc9cfd3dfd9",
+        "delivered_date": "2026-08-28 17:44:54",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.45,
+          34.35,
+          -120.375,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45G5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45G5BH/BlueTopo_BH45G5BH_20260820.tiff",
+        "publisher_sha256": "38f242e8c7056d3b3b3177fdc647968d726b7c35553a61f1021f4304c9ca341c",
+        "delivered_date": "2026-08-28 17:44:33",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.45,
+          34.425,
+          -120.375,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45H5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45H5BG/BlueTopo_BH45H5BG_20260820.tiff",
+        "publisher_sha256": "9d5230d48e321022549b2875848f02649bc964de3c02692fafdebb7545d42ede",
+        "delivered_date": "2026-08-28 17:44:57",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.375,
+          34.35,
+          -120.3,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45H5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45H5BH/BlueTopo_BH45H5BH_20260820.tiff",
+        "publisher_sha256": "4260b885c3619abbd2814d6db8087b26594ee07b428353289af493159d7e340f",
+        "delivered_date": "2026-08-28 17:44:06",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.375,
+          34.425,
+          -120.3,
+          34.5
+        ]
+      },
+      {
+        "id": "BH45J5BG",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45J5BG/BlueTopo_BH45J5BG_20260820.tiff",
+        "publisher_sha256": "05cd5fa9ea2d7669dd138b526c167a3d71f585f2616d345a3899998662eb6dcb",
+        "delivered_date": "2026-08-28 17:43:56",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.3,
+          34.35,
+          -120.225,
+          34.425
+        ]
+      },
+      {
+        "id": "BH45J5BH",
+        "url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/BH45J5BH/BlueTopo_BH45J5BH_20260820.tiff",
+        "publisher_sha256": "2b476b8b18f37e05d81304d554b654e9ceda1544fc05450d3a9e7a1ff48323d0",
+        "delivered_date": "2026-08-28 17:44:08",
+        "native_resolution_m": 4.0,
+        "bounds": [
+          -120.3,
+          34.425,
+          -120.225,
+          34.5
+        ]
+      }
+    ],
+    "method": "Nearest COG overview samples, classified at nominal -100 to <0 m elevation, nearest reprojected to 25 m; summed within disjoint 250 m cells. Fine valid reference wins; coarse fills remaining holes.",
+    "limitations": [
+      "Approximate reference area, not measured 0–300 ft coverage. Compilation interpolation and overview averaging are allowed only for this denominator.",
+      "Source vertical datums may differ. No vertical conversion or original-contributor validation is claimed.",
+      "Nodata remains unknown; missing reference water is not in the denominator. Unknown within boundary cells may include land.",
+      "Tile source checksums are publisher identifiers, not verified full downloads. Cached overview samples have separate verified local checksums.",
+      "Generalized coastline is an ownership spine only. Terminal endpoint projections are excluded. Region anchors are planning partitions, not legal boundaries."
+    ],
+    "outside_reference_band_status": "unknown",
+    "coastline": {
+      "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_coastline.zip",
+      "sha256": "bfa04cdbcbef07ef90dfca1dabb48062eca29900a113df0f389303e255484017",
+      "member": "ne_10m_coastline",
+      "documentation_url": "https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-coastline/",
+      "rights_url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "license": "public-domain",
+      "scale": "1:10 million; not 10 meter resolution",
+      "use": "Generalized alongshore planning spine only; not a shoreline, land mask, depth source or navigation boundary."
+    }
+  },
+  "totals": {
+    "cell_count": 55544,
+    "band_km2": 3307.514375,
+    "tier0_km2": 3307.514375,
+    "tier1_km2": 0,
+    "tier2_km2": 0,
+    "tier3_km2": 0,
+    "unknown_reference_within_band_cells_km2": 5.018125
+  },
+  "reaches": [
+    {
+      "id": "morro-bay-r04",
+      "region": "morro-bay",
+      "order": 1,
+      "status": "unassessed",
+      "cell_count": 373,
+      "band_km2": 20.520625,
+      "tier0_km2": 20.520625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.074375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r03",
+      "region": "morro-bay",
+      "order": 2,
+      "status": "unassessed",
+      "cell_count": 589,
+      "band_km2": 35.340625,
+      "tier0_km2": 35.340625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.105625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r05",
+      "region": "morro-bay",
+      "order": 3,
+      "status": "unassessed",
+      "cell_count": 481,
+      "band_km2": 27.2425,
+      "tier0_km2": 27.2425,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.05375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r02",
+      "region": "morro-bay",
+      "order": 4,
+      "status": "unassessed",
+      "cell_count": 1361,
+      "band_km2": 80.8625,
+      "tier0_km2": 80.8625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.136875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r06",
+      "region": "morro-bay",
+      "order": 5,
+      "status": "unassessed",
+      "cell_count": 1457,
+      "band_km2": 86.476875,
+      "tier0_km2": 86.476875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.215625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r01",
+      "region": "morro-bay",
+      "order": 6,
+      "status": "unassessed",
+      "cell_count": 877,
+      "band_km2": 51.59125,
+      "tier0_km2": 51.59125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.051875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r07",
+      "region": "morro-bay",
+      "order": 7,
+      "status": "unassessed",
+      "cell_count": 1155,
+      "band_km2": 68.115625,
+      "tier0_km2": 68.115625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.1525,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "cambria-san-simeon-r02",
+      "region": "cambria-san-simeon",
+      "order": 8,
+      "status": "unassessed",
+      "cell_count": 1276,
+      "band_km2": 75.9775,
+      "tier0_km2": 75.9775,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.035625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r08",
+      "region": "morro-bay",
+      "order": 9,
+      "status": "unassessed",
+      "cell_count": 2109,
+      "band_km2": 128.275625,
+      "tier0_km2": 128.275625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.16625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "cambria-san-simeon-r01",
+      "region": "cambria-san-simeon",
+      "order": 10,
+      "status": "unassessed",
+      "cell_count": 1076,
+      "band_km2": 63.703125,
+      "tier0_km2": 63.703125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.125625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r09",
+      "region": "morro-bay",
+      "order": 11,
+      "status": "unassessed",
+      "cell_count": 646,
+      "band_km2": 38.931875,
+      "tier0_km2": 38.931875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.015625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "morro-bay-r10",
+      "region": "morro-bay",
+      "order": 12,
+      "status": "unassessed",
+      "cell_count": 1053,
+      "band_km2": 64.77875,
+      "tier0_km2": 64.77875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.026875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "south-big-sur-san-simeon-r03",
+      "region": "south-big-sur-san-simeon",
+      "order": 13,
+      "status": "unassessed",
+      "cell_count": 1559,
+      "band_km2": 92.726875,
+      "tier0_km2": 92.726875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.18875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r01",
+      "region": "point-arguello-conception",
+      "order": 14,
+      "status": "unassessed",
+      "cell_count": 1986,
+      "band_km2": 121.79375,
+      "tier0_km2": 121.79375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.08375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "south-big-sur-san-simeon-r02",
+      "region": "south-big-sur-san-simeon",
+      "order": 15,
+      "status": "unassessed",
+      "cell_count": 1192,
+      "band_km2": 70.735,
+      "tier0_km2": 70.735,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.169375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r02",
+      "region": "point-arguello-conception",
+      "order": 16,
+      "status": "unassessed",
+      "cell_count": 2944,
+      "band_km2": 178.3425,
+      "tier0_km2": 178.3425,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.12,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "south-big-sur-san-simeon-r01",
+      "region": "south-big-sur-san-simeon",
+      "order": 17,
+      "status": "unassessed",
+      "cell_count": 926,
+      "band_km2": 53.0675,
+      "tier0_km2": 53.0675,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.07,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r03",
+      "region": "point-arguello-conception",
+      "order": 18,
+      "status": "unassessed",
+      "cell_count": 888,
+      "band_km2": 53.9875,
+      "tier0_km2": 53.9875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.000625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r06",
+      "region": "big-sur-coast",
+      "order": 19,
+      "status": "unassessed",
+      "cell_count": 550,
+      "band_km2": 30.91125,
+      "tier0_km2": 30.91125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.048125,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r04",
+      "region": "point-arguello-conception",
+      "order": 20,
+      "status": "unassessed",
+      "cell_count": 3451,
+      "band_km2": 210.5575,
+      "tier0_km2": 210.5575,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.194375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r05",
+      "region": "big-sur-coast",
+      "order": 21,
+      "status": "unassessed",
+      "cell_count": 631,
+      "band_km2": 36.079375,
+      "tier0_km2": 36.079375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.05125,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r05",
+      "region": "point-arguello-conception",
+      "order": 22,
+      "status": "unassessed",
+      "cell_count": 1006,
+      "band_km2": 61.294375,
+      "tier0_km2": 61.294375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.02125,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r04",
+      "region": "big-sur-coast",
+      "order": 23,
+      "status": "unassessed",
+      "cell_count": 337,
+      "band_km2": 17.6475,
+      "tier0_km2": 17.6475,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.016875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r06",
+      "region": "point-arguello-conception",
+      "order": 24,
+      "status": "unassessed",
+      "cell_count": 3023,
+      "band_km2": 182.425625,
+      "tier0_km2": 182.425625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.165,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r03",
+      "region": "big-sur-coast",
+      "order": 25,
+      "status": "unassessed",
+      "cell_count": 355,
+      "band_km2": 18.68375,
+      "tier0_km2": 18.68375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.02875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r07",
+      "region": "point-arguello-conception",
+      "order": 26,
+      "status": "unassessed",
+      "cell_count": 1493,
+      "band_km2": 90.038125,
+      "tier0_km2": 90.038125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.060625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r02",
+      "region": "big-sur-coast",
+      "order": 27,
+      "status": "unassessed",
+      "cell_count": 391,
+      "band_km2": 21.078125,
+      "tier0_km2": 21.078125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.07625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "point-arguello-conception-r08",
+      "region": "point-arguello-conception",
+      "order": 28,
+      "status": "unassessed",
+      "cell_count": 1191,
+      "band_km2": 71.10875,
+      "tier0_km2": 71.10875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.1425,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "big-sur-coast-r01",
+      "region": "big-sur-coast",
+      "order": 29,
+      "status": "unassessed",
+      "cell_count": 721,
+      "band_km2": 41.55375,
+      "tier0_km2": 41.55375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.024375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "monterey-point-sur-r04",
+      "region": "monterey-point-sur",
+      "order": 30,
+      "status": "unassessed",
+      "cell_count": 1979,
+      "band_km2": 117.170625,
+      "tier0_km2": 117.170625,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.1575,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "monterey-point-sur-r03",
+      "region": "monterey-point-sur",
+      "order": 31,
+      "status": "unassessed",
+      "cell_count": 637,
+      "band_km2": 35.864375,
+      "tier0_km2": 35.864375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.080625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "monterey-point-sur-r02",
+      "region": "monterey-point-sur",
+      "order": 32,
+      "status": "unassessed",
+      "cell_count": 343,
+      "band_km2": 16.75,
+      "tier0_km2": 16.75,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.056875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "monterey-point-sur-r01",
+      "region": "monterey-point-sur",
+      "order": 33,
+      "status": "unassessed",
+      "cell_count": 416,
+      "band_km2": 21.995,
+      "tier0_km2": 21.995,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.025625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r13",
+      "region": "santa-cruz-monterey-bay",
+      "order": 34,
+      "status": "unassessed",
+      "cell_count": 1387,
+      "band_km2": 81.95125,
+      "tier0_km2": 81.95125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.11875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r12",
+      "region": "santa-cruz-monterey-bay",
+      "order": 35,
+      "status": "unassessed",
+      "cell_count": 426,
+      "band_km2": 24.933125,
+      "tier0_km2": 24.933125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.020625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r11",
+      "region": "santa-cruz-monterey-bay",
+      "order": 36,
+      "status": "unassessed",
+      "cell_count": 1204,
+      "band_km2": 73.6725,
+      "tier0_km2": 73.6725,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.061875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r10",
+      "region": "santa-cruz-monterey-bay",
+      "order": 37,
+      "status": "unassessed",
+      "cell_count": 231,
+      "band_km2": 13.6275,
+      "tier0_km2": 13.6275,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.060625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r09",
+      "region": "santa-cruz-monterey-bay",
+      "order": 38,
+      "status": "unassessed",
+      "cell_count": 783,
+      "band_km2": 42.603125,
+      "tier0_km2": 42.603125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.56375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r08",
+      "region": "santa-cruz-monterey-bay",
+      "order": 39,
+      "status": "unassessed",
+      "cell_count": 1769,
+      "band_km2": 105.51,
+      "tier0_km2": 105.51,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.165625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r07",
+      "region": "santa-cruz-monterey-bay",
+      "order": 40,
+      "status": "unassessed",
+      "cell_count": 825,
+      "band_km2": 49.843125,
+      "tier0_km2": 49.843125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.07875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r06",
+      "region": "santa-cruz-monterey-bay",
+      "order": 41,
+      "status": "unassessed",
+      "cell_count": 1152,
+      "band_km2": 69.02,
+      "tier0_km2": 69.02,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.100625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r05",
+      "region": "santa-cruz-monterey-bay",
+      "order": 42,
+      "status": "unassessed",
+      "cell_count": 2971,
+      "band_km2": 179.841875,
+      "tier0_km2": 179.841875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.2825,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r04",
+      "region": "santa-cruz-monterey-bay",
+      "order": 43,
+      "status": "unassessed",
+      "cell_count": 1779,
+      "band_km2": 107.206875,
+      "tier0_km2": 107.206875,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.159375,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r03",
+      "region": "santa-cruz-monterey-bay",
+      "order": 44,
+      "status": "unassessed",
+      "cell_count": 1853,
+      "band_km2": 111.723125,
+      "tier0_km2": 111.723125,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.126875,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r02",
+      "region": "santa-cruz-monterey-bay",
+      "order": 45,
+      "status": "unassessed",
+      "cell_count": 1964,
+      "band_km2": 118.519375,
+      "tier0_km2": 118.519375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.22,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    },
+    {
+      "id": "santa-cruz-monterey-bay-r01",
+      "region": "santa-cruz-monterey-bay",
+      "order": 46,
+      "status": "unassessed",
+      "cell_count": 728,
+      "band_km2": 43.434375,
+      "tier0_km2": 43.434375,
+      "tier1_km2": 0,
+      "tier2_km2": 0,
+      "tier3_km2": 0,
+      "unknown_reference_within_band_cells_km2": 0.115625,
+      "polygons_by_grade": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "held_by_reason": {},
+      "surveys_used": [],
+      "last_survey_run": "unknown",
+      "habitat_rule_version": "unknown",
+      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap."
+    }
+  ]
+}

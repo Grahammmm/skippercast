@@ -6,20 +6,83 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M0, candidate inventory
+## Current stage: M1, reproducible coverage baseline
 
-[surveys.json](../catalog/surveys.json) inventories previously inspected files
-and catalog leads. **Every row is a candidate**, not a usable survey or coverage
-claim. The [row schema](../catalog/survey.schema.json) validates the seed now;
-runtime ingestion and status transitions arrive in M1–M2. The existing
-[coverage ledger](../dist/data/central-coverage-ledger-v1.json) is a legacy
-research baseline, not the new tier ledger. Its chart-qualified counts cannot
-be relabelled as habitat coverage.
+The [candidate manifest](../catalog/surveys.json) contains 385 source products.
+The runtime loader validates its [row schema](../catalog/survey.schema.json),
+identities and lineage. Candidates remain unprocessed; metadata alone cannot
+promote them to usable survey coverage.
 
-M1 will introduce the shared `skippercast.seafloor` CLI. The published ledger
-will be `dist/data/seafloor-ledger.json`, with band area, tier areas, holds,
-surveys, timestamps and rule version by reach. Before that exists, new-tier
-areas are **unmeasured**, not zero. M0 processes no area and publishes no tiles.
+The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
+packages into **46 reaches**, approximately 10 km alongshore, ordered outward
+from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
+**55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
+Every cell starts at tier 0. Tier 1 and tier 2 are **0 km² in every reach** because
+original-survey adapters and habitat processing arrive in M2–M3. This does not
+mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
+remains a separate research receipt; it is not reclassified as new coverage.
+
+### Run and reproduce
+
+Install the pinned `requirements-survey.txt` and `requirements-test.txt`, then:
+
+```bash
+PYTHONPATH=src python -m skippercast.seafloor ledger --region central-coast
+PYTHONPATH=src python -m skippercast.seafloor ledger --region morro-bay --json
+PYTHONPATH=src python -m skippercast.seafloor reaches --region central-coast --fetch
+PYTHONPATH=src python -m skippercast.seafloor reaches --region central-coast
+PYTHONPATH=src python -m unittest discover -s tests -p 'test_seafloor_*.py'
+```
+
+`ledger` reads the committed artifact without GIS packages or network access.
+`reaches` builds the shared grid, even when a single regional view is requested.
+Network access requires `--fetch`. A repeat verifies cached hashes and returns
+without rebuilding when inputs, implementation and output hashes match. Do not
+edit the generated reach catalog or ledger: edit [scope configuration](../catalog/seafloor-scope.json)
+and rebuild. A later processed ledger cannot be overwritten by this baseline
+command. Future survey runs will reuse cell IDs `3310:<x-index>:<y-index>`.
+
+### What the denominator measures
+
+[NOAA BlueTopo](https://nauticalcharts.noaa.gov/data/bluetopo.html) is a compilation,
+not an independent original survey. We pin the 2026-09-24 tile scheme by SHA-256
+and select all 252 tile footprints intersecting the configured search box.
+Per-tile delivered dates, URLs and publisher checksums are in the ledger.
+Four bounded workers read elevation overviews at approximately 32 m spacing;
+no full native tile download is required. Local derived samples are separately
+hashed. Their source checksums are **identifiers, not claims that range reads
+verified the full source file**. An access failure stops publication.
+
+Sampled elevations from -100 m through less than 0 m form a **provisional** band,
+leaving a margin around 300 ft / 91.44 m. Classifications are reprojected with
+nearest-neighbor sampling to aligned 25 m EPSG:3310 pixels; 100 subpixels make
+one 250 m planning cell. The ledger counts only the band fraction, not every
+cell's full square. Fine valid samples replace coarse ones; no-data never
+replaces valid coverage or becomes zero-depth water. Overview averaging,
+compilation interpolation and mixed vertical datums can shift this approximate
+boundary. None of these reference pixels establishes a survey or habitat tier.
+
+Missing reference water stays outside the denominator and remains unknown.
+The 5.018125 km² of no-data within band-touching cells may include land; it is
+not a measured water gap. Cells with no sampled shallow water are not evidence
+that the original survey inventory has no coverage. Bathymetry acquisition and
+survey-valid masks must resolve that separately in M2–M5.
+
+The ownership spine comes from [Natural Earth's generalized coastline](https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-coastline/),
+whose “10m” means **1:10 million scale**, not 10 m resolution. Its geometry is
+[public domain](https://www.naturalearthdata.com/about/terms-of-use/); credit:
+Made with Natural Earth. The pinned ZIP was downloaded and hash-verified.
+This spine assigns work only: it is not a land mask, exact shoreline, legal
+boundary or navigation geometry. Explicit planning anchors divide existing
+regional packages; Monterey Bay's package includes the coast north to Pigeon
+Point. Bays follow the generalized coastal line. Cell centers are assigned by
+nearest alongshore projection and half-open intervals, so adjacent reaches
+cannot share a cell. Centers projecting to terminal endpoints are excluded.
+
+Full cell assignments, sample receipts and run hashes stay in ignored
+`var/seafloor/reference/`; only reach geometry and the small summary ledger are
+committed. There are no habitat tiles or front-end changes in M1. Next is M2:
+cache and open original USGS and NOAA BAG depth with format-specific adapters.
 
 ## Tiers and units
 
@@ -135,8 +198,8 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
-`point-arguello-conception`. The shared package will be `src/skippercast/seafloor/`;
-its commands are `reaches`, `add-survey`, `run`, `ledger`, `publish`.
+`point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches` and `ledger` are
+implemented; `add-survey`, `run` and `publish` arrive at their milestone gates.
 
 The later workflow runs weekly, on dispatch, and relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
