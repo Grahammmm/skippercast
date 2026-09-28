@@ -19,6 +19,10 @@ import shutil
 import sys
 import time
 
+
+def log_err(message):
+    print(message, file=sys.stderr, flush=True)
+
 import numpy as np
 
 from .fetch import download_all, latest_cycle, plan_step
@@ -118,7 +122,7 @@ def convert(model, name, cube, times):
     return cube
 
 
-def fetch_model(model, cycle, workers=16, log=print):
+def fetch_model(model, cycle, workers=16, log=log_err):
     """Download and decode every step -> (times, lats, lons, {field: cube}, sea mask)."""
     want = [(f.name, f.select) for f in model.fields]
     mask_key = '__mask__'
@@ -248,7 +252,7 @@ def build_one(model, output, previous, force, log):
     return manifest, 'built'
 
 
-def build(output, previous=None, models=None, force=False, log=print):
+def build(output, previous=None, models=None, force=False, log=log_err):
     output.mkdir(parents=True, exist_ok=True)
     status = {}
     for model_id in models or MODELS:
