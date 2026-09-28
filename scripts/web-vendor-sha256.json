@@ -1,6 +1,8 @@
 {
   "dist/og.png": "e6bd776636642b7347268832376d9d3969de0fcfbcd24876ff3516e986f4205c",
   "dist/skippercast-parker-preview.jpg": "88a1f2c3475e879cebb8dd2476fbaaa82342842cb835cf47ffea894582dc587c",
+  "dist/tiles/morro-bay-reef-outlines.pmtiles": "4023258baaf5b668266267d96f2a632bc207e12a60e138c2eb7ff268b2bbfd80",
+  "dist/tiles/socal-survey-habitat.pmtiles": "f83be49cddd7e114b2ec3f7c73d1edc9ff49462ac4cfe66df0b72f3db5824802",
   "dist/vendor/LEAFLET-LICENSE.txt": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb",
   "dist/vendor/images/layers-2x.png": "066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf",
   "dist/vendor/images/layers.png": "1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6",
@@ -8,5 +10,11 @@
   "dist/vendor/images/marker-icon.png": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
   "dist/vendor/images/marker-shadow.png": "264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da",
   "dist/vendor/leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6",
-  "dist/vendor/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"
+  "dist/vendor/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a",
+  "dist/vendor/maplibre-5.24.0/LICENSE.txt": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+  "dist/vendor/maplibre-5.24.0/maplibre-gl-csp-worker.js": "f950e7b15c49c8b9c7bb52136df2a2df2f6f03b83b8927774573fc98b067f7f0",
+  "dist/vendor/maplibre-5.24.0/maplibre-gl-csp.js": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95",
+  "dist/vendor/maplibre-5.24.0/maplibre-gl.css": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+  "dist/vendor/pmtiles-4.5.0/LICENSE.txt": "0371c38f338835f7fc13ed71176f3d92144e22c8b736a31cced57adbbeb647b3",
+  "dist/vendor/pmtiles-4.5.0/pmtiles.js": "caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c"
 }

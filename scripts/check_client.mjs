@@ -25,7 +25,8 @@ for (const name of assets.filter(n => n.endsWith('.js'))) {
   for (const [, spec] of text.matchAll(/(?:from\s*|import\s*\(\s*)["'](\.\/[^"']+)["']/g)) {
     imports.push(spec);
     const file = spec.slice(2).split('?')[0];
-    if (!present.has(file)) problems.push(`${name} imports ${spec} (missing)`);
+    const exists = present.has(file) || (file.includes('/') && await readFile(join(dir, file)).then(() => true, () => false));
+    if (!exists) problems.push(`${name} imports ${spec} (missing)`);
   }
 }
 if (problems.length) {
