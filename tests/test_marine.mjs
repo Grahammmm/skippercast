@@ -152,8 +152,11 @@ test("current speed is converted from the actual returned unit, including zero",
 });
 test("every model request has its own grid, UTC epochs, explicit units and eight days", () => {
   for (const m of MODELS) {
-    const url = new URL(modelURL(m));
+    const url = new URL(modelURL(m), "https://skippercast.com");
     assert.equal(url.searchParams.get("models"), m.id);
+    // Wind and waves come from SkipperCast's own NOAA/ECMWF service.
+    if (m.kind === "ocean") assert.equal(url.hostname, "marine-api.open-meteo.com");
+    else assert.equal(url.pathname, m.kind === "wind" ? "/api/om/v1/forecast" : "/api/om/v1/marine");
     assert.equal(url.searchParams.get("forecast_days"), "8");
     assert.equal(url.searchParams.get("timeformat"), "unixtime");
     assert.equal(url.searchParams.get("timezone"), "UTC");

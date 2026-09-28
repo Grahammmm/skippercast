@@ -1,6 +1,6 @@
-import {getRegion,localContext} from './region.js?v=8.14';
-import {esc,num,from,local} from './marine-charts.js?v=8.14';
-import {readConditions,angleBetween,distanceNm} from './marine-data.js?v=8.14';
+import {getRegion,localContext} from './region.js';
+import {esc,num,from,local} from './marine-charts.js';
+import {readConditions,angleBetween,distanceNm} from './marine-data.js';
 
 export function freshSource(source,now=Date.now()) {
   if(!source?.data || source.status!=='ok')return false;

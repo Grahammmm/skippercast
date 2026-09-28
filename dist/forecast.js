@@ -1,4 +1,4 @@
-import { getRegion } from "./region.js?v=8.14";
+import { getRegion } from "./region.js";
 // Pure data handling shared by the browser and offline checks. Missing is never calm.
 export const STATIONS = [
   {
@@ -24,24 +24,24 @@ export const WIND_MODELS = [
   {
     id: "ecmwf_ifs025",
     name: "ECMWF IFS",
-    meta: "https://api.open-meteo.com/data/ecmwf_ifs025/static/meta.json",
+    meta: "/api/om/data/ecmwf_ifs025/static/meta.json",
   },
   {
     id: "gfs_global",
     name: "NOAA GFS",
-    meta: "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
+    meta: "/api/om/data/gfs_global/static/meta.json",
   },
 ];
 export const WAVE_MODELS = [
   {
     id: "ecmwf_wam",
-    name: "ECMWF WAM 9 km",
-    meta: "https://marine-api.open-meteo.com/data/ecmwf_wam/static/meta.json",
+    name: "ECMWF WAM",
+    meta: "/api/om/data/ecmwf_wam/static/meta.json",
   },
   {
     id: "ncep_gfswave016",
     name: "NOAA GFS Wave 0.16°",
-    meta: "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
+    meta: "/api/om/data/ncep_gfswave016/static/meta.json",
   },
 ];
 export const TIMEZONE = getRegion().timezone;
@@ -88,8 +88,8 @@ export function forecastURLs() {
       .join(","),
   });
   return {
-    wind: `https://api.open-meteo.com/v1/forecast?${wind}`,
-    wave: `https://marine-api.open-meteo.com/v1/marine?${wave}`,
+    wind: `/api/om/v1/forecast?${wind}`,
+    wave: `/api/om/v1/marine?${wave}`,
   };
 }
 export function valueAt(forecast, model, variable, time, unit) {
