@@ -79,3 +79,5 @@ jobs:
         run: python scripts/check_web.py
       - name: Build Worker and public assets
         run: pnpm build
+      - name: Every published script, style and page is fingerprinted and resolves
+        run: node scripts/check_client.mjs
