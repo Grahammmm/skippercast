@@ -9,8 +9,6 @@ on:
         description: Rebuild even if the newest cycle is already published
         type: boolean
         default: false
-  push:
-    branches: [claude/forecast-pipeline]
 
 permissions:
   contents: write
