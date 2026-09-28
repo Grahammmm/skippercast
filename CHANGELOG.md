@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Boat profile: enter your boat (optionally looked up with AI and confirmed) and comfort and drift-control ratings scale to its length, weight, hull and layout. See [boat profile](docs/boat-profile.md).
 - Search plans for five Central Coast preview regions now include their surveyed habitat footprints (575 in total); they had been built before those inputs existed.
 - The live conditions feed is monitored hourly and reports when it stops refreshing.
 

@@ -1,6 +1,8 @@
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {assessTrip,alertDecision,alertMessage,dateInZone} from './alert-policy.js';
 import {verifyJobToken} from './job-auth.js';
+import {lookupBoat,validQuery} from './boat-lookup.js';
+import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
 const regions=REGIONS;
@@ -129,6 +131,17 @@ export default {async fetch(request,env){
     return fresh;
   }
   try{
+    // SkipperCast's own NOAA/ECMWF forecast service, answering Open-Meteo-style queries.
+    const om=path.match(/^\/api\/om\/(?:v1\/(forecast|marine)|data\/([a-z0-9_]+)\/static\/meta\.json)$/);
+    if(request.method==='GET'&&om){
+      const base=deployment.forecast_feed,store={
+        manifest:model=>FORECAST_MODELS[model]?readFeed(`${base}/${model}/manifest.json`):null,
+        tile:(model,key)=>FORECAST_MODELS[model]&&/^-?\d{1,3}_-?\d{1,3}$/.test(key)?readFeed(`${base}/${model}/tiles/${key}.json`):null};
+      try{
+        const data=om[1]?await modelAnswer(om[1],url.searchParams,store):await modelMeta(om[2],store);
+        const response=json(data);response.headers.set('Cache-Control','public,max-age=300');return response;
+      }catch(error){if(error instanceof QueryError)return json({error:true,reason:error.message},400);throw error;}
+    }
     if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
@@ -152,6 +165,22 @@ export default {async fetch(request,env){
     if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:'/signin-with-chatgpt?return_to=%2F%23forecast'});
     if(!owner)return json({error:'Sign in to save private trips or feedback'},401);
     if(request.method!=='GET'){requireOrigin(request);await budget(env,owner);}
+    if(path==='/api/boat/lookup'&&request.method==='POST'){
+      // AI spec lookup for the boat profile: signed-in only, 20 per person per day, cached by query.
+      if(!env.ANTHROPIC_API_KEY)return json({error:'AI boat lookup is not configured yet; enter your boat details by hand.'},503);
+      const query=validQuery((await body(request)).query);if(!query)throw Error('invalid boat name');
+      const key=new Request('https://skippercast.com/boat-lookup/'+await hash(query.toLowerCase()));
+      let cache=null;try{cache=await globalThis.caches?.open('skippercast-boat-lookups-v1');const hit=await cache?.match(key);if(hit)return json({...await hit.json(),cached:true});}catch{cache=null;}
+      const day=Math.floor(Date.now()/86400000),id=await hash(owner+':boat:'+day);
+      const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,(day+2)*86400).first();
+      if(row.count>20)return json({error:'Daily boat lookup limit reached; try again tomorrow or enter details by hand.'},429);
+      let result;
+      try{result=await lookupBoat(query,{apiKey:env.ANTHROPIC_API_KEY,model:env.BOAT_AI_MODEL});}
+      catch(error){console.error('Boat lookup failed',{reason:String(error.message).slice(0,200)});return json({error:'Could not look up that boat. Check the name or enter details by hand.'},502);}
+      const payload={query,...result,looked_up_at:new Date().toISOString()};
+      if(cache)try{await cache.put(key,new Response(JSON.stringify(payload),{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=2592000'}}));}catch{}
+      return json(payload);
+    }
     if(path==='/api/trips'&&request.method==='GET')return json({trips:(await db(env).prepare('SELECT * FROM trips WHERE owner=? ORDER BY date DESC LIMIT 50').bind(owner).all()).results,events:(await db(env).prepare('SELECT id,trip_id,kind,message,status,created_at FROM alert_events WHERE owner=? ORDER BY created_at DESC LIMIT 30').bind(owner).all()).results});
     if(path==='/api/trips'&&request.method==='POST'){
       const t=validateTrip(await body(request));const count=await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner,dateInZone(Date.now(),regions[t.region].timezone)).first();if(count.n>=20)return json({error:'Limit of 20 active trips'},409);

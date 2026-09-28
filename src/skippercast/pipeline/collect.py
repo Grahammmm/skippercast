@@ -18,6 +18,7 @@ from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
 
 from . import parsers
+from ..forecast import local as forecast_local
 from .regulations import regulatory_snapshot, watch_jobs
 from .settings import settings, previous_for_region
 from ..platform.contracts import REPO, public_url
@@ -31,12 +32,10 @@ DATASETS = {
     "chlorophyll": ("erdMH1chla1day_R2022NRT", ["chlorophyll"], 1, 96),
     "currents": ("ucsdHfrW6", ["water_u", "water_v", "number_of_sites", "hdop"], 1, 12),
 }
-MODEL_META = {
-    "gfs_global": "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
-    "ecmwf_ifs025": "https://api.open-meteo.com/data/ecmwf_ifs025/static/meta.json",
-    "ncep_gfswave016": "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
-    "ecmwf_wam": "https://marine-api.open-meteo.com/data/ecmwf_wam/static/meta.json",
-}
+# SkipperCast's own NOAA/ECMWF forecast tiles (skippercast.forecast) replace the
+# Open-Meteo API; responses keep Open-Meteo's shape so every consumer is unchanged.
+MODEL_META = {model: forecast_local.meta_url(model)
+              for model in ("gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam")}
 POINTS = [("Point Estero", 35.45, -121.02), ("Estero Bay", 35.36, -120.94),
           ("Point Buchon", 35.24, -120.94), ("Off Avila", 35.1, -120.82),
           ("Offshore central", 35.3, -121.5)]
@@ -227,14 +226,15 @@ def model_loader(model, points=None):
         params["length_unit"] = "imperial"
     else:
         params.update(wind_speed_unit="kn", temperature_unit="fahrenheit")
-    url = ("https://marine-api.open-meteo.com/v1/marine?" if wave else "https://api.open-meteo.com/v1/forecast?") + urlencode(params)
+    url = forecast_local.public_url(model, params)
     def load(client):
-        meta = client.get(MODEL_META[model], True)
+        meta = forecast_local.meta(model, client)
         initialized = meta.get("last_run_initialisation_time")
         if not isinstance(initialized, (float, int)):
             raise ValueError("Model initialization timestamp absent")
-        data = client.get(url, True)
-        if not isinstance(data, list) or len(data) != len(points):
+        data = forecast_local.sample(model, params, client)
+        data = data if isinstance(data, list) else [data]
+        if len(data) != len(points):
             raise ValueError("Forecast point count changed")
         for p in data:
             units, hourly = p.get("hourly_units", {}), p.get("hourly", {})
@@ -248,7 +248,7 @@ def model_loader(model, points=None):
                 raise ValueError("Forecast units changed")
         return {"model": model, "sample_at": stamp(datetime.fromtimestamp(initialized, timezone.utc)),
                 "meta": meta, "requested_points": [{"name": p[0], "latitude": p[1], "longitude": p[2]} for p in points],
-                "points": data, "note": "Regional model archive; shared with public weather views when fresh. Browser retains direct-provider recovery."}
+                "points": data, "note": "SkipperCast forecast tiles built from NOAA and ECMWF open data; the app samples the same tiles."}
     return url, load
 
 
@@ -302,7 +302,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     jobs.extend(watch_jobs(config['watches']))
     for model in config["model_ids"]:
         url, loader = model_loader(model, points)
-        jobs.append(("model-" + model, model + " via Open-Meteo", "forecast", url, 36, loader))
+        jobs.append(("model-" + model, model + " (SkipperCast NOAA/ECMWF tiles)", "forecast", url, 36, loader))
     def run(job):
         return source(*job, now=now, previous=old_sources.get(job[0]))
     with ThreadPoolExecutor(max_workers=4) as pool:

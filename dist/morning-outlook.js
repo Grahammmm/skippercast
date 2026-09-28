@@ -8,6 +8,7 @@ import {
   POINTS,
 } from "./marine-data.js";
 import { esc, local, num } from "./marine-charts.js";
+import { activeBoatFactors } from "./boat-handling.js";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",
@@ -18,31 +19,33 @@ const clamp = (n) => Math.round(Math.max(0, Math.min(10, n)) * 10) / 10;
 // Wind and wave burdens overlap in how a small boat moves. Charge the larger
 // burden in full, then 45% of the smaller one to retain a combined-sea penalty.
 const combinedBurden = (wind, wave) => Math.max(wind, wave) + 0.45 * Math.min(wind, wave);
-export function hourScores(c, other, species, checkedGust = Math.max(c.gust, other.gust)) {
+// `boat` scales the tuned thresholds (see boat-handling.js); no saved boat = the tuned values.
+export function hourScores(c, other, species, checkedGust = Math.max(c.gust, other.gust), boat = activeBoatFactors()) {
+  const S = boat.sea, W = boat.wind;
   const wind = Math.max(c.wind, other.wind),
     gust = checkedGust,
     sea = Math.max(c.sea.height, other.sea.height);
   const crossing =
-    c.secondary.height >= 1 &&
+    c.secondary.height >= 1 * S &&
     angleBetween(c.swell.from, c.secondary.from) >= 60
       ? 0.7
       : 0;
-  const short = c.chop.height >= 0.5 && c.chop.period <= 6 ? 0.8 : 0;
+  const short = c.chop.height >= 0.5 * S && c.chop.period <= boat.chopPeriod ? 0.8 : 0;
   // Combined significant seas already contain wind-wave energy. Penalizing
   // both heights in full made ordinary rough days collapse to 0/10.
   const wavePenalty = Math.max(
-    Math.max(0, sea - 1.5) * 0.7,
-    Math.max(0, c.chop.height - 0.4) * 0.9,
+    Math.max(0, sea - 1.5 * S) * 0.7 / S,
+    Math.max(0, c.chop.height - 0.4 * S) * 0.9 / S,
   );
-  const comfortWind = Math.max(0, wind - 4) * 0.22 + Math.max(0, gust - 7) * 0.1;
+  const comfortWind = Math.max(0, wind - 4 * W) * 0.22 / W + Math.max(0, gust - 7 * W) * 0.1 / W;
   const comfortScore = clamp(10 - combinedBurden(comfortWind, wavePenalty) - crossing - short);
   const mode=getRegion().target_options?.find(t=>t.id===species)?.control_mode || (["reef","lingcod","rockfish","halibut","dungeness"].includes(species)?'bottom':'water-column');
   const bottom=mode==='bottom';
   const controlWavePenalty = Math.max(
-    Math.max(0, sea - 2) * 0.45,
-    Math.max(0, c.chop.height - 0.4) * (bottom ? 1.1 : 0.8),
+    Math.max(0, sea - 2 * S) * 0.45 / S,
+    Math.max(0, c.chop.height - 0.4 * S) * (bottom ? 1.1 : 0.8) / S,
   );
-  const controlWind = Math.max(0, wind - 4) * (bottom ? 0.32 : 0.22) + Math.max(0, gust - 8) * 0.08;
+  const controlWind = Math.max(0, wind - 4 * W) * (bottom ? 0.32 : 0.22) / W + Math.max(0, gust - 8 * W) * 0.08 / W;
   const controlScore = clamp(10 - combinedBurden(controlWind, controlWavePenalty) - crossing - short);
   return {
     comfort: comfortScore,
@@ -91,11 +94,11 @@ export function rateHour(bundle, point, species, time, now=Date.now()) {
     // A limited outlook uses only observed forecast fields. Missing chop, swell or
     // gust is never substituted with zero; the score cannot clear the 8+ banner.
     const mode=getRegion().target_options?.find(t=>t.id===species)?.control_mode || (["reef","lingcod","rockfish","halibut","dungeness"].includes(species)?'bottom':'water-column');
-    const bottom=mode==='bottom', gust=gusts.length?Math.max(...gusts):null;
-    const comfortWind=Math.max(0,wind-4)*0.22+(gust===null?0:Math.max(0,gust-7)*0.1);
-    const controlWind=Math.max(0,wind-4)*(bottom?0.32:0.22)+(gust===null?0:Math.max(0,gust-8)*0.08);
-    const comfortScore=clamp(10-combinedBurden(comfortWind,Math.max(0,sea-1.5)*0.7));
-    const controlScore=clamp(10-combinedBurden(controlWind,Math.max(0,sea-2)*0.45));
+    const bottom=mode==='bottom', gust=gusts.length?Math.max(...gusts):null, {sea:S,wind:W}=activeBoatFactors();
+    const comfortWind=Math.max(0,wind-4*W)*0.22/W+(gust===null?0:Math.max(0,gust-7*W)*0.1/W);
+    const controlWind=Math.max(0,wind-4*W)*(bottom?0.32:0.22)/W+(gust===null?0:Math.max(0,gust-8*W)*0.08/W);
+    const comfortScore=clamp(10-combinedBurden(comfortWind,Math.max(0,sea-1.5*S)*0.7/S));
+    const controlScore=clamp(10-combinedBurden(controlWind,Math.max(0,sea-2*S)*0.45/S));
     result={comfort:comfortScore,control:mode==='boat-comfort'?null:controlScore,conditions:Math.min(6.9,mode==='boat-comfort'?comfortScore:Math.min(comfortScore,controlScore)),score_scope:mode==='boat-comfort'?'boat-comfort':'comfort-and-control',bite:null,overall:null};
     reasons.push("Limited estimate from available wind and seas; missing comparison or wave detail");
     if(!gusts.length) reasons.push("Gust forecast unavailable or inconsistent; no gust assumed");
