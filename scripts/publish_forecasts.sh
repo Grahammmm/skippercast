@@ -6,6 +6,7 @@ set -euo pipefail
 export PYTHONPATH=src
 out=var/forecasts
 pub=var/forecasts-published
+mkdir -p var
 
 if [ ! -d "$pub" ]; then
   if git ls-remote --exit-code --heads origin forecasts >/dev/null; then
