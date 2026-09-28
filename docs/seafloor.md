@@ -413,10 +413,19 @@ tier-2 km² before/after **by reach**, including explicit reasons for no increas
 | M0 | This document and candidate seed; offline schema and evidence checks. |
 | M1 | Seven Central Coast regions subdivided into reaches; disjoint grid, manifest loader and tier-0 ledger with band km². |
 | M2 | Cached original Morro USGS grid and Point Conception H11953 regular BAG usable in their own windows; second fetch downloads nothing. |
-| M3 | One Morro reach and one survey-seam reach produce mapped coverage, held graded candidates, run receipts and a no-op repeat; compare applicable legacy outlines at ≥50% overlap and explain misses. Tier 2 remains gated by M4 screening. |
+| M3 | One Morro reach and one survey-seam reach produce tier-1 and tier-2 outputs and run receipts, with a no-op repeat; compare applicable legacy outlines at ≥50% overlap and explain misses. Held candidates do not satisfy this acceptance check. |
 | M4 | Fresh legal screen, dispatchable publishing workflow, live Morro PMTiles and nonzero ledger; no MPA overlap. Open “Seafloor tiers layer in the app” issue for Claude. |
 | M5 | Batch remaining reaches; each has mapped coverage or explicit holds/true gaps, and usable fine sources yield habitat tiles. |
 | M6 | Move unused receipts to private storage and retire scripts only after consumer/workflow/test checks; app asset checks pass. |
+
+**M3 acceptance is outstanding.** PR #16 adds extraction and ranking, but its
+held candidates have not passed the legal screen required for tier 2. The
+prescribed milestone order puts that screen in M4, while requiring M3 acceptance
+on main before M4 starts. The proposed resolution is to move only whole-polygon
+MPA, federal-area and security-zone screening into M3, leaving publication and
+scheduling in M4. This proposal awaits the owner's decision; no tier rule or
+milestone acceptance requirement has been waived. Green CI and held candidates
+do not establish completion of M3 or permission to publish.
 
 M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `south-big-sur-san-simeon`, `cambria-san-simeon`, `morro-bay`,
