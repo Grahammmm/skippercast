@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from urllib.parse import urlencode
 from .collect import Client, source, stamp, model_loader, MODEL_META
+from ..forecast import local as forecast_local
 from .ocean import collect_ocean
 from .parsers import ndbc
 from .verification import ForecastCollectionDeferred, forecast_records, merge_records, observation_records, merge_observations, derived_wind_data, derived_wind_records, verify
@@ -66,7 +67,7 @@ def model_source(model,region,now,previous):
         previous=None
     url,loader=model_loader(model,points)
     def coherent(client):
-        result=loader(client);after=client.get(MODEL_META[model],True)
+        result=loader(client);after=forecast_local.meta(model,client)
         if any(result['meta'].get(k)!=after.get(k) for k in ('last_run_initialisation_time','last_run_modification_time')):raise ValueError('Model changed during collection')
         return result
     return source('model-'+model,model,'forecast',url,36,coherent,now,previous)

@@ -1,0 +1,61 @@
+name: Forecast tiles
+
+# Manual rebuild of SkipperCast's NOAA/ECMWF forecast tiles. The live-conditions
+# loop normally does this every 30 minutes; use this to force a rebuild.
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if the newest cycle is already published
+        type: boolean
+        default: false
+  push:
+    branches: [claude/forecast-pipeline]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-tiles
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-ocean.txt
+      - name: Install GRIB decoder
+        run: python -m pip install -r requirements-ocean.txt
+      - name: Build and publish tiles
+        env:
+          FORCE: ${{ inputs.force && '1' || '' }}
+        run: |
+          time bash scripts/publish_forecasts.sh
+          cat var/forecast-build.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Read the published tiles back like the daily pipeline does
+        env:
+          PYTHONPATH: src
+        run: |
+          sleep 60  # raw.githubusercontent.com caches for a few minutes
+          python - <<'PY'
+          from datetime import datetime, timezone
+          from skippercast.pipeline.collect import model_loader, Client
+          points = [("Estero Bay", 35.36, -120.94), ("Point Buchon", 35.24, -120.94)]
+          for model in ("gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam"):
+              url, load = model_loader(model, points)
+              result = load(Client(datetime.now(timezone.utc)))
+              hourly = result["points"][0]["hourly"]
+              key = "wind_speed_10m" if "wind_speed_10m" in hourly else "wave_height"
+              filled = sum(v is not None for v in hourly[key])
+              print(f"{model}: cycle {result['sample_at']}, {filled}/{len(hourly[key])} hours of {key}")
+              assert filled > 100, model
+          PY
