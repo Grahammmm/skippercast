@@ -1,7 +1,7 @@
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {assessTrip,alertDecision,alertMessage,dateInZone} from './alert-policy.js';
 import {verifyJobToken} from './job-auth.js';
-import {lookupBoat,validQuery} from './boat-lookup.js';
+import {lookupBoat,lookupSettings,validQuery} from './boat-lookup.js';
 import {useBucket,readBucketJSON,serveFeed} from './feeds.js';
 import {watchdog} from './watchdog.js';
 import {secure} from './security-headers.js';
@@ -143,6 +143,13 @@ export async function checkTrips(env,cursor=''){
   return {checked:trips.length,changes,delivered,held,in_app:inApp,next_cursor:trips.length===25?trips.at(-1).id:null};
 }
 
+// One structured line per boat lookup (billed tokens and searches, never the
+// query or owner), mirrored to Workers Analytics Engine when ANALYTICS is bound.
+function recordLookupUsage(env,usage,outcome){
+  const line={event:'boat_lookup',outcome,model:usage.model||null,turns:usage.turns||0,input_tokens:usage.input_tokens||0,output_tokens:usage.output_tokens||0,web_search_requests:usage.web_search_requests||0};
+  console.log(JSON.stringify(line));
+  try{env.ANALYTICS?.writeDataPoint({indexes:['boat_lookup'],blobs:[line.event,line.outcome,line.model||''],doubles:[line.input_tokens,line.output_tokens,line.web_search_requests,line.turns]});}catch{}
+}
 function bind(env){
   useBucket(env);
   identityProvider=env?.IDENTITY_PROVIDER??'chatgpt-sites';
@@ -231,17 +238,26 @@ async function route(request,env,ctx){
     if(!owner)return json({error:SIGN_IN[identityProvider]?'Sign in to save private trips or feedback':'Accounts are not available on this site yet',signIn:SIGN_IN[identityProvider]||null},401);
     if(request.method!=='GET'){requireOrigin(request);await budget(env,owner);}
     if(path==='/api/boat/lookup'&&request.method==='POST'){
-      // AI spec lookup for the boat profile: signed-in only, 20 per person per day, cached by query.
+      // AI spec lookup for the boat profile: signed-in only, 20 per person per day,
+      // a global daily ceiling, a kill switch, cached by query.
+      const settings=lookupSettings(env);
+      if(!settings.enabled)return json({error:'AI boat lookup is switched off for now; enter your boat details by hand.'},503);
       if(!env.ANTHROPIC_API_KEY)return json({error:'AI boat lookup is not configured yet; enter your boat details by hand.'},503);
       const query=validQuery((await body(request)).query);if(!query)throw Error('invalid boat name');
       const key=new Request('https://skippercast.com/boat-lookup/'+await hash(query.toLowerCase()));
       let cache=null;try{cache=await globalThis.caches?.open('skippercast-boat-lookups-v1');const hit=await cache?.match(key);if(hit)return json({...await hit.json(),cached:true});}catch{cache=null;}
       const day=Math.floor(Date.now()/86400000),id=await hash(owner+':boat:'+day);
-      const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,(day+2)*86400).first();
-      if(row.count>20)return json({error:'Daily boat lookup limit reached; try again tomorrow or enter details by hand.'},429);
-      let result;
-      try{result=await lookupBoat(query,{apiKey:env.ANTHROPIC_API_KEY,model:env.BOAT_AI_MODEL});}
-      catch(error){console.error('Boat lookup failed',{reason:String(error.message).slice(0,200)});return json({error:'Could not look up that boat. Check the name or enter details by hand.'},502);}
+      const count=async id=>(await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,(day+2)*86400).first()).count;
+      if(await count(id)>20)return json({error:'Daily boat lookup limit reached; try again tomorrow or enter details by hand.'},429);
+      if(await count('global:boat:'+day)>settings.globalDailyLimit){
+        console.warn(JSON.stringify({event:'boat_lookup_global_cap',day,limit:settings.globalDailyLimit}));
+        return json({error:'AI boat lookup is busy today; try again tomorrow or enter details by hand.'},429);
+      }
+      let result,outcome='ok';const usage={};
+      try{result=await lookupBoat(query,{apiKey:env.ANTHROPIC_API_KEY,model:settings.model,usage});}
+      catch(error){outcome='error';console.error('Boat lookup failed',{reason:String(error.message).slice(0,200)});}
+      finally{recordLookupUsage(env,usage,outcome);}
+      if(outcome!=='ok')return json({error:'Could not look up that boat. Check the name or enter details by hand.'},502);
       const payload={query,...result,looked_up_at:new Date().toISOString()};
       if(cache)try{await cache.put(key,new Response(JSON.stringify(payload),{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=2592000'}}));}catch{}
       return json(payload);

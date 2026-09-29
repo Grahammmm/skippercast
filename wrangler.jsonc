@@ -24,7 +24,14 @@
   ],
   // Never trust platform identity headers here: only ChatGPT Sites injects and
   // strips them. Private features stay off until SkipperCast has its own sign-in.
-  "vars": { "IDENTITY_PROVIDER": "none" },
+  // BOAT_LOOKUP_ENABLED "false" is the AI boat-lookup kill switch;
+  // BOAT_LOOKUP_GLOBAL_DAILY_LIMIT caps lookups across all owners per UTC day.
+  // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.js).
+  "vars": {
+    "IDENTITY_PROVIDER": "none",
+    "BOAT_LOOKUP_ENABLED": "true",
+    "BOAT_LOOKUP_GLOBAL_DAILY_LIMIT": "500"
+  },
   // Per-IP limits for the anonymous read endpoints (server/edge-cache.js):
   // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer
   // string unique to this account. Absent on ChatGPT Sites, where they no-op.

@@ -14,9 +14,11 @@ SkipperCast's comfort and drift-control ratings were tuned on one boat: a 23 ft,
 
 The Worker applies the same range checks as manual entry (`normalizeBoat`) and discards implausible values. Lookups:
 - need sign-in;
-- are limited to 20 per person per day;
+- are limited to 20 per person per day, and to `BOAT_LOOKUP_GLOBAL_DAILY_LIMIT` (default 500) across everyone per UTC day; either limit answers 429;
 - are cached for 30 days per boat name;
 - send only the typed boat name.
+
+**Cost controls.** Setting `BOAT_LOOKUP_ENABLED` to `"false"` switches lookups off (503, manual entry still works); on Cloudflare these vars live in `wrangler.jsonc`, so a dashboard edit lasts only until the next deploy — commit the change too. Each lookup logs one JSON line, `{"event":"boat_lookup","outcome","model","turns","input_tokens","output_tokens","web_search_requests"}`, with no query or owner. When a Workers Analytics Engine dataset is bound as `ANALYTICS`, the same numbers are written as a data point (blobs: event, outcome, model; doubles: input tokens, output tokens, searches, turns).
 
 **Setup:** add an `ANTHROPIC_API_KEY` secret in the Sites hosting settings. Without it, the lookup answers 503 and the sheet asks for manual entry. Web search costs $10 per 1,000 searches plus tokens; each lookup uses up to 4 searches.
 
