@@ -58,7 +58,7 @@ Use Python 3.12+ and the optional GIS environment pinned in `requirements-survey
 ```bash
 python -m pip install -r requirements-survey.txt
 python research/scripts/build_socal_targets.py --fetch
-PYTHONPATH=src python -m unittest discover -s tests -p test_bottom_targets.py -v
+python -m pytest tests/gis/test_bottom_targets.py -v
 PYTHONPATH=src python -m skippercast.platform candidate --file catalog/candidates/noaa-h13093.json
 PYTHONPATH=src python -m skippercast.platform candidate --file catalog/candidates/noaa-h13323.json
 ```

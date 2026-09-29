@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://skippercast.com/schemas/forecast-tile.schema.json",
   "title": "SkipperCast forecast tile",
-  "description": "<model>/tiles/<lat>_<lon>.json on the forecasts branch, written by forecast.build.write_tiles(). Each field is little-endian int16 (times x nlat x nlon), base64-encoded, missing = -32768, value = raw * scale; sea is a packed bit mask (nlat x nlon). Array lengths versus times/nlat/nlon are not expressible in JSON Schema and are checked by tests/test_schemas.py for the committed sample.",
+  "description": "<model>/tiles/<lat>_<lon>.json on the forecasts branch, written by forecast.build.write_tiles(). Each field is little-endian int16 (times x nlat x nlon), base64-encoded, missing = -32768, value = raw * scale; sea is a packed bit mask (nlat x nlon). Array lengths versus times/nlat/nlon are not expressible in JSON Schema and are checked by tests/contract/test_schemas.py for the committed sample.",
   "type": "object",
   "required": ["schema_version", "model", "cycle", "key", "times", "lat0", "lon0", "dlat", "dlon", "nlat", "nlon", "sea", "fields"],
   "properties": {

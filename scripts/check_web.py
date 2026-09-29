@@ -1,7 +1,7 @@
 """Validate the static publication, its reviewed data copies, and local assets.
 
 Claims recorded in audit receipts (no longer published with the app) are
-checked by tests/test_receipt_claims.py.
+checked by the claims pin test_receipt_claims.py under the research tests.
 """
 from pathlib import Path
 from html.parser import HTMLParser

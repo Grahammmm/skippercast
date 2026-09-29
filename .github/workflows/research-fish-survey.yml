@@ -20,7 +20,7 @@ jobs:
       - name: Install spatial readers
         run: python -m pip install pyproj==3.7.1 shapely==2.1.2
       - name: Check research-only sample-distance gates
-        run: python -m unittest tests.test_nos_seabed_samples -v
+        run: python -m unittest research.tests.gis.test_nos_seabed_samples -v
       - name: Query NOAA/NOS historic samples near Monterey research outlines
         run: >-
           python research/scripts/audit_nos_seabed_samples.py --scope monterey
@@ -41,7 +41,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check rounded-position and changed-source safeguards
-        run: python -m unittest tests.test_dataone_rov_spot_precision -v
+        run: python -m unittest research.tests.test_dataone_rov_spot_precision -v
       - name: Download original OPC DataONE ROV fish-count object
         run: |
           mkdir -p var/review
@@ -72,7 +72,7 @@ jobs:
       - name: Install pinned original-grid readers
         run: python -m pip install numpy==2.2.6 scipy==1.17.1 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2 pyshp==2.3.1
       - name: Check depth-datum and research-only gates
-        run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_estero_camera_block_gap tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial tests.test_estero_wgs84_direct tests.test_estero_wgs84_2008_character tests.test_estero_noaa_bag_catalog_gap -v
+        run: python -m unittest research.tests.gis.test_point_estero_original_pair research.tests.gis.test_usgs_estero_2012_original research.tests.test_usgs_source_registry_datum research.tests.gis.test_estero_research_blocks research.tests.gis.test_estero_camera_block_gap research.tests.gis.test_csumb_estero_2010_blocks research.tests.gis.test_estero_vdatum_spatial research.tests.gis.test_estero_wgs84_direct research.tests.gis.test_estero_wgs84_2008_character research.tests.gis.test_estero_noaa_bag_catalog_gap -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
           python research/scripts/audit_point_estero_original_pair.py --fetch
@@ -185,7 +185,7 @@ jobs:
       - name: Install pinned raster readers
         run: python -m pip install numpy==2.2.6 rasterio==1.4.3 pyproj==3.7.1 shapely==2.1.2 pyshp==2.3.1 pypdf==6.10.0
       - name: Verify original pair safeguards
-        run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_2009_csumb_products tests.test_point_buchon_a3_trackline_lineage tests.test_point_buchon_2009_habitat_crosssurvey tests.test_point_buchon_2009_vdatum_probe tests.test_point_buchon_2009_access_blocks tests.test_point_buchon_rov_cell_join tests.test_point_buchon_cmecs_blocks tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap tests.test_point_buchon_ncei_multibeam_lead tests.test_point_buchon_ncei_line_index tests.test_point_buchon_ncei_beam_overlap tests.test_point_buchon_caris_prefix tests.test_point_buchon_rov_access_blocks -v
+        run: python -m unittest research.tests.gis.test_point_buchon_original_pair research.tests.gis.test_point_buchon_2009_csumb_products research.tests.gis.test_point_buchon_a3_trackline_lineage research.tests.gis.test_point_buchon_2009_habitat_crosssurvey research.tests.gis.test_point_buchon_2009_vdatum_probe research.tests.gis.test_point_buchon_2009_access_blocks research.tests.gis.test_point_buchon_rov_cell_join research.tests.gis.test_point_buchon_cmecs_blocks research.tests.gis.test_point_buchon_noaa_catalog_gap research.tests.test_point_buchon_bluetopo_overlap research.tests.gis.test_point_buchon_ncei_multibeam_lead research.tests.gis.test_point_buchon_ncei_line_index research.tests.gis.test_point_buchon_ncei_beam_overlap research.tests.test_point_buchon_caris_prefix research.tests.gis.test_point_buchon_rov_access_blocks -v
       - name: Recheck original USGS bathymetry and video-supervised character with published ROV
         run: >-
           python research/scripts/audit_point_buchon_original_pair.py --fetch
@@ -322,7 +322,7 @@ jobs:
       - name: Install spatial join dependencies
         run: python -m pip install pyproj==3.7.1 shapely==2.1.2
       - name: Verify depth and protected-site gates
-        run: python -m unittest tests.test_central_rov_depth_evidence -v
+        run: python -m unittest research.tests.test_central_rov_depth_evidence -v
       - name: Recheck published ROV object and open-reference summary
         run: >-
           python research/scripts/build_central_rov_depth_evidence.py --fetch
@@ -339,7 +339,7 @@ jobs:
       - name: Verify biological proximity remains research-only
         env:
           PYTHONPATH: src:.
-        run: python -m unittest tests.test_monterey_rov_research_overlap -v
+        run: python -m unittest research.tests.gis.test_monterey_rov_research_overlap -v
       - name: Upload research-only ROV summary
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -358,7 +358,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify bounded public evidence contract
-        run: python -m unittest tests.test_ccfrp_area_evidence -v
+        run: python -m unittest research.tests.test_ccfrp_area_evidence -v
       - name: Recheck CCFRP release, license, objects and effort
         run: >-
           python research/scripts/build_ccfrp_area_evidence.py --fetch
@@ -381,7 +381,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify conservative band overlap handling
-        run: python -m unittest tests.test_monterey_300_research_queue -v
+        run: python -m unittest research.tests.test_monterey_300_research_queue -v
       - name: Rebuild unpublished Monterey depth-band priority
         run: >-
           python research/scripts/build_monterey_300_research_queue.py
@@ -406,7 +406,7 @@ jobs:
       - name: Install reviewed polygon reader
         run: python -m pip install shapely==2.1.2
       - name: Verify VDatum sentinel handling
-        run: python -m unittest tests.test_vdatum_samples -v
+        run: python -m unittest research.tests.gis.test_vdatum_samples -v
       - name: Recheck official NAVD88-to-MLLW point coverage
         run: >-
           python research/scripts/audit_vdatum_samples.py
@@ -428,7 +428,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify missing-value and block-location handling
-        run: python -m unittest tests.test_cdfw_crfs_rcgl -v
+        run: python -m unittest research.tests.test_cdfw_crfs_rcgl -v
       - name: Recheck CDFW source version and every RCGL block
         run: >-
           python research/scripts/audit_cdfw_crfs_rcgl.py
@@ -449,7 +449,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify all-species scope and missing-value handling
-        run: python -m unittest tests.test_cdfw_crfs_all -v
+        run: python -m unittest research.tests.test_cdfw_crfs_all -v
       - name: Recheck CDFW edition and every all-species block
         run: >-
           python research/scripts/audit_cdfw_crfs_all.py
@@ -470,7 +470,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify survey aggregation contract
-        run: python -m unittest tests.test_noaa_dismap_groundfish -v
+        run: python -m unittest research.tests.test_noaa_dismap_groundfish -v
       - name: Refresh recent NOAA trawl evidence with schema and count checks
         run: >-
           python research/scripts/audit_noaa_dismap_groundfish.py

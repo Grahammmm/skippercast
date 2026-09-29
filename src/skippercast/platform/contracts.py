@@ -155,7 +155,7 @@ def _region_shape(region):
 
     validate_region runs these only when jsonschema is unavailable (or
     SKIPPERCAST_VALIDATE=off), and to phrase the error when the schema rejects
-    a region. tests/test_region_contract.py proves the two agree on every
+    a region. tests/contract/test_region_contract.py proves the two agree on every
     committed region and on a bad input for each check.
     """
     if region.get("schema_version") != 1 or not ID.fullmatch(region.get("id", "")):

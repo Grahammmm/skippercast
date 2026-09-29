@@ -46,7 +46,7 @@ Install `requirements-ocean.txt`, then run:
 ```bash
 PYTHONPATH=src python scripts/refresh_regions.py intelligence --output var/conditions --previous-root var/previous-conditions
 PYTHONPATH=src python -m skippercast.platform.build
-PYTHONPATH=src python -m unittest discover -s tests
+python -m pytest
 pnpm install --frozen-lockfile
 node --test tests/test_*.mjs
 python scripts/check_web.py

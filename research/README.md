@@ -6,7 +6,7 @@ It records *how* evidence was checked. It is not part of the app, the Worker or
 the scheduled product feeds.
 
 - **Not product.** Nothing in `src/`, `server/`, `dist/` or `scripts/` imports or
-  runs anything here. `tests/test_research_boundary.py` enforces that, and also
+  runs anything here. `tests/contract/test_research_boundary.py` enforces that, and also
   fails if a new `audit_*`/`screen_*`/`triage_*`/… script is added to `scripts/`.
 - **Dated.** Each script pins the sources, hashes and review dates it was written
   against. A script that no longer matches today's sources is a finding to review,
@@ -29,6 +29,7 @@ the scheduled product feeds.
 | `lib/` | Helpers shared by several research scripts, so they need not import an unrelated audit for them (`lib/paths.py`: repository `ROOT`; `lib/receipts.py`: `RECEIPTS`, `locate()`). |
 | `catalog/` | Dated research pins and review bindings (source screens, triage profiles, sample tiles, hazard scopes) that only research scripts and tests read. Product catalogs stay in the top-level `catalog/`; `platform.build` never reads this folder. |
 | `receipts/` | Audit receipts (JSON/GeoJSON) that used to ship in `dist/data/`. `receipts/manifest.json` pins each file's sha256; regenerate it with `python -m research.lib.receipts` after a reviewed change. |
+| `tests/` | Claims pins and research-script tests, run by pytest in CI with the product suite (marker `claims`; `tests/gis/` also `gis`). See [tests/README.md](tests/README.md). |
 
 Research scripts may import product code (`skippercast.*`, and product tools in
 `scripts/` such as `scripts.discover_noaa_surveys`); the reverse is not allowed.
@@ -46,7 +47,7 @@ token and results uploaded as workflow artifacts:
 - `research-substrate.yml`, `research-fish-survey.yml` (formerly `monthly-*.yml`):
   the monthly source re-verifications, on their original schedules.
 
-`tests/test_research_boundary.py` fails if a product workflow references
+`tests/contract/test_research_boundary.py` fails if a product workflow references
 `research/` or a research workflow can publish.
 
 ## Receipts and their historical paths

@@ -16,7 +16,7 @@ Run locally using Python 3.12 or later:
 
 ```bash
 python scripts/collect_recent_intel.py --engine var/last30days-upstream/skills/last30days/scripts/last30days.py --output var/recent-intel
-python -m unittest discover -s tests -p 'test_recent_intel.py' -v
+python -m pytest tests/integration/test_recent_intel.py -v
 ```
 
 For another coast, add a watchlist region and region-specific place terms, run representative searches, inspect the source health and false positives, and then extend the reviewed observation adapter. The data contract remains the same while local sources and search terms change.

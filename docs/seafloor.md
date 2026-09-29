@@ -34,7 +34,7 @@ PYTHONPATH=src python -m skippercast.seafloor ledger --region central-coast
 PYTHONPATH=src python -m skippercast.seafloor ledger --region morro-bay --json
 PYTHONPATH=src python -m skippercast.seafloor reaches --region central-coast --fetch
 PYTHONPATH=src python -m skippercast.seafloor reaches --region central-coast
-PYTHONPATH=src python -m unittest discover -s tests -p 'test_seafloor_*.py'
+python -m pytest tests -k test_seafloor
 ```
 
 `ledger` reads the committed artifact without GIS packages or network access.
@@ -445,7 +445,7 @@ extract reusable logic without breaking their tests. See also the
 [regional pipeline](region-pipeline.md).
 
 Validate M0 offline with `python -m pip install -r requirements-test.txt`, then
-`python -m unittest discover -s tests -p test_seafloor_manifest.py`. The full CI
+`python -m pytest tests/contract/test_seafloor_manifest.py`. The full CI
 also runs this validation; core-only tests check inventory invariants without
 requiring GIS or JSON Schema packages. M0 changes no map UI or existing release
 gates. Revisit tier rules only with the owner's decision.

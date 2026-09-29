@@ -11,5 +11,5 @@ Planned here (guide §8): `disclaimers.md` (the canonical user-facing caveats), 
 Related:
 
 - [`catalog/sources.json`](../../catalog/sources.json) holds the machine-readable `rights.commercial_use` and `rights.attribution_required` fields.
-- [`tests/test_commercial_sources.py`](../../tests/test_commercial_sources.py) is the CI gate that keeps the register and the shipped assets in step.
+- [`tests/contract/test_commercial_sources.py`](../../tests/contract/test_commercial_sources.py) is the CI gate that keeps the register and the shipped assets in step.
 - [`NOTICE.md`](../../NOTICE.md) and [`docs/data-sources.md`](../data-sources.md) hold attribution and processing notes.

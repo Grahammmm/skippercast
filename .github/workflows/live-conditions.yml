@@ -72,8 +72,9 @@ jobs:
           cache-dependency-path: |
             requirements-ocean.txt
             requirements-survey.txt
-      - name: Install reviewed ocean data decoders
-        run: python -m pip install -r requirements-ocean.txt -r requirements-survey.txt -r requirements-publish.txt
+            requirements-test.txt
+      - name: Install reviewed ocean data decoders and test tools
+        run: python -m pip install -r requirements-ocean.txt -r requirements-survey.txt -r requirements-publish.txt -r requirements-test.txt
       - name: Test the live conditions pipeline
         env:
           PYTHONPATH: src

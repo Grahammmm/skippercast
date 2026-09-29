@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "note": "sha256 of every research receipt; tests/test_receipt_manifest.py fails on drift. Regenerate with: python -m research.lib.receipts",
+ "note": "sha256 of every research receipt; tests/contract/test_receipt_manifest.py fails on drift. Regenerate with: python -m research.lib.receipts",
  "files": {
   "arena-native-hard-terrain-review.json": "40f1929414ee54382e55501437a1e65a773e903cfa76cd954fa20674afb708d1",
   "bigcreek-lopez-original-300-research.json": "18a2913ae04f5d2946a30bd0c2a5c9e92cf1b7dd081af88a9eb8aee31f6b4f5e",

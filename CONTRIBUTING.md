@@ -21,7 +21,8 @@ Read [README.md](README.md), the [architecture](docs/architecture.md), and the [
 From the repository root:
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 -m pip install -e ".[test]"
+python3 -m pytest -m "not gis"
 PYTHONPATH=src python3 -m skippercast demo
 python3 scripts/check_repository.py
 ```

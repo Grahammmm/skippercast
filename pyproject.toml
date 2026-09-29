@@ -12,7 +12,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "SkipperCast contributors" }]
 dependencies = []
 
-# Optional extras mirror the pinned requirements-*.txt files exactly (tests/test_packaging.py
+# Optional extras mirror the pinned requirements-*.txt files exactly (tests/contract/test_packaging.py
 # fails when they drift). The core app and scheduled live feed need none of them.
 [project.optional-dependencies]
 # Scheduled ocean collectors: NetCDF/GRIB decoders (requirements-ocean.txt).
@@ -37,8 +37,9 @@ survey = [
 # Publishing feeds to Cloudflare R2 (requirements-publish.txt). jsonschema turns on
 # validate-on-write, so a feed that does not match schemas/ is never published.
 publish = ["boto3==1.43.103", "jsonschema==4.26.0"]
-# JSON Schema validation for seafloor manifests and schemas/ (requirements-test.txt).
-test = ["jsonschema==4.26.0"]
+# Test runner, JSON Schema validation for seafloor manifests and schemas/, and the
+# in-memory S3 used by the R2 publisher test (requirements-test.txt).
+test = ["jsonschema==4.26.0", "pytest==9.1.1", "moto==5.2.3"]
 # Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
 seafloor = ["skippercast[survey,publish,test]"]
 # Operating-system trust store for skippercast.http (optional; stdlib TLS otherwise).
@@ -60,3 +61,21 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E9", "F63", "F7", "F82"]
+
+# Python tests: docs/engineering/testing.md. Layers are directories; markers are
+# applied by tests/conftest.py and research/tests/conftest.py from the directory,
+# so a test never needs to declare them. `pythonpath` puts the repository root on
+# sys.path (for `tests`, `research` and product `scripts`); the skippercast package
+# itself comes from `pip install -e .`. Tests never edit sys.path.
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests", "research/tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+addopts = ["--strict-markers", "-ra"]
+xfail_strict = true
+markers = [
+    "gis: needs the survey stack (pip install -e '.[survey]'); every test under a gis/ directory",
+    "claims: pins a statement to committed research receipts or outputs; every test under research/tests/",
+    "network: reaches the network; skipped unless SKIPPERCAST_NETWORK=1 (CI is offline)",
+]

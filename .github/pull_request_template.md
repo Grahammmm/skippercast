@@ -8,8 +8,8 @@
 
 ## How it was checked
 
-- [ ] Full test suite (Python 3.13 + requirements-survey.txt)
-- [ ] `run_core_tests.py` (no GIS packages)
+- [ ] Full test suite (`SKIPPERCAST_REQUIRE_GIS=1 python -m pytest`, Python 3.13 + survey stack)
+- [ ] `python -m pytest -m "not gis"` (no GIS packages)
 - [ ] Generated files rebuilt from source, not hand-edited (`platform.build`, `build_search_plans.py`, `pnpm build`)
 - [ ] `check_repository.py` and `check_web.py`
 - [ ] Viewed in a browser (for app changes)

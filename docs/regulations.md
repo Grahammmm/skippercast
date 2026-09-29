@@ -63,7 +63,7 @@ The data branch publishes `regions/<id>/latest.json` and `regions/<id>/regulatio
      --jurisdiction california-southern --packet var/rules/new-review/packet.json \
      --decision jurisdictions/reviews/REVIEW.json
    PYTHONPATH=src python -m skippercast.platform.build
-   PYTHONPATH=src python -m unittest discover -s tests -p 'test_pipeline*.py'
+   python -m pytest tests -k test_pipeline
    node --test tests/test_regulations.mjs tests/test_southern_species.mjs
    ```
 

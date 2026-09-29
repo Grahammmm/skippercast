@@ -116,7 +116,7 @@ jobs:
       - name: Build pinned PMTiles encoder (v2.82.0)
         run: make -C var/tools/tippecanoe -j2
       - name: Test publication gates
-        run: python -m unittest tests.test_seafloor_publish -v
+        run: python -m unittest tests.gis.test_seafloor_publish -v
       - name: Build complete regional archives and verify R2 read-back
         id: publication
         env:
