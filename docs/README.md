@@ -31,6 +31,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 
 | Document | Purpose |
 | --- | --- |
+| [product/data-confidence.md](product/data-confidence.md) | **Start here for trust:** grades, coverage states, freshness, depth datums and withdrawn claims |
 | [data-sources.md](data-sources.md) | Source register: providers, dates, licences and processing |
 | [forecast-data.md](forecast-data.md) | SkipperCast's own NOAA and ECMWF forecast tiles: models, grids, licences |
 | [forecast-verification-quality.md](forecast-verification-quality.md) | Prospective verification of collected forecasts against observations |
