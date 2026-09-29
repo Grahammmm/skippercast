@@ -1,5 +1,6 @@
 import {build} from 'esbuild';
-import {readdir,readFile,mkdir,cp,rm} from 'node:fs/promises';
+import {readdir,readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
+import {headersFile} from '../server/security-headers.js';
 import {fingerprint} from './fingerprint.mjs';
 
 const regions={};const draftRegions=[];
@@ -15,6 +16,8 @@ for(const region of draftRegions){const asset=region.assets.regulations;if(asset
 // is renamed with the build's content hash and every reference is rewritten.
 // Pages are served by the Worker (no-store) from the stable paths below.
 const {buildId,shells}=await fingerprint('dist/client');
+// Cloudflare applies these to static assets it serves without running the Worker.
+await writeFile('dist/client/_headers',headersFile());
 
 await build({entryPoints:['server/worker.js'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',
   define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment),SHELLS:JSON.stringify(shells),BUILD_ID:JSON.stringify(buildId)},sourcemap:false});

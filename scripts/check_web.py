@@ -1,6 +1,7 @@
 """Validate the static publication, its reviewed data copies, and local assets."""
 from pathlib import Path
 from html.parser import HTMLParser
+import base64
 import hashlib
 import json
 import re
@@ -16,9 +17,51 @@ class AssetParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.refs = []
+        self.tags = []
 
     def handle_starttag(self, tag, attrs):
         self.refs.extend(value for key, value in attrs if key in {"src", "href"} and value)
+        self.tags.append((tag, dict(attrs)))
+
+    handle_startendtag = handle_starttag
+
+
+def sri_digest(integrity, data):
+    """True when one of the SRI tokens (sha256/384/512, base64) matches data."""
+    for token in integrity.split():
+        algorithm, _, value = token.partition("-")
+        if algorithm in {"sha256", "sha384", "sha512"} and value:
+            if base64.b64encode(hashlib.new(algorithm, data).digest()).decode() == value:
+                return True
+    return False
+
+
+def check_vendor_integrity(pinned):
+    """Every page that loads a vendored script or stylesheet pins it with SRI.
+
+    The integrity value must match both the file and scripts/web-vendor-sha256.json,
+    so a vendor update has to change all three together. Pages carry no meta CSP:
+    the policy is sent as a header from server/security-headers.js.
+    """
+    for path in WEB.glob("*.html"):
+        text = path.read_text()
+        assert 'http-equiv="Content-Security-Policy"' not in text, (path, "CSP belongs in server/security-headers.js")
+        parser = AssetParser()
+        parser.feed(text)
+        for tag, attrs in parser.tags:
+            ref = attrs.get("src") if tag == "script" else attrs.get("href") if tag == "link" else None
+            if not ref or not urlsplit(ref).path.startswith("vendor/"):
+                continue
+            if tag == "link" and attrs.get("rel") != "stylesheet":
+                continue
+            name = "dist/" + urlsplit(ref).path
+            integrity = attrs.get("integrity") or ""
+            assert integrity, (path, ref, "vendor asset needs an integrity attribute")
+            assert name in pinned, (path, ref, "vendor asset missing from scripts/web-vendor-sha256.json")
+            data = (ROOT / name).read_bytes()
+            # The pinned sha256 was checked against the file above, so a match here
+            # ties the tag, the file and the pin together.
+            assert sri_digest(integrity, data), (path, ref, "integrity does not match the file")
 
 
 def check_native_depth_review(name, scope):
@@ -256,8 +299,10 @@ def main():
     for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
         assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
     assert (WEB / "downloads/LICENSE.txt").read_bytes() == (ROOT / "LICENSE").read_bytes()
-    for name, digest in json.loads((ROOT / "scripts/web-vendor-sha256.json").read_text()).items():
+    pinned = json.loads((ROOT / "scripts/web-vendor-sha256.json").read_text())
+    for name, digest in pinned.items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
+    check_vendor_integrity(pinned)
     for path in WEB.rglob("*.html"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         parser = AssetParser()
@@ -288,7 +333,7 @@ def main():
     check_usgs_morro_report_datum()
     check_usgs_bathy_accuracy_statewide()
     check_h11876_sidescan_context()
-    print("Website entrypoints, asset references, vendor hashes, GPX, and canonical data copies passed.")
+    print("Website entrypoints, asset references, vendor hashes and SRI, GPX, and canonical data copies passed.")
 
 
 if __name__ == "__main__":
