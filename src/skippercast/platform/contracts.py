@@ -20,6 +20,8 @@ from ..util.time import stamp  # noqa: F401  (re-exported; callers import it fro
 ID = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 REPO = repo_root()
 PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"}
+# Redistribution (above) and commercial use are separate questions; see docs/legal/data-rights-register.md.
+COMMERCIAL_USE = {"allowed", "prohibited", "permission-required", "unknown"}
 
 
 def _unique(pairs):
@@ -115,6 +117,8 @@ def load_catalogs(root=REPO):
             raise ValueError(f"Invalid review status on {ident}")
         if source["review_status"] == "approved" and source["rights"]["license"] not in PUBLIC_RIGHTS:
             raise ValueError(f"Unresolved redistribution rights for {ident}")
+        if source["rights"].get("commercial_use") not in COMMERCIAL_USE or not isinstance(source["rights"].get("attribution_required"), bool):
+            raise ValueError(f"Missing commercial-use review for {ident}")
         if source.get("bounds"):
             bbox(source["bounds"])
     return needs, sources

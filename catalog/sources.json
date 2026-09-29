@@ -17,7 +17,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
-        "terms_url": "https://doi.org/10.5066/P9KBGELE"
+        "terms_url": "https://doi.org/10.5066/P9KBGELE",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -54,7 +57,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
-        "terms_url": "https://doi.org/10.5066/P9HEZNRO"
+        "terms_url": "https://doi.org/10.5066/P9HEZNRO",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -90,7 +96,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "USGS; CSUMB Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
-        "terms_url": "https://doi.org/10.5066/P9ZSTUK1"
+        "terms_url": "https://doi.org/10.5066/P9ZSTUK1",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "USGS release metadata states U.S. public domain, but the CSUMB Seafloor Mapping Lab co-produced the survey and its data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -126,7 +135,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "U.S. Geological Survey",
-        "terms_url": "https://pubs.usgs.gov/sim/3327/"
+        "terms_url": "https://pubs.usgs.gov/sim/3327/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -157,7 +169,10 @@
       "rights": {
         "license": "CC0-1.0",
         "attribution": "NOAA National Centers for Environmental Information",
-        "terms_url": "https://www.ngdc.noaa.gov/mgg/bathymetry/noshdb/"
+        "terms_url": "https://www.ngdc.noaa.gov/mgg/bathymetry/noshdb/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -188,7 +203,10 @@
       "rights": {
         "license": "CC0-1.0 recorded in inspected contributor tables",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; original contributor identified per cell",
-        "terms_url": "https://nauticalcharts.noaa.gov/learn/nbs.html"
+        "terms_url": "https://nauticalcharts.noaa.gov/learn/nbs.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. Check each contributor table before use."
       },
       "authenticity": {
         "basis": "Official NOAA NBS project and hash-pinned public NOAA tile scheme, GeoTIFF and contributor table",
@@ -219,7 +237,10 @@
       "rights": {
         "license": "U.S. public domain/CC0-1.0 product; check each contributor RAT for source restrictions",
         "attribution": "NOAA National Ocean Service, Office of Coast Survey; identify original contributors",
-        "terms_url": "https://nauticalcharts.noaa.gov/data/bluetopo_faq.html"
+        "terms_url": "https://nauticalcharts.noaa.gov/data/bluetopo_faq.html",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Product is public domain/CC0, but individual contributor rasters can carry restrictions; review each RAT before use."
       },
       "authenticity": {
         "basis": "Official NOAA dated tile scheme and SHA-256-verified original GeoTIFF and contributor RAT",
@@ -257,7 +278,10 @@
       "rights": {
         "license": "metadata-review-needed",
         "attribution": "NOAA Fisheries",
-        "terms_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer"
+        "terms_url": "https://maps.fisheries.noaa.gov/server/rest/services/WestCoast/USWestCoast_SeafloorInduration_v2017/MapServer",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Candidate; metadata rights review not done."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -294,7 +318,10 @@
       "rights": {
         "license": "dataset-review-needed",
         "attribution": "U.S. Geological Survey",
-        "terms_url": "https://www.usgs.gov/centers/pcmsc/science/california-seafloor-mapping-program-data-collection"
+        "terms_url": "https://www.usgs.gov/centers/pcmsc/science/california-seafloor-mapping-program-data-collection",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Candidate; dataset rights review not done."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -324,7 +351,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "California Coastal and Seafloor Mapping Project, California Department of Fish and Wildlife",
-        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/ds3091.html"
+        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/ds3091.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "CC BY 4.0 allows commercial use with attribution and indication of changes."
       },
       "authenticity": {
         "basis": "Official CDFW BIOS metadata and matching ArcGIS raster attribute table",
@@ -358,7 +388,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "CDFW Marine Region GIS Lab",
-        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS0582.html"
+        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS0582.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "CC BY 4.0 allows commercial use with attribution and indication of changes."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -392,7 +425,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA Fisheries West Coast Region",
-        "terms_url": "https://www.fisheries.noaa.gov/resource/map/groundfish-conservation-areas-maps-and-gis-data-west-coast-region"
+        "terms_url": "https://www.fisheries.noaa.gov/resource/map/groundfish-conservation-areas-maps-and-gis-data-west-coast-region",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary NOAA Fisheries GIS service with per-layer counts and linked 50 CFR text",
@@ -426,7 +462,10 @@
       "rights": {
         "license": "facts-only",
         "attribution": "California Department of Fish and Wildlife",
-        "terms_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations"
+        "terms_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Only concise public facts, hashes and links are published; facts are not copyrightable in the US. Credit CDFW as good practice."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -457,7 +496,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "Electronic Code of Federal Regulations",
-        "terms_url": "https://www.ecfr.gov/current/title-33/section-165.1155"
+        "terms_url": "https://www.ecfr.gov/current/title-33/section-165.1155",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -488,7 +530,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "NOAA; Open-Meteo access service",
-        "terms_url": "https://open-meteo.com/en/docs/gfs-api"
+        "terms_url": "https://open-meteo.com/en/docs/gfs-api",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Underlying model data allow commercial use. Retrieval now runs through SkipperCast's own NOAA/ECMWF tiles (pipeline/collect.py model_loader); this catalog record still names the Open-Meteo access service and should be updated."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -523,7 +568,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "ECMWF; Open-Meteo access service",
-        "terms_url": "https://open-meteo.com/en/docs/ecmwf-api"
+        "terms_url": "https://open-meteo.com/en/docs/ecmwf-api",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "ECMWF open data: CC BY 4.0 allows commercial use with attribution and indication of changes. Underlying model data allow commercial use. Retrieval now runs through SkipperCast's own NOAA/ECMWF tiles (pipeline/collect.py model_loader); this catalog record still names the Open-Meteo access service and should be updated."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -558,7 +606,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "NOAA; Open-Meteo access service",
-        "terms_url": "https://open-meteo.com/en/docs/marine-weather-api"
+        "terms_url": "https://open-meteo.com/en/docs/marine-weather-api",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Underlying model data allow commercial use. Retrieval now runs through SkipperCast's own NOAA/ECMWF tiles (pipeline/collect.py model_loader); this catalog record still names the Open-Meteo access service and should be updated."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -592,7 +643,10 @@
       "rights": {
         "license": "CC-BY-4.0",
         "attribution": "ECMWF; Open-Meteo access service",
-        "terms_url": "https://open-meteo.com/en/docs/marine-weather-api"
+        "terms_url": "https://open-meteo.com/en/docs/marine-weather-api",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "ECMWF open data: CC BY 4.0 allows commercial use with attribution and indication of changes. Underlying model data allow commercial use. Retrieval now runs through SkipperCast's own NOAA/ECMWF tiles (pipeline/collect.py model_loader); this catalog record still names the Open-Meteo access service and should be updated."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -627,7 +681,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA National Data Buoy Center",
-        "terms_url": "https://www.ndbc.noaa.gov/"
+        "terms_url": "https://www.ndbc.noaa.gov/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -659,7 +716,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA National Weather Service",
-        "terms_url": "https://www.weather.gov/documentation/services-web-api"
+        "terms_url": "https://www.weather.gov/documentation/services-web-api",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -691,7 +751,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA Center for Operational Oceanographic Products and Services",
-        "terms_url": "https://api.tidesandcurrents.noaa.gov/api/prod/"
+        "terms_url": "https://api.tidesandcurrents.noaa.gov/api/prod/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -722,7 +785,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "IOOS; Scripps HFRNet; NOAA CoastWatch",
-        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/ucsdHfrW6/index.html"
+        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/ucsdHfrW6/index.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Dataset metadata permits free use and redistribution."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -765,7 +831,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NASA JPL; NOAA CoastWatch",
-        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.html"
+        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NASA/JPL metadata permits free use and redistribution; acknowledgment requested."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -807,7 +876,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NASA GSFC; NOAA CoastWatch",
-        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/erdMH1chla1day_R2022NRT/index.html"
+        "terms_url": "https://coastwatch.pfeg.noaa.gov/erddap/info/erdMH1chla1day_R2022NRT/index.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NASA Earth science data policy: open use; citation requested."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -848,7 +920,10 @@
       "rights": {
         "license": "dataset-review-needed",
         "attribution": "Regional IOOS associations and model operators",
-        "terms_url": "https://www.cencoos.org/"
+        "terms_url": "https://www.cencoos.org/",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Candidate; operator terms not reviewed."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -878,7 +953,10 @@
       "rights": {
         "license": "ODbL-1.0",
         "attribution": "The Nature Conservancy and Kelpwatch contributors",
-        "terms_url": "https://kelpwatch.org/terms"
+        "terms_url": "https://kelpwatch.org/terms",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Candidate; ODbL share-alike and site terms not reviewed."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -910,7 +988,10 @@
       "rights": {
         "license": "dataset-review-needed",
         "attribution": "NOAA Fisheries Northwest Fisheries Science Center",
-        "terms_url": "https://www.fisheries.noaa.gov/resource/data/fishery-resource-analysis-and-monitoring-division-fram-data-warehouse"
+        "terms_url": "https://www.fisheries.noaa.gov/resource/data/fishery-resource-analysis-and-monitoring-division-fram-data-warehouse",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Candidate; dataset rights review not done."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -940,7 +1021,10 @@
       "rights": {
         "license": "dataset-review-needed",
         "attribution": "Ocean Biodiversity Information System; original data publishers",
-        "terms_url": "https://obis.org/manual/access/"
+        "terms_url": "https://obis.org/manual/access/",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Candidate; OBIS records carry per-dataset licences, some CC BY-NC."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -970,7 +1054,10 @@
       "rights": {
         "license": "dataset-review-needed",
         "attribution": "Pacific States Marine Fisheries Commission; state survey programs",
-        "terms_url": "https://www.recfin.org/"
+        "terms_url": "https://www.recfin.org/",
+        "commercial_use": "unknown",
+        "attribution_required": false,
+        "commercial_note": "Candidate; terms not reviewed."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1000,7 +1087,10 @@
       "rights": {
         "license": "facts-only",
         "attribution": "Local charter operators; SoCalFishReports",
-        "terms_url": "https://www.socalfishreports.com/"
+        "terms_url": "https://www.socalfishreports.com/",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Dated catch facts and links only; the publisher's terms of use, automated collection and compilation questions have not been reviewed for a paid product."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1034,7 +1124,10 @@
       "rights": {
         "license": "facts-only",
         "attribution": "Individual charter operators",
-        "terms_url": "https://www.morrobaylanding.com/"
+        "terms_url": "https://www.morrobaylanding.com/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Vessel and operator names used only as screening facts with links."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1065,7 +1158,10 @@
       "rights": {
         "license": "CC0-1.0",
         "attribution": "NOAA Office for Coastal Management; USCG",
-        "terms_url": "https://hub.marinecadastre.gov/pages/vesseltraffic"
+        "terms_url": "https://hub.marinecadastre.gov/pages/vesseltraffic",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1096,7 +1192,10 @@
       "rights": {
         "license": "CC-BY-NC-4.0",
         "attribution": "Global Fishing Watch",
-        "terms_url": "https://globalfishingwatch.org/data-download/datasets/public-fishing-effort"
+        "terms_url": "https://globalfishingwatch.org/data-download/datasets/public-fishing-effort",
+        "commercial_use": "prohibited",
+        "attribution_required": true,
+        "commercial_note": "CC BY-NC 4.0: non-commercial use only. License it from Global Fishing Watch or remove it before paid launch."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1127,7 +1226,10 @@
       "rights": {
         "license": "facts-only",
         "attribution": "Region's harbor authority and USCG district",
-        "terms_url": "https://www.morrobayca.gov/144/Harbor"
+        "terms_url": "https://www.morrobayca.gov/144/Harbor",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Only concise public facts, hashes and links are published; facts are not copyrightable in the US."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1159,7 +1261,10 @@
       "rights": {
         "license": "unresolved",
         "attribution": "CSUMB Seafloor Mapping Lab; California Coastal Conservancy",
-        "terms_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html"
+        "terms_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block05_mb.html",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "Restricted and not published; grid metadata leaves use constraints to CSUMB and the California Coastal Conservancy."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1189,7 +1294,10 @@
       "rights": {
         "license": "permission-required",
         "attribution": "Ecotrust; CDFW",
-        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html"
+        "terms_url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS1091.html",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "Restricted and not published; metadata directs users to contact Ecotrust."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1218,7 +1326,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA / IOOS HF radar 1 km and 6 km",
-        "terms_url": "https://dods.ndbc.noaa.gov/thredds/catalog/hfradar.html"
+        "terms_url": "https://dods.ndbc.noaa.gov/thredds/catalog/hfradar.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
@@ -1248,7 +1359,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA West Coast Operational Forecast System",
-        "terms_url": "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html"
+        "terms_url": "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
@@ -1279,7 +1393,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA NCEP Global Ensemble Forecast System (GEFS)",
-        "terms_url": "https://registry.opendata.aws/noaa-gefs/"
+        "terms_url": "https://registry.opendata.aws/noaa-gefs/",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NOAA GEFS members are U.S. public domain, fetched directly from NOAA's AWS Open Data bucket (built by src/skippercast/forecast/ensemble.py)."
       },
       "authenticity": {
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
@@ -1309,7 +1426,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA GEFS Wave exceedance probabilities",
-        "terms_url": "https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml"
+        "terms_url": "https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
@@ -1338,7 +1458,10 @@
       "rights": {
         "license": "facts-only",
         "attribution": "CDFW Southern California artificial reef guide (2001)",
-        "terms_url": "https://wildlife.ca.gov/Conservation/Marine/Artificial-Reefs/Guide"
+        "terms_url": "https://wildlife.ca.gov/Conservation/Marine/Artificial-Reefs/Guide",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Only concise public facts, hashes and links are published; facts are not copyrightable in the US."
       },
       "authenticity": {
         "basis": "Primary agency publication",
@@ -1374,7 +1497,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA Southern California Groundfish Exclusion Areas",
-        "terms_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas"
+        "terms_url": "https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary agency publication",
@@ -1409,7 +1535,10 @@
         "license": "public-domain",
         "attribution": "NOAA/NOS/NCCOS/CCMA/Biogeography Branch; Moss Landing Marine Laboratory, MMS and UCSB",
         "terms_url": "https://www.fisheries.noaa.gov/inport/item/39578",
-        "scope": "Public NOAA data; attribution required by source use constraints"
+        "scope": "Public NOAA data; attribution required by source use constraints",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
@@ -1443,7 +1572,10 @@
         "license": "CC0-1.0",
         "attribution": "Sweeney, E.; Costa, B.; Caldow, C. (2025), NOAA NCEI accession 0304093; NOAA, USGS, MBARI, CSUMB and OET surveys",
         "terms_url": "https://www.ncei.noaa.gov/data/oceans/archive/arc0237/0304093/1.1/data/0-data/4CLCAE-ISO-19115-2.xml",
-        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata"
+        "scope": "CC0-1.0; expressly dedicated in the archive ISO metadata",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required. The archive dedicates the merged product, including CSUMB-contributed surveys, to CC0."
       },
       "authenticity": {
         "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
@@ -1481,7 +1613,10 @@
         "license": "facts-only",
         "attribution": "California Department of Fish and Wildlife; imagery and processing by Sandoval & Associates LLC",
         "terms_url": "https://filelib.wildlife.ca.gov/Public/R7_MR/BIOLOGICAL/Kelp/",
-        "scope": "Public CDFW distribution with CDFW attribution; source bundled use constraints retained in raw receipt"
+        "scope": "Public CDFW distribution with CDFW attribution; source bundled use constraints retained in raw receipt",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "Public CDFW distribution; credit CDFW and the imagery contractor."
       },
       "authenticity": {
         "basis": "Original files obtained from the primary publisher; content hashes and metadata pinned in regional habitat-sources.json. Derived factual habitat geometry retains publisher attribution.",
@@ -1515,7 +1650,10 @@
         "license": "CC0-1.0",
         "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13093.html",
         "redistribution_reviewed": true,
-        "attribution": "NOAA Ship Rainier; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+        "attribution": "NOAA Ship Rainier; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Original NOAA/NOS survey file, embedded metadata and descriptive report reviewed. Native arrays and transforms independently compared with GDAL.",
@@ -1560,7 +1698,10 @@
         "license": "CC0-1.0",
         "terms_url": "https://www.ngdc.noaa.gov/nos/H12001-H14000/H13323.html",
         "redistribution_reviewed": true,
-        "attribution": "NOAA Ship Fairweather; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI"
+        "attribution": "NOAA Ship Fairweather; NOAA/NOS Pacific Hydrographic Branch; NOAA NCEI",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "CC0 1.0 dedication; commercial use allowed. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Original NOAA/NOS survey file, embedded metadata and descriptive report reviewed. Native arrays and transforms independently compared with GDAL.",
@@ -1604,7 +1745,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA Climate Prediction Center",
-        "terms_url": "https://www.weather.gov/disclaimer"
+        "terms_url": "https://www.weather.gov/disclaimer",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary NOAA publisher; issued advisory date and status parsed from the document",
@@ -1634,7 +1778,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA CoastWatch / OSPO",
-        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-geo-polar-blended-global-sea-surface-temperature-analysis-level-4.html"
+        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-geo-polar-blended-global-sea-surface-temperature-analysis-level-4.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1670,7 +1817,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA NESDIS STAR / CoastWatch",
-        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-msl12-ocean-color-near-real-time-viirs-single-sensor-snpp-and-noaa-20.html"
+        "terms_url": "https://coastwatch.noaa.gov/cwn/products/noaa-msl12-ocean-color-near-real-time-viirs-single-sensor-snpp-and-noaa-20.html",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1706,7 +1856,10 @@
       "rights": {
         "license": "public-domain",
         "attribution": "NOAA IOOS Surface Currents Program / NDBC",
-        "terms_url": "https://ioos.noaa.gov/project/hf-radar/"
+        "terms_url": "https://ioos.noaa.gov/project/hf-radar/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
       },
       "authenticity": {
         "basis": "Primary publisher or official dataset documentation",
@@ -1727,6 +1880,141 @@
         "dataset": "hfradar_uswc_6km",
         "max_age_hours": 12
       }
+    },
+    {
+      "id": "usgs-cape-mendocino",
+      "name": "Offshore Cape Mendocino bathymetry and seafloor character",
+      "provider": "U.S. Geological Survey",
+      "needs": [
+        "bathymetry",
+        "substrate"
+      ],
+      "documentation_url": "https://doi.org/10.5066/P9U0SUGL",
+      "adapter": "geotiff",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-28",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "U.S. Geological Survey",
+        "terms_url": "https://doi.org/10.5066/P9U0SUGL",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. government work; public domain. Credit is requested, not legally required."
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Humboldt Bay–Cape Mendocino survey-habitat context; pinned in catalog/usgs-seafloor-sources.json.",
+      "limitations": [
+        "Seafloor-character class is habitat context, not a fish observation or chart depth."
+      ],
+      "allowed_hosts": [
+        "doi.org",
+        "www.sciencebase.gov",
+        "cmgds.marine.usgs.gov"
+      ]
+    },
+    {
+      "id": "usgs-csmp-seafloor-character",
+      "name": "California State Waters Map Series seafloor character (DS 781)",
+      "provider": "USGS; CSUMB Seafloor Mapping Lab; California Seafloor Mapping Program partners",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://pubs.usgs.gov/ds/781/",
+      "adapter": "geotiff",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-28",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab",
+        "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "commercial_use": "permission-required",
+        "attribution_required": true,
+        "commercial_note": "Only products whose USGS metadata states public domain and free redistribution are used, but CSMP data were produced with CSUMB, whose data-library policy requires express permission for for-profit use. Confirm with CSUMB (or counsel) before paid launch."
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Per-block original products reviewed in catalog/usgs-ds781-*.json; used for Monterey, Santa Cruz, Point Conception, Point Reyes, Bodega and Fort Ross survey-habitat context.",
+      "limitations": [
+        "Structured vertical datum is blank or not MLLW for most blocks; class polygons are context only.",
+        "Metadata rights vary by product; each block needs its own review."
+      ],
+      "allowed_hosts": [
+        "pubs.usgs.gov",
+        "cmgds.marine.usgs.gov"
+      ]
+    },
+    {
+      "id": "pmep-hapc",
+      "name": "PMEP West Coast nearshore rocky-reef HAPC compilation",
+      "provider": "Pacific Marine and Estuarine Fish Habitat Partnership; Pacific States Marine Fisheries Commission",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://gis.psmfc.org/server/rest/services/PMEP/West_Coast_Nearshore_CMECS_Substrate_Habitat/MapServer/1",
+      "adapter": "arcgis-feature-query",
+      "review_status": "candidate",
+      "reviewed_at": "2026-09-28",
+      "rights": {
+        "license": "unreviewed",
+        "attribution": "Pacific Marine and Estuarine Fish Habitat Partnership (PMEP)",
+        "terms_url": "https://gis.psmfc.org/server/rest/services/PMEP/West_Coast_Nearshore_CMECS_Substrate_Habitat/MapServer/1",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Published as habitat context for Big Sur regions, but no licence or terms of use were reviewed. Confirm terms with PSMFC/PMEP before paid launch."
+      },
+      "authenticity": {
+        "basis": "Public agency map service",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Big Sur and South Big Sur–San Simeon rocky-reef HAPC polygons.",
+      "limitations": [
+        "Compiled broad depth zones; no qualified local depth.",
+        "Rights not reviewed; see docs/legal/data-rights-register.md."
+      ],
+      "allowed_hosts": [
+        "gis.psmfc.org"
+      ]
+    },
+    {
+      "id": "open-meteo-api",
+      "name": "Open-Meteo forecast, marine and ensemble APIs (free tier)",
+      "provider": "Open-Meteo",
+      "needs": [
+        "wind-forecast",
+        "wave-forecast",
+        "wind-ensemble",
+        "surface-currents"
+      ],
+      "documentation_url": "https://open-meteo.com/en/terms",
+      "adapter": "open-meteo",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-28",
+      "rights": {
+        "license": "CC-BY-4.0",
+        "attribution": "Weather data by Open-Meteo.com",
+        "terms_url": "https://open-meteo.com/en/terms",
+        "commercial_use": "prohibited",
+        "attribution_required": true,
+        "commercial_note": "API data are CC BY 4.0, but the free API access terms are non-commercial. Replace (GEFS tiles, NOAA currents) or buy a commercial API plan before paid launch."
+      },
+      "authenticity": {
+        "basis": "Official provider documentation",
+        "transport": "HTTPS to fixed provider endpoints"
+      },
+      "coverage_note": "Access service, not an independent model. Still called by the GEFS ensemble, the legacy monitor and the browser's ocean-current request.",
+      "limitations": [
+        "Free endpoint is non-commercial with request limits."
+      ],
+      "allowed_hosts": [
+        "api.open-meteo.com",
+        "marine-api.open-meteo.com",
+        "ensemble-api.open-meteo.com"
+      ]
     }
   ]
 }
