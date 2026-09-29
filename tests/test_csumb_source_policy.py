@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_csumb_source_policy import ARCHIVES, audit
+from research.scripts.audit_csumb_source_policy import ARCHIVES, audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

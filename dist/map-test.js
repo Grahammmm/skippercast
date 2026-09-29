@@ -53,7 +53,7 @@ map.on('mouseenter', 'reef-fill', () => { map.getCanvas().style.cursor = 'pointe
 map.on('mouseleave', 'reef-fill', () => { map.getCanvas().style.cursor = ''; });
 
 window.__maplibre = map;  // for inspection in tests
-// Measurement hooks for scripts/measure_map_test.mjs.
+// Measurement hooks for research/scripts/measure_map_test.mjs.
 map.once('idle', () => {
   window.__mapTest = {engine: 'maplibre', readyMs: Math.round(performance.now() - started),
     reefs: map.queryRenderedFeatures({layers: ['reef-fill']}).length};

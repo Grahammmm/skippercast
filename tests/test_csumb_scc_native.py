@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.audit_csumb_scc_native import audit
+from research.scripts.audit_csumb_scc_native import audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

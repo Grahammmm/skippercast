@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.merge_vr_native_depth_reviews import merge
+from research.scripts.merge_vr_native_depth_reviews import merge
 
 
 ROOT = Path(__file__).resolve().parents[1]

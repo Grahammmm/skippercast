@@ -32,7 +32,7 @@ Primary ecology sources: [CDFW fish life histories](https://wildlife.ca.gov/Cons
 
 ## New soft-bottom geometry
 
-`scripts/build_habitat_regions.py` replaces the earlier isolated search circles with contiguous surveyed sediment outlines. It uses the same public USGS Point Buchon, Morro Bay and Point Estero releases in [the source register](data-sources.md), excluding Cambria. The published layer contains five halibut regions and seven Dungeness regions; these are habitat candidates, not catch locations.
+`research/scripts/build_habitat_regions.py` replaces the earlier isolated search circles with contiguous surveyed sediment outlines. It uses the same public USGS Point Buchon, Morro Bay and Point Estero releases in [the source register](data-sources.md), excluding Cambria. The published layer contains five halibut regions and seven Dungeness regions; these are habitat candidates, not catch locations.
 
 Each 10-m output cell must have full native bathymetry and classification coverage. Native minimum and maximum elevations enforce depths of 25–100 ft MLLW for halibut and 25–195 ft for crab; native minimum and maximum substrate class must both equal 1 (fine-grained soft flat sediment). The September 16 closure screen receives a 505-m buffer. The mask is eroded by 20 m, then outlined, buffered inward another 12 m and simplified by 8 m. Connected pieces smaller than 0.2 km² are removed. Holes and gaps remain; no convex hulls bridge rock, deeper water, missing coverage or closures. Coordinates are rounded to six decimals, finer than source resolution.
 

@@ -5,7 +5,7 @@ from pyproj import Transformer
 from shapely.geometry import box, mapping
 from shapely.ops import transform
 
-from scripts.audit_point_buchon_private_block_access import audit
+from research.scripts.audit_point_buchon_private_block_access import audit
 
 
 class PointBuchonPrivateBlockAccessTest(unittest.TestCase):

@@ -65,7 +65,8 @@ configs/              Public example configuration; no delivery credentials
 atlas/                Dated, attributed public data and ready-to-import exports
 docs/                 Quickstart, workflow, scoring, methods, and source rights
 tests/                Offline tests for missing evidence, alert state, and exports
-scripts/              Repository checks used locally and in CI
+scripts/              Product tools: build, deploy, publish, checks used locally and in CI
+research/             Dated audit and research tooling (not product; see research/README.md)
 .github/workflows/    Offline CI and daily public-evidence collection
 ```
 

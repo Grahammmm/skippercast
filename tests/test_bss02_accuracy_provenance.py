@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_bss02_accuracy_provenance import inspect
+from research.scripts.audit_bss02_accuracy_provenance import inspect
 
 
 ROOT = Path(__file__).resolve().parents[1]

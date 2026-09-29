@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from scripts.audit_monterey_vdatum_probes import parse, request_url
+from research.scripts.audit_monterey_vdatum_probes import parse, request_url
 
 
 class VDatumProbeTests(unittest.TestCase):

@@ -5,8 +5,8 @@ from pathlib import Path
 import tarfile
 import unittest
 
-from scripts.audit_bss03_caris_acquisition import PREFIX_BYTES, URL, inspect, inspect_prefix
-from scripts.audit_bss03_datum_footprint import compile_review, stable
+from research.scripts.audit_bss03_caris_acquisition import PREFIX_BYTES, URL, inspect, inspect_prefix
+from research.scripts.audit_bss03_datum_footprint import compile_review, stable
 
 
 ROOT = Path(__file__).resolve().parents[1]

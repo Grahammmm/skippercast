@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_nbs_modeling_tile import sha256
+from skippercast.seafloor.io import sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]

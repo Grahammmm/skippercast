@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts import audit_point_buchon_a3_trackline_lineage as audit
+from research.scripts import audit_point_buchon_a3_trackline_lineage as audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

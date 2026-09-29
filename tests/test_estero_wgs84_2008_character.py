@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_estero_wgs84_2008_character import checked_offsets, disk
+from research.scripts.audit_estero_wgs84_2008_character import checked_offsets, disk
 
 
 ROOT = Path(__file__).resolve().parents[1]

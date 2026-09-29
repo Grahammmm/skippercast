@@ -3,7 +3,7 @@ import unittest
 from pyproj import Transformer
 from shapely.geometry import Point
 
-from scripts.audit_nos_seabed_samples import audit
+from research.scripts.audit_nos_seabed_samples import audit
 
 
 class NosSeabedGapAuditTest(unittest.TestCase):

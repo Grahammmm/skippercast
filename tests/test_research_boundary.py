@@ -1,0 +1,64 @@
+"""Research tooling stays out of the product path (engineering audit P1-02).
+
+research/ holds dated audit, screening and discovery scripts. Product code must
+never import or run it, and new research scripts must not land in scripts/.
+"""
+import ast
+from pathlib import Path
+import py_compile
+import re
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+# Research prefixes; a product tool that happens to share one is listed explicitly.
+RESEARCH_PREFIXES = ('audit_', 'screen_', 'triage_', 'review_', 'discover_', 'inspect_', 'summarize_',
+                     'queue_', 'compile_', 'reconcile_', 'measure_', 'qualify_', 'merge_', 'split_',
+                     'assess_', 'fetch_', 'import_', 'inventory_')
+# Run by daily-data.yml; their outputs (survey-discovery.json, survey-products.json) are loaded by the app.
+PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py'}
+JS_RESEARCH_IMPORT = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*)['"][^'"]*\bresearch/""")
+
+
+def python_imports(path):
+    for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'), str(path))):
+        if isinstance(node, ast.Import):
+            yield from (alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            yield node.module
+
+
+class ResearchBoundaryTest(unittest.TestCase):
+    def test_product_python_never_imports_research(self):
+        paths = [*sorted((ROOT / 'src').rglob('*.py')), *sorted((ROOT / 'scripts').glob('*.py'))]
+        offenders = [f'{p.relative_to(ROOT)}: {m}' for p in paths for m in python_imports(p)
+                     if m.split('.')[0] == 'research']
+        self.assertEqual(offenders, [])
+
+    def test_product_scripts_never_run_research(self):
+        offenders = [p.name for p in sorted((ROOT / 'scripts').iterdir())
+                     if p.suffix in {'.py', '.sh', '.mjs'} and 'research/' in p.read_text(encoding='utf-8')]
+        self.assertEqual(offenders, [])
+
+    def test_web_and_worker_never_import_research(self):
+        paths = [*sorted((ROOT / 'dist').glob('*.js')), *sorted((ROOT / 'dist').glob('*.html')),
+                 *sorted((ROOT / 'server').rglob('*.[jt]s'))]
+        offenders = [p.relative_to(ROOT).as_posix() for p in paths
+                     if JS_RESEARCH_IMPORT.search(p.read_text(encoding='utf-8'))]
+        self.assertEqual(offenders, [])
+
+    def test_new_research_scripts_do_not_land_in_scripts(self):
+        misplaced = [p.name for p in sorted((ROOT / 'scripts').iterdir())
+                     if p.name.startswith(RESEARCH_PREFIXES) and p.name not in PRODUCT_EXCEPTIONS]
+        self.assertEqual(misplaced, [], 'put dated audit/research tooling in research/scripts/')
+
+    def test_research_scripts_compile(self):
+        # Import needs the GIS packages; syntax is checked everywhere so a moved
+        # script cannot silently rot in the core job.
+        with tempfile.TemporaryDirectory() as tmp:
+            for path in sorted((ROOT / 'research').rglob('*.py')):
+                py_compile.compile(str(path), cfile=str(Path(tmp) / 'x.pyc'), doraise=True)
+
+
+if __name__ == '__main__':
+    unittest.main()

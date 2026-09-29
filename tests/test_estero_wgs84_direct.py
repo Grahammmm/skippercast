@@ -1,7 +1,7 @@
 """A direct ellipsoid-to-MLLW point response is still not a fishing depth."""
 import unittest
 
-from scripts.audit_estero_wgs84_direct import stable, vdatum_point
+from research.scripts.audit_estero_wgs84_direct import stable, vdatum_point
 
 
 class EsteroWgs84DirectTests(unittest.TestCase):

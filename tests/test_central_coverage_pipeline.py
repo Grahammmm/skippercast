@@ -3,8 +3,8 @@ import pathlib
 import unittest
 from unittest.mock import patch
 
-from scripts import build_central_coverage_ledger as coverage
-from scripts import build_central_source_queue as sources
+from research.scripts import build_central_coverage_ledger as coverage
+from research.scripts import build_central_source_queue as sources
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

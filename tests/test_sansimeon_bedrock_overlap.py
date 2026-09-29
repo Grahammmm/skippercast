@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.audit_sansimeon_bedrock_overlap import fetch_geology
+from research.scripts.audit_sansimeon_bedrock_overlap import fetch_geology
 
 
 ROOT = Path(__file__).resolve().parents[1]

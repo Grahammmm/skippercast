@@ -8,7 +8,7 @@ from shapely.geometry import Polygon, box, mapping
 
 SPEC = importlib.util.spec_from_file_location(
     "audit_point_buchon_cmecs_blocks",
-    Path(__file__).resolve().parents[1] / "scripts/audit_point_buchon_cmecs_blocks.py",
+    Path(__file__).resolve().parents[1] / "research/scripts/audit_point_buchon_cmecs_blocks.py",
 )
 audit = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(audit)

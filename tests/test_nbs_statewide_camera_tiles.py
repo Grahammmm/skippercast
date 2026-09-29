@@ -6,7 +6,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from shapely.geometry import GeometryCollection, Point
 
-from scripts.audit_nbs_statewide_camera_tiles import camera_window_screen
+from research.scripts.audit_nbs_statewide_camera_tiles import camera_window_screen
 
 
 class NbsStatewideCameraTileTest(unittest.TestCase):

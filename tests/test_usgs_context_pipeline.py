@@ -5,7 +5,7 @@ import sys
 import unittest
 
 
-SCRIPTS=Path(__file__).resolve().parents[1]/'scripts'
+SCRIPTS=Path(__file__).resolve().parents[1]/'research/scripts'
 sys.path.insert(0,str(SCRIPTS))
 def module(name):
     spec=importlib.util.spec_from_file_location(name,SCRIPTS/(name+'.py'))

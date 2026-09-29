@@ -3,7 +3,7 @@ import unittest
 from shapely.geometry import Point, box
 from shapely.strtree import STRtree
 
-from scripts.audit_monterey_300_enc import screen
+from research.scripts.audit_monterey_300_enc import screen
 
 
 class MontereyEncScreenTests(unittest.TestCase):

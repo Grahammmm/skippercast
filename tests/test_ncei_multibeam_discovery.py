@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.discover_ncei_multibeam import collect, collect_sector, normalize_feature, validate_config, validate_service
+from research.scripts.discover_ncei_multibeam import collect, collect_sector, normalize_feature, validate_config, validate_service
 
 
 ROOT = Path(__file__).resolve().parents[1]

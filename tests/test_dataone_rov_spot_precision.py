@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_dataone_rov_spot_precision import FIELDS, build
+from research.scripts.audit_dataone_rov_spot_precision import FIELDS, build
 
 
 class DataOneRovPrecisionTest(unittest.TestCase):

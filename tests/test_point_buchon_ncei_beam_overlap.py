@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from pyproj import Geod
 
-from scripts import audit_point_buchon_ncei_beam_overlap as beams
+from research.scripts import audit_point_buchon_ncei_beam_overlap as beams
 
 
 ROOT = Path(__file__).resolve().parents[1]

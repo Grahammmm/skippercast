@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_point_conception_4m_patch_robustness import summarize_component
+from research.scripts.audit_point_conception_4m_patch_robustness import summarize_component
 
 
 class PatchRobustnessTest(unittest.TestCase):

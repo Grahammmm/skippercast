@@ -6,8 +6,8 @@ import unittest
 from shapely.geometry import box
 from shapely import wkb
 
-from scripts.inventory_nbs_hard_footprint_tiles import COASTS, gpkg_geometry, inventory
-from scripts.audit_nbs_hard_footprint_tiles import validate
+from research.scripts.inventory_nbs_hard_footprint_tiles import COASTS, gpkg_geometry, inventory
+from research.scripts.audit_nbs_hard_footprint_tiles import validate
 
 
 class HardFootprintTileTest(unittest.TestCase):

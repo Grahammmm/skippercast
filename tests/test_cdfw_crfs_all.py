@@ -5,9 +5,9 @@ import unittest
 
 
 SPEC = importlib.util.spec_from_file_location(
-    "audit_cdfw_crfs_all", Path(__file__).resolve().parents[1] / "scripts/audit_cdfw_crfs_all.py"
+    "audit_cdfw_crfs_all", Path(__file__).resolve().parents[1] / "research/scripts/audit_cdfw_crfs_all.py"
 )
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "research/scripts"))
 audit = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(audit)
 

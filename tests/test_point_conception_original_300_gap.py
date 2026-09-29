@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_point_conception_original_300_gap import summarize_cells
+from research.scripts.audit_point_conception_original_300_gap import summarize_cells
 
 
 ROOT = Path(__file__).resolve().parents[1]

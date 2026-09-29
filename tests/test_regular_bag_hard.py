@@ -10,7 +10,7 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-from scripts.qualify_regular_bag_hard import hard_mask_on_bag, excluded_report_hazards, excluded_federal_gea_cells
+from research.scripts.qualify_regular_bag_hard import hard_mask_on_bag, excluded_report_hazards, excluded_federal_gea_cells
 
 
 class OriginalGridScreenTest(unittest.TestCase):

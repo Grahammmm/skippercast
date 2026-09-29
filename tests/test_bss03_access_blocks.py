@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_bss03_access_blocks import screen
+from research.scripts.audit_bss03_access_blocks import screen
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +37,7 @@ class Bss03AccessTest(unittest.TestCase):
                  ROOT / 'var/review/enc-hazards-bss03-original-camera.geojson']
         if not all(path.exists() for path in paths):
             self.skipTest('Original archives or fresh official snapshots unavailable locally')
-        from scripts.audit_bss03_access_blocks import source_blocks, stable
+        from research.scripts.audit_bss03_access_blocks import source_blocks, stable
         bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
                    if source['survey_id'] == 'BSS_Block03')
         video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())

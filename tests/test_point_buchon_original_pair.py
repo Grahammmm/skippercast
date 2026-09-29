@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.audit_point_buchon_original_pair import (
+from research.scripts.audit_point_buchon_original_pair import (
     CLASS_NAMES, published_character_accuracy, verify_bathy_processing, verify_semantics,
 )
 

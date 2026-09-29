@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.discover_csumb_scc_blocks import compare, parse_report
+from research.scripts.discover_csumb_scc_blocks import compare, parse_report
 
 
 ROOT = Path(__file__).resolve().parents[1]

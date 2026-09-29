@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.prepare_regional_mpas import validate_response
+from research.scripts.prepare_regional_mpas import validate_response
 
 
 ROOT = Path(__file__).resolve().parents[1]

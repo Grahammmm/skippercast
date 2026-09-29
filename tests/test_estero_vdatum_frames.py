@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.audit_estero_vdatum_frames import classify
+from research.scripts.audit_estero_vdatum_frames import classify
 
 ROOT = Path(__file__).resolve().parents[1]
 

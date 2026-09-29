@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts import audit_point_conception_original_300_ladder as ladder
+from research.scripts import audit_point_conception_original_300_ladder as ladder
 
 
 ROOT = Path(__file__).resolve().parents[1]

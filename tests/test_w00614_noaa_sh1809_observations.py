@@ -3,7 +3,7 @@ import csv
 import io
 import unittest
 
-from scripts import audit_w00614_noaa_sh1809_observations as audit
+from research.scripts import audit_w00614_noaa_sh1809_observations as audit
 
 
 class SH1809ObservationTests(unittest.TestCase):

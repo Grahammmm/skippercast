@@ -4,7 +4,7 @@ import numpy as np
 from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
-from scripts.audit_usgs_ds552_san_pedro import validate_raster
+from research.scripts.audit_usgs_ds552_san_pedro import validate_raster
 
 
 class SanPedroOriginalRasterTests(unittest.TestCase):

@@ -5,9 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_pinned_original_vr_source import audit as audit_pinned
-from scripts.audit_vr_camera_hazard_gate import audit as audit_hazards
-from scripts.compile_original_vr_camera_lead import compile_review
+from research.scripts.audit_pinned_original_vr_source import audit as audit_pinned
+from research.scripts.audit_vr_camera_hazard_gate import audit as audit_hazards
+from research.scripts.compile_original_vr_camera_lead import compile_review
 
 
 ROOT = Path(__file__).resolve().parents[1]

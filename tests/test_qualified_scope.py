@@ -12,7 +12,7 @@ from skippercast.platform.bottom_targets import VERSION
 from skippercast.platform.qualified_scope import (
     validate_qualified_scope, qualified_subset_satisfies, _intersects, _polygons,
     _require_unheld_original_source)
-from scripts.publish_bottom_subset import publish as publish_bottom_subset
+from research.scripts.publish_bottom_subset import publish as publish_bottom_subset
 
 
 def polygon(west, south, east, north):
@@ -350,7 +350,7 @@ class QualifiedScopeTests(unittest.TestCase):
         index_path = self.root / "dist" / self.region["assets"]["bottom_index"]
         before = (atlas_path.read_bytes(), index_path.read_bytes())
         self.region["source_bindings"]["bathymetry"] = []
-        with patch("scripts.publish_bottom_subset.load_region", return_value=self.region):
+        with patch("research.scripts.publish_bottom_subset.load_region", return_value=self.region):
             with self.assertRaises(ValueError):
                 publish_bottom_subset(self.rid, self.root)
         self.assertEqual((atlas_path.read_bytes(), index_path.read_bytes()), before)

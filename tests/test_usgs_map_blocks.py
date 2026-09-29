@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 
-SPEC = importlib.util.spec_from_file_location('map_blocks', Path(__file__).resolve().parents[1] / 'scripts' / 'discover_usgs_map_blocks.py')
+SPEC = importlib.util.spec_from_file_location('map_blocks', Path(__file__).resolve().parents[1] / 'research/scripts' / 'discover_usgs_map_blocks.py')
 mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 

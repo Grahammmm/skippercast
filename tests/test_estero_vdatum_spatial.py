@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts import audit_estero_vdatum_spatial as spatial
+from research.scripts import audit_estero_vdatum_spatial as spatial
 
 
 ROOT = Path(__file__).resolve().parents[1]

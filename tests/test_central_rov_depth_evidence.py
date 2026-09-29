@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts import build_central_rov_depth_evidence as rov
+from research.scripts import build_central_rov_depth_evidence as rov
 
 
 class CentralRovDepthEvidenceTest(unittest.TestCase):

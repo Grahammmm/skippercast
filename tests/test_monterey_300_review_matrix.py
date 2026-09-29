@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from scripts.build_monterey_300_review_matrix import build
+from research.scripts.build_monterey_300_review_matrix import build
 
 
 class MontereyMatrixTests(unittest.TestCase):

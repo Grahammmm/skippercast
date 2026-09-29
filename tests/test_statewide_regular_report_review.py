@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_statewide_regular_camera import reviewed_hazards
+from research.scripts.audit_statewide_regular_camera import reviewed_hazards
 
 
 class ReportReviewTests(unittest.TestCase):

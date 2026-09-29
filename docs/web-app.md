@@ -52,11 +52,11 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 | `dist/weather-ui.js` | Shared map/detail timeline, playback, selected forecast sample, model choice, caching, overlay |
 | `dist/gpx.js` | Selected-target GPX with separate polygon rings |
 | `dist/sw.js`, `offline.js`, `offline-pack.js`, `offline-core.js`, `offline.css` | Service worker (shell precache from `precache.json`, network-first data, saved chart tiles, push), offline banner, install prompt, offline trip pack |
-| `scripts/export_web_targets.mjs` | Generate the 132 direct single-target GPX files in `dist/downloads/targets/` |
+| `research/scripts/export_web_targets.mjs` | Generate the 132 direct single-target GPX files in `dist/downloads/targets/` |
 | `dist/data/`, `downloads/` | Copies of the reviewed public atlas and exports; dated aggregate AIS research summary |
 | `dist/vendor/` | Leaflet 1.9.4 plus its BSD license; exact hashes in `scripts/web-vendor-sha256.json` |
 
-`scripts/check_web.py` verifies that deployed copies match the canonical atlas and license, checks vendor hashes and local assets, and parses the shipped GPX. After an atlas refresh, run `node scripts/export_web_targets.mjs` to rebuild the direct downloads. JavaScript checks use `node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs` (Node 22+) and verify every prebuilt target file against the exporter; the existing Python checks remain independent.
+`scripts/check_web.py` verifies that deployed copies match the canonical atlas and license, checks vendor hashes and local assets, and parses the shipped GPX. After an atlas refresh, run `node research/scripts/export_web_targets.mjs` to rebuild the direct downloads. JavaScript checks use `node --test tests/test_web.mjs tests/test_marine.mjs tests/test_morning.mjs tests/test_charters.mjs` (Node 22+) and verify every prebuilt target file against the exporter; the existing Python checks remain independent.
 
 Supported browsers can expose two page-scoped WebMCP tools: `list_fishing_targets` reads the currently filtered rocky-target list (sediment/search references are not yet part of that API); `show_fishing_target` resets filters and selects an existing target. Neither tool saves a trip, downloads a file, or sends an alert. Unsupported browsers retain the full visible interface.
 
@@ -70,7 +70,7 @@ The private personal Telegram monitor is not wired into the public web app. The 
 
 The September 21 mobile review found obstructed popups, overlapping layer controls, crowded reef pins and excessive conditions scrolling. The app now uses a full-width map at every viewport, no permanent list or selected-detail sidebar, no automatic first selection, grid-clustered reef markers, and one native dialog for selected points and areas. NOAA cable/seabed symbols are off in Fishing chart and restored by Full NOAA chart. The initial map centers on the Morro Bay grounds at zoom 11; Fit map still shows all filtered grounds. Species and Options are the primary controls. The weather summary is compact, with the seven-day scrubber and playback behind Timeline. Rules start collapsed. The guide opens one topic at a time, and Conditions puts current weather ahead of expandable evidence and reference notes. Model/layer/filter/export controls are in Options. Conditions has Live/Waves/Wind/Tides/Sources tabs.
 
-`dist/data/habitat-regions.json` contains connected soft-bottom outlines built by `scripts/build_habitat_regions.py`; the old 18-window artifact is retained but not rendered. `dist/morning-outlook.js` ranks complete future 7 a.m.–1 p.m. windows using two models and distinguishes conditions, comfort, gear control, confidence and unknown bite potential. The top bar links to the full evidence. [Research and scoring method](species-research.md#morning-ratings).
+`dist/data/habitat-regions.json` contains connected soft-bottom outlines built by `research/scripts/build_habitat_regions.py`; the old 18-window artifact is retained but not rendered. `dist/morning-outlook.js` ranks complete future 7 a.m.–1 p.m. windows using two models and distinguishes conditions, comfort, gear control, confidence and unknown bite potential. The top bar links to the full evidence. [Research and scoring method](species-research.md#morning-ratings).
 
 ## Live measurements
 

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_usgs_ds781_metadata import parse_xml, signature, xml_sibling
+from research.scripts.audit_usgs_ds781_metadata import parse_xml, signature, xml_sibling
 
 
 ROOT = Path(__file__).resolve().parents[1]

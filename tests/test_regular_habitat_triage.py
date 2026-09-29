@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.triage_regular_habitat_outlines import triage
+from research.scripts.triage_regular_habitat_outlines import triage
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -7,7 +7,7 @@ import rasterio
 from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
-from scripts.audit_point_buchon_2009_csumb_products import summarize_grid
+from research.scripts.audit_point_buchon_2009_csumb_products import summarize_grid
 
 
 class PointBuchon2009ProductsTests(unittest.TestCase):

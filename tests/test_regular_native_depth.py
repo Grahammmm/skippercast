@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 
-from scripts.screen_regular_native_depth import (count_sector_cells, regular_audited_rows,
+from research.scripts.screen_regular_native_depth import (count_sector_cells, regular_audited_rows,
                                                   summarize_by_sector)
-from scripts.inspect_noaa_bag_grids import scan
+from research.scripts.inspect_noaa_bag_grids import scan
 
 
 class RegularNativeDepthTests(unittest.TestCase):

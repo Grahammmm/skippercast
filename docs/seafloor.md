@@ -434,9 +434,9 @@ limit per reach, refreshes screens, publishes tiles privately reviewed by the
 pipeline, and proposes changed ledger totals through a PR. A timeout is a
 performance problem to fix, not permission to skip validation.
 
-Reuse the tracked [BAG reader](../scripts/inspect_noaa_bag_grids.py),
-[USGS reader](../scripts/inspect_usgs_native_grids.py),
-[substrate importer](../scripts/import_usgs_seafloor_character.py),
+Reuse the tracked [BAG reader](../research/scripts/inspect_noaa_bag_grids.py),
+[USGS reader](../research/scripts/inspect_usgs_native_grids.py),
+[substrate importer](../research/scripts/import_usgs_seafloor_character.py),
 [MPA collector](../scripts/collect_cdfw_mpas.py),
 [federal collector](../scripts/collect_noaa_groundfish_areas.py),
 [tile builder](../scripts/build_map_tiles.py) and

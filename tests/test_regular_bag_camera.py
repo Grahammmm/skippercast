@@ -6,8 +6,8 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-from scripts.audit_regular_bag_camera import cell_review, reviewed_archive
-from scripts.audit_statewide_regular_camera import candidate_pairs
+from research.scripts.audit_regular_bag_camera import cell_review, reviewed_archive
+from research.scripts.audit_statewide_regular_camera import candidate_pairs
 
 
 class RegularBagCameraTests(unittest.TestCase):

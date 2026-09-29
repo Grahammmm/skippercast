@@ -16,12 +16,12 @@ The northern GeoTIFFs identify NAD83/UTM 10N. The Santa Barbara Island files emb
 
 ## Repeatable processing
 
-`regions/southern-california/habitat-sources.json` is the reviewed input contract. `scripts/build_socal_habitat.py` consumes it, creates `survey-habitat.geojson`, a per-island coverage summary and masked numeric bottom tiles, and writes `habitat-receipts.json`. The private raw cache stays outside public artifacts under `var/`.
+`regions/southern-california/habitat-sources.json` is the reviewed input contract. `research/scripts/build_socal_habitat.py` consumes it, creates `survey-habitat.geojson`, a per-island coverage summary and masked numeric bottom tiles, and writes `habitat-receipts.json`. The private raw cache stays outside public artifacts under `var/`.
 
 ```bash
 # Run with the optional GIS environment containing numpy, rasterio, shapely,
 # pyproj, pyogrio, requests and remotezip.
-python scripts/build_socal_habitat.py --fetch
+python research/scripts/build_socal_habitat.py --fetch
 ```
 
 The first validated build used NumPy 2.5.3, rasterio 1.5.1 (GDAL 3.12.4), Shapely 2.1.2, pyproj 3.8.0 and pyogrio 0.13.0. Keep the GIS environment pinned when comparing byte-level output or feature identifiers; geometry-library upgrades deserve a fresh geometry and closure review.

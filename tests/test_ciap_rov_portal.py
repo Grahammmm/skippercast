@@ -2,7 +2,7 @@ import copy
 import json
 import unittest
 
-from scripts.audit_ciap_rov_portal import build
+from research.scripts.audit_ciap_rov_portal import build
 
 
 def collection(count, crs, properties):

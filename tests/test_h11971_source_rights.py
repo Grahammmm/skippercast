@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_noaa_usgs_camera_rights import audit
+from research.scripts.audit_noaa_usgs_camera_rights import audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from rasterio.transform import from_origin
 
-from scripts.audit_bss02_video_grid_overlap import near_valid_pixel, inspect
+from research.scripts.audit_bss02_video_grid_overlap import near_valid_pixel, inspect
 
 
 ROOT = Path(__file__).resolve().parents[1]

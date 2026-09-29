@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.audit_camera_native_terrain import fit_terrain
+from research.scripts.audit_camera_native_terrain import fit_terrain
 
 
 ROOT = Path(__file__).resolve().parents[1]

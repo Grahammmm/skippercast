@@ -1,7 +1,7 @@
 """A neighboring survey cannot be attributed to a region by its survey name."""
 import unittest
 
-from scripts.audit_region_bag_coverage import build
+from research.scripts.audit_region_bag_coverage import build
 
 
 class RegionBagCoverageTest(unittest.TestCase):

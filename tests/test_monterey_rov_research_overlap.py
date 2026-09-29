@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from scripts.audit_monterey_rov_research_overlap import build
+from research.scripts.audit_monterey_rov_research_overlap import build
 
 
 class HistoricalRovOverlapTest(unittest.TestCase):

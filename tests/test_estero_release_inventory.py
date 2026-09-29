@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.audit_estero_release_inventory import build
+from research.scripts.audit_estero_release_inventory import build
 
 
 class EsteroReleaseInventoryTest(unittest.TestCase):

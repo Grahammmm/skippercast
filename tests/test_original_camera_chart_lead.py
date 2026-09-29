@@ -4,8 +4,8 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.audit_original_camera_chart_lead import audit
-from scripts.summarize_original_camera_chart_lead import summarize
+from research.scripts.audit_original_camera_chart_lead import audit
+from research.scripts.summarize_original_camera_chart_lead import summarize
 
 
 class OriginalCameraChartLeadTests(unittest.TestCase):

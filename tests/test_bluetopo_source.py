@@ -3,8 +3,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from scripts.audit_bluetopo_tile import scheme_row
-from scripts.refresh_bluetopo_samples import listed_schemes, refresh
+from research.scripts.audit_bluetopo_tile import scheme_row
+from research.scripts.refresh_bluetopo_samples import listed_schemes, refresh
 
 
 class BlueTopoSourceReviewTests(unittest.TestCase):

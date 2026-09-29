@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from scripts.audit_point_conception_enc_seabed_gap import query_one
+from research.scripts.audit_point_conception_enc_seabed_gap import query_one
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +27,7 @@ class PointConceptionEncSeabedGapTest(unittest.TestCase):
         self.assertNotIn("coordinates", report)
 
     def test_a_new_chart_feature_is_only_a_lead(self):
-        with patch("scripts.audit_point_conception_enc_seabed_gap.query_layer") as mocked:
+        with patch("research.scripts.audit_point_conception_enc_seabed_gap.query_layer") as mocked:
             mocked.return_value = ([{"geometry": {"type": "Point", "coordinates": [-120, 34]}}],
                                    {"count_sha256": "count", "data_sha256": "data"})
             row = query_one(("H11952", (-121, 34, -120, 35), "enc_coastal",

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_regular_bag_300 import summarize
+from research.scripts.audit_regular_bag_300 import summarize
 
 
 class RegularBagDepthScreenTests(unittest.TestCase):

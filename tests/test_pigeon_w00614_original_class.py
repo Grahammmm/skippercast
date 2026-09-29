@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from scripts import audit_pigeon_w00614_original_class as audit
+from research.scripts import audit_pigeon_w00614_original_class as audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

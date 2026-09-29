@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 
-from scripts.audit_habitat_shortlist_closures import audit
+from research.scripts.audit_habitat_shortlist_closures import audit
 
 
 def square(x, y, width=0.001):

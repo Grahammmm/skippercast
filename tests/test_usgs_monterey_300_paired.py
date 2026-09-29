@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_usgs_monterey_300_paired import paired_count
+from research.scripts.audit_usgs_monterey_300_paired import paired_count
 
 
 class OriginalPairTests(unittest.TestCase):

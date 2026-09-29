@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 from shapely.geometry import shape
-from scripts.prepare_regional_mpas import validate_response
+from research.scripts.prepare_regional_mpas import validate_response
 from skippercast.pipeline.settings import settings
 
 

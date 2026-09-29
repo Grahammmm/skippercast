@@ -12,12 +12,12 @@ A regional package is configuration and evidence, not a fork of the app. The [So
 5. Compile and inspect the package. Preview status allows explicit geological context and regional forecasts while unavailable targets stay empty. Published fishing targets require ready depth, substrate and MPA coverage, or a hash-validated qualified subset that proves depth/substrate for its exact footprints while keeping the other gates. Partial source coverage remains partial. A production-ready forecast also needs fresh observations, advisories and confidence checks at runtime.
 6. Add the region to the existing daily and half-hourly workflow discovery (non-draft packages are discovered automatically). Confirm its first feed receipt before claiming the updater works. No new per-region scheduler or copied app is needed.
 
-For first-run port selection, add a reviewed entry to `catalog/home-ports.json` with the port label, regional package, a local `forecast_point` ID, and an approximate harbor/city coordinate used only for on-device nearest-port matching. Run `python scripts/build_home_ports.py` to compile `dist/data/home-ports.json`. The resulting map center is the region's marine forecast sample, never a harbor entrance, fishing waypoint, or verified departure route. A preview region stays labeled as a preview in the chooser. Port preference is browser-local; shared region/view links override it without changing the saved choice.
+For first-run port selection, add a reviewed entry to `catalog/home-ports.json` with the port label, regional package, a local `forecast_point` ID, and an approximate harbor/city coordinate used only for on-device nearest-port matching. Run `python research/scripts/build_home_ports.py` to compile `dist/data/home-ports.json`. The resulting map center is the region's marine forecast sample, never a harbor entrance, fishing waypoint, or verified departure route. A preview region stays labeled as a preview in the chooser. Port preference is browser-local; shared region/view links override it without changing the saved choice.
 
 ```bash
 PYTHONPATH=src python -m skippercast.platform validate --region cambria-san-simeon
 PYTHONPATH=src python -m skippercast.platform.build
-python scripts/build_primary_strategies.py
+python research/scripts/build_primary_strategies.py
 PYTHONPATH=src python -m skippercast.pipeline --region cambria-san-simeon --output var/north-daily
 PYTHONPATH=src python -m skippercast.pipeline.live --region cambria-san-simeon --output var/north-live.json
 python scripts/check_web.py
@@ -48,11 +48,11 @@ The Point Sal–Point Conception Central preview binds distinct [NWS PZZ645/670 
 
 ```bash
 # Optional GIS environment: numpy, rasterio, shapely, pyproj, pyshp.
-python scripts/import_usgs_geology.py --region cambria-san-simeon --zip /local/Geology_SanSimeon.zip
-python scripts/build_bottom_views.py --region morro-bay --manifest /local/survey-manifest.json
+python research/scripts/import_usgs_geology.py --region cambria-san-simeon --zip /local/Geology_SanSimeon.zip
+python research/scripts/build_bottom_views.py --region morro-bay --manifest /local/survey-manifest.json
 ```
 
-Use `$skippercast-discover-data`, `$skippercast-ingest-data`, and `$skippercast-add-region` for future work. Their maintained sources live under `skills/`; `python scripts/install_research_skills.py` installs them into the current user's Codex skills folder. Run the system skill validator on the installed copies when available.
+Use `$skippercast-discover-data`, `$skippercast-ingest-data`, and `$skippercast-add-region` for future work. Their maintained sources live under `skills/`; `python research/scripts/install_research_skills.py` installs them into the current user's Codex skills folder. Run the system skill validator on the installed copies when available.
 
 Roll back a region by republishing the previous coherent app/package version; mark a problematic new package draft to remove it from discovery. Retain prior feed source times. Do not relabel retained data as a new observation. Existing regions can keep working while one preview is withheld.
 

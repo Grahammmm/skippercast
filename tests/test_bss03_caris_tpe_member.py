@@ -2,7 +2,7 @@ import io
 import tarfile
 import unittest
 
-from scripts.audit_bss03_caris_tpe_member import MEMBER, build
+from research.scripts.audit_bss03_caris_tpe_member import MEMBER, build
 
 
 def archive(tpe=b"HDCS\0\x01"):

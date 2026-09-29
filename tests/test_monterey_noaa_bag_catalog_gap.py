@@ -2,7 +2,7 @@ import unittest
 
 from shapely.geometry import box, mapping
 
-from scripts.audit_monterey_noaa_bag_catalog_gap import build
+from research.scripts.audit_monterey_noaa_bag_catalog_gap import build
 
 
 class MontereyNoaaBagCatalogGapTest(unittest.TestCase):

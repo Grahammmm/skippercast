@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from scripts.build_monterey_300_research_queue import build
+from research.scripts.build_monterey_300_research_queue import build
 
 
 class MontereyBandQueueTests(unittest.TestCase):

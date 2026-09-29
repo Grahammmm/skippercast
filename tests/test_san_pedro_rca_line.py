@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 from zipfile import ZipFile
 
-from scripts import audit_san_pedro_rca_line as rca
+from research.scripts import audit_san_pedro_rca_line as rca
 
 
 def archive_with_local_line():

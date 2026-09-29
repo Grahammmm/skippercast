@@ -35,6 +35,13 @@ the commit.
 
 Commit the regenerated files in the same PR as the source change.
 
+## Research tooling
+
+`research/` holds dated audit, screening and discovery tooling (see
+[research/README.md](research/README.md)). Product code (`src/`, `server/`,
+`dist/`, `scripts/`) never imports or runs it; `tests/test_research_boundary.py`
+fails if it does. New audit scripts go in `research/scripts/`, not `scripts/`.
+
 ## Before opening a PR
 
 Run what CI runs (Python 3.13 with `requirements-survey.txt` for the full suite):

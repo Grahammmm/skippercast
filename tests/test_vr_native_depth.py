@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from scripts.screen_vr_native_depth import native_counts, containing_sector, summarize_by_sector, summarize_by_region
-from scripts.coastal_review_areas import containing_island, load_island_review_areas
+from research.scripts.screen_vr_native_depth import native_counts, containing_sector, summarize_by_sector, summarize_by_region
+from research.scripts.coastal_review_areas import containing_island, load_island_review_areas
 
 
 class VariableResolutionNativeReviewTest(unittest.TestCase):

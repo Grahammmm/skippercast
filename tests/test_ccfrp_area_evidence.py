@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import build_ccfrp_area_evidence as ccfrp
+from research.scripts import build_ccfrp_area_evidence as ccfrp
 
 
 class CcfrpAreaEvidenceTest(unittest.TestCase):

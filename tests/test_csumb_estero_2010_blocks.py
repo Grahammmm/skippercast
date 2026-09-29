@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_csumb_estero_2010_blocks import SOURCES, original_grid
+from research.scripts.audit_csumb_estero_2010_blocks import SOURCES, original_grid
 
 
 ROOT = Path(__file__).resolve().parents[1]

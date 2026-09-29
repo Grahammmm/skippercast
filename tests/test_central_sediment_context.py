@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 from shapely.geometry import box
 
-from scripts.build_central_sediment_context import display_parts, download_missing, thin_mask
+from research.scripts.build_central_sediment_context import display_parts, download_missing, thin_mask
 
 
 class CentralSedimentContextTests(unittest.TestCase):

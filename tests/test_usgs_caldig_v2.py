@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_usgs_caldig_v2 import acquire
+from research.scripts.audit_usgs_caldig_v2 import acquire
 
 
 ROOT = Path(__file__).resolve().parents[1]

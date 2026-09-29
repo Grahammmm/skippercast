@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_usgs_monterey_300_pixels import count_band
+from research.scripts.audit_usgs_monterey_300_pixels import count_band
 
 
 class NativeBandTests(unittest.TestCase):

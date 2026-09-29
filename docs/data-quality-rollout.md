@@ -38,10 +38,10 @@ PYTHONPATH=src python -m skippercast.platform needs --region southern-california
 
 # Compile original survey inputs in the pinned optional GIS environment.
 python -m pip install -r requirements-survey.txt
-PYTHONPATH=src python scripts/build_socal_targets.py \
+PYTHONPATH=src python research/scripts/build_socal_targets.py \
   --config regions/southern-california/bottom-sources.reviewed.json \
   --output dist/regions/southern-california/qualified-bottom --fetch
-PYTHONPATH=src python scripts/publish_bottom_subset.py --region southern-california
+PYTHONPATH=src python research/scripts/publish_bottom_subset.py --region southern-california
 PYTHONPATH=src python -m skippercast.platform.build
 
 # Run exactly the regional collector used by the shared schedule.
@@ -51,7 +51,7 @@ PYTHONPATH=src python scripts/refresh_regions.py habitat \
 
 Use a new reviewed configuration, region ID, target prefix and output directory when applying the survey compiler elsewhere. Its current adapter requires original NOAA variable-resolution BAG files with inspected MLLW metadata; another format or datum requires a reviewed adapter. Do not rename a grid's datum to satisfy the contract.
 
-The separate `scripts/refresh_reviewed_closures.py --region southern-california` check re-fetches the pinned CDFW MPA query and NOAA groundfish-exclusion coordinate file before a survey rebuild. It updates the local acquisition time only when both original responses still match the reviewed snapshots; changed geometry or coordinates require a new review. This recheck does not replace current legal text or other access notices. `publish_bottom_subset.py` now validates the proposed atlas and bottom index before either public asset is replaced. A survey may still be held after valid depth screening: H13555 near Santa Rosa produced only two flat C-grade patches, so no new reef targets were promoted.
+The separate `research/scripts/refresh_reviewed_closures.py --region southern-california` check re-fetches the pinned CDFW MPA query and NOAA groundfish-exclusion coordinate file before a survey rebuild. It updates the local acquisition time only when both original responses still match the reviewed snapshots; changed geometry or coordinates require a new review. This recheck does not replace current legal text or other access notices. `publish_bottom_subset.py` now validates the proposed atlas and bottom index before either public asset is replaced. A survey may still be held after valid depth screening: H13555 near Santa Rosa produced only two flat C-grade patches, so no new reef targets were promoted.
 
 The source branch holds code and reviewed public packages. The conditions branch holds current operational products and their prospective archive. Tile and archive files are immutable and checksummed. Publication writes data before manifests, then commits the coherent regional snapshot. The outgoing and incoming generations remain available for cached readers. A failed refresh retains source age; a missing or corrupt archive prevents publication rather than silently restarting verification. Expected cloud gaps remain visible without being mislabeled as a transport failure.
 

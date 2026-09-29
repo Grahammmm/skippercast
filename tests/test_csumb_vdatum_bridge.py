@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_csumb_vdatum_bridge import assess, compile_review, stable
+from research.scripts.audit_csumb_vdatum_bridge import assess, compile_review, stable
 
 
 ROOT = Path(__file__).resolve().parents[1]

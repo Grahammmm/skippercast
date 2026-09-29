@@ -5,7 +5,7 @@ import unittest
 from affine import Affine
 import numpy as np
 
-from scripts.build_vr_hard_context import DisplayMask
+from research.scripts.build_vr_hard_context import DisplayMask
 
 
 ROOT=Path(__file__).resolve().parents[1]

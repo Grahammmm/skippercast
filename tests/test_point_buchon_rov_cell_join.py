@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_point_buchon_rov_cell_join import source_depth_at
+from research.scripts.audit_point_buchon_rov_cell_join import source_depth_at
 
 
 ROOT = Path(__file__).resolve().parents[1]

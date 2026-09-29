@@ -4,8 +4,8 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from scripts.refresh_enc_hazards import LAYERS, main, query_layer, refresh
-from scripts.audit_enc_context_overlap import audit
+from research.scripts.refresh_enc_hazards import LAYERS, main, query_layer, refresh
+from research.scripts.audit_enc_context_overlap import audit
 
 
 class EncHazardRefreshTests(unittest.TestCase):
@@ -45,7 +45,7 @@ class EncHazardRefreshTests(unittest.TestCase):
     def test_count_disagreement_cannot_be_published_as_empty_hazard_water(self):
         responses = iter([({"count": 1}, "a" * 64),
                           ({"type": "FeatureCollection", "features": []}, "b" * 64)])
-        with patch("scripts.refresh_enc_hazards.fetch_json", side_effect=lambda _: next(responses)):
+        with patch("research.scripts.refresh_enc_hazards.fetch_json", side_effect=lambda _: next(responses)):
             with self.assertRaisesRegex(ValueError, "Incomplete or changed ENC"):
                 query_layer("enc_approach", "Underwater_Awash_Rock_point", 37,
                             [-119.12, 33.33, -118.98, 33.54])
@@ -55,7 +55,7 @@ class EncHazardRefreshTests(unittest.TestCase):
                                for i, name in enumerate(LAYERS) if name != "Wreck_area"]}
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "hazards.geojson"
-            with patch("scripts.refresh_enc_hazards.fetch_json", return_value=(metadata, "a" * 64)):
+            with patch("research.scripts.refresh_enc_hazards.fetch_json", return_value=(metadata, "a" * 64)):
                 with self.assertRaisesRegex(ValueError, "Required NOAA ENC layer missing"):
                     refresh({"id": "test", "region_id": "southern-california",
                              "bounds": [-119.12, 33.33, -118.98, 33.54]}, output)

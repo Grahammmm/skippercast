@@ -4,7 +4,7 @@ from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.strtree import STRtree
 
-from scripts.reconcile_nbs_vr_bag_camera import bag_camera_status
+from research.scripts.reconcile_nbs_vr_bag_camera import bag_camera_status
 
 
 class NbsBagReconciliationTest(unittest.TestCase):
