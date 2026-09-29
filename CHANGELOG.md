@@ -24,6 +24,7 @@
 - Legal: a data-rights register records, for every source and runtime service, whether a paid product may use it; a CI gate fails if a new asset depends on a source not cleared for commercial use. See [data-rights register](docs/legal/data-rights-register.md).
 - Draft terms of use, privacy notice and licences pages (pending review by counsel), linked from About, the Guide and Sources.
 - Contributing: outside contributors must sign off commits (Developer Certificate of Origin), checked on every pull request; licensing options are laid out for the owner in [ADR 0004](docs/engineering/adr/0004-licensing.md).
+- Governance: issue templates, CODEOWNERS, weekly Dependabot updates, a security policy, a production dependency audit in CI, and CI actions pinned to commit SHAs.
 - Security: the Cloudflare Worker no longer trusts ChatGPT identity headers; private features there return 401 until SkipperCast has its own sign-in.
 - Fixed: trip-alert push notifications could never be enabled because the build renamed the service worker away from `/sw.js`.
 - Seafloor runner setup now installs the schema validator and checks the manifest before processing or publishing.

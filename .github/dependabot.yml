@@ -1,0 +1,30 @@
+# Weekly dependency updates. Minor and patch updates are grouped into one PR
+# per ecosystem; major updates arrive separately for review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  # requirements-*.txt at the repository root.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Actions are pinned to commit SHAs with a version comment; Dependabot
+  # updates both.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
