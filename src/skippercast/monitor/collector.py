@@ -22,8 +22,11 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from ..forecast import local as forecast_local
+
 
 UA = "SkipperCast/0.1 (personal marine forecast research)"
+FORECAST_API = forecast_local.API  # https://skippercast.com/api/om, built from NOAA and ECMWF open data
 WIND_MODELS = ("ecmwf_ifs025", "gfs_global")
 WAVE_MODELS = ("ecmwf_wam", "ncep_gfswave016")
 WIND_VARIABLES = (
@@ -189,20 +192,20 @@ def sources(config, now):
     base = {"latitude": ",".join(str(p["latitude"]) for p in points),
             "longitude": ",".join(str(p["longitude"]) for p in points),
             "timezone": config["timezone"], "forecast_days": 8, "cell_selection": "sea"}
-    wind = dict(base, models=",".join(WIND_MODELS), wind_speed_unit="kn", daily="sunrise,sunset",
-                hourly=",".join(WIND_VARIABLES))
+    wind = dict(base, models=",".join(WIND_MODELS), wind_speed_unit="kn", hourly=",".join(WIND_VARIABLES))
     wave = dict(base, models=",".join(WAVE_MODELS), hourly=",".join(WAVE_VARIABLES))
     tides = {"product": "predictions", "application": "SkipperCast",
              "begin_date": now.strftime("%Y%m%d"), "end_date": (now + timedelta(days=7)).strftime("%Y%m%d"),
              "datum": "MLLW", "station": "9412110", "time_zone": "lst_ldt",
              "units": "english", "interval": "hilo", "format": "json"}
     return {
-        "wind-models": "https://api.open-meteo.com/v1/forecast?" + urlencode(wind),
-        "wave-models": "https://marine-api.open-meteo.com/v1/marine?" + urlencode(wave),
-        "meta-ecmwf-wind": "https://api.open-meteo.com/data/ecmwf_ifs025/static/meta.json",
-        "meta-gfs-wind": "https://api.open-meteo.com/data/ncep_gfs013/static/meta.json",
-        "meta-ecmwf-wave": "https://marine-api.open-meteo.com/data/ecmwf_wam/static/meta.json",
-        "meta-gfs-wave": "https://marine-api.open-meteo.com/data/ncep_gfswave016/static/meta.json",
+        # SkipperCast's own NOAA/ECMWF forecast service (Open-Meteo-compatible responses).
+        "wind-models": f"{FORECAST_API}/v1/forecast?" + urlencode(wind),
+        "wave-models": f"{FORECAST_API}/v1/marine?" + urlencode(wave),
+        "meta-ecmwf-wind": forecast_local.meta_url("ecmwf_ifs025"),
+        "meta-gfs-wind": forecast_local.meta_url("gfs_global"),
+        "meta-ecmwf-wave": forecast_local.meta_url("ecmwf_wam"),
+        "meta-gfs-wave": forecast_local.meta_url("ncep_gfswave016"),
         "nws-pzz645": "https://forecast.weather.gov/MapClick.php?TextType=2&zoneid=PZZ645",
         "nws-lox-discussion": "https://forecast.weather.gov/product.php?issuedby=LOX&product=AFD&site=lox",
         "nws-active-alerts": "https://api.weather.gov/alerts/active/zone/PZZ645",
