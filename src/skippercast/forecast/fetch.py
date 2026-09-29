@@ -6,42 +6,46 @@ request, so a run downloads megabytes per hour of forecast, not whole files.
 """
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from http.client import HTTPException
 import json
 import random
-import time
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
+from ..http import HTTPStatusError, default_session
 from .models import ECMWF_AWS, ECMWF_PORTAL, GFS_AWS
 
-UA = 'SkipperCast-forecast-grids/1.0 (+https://github.com/Grahammmm/skippercast)'
 RETRIES = 7
+# Any error status except "not there" (403/404 from S3 and ECMWF) is retried.
+RETRY_STATUSES = frozenset(range(400, 600)) - {403, 404}
+MAX_BYTES = 512 * 1024 * 1024  # one GRIB message or index; far above any real field
 
 
-def http(url, byte_range=None, method='GET', timeout=60, retries=RETRIES):
-    """GET (or HEAD) with retries. Returns bytes, or None for 404."""
-    headers = {'User-Agent': UA}
+def backoff(retry):
+    """Seconds before retry `retry` (1-based): 2, 4, 8, 16, then 30, each plus up to as much jitter.
+
+    S3 answers bursts with 503 Slow Down; this is the schedule the tile builder has always used.
+    """
+    delay = min(2 * 2 ** (retry - 1), 30)
+    return delay + random.uniform(0, delay)
+
+
+def http(url, byte_range=None, method='GET', timeout=60, retries=RETRIES, session=None):
+    """GET (or HEAD) with retries. Returns bytes, or None for 403/404.
+
+    Transport through skippercast.http.Session: connection errors, timeouts and cut
+    transfers (IncompleteRead) are retried like error statuses, with the same backoff.
+    """
+    headers = {}
     if byte_range:
         start, end = byte_range
         headers['Range'] = f'bytes={start}-' + ('' if end is None else str(end))
-    delay = 2
-    for attempt in range(retries):
-        try:
-            with urlopen(Request(url, headers=headers, method=method), timeout=timeout) as response:
-                return b'' if method == 'HEAD' else response.read()
-        except HTTPError as error:
-            if error.code in (403, 404):
-                return None
-            if attempt == retries - 1:
-                raise
-        except (URLError, TimeoutError, ConnectionError, HTTPException):  # HTTPException: IncompleteRead on a cut transfer
-            if attempt == retries - 1:
-                raise
-        # S3 answers bursts with 503 Slow Down; back off with jitter.
-        time.sleep(delay + random.uniform(0, delay))
-        delay = min(delay * 2, 30)
-    return None
+    try:
+        response = (session or default_session()).request(
+            method, url, headers=headers, timeout=timeout, attempts=retries, retry_statuses=RETRY_STATUSES,
+            max_bytes=MAX_BYTES, backoff=backoff, use_cache=False)
+    except HTTPStatusError as error:
+        if error.status in (403, 404):
+            return None
+        raise
+    return b'' if method == 'HEAD' else response.body
 
 
 def exists(url):

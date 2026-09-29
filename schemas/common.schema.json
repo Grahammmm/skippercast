@@ -46,7 +46,7 @@
       "enum": ["ok", "degraded", "failed"]
     },
     "request_receipt": {
-      "description": "One HTTP attempt recorded by pipeline.collect.Client.get(). Providers' headers are optional because failures and TLS fallbacks omit them.",
+      "description": "One HTTP attempt recorded by pipeline.collect.Client.get() from a skippercast.http receipt. Providers' headers are optional because failures omit them; transport appears in feeds written before the shared client.",
       "type": "object",
       "required": ["url", "attempt", "retrieved_at"],
       "properties": {
@@ -62,7 +62,10 @@
         "compressed_bytes": {"type": "integer", "minimum": 0},
         "sha256": {"$ref": "#/$defs/sha256"},
         "error": {"type": "string"},
-        "transport": {"type": "string"}
+        "transport": {"type": "string"},
+        "elapsed_ms": {"type": "integer", "minimum": 0},
+        "from_cache": {"type": "boolean"},
+        "error_class": {"type": "string"}
       },
       "additionalProperties": true
     },

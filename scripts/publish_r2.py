@@ -2,6 +2,7 @@
 """Mirror a published feed directory to Cloudflare R2, uploading only changes.
 
     python scripts/publish_r2.py <local-dir> <prefix>      # e.g. var/live-published conditions
+    python scripts/publish_r2.py var/runs runs             # run manifests (upload only, never delete)
 
 Keys mirror the GitHub branch layout (`<prefix>/<path>`), so the site's
 /feeds/<prefix>/<path> route serves R2 and GitHub interchangeably. A hash
@@ -16,6 +17,11 @@ exits non-zero: the Worker serves R2 first, so a failed upload means users see
 stale data and the publishing job must go red. S3 credentials are derived from
 the API token as Cloudflare documents: access key = token id, secret =
 SHA-256 of the token value.
+
+Run manifests (`var/runs/<job>/<run_id>.json`, skippercast.runs) go to
+`runs/<job>/<run_id>.json` through upload_run_manifests(): each is checked,
+uploaded and read back, and nothing under runs/ is ever deleted here (expiry is
+an R2 lifecycle rule), because a runner only holds its own run's manifests.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -28,6 +34,7 @@ import sys
 from urllib.request import Request, urlopen
 
 INDEX = '.r2-sync.json'
+RUN_FILE = re.compile(r'^[a-z][a-z0-9-]{1,63}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.json$')
 POINTER = re.compile(r'(^|/)(latest|index|manifest|status|health|intelligence-health|habitat-health)[^/]*\.json$')
 TYPES = {'.json': 'application/json', '.geojson': 'application/json', '.md': 'text/markdown; charset=utf-8',
          '.pmtiles': 'application/octet-stream', '.gpx': 'application/gpx+xml', '.html': 'text/html; charset=utf-8'}
@@ -85,14 +92,50 @@ def client(token, account):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('source')
-    parser.add_argument('prefix', choices=['conditions', 'data', 'forecasts', 'tiles'])
+    parser.add_argument('prefix', choices=['conditions', 'data', 'forecasts', 'tiles', 'runs'])
     parser.add_argument('--bucket', default=os.environ.get('R2_BUCKET', 'skippercast-feeds'))
     args = parser.parse_args()
     token, account = os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     if not token or not account:
         print(f'R2 not configured (no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID); skipped {args.prefix}.')
         return
-    print(sync(client(token, account), args.bucket, args.source, args.prefix))
+    s3 = client(token, account)
+    if args.prefix == 'runs':
+        print(upload_run_manifests(s3, args.bucket, args.source))
+    else:
+        print(sync(s3, args.bucket, args.source, args.prefix))
+
+
+def run_manifest_keys(root):
+    """{local path: R2 key} for every <job>/<run_id>.json under root; rejects anything else."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+    from skippercast.platform.contracts import read_json
+    from skippercast.runs import validate
+    root, keys = Path(root), {}
+    if not root.is_dir():
+        return keys
+    for path in sorted(p for p in root.rglob('*') if p.is_file()):
+        relative = path.relative_to(root).as_posix()
+        if not RUN_FILE.fullmatch(relative):
+            raise ValueError(f'Not a run manifest path (<job>/<run_id>.json): {relative}')
+        document = validate(read_json(path))
+        if document['job'] != relative.split('/')[0]:
+            raise ValueError(f'Run manifest job {document["job"]!r} does not match its folder: {relative}')
+        keys[path] = f'runs/{relative}'
+    return keys
+
+
+def upload_run_manifests(s3, bucket, root):
+    """Upload each run manifest under root to runs/<job>/<file>, then read back its size. Never deletes."""
+    keys = run_manifest_keys(root)
+    for path, key in keys.items():
+        body = path.read_bytes()
+        s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType='application/json',
+                      CacheControl='no-store')
+        stored = s3.head_object(Bucket=bucket, Key=key).get('ContentLength')
+        if stored != len(body):
+            raise RuntimeError(f'R2 read-back mismatch for {key}: {stored} != {len(body)} bytes')
+    return f'R2 {bucket}/runs: {len(keys)} run manifest(s) uploaded and verified.'
 
 
 def sync(s3, bucket, source, prefix):
