@@ -13075,18 +13075,20 @@
       "resolution_m": 2.0,
       "horizontal_crs": "NAD83(CORS96) UTM zone 10",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "public-domain-us-gov",
       "sha256": "b44661031acac9e22e18fed8785e796690368cb8a2cdf7887903a1e732d6c08a",
-      "bytes": "unknown",
+      "bytes": 157558355,
       "derived_from": [],
-      "status": "candidate",
-      "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. ESRI ASCII mosaic: 2 m output includes 4 m source cells resampled beyond 100 m; adapter must retain this distinction. NAVD88 Geoid12. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "status": "hold",
+      "hold_reason": "format-unsupported",
+      "notes": "Native 157,558,355-byte ZIP SHA-256 verified; sole member is a 2 m ESRI ASCII grid, with 4 m native cells resampled only beyond 100 m. Public-domain metadata permits redistribution with USGS/CSUMB/UC attribution and asks that derived products be shared with USGS; not for navigation. Hold: ArcInfo/ASCII adapter is absent, and the released mosaic used 3x3 FocalMean gap filling without a per-pixel interpolation mask, so the tier-1 non-interpolated gate cannot yet be checked. No tier-1 or tier-2 area credited; obtain pre-fill data or a validity/density mask before promotion.",
+      "archive_member": "nad83_utm10_esterobay.asc",
       "evidence": [
         "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/access_url",
         "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/provenance/transformations/0",
-        "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/spatial/horizontal_crs"
+        "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/spatial/horizontal_crs",
+        "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/rights/license",
+        "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/provenance/interpolation_review"
       ],
       "field_evidence": {
         "sha256": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/access_url",
@@ -13094,7 +13096,10 @@
         "vertical_datum": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/access_url",
         "year": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/access_url",
         "format": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/provenance/transformations/0",
-        "horizontal_crs": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/spatial/horizontal_crs"
+        "horizontal_crs": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/spatial/horizontal_crs",
+        "license": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/rights/license",
+        "bytes": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/provenance/archive_bytes",
+        "archive_member": "catalog/candidates/usgs-estero-bay-2012-navd88-original.json#/provenance/archive_member"
       },
       "inspection_level": "native",
       "lineage_status": "unknown"

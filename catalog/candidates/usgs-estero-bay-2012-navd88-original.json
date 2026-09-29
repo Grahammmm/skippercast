@@ -18,9 +18,9 @@
     "within_cell_sounding_standard_deviation": "m in separate WGS84 G1150 grid"
   },
   "rights": {
-    "license": "USGS public-domain work; source metadata requires attribution and says not for navigation",
+    "license": "USGS public-domain work; acknowledge USGS, CSUMB Seafloor Mapping Lab, and UC Center for Integrated Spatial Research; share derived products with USGS; not for navigation",
     "terms_url": "https://pubs.usgs.gov/of/2013/1225/metadata/NAD83_metadata_EsteroBay.xml",
-    "redistribution_reviewed": false
+    "redistribution_reviewed": true
   },
   "spatial": {
     "bounds": [-121.172404, 35.224352, -120.915074, 35.520167],
@@ -44,7 +44,10 @@
     "transformations": [
       "Inspected native ESRI ASCII header: 11,456 columns, 16,020 rows, 2 m cell size; source states mixed 2 m/4 m survey data, resampled into a 2 m mosaic.",
       "No NAVD88-to-MLLW transformation or fishing target has been approved."
-    ]
+    ],
+    "archive_bytes": 157558355,
+    "archive_member": "nad83_utm10_esterobay.asc",
+    "interpolation_review": "Original FGDC metadata states the 2 m and 4 m mosaics were nearest-neighbor combined, then a 3x3 FocalMean was applied to fill gaps and smooth. The only ZIP member is the finished .asc; no per-pixel interpolation or sounding-density mask is provided. Valid, non-interpolated tier-1 cells cannot be counted from this archive alone."
   },
   "evidence": [
     {
@@ -69,6 +72,7 @@
     "Depth and spread grids use different horizontal realizations and shifted raster origins. Their rows cannot be paired by index without reviewed coordinate transformation and registration uncertainty.",
     "NAVD88 depths require a reviewed spatial VDatum transformation to MLLW plus total vertical uncertainty before applying the 300 ft fishing limit.",
     "The raster envelope contains nodata and includes 4 m native-depth data resampled onto a 2 m output grid beyond 100 m. It is not a navigation product or a set of fishing spots.",
-    "Overlap with independently classified seabed, biological observations, current MPAs, chart dangers and usable drift/route geometry remains unreviewed."
+    "Overlap with independently classified seabed, biological observations, current MPAs, chart dangers and usable drift/route geometry remains unreviewed.",
+    "The released ASCII grid contains focal-mean gap filling without a supplied pixel provenance mask. Hold this source under the current tier-1 non-interpolated gate until an original density/validity mask or pre-fill grid can be reviewed."
   ]
 }
