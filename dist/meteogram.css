@@ -1,0 +1,68 @@
+/* 7-day meteogram card (P4-06). Colours use design tokens with the token
+   values as fallbacks, so the card renders before and after tokens.css. */
+.meteogram-card { border: 1px solid var(--line, #d6e2e6); border-radius: var(--radius-md, 12px); background: var(--card, #fff); color: var(--ink, #0b2530); margin: 12px 0; }
+.meteogram-card > summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 12px; list-style: none; font-weight: 700; }
+.meteogram-card > summary::-webkit-details-marker { display: none; }
+.meteogram-card > summary::after { content: ""; width: 8px; height: 8px; border: solid var(--ink-2, #3f5a66); border-width: 0 2px 2px 0; transform: rotate(45deg); margin-right: 4px; }
+.meteogram-card[open] > summary::after { transform: rotate(-135deg); }
+.meteogram-card > summary small { font-weight: 400; color: var(--ink-2, #3f5a66); font-size: 14px; margin-left: auto; }
+.meteogram { padding: 0 8px 8px; }
+.meteogram-plot { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; border-radius: var(--radius-sm, 8px); cursor: crosshair; }
+.meteogram-plot:focus-visible { outline: 3px solid var(--brand, #0a7c72); outline-offset: 2px; }
+.meteogram-svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--font-sans, inherit); font-variant-numeric: tabular-nums; }
+.meteogram-empty, .meteogram-loading { margin: 0; padding: 12px 4px; color: var(--ink-2, #3f5a66); font-size: 14px; }
+
+.mg-grid { stroke: var(--line, #d6e2e6); stroke-width: 1; fill: none; }
+.mg-day { stroke: var(--line, #d6e2e6); stroke-width: 1; }
+.mg-axis, .mg-foot { fill: var(--ink-2, #3f5a66); font-size: 10px; }
+.mg-daylabel { fill: var(--ink, #0b2530); font-size: 11px; font-weight: 600; }
+.mg-lane { fill: var(--ink-2, #3f5a66); font-size: 10px; font-weight: 600; letter-spacing: .02em; paint-order: stroke; stroke: var(--card, #fff); stroke-width: 3px; stroke-linejoin: round; }
+.mg-unit { font-weight: 400; }
+
+.mg-go { fill: var(--go, #1a8050); }
+.mg-caution { fill: var(--caution, #a46200); }
+.mg-rough { fill: var(--rough, #b23a48); }
+.mg-unknown { fill: var(--unknown, #64747d); opacity: .35; }
+.mg-differ { fill: var(--ink-2, #3f5a66); }
+
+.mg-wind { fill: var(--map-wind, #315f98); opacity: .8; }
+.mg-gust { stroke: var(--ink, #0b2530); stroke-width: 1.5; fill: none; }
+.mg-sea { stroke: var(--brand, #0a7c72); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.mg-tide { fill: var(--map-current, #2f6fb0); opacity: .2; }
+.mg-tide-line { stroke: var(--map-current, #2f6fb0); stroke-width: 1.5; fill: none; }
+
+.mg-provisional { pointer-events: none; }
+.mg-hatch-line { stroke: var(--ink-2, #3f5a66); stroke-width: 1; opacity: .22; }
+.mg-now { stroke: var(--ink, #0b2530); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.mg-now-label { fill: var(--ink, #0b2530); font-weight: 600; }
+
+.mg-hit { fill: transparent; }
+.mg-cursor-line { stroke: var(--ink, #0b2530); stroke-width: 2; }
+.mg-cursor-knob { fill: var(--ink, #0b2530); }
+.meteogram-plot:focus-visible .mg-cursor-line { stroke: var(--brand, #0a7c72); stroke-width: 3; }
+
+.meteogram-readout { margin: 6px 4px 0; font-size: 14px; line-height: 1.4; font-variant-numeric: tabular-nums; min-height: 20px; }
+.meteogram-readout strong { margin-right: 4px; }
+.mg-chip { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+span.mg-go { background: var(--go, #1a8050); }
+span.mg-caution { background: var(--caution, #a46200); }
+span.mg-rough { background: var(--rough, #b23a48); }
+span.mg-unknown { background: var(--unknown, #64747d); }
+
+.meteogram-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 12px 12px; padding: 0; list-style: none; font-size: 12px; color: var(--ink-2, #3f5a66); }
+.meteogram-legend li { display: inline-flex; align-items: center; gap: 4px; }
+.meteogram-legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
+.meteogram-legend .lg-wind { background: var(--map-wind, #315f98); }
+.meteogram-legend .lg-gust { height: 2px; background: var(--ink, #0b2530); }
+.meteogram-legend .lg-sea { height: 3px; background: var(--brand, #0a7c72); }
+.meteogram-legend .lg-tide { background: color-mix(in srgb, var(--map-current, #2f6fb0) 30%, transparent); border-top: 1.5px solid var(--map-current, #2f6fb0); }
+.meteogram-legend .lg-go { background: var(--go, #1a8050); }
+.meteogram-legend .lg-caution { background: var(--caution, #a46200); }
+.meteogram-legend .lg-rough { background: var(--rough, #b23a48); }
+.meteogram-legend .lg-unknown { background: var(--unknown, #64747d); opacity: .45; }
+.meteogram-legend .lg-differ { height: 3px; background: var(--ink-2, #3f5a66); }
+.meteogram-legend .lg-hatch { background: repeating-linear-gradient(45deg, transparent 0 3px, color-mix(in srgb, var(--ink-2, #3f5a66) 45%, transparent) 3px 4px); border: 1px solid var(--line, #d6e2e6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .meteogram-card, .meteogram-card * { transition: none !important; animation: none !important; }
+}
