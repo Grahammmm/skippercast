@@ -39,6 +39,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
    - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`: required.
    - `ANTHROPIC_API_KEY`: optional, for the AI boat lookup.
    - `WATCHDOG_GITHUB_TOKEN`: optional, for the watchdog. Create a fine-grained GitHub token for this repository only, with **Actions: Read and write**.
+   - `R2_PUBLISH_TOKEN`: recommended. An R2-only token for the data jobs; see [scoped tokens](#scoped-tokens-for-the-data-jobs). Until it exists, they fall back to `CLOUDFLARE_API_TOKEN`.
 4. **Add repository variables** on the same page, under the Variables tab:
    - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`, for the post-deploy check;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
@@ -74,6 +75,29 @@ These are the free-tier allowances as published by Cloudflare; check current pri
 - **R2:** 10 GB storage and 1 million writes a month free, with no egress charge. SkipperCast's feeds total about 185 MB. Incremental uploads keep writes to changed files only.
 - **Workers paid plan:** $5 a month, once traffic or cron needs exceed the free plan.
 
+## Scoped tokens for the data jobs
+
+The data workflows only upload feed files to R2: the live loop, the daily job, Forecast tiles and Seafloor. They read `secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN`. Once `R2_PUBLISH_TOKEN` exists, the broad deploy token, which can edit Workers, D1 and every R2 bucket, is used only by **Deploy to Cloudflare**. To create the R2-only token:
+
+1. In the Cloudflare dashboard, open **R2 object storage → Overview**. Under **Account Details**, select **Manage** next to **API Tokens**.
+2. Select **Create Account API token**. A user token also works, but it stops working if your user leaves the account.
+3. Under **Permissions**, choose **Object Read & Write**. Scope it to the **`skippercast-feeds`** bucket only. Do not choose Admin, and do not include `skippercast-backups`, which holds D1 exports.
+4. Create it, then copy the **token value**. The Access Key ID and Secret Access Key shown on the same page are not needed: `scripts/publish_r2.py` derives them from the token value as Cloudflare documents (key ID = token id, secret = SHA-256 of the value).
+5. Save it as the repository secret `R2_PUBLISH_TOKEN`. To check it, run **Actions → Forecast tiles → Run workflow**. The log line `R2 skippercast-feeds/forecasts: … uploaded` means it works. If the job fails with `could not verify CLOUDFLARE_API_TOKEN`, delete the secret; the jobs then fall back to the deploy token.
+
+R2 lifecycle rules are bucket configuration, which an Object Read & Write token cannot change. They are therefore applied by the deploy, with the deploy token.
+
+**The live workflow is split into three jobs, so each holds only what it needs:**
+
+| Job | Permissions | Does |
+| --- | --- | --- |
+| `refresh` | `contents: write` | Collects and publishes the `conditions` and `forecasts` branches and R2 every 30 minutes (`live_loop.py --skip-trips`). |
+| `notify` | `id-token: write`, `contents: read`, `actions: read` | Runs beside `refresh`. It watches the `conditions` head and runs `check_saved_trips.py` once per new publication, after a 90-second wait for R2 (`scripts/trip_check_loop.py`). A failed delivery turns only this job red, and the next publication is still checked. It stops when `refresh` finishes. |
+| `next` | `actions: write` | After `refresh`, dispatches the next loop, unless `refresh` ended within an hour. It holds no secrets. |
+
+All three jobs stay in `live-conditions.yml` because `server/job-auth.js` accepts the OIDC token only when its `workflow_ref` is `deployments/production.json`'s `scheduler.workflow`, which is this file. Moving trip checks to another workflow file, or to a `workflow_run` trigger (a different `event_name`), would need a reviewed change to that policy. The `refresh` job keeps `contents: write` for as long as the git branches are published.
+
+## Before skippercast.com moves here
 ## Custom domain
 
 The deploy attaches every host in the `CUSTOM_DOMAINS` repository variable as a [Worker custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/): `scripts/wrangler_config.mjs` turns `skippercast.com,www.skippercast.com` into `"routes": [{"pattern": "skippercast.com", "custom_domain": true}, {"pattern": "www.skippercast.com", "custom_domain": true}]` and keeps `workers_dev` on. Without the variable nothing changes (workers.dev only). Cloudflare then creates the DNS records and certificates itself. The Worker answers any `www.` host with a 301 to the apex, keeping path and query, so there is one canonical origin for cookies, passkeys and caches (hashed static files under www may still be served directly; they are identical and harmless). `deployments/production.json` allows `https://skippercast.com` and `https://www.skippercast.com` as Origins; the `EXTRA_ORIGINS` secret keeps the workers.dev origin allowed.
