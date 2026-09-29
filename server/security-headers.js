@@ -10,7 +10,6 @@
 export const CONNECT_ORIGINS = [
   'https://api.weather.gov',                  // NWS alerts and station observations (live-conditions.js, marine-data.js)
   'https://api.tidesandcurrents.noaa.gov',    // NOAA CO-OPS tides and water level
-  'https://marine-api.open-meteo.com',        // ocean currents (marine-data.js); to be replaced under P0-10
   'https://raw.githubusercontent.com',        // region feed URLs not routed through /feeds/ (fallbacks)
   'https://services2.arcgis.com',             // CDFW MPA boundary query (protected-areas.js)
   'https://tile.openstreetmap.org',           // base map tiles (MapLibre fetches tiles)

@@ -102,14 +102,9 @@ REGISTER_ROW = 'docs/legal/data-rights-register.md#'
 # source id -> (register anchor, date listed, offending usages). Remove an
 # entry (and update the register) when the blocker is resolved.
 KNOWN_BLOCKERS = {
-    'open-meteo-api': (REGISTER_ROW + 'b1--open-meteo-free-api', '2026-09-28', {
-        'runtime:dist/marine-data.js',
-        'runtime:src/skippercast/monitor/collector.py',
-        'runtime:src/skippercast/pipeline/intelligence.py',
+    'open-meteo-api': (REGISTER_ROW + 'b1--open-meteo-free-api-mostly-resolved', '2026-09-28', {
+        # Runtime calls were removed in #51/#54; only the committed daily snapshot still carries Open-Meteo data.
         'data/daily-evidence.json',
-    }),
-    'noaa-gefs-members': (REGISTER_ROW + 'b1--open-meteo-free-api', '2026-09-28', {
-        'region.json:intelligence.providers.wind_ensemble',
     }),
     'gfw-effort': (REGISTER_ROW + 'b2--global-fishing-watch-cc-by-nc', '2026-09-28', {
         'data/commercial-ais-effort.geojson',
@@ -142,7 +137,7 @@ KNOWN_BLOCKERS = {
         'data/charter-grounds.json', 'data/daily-evidence.json',
     }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
-        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js',
+        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.js',
     }),
 }
 

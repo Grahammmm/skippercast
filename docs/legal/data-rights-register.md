@@ -26,13 +26,14 @@ Adding a new source to `catalog/sources.json` now requires `commercial_use` and 
 
 Every item here must be closed, licensed or removed before SkipperCast charges money.
 
-### B1 — Open-Meteo free API
+### B1 — Open-Meteo free API (mostly resolved)
 
-- **Sources:** `open-meteo-api`, `noaa-gefs-members`.
-- **Terms:** Open-Meteo API data are CC BY 4.0, but the [free API terms](https://open-meteo.com/en/terms) restrict access to non-commercial use. NOAA GEFS data themselves are public domain; the blocker is the access path.
-- **Where:** GEFS 31-member wind ensemble in `src/skippercast/pipeline/intelligence.py` (bound in every region as `intelligence.providers.wind_ensemble`); the legacy Morro Bay monitor `src/skippercast/monitor/collector.py`; the browser's direct ocean-current request (Météo-France/Copernicus via `marine-api.open-meteo.com`) in `dist/marine-data.js`; and the committed Morro Bay `data/daily-evidence.json` snapshot, which contains Open-Meteo model responses from before the switch to SkipperCast tiles.
-- **Action:** build GEFS 0.25° member tiles from NOMADS/AWS in `forecast/` and sample them in `intelligence.ensemble` (guide P0-10); switch the browser ocean-current layer to NOAA WCOFS/HF radar or drop it; archive `monitor/`; regenerate `daily-evidence.json` from the current pipeline. Alternative: an Open-Meteo commercial API plan.
-- **Owner:** Engineering (replacement) · Owner (decide whether to buy a plan).
+- **Sources:** `open-meteo-api`. (`noaa-gefs-members` is resolved: members now come directly from NOAA's AWS Open Data bucket, public domain.)
+- **Terms:** Open-Meteo API data are CC BY 4.0, but the [free API terms](https://open-meteo.com/en/terms) restrict access to non-commercial use.
+- **Resolved:** the GEFS ensemble is built from NOAA directly (`src/skippercast/forecast/ensemble.py`, #51); the browser ocean-current request was replaced by NOAA WCOFS, and the legacy monitor now calls SkipperCast's own `/api/om` (#54); the Content-Security-Policy no longer allows `marine-api.open-meteo.com`.
+- **Remaining:** the committed Morro Bay `data/daily-evidence.json` snapshot still contains Open-Meteo model responses from before the switch.
+- **Action:** regenerate `daily-evidence.json` from the current pipeline, then remove `open-meteo-api` from `KNOWN_BLOCKERS`.
+- **Owner:** Engineering.
 
 ### B2 — Global Fishing Watch CC BY-NC
 
@@ -76,7 +77,7 @@ Every item here must be closed, licensed or removed before SkipperCast charges m
 
 | Service | Id | Licence / terms | Attribution required | Commercial use OK | Where used in app | Action | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| OpenStreetMap standard tiles | `osm-tiles` | ODbL data; OSMF tile usage policy | yes | **unknown** | `dist/chart-map.js`, `dist/map-test-common.js` | [Blocker B6](#b6--openstreetmap-tile-service) | Engineering |
+| OpenStreetMap standard tiles | `osm-tiles` | ODbL data; OSMF tile usage policy | yes | **unknown** | `dist/chart-map.js`, `dist/map-test-common.js`, `server/security-headers.js` (CSP) | [Blocker B6](#b6--openstreetmap-tile-service) | Engineering |
 | NOAA Chart Display Service (ENC WMS) | `noaa-enc-display` | US public domain | no (credit requested) | yes | `dist/chart-map.js`, `dist/map-test-common.js` | None | Engineering |
 
 The browser also calls NWS (`api.weather.gov`) and NOAA CO-OPS (`api.tidesandcurrents.noaa.gov`) directly; they are public domain and covered by the `nws-weather` and `noaa-tides` rows.
@@ -125,7 +126,7 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | 2011 charter fishing-ground interviews DS1091 | `ds1091-charter-grounds` | permission-required | yes | **needs permission** | Not shipped (catalog or research only) | Rights review before any use | Owner |
 | NOAA / IOOS HF radar 1 km and 6 km | `noaa-hfr-thredds` | US public domain | no (credit requested) | yes | `region.json:intelligence.providers.hfr` | None | Engineering |
 | NOAA West Coast Operational Forecast System | `noaa-wcofs` | US public domain | no (credit requested) | yes | `region.json:intelligence.providers.regional_current` | None | Engineering |
-| NOAA GEFS wind ensemble via Open-Meteo | `noaa-gefs-members` | CC BY 4.0 | yes | **no** | `region.json:intelligence.providers.wind_ensemble` | [Blocker B1](#b1--open-meteo-free-api) | Owner |
+| NOAA GEFS wind ensemble (NOAA AWS Open Data) | `noaa-gefs-members` | Public domain | yes | yes | `region.json:intelligence.providers.wind_ensemble` | — | — |
 | NOAA GEFS Wave exceedance probabilities | `noaa-gefs-wave-prob` | US public domain | no (credit requested) | yes | `region.json:intelligence.providers.wave_ensemble` | None | Engineering |
 | CDFW Southern California artificial reef guide (2001) | `cdfw-artificial-reefs` | Facts only | no (credit requested) | yes | `regions/southern-california/reef-context.geojson` | None | Engineering |
 | NOAA Southern California Groundfish Exclusion Areas | `noaa-socal-gea` | US public domain | no (credit requested) | yes | `regions/southern-california/groundfish-exclusions.geojson` | None | Engineering |
@@ -141,7 +142,7 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | Offshore Cape Mendocino bathymetry and seafloor character | `usgs-cape-mendocino` | US public domain | no (credit requested) | yes | `regions/humboldt-bay-cape-mendocino/search-plans.json`<br>`regions/humboldt-bay-cape-mendocino/survey-habitat.geojson` | None | Engineering |
 | California State Waters Map Series seafloor character (DS 781) | `usgs-csmp-seafloor-character` | US public domain | yes | **needs permission** | `regions/bodega-point-reyes/search-plans.json`<br>`regions/bodega-point-reyes/survey-habitat.geojson`<br>`regions/monterey-point-sur/search-plans.json`<br>`regions/monterey-point-sur/survey-habitat.geojson`<br>`regions/point-arena-bodega/search-plans.json`<br>`regions/point-arena-bodega/survey-habitat.geojson`<br>`regions/point-arguello-conception/search-plans.json`<br>`regions/point-arguello-conception/survey-habitat.geojson`<br>`regions/santa-cruz-monterey-bay/search-plans.json`<br>`regions/santa-cruz-monterey-bay/survey-habitat.geojson` | [Blocker B3](#b3--csumb-co-produced-seafloor-data) | Owner |
 | PMEP West Coast nearshore rocky-reef HAPC compilation | `pmep-hapc` | unreviewed | yes | **unknown** | `regions/big-sur-coast/search-plans.json`<br>`regions/big-sur-coast/survey-habitat.geojson`<br>`regions/south-big-sur-san-simeon/search-plans.json`<br>`regions/south-big-sur-san-simeon/survey-habitat.geojson` | [Blocker B4](#b4--pmep-habitat-compilation-terms-unreviewed) | Owner |
-| Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | `data/daily-evidence.json`<br>`runtime:dist/marine-data.js`<br>`runtime:src/skippercast/monitor/collector.py`<br>`runtime:src/skippercast/pipeline/intelligence.py` | [Blocker B1](#b1--open-meteo-free-api) | Owner |
+| Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | `data/daily-evidence.json` | [Blocker B1](#b1--open-meteo-free-api-mostly-resolved) | Owner |
 
 ## Web and code dependencies
 
