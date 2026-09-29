@@ -104,7 +104,7 @@ def main():
     parser.add_argument('--context', type=Path, required=True)
     parser.add_argument('--reconciliation', type=Path, required=True)
     parser.add_argument('--enc', type=Path, required=True)
-    parser.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
+    parser.add_argument('--hazards', type=Path, default=Path('research/catalog/noaa-survey-hazards.json'))
     parser.add_argument('--mpas', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)

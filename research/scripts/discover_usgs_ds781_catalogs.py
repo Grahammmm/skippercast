@@ -173,7 +173,7 @@ def release_products(content, page_url, area_name, shared):
 def inventory():
     index = fetch(INDEX)
     areas = map_areas(index)
-    association = json.loads((ROOT / 'catalog/usgs-ds781-sector-associations.json').read_text())
+    association = json.loads((ROOT / 'research/catalog/usgs-ds781-sector-associations.json').read_text())
     mapping = association['planning_sectors']
     sector_ids = {s['id'] for s in json.loads((ROOT / 'catalog/coastal-sectors.json').read_text())['sectors']}
     if set(mapping) != {a['name'] for a in areas} or any(not set(ids) <= sector_ids for ids in mapping.values()):

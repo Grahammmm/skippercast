@@ -21,7 +21,7 @@ class OriginalHabitatTriageTest(unittest.TestCase):
         cls.context = read("dist/data/cape-mendocino-native-hard-context.geojson")
         cls.depths = read("dist/data/h11975-research-outline-original-depths.json")
         cls.enc = read("dist/data/cape-mendocino-enc-context-review.json")
-        cls.profile = read("catalog/original-habitat-triage-profiles.json")["profiles"][0]
+        cls.profile = read("research/catalog/original-habitat-triage-profiles.json")["profiles"][0]
 
     def test_shortlist_is_measured_chart_screened_and_never_fishing(self):
         result = triage(self.context, self.depths, self.enc, self.profile)

@@ -260,7 +260,7 @@ def main():
     p.add_argument("--fetch", action="store_true", help="Fetch pinned original USGS and published ROV objects")
     p.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-original-paired-200-300ft-review.json")
     args = p.parse_args()
-    pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
+    pin = json.loads((ROOT / "research/catalog/central-rov-2024-source.json").read_text())
     if args.fetch:
         leads = json.loads((ROOT / "dist/data/usgs-ds781-source-leads.json").read_text())
         fetch_original(leads, args.bathy, args.character, args.character_metadata, args.bathy_metadata)

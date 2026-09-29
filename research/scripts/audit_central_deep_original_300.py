@@ -128,7 +128,7 @@ def build(binding, fetch=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binding", type=Path, default=Path("catalog/central-deep-original-300-bindings.json"))
+    parser.add_argument("--binding", type=Path, default=Path("research/catalog/central-deep-original-300-bindings.json"))
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--output", type=Path, default=Path("research/receipts/central-deep-original-300-refutation.json"))
     args = parser.parse_args()

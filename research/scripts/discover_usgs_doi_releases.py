@@ -20,7 +20,7 @@ from research.scripts.discover_usgs_map_blocks import INDEX
 
 DOI = re.compile(r'^https://doi\.org/10\.5066/([A-Z0-9]+)$')
 MAX_PAGE=1_500_000
-ADDITIONAL=Path('catalog/usgs-additional-doi-releases.json')
+ADDITIONAL=Path('research/catalog/usgs-additional-doi-releases.json')
 
 
 class Anchors(HTMLParser):

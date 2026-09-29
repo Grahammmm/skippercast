@@ -160,7 +160,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bss-manifest', type=Path, default=ROOT / 'catalog/csumb-bss-native-sources.json')
     parser.add_argument('--survey-id', default='BSS_Block02')
-    parser.add_argument('--video-manifest', type=Path, default=ROOT / 'catalog/usgs-video-cruises.json')
+    parser.add_argument('--video-manifest', type=Path, default=ROOT / 'research/catalog/usgs-video-cruises.json')
     parser.add_argument('--bss-cache', type=Path, default=ROOT / 'var/noaa-native-cache')
     parser.add_argument('--video-cache', type=Path, default=ROOT / 'var/usgs-video-cache')
     parser.add_argument('--download-video', action='store_true')

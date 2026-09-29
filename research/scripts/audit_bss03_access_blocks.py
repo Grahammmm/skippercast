@@ -182,7 +182,7 @@ def main():
     args = parser.parse_args()
     bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
                if source['survey_id'] == SURVEY)
-    video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
+    video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
     blocks = source_blocks(bss, video, args.bss_cache, args.video_cache)
     source_data = [json.loads(path.read_text()) for path in (args.mpas, args.federal, args.enc)]
     report, private = screen(blocks, *source_data)

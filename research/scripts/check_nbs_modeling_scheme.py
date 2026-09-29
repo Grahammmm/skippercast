@@ -57,7 +57,7 @@ def check(manifest, cache, *, list_bytes=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("catalog/nbs-modeling-sample.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("research/catalog/nbs-modeling-sample.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache/modeling-tile-scheme.gpkg"))
     parser.add_argument("--output", type=Path, default=Path("var/review/nbs-modeling-scheme-health.json"))
     args = parser.parse_args()

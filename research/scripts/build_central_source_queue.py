@@ -30,7 +30,7 @@ def build(root):
     usgs = read(root / "catalog/usgs-ds781-source-leads.json")
     metadata = read(root / "catalog/usgs-ds781-metadata-review.json")
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
-    bindings = read(root / "catalog/central-native-depth-review-bindings.json")
+    bindings = read(root / "research/catalog/central-native-depth-review-bindings.json")
     monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
     monterey_merge_assets = read(root / "research/receipts/monterey-2013-merge-public-asset-access.json")
     if (monterey_merge_assets.get("scope") != "noaa-2013-merge-m2612-public-distribution-access"
@@ -44,7 +44,7 @@ def build(root):
             or monterey_merge_assets.get("fishing_target") is not False):
         raise ValueError("NOAA 2013 merge asset-access gate changed")
     bluetopo = read(root / "research/receipts/central-bluetopo-upstream-source-leads.json")
-    bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
+    bluetopo_manifest = read(root / "research/catalog/bluetopo-statewide-sample.json")
     multibeam = read(root / "research/receipts/noaa-central-multibeam-footprint-leads.json")
     csumb = read(root / "research/receipts/csumb-bss-native-source-review.json")
     bigcreek = read(root / "research/receipts/bigcreek-lopez-original-300-research.json")
@@ -98,7 +98,7 @@ def build(root):
             or len(conception_access.get("components", [])) != 2
             or conception_access.get("fishing_target") is not False):
         raise ValueError("Point Conception point-in-time access screen changed")
-    extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
+    extra_bag_pin = read(root / "research/catalog/central-extra-bag-pin.json")
     extra_bag = read(root / "research/receipts/f00844-original-fifth-bag-review.json")
     estero_depth = read(root / "research/receipts/usgs-estero-bay-2012-original-200-300ft-review.json")
     estero_overlap = read(root / "research/receipts/estero-independent-2012-depth-2008-character-overlap.json")
@@ -118,7 +118,7 @@ def build(root):
             or estero_direct_character.get("qualified_waypoints") != 0
             or estero_direct_character.get("full_cellwise_mllw_surface_verified") is not False):
         raise ValueError("Estero direct-frame independent-class screen changed")
-    deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
+    deep_binding = read(root / "research/catalog/central-deep-original-300-bindings.json")
     deep_refutation = read(root / "research/receipts/central-deep-original-300-refutation.json")
     buchon_catalog_gap = read(root / "research/receipts/point-buchon-noaa-catalog-envelope-gap.json")
     buchon_original = read(root / "research/receipts/point-buchon-original-paired-200-300ft-review.json")

@@ -84,7 +84,7 @@ def main():
     p.add_argument("--context", type=Path, required=True)
     p.add_argument("--summary", type=Path, required=True)
     p.add_argument("--enc", type=Path, required=True)
-    p.add_argument("--profiles", type=Path, default=Path("catalog/regular-habitat-triage-profiles.json"))
+    p.add_argument("--profiles", type=Path, default=Path("research/catalog/regular-habitat-triage-profiles.json"))
     p.add_argument("--profile-id", required=True)
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()

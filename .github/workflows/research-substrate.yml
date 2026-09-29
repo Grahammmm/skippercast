@@ -1,4 +1,4 @@
-name: Monthly statewide substrate review
+name: "Research: monthly statewide substrate review"
 
 on:
   schedule:
@@ -700,13 +700,13 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: var/bluetopo-cache
-          key: bluetopo-statewide-source-${{ hashFiles('catalog/bluetopo-statewide-sample.json') }}
+          key: bluetopo-statewide-source-${{ hashFiles('research/catalog/bluetopo-statewide-sample.json') }}
       - name: Recheck measured contributor pixels and publisher scheme
         env:
           PYTHONPATH: src:.
         run: >-
           python research/scripts/refresh_bluetopo_samples.py
-          --manifest catalog/bluetopo-statewide-sample.json
+          --manifest research/catalog/bluetopo-statewide-sample.json
           --output var/review/bluetopo-pinned-samples.json
       - name: Refresh Central Coast contributor-table source leads
         env:
@@ -743,7 +743,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: var/usgs-dig-cache/Cal_DIG_I_v2_*.zip
-          key: usgs-caldig-v2-original-${{ hashFiles('catalog/usgs-caldig-v2.json') }}
+          key: usgs-caldig-v2-original-${{ hashFiles('research/catalog/usgs-caldig-v2.json') }}
       - name: Rescan exact original bathymetry and CMECS polygons
         run: >-
           python research/scripts/audit_usgs_caldig_v2.py
@@ -807,7 +807,7 @@ jobs:
             var/noaa-native-cache/BSS_Block*_additional_products.tar.gz
             var/noaa-native-cache/BigCreek_additional_products.tar.gz
             var/usgs-video-cache/c0212sc_video_observations.zip
-          key: csumb-scc-bss-bigcreek-original-v2-${{ hashFiles('catalog/csumb-scc-native-sources.json', 'catalog/csumb-bss-native-sources.json', 'catalog/candidates/csumb-bigcreek-lopez-original-grids.json', 'catalog/usgs-video-cruises.json') }}
+          key: csumb-scc-bss-bigcreek-original-v2-${{ hashFiles('catalog/csumb-scc-native-sources.json', 'catalog/csumb-bss-native-sources.json', 'catalog/candidates/csumb-bigcreek-lopez-original-grids.json', 'research/catalog/usgs-video-cruises.json') }}
       - name: Audit exact original CSUMB bathymetry and terrain classes
         run: >-
           python research/scripts/audit_csumb_scc_native.py
@@ -1072,7 +1072,7 @@ jobs:
             var/nbs-cache
             var/usgs-native-cache
             var/usgs-doi-native-cache
-          key: california-original-rasters-v1-${{ hashFiles('catalog/nbs-modeling-sample.json', 'catalog/usgs-seafloor-sources.json') }}
+          key: california-original-rasters-v1-${{ hashFiles('research/catalog/nbs-modeling-sample.json', 'catalog/usgs-seafloor-sources.json') }}
           restore-keys: |
             california-original-rasters-v1-
       - name: Verify substrate adapter and class safeguards

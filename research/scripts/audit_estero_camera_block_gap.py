@@ -107,7 +107,7 @@ def build(manifest, blocks, cache, download=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=ROOT / "catalog/usgs-video-cruises.json")
+    parser.add_argument("--manifest", type=Path, default=ROOT / "research/catalog/usgs-video-cruises.json")
     parser.add_argument("--blocks", type=Path, default=ROOT / "var/review/estero-nominal-research-blocks.geojson")
     parser.add_argument("--cache", type=Path, default=ROOT / "var/usgs-video-cache")
     parser.add_argument("--download-video", action="store_true")

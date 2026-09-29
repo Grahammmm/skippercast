@@ -134,7 +134,7 @@ def review(pairs, cruise_bytes, expected_hashes, tile_audit, tile_cache, usgs_co
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pairs', type=Path, default=Path('research/receipts/noaa-statewide-regular-camera-review.json'))
-    parser.add_argument('--cruises', type=Path, default=Path('catalog/usgs-video-cruises.json'))
+    parser.add_argument('--cruises', type=Path, default=Path('research/catalog/usgs-video-cruises.json'))
     parser.add_argument('--camera-cache', type=Path, default=Path('var/usgs-video-cache'))
     parser.add_argument('--tile-audit', type=Path, required=True)
     parser.add_argument('--tile-cache', type=Path, default=Path('var/cdfw-ds3091-tiles'))

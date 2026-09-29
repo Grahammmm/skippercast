@@ -194,7 +194,7 @@ def main():
     parser.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/point-buchon-rov-100m-blocks.geojson")
     parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-rov-access-triage.json")
     args = parser.parse_args()
-    pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
+    pin = json.loads((ROOT / "research/catalog/central-rov-2024-source.json").read_text())
     blocks = source_blocks(args.bathy, args.character, args.rov, pin)
     mpas, federal, enc = (json.loads(path.read_text()) for path in (args.mpas, args.federal, args.enc))
     report, private = build(blocks, mpas, federal, enc)

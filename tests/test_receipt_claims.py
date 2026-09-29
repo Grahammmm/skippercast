@@ -18,7 +18,7 @@ class ReceiptClaimsTest(unittest.TestCase):
     def test_expanded_native_depth_inventory(self):
         name = 'noaa-vr-native-depth-expanded-review.json'
         data = json.loads((WEB / 'data' / name).read_text())
-        manifest = json.loads((ROOT / 'catalog/noaa-vr-native-review-sources.json').read_text())
+        manifest = json.loads((ROOT / 'research/catalog/noaa-vr-native-review-sources.json').read_text())
         assert manifest['scope'] == 'california-original-vr-depth-review-inputs'
         reviews = [json.loads(locate(path).read_text()) for path in manifest['review_files']]
         sectors = json.loads((WEB / 'data/coastal-sectors.json').read_text())['sectors']
@@ -41,7 +41,7 @@ class ReceiptClaimsTest(unittest.TestCase):
                                        for source in data['files'])
 
     def test_usgs_morro_report_datum(self):
-        manifest = json.loads((ROOT / 'catalog/usgs-morro-report-datum-source.json').read_text())
+        manifest = json.loads((ROOT / 'research/catalog/usgs-morro-report-datum-source.json').read_text())
         review = json.loads((RECEIPTS / 'usgs-morro-report-datum-review.json').read_text())
         assert review['scope'] == manifest['scope']
         assert review['report_sha256'] == manifest['report_sha256']

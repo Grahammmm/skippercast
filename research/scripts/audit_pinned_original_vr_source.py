@@ -44,7 +44,7 @@ def audit(spec, cache, *, fetcher=download):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--manifest', type=Path, default=Path('catalog/original-vr-camera-review-sources.json'))
+    parser.add_argument('--manifest', type=Path, default=Path('research/catalog/original-vr-camera-review-sources.json'))
     parser.add_argument('--survey-id', required=True)
     parser.add_argument('--cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--output', type=Path, required=True)

@@ -192,7 +192,7 @@ def main():
     p.add_argument('--usgs-cache',type=Path,default=Path('var/usgs-doi-native-cache'))
     p.add_argument('--mpas',type=Path,default=Path('var/qualification-current/coastal/latest.json'))
     p.add_argument('--federal-areas',type=Path,default=Path('var/noaa-federal-areas.json'))
-    p.add_argument('--hazards',type=Path,default=Path('catalog/noaa-survey-hazards.json'))
+    p.add_argument('--hazards',type=Path,default=Path('research/catalog/noaa-survey-hazards.json'))
     p.add_argument('--report-cache',type=Path,default=Path('var/noaa-report-cache'))
     p.add_argument('--limit-ft',type=int,default=200)
     p.add_argument('--output',type=Path,required=True)

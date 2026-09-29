@@ -146,7 +146,7 @@ def build(scheme, manifest, video_cache, sectors, cache, mpa_snapshot, *, coast,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scheme', type=Path, required=True)
-    parser.add_argument('--manifest', type=Path, default=Path('catalog/usgs-video-cruises.json'))
+    parser.add_argument('--manifest', type=Path, default=Path('research/catalog/usgs-video-cruises.json'))
     parser.add_argument('--video-cache', type=Path, default=Path('var/usgs-video-cache'))
     parser.add_argument('--sectors', type=Path, default=Path('catalog/coastal-sectors.json'))
     parser.add_argument('--cache', type=Path, default=Path('var/nbs-cache'))

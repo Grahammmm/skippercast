@@ -27,12 +27,27 @@ the scheduled product feeds.
 | --- | --- |
 | `scripts/` | Audit, screen, triage, review, discovery, inspect, summarize, queue, compile, reconcile and measure scripts, plus one-off builders for research datasets and manually refreshed app data (for example `build_habitat_regions.py`, `export_web_targets.mjs`). Maintained by Codex. |
 | `lib/` | Helpers shared by several research scripts, so they need not import an unrelated audit for them (`lib/paths.py`: repository `ROOT`; `lib/receipts.py`: `RECEIPTS`, `locate()`). |
+| `catalog/` | Dated research pins and review bindings (source screens, triage profiles, sample tiles, hazard scopes) that only research scripts and tests read. Product catalogs stay in the top-level `catalog/`; `platform.build` never reads this folder. |
 | `receipts/` | Audit receipts (JSON/GeoJSON) that used to ship in `dist/data/`. `receipts/manifest.json` pins each file's sha256; regenerate it with `python -m research.lib.receipts` after a reviewed change. |
 
 Research scripts may import product code (`skippercast.*`, and product tools in
 `scripts/` such as `scripts.discover_noaa_surveys`); the reverse is not allowed.
 Cross-imports between research scripts use `research.scripts.<name>`; when a
 helper is shared by several of them, move it into `research/lib/`.
+
+## Workflows
+
+Research runs only in `.github/workflows/research-*.yml`, each with a read-only
+token and results uploaded as workflow artifacts:
+
+- `research-daily.yml`: NOAA BAG head triage, bounded ENC danger reviews and USGS
+  map-block/DOI discovery and XML audits, after each `daily-data.yml` run
+  (formerly steps inside it); incremental state lives in the Actions cache.
+- `research-substrate.yml`, `research-fish-survey.yml` (formerly `monthly-*.yml`):
+  the monthly source re-verifications, on their original schedules.
+
+`tests/test_research_boundary.py` fails if a product workflow references
+`research/` or a research workflow can publish.
 
 ## Receipts and their historical paths
 

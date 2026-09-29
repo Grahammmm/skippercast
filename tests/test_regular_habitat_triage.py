@@ -10,7 +10,7 @@ from research.lib.receipts import locate
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {row["id"]: row for row in json.loads(
-    (ROOT / "catalog/regular-habitat-triage-profiles.json").read_text())["profiles"]}
+    (ROOT / "research/catalog/regular-habitat-triage-profiles.json").read_text())["profiles"]}
 
 
 def packet(place):

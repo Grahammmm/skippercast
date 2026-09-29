@@ -33,7 +33,7 @@ def audit(root=REPO, now=None):
     region = json.loads((root / 'regions/bodega-point-reyes/region.json').read_text())
     if region['status'] != 'preview' or region['id'] != 'bodega-point-reyes':
         raise ValueError('Expected Bodega research-only preview')
-    catalog = json.loads((root / 'catalog/noaa-enc-hazard-scopes.json').read_text())
+    catalog = json.loads((root / 'research/catalog/noaa-enc-hazard-scopes.json').read_text())
     configurations = {item['id']: item for item in catalog['scopes']}
     review_boxes, danger_geometries, receipts = [], [], []
     project = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True).transform

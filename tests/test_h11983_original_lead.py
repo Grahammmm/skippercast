@@ -77,7 +77,7 @@ class OriginalLeadGateTests(unittest.TestCase):
             compile_review(*altered)
 
     def test_pinned_digest_fails_before_grid_inspection(self):
-        spec = copy.deepcopy(packet('catalog/original-vr-camera-review-sources.json')['sources'][0])
+        spec = copy.deepcopy(packet('research/catalog/original-vr-camera-review-sources.json')['sources'][0])
         spec['bag_bytes'] = 3
         spec['bag_sha256'] = '0' * 64
         with tempfile.TemporaryDirectory() as temp:
@@ -96,7 +96,7 @@ class OriginalLeadGateTests(unittest.TestCase):
         args = [json.loads(context_raw), context_raw,
                 packet('var/noaa-h11983-nbs-original-camera-reconciliation.json'),
                 packet('var/review/enc-hazards-h11983-point-st-george.geojson'),
-                packet('catalog/noaa-survey-hazards.json'),
+                packet('research/catalog/noaa-survey-hazards.json'),
                 packet('var/review-20260925/coastal/latest.json'),
                 (ROOT / 'var/review/H11983.pdf').read_bytes()]
         bad_report = list(args)

@@ -158,7 +158,7 @@ def main():
     parser.add_argument("--cache-dir", type=Path, default=ROOT / "var/review/ccfrp-2024")
     parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/central-ccfrp-area-evidence.json")
     args = parser.parse_args()
-    pin = json.loads((ROOT / "catalog/ccfrp-2024-source.json").read_text())
+    pin = json.loads((ROOT / "research/catalog/ccfrp-2024-source.json").read_text())
     if args.fetch:
         fetch_and_check(pin, args.cache_dir)
     result = build(pin, args.cache_dir)

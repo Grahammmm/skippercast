@@ -119,7 +119,7 @@ flowchart LR
 | `seafloor.yml` | Mondays 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
 | `regional-legal-review.yml` | Mondays (Pacific), or on rule-source changes | Legal review packets for the Northern, Mendocino and San Francisco rules, as workflow artifacts |
-| `monthly-fish-survey.yml`, `monthly-substrate.yml`, `draft-region-rehearsal.yml` | Monthly, manual or on draft-region changes | Research evidence reviews as workflow artifacts; not product feeds |
+| `research-fish-survey.yml`, `research-substrate.yml`, `draft-region-rehearsal.yml` | Monthly, manual or on draft-region changes | Research evidence reviews as workflow artifacts; not product feeds |
 | `ci.yml` (Offline checks) | Every push and PR | Tests and generated-file drift checks ([testing](#pending-documents)) |
 | `deploy-cloudflare.yml` | Push to `main` or manual | Cloudflare deployment |
 

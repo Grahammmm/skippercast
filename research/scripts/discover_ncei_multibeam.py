@@ -141,7 +141,7 @@ def collect(config, sectors, *, get=fetch_json, only_sector=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', type=Path, default=ROOT / 'catalog/ncei-multibeam-search.json')
+    parser.add_argument('--config', type=Path, default=ROOT / 'research/catalog/ncei-multibeam-search.json')
     parser.add_argument('--sectors', type=Path, default=ROOT / 'catalog/coastal-sectors.json')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--only-sector')

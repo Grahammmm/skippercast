@@ -64,7 +64,7 @@ def refresh(manifest, cache):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("catalog/bluetopo-statewide-sample.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("research/catalog/bluetopo-statewide-sample.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/bluetopo-cache"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

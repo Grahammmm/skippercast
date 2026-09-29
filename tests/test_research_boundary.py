@@ -60,6 +60,24 @@ class ResearchBoundaryTest(unittest.TestCase):
         self.assertEqual(sorted(set(manifest) & {p.name for p in (ROOT / 'dist/data').iterdir()}), [],
                          'a receipt is back in dist/data/; research receipts belong in research/receipts/')
 
+    def test_product_workflows_run_no_research(self):
+        # P1-02c: research runs only in research-*.yml, so it can never gate a product feed.
+        offenders = [p.name for p in sorted((ROOT / '.github/workflows').glob('*.yml'))
+                     if not p.name.startswith('research-') and 'research/' in p.read_text()]
+        self.assertEqual(offenders, [])
+
+    def test_research_workflows_publish_nothing(self):
+        # Artifacts only: read-only token, and feed publishers may only be used to --load.
+        publisher = re.compile(r'(publish_branch_snapshot\.sh(?! --load)|publish_branch_r2\.sh|publish_r2\.py|'
+                               r'publish_forecasts\.sh|contents:\s*write|git push)')
+        workflows = sorted((ROOT / '.github/workflows').glob('research-*.yml'))
+        self.assertGreaterEqual(len(workflows), 3)
+        for path in workflows:
+            with self.subTest(path.name):
+                text = path.read_text()
+                self.assertRegex(text, r'(?m)^permissions:\n  contents: read$')
+                self.assertIsNone(publisher.search(text))
+
     def test_new_research_scripts_do_not_land_in_scripts(self):
         misplaced = [p.name for p in sorted((ROOT / 'scripts').iterdir())
                      if p.name.startswith(RESEARCH_PREFIXES) and p.name not in PRODUCT_EXCEPTIONS]

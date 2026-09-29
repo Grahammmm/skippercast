@@ -163,7 +163,7 @@ def main():
     parser.add_argument("--nbs-cache", type=Path, default=Path("var/nbs-cache"))
     parser.add_argument("--bag-audit", type=Path, default=Path("var/noaa-native-audit-100mb-refined.json"))
     parser.add_argument("--bag-cache", type=Path, default=Path("var/noaa-native-cache"))
-    parser.add_argument("--video-manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
+    parser.add_argument("--video-manifest", type=Path, default=Path("research/catalog/usgs-video-cruises.json"))
     parser.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))

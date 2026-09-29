@@ -85,7 +85,7 @@ def audit(root=ROOT):
                     root / 'var/noaa-native-cache', root / 'var/usgs-doi-native-cache',
                     read(root / 'var/qualification-current/coastal/latest.json'),
                     read(root / 'var/noaa-federal-areas.json'),
-                    read(root / 'catalog/noaa-survey-hazards.json'),
+                    read(root / 'research/catalog/noaa-survey-hazards.json'),
                     root / 'var/noaa-report-cache', mask_callback=collect)
     previous = read(root / 'dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json')
     for key in ('bag_sha256', 'usgs_archive_sha256', 'survey_report_sha256', 'counts'):

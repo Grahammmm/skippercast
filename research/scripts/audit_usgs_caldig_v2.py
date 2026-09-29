@@ -150,7 +150,7 @@ def audit(manifest, cache, fetch=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--manifest', type=Path, default=ROOT / 'catalog/usgs-caldig-v2.json')
+    parser.add_argument('--manifest', type=Path, default=ROOT / 'research/catalog/usgs-caldig-v2.json')
     parser.add_argument('--cache', type=Path, default=ROOT / 'var/usgs-dig-cache')
     parser.add_argument('--output', type=Path, default=ROOT / 'research/receipts/usgs-caldig-v2-native-review.json')
     parser.add_argument('--fetch', action='store_true')
