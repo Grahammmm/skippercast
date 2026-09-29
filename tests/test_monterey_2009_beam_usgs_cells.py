@@ -14,6 +14,7 @@ from shapely.ops import transform as transform_geometry
 
 from research.scripts.build_central_300_qualification_plan import build
 from research.scripts.audit_monterey_2009_beam_usgs_cells import join_outline
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ class BeamCellGate(unittest.TestCase):
         self.assertEqual(result["unique_paired_class3_band_cells_under_source_beams"], 0)
 
     def test_pairing_improves_coverage_evidence_without_depth_or_habitat_promotion(self):
-        report = json.loads((ROOT / "dist/data/monterey-2009-beam-usgs-cell-screen.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-2009-beam-usgs-cell-screen.json").read_text())
         self.assertEqual(report["scope"], "monterey-2009-original-beams-to-usgs-native-cell-screen")
         self.assertFalse(report["fishing_target"])
         self.assertFalse(report["exportable"])

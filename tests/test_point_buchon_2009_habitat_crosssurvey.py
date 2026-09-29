@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import audit_point_buchon_2009_habitat_crosssurvey as audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchon2009HabitatCrossSurveyTests(unittest.TestCase):
     def test_cross_survey_terrain_agreement_does_not_claim_rock_or_fish(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-2009-csumb-terrain-crosssurvey.json").read_text())
         self.assertEqual(receipt["inner_member_sha256"], audit.MEMBER_SHA256)
         self.assertEqual(receipt["usgs_hard_rugose_cells_with_csumb_class"], 87115)
         self.assertEqual(receipt["usgs_hard_rugose_cells_also_csumb_rough"], 66133)
@@ -27,7 +28,7 @@ class PointBuchon2009HabitatCrossSurveyTests(unittest.TestCase):
         character = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon.zip"
         if not archive.exists() or not character.exists():
             self.skipTest("Monthly source job downloads original archives before full audit")
-        expected = json.loads((ROOT / "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json").read_text())
+        expected = json.loads((RECEIPTS / "point-buchon-2009-csumb-terrain-crosssurvey.json").read_text())
         self.assertEqual(audit.audit(archive, character), expected)
 
 

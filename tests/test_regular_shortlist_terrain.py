@@ -7,6 +7,7 @@ import unittest
 
 from research.scripts.audit_regular_shortlist_terrain import audit
 from research.scripts.fetch_shortlist_original_bags import selected_sources
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +18,7 @@ class OriginalRegularShortlistTerrainTests(unittest.TestCase):
         paths = ["point-conception-regular-site-review-queue.json",
                  "point-conception-native-hard-context.geojson",
                  "point-conception-fresh-closure-audit.json"]
-        return [json.loads((ROOT / "dist/data" / path).read_text()) for path in paths]
+        return [json.loads(locate("dist/data/" + path).read_text()) for path in paths]
 
     def test_shortlist_fetches_only_exact_pinned_original_bags(self):
         queue, context, _ = self.data()

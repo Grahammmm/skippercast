@@ -28,7 +28,7 @@ def compare(reviewed, current):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reviewed", type=Path,
-                        default=Path("dist/data/estero-2012-depth-class-closure-block-review.json"))
+                        default=Path("research/receipts/estero-2012-depth-class-closure-block-review.json"))
     parser.add_argument("--current", required=True, type=Path)
     args = parser.parse_args()
     compare(json.loads(args.reviewed.read_text()), json.loads(args.current.read_text()))

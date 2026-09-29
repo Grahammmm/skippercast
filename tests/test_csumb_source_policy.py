@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_csumb_source_policy import ARCHIVES, audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class CSUMBSourcePolicyTest(unittest.TestCase):
     def test_source_records_remain_held(self):
-        receipt = json.loads((ROOT / "dist/data/csumb-original-source-policy-review.json").read_text())
+        receipt = json.loads((RECEIPTS / "csumb-original-source-policy-review.json").read_text())
         self.assertEqual(set(receipt["affected_candidate_ids"]), set(ARCHIVES))
         self.assertFalse(receipt["website_redistribution_cleared"])
         self.assertFalse(receipt["fishing_target"])

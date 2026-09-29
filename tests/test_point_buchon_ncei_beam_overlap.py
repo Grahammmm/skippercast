@@ -7,6 +7,7 @@ import numpy as np
 from pyproj import Geod
 
 from research.scripts import audit_point_buchon_ncei_beam_overlap as beams
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +26,7 @@ class PointBuchonValidBeamTest(unittest.TestCase):
         self.assertLess(lat[0], 35.2)  # starboard of east-going ship is south
 
     def test_original_beam_receipt_keeps_spots_unqualified(self):
-        result = json.loads((ROOT / "dist/data/point-buchon-2007-ncei-valid-beam-overlap.json").read_text())
+        result = json.loads((RECEIPTS / "point-buchon-2007-ncei-valid-beam-overlap.json").read_text())
         self.assertEqual(result["scope"], "point-buchon-2007-ncei-original-valid-beam-overlap")
         self.assertEqual(result["qualified_waypoints"], 0)
         self.assertFalse(result["fishing_target"])

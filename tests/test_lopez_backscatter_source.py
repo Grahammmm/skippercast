@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from skippercast.platform.candidate import validate_candidate
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class LopezBackscatterSourceTest(unittest.TestCase):
     def test_two_native_mosaics_are_cataloged_with_release_holds(self):
-        report = json.loads((ROOT / "dist/data/lopez-original-backscatter-source-review.json").read_text())
+        report = json.loads((RECEIPTS / "lopez-original-backscatter-source-review.json").read_text())
         self.assertEqual({row["sensor"] for row in report["mosaics"]},
                          {"reson_7125", "sea_swathplus"})
         self.assertTrue(all(row["resolution_m"] == 1 and row["declared_nodata"] is None

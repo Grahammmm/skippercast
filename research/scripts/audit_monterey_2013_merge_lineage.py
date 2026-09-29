@@ -85,7 +85,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-2013-merge-lineage-gap.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-2013-merge-lineage-gap.json"))
     args = parser.parse_args()
     report = build(args.root.resolve(), args.fetch)
     if args.verify:

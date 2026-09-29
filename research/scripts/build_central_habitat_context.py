@@ -17,6 +17,9 @@ from pyproj import Transformer
 from shapely.geometry import box, mapping, shape
 from shapely.ops import transform, unary_union
 from shapely.validation import make_valid
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
+from research.lib.receipts import locate
 
 ROOT = Path(__file__).resolve().parents[2]
 REGIONS = (
@@ -29,7 +32,7 @@ TO_WGS84 = Transformer.from_crs(32610, 4326, always_xy=True).transform
 
 
 def read(path):
-    return json.loads((ROOT / path).read_text())
+    return json.loads(locate(path).read_text())
 
 
 def pmep_features(bounds):

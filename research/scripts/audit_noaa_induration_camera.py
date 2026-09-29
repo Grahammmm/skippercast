@@ -222,7 +222,7 @@ def audit_qualified_context(context, context_bytes, reconciliation, chart_screen
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--review", type=Path, default=Path("dist/data/noaa-statewide-regular-camera-review.json"))
+    parser.add_argument("--review", type=Path, default=Path("research/receipts/noaa-statewide-regular-camera-review.json"))
     parser.add_argument("--manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     parser.add_argument("--camera-cache", type=Path, default=Path("var/usgs-video-cache"))

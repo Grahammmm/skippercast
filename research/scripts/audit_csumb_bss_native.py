@@ -151,7 +151,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, default=ROOT / 'catalog/csumb-bss-native-sources.json')
     parser.add_argument('--cache', type=Path, default=ROOT / 'var/noaa-native-cache')
-    parser.add_argument('--output', type=Path, default=ROOT / 'dist/data/csumb-bss-native-source-review.json')
+    parser.add_argument('--output', type=Path, default=ROOT / 'research/receipts/csumb-bss-native-source-review.json')
     parser.add_argument('--fetch', action='store_true')
     args = parser.parse_args()
     sources = json.loads(args.manifest.read_text())['sources']

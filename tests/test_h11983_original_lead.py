@@ -8,13 +8,14 @@ import unittest
 from research.scripts.audit_pinned_original_vr_source import audit as audit_pinned
 from research.scripts.audit_vr_camera_hazard_gate import audit as audit_hazards
 from research.scripts.compile_original_vr_camera_lead import compile_review
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def packet(name):
-    return json.loads((ROOT / name).read_text())
+    return json.loads(locate(name).read_text())
 
 
 class OriginalLeadGateTests(unittest.TestCase):

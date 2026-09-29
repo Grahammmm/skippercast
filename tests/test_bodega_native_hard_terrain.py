@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BodegaNativeHardTerrainTests(unittest.TestCase):
     def test_public_review_has_no_promoted_spots(self):
-        review = json.loads((ROOT / 'dist/data/bodega-native-hard-terrain-review.json').read_text())
-        chart = json.loads((ROOT / 'dist/data/bodega-native-enc-scope-review.json').read_text())
+        review = json.loads((RECEIPTS / 'bodega-native-hard-terrain-review.json').read_text())
+        chart = json.loads((RECEIPTS / 'bodega-native-enc-scope-review.json').read_text())
         atlas = json.loads((ROOT / 'dist/regions/bodega-point-reyes/atlas.json').read_text())
         self.assertEqual(review['status'], 'research-ranking-only')
         self.assertEqual(review['reviewed_outlines'], 74)

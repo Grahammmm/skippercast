@@ -92,7 +92,7 @@ def stable(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path,
-                        default=Path('dist/data/bss03-original-vessel-tpu-inputs.json'))
+                        default=Path('research/receipts/bss03-original-vessel-tpu-inputs.json'))
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
     report = inspect(fetch())

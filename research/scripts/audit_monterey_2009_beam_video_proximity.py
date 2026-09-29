@@ -32,8 +32,8 @@ INTERIOR_M = 25
 
 
 def build(root, fetch=False):
-    beam_path = root / "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json"
-    video_path = root / "dist/data/usgs-offshore-monterey-video-overlap.json"
+    beam_path = root / "research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json"
+    video_path = root / "research/receipts/usgs-offshore-monterey-video-overlap.json"
     beam_receipt = json.loads(beam_path.read_text())
     video_receipt = json.loads(video_path.read_text())
     layer = next(row for row in video_receipt["layers"]
@@ -151,7 +151,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-2009-beam-2010-video-proximity.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-2009-beam-2010-video-proximity.json"))
     args = parser.parse_args()
     report = build(args.root.resolve(), args.fetch)
     if args.verify:

@@ -6,12 +6,12 @@ import unittest
 from pathlib import Path
 
 from research.scripts import build_central_rov_depth_evidence as rov
+from research.lib.receipts import RECEIPTS
 
 
 class CentralRovDepthEvidenceTest(unittest.TestCase):
     def test_published_summary_is_nonpositional_and_reference_only(self):
-        root = Path(__file__).resolve().parents[1]
-        data = json.loads((root / "dist/data/central-rov-200-300ft-evidence.json").read_text())
+        data = json.loads((RECEIPTS / "central-rov-200-300ft-evidence.json").read_text())
         self.assertFalse(data["fishing_target"])
         self.assertFalse(data["exportable"])
         self.assertEqual(data["depth_band_ft"], [200, 300])

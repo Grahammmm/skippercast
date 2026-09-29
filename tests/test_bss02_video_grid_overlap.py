@@ -7,6 +7,7 @@ import numpy as np
 from rasterio.transform import from_origin
 
 from research.scripts.audit_bss02_video_grid_overlap import near_valid_pixel, inspect
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +32,7 @@ class VideoGridOverlapTest(unittest.TestCase):
         self.assertTrue(near_valid_pixel(mask, Grid(), 1, 19, 15))
 
     def test_original_receipt_has_no_camera_grid_join(self):
-        receipt = json.loads((ROOT / 'dist/data/bss02-video-grid-overlap.json').read_text())
+        receipt = json.loads((RECEIPTS / 'bss02-video-grid-overlap.json').read_text())
         self.assertEqual(receipt['camera_records_inside_raster_bounds'], 46)
         self.assertEqual(receipt['interpreted_bottom_windows'], 39)
         self.assertEqual(receipt['rock_boulder_cobble_windows'], 11)
@@ -42,7 +43,7 @@ class VideoGridOverlapTest(unittest.TestCase):
         self.assertFalse(receipt['exportable'])
 
     def test_adjacent_block_has_real_but_limited_source_datum_overlap(self):
-        receipt = json.loads((ROOT / 'dist/data/bss03-video-grid-overlap.json').read_text())
+        receipt = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
         self.assertEqual(receipt['camera_records_on_valid_depth_pixel'], 46)
         self.assertEqual(receipt['camera_windows_in_200_300ft_source_datum_band'], 46)
         self.assertEqual(receipt['rock_boulder_cobble_windows_in_band'], 11)
@@ -66,7 +67,7 @@ class VideoGridOverlapTest(unittest.TestCase):
                    if source['survey_id'] == 'BSS_Block02')
         video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
-        expected = json.loads((ROOT / 'dist/data/bss02-video-grid-overlap.json').read_text())
+        expected = json.loads((RECEIPTS / 'bss02-video-grid-overlap.json').read_text())
         self.assertEqual(actual, expected)
 
     def test_adjacent_block_reproduces_when_cached(self):
@@ -79,7 +80,7 @@ class VideoGridOverlapTest(unittest.TestCase):
                    if source['survey_id'] == 'BSS_Block03')
         video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
-        expected = json.loads((ROOT / 'dist/data/bss03-video-grid-overlap.json').read_text())
+        expected = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
         self.assertEqual(actual, expected)
 
 

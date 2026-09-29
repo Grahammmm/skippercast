@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from research.scripts import audit_pigeon_w00614_original_class as audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +20,7 @@ class PigeonOriginalClassTests(unittest.TestCase):
 
     def test_original_source_receipt_keeps_zero_overlap_on_hold(self):
         binding = json.loads((ROOT / "catalog/pigeon-w00614-original-class-binding.json").read_text())
-        receipt = json.loads((ROOT / "dist/data/w00614-pigeon-original-character-overlap.json").read_text())
+        receipt = json.loads((RECEIPTS / "w00614-pigeon-original-character-overlap.json").read_text())
         self.assertEqual(receipt["scope"], binding["scope"])
         self.assertEqual(receipt["depth_source_sha256"], binding["bag_sha256"])
         self.assertEqual(receipt["character_source_sha256"], binding["character_sha256"])

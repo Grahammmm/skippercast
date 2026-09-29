@@ -192,7 +192,7 @@ def main():
     parser.add_argument("--federal", type=Path, required=True)
     parser.add_argument("--enc", type=Path, required=True)
     parser.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/point-buchon-rov-100m-blocks.geojson")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-rov-access-triage.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-rov-access-triage.json")
     args = parser.parse_args()
     pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
     blocks = source_blocks(args.bathy, args.character, args.rov, pin)

@@ -28,7 +28,7 @@ BLOCKS = {
     "point-buchon-rov": ("var/review/point-buchon-rov-100m-blocks.geojson", "EPSG:32610", 26),
     "point-buchon-terrain": ("var/review/point-buchon-2009-csumb-100m-blocks.geojson", "EPSG:32610", 181),
 }
-OUTPUT = Path("dist/data/ciap-2016-central-video-private-block-overlap.json")
+OUTPUT = Path("research/receipts/ciap-2016-central-video-private-block-overlap.json")
 
 
 def load_blocks(path, expected_crs, expected_count):

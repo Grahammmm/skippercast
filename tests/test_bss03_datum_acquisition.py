@@ -7,6 +7,7 @@ import unittest
 
 from research.scripts.audit_bss03_caris_acquisition import PREFIX_BYTES, URL, inspect, inspect_prefix
 from research.scripts.audit_bss03_datum_footprint import compile_review, stable
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,7 +19,7 @@ class Bss03DatumAcquisitionTests(unittest.TestCase):
                          'Private review blocks (var/review, gitignored) are only on the maintainer machine')
     def test_footprint_probe_stays_private_and_unqualified(self):
         blocks = json.loads(PRIVATE_BLOCKS.read_text())
-        access = json.loads((ROOT / 'dist/data/bss03-camera-access-triage.json').read_text())
+        access = json.loads((RECEIPTS / 'bss03-camera-access-triage.json').read_text())
 
         def get(params):
             return {'region': 'WESTCOAST', 's_h_frame': params['s_h_frame'],
@@ -42,7 +43,7 @@ class Bss03DatumAcquisitionTests(unittest.TestCase):
             compile_review(blocks, dict(access, private_block_fingerprint='changed'), get=get)
 
     def test_published_diagnostic_stays_unqualified(self):
-        report = json.loads((ROOT / 'dist/data/bss03-footprint-vdatum-diagnostic.json').read_text())
+        report = json.loads((RECEIPTS / 'bss03-footprint-vdatum-diagnostic.json').read_text())
         text = json.dumps(report)
         self.assertNotIn('longitude', text)
         self.assertNotIn('request_url', text)

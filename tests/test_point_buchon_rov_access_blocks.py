@@ -8,6 +8,7 @@ from shapely.geometry import box
 
 from research.scripts.audit_point_buchon_rov_access_blocks import build
 from research.scripts.check_point_buchon_rov_access_change import compare
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ class PointBuchonRovAccessBlocksTest(unittest.TestCase):
         self.assertFalse(private["features"][0]["properties"]["exportable"])
 
     def test_published_receipt_and_refresh_guard(self):
-        report = json.loads((ROOT / "dist/data/point-buchon-rov-access-triage.json").read_text())
+        report = json.loads((RECEIPTS / "point-buchon-rov-access-triage.json").read_text())
         self.assertEqual(report["totals"]["blocks"], 26)
         self.assertEqual(report["totals"]["subunits"], 183)
         self.assertEqual(report["totals"]["hard_rugose_subunits"], 58)

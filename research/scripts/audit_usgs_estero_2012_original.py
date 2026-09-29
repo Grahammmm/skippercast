@@ -155,7 +155,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--fetch", action="store_true")
     p.add_argument("--base", type=Path, default=ROOT / "var/review/estero-bay-2012")
-    p.add_argument("--output", type=Path, default=ROOT / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
+    p.add_argument("--output", type=Path, default=ROOT / "research/receipts/usgs-estero-bay-2012-original-200-300ft-review.json")
     args = p.parse_args()
     if args.fetch:
         fetch_sources(args.base)

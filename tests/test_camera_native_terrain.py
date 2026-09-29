@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from research.scripts.audit_camera_native_terrain import fit_terrain
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +31,7 @@ class CameraNativeTerrainTests(unittest.TestCase):
             fit_terrain(plane, incomplete, dx, dy, within, resolution_m=2)
 
     def test_bear_landing_receipt_does_not_turn_transects_into_targets(self):
-        report = json.loads((ROOT / 'dist/data/h11971-bear-landing-native-terrain.json').read_text())
+        report = json.loads((RECEIPTS / 'h11971-bear-landing-native-terrain.json').read_text())
         self.assertEqual([row['historical_camera_windows'] for row in report['transects']], [5, 8])
         self.assertFalse(report['fishing_target'])
         self.assertFalse(report['exportable'])
@@ -40,8 +41,8 @@ class CameraNativeTerrainTests(unittest.TestCase):
                            cobble['detrended_p95_p05_relief_m_range'][1])
 
     def test_second_coast_reuses_method_without_a_global_rock_threshold(self):
-        north = json.loads((ROOT / 'dist/data/h11971-bear-landing-native-terrain.json').read_text())
-        south = json.loads((ROOT / 'dist/data/h11876-la-jolla-native-terrain.json').read_text())
+        north = json.loads((RECEIPTS / 'h11971-bear-landing-native-terrain.json').read_text())
+        south = json.loads((RECEIPTS / 'h11876-la-jolla-native-terrain.json').read_text())
         self.assertEqual(north['method'], south['method'])
         self.assertEqual(south['survey_id'], 'H11876')
         self.assertEqual(sum(row['historical_camera_windows'] for row in south['transects']), 11)
@@ -51,10 +52,10 @@ class CameraNativeTerrainTests(unittest.TestCase):
                         north['transects'][0]['detrended_p95_p05_relief_m_range'][1])
 
     def test_h11730_unheld_report_review_stays_research_only(self):
-        pairs = json.loads((ROOT / 'dist/data/noaa-statewide-regular-camera-review.json').read_text())['pair_reviews']
+        pairs = json.loads((RECEIPTS / 'noaa-statewide-regular-camera-review.json').read_text())['pair_reviews']
         for cruise, suffix, count in (
             ('f208nc', '2008', 40), ('c210nc', '2010', 14)):
-            report = json.loads((ROOT / f'dist/data/h11730-arena-bodega-{suffix}-native-terrain.json').read_text())
+            report = json.loads((RECEIPTS / f'h11730-arena-bodega-{suffix}-native-terrain.json').read_text())
             pair = next(row for row in pairs if row['survey_id'] == 'H11730'
                         and row['cruise'] == cruise and row['bag_url'] == report['bag_url'])
             self.assertTrue(pair['report_hazard_review_complete'])

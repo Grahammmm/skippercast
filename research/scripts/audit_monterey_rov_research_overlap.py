@@ -22,7 +22,7 @@ from research.scripts.build_central_rov_depth_evidence import fetch, source_byte
 
 
 CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-MATRIX = ROOT / "dist/data/monterey-original-300-paired-review.json"
+MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
 PIN = ROOT / "catalog/central-rov-2024-source.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
@@ -163,7 +163,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--source", type=Path, default=ROOT / "var/review/rov-zenodo-10929417.csv")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/monterey-rov-research-overlap.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/monterey-rov-research-overlap.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     pin = json.loads(PIN.read_text())

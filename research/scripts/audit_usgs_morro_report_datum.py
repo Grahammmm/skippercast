@@ -104,7 +104,7 @@ def main():
                         default=Path('var/usgs-report-cache/ofr20231064.xml'))
     parser.add_argument('--fetch', action='store_true')
     parser.add_argument('--output', type=Path,
-                        default=Path('dist/data/usgs-morro-report-datum-review.json'))
+                        default=Path('research/receipts/usgs-morro-report-datum-review.json'))
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text())
     ledger = json.loads(args.ledger.read_text())

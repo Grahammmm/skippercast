@@ -34,7 +34,7 @@ CHARACTER = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePoint
 CHARACTER_METADATA = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon_metadata.xml"
 ROV = ROOT / "var/review/rov-zenodo-10929417.csv"
 BLOCKS = ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson"
-ACCESS = ROOT / "dist/data/point-buchon-2009-csumb-access-triage.json"
+ACCESS = ROOT / "research/receipts/point-buchon-2009-csumb-access-triage.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
 MARGINS = (0, 10, 25)
@@ -229,7 +229,7 @@ def main() -> None:
     parser.add_argument("--character-metadata", type=Path, default=CHARACTER_METADATA)
     parser.add_argument("--blocks", type=Path, default=BLOCKS)
     parser.add_argument("--access", type=Path, default=ACCESS)
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-rov-original-cell-join.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-rov-original-cell-join.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     if args.fetch_rov:

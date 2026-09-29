@@ -214,7 +214,7 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--review", type=Path, default=Path("dist/data/nbs-central-multiple-camera-tile-review.json"))
+    parser.add_argument("--review", type=Path, default=Path("research/receipts/nbs-central-multiple-camera-tile-review.json"))
     parser.add_argument("--scheme", type=Path, default=Path("var/modeling-tile-scheme-20260923.gpkg"))
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache"))
     parser.add_argument("--hard", type=Path, default=Path("dist/data/usgs-hard-context-central.geojson"))

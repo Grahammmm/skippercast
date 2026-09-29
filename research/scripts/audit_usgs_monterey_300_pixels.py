@@ -93,7 +93,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--prior", type=Path, default=Path("dist/data/usgs-offshore-monterey-bathy-context-review.json"))
-    parser.add_argument("--queue", type=Path, default=Path("dist/data/monterey-300-native-research-queue.json"))
+    parser.add_argument("--queue", type=Path, default=Path("research/receipts/monterey-300-native-research-queue.json"))
     parser.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

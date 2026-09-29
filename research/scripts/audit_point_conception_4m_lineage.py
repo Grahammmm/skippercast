@@ -22,7 +22,7 @@ from research.scripts.audit_point_conception_original_300_gap import CACHE, file
 from research.scripts.audit_point_conception_original_300_ladder import SOURCE_HASHES
 
 
-OUTPUT = ROOT / "dist/data/point-conception-original-4m-source-lineage.json"
+OUTPUT = ROOT / "research/receipts/point-conception-original-4m-source-lineage.json"
 USGS_PAMPHLET_URL = "https://pubs.usgs.gov/of/2018/1024/ofr20181024_pamphlet.pdf"
 USGS_PAMPHLET_SHA = "a1e2913c78a8a0b89f213acff8844cab9baba481a83c2d3b04bd2f68bf66a009"
 REPORT_HASHES = {
@@ -149,7 +149,7 @@ def usgs_acoustic_source(path, *, fetch):
 
 def audit(bag_cache, usgs_cache, report_cache, *, fetch=False):
     prior = json.loads((ROOT / "dist/data/point-conception-original-4m-rugged-overlap.json").read_text())
-    camera = json.loads((ROOT / "dist/data/point-conception-original-4m-camera-gap.json").read_text())
+    camera = json.loads((ROOT / "research/receipts/point-conception-original-4m-camera-gap.json").read_text())
     if any(row["bottom_observations_inside_component"] for row in camera["components"]):
         raise ValueError("Direct camera evidence changed; review before asserting a gap")
     candidates = candidate_footprints(bag_cache, usgs_cache, prior)

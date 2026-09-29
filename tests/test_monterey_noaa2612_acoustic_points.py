@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class AcousticPointGate(unittest.TestCase):
     def test_measured_support_keeps_chart_depth_and_rank_unqualified(self):
-        report = json.loads((ROOT / "dist/data/monterey-noaa2612-acoustic-point-support.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-noaa2612-acoustic-point-support.json").read_text())
         self.assertEqual(report["outlines_reviewed"], 17)
         self.assertEqual(report["outlines_with_class13_points"], 17)
         self.assertEqual(report["camera_positive_outlines_with_class13_points"], 4)

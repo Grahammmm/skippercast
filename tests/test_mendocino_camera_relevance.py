@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,10 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class MendocinoCameraRelevanceTests(unittest.TestCase):
     def test_original_camera_windows_do_not_support_fort_bragg_sites(self):
-        packet = json.loads((ROOT / "dist/data/h11730-fort-bragg-regional-camera-support.json").read_text())
+        packet = json.loads((RECEIPTS / "h11730-fort-bragg-regional-camera-support.json").read_text())
         candidate = json.loads((ROOT / "catalog/candidates/noaa-h11730-arena-bodega-original-camera.json").read_text())
         sources = [ROOT / "regions/fort-bragg-point-arena/region.json",
-                   ROOT / "dist/data/noaa-statewide-regular-camera-review.json"]
+                   RECEIPTS / "noaa-statewide-regular-camera-review.json"]
         self.assertEqual(packet["region_id"], "fort-bragg-point-arena")
         self.assertEqual(packet["survey_id"], "H11730")
         self.assertEqual(packet["region_sha256"], hashlib.sha256(sources[0].read_bytes()).hexdigest())

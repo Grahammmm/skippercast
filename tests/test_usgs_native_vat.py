@@ -10,6 +10,7 @@ import shapefile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'research/scripts'))
 from research.scripts.inspect_usgs_native_grids import parse_vat
+from research.lib.receipts import RECEIPTS
 
 
 def original_style_dbf(description_field='SUBST_DESC'):
@@ -38,7 +39,7 @@ class UsgsNativeVatTests(unittest.TestCase):
                 self.assertEqual(rows[0]['substrate_description'], 'Rock and boulders, rugose')
 
     def test_aptos_receipt_is_actual_grid_review_and_not_a_target(self):
-        data = json.loads((ROOT / 'dist/data/usgs-offshore-aptos-native-audit.json').read_text())
+        data = json.loads((RECEIPTS / 'usgs-offshore-aptos-native-audit.json').read_text())
         self.assertEqual(data['scope'], 'usgs-state-waters-native-grid-audit')
         self.assertEqual((data['inspected_count'], data['product_count']), (4, 4))
         self.assertFalse(data['fishing_target'])

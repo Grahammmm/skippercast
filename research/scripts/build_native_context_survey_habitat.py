@@ -104,7 +104,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source', type=Path, default=Path('dist/data/cape-mendocino-native-hard-context.geojson'))
     p.add_argument('--region', type=Path, default=Path('regions/humboldt-bay-cape-mendocino/region.json'))
-    p.add_argument('--depth-review', type=Path, default=Path('dist/data/h11975-research-outline-original-depths.json'))
+    p.add_argument('--depth-review', type=Path, default=Path('research/receipts/h11975-research-outline-original-depths.json'))
     p.add_argument('--output', type=Path, default=Path('dist/regions/humboldt-bay-cape-mendocino/survey-habitat.geojson'))
     a = p.parse_args()
     raw = a.source.read_bytes()

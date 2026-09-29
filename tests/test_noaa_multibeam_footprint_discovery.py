@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import discover_noaa_multibeam_footprints as discovery
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NOAAFootprintDiscoveryTests(unittest.TestCase):
     def test_published_receipt_is_complete_and_research_only(self):
-        receipt = json.loads((ROOT / "dist/data/noaa-central-multibeam-footprint-leads.json").read_text())
+        receipt = json.loads((RECEIPTS / "noaa-central-multibeam-footprint-leads.json").read_text())
         self.assertEqual(receipt["status"], "complete-catalog-query")
         self.assertEqual({row["sector_id"] for row in receipt["sectors"]}, set(discovery.SECTORS))
         self.assertGreater(receipt["unique_footprint_object_ids"], 0)

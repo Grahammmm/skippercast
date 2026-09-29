@@ -92,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--region", required=True)
     parser.add_argument("--survey", required=True)
-    parser.add_argument("--pairs", type=Path, default=Path("dist/data/noaa-statewide-regular-camera-review.json"))
+    parser.add_argument("--pairs", type=Path, default=Path("research/receipts/noaa-statewide-regular-camera-review.json"))
     parser.add_argument("--camera-cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--verify", type=Path, help="Fail when the pinned public review changes")

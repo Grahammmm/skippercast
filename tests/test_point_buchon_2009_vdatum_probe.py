@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import audit_point_buchon_2009_vdatum_probe as probe
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchon2009VDatumProbeTests(unittest.TestCase):
     def test_official_model_samples_do_not_become_depth_clearance(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-2009-conditional-vdatum-probes.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-2009-conditional-vdatum-probes.json").read_text())
         self.assertEqual(receipt["official_regional_archive_sha256"], probe.ARCHIVE_SHA256)
         self.assertEqual(receipt["private_block_count"], 181)
         self.assertEqual(receipt["sample_count"], probe.SAMPLE_COUNT)
@@ -24,7 +25,7 @@ class PointBuchon2009VDatumProbeTests(unittest.TestCase):
         self.assertFalse(receipt["exportable"])
 
     def test_retrieval_time_is_ignored_but_model_change_is_not(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-2009-conditional-vdatum-probes.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-2009-conditional-vdatum-probes.json").read_text())
         changed = {**receipt, "checked_at": "later"}
         self.assertEqual(probe.stable(receipt), probe.stable(changed))
         changed["conditional_navd88_zero_to_mllw_offset_m"] = [0.129, 0.150]

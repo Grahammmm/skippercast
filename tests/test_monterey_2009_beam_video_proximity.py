@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class HistoricalCameraGate(unittest.TestCase):
     def test_old_rockfish_windows_do_not_promote_fishing_marks(self):
-        report = json.loads((ROOT / "dist/data/monterey-2009-beam-2010-video-proximity.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-2009-beam-2010-video-proximity.json").read_text())
         self.assertEqual(report["scope"], "monterey-2009-beam-to-2010-video-proximity-research")
         self.assertFalse(report["fishing_target"])
         self.assertFalse(report["exportable"])

@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from skippercast.seafloor.io import sha256
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ class HardFootprintOverlapTest(unittest.TestCase):
         source = ROOT / 'dist/data'
         inventory = json.loads((source / 'nbs-hard-footprint-tile-inventory.json').read_text())
         depth = json.loads((source / 'nbs-hard-footprint-depth-audit.json').read_text())
-        originals = json.loads((source / 'nbs-hard-footprint-usgs-class-fetch.json').read_text())
+        originals = json.loads((RECEIPTS / 'nbs-hard-footprint-usgs-class-fetch.json').read_text())
         overlap = json.loads((source / 'nbs-hard-footprint-original-class-overlap.json').read_text())
         self.assertEqual((inventory['tile_count'], depth['completed_tiles'], depth['failed_tiles']),
                          (102, 102, 0))

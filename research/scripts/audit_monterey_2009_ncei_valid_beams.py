@@ -234,7 +234,7 @@ def decode_line(path, inf, fnv, spec, outlines, collect=None):
 
 def build(root, fetch=False):
     context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-    matrix_path = root / "dist/data/monterey-300-source-evidence-matrix.json"
+    matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     features = {f["properties"]["id"]: f for f in json.loads(context_path.read_text())["features"]}
     matrix = json.loads(matrix_path.read_text())
     if matrix.get("outline_count") != 17:
@@ -293,7 +293,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-2009-centralmontereybay-valid-beam-review.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json"))
     args = parser.parse_args()
     report = build(args.root.resolve(), args.fetch)
     if args.verify:

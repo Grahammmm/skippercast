@@ -258,7 +258,7 @@ def main():
     p.add_argument("--bathy-metadata", type=Path, default=ROOT / "var/review/usgs-point-buchon/Bathymetry_OffshorePointBuchon_metadata.xml")
     p.add_argument("--rov", type=Path, default=ROOT / "var/review/rov-zenodo-10929417.csv")
     p.add_argument("--fetch", action="store_true", help="Fetch pinned original USGS and published ROV objects")
-    p.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-original-paired-200-300ft-review.json")
+    p.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-original-paired-200-300ft-review.json")
     args = p.parse_args()
     pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
     if args.fetch:

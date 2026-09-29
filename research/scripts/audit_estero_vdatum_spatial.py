@@ -118,7 +118,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blocks", type=Path, default=Path("var/review/estero-nominal-research-blocks.geojson"))
     parser.add_argument("--private-output", type=Path, default=Path("var/review/estero-vdatum-spatial-samples.json"))
-    parser.add_argument("--output", type=Path, default=Path("dist/data/estero-2012-vdatum-spatial-diagnostic.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/estero-2012-vdatum-spatial-diagnostic.json"))
     args = parser.parse_args()
     blocks = json.loads(args.blocks.read_text())
     west, south, east, north = extent(blocks)

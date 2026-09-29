@@ -101,7 +101,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--depth", type=Path, default=ROOT / "var/review/estero-bay-2012/NAD83_utm10_EsteroBay.zip")
     p.add_argument("--character", type=Path, default=ROOT / "var/review/usgs-point-estero/SeafloorCharacter_OffshorePointEstero.zip")
-    p.add_argument("--output", type=Path, default=ROOT / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
+    p.add_argument("--output", type=Path, default=ROOT / "research/receipts/estero-independent-2012-depth-2008-character-overlap.json")
     args = p.parse_args()
     result = audit(args.depth, args.character)
     args.output.parent.mkdir(parents=True, exist_ok=True)

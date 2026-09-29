@@ -12,6 +12,9 @@ from pathlib import Path
 from pyproj import Transformer
 from shapely.geometry import mapping, shape
 from shapely.ops import transform
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -20,7 +23,7 @@ SOURCE_SHA256 = "e0dac59edb3f0d6e6a506beb911d9c9eac07e1743b06deb817ec04ecd8f213d
 
 
 def read(path):
-    return json.loads((ROOT / path).read_text())
+    return json.loads(locate(path).read_text())
 
 
 def write(path, value):

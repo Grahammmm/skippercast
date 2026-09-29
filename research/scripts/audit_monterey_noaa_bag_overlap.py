@@ -91,7 +91,7 @@ def main():
     p.add_argument("--source-url", required=True)
     p.add_argument("--sha256", required=True)
     p.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
-    p.add_argument("--pixel", type=Path, default=Path("dist/data/monterey-original-300-pixel-review.json"))
+    p.add_argument("--pixel", type=Path, default=Path("research/receipts/monterey-original-300-pixel-review.json"))
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
     result = audit(args.bag, args.survey_id, args.source_url, args.sha256,

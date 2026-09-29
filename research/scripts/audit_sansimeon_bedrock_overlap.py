@@ -172,7 +172,7 @@ def main():
     parser.add_argument("--mpa-snapshot", type=Path, default=ROOT / "dist/data/protected-areas.geojson")
     parser.add_argument("--geology-cache", type=Path, default=ROOT / "var/usgs-native-cache")
     parser.add_argument("--csumb-cache", type=Path, default=ROOT / "var/noaa-native-cache")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/csumb-sansimeon-bedrock-overlap-review.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/csumb-sansimeon-bedrock-overlap-review.json")
     parser.add_argument("--fetch", action="store_true")
     args = parser.parse_args()
     geology = json.loads(args.geology.read_text())

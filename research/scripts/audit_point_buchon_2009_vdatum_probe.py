@@ -155,7 +155,7 @@ def main():
     parser.add_argument("--archive", type=Path, default=ROOT / "var/review/vdatum-point-buchon/CAmorrob01_8301.zip")
     parser.add_argument("--blocks", type=Path, default=ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson")
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-2009-conditional-vdatum-probes.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-2009-conditional-vdatum-probes.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     if args.fetch and not args.archive.exists():

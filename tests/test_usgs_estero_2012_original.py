@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from research.scripts.audit_usgs_estero_2012_original import BANDS, header
+from research.lib.receipts import RECEIPTS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,7 +17,7 @@ class UsgsEstero2012OriginalTest(unittest.TestCase):
             header(io.BytesIO(valid.replace(b"ncols 11456", b"ncols 100")))
 
     def test_published_original_audit_preserves_gaps_and_holds(self):
-        report = json.loads((ROOT / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json").read_text())
+        report = json.loads((RECEIPTS / "usgs-estero-bay-2012-original-200-300ft-review.json").read_text())
         self.assertEqual(BANDS, ((200, 250), (250, 300)))
         self.assertEqual(report["source_vertical_datum"], "NAVD88 Geoid12 for NAD83 bathymetry")
         self.assertFalse(report["fishing_target"])
@@ -26,7 +27,7 @@ class UsgsEstero2012OriginalTest(unittest.TestCase):
             self.assertGreater(item["depth_cells"], item["paired_nominal_cells"])
 
     def test_independent_character_overlap_is_only_nominal(self):
-        report = json.loads((ROOT / "dist/data/estero-independent-2012-depth-2008-character-overlap.json").read_text())
+        report = json.loads((RECEIPTS / "estero-independent-2012-depth-2008-character-overlap.json").read_text())
         self.assertFalse(report["fishing_target"])
         self.assertEqual(report["qualified_waypoints"], 0)
         self.assertGreater(report["depth_bands"]["250-300ft"]["classified_cells_by_type"]["hard_rugose"], 0)

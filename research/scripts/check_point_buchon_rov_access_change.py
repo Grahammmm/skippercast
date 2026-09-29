@@ -26,7 +26,7 @@ def compare(reviewed, current):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reviewed", type=Path,
-                        default=Path("dist/data/point-buchon-rov-access-triage.json"))
+                        default=Path("research/receipts/point-buchon-rov-access-triage.json"))
     parser.add_argument("--current", type=Path, required=True)
     args = parser.parse_args()
     compare(json.loads(args.reviewed.read_text()), json.loads(args.current.read_text()))

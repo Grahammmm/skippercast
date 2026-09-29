@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from research.scripts.audit_point_estero_original_pair import BANDS, CLASSES, PIN, checked
+from research.lib.receipts import RECEIPTS
 
 
 class PointEsteroOriginalPairTest(unittest.TestCase):
@@ -22,7 +23,7 @@ class PointEsteroOriginalPairTest(unittest.TestCase):
                 checked(path)
 
     def test_published_review_cannot_export_a_mark(self):
-        path = Path(__file__).resolve().parents[1] / "dist/data/point-estero-original-paired-200-300ft-review.json"
+        path = RECEIPTS / "point-estero-original-paired-200-300ft-review.json"
         if not path.exists():
             self.skipTest("Original audit not built yet")
         review = json.loads(path.read_text())

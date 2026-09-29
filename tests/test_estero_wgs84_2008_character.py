@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_estero_wgs84_2008_character import checked_offsets, disk
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EsteroWgs84CharacterTest(unittest.TestCase):
     def test_receipt_is_aggregate_and_unqualified(self):
-        report = json.loads((ROOT / "dist/data/estero-wgs84-2008-character-sensitivity.json").read_text())
+        report = json.loads((RECEIPTS / "estero-wgs84-2008-character-sensitivity.json").read_text())
         self.assertFalse(report["full_cellwise_mllw_surface_verified"])
         self.assertFalse(report["source_product_upper_uncertainty_verified"])
         self.assertFalse(report["cross_survey_horizontal_registration_bounded"])

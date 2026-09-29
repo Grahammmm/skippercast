@@ -21,7 +21,7 @@ URL = ("https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/"
 SHA256 = "721c073303b60a09d479256b1ccb1d1e3b7088232f7a6a3f8837ef0fd3feb379"
 TABLE = "CentCA_Topobathy_DEM_Spatial_Metadata_v3"
 CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-MATRIX = ROOT / "dist/data/monterey-original-300-paired-review.json"
+MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
 
 
 def verified_source(path: Path, fetch: bool) -> None:
@@ -140,7 +140,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=ROOT / "var/review/CentCA_Topobathy_DEM_Spatial_Metadata.gpkg")
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/monterey-coned-source-footprint-audit.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/monterey-coned-source-footprint-audit.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     verified_source(args.source, args.fetch)

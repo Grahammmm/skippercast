@@ -4,6 +4,7 @@ research/ holds dated audit, screening and discovery scripts. Product code must
 never import or run it, and new research scripts must not land in scripts/.
 """
 import ast
+import json
 from pathlib import Path
 import py_compile
 import re
@@ -46,6 +47,18 @@ class ResearchBoundaryTest(unittest.TestCase):
         offenders = [p.relative_to(ROOT).as_posix() for p in paths
                      if JS_RESEARCH_IMPORT.search(p.read_text(encoding='utf-8'))]
         self.assertEqual(offenders, [])
+
+    def test_app_and_worker_do_not_load_receipts(self):
+        # Receipts left dist/data/ (P1-02b); the published client must not depend on them.
+        manifest = json.loads((ROOT / 'research/receipts/manifest.json').read_text())['files']
+        shipped = [*sorted((ROOT / 'dist').glob('*.js')), *sorted((ROOT / 'dist').glob('*.html')),
+                   *sorted((ROOT / 'server').rglob('*.[jt]s'))]
+        text = {p.relative_to(ROOT).as_posix(): p.read_text(encoding='utf-8') for p in shipped}
+        loaded = sorted(f'{path}: {name}' for name in manifest for path, body in text.items()
+                        if re.search(r'(?<![\w.-])' + re.escape(name) + r'(?![\w-])', body))
+        self.assertEqual(loaded, [])
+        self.assertEqual(sorted(set(manifest) & {p.name for p in (ROOT / 'dist/data').iterdir()}), [],
+                         'a receipt is back in dist/data/; research receipts belong in research/receipts/')
 
     def test_new_research_scripts_do_not_land_in_scripts(self):
         misplaced = [p.name for p in sorted((ROOT / 'scripts').iterdir())

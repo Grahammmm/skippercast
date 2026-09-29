@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_noaa_bathymetry_gap import classify
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +16,7 @@ def layer(layer_id, alpha):
 
 class NOAABathymetryGapTest(unittest.TestCase):
     def test_discovery_only(self):
-        receipt = json.loads((ROOT / "dist/data/noaa-central-bathymetry-gap-discovery.json").read_text())
+        receipt = json.loads((RECEIPTS / "noaa-central-bathymetry-gap-discovery.json").read_text())
         candidate = json.loads((ROOT / "catalog/candidates/noaa-bathymetry-coverage-gap-map.json").read_text())
         self.assertFalse(receipt["fishing_target"])
         self.assertFalse(receipt["exportable"])

@@ -161,7 +161,7 @@ def main():
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/nbs-statewide-camera-tile-review.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/nbs-statewide-camera-tile-review.json"))
     args = parser.parse_args()
     if not 1 <= args.workers <= 8:
         parser.error("workers must be between 1 and 8")

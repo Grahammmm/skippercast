@@ -6,6 +6,7 @@ from shapely.geometry import box, GeometryCollection
 
 from research.scripts.audit_estero_research_blocks import screen, verify_enc
 from research.scripts.check_estero_review_change import compare
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ class EsteroResearchBlocksTest(unittest.TestCase):
                         "query_receipts": [], "features": []}, None)
 
     def test_published_receipt_stays_research_only(self):
-        report = json.loads((ROOT / "dist/data/estero-2012-depth-class-closure-block-review.json").read_text())
+        report = json.loads((RECEIPTS / "estero-2012-depth-class-closure-block-review.json").read_text())
         self.assertEqual(report["scope"], "estero-independent-research-block-closure-screen")
         self.assertEqual(report["bands"]["200-250ft"]["hard_rugose_cells"]
                          + report["bands"]["250-300ft"]["hard_rugose_cells"], 24_210)

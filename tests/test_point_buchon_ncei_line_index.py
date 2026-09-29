@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import audit_point_buchon_ncei_line_index as index
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchonLineIndexTest(unittest.TestCase):
     def test_public_index_is_research_only(self):
-        result = json.loads((ROOT / "dist/data/point-buchon-2007-ncei-line-index.json").read_text())
+        result = json.loads((RECEIPTS / "point-buchon-2007-ncei-line-index.json").read_text())
         self.assertEqual(result["scope"], "point-buchon-2007-ncei-generated-line-depth-index")
         self.assertFalse(result["fishing_target"])
         self.assertEqual(result["qualified_waypoints"], 0)

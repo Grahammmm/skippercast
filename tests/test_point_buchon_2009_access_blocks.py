@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_point_buchon_2009_access_blocks import stable
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchon2009AccessBlocksTests(unittest.TestCase):
     def setUp(self):
-        self.report = json.loads((ROOT / "dist/data/point-buchon-2009-csumb-access-triage.json").read_text())
+        self.report = json.loads((RECEIPTS / "point-buchon-2009-csumb-access-triage.json").read_text())
 
     def test_partial_screen_cannot_promote_waypoints(self):
         totals = self.report["totals"]

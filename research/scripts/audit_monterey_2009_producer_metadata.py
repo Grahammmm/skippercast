@@ -62,7 +62,7 @@ def evaluate(raw: bytes) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path(
-        "dist/data/monterey-2009-producer-metadata-review.json"))
+        "research/receipts/monterey-2009-producer-metadata-review.json"))
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     with urlopen(URL, timeout=30) as response:

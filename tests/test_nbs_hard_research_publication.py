@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NbsHardResearchPublicationTests(unittest.TestCase):
     def test_monterey_big_sur_zero_is_a_complete_sampled_tile_result(self):
-        receipt = json.loads((ROOT / "dist/data/nbs-central-gap-all-camera-tiles-review.json").read_text())
+        receipt = json.loads((RECEIPTS / "nbs-central-gap-all-camera-tiles-review.json").read_text())
         self.assertEqual({row["sector_id"] for row in receipt["sectors"]},
                          {"monterey-sur", "big-sur", "sur-san-simeon"})
         self.assertEqual(receipt["requested_unique_tiles"], 26)
@@ -54,7 +55,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
 
     def test_cape_camera_centers_are_reconciled_with_original_survey_cells(self):
         camera = json.loads((ROOT / "dist/data/usgs-video-nbs-hard-overlap.json").read_text())
-        original = json.loads((ROOT / "dist/data/h11975-original-camera-cell-review.json").read_text())
+        original = json.loads((RECEIPTS / "h11975-original-camera-cell-review.json").read_text())
         cape = next(layer for layer in camera["layers"]
                     if layer["context_file"] == "northern-nbs-usgs-hard-research-context.geojson")
         context = json.loads((ROOT / "dist/data/northern-nbs-usgs-hard-research-context.geojson").read_text())
@@ -78,7 +79,7 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
             self.assertTrue(all(25 <= depth <= 200 for depth in row["qualified_center_depths_ft"]))
 
     def test_other_coast_layers_keep_native_depth_and_source_policy(self):
-        statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
+        statewide = json.loads((RECEIPTS / "nbs-statewide-usgs-hard-overlap-review.json").read_text())
         for coast_id, sectors, cell_m, max_features in (
                 ("northern", {"humboldt-cape"}, 40, 10),
                 ("san-francisco", {"arena-bodega", "bodega-reyes"}, 20, 10)):
@@ -106,8 +107,8 @@ class NbsHardResearchPublicationTests(unittest.TestCase):
                 self.assertEqual(p["nbs_raster_sha256"], tiles[p["tile"]]["source_raster_sha256"])
 
     def test_statewide_review_covers_each_sampled_sector_without_promoting_points(self):
-        statewide = json.loads((ROOT / "dist/data/nbs-statewide-usgs-hard-overlap-review.json").read_text())
-        sampled = json.loads((ROOT / "dist/data/nbs-statewide-multiple-camera-tile-review.json").read_text())
+        statewide = json.loads((RECEIPTS / "nbs-statewide-usgs-hard-overlap-review.json").read_text())
+        sampled = json.loads((RECEIPTS / "nbs-statewide-multiple-camera-tile-review.json").read_text())
         self.assertEqual(statewide["status"], "research-leads-only")
         self.assertFalse(statewide["fishing_target"])
         self.assertFalse(statewide["exportable"])

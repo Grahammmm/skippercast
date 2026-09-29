@@ -144,7 +144,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, default=ROOT / "var/review/point-buchon-additional-products/Pt_Buchon_control_additional_products.tar.gz")
     parser.add_argument("--character", type=Path, default=ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon.zip")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-2009-csumb-terrain-crosssurvey.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     result = audit(args.archive, args.character)

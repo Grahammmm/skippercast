@@ -70,7 +70,7 @@ def main():
     parser.add_argument('--audit', type=Path, default=Path('var/noaa-native-audit-100mb-refined.json'))
     parser.add_argument('--regions', type=Path, default=Path('regions'))
     parser.add_argument('--holds', type=Path, default=Path('catalog/noaa-survey-lead-holds.json'))
-    parser.add_argument('--output', type=Path, default=Path('dist/data/noaa-region-bag-envelope-review.json'))
+    parser.add_argument('--output', type=Path, default=Path('research/receipts/noaa-region-bag-envelope-review.json'))
     args = parser.parse_args()
     regions = [json.loads(path.read_text()) for path in sorted(args.regions.glob('*/region.json'))]
     packet = build(json.loads(args.audit.read_text()), regions, json.loads(args.holds.read_text()))

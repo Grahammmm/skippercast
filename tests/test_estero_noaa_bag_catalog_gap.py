@@ -7,6 +7,7 @@ import unittest
 from shapely.geometry import box, mapping
 
 from research.scripts.audit_estero_noaa_bag_catalog_gap import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EsteroNoaaBagCatalogGapTest(unittest.TestCase):
     def test_published_receipt_is_research_only(self):
-        report = json.loads((ROOT / "dist/data/estero-noaa-bag-catalog-gap.json").read_text())
+        report = json.loads((RECEIPTS / "estero-noaa-bag-catalog-gap.json").read_text())
         self.assertEqual(report["bag_survey_count"], 0)
         self.assertEqual(report["bag_survey_ids_returned"], [])
         self.assertFalse(report["fishing_target"])

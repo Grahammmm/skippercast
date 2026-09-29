@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_csumb_estero_2010_blocks import SOURCES, original_grid
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ class CsumbEsteroOriginalBlocksTest(unittest.TestCase):
             original_grid(Path(__file__), 12, ROOT / "var/review")
 
     def test_published_result_cannot_qualify_deeper_blocks(self):
-        receipt = json.loads((ROOT / "dist/data/csumb-scc-2010-estero-original-block-coverage.json").read_text())
+        receipt = json.loads((RECEIPTS / "csumb-scc-2010-estero-original-block-coverage.json").read_text())
         self.assertEqual(receipt["scope"], "csumb-scc-2010-estero-original-research-block-coverage")
         self.assertEqual(receipt["private_block_count"], 60)
         self.assertEqual(receipt["qualified_waypoints"], 0)

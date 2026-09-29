@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.merge_vr_native_depth_reviews import merge
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ class MergeNativeDepthReviewTests(unittest.TestCase):
     def setUp(self):
         self.sectors = json.loads((ROOT / 'dist/data/coastal-sectors.json').read_text())
         self.base = json.loads((ROOT / 'dist/data/noaa-vr-native-depth-review.json').read_text())
-        self.crescent = json.loads((ROOT / 'dist/data/noaa-h12131-native-depth-review.json').read_text())
+        self.crescent = json.loads((RECEIPTS / 'noaa-h12131-native-depth-review.json').read_text())
 
     def test_extra_original_survey_changes_del_norte_depth_lead(self):
         result = merge([self.base, self.crescent], self.sectors)

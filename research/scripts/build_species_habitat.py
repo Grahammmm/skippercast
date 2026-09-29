@@ -93,7 +93,7 @@ def main():
             print(src["key"], buckets)
     output = {"schema_version": 1, "built_date": "2026-09-21", "areas": areas,
               "method": "200 m search circles, at least 95% native class-1 soft sediment, whole-circle native depths 25–195 ft MLLW, at least 505 m from the September 16 closure screen. Halibut subset has maximum circle depth <=100 ft. Circles are partial search windows, not sediment boundaries. No catch-based ranking."}
-    (root / "dist/data/species-habitat.json").write_text(json.dumps(output, separators=(",", ":")) + "\n")
+    (root / "research/receipts/species-habitat.json").write_text(json.dumps(output, separators=(",", ":")) + "\n")
     print(len(areas), "areas written")
 
 

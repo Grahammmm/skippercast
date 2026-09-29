@@ -89,7 +89,7 @@ def ensure_newer(root, fetch=False):
 def audit(root, fetch=False):
     cache = root / "var/review/mont95-original"
     verify_sources(cache, fetch)
-    matrix_path = root / "dist/data/monterey-300-source-evidence-matrix.json"
+    matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
     newer = ensure_newer(root, fetch)
     matrix = json.loads(matrix_path.read_text())
@@ -162,7 +162,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-1995-original-multibeam-overlap.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-1995-original-multibeam-overlap.json"))
     args = parser.parse_args()
     report = audit(args.root.resolve(), args.fetch)
     if args.verify:

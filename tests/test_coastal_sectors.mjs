@@ -42,7 +42,7 @@ test('Eureka jetty class is withheld from natural hard-bottom context',()=>{
   const hold=layer.held_releases.find(r=>r.release_id==='P9EC35PF');
   assert.ok(hold?.reason.includes('North Jetty'));
   assert.ok(hold.evidence_urls.some(url=>url.includes('9418768')));
-  const review=JSON.parse(fs.readFileSync(new URL('../dist/data/usgs-eureka-jetty-hold-review.json',import.meta.url)));
+  const review=JSON.parse(fs.readFileSync(new URL('../research/receipts/usgs-eureka-jetty-hold-review.json',import.meta.url)));
   assert.equal(review.fishing_target,false);
   assert.equal(review.exportable,false);
   assert.equal(review.products.length,3);

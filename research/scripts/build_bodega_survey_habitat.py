@@ -91,7 +91,7 @@ def build(source, raw, terrain, region):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))
-    p.add_argument('--terrain', type=Path, default=Path('dist/data/bodega-native-hard-terrain-review.json'))
+    p.add_argument('--terrain', type=Path, default=Path('research/receipts/bodega-native-hard-terrain-review.json'))
     p.add_argument('--region', type=Path, default=Path('regions/bodega-point-reyes/region.json'))
     p.add_argument('--output', type=Path, default=Path('dist/regions/bodega-point-reyes/survey-habitat.geojson'))
     a = p.parse_args()

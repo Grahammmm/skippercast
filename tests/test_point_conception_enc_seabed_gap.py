@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from research.scripts.audit_point_conception_enc_seabed_gap import query_one
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointConceptionEncSeabedGapTest(unittest.TestCase):
     def test_aggregate_receipt_keeps_two_patches_unqualified(self):
-        report = json.loads((ROOT / "dist/data/point-conception-original-4m-enc-seabed-gap.json").read_text())
+        report = json.loads((RECEIPTS / "point-conception-original-4m-enc-seabed-gap.json").read_text())
         self.assertEqual(set(report["by_survey"]), {"H11952", "H11953"})
         self.assertEqual(report["reviewed_scale_bands"], ["enc_harbour", "enc_approach", "enc_coastal"])
         for row in report["by_survey"].values():

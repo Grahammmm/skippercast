@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from research.scripts.audit_csumb_scc_native import audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class CsumbNativeSourceReviewTest(unittest.TestCase):
     def test_original_grid_receipt_stays_out_of_fishing_targets(self):
-        report = json.loads((ROOT / "dist/data/csumb-scc-native-source-review.json").read_text())
+        report = json.loads((RECEIPTS / "csumb-scc-native-source-review.json").read_text())
         self.assertEqual(report["publication_status"], "source-evidence-only")
         self.assertEqual({s["source_id"] for s in report["sources"]},
                          {"csumb-scc-block04", "csumb-scc-block05", "csumb-scc-block06"})

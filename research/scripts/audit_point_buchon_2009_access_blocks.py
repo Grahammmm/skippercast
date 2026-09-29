@@ -150,7 +150,7 @@ def main():
     parser.add_argument("--federal", type=Path, required=True)
     parser.add_argument("--enc", type=Path, required=True)
     parser.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-2009-csumb-access-triage.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-2009-csumb-access-triage.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     blocks = source_blocks(args.archive, args.character)

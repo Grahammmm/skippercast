@@ -193,7 +193,7 @@ def main():
     p.add_argument("--survey-id", default="H11981")
     p.add_argument("--bag-url", help="Required when a survey has multiple original BAG files")
     p.add_argument("--cruise", default="c109nc")
-    p.add_argument("--output", type=Path, default=Path("dist/data/noaa-h11981-camera-depth-review.json"))
+    p.add_argument("--output", type=Path, default=Path("research/receipts/noaa-h11981-camera-depth-review.json"))
     a = p.parse_args()
     result = review(json.loads(a.audit.read_text()), json.loads(a.manifest.read_text()),
                     json.loads(a.mpas.read_text()), a.cache, a.video_cache,

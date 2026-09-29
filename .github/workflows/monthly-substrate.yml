@@ -33,7 +33,7 @@ jobs:
         run: >-
           python research/scripts/audit_monterey_noaa_bag_catalog_gap.py
           --output var/review/monterey-17-noaa-bag-catalog-gap.json
-          --verify dist/data/monterey-17-noaa-bag-catalog-gap.json
+          --verify research/receipts/monterey-17-noaa-bag-catalog-gap.json
       - name: Recheck exact BlueTopo contributor pixels in Monterey research outlines
         env:
           PYTHONPATH: src:.
@@ -41,7 +41,7 @@ jobs:
           python research/scripts/audit_monterey_bluetopo_context_pixels.py
           --fetch
           --output var/review/monterey-17-bluetopo-contributor-pixels.json
-          --verify dist/data/monterey-17-bluetopo-contributor-pixels.json
+          --verify research/receipts/monterey-17-bluetopo-contributor-pixels.json
       - name: Recheck NOAA Monterey regional VDatum model package and conditional probes
         env:
           PYTHONPATH: src:.
@@ -102,7 +102,7 @@ jobs:
           python research/scripts/audit_mont95_monterey_original_overlap.py
           --fetch
           --output var/review/monterey-1995-original-multibeam-overlap.json
-          --verify dist/data/monterey-1995-original-multibeam-overlap.json
+          --verify research/receipts/monterey-1995-original-multibeam-overlap.json
       - name: Recheck original 1998 USGS EM300 research overlap
         env:
           PYTHONPATH: src:.
@@ -110,18 +110,18 @@ jobs:
           python research/scripts/audit_em300_monterey_original_overlap.py
           --fetch
           --output var/review/monterey-1998-original-em300-overlap.json
-          --verify dist/data/monterey-1998-original-em300-overlap.json
+          --verify research/receipts/monterey-1998-original-em300-overlap.json
       - name: Recheck NOAA 2013 merge provenance and missing accuracy deliverables
         run: >-
           python research/scripts/audit_monterey_2013_merge_lineage.py
           --fetch
           --output var/review/monterey-2013-merge-lineage-gap.json
-          --verify dist/data/monterey-2013-merge-lineage-gap.json
+          --verify research/receipts/monterey-2013-merge-lineage-gap.json
       - name: Recheck NOAA 2013 public supplemental asset availability
         run: >-
           python research/scripts/audit_monterey_2013_merge_asset_access.py
           --output var/review/monterey-2013-merge-public-asset-access.json
-          --verify dist/data/monterey-2013-merge-public-asset-access.json
+          --verify research/receipts/monterey-2013-merge-public-asset-access.json
       - name: Recheck NOAA CoNED source polygons against all original Monterey outlines
         env:
           PYTHONPATH: src:.
@@ -129,7 +129,7 @@ jobs:
           python research/scripts/audit_monterey_coned_source_footprints.py
           --fetch
           --output var/review/monterey-coned-source-footprint-audit.json
-          --verify dist/data/monterey-coned-source-footprint-audit.json
+          --verify research/receipts/monterey-coned-source-footprint-audit.json
       - name: Recheck NOAA merge acoustic-classified samples inside all 17 outlines
         env:
           PYTHONPATH: src:.
@@ -137,13 +137,13 @@ jobs:
           python research/scripts/audit_monterey_noaa2612_acoustic_points.py
           --fetch
           --output var/review/monterey-noaa2612-acoustic-point-support.json
-          --verify dist/data/monterey-noaa2612-acoustic-point-support.json
+          --verify research/receipts/monterey-noaa2612-acoustic-point-support.json
       - name: Recheck NCEI survey footprints against actual trackline leads
         run: >-
           python research/scripts/audit_monterey_ncei_trackline_leads.py
           --fetch
           --output var/review/monterey-17-ncei-trackline-leads.json
-          --verify dist/data/monterey-17-ncei-trackline-leads.json
+          --verify research/receipts/monterey-17-ncei-trackline-leads.json
       - name: Recheck 2009 original processed beams in priority Monterey outlines
         env:
           PYTHONPATH: src:.
@@ -151,17 +151,17 @@ jobs:
           python research/scripts/audit_monterey_2009_ncei_valid_beams.py
           --fetch
           --output var/review/monterey-2009-centralmontereybay-valid-beam-review.json
-          --verify dist/data/monterey-2009-centralmontereybay-valid-beam-review.json
+          --verify research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json
       - name: Recheck CSUMB producer metadata for the 2009 Monterey survey
         run: >-
           python research/scripts/audit_monterey_2009_producer_metadata.py
           --output var/review/monterey-2009-producer-metadata-review.json
-          --verify dist/data/monterey-2009-producer-metadata-review.json
+          --verify research/receipts/monterey-2009-producer-metadata-review.json
       - name: Bound the original CSUMB project XML to its northern raster
         run: >-
           python research/scripts/audit_monterey_2009_project_raster_metadata.py
           --output var/review/monterey-2009-project-raster-datum-scope.json
-          --verify dist/data/monterey-2009-project-raster-datum-scope.json
+          --verify research/receipts/monterey-2009-project-raster-datum-scope.json
       - name: Recheck original 2009 beams against native USGS depth and character cells
         env:
           PYTHONPATH: src:.
@@ -169,7 +169,7 @@ jobs:
           python research/scripts/audit_monterey_2009_beam_usgs_cells.py
           --fetch
           --output var/review/monterey-2009-beam-usgs-cell-screen.json
-          --verify dist/data/monterey-2009-beam-usgs-cell-screen.json
+          --verify research/receipts/monterey-2009-beam-usgs-cell-screen.json
       - name: Recheck historical 2010 USGS camera windows against 2009 valid beams
         env:
           PYTHONPATH: src:.
@@ -177,7 +177,7 @@ jobs:
           python research/scripts/audit_monterey_2009_beam_video_proximity.py
           --fetch
           --output var/review/monterey-2009-beam-2010-video-proximity.json
-          --verify dist/data/monterey-2009-beam-2010-video-proximity.json
+          --verify research/receipts/monterey-2009-beam-2010-video-proximity.json
       - name: Verify historical source and merge lineage holds keep fishing gates closed
         env:
           PYTHONPATH: src:.
@@ -215,13 +215,13 @@ jobs:
           PYTHONPATH: src:.
         run: |
           python research/scripts/audit_central_extra_bag.py --fetch --output var/review/f00844-original-fifth-bag-review.json
-          cmp var/review/f00844-original-fifth-bag-review.json dist/data/f00844-original-fifth-bag-review.json
+          cmp var/review/f00844-original-fifth-bag-review.json research/receipts/f00844-original-fifth-bag-review.json
       - name: Recheck original W00614 depth versus USGS Pigeon Point character
         env:
           PYTHONPATH: src:.
         run: |
           python research/scripts/audit_pigeon_w00614_original_class.py --fetch --output var/review/w00614-pigeon-original-character-overlap.json
-          cmp var/review/w00614-pigeon-original-character-overlap.json dist/data/w00614-pigeon-original-character-overlap.json
+          cmp var/review/w00614-pigeon-original-character-overlap.json research/receipts/w00614-pigeon-original-character-overlap.json
       - name: Recheck USGS video observations versus W00614 original cells
         env:
           PYTHONPATH: src:.
@@ -229,28 +229,28 @@ jobs:
           python research/scripts/audit_w00614_usgs_video_gap.py
           --bag var/review/W00614_MB_VR_MLLW_1of1.bag
           --output var/review/w00614-usgs-video-observation-gap.json
-          --verify dist/data/w00614-usgs-video-observation-gap.json
+          --verify research/receipts/w00614-usgs-video-observation-gap.json
       - name: Recheck NOAA 2018 ROV coral/sponge occurrences near W00614
         run: >-
           python research/scripts/audit_w00614_noaa_sh1809_observations.py
           --output var/review/w00614-noaa-sh1809-observation-gap.json
-          --verify dist/data/w00614-noaa-sh1809-observation-gap.json
+          --verify research/receipts/w00614-noaa-sh1809-observation-gap.json
       - name: Recheck original Cal DIG I ROV depth coverage off Morro Bay
         run: >-
           python research/scripts/audit_cal_dig_shallow_300_gap.py
           --output var/review/cal-dig-i-original-rov-300ft-gap.json
-          --verify dist/data/cal-dig-i-original-rov-300ft-gap.json
+          --verify research/receipts/cal-dig-i-original-rov-300ft-gap.json
       - name: Recheck CIAP Central ROV public video and aggregate fish layers
         run: >-
           python research/scripts/audit_ciap_rov_portal.py
           --output var/review/ciap-2016-central-rov-public-service-audit.json
-          --verify dist/data/ciap-2016-central-rov-public-service-audit.json
+          --verify research/receipts/ciap-2016-central-rov-public-service-audit.json
       - name: Recheck original H13152 and W00479 active MLLW cells
         env:
           PYTHONPATH: src:.
         run: |
           python research/scripts/audit_central_deep_original_300.py --fetch --output var/review/central-deep-original-300-refutation.json
-          cmp var/review/central-deep-original-300-refutation.json dist/data/central-deep-original-300-refutation.json
+          cmp var/review/central-deep-original-300-refutation.json research/receipts/central-deep-original-300-refutation.json
       - name: Recheck Point Conception original BAG depth-band gap
         env:
           PYTHONPATH: src:.
@@ -285,7 +285,7 @@ jobs:
         run: >-
           python -m research.scripts.audit_point_conception_enc_seabed_gap
           --output var/review/point-conception-original-4m-enc-seabed-gap.json
-          --verify dist/data/point-conception-original-4m-enc-seabed-gap.json
+          --verify research/receipts/point-conception-original-4m-enc-seabed-gap.json
       - name: Recheck NOAA processing and VDatum control notes
         env:
           PYTHONPATH: src:.
@@ -323,7 +323,7 @@ jobs:
         run: >-
           python -m research.scripts.audit_point_conception_4m_camera_gap
           --download-missing
-          --verify dist/data/point-conception-original-4m-camera-gap.json
+          --verify research/receipts/point-conception-original-4m-camera-gap.json
           --output var/review/point-conception-original-4m-camera-gap.json
       - name: Recheck NOAA survey datum, BAG cell uncertainty and USGS source dependence
         env:
@@ -331,7 +331,7 @@ jobs:
         run: >-
           python -m research.scripts.audit_point_conception_4m_lineage
           --fetch
-          --verify dist/data/point-conception-original-4m-source-lineage.json
+          --verify research/receipts/point-conception-original-4m-source-lineage.json
           --output var/review/point-conception-original-4m-source-lineage.json
       - name: Verify Central gap ledger, catalog join and 300 ft qualification holds
         run: python -m unittest tests.test_central_coverage_pipeline tests.test_central_300_qualification_plan tests.test_point_conception_original_300_gap tests.test_point_conception_original_300_ladder tests.test_point_conception_4m_hard_overlap tests.test_point_conception_4m_patch_robustness tests.test_point_conception_enc_seabed_gap tests.test_point_conception_control_reports tests.test_point_conception_8m_hard_overlap tests.test_point_conception_4m_access tests.test_point_conception_4m_camera_gap tests.test_point_conception_4m_lineage tests.test_ciap_rov_portal tests.test_pigeon_w00614_original_class tests.test_w00614_usgs_video_gap tests.test_w00614_noaa_sh1809_observations tests.test_cal_dig_shallow_300_gap tests.test_central_deep_original_300 -v
@@ -343,8 +343,8 @@ jobs:
       - name: Hold any unexplained publication drift for review
         run: |
           cmp var/review/central-coverage-ledger-v1.json dist/data/central-coverage-ledger-v1.json
-          cmp var/review/central-source-acquisition-queue.json dist/data/central-source-acquisition-queue.json
-          cmp var/review/central-300ft-qualification-plan.json dist/data/central-300ft-qualification-plan.json
+          cmp var/review/central-source-acquisition-queue.json research/receipts/central-source-acquisition-queue.json
+          cmp var/review/central-300ft-qualification-plan.json research/receipts/central-300ft-qualification-plan.json
       - name: Upload source-gap review even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -830,7 +830,7 @@ jobs:
           python research/scripts/audit_bigcreek_original_grids.py
           --fetch
           --output var/review/bigcreek-lopez-original-300-research.json
-          --verify dist/data/bigcreek-lopez-original-300-research.json
+          --verify research/receipts/bigcreek-lopez-original-300-research.json
       - name: Recheck historical ROV observations against Lopez original cells
         env:
           PYTHONPATH: src:.
@@ -839,7 +839,7 @@ jobs:
           --fetch-rov
           --fetch-archive
           --output var/review/bigcreek-lopez-rov-original-cell-join.json
-          --verify dist/data/bigcreek-lopez-rov-original-cell-join.json
+          --verify research/receipts/bigcreek-lopez-rov-original-cell-join.json
       - name: Recheck original Lopez backscatter source and rights metadata
         env:
           PYTHONPATH: src:.
@@ -847,7 +847,7 @@ jobs:
           python research/scripts/audit_lopez_backscatter_source.py
           --fetch
           --output var/review/lopez-original-backscatter-source-review.json
-          --verify dist/data/lopez-original-backscatter-source-review.json
+          --verify research/receipts/lopez-original-backscatter-source-review.json
       - name: Check whether Block 02 accuracy assessment independently observes rock
         env:
           PYTHONPATH: src:.
@@ -861,7 +861,7 @@ jobs:
           python research/scripts/audit_bss02_video_grid_overlap.py
           --download-video
           --output var/review/bss02-video-grid-overlap.json
-          --verify dist/data/bss02-video-grid-overlap.json
+          --verify research/receipts/bss02-video-grid-overlap.json
       - name: Check Block 03 video, source-depth band and derived rough class
         env:
           PYTHONPATH: src:.
@@ -870,7 +870,7 @@ jobs:
           --survey-id BSS_Block03
           --download-video
           --output var/review/bss03-video-grid-overlap.json
-          --verify dist/data/bss03-video-grid-overlap.json
+          --verify research/receipts/bss03-video-grid-overlap.json
       - name: Recheck official MPAs around Block 03 research blocks
         env:
           PYTHONPATH: src:.
@@ -895,37 +895,37 @@ jobs:
           --federal var/review/bss03-federal-areas.json
           --enc var/review/enc-hazards-bss03-original-camera.geojson
           --output var/review/bss03-camera-access-triage.json
-          --verify dist/data/bss03-camera-access-triage.json
+          --verify research/receipts/bss03-camera-access-triage.json
       - name: Recheck NOAA VDatum availability and source-frame hold for six CSUMB blocks
         run: >-
           python research/scripts/audit_csumb_vdatum_bridge.py
           --scc-review var/review/csumb-scc-native-source-review.json
           --bss-review var/review/csumb-bss-native-source-review.json
           --output var/review/csumb-vdatum-bridge-review.json
-          --verify dist/data/csumb-vdatum-bridge-review.json
+          --verify research/receipts/csumb-vdatum-bridge-review.json
       - name: Recheck private Block 03 footprint VDatum diagnostic
         run: >-
           python research/scripts/audit_bss03_datum_footprint.py
           --access var/review/bss03-camera-access-triage.json
           --output var/review/bss03-footprint-vdatum-diagnostic.json
-          --verify dist/data/bss03-footprint-vdatum-diagnostic.json
+          --verify research/receipts/bss03-footprint-vdatum-diagnostic.json
       - name: Recheck official Block 03 CARIS project archive lead
         run: >-
           python research/scripts/audit_bss03_caris_acquisition.py
           --output var/review/bss03-caris-acquisition-lead.json
-          --verify dist/data/bss03-caris-acquisition-lead.json
+          --verify research/receipts/bss03-caris-acquisition-lead.json
       - name: Recheck complete original Block 03 per-line TPE member
         env:
           PYTHONPATH: src:.
         run: >-
           python research/scripts/audit_bss03_caris_tpe_member.py
           --output var/review/bss03-caris-original-tpe-member-lead.json
-          --verify dist/data/bss03-caris-original-tpe-member-lead.json
+          --verify research/receipts/bss03-caris-original-tpe-member-lead.json
       - name: Recheck original Block 03 vessel TPU input settings
         run: >-
           python research/scripts/audit_bss03_vessel_settings.py
           --output var/review/bss03-original-vessel-tpu-inputs.json
-          --verify dist/data/bss03-original-vessel-tpu-inputs.json
+          --verify research/receipts/bss03-original-vessel-tpu-inputs.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -1015,7 +1015,7 @@ jobs:
         run: >-
           python research/scripts/audit_san_miguel_original_habitat.py
           --output var/review/san-miguel-regular-recheck.json
-          --verify dist/data/san-miguel-original-habitat-depth-review.json
+          --verify research/receipts/san-miguel-original-habitat-depth-review.json
       - name: Collect current exclusion and chart-danger evidence
         env:
           PYTHONPATH: src:.
@@ -1036,7 +1036,7 @@ jobs:
         run: >-
           python research/scripts/audit_san_miguel_vr_habitat.py
           --output var/review/san-miguel-vr-recheck.json
-          --verify dist/data/san-miguel-original-habitat-vr-review.json
+          --verify research/receipts/san-miguel-original-habitat-vr-review.json
       - name: Upload unpublished source review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -1100,7 +1100,7 @@ jobs:
           --region fort-bragg-point-arena
           --survey H11730
           --output var/review/h11730-fort-bragg-regional-camera-support.json
-          --verify dist/data/h11730-fort-bragg-regional-camera-support.json
+          --verify research/receipts/h11730-fort-bragg-regional-camera-support.json
       - name: Recheck H11971 NOAA and USGS camera source terms
         env:
           PYTHONPATH: src:.
@@ -1108,21 +1108,21 @@ jobs:
           python research/scripts/audit_noaa_usgs_camera_rights.py
           --survey H11971 --cruise c210nc
           --output var/review/h11971-camera-source-rights-review.json
-          --verify dist/data/h11971-camera-source-rights-review.json
+          --verify research/receipts/h11971-camera-source-rights-review.json
       - name: Recheck CSUMB producer and original BSS/SCC source-use terms
         env:
           PYTHONPATH: src:.
         run: >-
           python research/scripts/audit_csumb_source_policy.py
           --output var/review/csumb-original-source-policy-review.json
-          --verify dist/data/csumb-original-source-policy-review.json
+          --verify research/receipts/csumb-original-source-policy-review.json
       - name: Recheck NOAA bathymetry coverage discovery service
         env:
           PYTHONPATH: src:.
         run: >-
           python research/scripts/audit_noaa_bathymetry_gap.py
           --output var/review/noaa-central-bathymetry-gap-discovery.json
-          --verify dist/data/noaa-central-bathymetry-gap-discovery.json
+          --verify research/receipts/noaa-central-bathymetry-gap-discovery.json
       - name: Reopen original H11876 side-scan mosaic and companion files
         run: |
           mkdir -p var/noaa-native-cache
@@ -1241,7 +1241,7 @@ jobs:
           --cache var/usgs-native-cache
           --block-id OffshoreAptos
           --output var/review/usgs-offshore-aptos-native-audit.json
-          --verify dist/data/usgs-offshore-aptos-native-audit.json
+          --verify research/receipts/usgs-offshore-aptos-native-audit.json
       - name: Recheck Aptos original rock against all nine intersecting NOAA MLLW tiles
         env:
           PYTHONPATH: src:.
@@ -1256,7 +1256,7 @@ jobs:
           --usgs-cache var/usgs-native-cache
           --fetch
           --output var/review/usgs-offshore-aptos-noaa-mllw-overlap-review.json
-          --verify dist/data/usgs-offshore-aptos-noaa-mllw-overlap-review.json
+          --verify research/receipts/usgs-offshore-aptos-noaa-mllw-overlap-review.json
       - name: Upload unpublished Aptos native and measured-depth receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -1410,7 +1410,7 @@ jobs:
           python research/scripts/audit_h11730_cdfw_substrate_overlap.py
           --tile-audit var/review/cdfw-ds3091-tile-audit.json
           --output var/review/h11730-point-arena-cdfw-substrate-crosscheck.json
-          --verify dist/data/h11730-point-arena-cdfw-substrate-crosscheck.json
+          --verify research/receipts/h11730-point-arena-cdfw-substrate-crosscheck.json
       - name: Build MPA-screened review layers
         run: >-
           python research/scripts/build_cdfw_substrate_context.py
@@ -1612,7 +1612,7 @@ jobs:
           --reconciliation var/review/h11983-reconciliation.json
           --hazards var/review/h11983-hazard-gate.json
           --output var/review/h11983-native-source-review.json
-          --verify dist/data/noaa-h11983-native-source-review.json
+          --verify research/receipts/noaa-h11983-native-source-review.json
       - name: Upload only coordinate-free review receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

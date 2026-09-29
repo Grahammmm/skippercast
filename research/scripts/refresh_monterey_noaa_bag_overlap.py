@@ -42,7 +42,7 @@ def main():
     root = args.root
     bindings = json.loads((root / "catalog/monterey-original-bag-overlap-bindings.json").read_text())
     context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-    pixel_path = root / "dist/data/monterey-original-300-pixel-review.json"
+    pixel_path = root / "research/receipts/monterey-original-300-pixel-review.json"
     context = json.loads(context_path.read_text())
     pixel = json.loads(pixel_path.read_text())
     if (bindings.get("schema_version") != 1

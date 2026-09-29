@@ -49,7 +49,7 @@ def fetch_samples():
 
 def areas(selected=None):
     project = Transformer.from_crs("EPSG:4326", "EPSG:32610", always_xy=True)
-    matrix = json.loads((ROOT / "dist/data/monterey-original-300-paired-review.json").read_text())
+    matrix = json.loads((ROOT / "research/receipts/monterey-original-300-paired-review.json").read_text())
     monterey_ids = {row["context_id"] for row in matrix["outlines"]}
     if len(monterey_ids) != 17:
         raise ValueError("Monterey research matrix changed")
@@ -131,7 +131,7 @@ def audit(samples, candidate_areas):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/nos-seabed-central-gap-audit.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/nos-seabed-central-gap-audit.json")
     parser.add_argument("--scope", choices=(*SOURCES, "all"), default="all")
     args = parser.parse_args()
     selected = None if args.scope == "all" else {args.scope}

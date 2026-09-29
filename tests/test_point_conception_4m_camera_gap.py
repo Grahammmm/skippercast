@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointConceptionFourMeterCameraGapTests(unittest.TestCase):
     def test_original_camera_proximity_does_not_verify_patch(self):
-        report = json.loads((ROOT / "dist/data/point-conception-original-4m-camera-gap.json").read_text())
+        report = json.loads((RECEIPTS / "point-conception-original-4m-camera-gap.json").read_text())
         self.assertEqual(report["scope"], "point-conception-two-original-4m-components-usgs-video-proximity")
         self.assertEqual(len(report["sources"]), 12)
         self.assertEqual([row["survey_id"] for row in report["components"]], ["H11952", "H11953"])

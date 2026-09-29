@@ -119,7 +119,7 @@ def audit(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/point-buchon-vdatum-grid-api-bridge.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/point-buchon-vdatum-grid-api-bridge.json"))
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     result = audit(args.root.resolve())

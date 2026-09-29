@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class OriginalMultibeamResearchGate(unittest.TestCase):
     def test_unbounded_old_depth_stays_research_only(self):
-        receipt = json.loads((ROOT / "dist/data/monterey-1995-original-multibeam-overlap.json").read_text())
+        receipt = json.loads((RECEIPTS / "monterey-1995-original-multibeam-overlap.json").read_text())
         self.assertEqual(receipt["outlines_with_original_cells"], 14)
         self.assertEqual(receipt["rockfish_camera_positive_outlines_with_original_cells"], 3)
         self.assertFalse(receipt["original_vertical_datum_documented"])
