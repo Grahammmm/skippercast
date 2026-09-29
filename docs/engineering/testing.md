@@ -68,7 +68,7 @@ Not in place yet; the guide's P2-09, P3-06 and P4-09 tasks move toward it. Open 
 | Claims | `research/tests` | every PR (fast) | "receipt X says Y" pins, named by claim |
 | GIS | `packages/pipeline/tests/gis` (`pytest -m gis`) | survey job, all packages installed, zero skips | rasters, grids, seafloor |
 | Integration | `packages/pipeline/tests/integration`, `apps/worker/test/integration` | every PR | pipeline on synthetic fixtures in a temporary directory; `wrangler dev` smoke for `/api/health`, `/feeds/*`, auth and a billing webhook with recorded fixtures |
-| E2E | `apps/web/e2e` (Playwright + axe) | every PR at 390×844; nightly full matrix | the eight [mobile review](../mobile-review.md) flows, dark mode, offline pack, paywall |
+| E2E | `apps/web/e2e` (Playwright + axe) | every PR at 390×844; nightly full matrix | the [mobile review](../mobile-review.md) flows (six today; the guide plans eight), dark mode, offline pack, paywall |
 | Load | `oha` against staging | before each production deploy | `/api/om`, `/feeds/*`, cache hit ratio, p95 latency |
 | Visual | Storybook screenshots | every PR | < 0.5 % diff |
 
