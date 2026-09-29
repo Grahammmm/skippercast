@@ -32,7 +32,6 @@ __pycache__/
 build/
 # dist/ is authored, tracked static website source in this project.
 node_modules/
-.sites-runtime/
 .coverage
 .pytest_cache/
 .DS_Store
@@ -40,7 +39,6 @@ node_modules/
 # Generated Worker and asset copy (dist root remains authored source)
 dist/client/
 dist/server/
-dist/.openai/
 wrangler.deploy.jsonc
 .wrangler/
 wrangler.rollback.jsonc

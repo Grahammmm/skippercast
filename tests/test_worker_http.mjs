@@ -11,7 +11,9 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
-const {default: worker, checkTrips, ClientError} = await import('../server/worker.js');
+const {default: deployed, handle, checkTrips, ClientError} = await import('../server/worker.js');
+// A test-only identity resolver, passed through handle(); the deployed fetch never reads it.
+const worker = {fetch: (request, env, ctx) => handle(request, env, ctx, async r => r.headers.get('x-test-owner')), scheduled: deployed.scheduled};
 
 function database() {
   const sql = new DatabaseSync(':memory:'), journal = read('../drizzle/meta/_journal.json');
@@ -23,7 +25,7 @@ function database() {
 const origin = 'https://skippercast.com';
 function request(path, {owner, method = 'GET', body} = {}) {
   const headers = {'Content-Type': 'application/json'};
-  if (owner) { headers['oai-authenticated-user-id'] = owner; headers['oai-authenticated-user-email'] = owner + '@example.test'; }
+  if (owner) headers['x-test-owner'] = owner;
   if (method !== 'GET') headers.Origin = origin;
   return new Request(origin + path, {method, headers, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body)});
 }

@@ -61,7 +61,7 @@ Supported browsers can expose two page-scoped WebMCP tools: `list_fishing_target
 
 ## Hosting
 
-The registered Sites project is identified by `.openai/hosting.json`; only its `dist/` static directory is published. Source credentials, generated archives, DNS receipts, and personal monitor state are not committed. The source repository and the hosting deployment are separate services. Never recreate a Site because an upload or build fails; reuse its existing project ID.
+The site is served by SkipperCast's Cloudflare Worker (`wrangler.jsonc`), which publishes the built `dist/client` and `dist/server`; see [Cloudflare](cloudflare.md). Source credentials, generated archives, DNS receipts, and personal monitor state are not committed. Deploys come only from `main` through `.github/workflows/deploy-cloudflare.yml`; a failed deploy is rolled back, never repaired by hand in the dashboard.
 
 The private personal Telegram monitor is not wired into the public web app. The portable Python collector and alert lifecycle stay available for a later authenticated integration.
 

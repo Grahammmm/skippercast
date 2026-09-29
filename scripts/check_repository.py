@@ -12,7 +12,7 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-IGNORED = {".git", ".venv", "var", "__pycache__", ".ruff_cache", "build", "node_modules", ".sites-runtime", ".wrangler"}
+IGNORED = {".git", ".venv", "var", "__pycache__", ".ruff_cache", "build", "node_modules", ".wrangler"}
 PATTERNS = {
     "private home path": re.compile(r"/(?:Users|home)/[A-Za-z0-9_.-]+/"),
     "private tailnet address": re.compile(r"\b100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.\d+\.\d+\b"),
@@ -29,7 +29,7 @@ def main():
     vendor_hashes = json.loads(manifest.read_text()) if manifest.exists() else {}
     for path in sorted(ROOT.rglob("*")):
         relative = path.relative_to(ROOT)
-        if relative.parts[:2] in {("dist","client"),("dist","server"),("dist",".openai")}:
+        if relative.parts[:2] in {("dist","client"),("dist","server")}:
             continue
         if not path.is_file() or set(relative.parts) & IGNORED or any(p.endswith(".egg-info") for p in relative.parts):
             continue

@@ -90,7 +90,7 @@ function sheet() {
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
         const signIn = typeof data.signIn === 'string' ? data.signIn : '';
-        status.innerHTML = signIn && signIn.startsWith('/') ? `Sign in to use AI lookup, or enter the numbers below by hand. <a href="${signIn.replace('%2F%23forecast', '%2F%23map')}">Sign in</a>` : 'AI lookup needs an account, which is coming soon. Enter the numbers below by hand.';
+        status.innerHTML = signIn && signIn.startsWith('/') ? `Sign in to use AI lookup, or enter the numbers below by hand. <a href="${signIn}">Sign in</a>` : 'AI lookup needs an account, which is coming soon. Enter the numbers below by hand.';
         return;
       }
       if (!response.ok) { status.textContent = data.error || 'Lookup failed. Enter the numbers below by hand.'; return; }

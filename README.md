@@ -7,7 +7,7 @@
 
 SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and build a small GPX day plan for your chartplotter. Select a species, scrub seven days of ocean conditions, and inspect a tide chart and wave components. Map, Conditions, Export, and Guide views keep habitat, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
 
-**[Open the app](https://skippercast.com)** · [Hosting address](https://skippercast.email-me-here-2016.chatgpt.site) · [Web app guide](docs/web-app.md)
+**[Open the app](https://skippercast.com)** · [Hosting on Cloudflare](docs/cloudflare.md) · [Web app guide](docs/web-app.md)
 
 **Status:** mobile web app with shared regional ocean feeds, private saved-trip alerts and research layers. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
 
@@ -69,7 +69,7 @@ scripts/              Repository checks used locally and in CI
 .github/workflows/    Offline CI and daily public-evidence collection
 ```
 
-Before packaging a Sites release, run `npm run build`. Production serves the generated `dist/client`, where every script, stylesheet and page is renamed with a content hash (`scripts/fingerprint.mjs`) so the hosting edge can never serve a stale copy. The one exception is the service worker `sw.js`, which must keep its URL; the Worker serves it with `Cache-Control: no-cache`. Edit the plain files under `dist/` (`index.html`, `boot.js`, `app.js` and so on); never hand-version file names or add `?v=` query strings. `node scripts/check_client.mjs` confirms every reference resolves.
+Before a release, run `pnpm build`. Production serves the generated `dist/client`, where every script, stylesheet and page is renamed with a content hash (`scripts/fingerprint.mjs`) so the hosting edge can never serve a stale copy. The one exception is the service worker `sw.js`, which must keep its URL; the Worker serves it with `Cache-Control: no-cache`. Edit the plain files under `dist/` (`index.html`, `boot.js`, `app.js` and so on); never hand-version file names or add `?v=` query strings. `node scripts/check_client.mjs` confirms every reference resolves.
 
 Start with the [quickstart](docs/quickstart.md), then the [forecast workflow](docs/forecast-workflow.md) or [atlas methodology](docs/atlas-methodology.md). The [roadmap](docs/roadmap.md) separates future app work from shipped functionality. See [CONTRIBUTING.md](CONTRIBUTING.md) for development.
 

@@ -1,8 +1,8 @@
 // Edge caching and per-IP rate limits for the anonymous read endpoints
 // (/api/om, /api/forecast, /api/intelligence, /api/habitat and R2 /feeds/).
 //
-// Both are optional. ChatGPT Sites forbids the shared default cache and has no
-// Rate Limiting binding, so each one quietly does nothing there. A cache or
+// Both are optional: without the shared default cache or a Rate Limiting
+// binding (local tests, a bare wrangler dev) each quietly does nothing. A cache or
 // limiter failure must never take a public feed down: lookups, writes and
 // limit checks fail open.
 

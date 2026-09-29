@@ -6,7 +6,11 @@ import {assessTrip,alertDecision} from '../server/alert-policy.js';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 globalThis.REGIONS={'morro-bay':read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
-const {default:worker,validateSubscription,checkTrips}=await import('../server/worker.js');
+const {default:deployed,handle,validateSubscription,checkTrips}=await import('../server/worker.js');
+// Owner-isolation tests inject a test-only identity resolver through handle();
+// the deployed Worker (deployed.fetch) never reads this header.
+const testIdentity=async request=>request.headers.get('x-test-owner');
+const worker={fetch:(request,env,ctx)=>handle(request,env,ctx,testIdentity),scheduled:deployed.scheduled};
 
 function database(){
   // Apply every migration in journal order, as `wrangler d1 migrations apply` does.
@@ -16,7 +20,7 @@ function database(){
 }
 const origin='https://skippercast.com';
 function request(path,{owner,method='GET',body,requestOrigin=origin}={}){
-  const headers={'Content-Type':'application/json'};if(owner){headers['oai-authenticated-user-id']=owner;headers['oai-authenticated-user-email']=owner+'@example.test';}if(method!=='GET')headers.Origin=requestOrigin;
+  const headers={'Content-Type':'application/json'};if(owner)headers['x-test-owner']=owner;if(method!=='GET')headers.Origin=requestOrigin;
   return new Request(origin+'/api/'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
 }
 test('private API denies anonymous access, enforces owner isolation and supports complete deletion',async()=>{
@@ -80,27 +84,35 @@ test('alert changes and source loss retract prior threshold fit; final is mandat
   const result=assessTrip({point:'north'},REGIONS['morro-bay'],null,null,null);
   assert.notEqual(result.status,'within limits');
 });
-test('identity headers are refused unless the host is ChatGPT Sites',async()=>{
+const forgedHeaders=(owner)=>({'oai-authenticated-user-id':owner,'oai-authenticated-user-email':owner+'@example.test','x-test-owner':owner});
+test('no request header ever authenticates, whatever IDENTITY_PROVIDER says',async()=>{
   const {sql,adapter}=database();
-  const forged={owner:'alice'};
-  for(const provider of ['none','cloudflare','']){
-    const env={DB:adapter,IDENTITY_PROVIDER:provider};
-    const denied=await worker.fetch(request('trips',forged),env);
-    assert.equal(denied.status,401,`provider ${JSON.stringify(provider)} must not trust forged headers`);
+  for(const provider of [undefined,'none','','chatgpt-sites','cloudflare','constructor','__proto__','toString']){
+    const env={DB:adapter,ANTHROPIC_API_KEY:'k'};if(provider!==undefined)env.IDENTITY_PROVIDER=provider;
+    const label=`provider ${JSON.stringify(provider)}`;
+    const denied=await deployed.fetch(new Request(origin+'/api/trips',{headers:forgedHeaders('alice')}),env);
+    assert.equal(denied.status,401,label+' must not trust forged headers');
     assert.equal((await denied.json()).signIn,null);
-    const session=await(await worker.fetch(request('session',forged),env)).json();
-    assert.equal(session.signedIn,false);assert.equal(session.signIn,null);
-    assert.equal((await worker.fetch(request('boat/lookup',{...forged,method:'POST',body:{query:'Parker 2320'}}),{...env,ANTHROPIC_API_KEY:'k'})).status,401);
+    const session=await(await deployed.fetch(new Request(origin+'/api/session',{headers:forgedHeaders('alice')}),env)).json();
+    assert.equal(session.signedIn,false,label);assert.equal(session.signIn,null,label);
+    const post=await deployed.fetch(new Request(origin+'/api/boat/lookup',{method:'POST',headers:{...forgedHeaders('alice'),'Content-Type':'application/json',Origin:origin},body:JSON.stringify({query:'Parker 2320'})}),env);
+    assert.equal(post.status,401,label);
   }
-  const sites=await(await worker.fetch(request('session',forged),{DB:adapter,IDENTITY_PROVIDER:'chatgpt-sites'})).json();
-  assert.equal(sites.signedIn,true);assert.match(sites.signIn,/^\/signin-with-chatgpt/);
-  const absent=await(await worker.fetch(request('session',forged),{DB:adapter})).json();
-  assert.equal(absent.signedIn,true,'the Sites package has no wrangler vars and keeps its platform sign-in');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n,0);
   sql.close();
 });
-test('the Cloudflare deployment config disables platform identity headers',()=>{
+test('the Cloudflare deployment config names the identity provider explicitly',()=>{
   const text=readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8').replace(/^\s*\/\/.*$/mg,'');
   assert.equal(JSON.parse(text).vars?.IDENTITY_PROVIDER,'none');
+});
+test('www redirects to the apex host with a 301 that keeps path and query',async()=>{
+  for(const [from,to] of [['https://www.skippercast.com/','https://skippercast.com/'],['https://www.skippercast.com/sources.html?region=morro-bay&x=1#map','https://skippercast.com/sources.html?region=morro-bay&x=1'],['https://www.skippercast.com/api/session','https://skippercast.com/api/session']]){
+    const response=await deployed.fetch(new Request(from),{});
+    assert.equal(response.status,301,from);assert.equal(response.headers.get('Location'),to);
+    assert.ok(response.headers.get('Strict-Transport-Security'),'redirects carry the security headers');
+  }
+  const apex=await deployed.fetch(new Request('https://skippercast.com/api/session'),{});assert.equal(apex.status,200);
+  const staging=await deployed.fetch(new Request('https://skippercast.g4651.workers.dev/api/session'),{});assert.equal(staging.status,200,'workers.dev is not redirected');
 });
 test('the stable service worker is served with no-cache',async()=>{
   const ASSETS={fetch:async req=>new Response('self.x=1',{headers:{'Content-Type':'text/javascript','Cache-Control':'public,max-age=14400'}})};

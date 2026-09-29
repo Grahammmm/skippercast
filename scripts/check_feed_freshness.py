@@ -17,7 +17,8 @@ import json
 import os
 from urllib.request import Request, urlopen
 
-# skippercast.com still points at ChatGPT Sites; the Worker's own host serves R2.
+# The workers.dev host always serves the Worker (and R2). Set FEEDS_PUBLIC_BASE to
+# https://skippercast.com once that custom domain is attached (docs/cloudflare.md).
 DEFAULT_PUBLIC_BASE = "https://skippercast.g4651.workers.dev"
 FEED_PATH = "/feeds/conditions/latest.json"
 FEED = "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/latest.json"
