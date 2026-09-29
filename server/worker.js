@@ -150,6 +150,11 @@ async fetch(request,env){
     // The Sites edge can retain a previously deployed asset at a stable URL, so
     // scripts, styles and pages are published under content-hashed names
     // (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
+    if(path==='/sw.js'){
+      // Stable service-worker URL (see scripts/fingerprint.mjs STABLE): revalidate on every check.
+      const response=await env.ASSETS.fetch(request),fresh=new Response(response.body,response);
+      fresh.headers.set('Cache-Control','no-cache');return fresh;
+    }
     const current=SHELLS[path];
     if(!current)return env.ASSETS.fetch(request);
     const assetUrl=new URL(request.url);assetUrl.pathname=current.replace(/\.html$/,'');assetUrl.search=''; // hosts serve pages without .html

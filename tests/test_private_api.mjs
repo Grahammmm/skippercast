@@ -100,3 +100,9 @@ test('the Cloudflare deployment config disables platform identity headers',()=>{
   const text=readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8').replace(/^\s*\/\/.*$/mg,'');
   assert.equal(JSON.parse(text).vars?.IDENTITY_PROVIDER,'none');
 });
+test('the stable service worker is served with no-cache',async()=>{
+  const ASSETS={fetch:async req=>new Response('self.x=1',{headers:{'Content-Type':'text/javascript','Cache-Control':'public,max-age=14400'}})};
+  const response=await worker.fetch(new Request(origin+'/sw.js'),{ASSETS});
+  assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-cache');
+  assert.equal(await response.text(),'self.x=1');
+});

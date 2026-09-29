@@ -4,6 +4,7 @@
 // reference to it (import specifiers, new URL(...), src/href attributes) in those
 // files is rewritten. The build id hashes all of their authored contents, so any
 // change produces new URLs and nothing stale can be served from an edge cache.
+// STABLE files are left in place, unrenamed, and excluded from the hash.
 // Returns {buildId, shells}: shells maps stable page paths ('/', '/sources.html')
 // to their fingerprinted files for the Worker to serve with no-store.
 import {createHash} from 'node:crypto';
@@ -11,6 +12,10 @@ import {readdir, readFile, writeFile, rm} from 'node:fs/promises';
 import {join} from 'node:path';
 
 const ASSET = /\.(?:js|css|html)$/;
+// Files that must keep their URL. A service worker's script URL is its identity:
+// renaming it registers a different worker, and the page registers '/sw.js'.
+// The Worker serves these with Cache-Control: no-cache so updates still land.
+export const STABLE = new Set(['sw.js']);
 
 export function hashName(name, buildId) {
   const dot = name.lastIndexOf('.');
@@ -26,7 +31,7 @@ export function rewrite(text, names, buildId) {
 }
 
 export async function fingerprint(dir) {
-  const names = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile() && ASSET.test(e.name)).map(e => e.name).sort();
+  const names = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile() && ASSET.test(e.name) && !STABLE.has(e.name)).map(e => e.name).sort();
   const contents = new Map();
   const hash = createHash('sha256');
   for (const name of names) {

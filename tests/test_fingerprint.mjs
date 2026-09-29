@@ -31,3 +31,13 @@ test('fingerprint renames assets, maps stable page paths and changes id with con
   await writeFile(join(other, 'app.js'), 'export default 2;');
   assert.notEqual((await fingerprint(other)).buildId, buildId);
 });
+
+test('the service worker keeps its stable URL so /sw.js registration works', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'fp-'));
+  await writeFile(join(dir, 'trip-alerts.js'), "navigator.serviceWorker.register('/sw.js');");
+  await writeFile(join(dir, 'sw.js'), "self.addEventListener('push',()=>{});");
+  const {buildId} = await fingerprint(dir);
+  const files = (await readdir(dir)).sort();
+  assert.deepEqual(files, ['sw.js', `trip-alerts.${buildId}.js`].sort());
+  assert.match(await readFile(join(dir, `trip-alerts.${buildId}.js`), 'utf8'), /register\('\/sw\.js'\)/);
+});
