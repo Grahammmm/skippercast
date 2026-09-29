@@ -4,7 +4,7 @@ import unittest
 from pyproj import Transformer
 from shapely.geometry import box
 
-from scripts.audit_ciap_video_block_overlap import measure
+from research.scripts.audit_ciap_video_block_overlap import measure
 
 
 class CiapVideoBlockOverlapTests(unittest.TestCase):

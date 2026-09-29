@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_point_conception_8m_hard_overlap import cells_in_region
+from research.scripts.audit_point_conception_8m_hard_overlap import cells_in_region
 from affine import Affine
 
 

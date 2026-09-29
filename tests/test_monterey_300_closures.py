@@ -2,7 +2,7 @@ import unittest
 
 from shapely.geometry import box
 
-from scripts.audit_monterey_300_closures import official_query_envelope, screen_geometry
+from research.scripts.audit_monterey_300_closures import official_query_envelope, screen_geometry
 
 
 class FullFootprintClosureTests(unittest.TestCase):

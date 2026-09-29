@@ -4,7 +4,9 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.audit_nbs_modeling_tile import audit, is_measured_survey, item_year, qualified_mask, verified_file
+from skippercast.seafloor.io import verified_file
+
+from research.scripts.audit_nbs_modeling_tile import audit, is_measured_survey, item_year, qualified_mask
 
 
 class NbsModelingTileTest(unittest.TestCase):

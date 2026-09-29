@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from urllib.parse import parse_qs, urlsplit
 
-from scripts.audit_monterey_2013_merge_asset_access import DEM_PREFIX, FULL_PREFIX, PREFIXES, audit, parse_listing
+from research.scripts.audit_monterey_2013_merge_asset_access import DEM_PREFIX, FULL_PREFIX, PREFIXES, audit, parse_listing
 
 
 ROOT = Path(__file__).resolve().parents[1]

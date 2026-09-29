@@ -4,9 +4,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from scripts.audit_san_miguel_original_habitat import read_usgs
-from scripts.audit_san_miguel_naval_zone import danger_polygon, degrees
-from scripts.audit_san_miguel_vr_habitat import stable
+from research.scripts.audit_san_miguel_original_habitat import read_usgs
+from research.scripts.audit_san_miguel_naval_zone import danger_polygon, degrees
+from research.scripts.audit_san_miguel_vr_habitat import stable
 
 
 ROOT = Path(__file__).resolve().parents[1]

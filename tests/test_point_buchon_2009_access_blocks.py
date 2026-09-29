@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_point_buchon_2009_access_blocks import stable
+from research.scripts.audit_point_buchon_2009_access_blocks import stable
 
 
 ROOT = Path(__file__).resolve().parents[1]

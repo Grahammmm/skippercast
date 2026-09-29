@@ -3,7 +3,7 @@ import unittest
 import hashlib
 import json
 
-from scripts.audit_noaa_induration_camera import (SERVICE, audit_qualified_context,
+from research.scripts.audit_noaa_induration_camera import (SERVICE, audit_qualified_context,
     parse_identify, representative_records, validate_service, verify_class_codes)
 
 

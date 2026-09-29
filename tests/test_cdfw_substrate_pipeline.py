@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'research/scripts'))
 from audit_cdfw_substrate_tiles import verify_service, sector_tiles
 
 

@@ -13,10 +13,10 @@ There are still **zero** qualified fishing marks, drifts, chartplotter exports o
 The reproducible review commands are:
 
 ```bash
-PYTHONPATH=src python scripts/refresh_enc_hazards.py --scope h11732-h11733-fort-ross-salt-point-context --output var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
+PYTHONPATH=src python research/scripts/refresh_enc_hazards.py --scope h11732-h11733-fort-ross-salt-point-context --output var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson
 PYTHONPATH=src python scripts/collect_noaa_groundfish_areas.py --output var/review/noaa-federal-areas.json
-PYTHONPATH=src python scripts/audit_regional_native_hard_terrain.py --region point-arena-bodega --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson --federal var/review/noaa-federal-areas.json --output dist/data/arena-native-hard-terrain-review.json
-PYTHONPATH=src python scripts/build_regional_native_hard_preview.py --region point-arena-bodega --audit dist/data/arena-native-hard-terrain-review.json --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson --federal var/review/noaa-federal-areas.json --output dist/regions/point-arena-bodega/survey-habitat.geojson
+PYTHONPATH=src python research/scripts/audit_regional_native_hard_terrain.py --region point-arena-bodega --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson --federal var/review/noaa-federal-areas.json --output dist/data/arena-native-hard-terrain-review.json
+PYTHONPATH=src python research/scripts/build_regional_native_hard_preview.py --region point-arena-bodega --audit dist/data/arena-native-hard-terrain-review.json --enc var/review/enc-hazards-h11732-h11733-fort-ross-salt-point.geojson --federal var/review/noaa-federal-areas.json --output dist/regions/point-arena-bodega/survey-habitat.geojson
 ```
 
 The two review scripts require fresh bounded CDFW MPA, federal and ENC snapshots plus the exact cached original BAG files. The monthly source workflow rechecks the bounded ENC screen; any source or geometry change requires a fresh reviewed publication, never an automatic fishing-target promotion.

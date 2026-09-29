@@ -83,10 +83,10 @@ Depth compliance and legality are independent of fish potential. [NOAA VDatum](h
 ## Routine commands
 
 ```sh
-python scripts/build_central_coverage_ledger.py
-python scripts/build_central_source_queue.py
+python research/scripts/build_central_coverage_ledger.py
+python research/scripts/build_central_source_queue.py
 python -m unittest tests.test_central_coverage_pipeline -v
-node scripts/build-central-rankings.mjs  # only after a fresh successful closure screen
+node research/scripts/build-central-rankings.mjs  # only after a fresh successful closure screen
 ```
 
 Routine ingestion should run on a low-cost deterministic worker: source fetch → checksum/metadata receipt → native raster gate → candidate geometry → legal/chart screen → species habitat fit → release review. Use a higher-capability model only for disputed source interpretation or manual scientific review, with its conclusion written into a reviewed receipt. The monthly workflow compares generated artifacts against published versions; changed evidence requires a human-reviewed publication rather than silently changing fishing marks.

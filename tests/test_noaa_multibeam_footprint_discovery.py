@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts import discover_noaa_multibeam_footprints as discovery
+from research.scripts import discover_noaa_multibeam_footprints as discovery
 
 
 ROOT = Path(__file__).resolve().parents[1]

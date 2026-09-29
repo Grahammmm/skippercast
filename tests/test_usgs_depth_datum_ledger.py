@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.build_usgs_depth_datum_ledger import build
+from research.scripts.build_usgs_depth_datum_ledger import build
 
 
 def fixture():

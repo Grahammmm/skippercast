@@ -3,7 +3,7 @@ import unittest
 from shapely.geometry import Point, box
 from shapely.strtree import STRtree
 
-from scripts.audit_vr_camera_overlap import interior_camera_match
+from research.scripts.audit_vr_camera_overlap import interior_camera_match
 
 
 class VariableGridCameraTest(unittest.TestCase):

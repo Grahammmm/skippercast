@@ -4,7 +4,7 @@ import unittest
 
 import shapefile
 
-from scripts.audit_w00614_usgs_video_gap import inspect_zip
+from research.scripts.audit_w00614_usgs_video_gap import inspect_zip
 
 
 def point_archive(points):

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.audit_point_estero_original_pair import BANDS, CLASSES, PIN, checked
+from research.scripts.audit_point_estero_original_pair import BANDS, CLASSES, PIN, checked
 
 
 class PointEsteroOriginalPairTest(unittest.TestCase):

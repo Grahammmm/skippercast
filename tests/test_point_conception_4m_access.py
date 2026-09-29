@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_point_conception_4m_access import (
+from research.scripts.audit_point_conception_4m_access import (
     feature_digest, fresh, verify_baseline, vandenberg_zone_7,
 )
 from shapely.geometry import Point

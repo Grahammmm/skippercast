@@ -7,7 +7,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from shapely.geometry import box
 
-from scripts.audit_monterey_noaa_bag_overlap import count_overlap
+from research.scripts.audit_monterey_noaa_bag_overlap import count_overlap
 
 
 class OriginalBagOverlapTests(unittest.TestCase):

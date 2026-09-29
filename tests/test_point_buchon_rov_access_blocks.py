@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 from shapely.geometry import box
 
-from scripts.audit_point_buchon_rov_access_blocks import build
-from scripts.check_point_buchon_rov_access_change import compare
+from research.scripts.audit_point_buchon_rov_access_blocks import build
+from research.scripts.check_point_buchon_rov_access_change import compare
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +27,7 @@ class PointBuchonRovAccessBlocksTest(unittest.TestCase):
                    "features": []}
         enc = {"checked_at": "2026-09-26T12:00:00Z", "source_url": "https://example.test/enc",
                "features": [], "query_receipts": []}
-        with patch("scripts.audit_point_buchon_rov_access_blocks.closures",
+        with patch("research.scripts.audit_point_buchon_rov_access_blocks.closures",
                    return_value=(box(9000, 9000, 11000, 11000), box(9000, 9000, 11000, 11000),
                                  geometry, box(0, 0, 1, 1), box(0, 0, 1, 1), 10)):
             public, private = build(blocks, mpa, federal, enc,

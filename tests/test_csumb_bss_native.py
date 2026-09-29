@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_csumb_bss_native import audit
+from research.scripts.audit_csumb_bss_native import audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.discover_usgs_ds781_catalogs import products, release_products, signature
+from research.scripts.discover_usgs_ds781_catalogs import products, release_products, signature
 
 
 ROOT = Path(__file__).resolve().parents[1]

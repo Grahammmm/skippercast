@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from scripts.audit_statewide_regular_camera import deduplicate_camera_windows
+from research.scripts.audit_statewide_regular_camera import deduplicate_camera_windows
 
 
 def pair(indices, positives, sector):

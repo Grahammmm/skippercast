@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 
-SPEC = importlib.util.spec_from_file_location('bag_triage', Path(__file__).resolve().parents[1] / 'scripts' / 'triage_noaa_bag_files.py')
+SPEC = importlib.util.spec_from_file_location('bag_triage', Path(__file__).resolve().parents[1] / 'research/scripts' / 'triage_noaa_bag_files.py')
 mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 

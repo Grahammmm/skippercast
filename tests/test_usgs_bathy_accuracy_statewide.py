@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from scripts.audit_usgs_bathy_accuracy_statewide import build, inspect
+from research.scripts.audit_usgs_bathy_accuracy_statewide import build, inspect
 
 
 ROOT = Path(__file__).resolve().parents[1]

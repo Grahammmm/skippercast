@@ -2,7 +2,7 @@ import unittest
 
 from shapely.geometry import box
 
-from scripts.audit_vr_region_protection import classify_footprint
+from research.scripts.audit_vr_region_protection import classify_footprint
 
 
 class VariableGridMpaTest(unittest.TestCase):

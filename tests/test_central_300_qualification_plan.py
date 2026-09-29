@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from scripts import build_central_300_qualification_plan as plan
+from research.scripts import build_central_300_qualification_plan as plan
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -5,7 +5,7 @@ import unittest
 
 SPEC = importlib.util.spec_from_file_location(
     "audit_noaa_dismap_groundfish",
-    Path(__file__).resolve().parents[1] / "scripts/audit_noaa_dismap_groundfish.py",
+    Path(__file__).resolve().parents[1] / "research/scripts/audit_noaa_dismap_groundfish.py",
 )
 audit = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(audit)

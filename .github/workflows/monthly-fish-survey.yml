@@ -23,7 +23,7 @@ jobs:
         run: python -m unittest tests.test_nos_seabed_samples -v
       - name: Query NOAA/NOS historic samples near Monterey research outlines
         run: >-
-          python scripts/audit_nos_seabed_samples.py --scope monterey
+          python research/scripts/audit_nos_seabed_samples.py --scope monterey
           --output var/review/nos-seabed-monterey-gap-audit.json
       - name: Upload aggregate review without sample coordinates
         if: always()
@@ -50,7 +50,7 @@ jobs:
             --output var/review/central-dataone-rov-fish-count.csv
       - name: Verify source precision before any spot promotion
         run: >-
-          python scripts/audit_dataone_rov_spot_precision.py
+          python research/scripts/audit_dataone_rov_spot_precision.py
           --input var/review/central-dataone-rov-fish-count.csv
           --output var/review/central-dataone-rov-300ft-spot-precision.json
           --verify dist/data/central-dataone-rov-300ft-spot-precision.json
@@ -75,24 +75,24 @@ jobs:
         run: python -m unittest tests.test_point_estero_original_pair tests.test_usgs_estero_2012_original tests.test_usgs_source_registry_datum tests.test_estero_research_blocks tests.test_estero_camera_block_gap tests.test_csumb_estero_2010_blocks tests.test_estero_vdatum_spatial tests.test_estero_wgs84_direct tests.test_estero_wgs84_2008_character tests.test_estero_noaa_bag_catalog_gap -v
       - name: Recheck original 2008 Point Estero pair
         run: >-
-          python scripts/audit_point_estero_original_pair.py --fetch
+          python research/scripts/audit_point_estero_original_pair.py --fetch
           --output var/review/point-estero-original-paired-200-300ft-review.json
       - name: Recheck original 2012 Estero Bay depth and sounding spread
         run: >-
-          python scripts/audit_usgs_estero_2012_original.py --fetch
+          python research/scripts/audit_usgs_estero_2012_original.py --fetch
           --output var/review/usgs-estero-bay-2012-original-200-300ft-review.json
       - name: Recheck independent 2008/2012 overlap
         run: >-
-          python scripts/audit_estero_2012_2008_overlap.py
+          python research/scripts/audit_estero_2012_2008_overlap.py
           --output var/review/estero-independent-2012-depth-2008-character-overlap.json
       - name: Fetch current Estero CDFW, NOAA federal and ENC research screens
         run: |
-          python -m scripts.collect_estero_mpa_review --output var/review/estero-cdfw-mpas.geojson
+          python -m research.scripts.collect_estero_mpa_review --output var/review/estero-cdfw-mpas.geojson
           python scripts/collect_noaa_groundfish_areas.py --output var/review/estero-federal-areas.geojson
-          python scripts/refresh_enc_hazards.py --scope estero-independent-deep-hard-context --output var/review/enc-hazards-estero-independent-deep-hard.geojson
+          python research/scripts/refresh_enc_hazards.py --scope estero-independent-deep-hard-context --output var/review/enc-hazards-estero-independent-deep-hard.geojson
       - name: Screen whole 100 m Estero research blocks with 100 m margin
         run: >-
-          python scripts/audit_estero_research_blocks.py
+          python research/scripts/audit_estero_research_blocks.py
           --mpas var/review/estero-cdfw-mpas.geojson
           --federal var/review/estero-federal-areas.geojson
           --enc var/review/enc-hazards-estero-independent-deep-hard.geojson
@@ -100,33 +100,33 @@ jobs:
           --output var/review/estero-2012-depth-class-closure-block-review.json
       - name: Recheck original USGS camera support for Estero research blocks
         run: >-
-          python scripts/audit_estero_camera_block_gap.py --download-video
+          python research/scripts/audit_estero_camera_block_gap.py --download-video
           --blocks var/review/estero-nominal-research-blocks.geojson
           --output var/review/estero-original-camera-block-gap.json
           --verify dist/data/estero-original-camera-block-gap.json
       - name: Cross-check original 2010 CSUMB 2 m bathymetry on the Estero blocks
         run: >-
-          python scripts/audit_csumb_estero_2010_blocks.py --fetch
+          python research/scripts/audit_csumb_estero_2010_blocks.py --fetch
           --output var/review/csumb-scc-2010-estero-original-block-coverage.json
       - name: Recheck VDatum source-frame acceptance without converting a grid
         run: >-
-          python scripts/audit_estero_vdatum_frames.py --expect-current-gates
+          python research/scripts/audit_estero_vdatum_frames.py --expect-current-gates
           --output var/review/estero-2012-vdatum-frame-review.json
       - name: Recheck spatial VDatum offset without converting the source raster
         run: >-
-          python scripts/audit_estero_vdatum_spatial.py
+          python research/scripts/audit_estero_vdatum_spatial.py
           --blocks var/review/estero-nominal-research-blocks.geojson
           --private-output var/review/estero-vdatum-spatial-samples.json
           --output var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Recheck original WGS84 ellipsoid cells and direct VDatum block samples
         run: >-
-          python scripts/audit_estero_wgs84_direct.py
+          python research/scripts/audit_estero_wgs84_direct.py
           --blocks var/review/estero-nominal-research-blocks.geojson
           --output var/review/estero-wgs84-direct-vdatum-review.json
           --verify dist/data/estero-wgs84-direct-vdatum-review.json
       - name: Check WGS84 source cells against independent 2008 bottom classes
         run: >-
-          python scripts/audit_estero_wgs84_2008_character.py
+          python research/scripts/audit_estero_wgs84_2008_character.py
           --blocks var/review/estero-nominal-research-blocks.geojson
           --private-offsets var/review/estero-wgs84-direct-vdatum-blocks.json
           --source-receipt var/review/estero-wgs84-direct-vdatum-review.json
@@ -134,14 +134,14 @@ jobs:
           --verify dist/data/estero-wgs84-2008-character-sensitivity.json
       - name: Recheck bounded NOAA BAG catalog coverage over Estero research blocks
         run: >-
-          python scripts/audit_estero_noaa_bag_catalog_gap.py
+          python research/scripts/audit_estero_noaa_bag_catalog_gap.py
           --blocks var/review/estero-nominal-research-blocks.geojson
           --source-receipt var/review/estero-wgs84-direct-vdatum-review.json
           --output var/review/estero-noaa-bag-catalog-gap.json
           --verify dist/data/estero-noaa-bag-catalog-gap.json
       - name: Recheck USGS report release inventory for newly available TPU
         run: >-
-          python scripts/audit_estero_release_inventory.py
+          python research/scripts/audit_estero_release_inventory.py
           --output var/review/estero-2012-public-release-inventory.json
           --verify dist/data/estero-2012-public-release-inventory.json
       - name: Detect changed research-only original cells
@@ -149,7 +149,7 @@ jobs:
           cmp dist/data/point-estero-original-paired-200-300ft-review.json var/review/point-estero-original-paired-200-300ft-review.json
           cmp dist/data/usgs-estero-bay-2012-original-200-300ft-review.json var/review/usgs-estero-bay-2012-original-200-300ft-review.json
           cmp dist/data/estero-independent-2012-depth-2008-character-overlap.json var/review/estero-independent-2012-depth-2008-character-overlap.json
-          python scripts/check_estero_review_change.py --current var/review/estero-2012-depth-class-closure-block-review.json
+          python research/scripts/check_estero_review_change.py --current var/review/estero-2012-depth-class-closure-block-review.json
           cmp dist/data/csumb-scc-2010-estero-original-block-coverage.json var/review/csumb-scc-2010-estero-original-block-coverage.json
           cmp dist/data/estero-2012-vdatum-spatial-diagnostic.json var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Upload research-only source audit
@@ -188,60 +188,60 @@ jobs:
         run: python -m unittest tests.test_point_buchon_original_pair tests.test_point_buchon_2009_csumb_products tests.test_point_buchon_a3_trackline_lineage tests.test_point_buchon_2009_habitat_crosssurvey tests.test_point_buchon_2009_vdatum_probe tests.test_point_buchon_2009_access_blocks tests.test_point_buchon_rov_cell_join tests.test_point_buchon_cmecs_blocks tests.test_point_buchon_noaa_catalog_gap tests.test_point_buchon_bluetopo_overlap tests.test_point_buchon_ncei_multibeam_lead tests.test_point_buchon_ncei_line_index tests.test_point_buchon_ncei_beam_overlap tests.test_point_buchon_caris_prefix tests.test_point_buchon_rov_access_blocks -v
       - name: Recheck original USGS bathymetry and video-supervised character with published ROV
         run: >-
-          python scripts/audit_point_buchon_original_pair.py --fetch
+          python research/scripts/audit_point_buchon_original_pair.py --fetch
           --output var/review/point-buchon-original-paired-200-300ft-review.json
       - name: Recheck 2009 CSUMB Block A3 original grids inside NOAA products archive
         run: >-
-          python scripts/audit_point_buchon_2009_csumb_products.py --fetch
+          python research/scripts/audit_point_buchon_2009_csumb_products.py --fetch
           --output var/review/point-buchon-2009-csumb-original-overlap.json
           --verify dist/data/point-buchon-2009-csumb-original-overlap.json
       - name: Compare 2009 CSUMB and 2008 USGS terrain interpretations
         run: >-
-          python scripts/audit_point_buchon_2009_habitat_crosssurvey.py
+          python research/scripts/audit_point_buchon_2009_habitat_crosssurvey.py
           --output var/review/point-buchon-2009-csumb-terrain-crosssurvey.json
           --verify dist/data/point-buchon-2009-csumb-terrain-crosssurvey.json
       - name: Recheck related Point Buchon datum and legacy original-grid leads
         run: |
-          python scripts/audit_point_buchon_datum_leads.py --fetch --output var/review/point-buchon-datum-provenance-leads.json
+          python research/scripts/audit_point_buchon_datum_leads.py --fetch --output var/review/point-buchon-datum-provenance-leads.json
           cmp dist/data/point-buchon-datum-provenance-leads.json var/review/point-buchon-datum-provenance-leads.json
       - name: Detect change in research-only original pair
         run: cmp dist/data/point-buchon-original-paired-200-300ft-review.json var/review/point-buchon-original-paired-200-300ft-review.json
       - name: Recheck NCEI Point Buchon processed-sounding acquisition lead
         run: >-
-          python scripts/audit_point_buchon_ncei_multibeam_lead.py
+          python research/scripts/audit_point_buchon_ncei_multibeam_lead.py
           --output var/review/point-buchon-2007-ncei-multibeam-lead.json
           --verify dist/data/point-buchon-2007-ncei-multibeam-lead.json
       - name: Recheck every NCEI Point Buchon generated line-depth summary
         run: >-
-          python scripts/audit_point_buchon_ncei_line_index.py
+          python research/scripts/audit_point_buchon_ncei_line_index.py
           --output var/review/point-buchon-2007-ncei-line-index.json
           --verify dist/data/point-buchon-2007-ncei-line-index.json
       - name: Recheck original valid GSF beams against original USGS hard cells
         run: >-
-          python scripts/audit_point_buchon_ncei_beam_overlap.py
+          python research/scripts/audit_point_buchon_ncei_beam_overlap.py
           --output var/review/point-buchon-2007-ncei-valid-beam-overlap.json
           --verify dist/data/point-buchon-2007-ncei-valid-beam-overlap.json
       - name: Recheck bounded original CARIS project and error-surface leads
         run: >-
-          python scripts/audit_point_buchon_caris_prefix.py
+          python research/scripts/audit_point_buchon_caris_prefix.py
           --output var/review/point-buchon-2007-caris-prefix-lead.json
           --verify dist/data/point-buchon-2007-caris-prefix-lead.json
       - name: Recheck original hard-cell envelope against fresh NOAA BAG catalog
         run: |
-          python scripts/audit_point_buchon_noaa_catalog_gap.py --output var/review/point-buchon-noaa-catalog-envelope-gap.json
+          python research/scripts/audit_point_buchon_noaa_catalog_gap.py --output var/review/point-buchon-noaa-catalog-envelope-gap.json
           cmp dist/data/point-buchon-noaa-catalog-envelope-gap.json var/review/point-buchon-noaa-catalog-envelope-gap.json
       - name: Recheck measured-versus-interpolated BlueTopo contributors at original hard cells
         run: |
-          python scripts/audit_point_buchon_bluetopo_overlap.py --fetch --output var/review/point-buchon-bluetopo-hard-cell-overlap.json
+          python research/scripts/audit_point_buchon_bluetopo_overlap.py --fetch --output var/review/point-buchon-bluetopo-hard-cell-overlap.json
           cmp dist/data/point-buchon-bluetopo-hard-cell-overlap.json var/review/point-buchon-bluetopo-hard-cell-overlap.json
       - name: Fetch current Point Buchon MPA, federal and ENC research screens
         run: |
-          python -m scripts.collect_point_buchon_mpa_review --output var/review/point-buchon-cdfw-mpas.geojson
+          python -m research.scripts.collect_point_buchon_mpa_review --output var/review/point-buchon-cdfw-mpas.geojson
           python scripts/collect_noaa_groundfish_areas.py --output var/review/point-buchon-federal-areas.geojson
-          python scripts/refresh_enc_hazards.py --scope point-buchon-open-reference-hard-context --output var/review/enc-hazards-point-buchon-open-reference.geojson
+          python research/scripts/refresh_enc_hazards.py --scope point-buchon-open-reference-hard-context --output var/review/enc-hazards-point-buchon-open-reference.geojson
       - name: Screen whole 2009 CSUMB / 2008 USGS research blocks with margin
         run: >-
-          python scripts/audit_point_buchon_2009_access_blocks.py
+          python research/scripts/audit_point_buchon_2009_access_blocks.py
           --mpas var/review/point-buchon-cdfw-mpas.geojson
           --federal var/review/point-buchon-federal-areas.geojson
           --enc var/review/enc-hazards-point-buchon-open-reference.geojson
@@ -250,7 +250,7 @@ jobs:
           --verify dist/data/point-buchon-2009-csumb-access-triage.json
       - name: Recheck historical ROV against original depth and character cells
         run: >-
-          python -m scripts.audit_point_buchon_rov_cell_join --fetch-rov
+          python -m research.scripts.audit_point_buchon_rov_cell_join --fetch-rov
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --access var/review/point-buchon-2009-csumb-access-triage.json
           --output var/review/point-buchon-rov-original-cell-join.json
@@ -262,30 +262,30 @@ jobs:
           --output var/review/CMECS_OffshorePointBuchon.zip
       - name: Recheck interpreted bedrock against private research blocks
         run: |
-          python scripts/audit_point_buchon_cmecs_blocks.py --archive var/review/CMECS_OffshorePointBuchon.zip --output var/review/point-buchon-cmecs-block-review.json
+          python research/scripts/audit_point_buchon_cmecs_blocks.py --archive var/review/CMECS_OffshorePointBuchon.zip --output var/review/point-buchon-cmecs-block-review.json
           cmp dist/data/point-buchon-cmecs-block-review.json var/review/point-buchon-cmecs-block-review.json
       - name: Recheck Block A3 bathymetry acquisition tracklines and NOAA catalog
         run: >-
-          python scripts/audit_point_buchon_a3_trackline_lineage.py
+          python research/scripts/audit_point_buchon_a3_trackline_lineage.py
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --output var/review/point-buchon-block-a3-trackline-lineage.json
           --verify dist/data/point-buchon-block-a3-trackline-lineage.json
       - name: Probe Point Buchon GEOID03 to MLLW model over actual research blocks
         run: >-
-          python scripts/audit_point_buchon_2009_vdatum_probe.py --fetch
+          python research/scripts/audit_point_buchon_2009_vdatum_probe.py --fetch
           --blocks var/review/point-buchon-2009-csumb-100m-blocks.geojson
           --output var/review/point-buchon-2009-conditional-vdatum-probes.json
           --verify dist/data/point-buchon-2009-conditional-vdatum-probes.json
       - name: Screen whole historical ROV research blocks with margin
         run: >-
-          python scripts/audit_point_buchon_rov_access_blocks.py
+          python research/scripts/audit_point_buchon_rov_access_blocks.py
           --mpas var/review/point-buchon-cdfw-mpas.geojson
           --federal var/review/point-buchon-federal-areas.geojson
           --enc var/review/enc-hazards-point-buchon-open-reference.geojson
           --private-blocks var/review/point-buchon-rov-100m-blocks.geojson
           --output var/review/point-buchon-rov-access-triage.json
       - name: Hold changes to research-only access screen
-        run: python scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
+        run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -325,7 +325,7 @@ jobs:
         run: python -m unittest tests.test_central_rov_depth_evidence -v
       - name: Recheck published ROV object and open-reference summary
         run: >-
-          python scripts/build_central_rov_depth_evidence.py --fetch
+          python research/scripts/build_central_rov_depth_evidence.py --fetch
           --output var/review/central-rov-200-300ft-evidence.json
       - name: Detect changed deeper biological context
         run: cmp dist/data/central-rov-200-300ft-evidence.json var/review/central-rov-200-300ft-evidence.json
@@ -333,7 +333,7 @@ jobs:
         env:
           PYTHONPATH: src:.
         run: >-
-          python scripts/audit_monterey_rov_research_overlap.py
+          python research/scripts/audit_monterey_rov_research_overlap.py
           --output var/review/monterey-rov-research-overlap.json
           --verify dist/data/monterey-rov-research-overlap.json
       - name: Verify biological proximity remains research-only
@@ -361,7 +361,7 @@ jobs:
         run: python -m unittest tests.test_ccfrp_area_evidence -v
       - name: Recheck CCFRP release, license, objects and effort
         run: >-
-          python scripts/build_ccfrp_area_evidence.py --fetch
+          python research/scripts/build_ccfrp_area_evidence.py --fetch
           --output var/review/central-ccfrp-area-evidence.json
       - name: Detect changed biological context
         run: cmp dist/data/central-ccfrp-area-evidence.json var/review/central-ccfrp-area-evidence.json
@@ -384,7 +384,7 @@ jobs:
         run: python -m unittest tests.test_monterey_300_research_queue -v
       - name: Rebuild unpublished Monterey depth-band priority
         run: >-
-          python scripts/build_monterey_300_research_queue.py
+          python research/scripts/build_monterey_300_research_queue.py
           --output var/review/monterey-300-native-research-queue.json
       - name: Detect changed priority against reviewed snapshot
         run: cmp dist/data/monterey-300-native-research-queue.json var/review/monterey-300-native-research-queue.json
@@ -409,7 +409,7 @@ jobs:
         run: python -m unittest tests.test_vdatum_samples -v
       - name: Recheck official NAVD88-to-MLLW point coverage
         run: >-
-          python scripts/audit_vdatum_samples.py
+          python research/scripts/audit_vdatum_samples.py
           --probe=-121.9,36.6
           --output var/review/noaa-vdatum-offshore-monterey-samples.json
       - name: Upload unpublished datum-service review
@@ -431,7 +431,7 @@ jobs:
         run: python -m unittest tests.test_cdfw_crfs_rcgl -v
       - name: Recheck CDFW source version and every RCGL block
         run: >-
-          python scripts/audit_cdfw_crfs_rcgl.py
+          python research/scripts/audit_cdfw_crfs_rcgl.py
           --output var/review/cdfw-crfs-rcgl-2004-2024.json
       - name: Upload unpublished CDFW survey review
         if: always()
@@ -452,7 +452,7 @@ jobs:
         run: python -m unittest tests.test_cdfw_crfs_all -v
       - name: Recheck CDFW edition and every all-species block
         run: >-
-          python scripts/audit_cdfw_crfs_all.py
+          python research/scripts/audit_cdfw_crfs_all.py
           --output var/review/cdfw-crfs-all-2004-2024.json
       - name: Upload unpublished survey-coverage review
         if: always()
@@ -473,7 +473,7 @@ jobs:
         run: python -m unittest tests.test_noaa_dismap_groundfish -v
       - name: Refresh recent NOAA trawl evidence with schema and count checks
         run: >-
-          python scripts/audit_noaa_dismap_groundfish.py
+          python research/scripts/audit_noaa_dismap_groundfish.py
           --output var/review/noaa-dismap-groundfish-2023-2025.json
       - name: Upload unpublished source review
         if: always()

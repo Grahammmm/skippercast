@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_monterey_coned_source_footprints import build, gpkg_polygon
+from research.scripts.audit_monterey_coned_source_footprints import build, gpkg_polygon
 
 
 ROOT = Path(__file__).resolve().parents[1]

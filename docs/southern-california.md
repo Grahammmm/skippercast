@@ -19,9 +19,9 @@ The `southern-california` package covers the Mexico border–Point Conception co
 `regions/southern-california/reef-records.json` holds the reviewed historical facts. To rebuild outlines after a reviewed source or closure update:
 
 ```sh
-node scripts/build_reef_context.mjs southern-california
+node research/scripts/build_reef_context.mjs southern-california
 # Optional GIS environment; hash-pinned cache, or --fetch for original sources.
-python scripts/build_socal_habitat.py
+python research/scripts/build_socal_habitat.py
 PYTHONPATH=src python -m skippercast.platform validate --region southern-california
 PYTHONPATH=src python -m skippercast.platform.build
 ```

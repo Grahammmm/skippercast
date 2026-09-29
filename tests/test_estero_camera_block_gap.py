@@ -3,7 +3,7 @@ import unittest
 from pyproj import Transformer
 from shapely.geometry import box, mapping
 
-from scripts.audit_estero_camera_block_gap import inspect
+from research.scripts.audit_estero_camera_block_gap import inspect
 
 
 class EsteroCameraBlockGapTests(unittest.TestCase):

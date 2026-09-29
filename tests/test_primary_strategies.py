@@ -27,7 +27,7 @@ class PrimaryStrategyTests(unittest.TestCase):
     def test_rebuild_is_repeatable(self):
         files = sorted((ROOT / 'dist/regions').glob('*/strategies.json'))
         before = {file: file.read_bytes() for file in files}
-        subprocess.run([sys.executable, str(ROOT / 'scripts/build_primary_strategies.py')], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run([sys.executable, str(ROOT / 'research/scripts/build_primary_strategies.py')], cwd=ROOT, check=True, capture_output=True)
         self.assertEqual(before, {file: file.read_bytes() for file in files})
 
 

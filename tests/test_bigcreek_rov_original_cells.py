@@ -9,7 +9,7 @@ import rasterio
 from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
-from scripts.audit_bigcreek_rov_original_cells import neighborhood_consistent
+from research.scripts.audit_bigcreek_rov_original_cells import neighborhood_consistent
 
 
 ROOT = Path(__file__).resolve().parents[1]

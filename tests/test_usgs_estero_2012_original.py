@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.audit_usgs_estero_2012_original import BANDS, header
+from research.scripts.audit_usgs_estero_2012_original import BANDS, header
 
 ROOT = Path(__file__).resolve().parents[1]
 

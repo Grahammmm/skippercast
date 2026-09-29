@@ -1,6 +1,6 @@
 # Monterey–Point Conception habitat context
 
-`scripts/build_central_habitat_context.py` adds a reproducible **research-only** reef layer to five preview regions between Santa Cruz and San Simeon. The existing Morro Bay survey targets and Point Arguello original-depth research outlines remain separate. The layer does not create any ranked fishing marks or GPX exports.
+`research/scripts/build_central_habitat_context.py` adds a reproducible **research-only** reef layer to five preview regions between Santa Cruz and San Simeon. The existing Morro Bay survey targets and Point Arguello original-depth research outlines remain separate. The layer does not create any ranked fishing marks or GPX exports.
 
 | Region | Source | Published patches | Qualification |
 | --- | --- | ---: | --- |
@@ -17,7 +17,7 @@ The builder clips every outline to its region, removes the official CDFW MPA foo
 To rebuild, install `requirements-survey.txt` into an isolated environment and run:
 
 ```bash
-PYTHONPATH=src python scripts/build_central_habitat_context.py
+PYTHONPATH=src python research/scripts/build_central_habitat_context.py
 PYTHONPATH=src python -m skippercast.platform.build
 python -m unittest tests.test_central_habitat_context
 ```

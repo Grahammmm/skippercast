@@ -2,14 +2,14 @@
 import unittest
 from unittest.mock import patch
 
-from scripts.audit_san_diego_substrate_lead import query, review
+from research.scripts.audit_san_diego_substrate_lead import query, review
 
 
 class SanDiegoSubstrateLeadTests(unittest.TestCase):
     def test_missing_feature_page_fails_closed(self):
         metadata = {'geometryType': 'esriGeometryPolygon',
                     'fields': [{'name': 'OBJECTID'}, {'name': 'descrip'}]}
-        with patch('scripts.audit_san_diego_substrate_lead.fetch', side_effect=[
+        with patch('research.scripts.audit_san_diego_substrate_lead.fetch', side_effect=[
                 (metadata, 'a', b'{}'), ({'count': 1}, 'b', b'{}'),
                 ({'type': 'FeatureCollection', 'features': []}, 'c', b'{}')]):
             with self.assertRaisesRegex(ValueError, 'Incomplete substrate polygon query'):

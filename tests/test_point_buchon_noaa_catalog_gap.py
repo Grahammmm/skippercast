@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from scripts import audit_point_buchon_noaa_catalog_gap as audit
+from research.scripts import audit_point_buchon_noaa_catalog_gap as audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

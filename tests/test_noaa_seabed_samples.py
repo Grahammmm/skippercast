@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.audit_noaa_seabed_samples import summarize, validate_pages
+from research.scripts.audit_noaa_seabed_samples import summarize, validate_pages
 
 
 ROOT = Path(__file__).resolve().parents[1]

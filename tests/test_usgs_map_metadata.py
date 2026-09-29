@@ -5,7 +5,7 @@ import sys
 import unittest
 
 
-SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
+SCRIPTS = Path(__file__).resolve().parents[1] / 'research/scripts'
 sys.path.insert(0, str(SCRIPTS))
 SPEC = importlib.util.spec_from_file_location('map_metadata', SCRIPTS / 'audit_usgs_map_metadata.py')
 mod = importlib.util.module_from_spec(SPEC)

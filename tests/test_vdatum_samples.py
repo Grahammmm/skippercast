@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.audit_vdatum_samples import assess_response
+from research.scripts.audit_vdatum_samples import assess_response
 
 
 class VDatumSampleTests(unittest.TestCase):

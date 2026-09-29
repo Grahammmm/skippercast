@@ -3,7 +3,7 @@ import hashlib
 from pathlib import Path
 import unittest
 
-from scripts.audit_usgs_morro_report_datum import audit
+from research.scripts.audit_usgs_morro_report_datum import audit
 
 
 ROOT = Path(__file__).resolve().parents[1]

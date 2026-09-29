@@ -8,8 +8,8 @@ import unittest
 import shapefile
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'scripts'))
-from scripts.inspect_usgs_native_grids import parse_vat
+sys.path.insert(0, str(ROOT / 'research/scripts'))
+from research.scripts.inspect_usgs_native_grids import parse_vat
 
 
 def original_style_dbf(description_field='SUBST_DESC'):

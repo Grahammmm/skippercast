@@ -11,7 +11,7 @@ import unittest
 
 from shapely.geometry import Point, box
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "research/scripts"))
 from audit_usgs_video_observations import first_field, load_archive, sector_for
 from audit_usgs_native_overlap import hit_counters
 

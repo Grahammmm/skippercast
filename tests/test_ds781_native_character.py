@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_usgs_ds781_native_character import allowed, signature
+from research.scripts.audit_usgs_ds781_native_character import allowed, signature
 
 
 ROOT = Path(__file__).resolve().parents[1]

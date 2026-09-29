@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from scripts.audit_central_deep_original_300 import MAX_M, depth_summary
+from research.scripts.audit_central_deep_original_300 import MAX_M, depth_summary
 
 
 ROOT = Path(__file__).resolve().parents[1]

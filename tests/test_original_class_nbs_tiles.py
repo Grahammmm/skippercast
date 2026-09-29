@@ -3,11 +3,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.queue_nbs_original_class_tiles import intersecting_scheme_rows
-from scripts.queue_statewide_original_class_tiles import build as build_statewide_queue
-from scripts.screen_original_class_nbs_tiles import screen
-from scripts.screen_statewide_original_class_leads import build as build_statewide_overlap
-from scripts.triage_original_class_tile_queue import triage
+from research.scripts.queue_nbs_original_class_tiles import intersecting_scheme_rows
+from research.scripts.queue_statewide_original_class_tiles import build as build_statewide_queue
+from research.scripts.screen_original_class_nbs_tiles import screen
+from research.scripts.screen_statewide_original_class_leads import build as build_statewide_overlap
+from research.scripts.triage_original_class_tile_queue import triage
 
 
 class OriginalClassNbsTilesTest(unittest.TestCase):

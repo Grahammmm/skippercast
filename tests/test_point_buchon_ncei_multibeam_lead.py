@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import unittest
 
-from scripts import audit_point_buchon_ncei_multibeam_lead as lead
+from research.scripts import audit_point_buchon_ncei_multibeam_lead as lead
 
 
 ROOT = Path(__file__).resolve().parents[1]

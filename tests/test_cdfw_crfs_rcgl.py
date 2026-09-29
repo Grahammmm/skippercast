@@ -4,7 +4,7 @@ import unittest
 
 
 SPEC = importlib.util.spec_from_file_location(
-    "audit_cdfw_crfs_rcgl", Path(__file__).resolve().parents[1] / "scripts/audit_cdfw_crfs_rcgl.py"
+    "audit_cdfw_crfs_rcgl", Path(__file__).resolve().parents[1] / "research/scripts/audit_cdfw_crfs_rcgl.py"
 )
 audit = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(audit)

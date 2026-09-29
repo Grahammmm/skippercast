@@ -5,7 +5,7 @@ import sys
 import unittest
 
 
-SCRIPTS=Path(__file__).resolve().parents[1]/'scripts'
+SCRIPTS=Path(__file__).resolve().parents[1]/'research/scripts'
 sys.path.insert(0,str(SCRIPTS))
 def module(name):
     spec=importlib.util.spec_from_file_location(name,SCRIPTS/(name+'.py'))
@@ -57,7 +57,7 @@ class DoiPipelineTests(unittest.TestCase):
         self.assertIn('boulder',row['categorical_classes'][0]['label'])
 
     def test_jetty_release_requires_pinned_review_hold(self):
-        packet=__import__('json').loads((SCRIPTS.parent/'catalog/usgs-context-holds.json').read_text())
+        packet=__import__('json').loads((SCRIPTS.parents[1]/'catalog/usgs-context-holds.json').read_text())
         holds=context.reviewed_holds(packet)
         self.assertEqual(holds['P9EC35PF']['disposition'],'exclude_from_natural_hard_context')
         packet['holds'][0]['evidence_urls']=['https://example.com/not-official']

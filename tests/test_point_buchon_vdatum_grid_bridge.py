@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.audit_point_buchon_vdatum_grid_bridge import summarize
+from research.scripts.audit_point_buchon_vdatum_grid_bridge import summarize
 
 
 class PointBuchonVDatumGridBridgeTest(unittest.TestCase):

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.screen_usgs_map_nbs_overlap import signature, source_row
+from research.scripts.screen_usgs_map_nbs_overlap import signature, source_row
 
 
 ROOT = Path(__file__).resolve().parents[1]

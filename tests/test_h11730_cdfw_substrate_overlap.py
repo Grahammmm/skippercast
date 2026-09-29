@@ -1,7 +1,7 @@
 import unittest
 
-from scripts.audit_h11730_cdfw_substrate_overlap import pixel_location, review
-from scripts.audit_cdfw_substrate_tiles import BASE, RESOLUTION_M
+from research.scripts.audit_h11730_cdfw_substrate_overlap import pixel_location, review
+from research.scripts.audit_cdfw_substrate_tiles import BASE, RESOLUTION_M
 
 
 class CameraSubstrateCrosscheckTests(unittest.TestCase):

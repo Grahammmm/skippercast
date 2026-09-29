@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.audit_regular_shortlist_terrain import audit
-from scripts.fetch_shortlist_original_bags import selected_sources
+from research.scripts.audit_regular_shortlist_terrain import audit
+from research.scripts.fetch_shortlist_original_bags import selected_sources
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -12,8 +12,8 @@ from rasterio.transform import from_origin
 from shapely.geometry import box
 from shapely.ops import transform as transform_geometry
 
-from scripts.build_central_300_qualification_plan import build
-from scripts.audit_monterey_2009_beam_usgs_cells import join_outline
+from research.scripts.build_central_300_qualification_plan import build
+from research.scripts.audit_monterey_2009_beam_usgs_cells import join_outline
 
 
 ROOT = Path(__file__).resolve().parents[1]

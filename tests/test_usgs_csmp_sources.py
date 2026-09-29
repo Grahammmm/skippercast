@@ -3,8 +3,8 @@ import unittest
 
 import numpy as np
 
-from scripts.import_usgs_seafloor_character import class_mask
-from scripts.audit_usgs_catalog_duplicate_context import audit
+from research.scripts.import_usgs_seafloor_character import class_mask
+from research.scripts.audit_usgs_catalog_duplicate_context import audit
 
 
 class UsgsCsmpSourceTests(unittest.TestCase):

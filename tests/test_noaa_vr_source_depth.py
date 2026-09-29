@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.screen_noaa_vr_source_depth import acquire, stable
+from research.scripts.screen_noaa_vr_source_depth import acquire, stable
 
 
 ROOT = Path(__file__).resolve().parents[1]

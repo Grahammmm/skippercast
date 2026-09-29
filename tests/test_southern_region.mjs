@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {setRegion,localContext,pointBundle} from '../dist/region.js';
 import {geometryIntersects} from '../dist/geo-screen.js';
-import {buildContext} from '../scripts/build_reef_context.mjs';
+import {buildContext} from '../research/scripts/build_reef_context.mjs';
 import {regulationState} from '../dist/regulations.js';
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const r=read('regions/southern-california/region.json');

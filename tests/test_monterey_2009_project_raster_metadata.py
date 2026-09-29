@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_monterey_2009_project_raster_metadata import evaluate
+from research.scripts.audit_monterey_2009_project_raster_metadata import evaluate
 
 
 ROOT = Path(__file__).resolve().parents[1]

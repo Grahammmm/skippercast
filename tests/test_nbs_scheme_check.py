@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.check_nbs_modeling_scheme import latest_key
+from research.scripts.check_nbs_modeling_scheme import latest_key
 
 
 class NbsSchemeCheckTest(unittest.TestCase):

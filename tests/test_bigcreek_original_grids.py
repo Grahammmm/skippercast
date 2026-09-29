@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.audit_bigcreek_original_grids import ARCHIVE_SHA256, LOCATIONS
+from research.scripts.audit_bigcreek_original_grids import ARCHIVE_SHA256, LOCATIONS
 
 
 ROOT = Path(__file__).resolve().parents[1]

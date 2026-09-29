@@ -2,7 +2,7 @@ import io
 import tarfile
 import unittest
 
-from scripts import audit_bss03_vessel_settings as audit
+from research.scripts import audit_bss03_vessel_settings as audit
 
 
 class Bss03VesselSettingsTests(unittest.TestCase):

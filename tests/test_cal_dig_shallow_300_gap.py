@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.audit_cal_dig_shallow_300_gap import build, summarize
+from research.scripts.audit_cal_dig_shallow_300_gap import build, summarize
 
 
 def table(kind, depth):

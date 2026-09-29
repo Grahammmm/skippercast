@@ -4,8 +4,8 @@ import unittest
 
 from shapely.geometry import box, GeometryCollection
 
-from scripts.audit_estero_research_blocks import screen, verify_enc
-from scripts.check_estero_review_change import compare
+from research.scripts.audit_estero_research_blocks import screen, verify_enc
+from research.scripts.check_estero_review_change import compare
 
 
 ROOT = Path(__file__).resolve().parents[1]

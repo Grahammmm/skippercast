@@ -1,7 +1,7 @@
 import hashlib
 import unittest
 
-from scripts.audit_usgs_character_semantics import audit, definitions, metadata_formula_for_class3
+from research.scripts.audit_usgs_character_semantics import audit, definitions, metadata_formula_for_class3
 
 
 ENUMERATED = b'''<metadata><eainfo><detailed><attr><attrlabl>Value</attrlabl>

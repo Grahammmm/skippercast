@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts import audit_point_buchon_2009_vdatum_probe as probe
+from research.scripts import audit_point_buchon_2009_vdatum_probe as probe
 
 
 ROOT = Path(__file__).resolve().parents[1]

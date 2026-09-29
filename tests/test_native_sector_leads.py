@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.summarize_native_sector_leads import build
+from research.scripts.summarize_native_sector_leads import build
 
 
 class NativeSectorLeadsTest(unittest.TestCase):

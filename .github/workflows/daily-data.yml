@@ -21,14 +21,14 @@ on:
       - "scripts/collect_recent_intel.py"
       - "scripts/discover_noaa_surveys.py"
       - "scripts/audit_noaa_survey_products.py"
-      - "scripts/triage_noaa_bag_files.py"
-      - "scripts/discover_usgs_map_blocks.py"
-      - "scripts/audit_usgs_map_metadata.py"
-      - "scripts/discover_usgs_doi_releases.py"
-      - "scripts/audit_usgs_doi_metadata.py"
+      - "research/scripts/triage_noaa_bag_files.py"
+      - "research/scripts/discover_usgs_map_blocks.py"
+      - "research/scripts/audit_usgs_map_metadata.py"
+      - "research/scripts/discover_usgs_doi_releases.py"
+      - "research/scripts/audit_usgs_doi_metadata.py"
       - "scripts/collect_noaa_groundfish_areas.py"
-      - "scripts/refresh_enc_hazards.py"
-      - "scripts/audit_enc_context_overlap.py"
+      - "research/scripts/refresh_enc_hazards.py"
+      - "research/scripts/audit_enc_context_overlap.py"
       - "skills/skippercast-recent-intel/**"
 
 permissions:
@@ -106,34 +106,34 @@ jobs:
         continue-on-error: true
         env:
           PYTHONPATH: src
-        run: python scripts/triage_noaa_bag_files.py --discovery var/daily/survey-discovery.json --products var/daily/survey-products.json --output var/daily/bag-head-inventory.json --previous var/published/bag-head-inventory.json --max-age-days 30
+        run: python research/scripts/triage_noaa_bag_files.py --discovery var/daily/survey-discovery.json --products var/daily/survey-products.json --output var/daily/bag-head-inventory.json --previous var/published/bag-head-inventory.json --max-age-days 30
       - name: Refresh bounded NOAA ENC danger review
         continue-on-error: true
-        run: python scripts/refresh_enc_hazards.py --scope santa-barbara-island --output var/daily/enc-hazards/santa-barbara-island.geojson
+        run: python research/scripts/refresh_enc_hazards.py --scope santa-barbara-island --output var/daily/enc-hazards/santa-barbara-island.geojson
       - name: Refresh Point Reyes and Tomales NOAA ENC danger review
         continue-on-error: true
-        run: python scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/daily/enc-hazards/point-reyes-tomales.geojson
+        run: python research/scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/daily/enc-hazards/point-reyes-tomales.geojson
       - name: Refresh Greenwood NOAA ENC danger review
         continue-on-error: true
-        run: python scripts/refresh_enc_hazards.py --scope h11967-greenwood-tile --output var/daily/enc-hazards/h11967-greenwood-tile.geojson
+        run: python research/scripts/refresh_enc_hazards.py --scope h11967-greenwood-tile --output var/daily/enc-hazards/h11967-greenwood-tile.geojson
       - name: Discover USGS state-waters map-block products
         continue-on-error: true
-        run: python scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
+        run: python research/scripts/discover_usgs_map_blocks.py --output var/daily/usgs-map-blocks.json --previous var/published/usgs-map-blocks.json --max-age-days 30
       - name: Discover additional official USGS CSMP map-block products
         continue-on-error: true
-        run: python scripts/discover_usgs_map_blocks.py --catalog-family csmp --output var/daily/usgs-csmp-map-blocks.json --previous var/published/usgs-csmp-map-blocks.json --max-age-days 30
+        run: python research/scripts/discover_usgs_map_blocks.py --catalog-family csmp --output var/daily/usgs-csmp-map-blocks.json --previous var/published/usgs-csmp-map-blocks.json --max-age-days 30
       - name: Verify original USGS map-block XML metadata
         continue-on-error: true
-        run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-map-blocks.json --output var/daily/usgs-map-metadata.json --previous var/published/usgs-map-metadata.json --max-age-days 30
+        run: python research/scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-map-blocks.json --output var/daily/usgs-map-metadata.json --previous var/published/usgs-map-metadata.json --max-age-days 30
       - name: Verify original USGS CSMP XML metadata
         continue-on-error: true
-        run: python scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-csmp-map-blocks.json --output var/daily/usgs-csmp-map-metadata.json --previous var/published/usgs-csmp-map-metadata.json --max-age-days 30
+        run: python research/scripts/audit_usgs_map_metadata.py --blocks var/daily/usgs-csmp-map-blocks.json --output var/daily/usgs-csmp-map-metadata.json --previous var/published/usgs-csmp-map-metadata.json --max-age-days 30
       - name: Discover newer USGS DOI release products
         continue-on-error: true
-        run: python scripts/discover_usgs_doi_releases.py --output var/daily/usgs-doi-releases.json --previous var/published/usgs-doi-releases.json --max-age-days 30
+        run: python research/scripts/discover_usgs_doi_releases.py --output var/daily/usgs-doi-releases.json --previous var/published/usgs-doi-releases.json --max-age-days 30
       - name: Verify original USGS DOI XML metadata
         continue-on-error: true
-        run: python scripts/audit_usgs_doi_metadata.py --releases var/daily/usgs-doi-releases.json --output var/daily/usgs-doi-metadata.json --previous var/published/usgs-doi-metadata.json --max-age-days 30
+        run: python research/scripts/audit_usgs_doi_metadata.py --releases var/daily/usgs-doi-releases.json --output var/daily/usgs-doi-metadata.json --previous var/published/usgs-doi-metadata.json --max-age-days 30
       - name: Publish an atomic data snapshot
         env:
           # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.

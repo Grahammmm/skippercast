@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import unittest
 import zipfile
 
-from scripts.audit_reefcheck_observations import build, sector_for
+from research.scripts.audit_reefcheck_observations import build, sector_for
 
 
 SECTORS = {"sectors": [{"id": "north", "latitude": [40.0, 42.0]}]}

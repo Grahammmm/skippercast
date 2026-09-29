@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.audit_monterey_2009_producer_metadata import evaluate
+from research.scripts.audit_monterey_2009_producer_metadata import evaluate
 
 
 class ProducerMetadataTest(unittest.TestCase):

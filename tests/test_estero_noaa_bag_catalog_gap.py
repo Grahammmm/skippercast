@@ -6,7 +6,7 @@ import unittest
 
 from shapely.geometry import box, mapping
 
-from scripts.audit_estero_noaa_bag_catalog_gap import build
+from research.scripts.audit_estero_noaa_bag_catalog_gap import build
 
 
 ROOT = Path(__file__).resolve().parents[1]

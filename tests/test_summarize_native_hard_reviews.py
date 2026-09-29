@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.summarize_native_hard_reviews import summarize
+from research.scripts.summarize_native_hard_reviews import summarize
 
 
 class SummaryPrivacyTest(unittest.TestCase):

@@ -46,8 +46,8 @@ TIPPECANOE=/path/to/tippecanoe python scripts/build_map_tiles.py [morro-bay-reef
 
 # Measurements (needs playwright and Chromium) against a local or deployed site.
 pnpm build && npx wrangler dev   # serves http://localhost:8787
-node scripts/measure_map_test.mjs http://localhost:8787 3
-node scripts/measure_map_test.mjs http://localhost:8787 3 layer=socal
+node research/scripts/measure_map_test.mjs http://localhost:8787 3
+node research/scripts/measure_map_test.mjs http://localhost:8787 3 layer=socal
 ```
 
 `tests/test_map_tiles.py` checks that the committed archives are PMTiles v3

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
-from scripts.build_central_300_qualification_plan import build
+from research.scripts.build_central_300_qualification_plan import build
 
 
 ROOT = Path(__file__).resolve().parents[1]

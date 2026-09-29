@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from scripts.audit_point_conception_control_reports import CACHE, OUTPUT, SOURCES, build, verified_pdf
+from research.scripts.audit_point_conception_control_reports import CACHE, OUTPUT, SOURCES, build, verified_pdf
 
 
 def _cached_sources_present():
