@@ -1,94 +1,62 @@
 # SkipperCast
 
-[Documentation index](docs/README.md) · [Architecture](docs/architecture.md) · [Statewide buildout ledger](docs/archive/statewide-buildout.md) · [Central Coast coverage and accuracy](docs/archive/central-coast-coverage-and-accuracy.md) · [Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
+**A phone-first fishing map and ocean forecast for California boat anglers: where the structure is, what the water will do, and what the rules allow.**
 
+**[Open the app](https://skippercast.com)** · [Documentation](docs/README.md)
 
-**Find structure worth investigating. Collect the evidence for a good morning on the water.**
+<img src="docs/images/skippercast-map.png" alt="SkipperCast map of Estero Bay near Morro Bay: NOAA chart with clustered reef habitat candidates, protected areas, the lingcod and rockfish selector, the Rules card and the latest buoy observation" width="320" />
 
-SkipperCast is a mobile-first boat-fishing map and research toolkit. Open the map, find a spot, expand its notes, and build a small GPX day plan for your chartplotter. Select a species, scrub seven days of ocean conditions, and inspect a tide chart and wave components. Map, Conditions, Export, and Guide views keep habitat, marine evidence, and research context within reach on a phone. It began with rockfish and lingcod fishing near Morro Bay, California, from a 23-foot boat.
+## What you get
 
-**[Open the app](https://skippercast.com)** · [Hosting on Cloudflare](docs/cloudflare.md) · [Web app guide](docs/web-app.md)
+- **A fishing map on a nautical chart.** NOAA chart base, species selectors, reef and soft-bottom habitat candidates with their terrain evidence, marine protected areas, charter-reported grounds and a seafloor habitat layer built from original surveys.
+- **A 7-day forecast chart.** One meteogram of wind and gusts, seas and period, tide and an hourly conditions score for your boat, built from SkipperCast's own NOAA and ECMWF forecast tiles, next to live buoy and weather-station readings.
+- **A Tomorrow card.** For the next three days, go, marginal or no-go for each two-hour window, the one factor that limits the day, how well the models agree, and the latest comfortable time to be back at the dock.
+- **The rules at a glance.** A regulations summary for the selected species, place and date: season status, bag and size limits, gear rules and links to the official CDFW pages, checked against the official sources every day.
+- **Plans that go with you.** GPX export for chartplotters and iNavX, an offline trip pack for when the signal drops, and saved-trip alerts on a SkipperCast account you sign in to with a passkey.
 
-**Status:** mobile web app with shared regional ocean feeds, private saved-trip alerts and research layers. The code and original documentation are **source-available for personal use** under the [SkipperCast Personal Use License](LICENSE).
+## Coverage
 
-**See how it fits together:** [current data flow and region rollout](docs/region-pipeline.md).
+California's outer coast, in regional packages. `active` is the main reviewed package; `preview` packages are still gathering reviewed evidence, and each one shows what it covers.
 
-## What you can use today
+| Package | Status |
+| --- | --- |
+| Morro Bay & Avila | `active` |
+| Southern California (Point Conception to the Mexican border, Channel Islands) | `preview` |
+| Point Sal to Point Conception · Cambria–San Simeon · South Big Sur to San Simeon · Big Sur outer coast | `preview` |
+| Monterey Peninsula to Point Sur · Pigeon Point to Monterey Bay · Point Reyes to Pigeon Point | `preview` |
+| Bodega Bay to Point Reyes · Point Arena to northern Sonoma · Fort Bragg to Point Arena | `preview` |
+| Shelter Cove to Fort Bragg · Humboldt Bay to Cape Mendocino · Crescent City & Del Norte | `preview` |
 
-| Part | What it does | Start here |
-| --- | --- | --- |
-| Coastal regions | Five CDFW ocean planning regions, locally ordered species, a daily NOAA seasonal watch and statewide MPAs. Detailed fishing packages remain separate from coastal browse coverage. | [Coastal directory and update process](docs/coastal-directory.md) |
-| Statewide sectors | Nineteen smaller outer-coast planning sectors with a dated NOAA BAG-survey discovery feed. They organize future local packages; survey leads are not fishing spots. | [Statewide buildout ledger](docs/archive/statewide-buildout.md) |
-| Interactive map | NOAA nautical chart, seven-day wind/wave/tide timeline, regional species selectors (16 for Southern California), 132 Central Coast reef candidates, 11 survey-qualified island reef areas, 12 connected soft-bottom habitat outlines, source-dated Channel Islands habitat and terrain views, two named Central Coast charter vicinities, MPA boundaries, historical commercial AIS and dated boat histories, and offshore search references. | [Web app guide](docs/web-app.md) |
-| Dynamic ocean layers | Dated satellite temperature, temperature gradients and chlorophyll; NOAA surface temperature and current forecasts at native resolution, following the selected time within actual forecast coverage. | [Methods and limitations](docs/dynamic-species-method.md) |
-| Forecast verification | Prospective forecasts matched to nearby buoy observations, with distinct-hour coverage, measurement differences and fair model comparisons. More independent outcomes are needed before calibration. | [Verification method](docs/forecast-verification-quality.md) |
-| Fishing atlas | 132 noted habitat candidates, 107 partial reef outlines, and 31 optional drift alignments from Avila / Point Buchon to Point Estero. GPX for chartplotters, GeoJSON, and searchable offline notes. | [Atlas and downloads](atlas/avila-point-estero-2026-09-20/README.md) |
-| Chartplotter day plan | Choose individual spots, the current map, filtered spots or one region; include waypoints, linked outlines, fixed alignment tracks and protected-area reference tracks. Save a local draft, share GPX and download offline notes. | [Export and device guide](docs/chartplotter-export.md) · [Mobile review](docs/archive/mobile-review.md) |
-| Forecast collector | Saves public forecast responses, model metadata, buoy observations, advisories, and access failures for a Morro Bay example profile. Compares numerical ranges and flags missing or inconsistent evidence. | [Run the collector](docs/quickstart.md#collect-live-evidence) |
-| Alert lifecycle | Given an already reviewed assessment and prior delivery state, decides whether an initial alert, update, retraction, or day-before assessment is due. | [Offline demo](#try-it-offline) · [Assessment workflow](docs/forecast-workflow.md) |
+The whole coast can also be browsed by CDFW's five ocean regions, with seasonal species and protected areas ([coastal directory](docs/coastal-directory.md)). The package list is generated in [`dist/regions/index.json`](dist/regions/index.json).
 
-The public conditions rating is a disclosed comfort/gear-control heuristic. Optional private saved-trip alerts compare your chosen weather window and reviewed rules, with updates and a final previous-evening assessment. They do not certify a route or entrance and do not predict catches. See [regional intelligence](docs/regional-intelligence.md) and [production operations](docs/production-operations.md).
+## Run it
 
-## Try it offline
-
-From the repository root, with Python 3.11 or newer:
+From the repository root, with Python 3.11+, Node 22 and pnpm:
 
 ```bash
-PYTHONPATH=src python3 -m skippercast demo
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 -m http.server 8485 --directory dist        # the app at http://localhost:8485
+PYTHONPATH=src python3 scripts/run_core_tests.py      # Python tests, offline
+pnpm install --frozen-lockfile && pnpm test           # Worker and browser tests
 ```
 
-The demo uses invented assessments. It prints an initial alert decision, silence for an unchanged assessment, a retraction when evidence disappears, and a day-before decision. It makes no network requests and sends no messages. Windows and installation instructions are in the [quickstart](docs/quickstart.md).
+More in the [quickstart](docs/quickstart.md) and the [web app guide](docs/web-app.md).
 
-To use the existing atlas without Python, download [complete.gpx](atlas/avila-point-estero-2026-09-20/exports/complete.gpx) and follow the [iNavX import guide](docs/inavx.md), or download and open [spot-notes.html](atlas/avila-point-estero-2026-09-20/exports/spot-notes.html) locally.
+## How it works
 
-## Read the atlas correctly
+[Architecture](docs/architecture.md): one shared web app, a Cloudflare Worker with D1 and R2, and scheduled Python jobs that turn reviewed regional configuration and public data into published feeds.
 
-- A grade ranks **mapped habitat search priority**, not catch probability, boulder size, or a verified fishing hotspot. Purple boat labels mark [two named charter vicinities](docs/charter-grounds.md), backed by 31 published trips. Their outlines are approximate search water, not exact boat positions. There are **no AIS-confirmed charter hotspots** in this release.
-- Outlines are selected portions of surveyed habitat. Drift lines are optional alignments over structure, **not safe approach or passage routes**.
-- The 132 historical Morro–Avila terrain candidates have an unresolved source-raster output datum and are research-only; their old MLLW/200-foot qualification claim was withdrawn September 27, 2026. The 11 island patches use surveyed MLLW depths. The island patches also screen product uncertainty and a planning allowance at native 1–4 m resolution. Other Channel Islands terrain retains an unspecified merged reference and remains context. Actual sounder depth changes with water level. The Central Coast boat-planning ceiling is 300 feet, but no Morro–Avila target currently passes the full chart-depth qualification gate; [the coverage ledger](docs/archive/central-coast-coverage-and-accuracy.md) tracks the gap.
-- This public atlas excludes 11 Cambria targets and the older DS1091 charter-ground annotations whose source reuse terms are unresolved. The [source register](docs/data-sources.md) explains the smaller public edition.
-- The monitor example covers **Cambria–Diablo Canyon**; the included public atlas covers **Avila / Point Buchon–Point Estero**. They have different extents.
+## Data & trust
 
-Use current official charts, rules, protected-area boundaries, and local entrance conditions for the actual trip. This dated research layer is not navigation or legal clearance.
+Every layer keeps its source, date and coverage state, and the app shows a gap as a gap rather than filling it in. [Data confidence](docs/product/data-confidence.md) explains the grades, coverage states and freshness rules, and [data sources](docs/data-sources.md) lists every provider with its licence.
 
-## Repository map
+## Status
 
-```text
-src/skippercast/       Portable Python code: collector, alert rules, atlas exporter
-dist/                 Authored browser app and data; generated client/server folders ignored
-server/               Cached public API, private access, trip outbox and OIDC job policy
-db/ and drizzle/       D1 schema and reviewed migrations
-regions/ and catalog/  Regional bindings, data needs and scoped species evidence
-deployments/          Public origin and immutable scheduled-workflow identity policy
-configs/              Public example configuration; no delivery credentials
-atlas/                Dated, attributed public data and ready-to-import exports
-docs/                 Quickstart, workflow, scoring, methods, and source rights
-tests/                Offline tests for missing evidence, alert state, and exports
-scripts/              Product tools: build, deploy, publish, checks used locally and in CI
-research/             Dated audit and research tooling (not product; see research/README.md)
-.github/workflows/    Offline CI and daily public-evidence collection
-```
+A working mobile web app, version 0.3. See the [roadmap](docs/roadmap.md) and [changelog](CHANGELOG.md).
 
-Before a release, run `pnpm build`. Production serves the generated `dist/client`, where every script, stylesheet and page is renamed with a content hash (`scripts/fingerprint.mjs`) so the hosting edge can never serve a stale copy. The one exception is the service worker `sw.js`, which must keep its URL; the Worker serves it with `Cache-Control: no-cache`. Edit the plain files under `dist/` (`index.html`, `boot.js`, `app.js` and so on); never hand-version file names or add `?v=` query strings. `node scripts/check_client.mjs` confirms every reference resolves.
+## License
 
-Start with the [quickstart](docs/quickstart.md), then the [forecast workflow](docs/forecast-workflow.md) or [atlas methodology](docs/atlas-methodology.md). The [roadmap](docs/roadmap.md) separates future app work from shipped functionality. See [CONTRIBUTING.md](CONTRIBUTING.md) for development.
+Source-available for personal use under the [SkipperCast Personal Use License](LICENSE); third-party data keeps its own terms ([NOTICE.md](NOTICE.md)).
 
-## License and data rights
+## Contributing
 
-The custom license permits individuals to use and modify SkipperCast for private recreation and learning, and to share free copies under the same terms. Commercial, charter, professional, and organizational use requires separate permission. A personal-use restriction makes this **source-available, not OSI open source**; see the [Open Source Definition](https://opensource.org/osd).
-
-Third-party and public-domain data retain their own rights. The personal-use restriction does not relicense underlying USGS facts, CDFW CC BY data, or other third-party material. See [NOTICE.md](NOTICE.md) and the full [LICENSE](LICENSE).
-
-## Daily fishing evidence
-
-Selecting a target opens its local regulations card: season status and dates,
-size and bag limits, gear rules and official CDFW links. The daily job checks
-the official sources against reviewed versions. Changed, failed or stale checks
-withhold the open-season badge until reviewed. See [how regulation updates work](docs/regulations.md).
-
-The app adds species-specific confidence notes from dated charter reports, plus satellite surface temperature, chlorophyll and radar-current context when available. A daily GitHub Actions job refreshes the public feed at 4:17 a.m. Pacific, with per-source dates and visible failures. A [recent discussion research pipeline](docs/recent-intel.md) rotates regional searches through a pinned last30days engine; its candidate links require review before they influence the map or ratings. The Live tab shows dated NOAA buoy readings, local airport weather and measured water level. A separate cloud job refreshes buoy observations every 30 minutes; the app checks current observations and advisories every five minutes while open. [Live conditions and sources](docs/live-conditions.md). The live job also collects regional forecasts, ensembles, radar, WCOFS surface currents and prospective verification. Its habitat stage refreshes native ocean tiles with six-hour provider caches, retaining original source dates and cloud gaps. A cached Worker feed supplies the app, with direct-provider recovery. No bite probability is claimed. Read the [research and operating guide](docs/bite-evidence.md), inspect [job status](https://github.com/Grahammmm/skippercast/actions/workflows/daily-data.yml), or use the [public feed](https://raw.githubusercontent.com/Grahammmm/skippercast/data/latest.json).
-
-Recent additions: [map protection, drift guides and forecast ratings](docs/archive/map-and-forecast.md), [historical commercial AIS](docs/archive/commercial-ais-research.md), and [feature research across 13 products](docs/archive/product-research.md).
-
-Selected release features: [hourly comparison, scoped regulations, spot evidence, currents and ensembles, bottom exploration, iNavX sets and private alerts](docs/archive/implementation-2026-09.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before opening a pull request.
