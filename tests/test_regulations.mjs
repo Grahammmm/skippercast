@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { regulationState, regulationsHTML, validRegulations, officialURL, areaNoticesHTML } from "../dist/regulations.js";
+import { regulationState, regulationsHTML, validRegulations, officialURL, areaNoticesHTML, ruleSummary, ruleSummaryHTML, firstClause, depthLimit } from "../dist/regulations.js";
 const now = Date.parse("2026-09-21T18:00:00Z");
 const original = JSON.parse(readFileSync(new URL("../dist/data/regulations.json", import.meta.url), "utf8"));
 function data(at = now) {
@@ -108,4 +108,68 @@ test('latitude-limited seasons check the entire selected fishing geometry', () =
   assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.2)).status,'unknown');
   d.species.salmon.windows[0].geography.north=91;
   assert.equal(validRegulations(d),false);
+});
+
+test("summary row leads the card with status, bag, size, depth, verified date and one link", () => {
+  const d = data();
+  const html = regulationsHTML(d, "halibut", now);
+  const row = html.indexOf('class="reg-summary-row"');
+  assert.ok(row > 0 && row < html.indexOf("reg-notice"), "row comes before the existing detail");
+  assert.match(html, /<dl class="reg-limits"><dt>Season<\/dt>/, "existing detail is still rendered");
+  const s = ruleSummary(d, "halibut", regulationState(d, "halibut", now));
+  assert.equal(s.label, "Open");
+  assert.deepEqual(s.bag, ["5 per person daily"]);
+  assert.deepEqual(s.size, ["22 in min total length"]);
+  assert.equal(s.verified, "Sep 21");
+  assert.match(s.link, /^https:\/\/wildlife\.ca\.gov\//);
+  assert.equal((ruleSummaryHTML(s).match(/<a /g) || []).length, 1, "exactly one official link");
+  const lingcod = ruleSummary(d, "lingcod", regulationState(d, "lingcod", now));
+  assert.equal(lingcod.depth, "All depths");
+  const reef = ruleSummary(d, "reef", regulationState(d, "reef", now));
+  assert.deepEqual(reef.bag.map((b) => b.split(":")[0]), ["Lingcod", "Rockfish / rock cod"]);
+  assert.equal(reef.linkLabel, "Official groundfish rules");
+  assert.equal((regulationsHTML(d, "reef", now).match(/reg-summary-row/g) || []).length, 1, "member cards do not repeat the row");
+});
+
+test("summary row keeps the fail-closed status and never claims verification", () => {
+  const d = data();
+  d.checks[d.species.halibut.source_ids[0]].status = "changed";
+  const state = regulationState(d, "halibut", now);
+  const s = ruleSummary(d, "halibut", state);
+  assert.equal(s.status, "unknown");
+  assert.equal(s.label, "Check rules");
+  assert.equal(s.verified, null);
+  assert.equal(s.depth, null);
+  assert.match(ruleSummaryHTML(s), /Needs recheck · last check Sep 21/);
+  assert.doesNotMatch(ruleSummaryHTML(s), />Open</);
+  const stale = data(now - 48 * 3600000);
+  const staleSummary = ruleSummary(stale, "lingcod", regulationState(stale, "lingcod", now));
+  assert.equal(staleSummary.label, "Check rules");
+  assert.equal(staleSummary.verified, null);
+  const missing = ruleSummary(null, "salmon", regulationState(null, "salmon", now));
+  assert.equal(missing.label, "Check rules");
+  assert.deepEqual(missing.bag, []);
+  assert.equal(missing.link, "https://wildlife.ca.gov/Fishing/Ocean");
+  assert.match(regulationsHTML(null, "salmon", now), /reg-summary-row[\s\S]*Check rules[\s\S]*Official CDFW rules/);
+  const unreviewed = data(); unreviewed.rules_review_status = "content-needs-review";
+  assert.equal(ruleSummary(unreviewed, "halibut", regulationState(unreviewed, "halibut", now)).verified, null);
+});
+
+test("summary text is cut from the reviewed wording, never rewritten, and depth comes from structured access", () => {
+  assert.equal(firstClause("2 per person daily; 2 in possession."), "2 per person daily");
+  assert.equal(firstClause("22 in minimum total length."), "22 in min total length");
+  assert.match(firstClause("5 total kelp, barred sand and spotted sand bass combined, with no more than 4 barred sand bass."), /…$|exceptions below/);
+  assert.match(firstClause("14 in minimum total length (or the regulation's defined 10 in alternate length)."), /^14 in min total length \(exceptions below\)$/);
+  assert.equal(firstClause(""), null);
+  const southern = JSON.parse(readFileSync(new URL("../dist/regions/southern-california/regulations.json", import.meta.url), "utf8"));
+  assert.equal(depthLimit(southern.species.lingcod, "2026-08-01"), "Inside 50-fm line");
+  assert.equal(depthLimit(southern.species.lingcod, "2026-11-01"), "Outside 50-fm line");
+  assert.equal(depthLimit(southern.species.lingcod, "2026-05-01"), "All depths");
+  assert.equal(depthLimit(southern.species.lingcod, "2026-02-01"), null, "no active window, no depth claim");
+  assert.equal(depthLimit(southern.species.halibut, "2026-05-01"), null, "no depth wording, no depth claim");
+});
+
+test("summary escapes registry text", () => {
+  const d = data(); d.species.halibut.bag = '<b onmouseover="x()">5</b> per person daily';
+  assert.doesNotMatch(ruleSummaryHTML(ruleSummary(d, "halibut", regulationState(d, "halibut", now))), /<b /);
 });

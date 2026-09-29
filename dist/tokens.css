@@ -1,0 +1,143 @@
+/* SkipperCast design tokens (engineering guide section 5.2-5.4).
+   Loaded before every other stylesheet. Light values apply by default.
+   Dark values are defined but stay inactive until <html data-theme="auto">
+   (follow the OS) or data-theme="dark" is set; neither is set yet.
+   scripts/check_contrast.mjs checks every documented text pair in both
+   themes and fails under 4.5:1.
+   Deviations from the guide, made so that every text pair reaches 4.5:1:
+   light --go #1E8E5A -> #1A8050, --caution #B26B00 -> #A46200,
+   --unknown #6B7C86 -> #64747D, --brand-tint #E2F3F0 -> #E6F5F2. */
+:root {
+  /* Colour (light) */
+  --ink: #0b2530;
+  --ink-2: #3f5a66;
+  --surface: #f4f8f9;
+  --card: #ffffff;
+  --line: #d6e2e6;
+  --brand: #0a7c72;
+  --brand-tint: #e6f5f2;
+  --deep: #082e3b;
+  --kelp: #54dacb;
+  --go: #1a8050;
+  --caution: #a46200;
+  --rough: #b23a48;
+  --unknown: #64747d;
+  --on-brand: #ffffff;
+  --on-deep: #ffffff;
+
+  /* Cartography (same in both themes) */
+  --map-mpa: #d6339a;
+  --map-reef: #0a7c72;
+  --map-structure: #a66310;
+  --map-charter: #7540a0;
+  --map-commercial: #c98a1a;
+  --map-current: #2f6fb0;
+  --map-wind: #315f98;
+
+  /* Legacy palette: the values styles.css used before tokens existed.
+     Kept so current screens render unchanged. The P4-02 restyle replaces
+     each one with the token named in its comment and then deletes it. */
+  --legacy-ink: #102f3b; /* -> --ink */
+  --legacy-muted: #526773; /* -> --ink-2 */
+  --legacy-teal: #007f73; /* -> --brand */
+  --legacy-line: #dbe4e7; /* -> --line */
+  --legacy-paper: #f3f7f8; /* -> --surface */
+  --legacy-amber: #946008; /* -> --caution */
+
+  /* Typography */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --text-12: 12px;
+  --text-14: 14px;
+  --text-16: 16px;
+  --text-18: 18px;
+  --text-22: 22px;
+  --text-28: 28px;
+  --text-36: 36px;
+  --leading-heading: 1.25;
+  --leading-body: 1.5;
+  --weight-instrument: 700;
+  --tracking-eyebrow: 0.08em;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --elev-1: 0 1px 3px rgb(8 46 59 / 0.12);
+  --elev-2: 0 4px 14px rgb(8 46 59 / 0.14);
+  --elev-3: 0 12px 32px rgb(8 46 59 / 0.22);
+
+  /* Z-scale */
+  --z-map: 0;
+  --z-map-chrome: 10;
+  --z-dock: 20;
+  --z-sheet: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+
+  /* Motion */
+  --motion-state: 120ms ease-out;
+  --motion-sheet: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Touch */
+  --touch-min: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-state: 0ms linear;
+    --motion-sheet: 0ms linear;
+  }
+}
+
+/* Dark colour tokens. Inactive until data-theme is set on <html>. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --ink: #e8f1f4;
+    --ink-2: #a9bec7;
+    --surface: #0a1a21;
+    --card: #122a33;
+    --line: #24404a;
+    --brand: #3fd1c1;
+    --brand-tint: #0f3a3a;
+    --deep: #061c24;
+    --kelp: #54dacb;
+    --go: #4fd08c;
+    --caution: #f0a83a;
+    --rough: #f07c88;
+    --unknown: #93a5af;
+    --on-brand: #061c24;
+    --on-deep: #e8f1f4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #e8f1f4;
+  --ink-2: #a9bec7;
+  --surface: #0a1a21;
+  --card: #122a33;
+  --line: #24404a;
+  --brand: #3fd1c1;
+  --brand-tint: #0f3a3a;
+  --deep: #061c24;
+  --kelp: #54dacb;
+  --go: #4fd08c;
+  --caution: #f0a83a;
+  --rough: #f07c88;
+  --unknown: #93a5af;
+  --on-brand: #061c24;
+  --on-deep: #e8f1f4;
+  color-scheme: dark;
+}

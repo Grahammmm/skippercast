@@ -1,12 +1,12 @@
 # Web app
 
-The app is a mobile-first map workspace with three views: **Map, Conditions, and Guide**. Its source lives in `dist/` and is tracked directly; no framework build or package installation is required. Serve that directory with any static HTTP server:
+The app is a mobile-first map workspace with four views in the bottom navigation: **Map, Conditions, Export and Guide**. Its source lives in `dist/` as plain, tracked files with no framework. To view it locally, no build or package installation is needed; serve that directory with any static HTTP server:
 
 ```bash
 python3 -m http.server 8485 --directory dist
 ```
 
-Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site.
+Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site. Deployment does need a build: `pnpm install --frozen-lockfile && pnpm build` (`scripts/build-worker.mjs`) copies `dist/` to `dist/client`, renames every script, style and page with a content hash, and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). A plain static server cannot answer the Worker's `/feeds/` and `/api/` routes, so published feeds and forecasts fail there; to run the whole app locally, build and then start `npx --yes wrangler@4.142.0 dev`.
 
 ## What works
 
@@ -22,9 +22,9 @@ Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas 
 - Inspect wind, gusts, visibility, precipitation, swell/chop heights and periods, direction arrows, a boat-heading comparison, 24-hour trends, NOAA Port San Luis tides, and a separately timestamped recent water-level observation.
 - Compare ECMWF IFS / NOAA GFS and ECMWF WAM / NOAA GFS Wave. Review per-model run metadata, returned grid coordinates, coverage, and active PZZ645/PZZ670 alerts. GFS primary-wave headline periods and ECMWF mean periods are labeled separately.
 
-Shared cloud jobs publish regional environmental evidence. A Worker serves cached public feeds, with direct-provider recovery in the browser. Optional authenticated features store private saved trips and comfort feedback in D1; anonymous map browsing needs no account. Public assets contain no credentials or private records. See [production operations](production-operations.md) for isolation and retention. Hosting providers and external map/weather services process ordinary network requests. Base-map tiles are fetched only for the visible map; there is no bulk or offline tile download.
+Shared cloud jobs publish regional environmental evidence. A Worker serves cached public feeds, with direct-provider recovery in the browser. Optional authenticated features store private saved trips and comfort feedback in D1; anonymous map browsing needs no account. Public assets contain no credentials or private records. See [production operations](production-operations.md) for isolation and retention. Hosting providers and external map/weather services process ordinary network requests. Street-map (OpenStreetMap) tiles are fetched only for the visible map and are never bulk-downloaded. The optional offline trip pack (Guide → Offline trip pack) saves NOAA ENC chart tiles for the selected region at zoom 8–12 (at most 1,500) on the user's device, only when asked.
 
-Changing views preserves filters, selection, map position, and loaded forecasts during the page session. Browser Back also closes an opened spot sheet. A reload resets target selection; an old sheet URL returns to Map. Public forecast responses are cached in session storage for up to 30 minutes to reduce repeated provider requests; the original retrieval time remains visible. Refresh bypasses the cache. The app is a mobile website, with no offline map cache or native installation required.
+Changing views preserves filters, selection, map position, and loaded forecasts during the page session. Browser Back also closes an opened spot sheet. A reload resets target selection; an old sheet URL returns to Map. Public forecast responses are cached in session storage for up to 30 minutes to reduce repeated provider requests; the original retrieval time remains visible. Refresh bypasses the cache. The app is a mobile website; installing it to the home screen is optional (iPhone and iPad need it for push alerts). A service worker at `/sw.js` keeps the app shell for offline start, keeps the latest public data it has seen, and answers from a saved trip pack when the network fails. Anything served from a save is marked `X-SC-Offline: <saved-at>` and the page shows an "Offline — showing data saved …" banner; saved data is never shown as live.
 
 ## Evidence limits
 
@@ -51,6 +51,7 @@ NOAA chart images follow the service's portrayal units. Wave, tide, and habitat 
 | `dist/live-conditions.js` | Current buoy, airport weather, water level and alert loading, source timestamps and freshness |
 | `dist/weather-ui.js` | Shared map/detail timeline, playback, selected forecast sample, model choice, caching, overlay |
 | `dist/gpx.js` | Selected-target GPX with separate polygon rings |
+| `dist/sw.js`, `offline.js`, `offline-pack.js`, `offline-core.js`, `offline.css` | Service worker (shell precache from `precache.json`, network-first data, saved chart tiles, push), offline banner, install prompt, offline trip pack |
 | `scripts/export_web_targets.mjs` | Generate the 132 direct single-target GPX files in `dist/downloads/targets/` |
 | `dist/data/`, `downloads/` | Copies of the reviewed public atlas and exports; dated aggregate AIS research summary |
 | `dist/vendor/` | Leaflet 1.9.4 plus its BSD license; exact hashes in `scripts/web-vendor-sha256.json` |

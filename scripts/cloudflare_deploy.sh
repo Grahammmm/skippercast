@@ -35,6 +35,11 @@ if ! out=$($WRANGLER r2 bucket create "$BUCKET" 2>&1); then
 else
   echo "Created R2 bucket $BUCKET"
 fi
+# Retention backstops (run manifests 7 days, history and verification archive after
+# the pipeline's own pruning). Idempotent: `lifecycle set` replaces the whole rule set.
+if ! python3 scripts/r2_lifecycle.py --bucket "$BUCKET"; then
+  echo "::warning title=R2 lifecycle::rules not applied to $BUCKET; feeds are unaffected (see docs/cloudflare.md)"
+fi
 
 # CUSTOM_DOMAINS (repository variable, e.g. "skippercast.com,www.skippercast.com")
 # attaches those hosts as Worker custom domains; unset means workers.dev only.

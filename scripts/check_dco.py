@@ -10,7 +10,9 @@ work the owner already controls (see CONTRIBUTING.md and
 docs/engineering/adr/0004-licensing.md):
 
 * GitHub login ``Grahammmm`` (the owner; Codex commits are authored as the owner);
-* ``Claude <noreply@anthropic.com>`` (Claude Code commits).
+* ``Claude <noreply@anthropic.com>`` (Claude Code commits);
+* GitHub login ``dependabot[bot]`` (dependency updates this repository configures in
+  ``.github/dependabot.yml``; they contain no authored work to certify).
 
 Commit authorship is only an email address, which anyone can set. The
 exemptions therefore apply only to pull requests from branches of this
@@ -25,6 +27,7 @@ import sys
 
 OWNER_LOGINS = frozenset({'grahammmm'})
 AGENT_EMAILS = frozenset({'noreply@anthropic.com'})
+BOT_LOGINS = frozenset({'dependabot[bot]'})
 SIGN_OFF = re.compile(r'^Signed-off-by:\s*(?P<name>.+?)\s*<(?P<email>[^<>\s]+@[^<>\s]+)>\s*$', re.MULTILINE)
 
 
@@ -33,7 +36,7 @@ def exempt(commit, fork=False):
         return False
     login = ((commit.get('author') or {}).get('login') or '').lower()
     email = (commit['commit']['author'].get('email') or '').lower()
-    return login in OWNER_LOGINS or email in AGENT_EMAILS
+    return login in OWNER_LOGINS or login in BOT_LOGINS or email in AGENT_EMAILS
 
 
 def signed_off(commit):

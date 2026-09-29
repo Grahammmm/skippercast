@@ -18,7 +18,7 @@ NOAA data are U.S. public domain. ECMWF open data are [CC BY 4.0](https://creati
 1. `scripts/publish_forecasts.sh` runs inside every live-conditions cycle (every 30 minutes).
 2. `python -m skippercast.forecast.build` finds each model's newest complete cycle. If it is already published, it reuses the tiles in seconds. Otherwise it downloads only the needed fields for every forecast hour: one HTTP range request per field, using NOAA's `.idx` and ECMWF's `.index` files. ECMWF downloads fall back between ECMWF's AWS mirror and its own portal.
 3. Fields are cut to the California box (32–43° N, 127–116° W) and written as 1-degree tiles with a one-cell margin. Only tiles that contain sea are kept. Values are stored as int16 with a per-field scale, and missing values as -32768.
-4. The tiles are force-pushed as a single commit to the `forecasts` branch, so the repository does not grow. A model that fails keeps its previous tiles and raises a warning.
+4. The tiles are force-pushed as a single commit to the `forecasts` branch (`scripts/publish_branch_snapshot.sh`, with a lease so the manual workflow and the live loop cannot overwrite each other), so the repository does not grow. A model that fails keeps its previous tiles and raises a warning.
 
 Layout on the `forecasts` branch: `index.json` (per-model status), `<model>/manifest.json` (cycle, times, tiles, Open-Meteo-style `meta`), `<model>/tiles/<lat>_<lon>.json`.
 

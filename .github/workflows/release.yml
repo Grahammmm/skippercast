@@ -1,0 +1,45 @@
+name: Release
+
+# Creates the GitHub Release for a version tag, using that version's
+# CHANGELOG.md section as the notes. See docs/operations/release-process.md.
+# Tags that point at commits older than this workflow (for example v0.3.0)
+# do not trigger it; publish those with "Run workflow" and the tag name.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish, e.g. v0.3.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Tag names a released version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null || { echo "::error::Tag ${TAG} does not exist"; exit 1; }
+          version=$(git show "${TAG}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
+          if [ "v${version}" != "${TAG}" ]; then
+            echo "::error::${TAG} points at a commit whose package.json says ${version}"
+            exit 1
+          fi
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: python3 scripts/changelog_section.py "$TAG" > "$RUNNER_TEMP/notes.md"
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: gh release create "$TAG" --verify-tag --title "SkipperCast ${TAG#v}" --notes-file "$RUNNER_TEMP/notes.md"

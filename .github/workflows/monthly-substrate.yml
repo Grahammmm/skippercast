@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned GIS dependencies
@@ -71,7 +71,7 @@ jobs:
           python scripts/build_monterey_300_review_matrix.py --closure var/review/monterey-300-closure-review.json --enc var/review/monterey-300-enc-review.json --output var/review/monterey-300-evidence-matrix.json
       - name: Upload research-only source receipts even on failure
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: monterey-original-300-source-screen
           path: |
@@ -89,8 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned original-grid reader
@@ -184,7 +184,7 @@ jobs:
         run: python -m unittest tests.test_mont95_monterey_original_overlap tests.test_em300_monterey_original_overlap tests.test_monterey_2013_merge_lineage tests.test_monterey_2013_merge_asset_access tests.test_monterey_coned_source_footprints tests.test_monterey_noaa2612_acoustic_points tests.test_monterey_ncei_trackline_leads tests.test_monterey_2009_ncei_valid_beams tests.test_monterey_2009_producer_metadata tests.test_monterey_2009_project_raster_metadata tests.test_monterey_2009_beam_usgs_cells tests.test_monterey_2009_beam_video_proximity -v
       - name: Upload historical source receipts even on failure
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: monterey-original-multibeam-crosssurvey
           path: |
@@ -204,8 +204,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned native-grid reader
@@ -347,7 +347,7 @@ jobs:
           cmp var/review/central-300ft-qualification-plan.json dist/data/central-300ft-qualification-plan.json
       - name: Upload source-gap review even on failure
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: central-coast-source-gaps
           path: |
@@ -379,8 +379,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned original-raster audit dependencies
@@ -453,7 +453,7 @@ jobs:
           --output var/review/san-pedro-rca-screen.json
       - name: Upload unpublished source-change and candidate receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-ds552-san-pedro-review
           path: |
@@ -466,8 +466,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify USGS map-area and source-link parser
@@ -479,7 +479,7 @@ jobs:
           --verify catalog/usgs-ds781-source-leads.json
       - name: Upload unpublished catalog-change receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-ds781-source-leads
           path: var/review/usgs-ds781-source-leads.json
@@ -492,7 +492,7 @@ jobs:
           --verify catalog/usgs-ds781-metadata-review.json
       - name: Upload unpublished FGDC metadata-change receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-ds781-fgdc-metadata
           path: var/review/usgs-ds781-metadata-review.json
@@ -501,8 +501,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify statewide historical-sample audit safeguards
@@ -514,7 +514,7 @@ jobs:
           --output var/review/noaa-seabed-samples-sector-review.json
       - name: Upload aggregate source-change receipt without original point locations
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nos-historical-seabed-samples
           path: var/review/noaa-seabed-samples-sector-review.json
@@ -523,8 +523,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify historical observation audit contract
@@ -542,7 +542,7 @@ jobs:
           --output var/review/reefcheck/statewide-observation-audit.json
       - name: Upload unpublished observation review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: reefcheck-historical-observations
           path: var/review/reefcheck/statewide-observation-audit.json
@@ -551,8 +551,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned geometry dependencies
@@ -660,7 +660,7 @@ jobs:
           --output var/review/bodega-native-enc-scope-review.json
       - name: Upload unpublished chart-danger research receipts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: original-hard-context-enc-review
           path: |
@@ -690,14 +690,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned raster reader
         run: python -m pip install -r requirements-survey.txt
       - name: Reuse exact NOAA BlueTopo originals
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: var/bluetopo-cache
           key: bluetopo-statewide-source-${{ hashFiles('catalog/bluetopo-statewide-sample.json') }}
@@ -718,7 +718,7 @@ jobs:
           --output var/review/central-bluetopo-upstream-source-leads.json
       - name: Upload unpublished BlueTopo source review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bluetopo-source-leads
           path: |
@@ -729,8 +729,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned native-grid reader
@@ -740,7 +740,7 @@ jobs:
           PYTHONPATH: src:.
         run: python -m unittest tests.test_usgs_caldig_v2 -v
       - name: Reuse exact USGS version 2 original archives
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: var/usgs-dig-cache/Cal_DIG_I_v2_*.zip
           key: usgs-caldig-v2-original-${{ hashFiles('catalog/usgs-caldig-v2.json') }}
@@ -751,7 +751,7 @@ jobs:
           --output var/review/usgs-caldig-v2-native-review.json
       - name: Upload deepwater source review, not fishing targets
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-caldig-v2-source-review
           path: var/review/usgs-caldig-v2-native-review.json
@@ -760,8 +760,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify bounded survey discovery
@@ -780,7 +780,7 @@ jobs:
           --output var/review/noaa-central-multibeam-footprint-leads.json
       - name: Upload unpublished source-lead review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ncei-multibeam-discovery
           path: |
@@ -791,8 +791,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned native-grid reader
@@ -800,7 +800,7 @@ jobs:
       - name: Verify native-grid receipts stay out of fishing targets
         run: python -m unittest tests.test_csumb_scc_native tests.test_csumb_bss_native tests.test_bss02_accuracy_provenance tests.test_bss02_video_grid_overlap tests.test_bss03_access_blocks tests.test_bss03_caris_tpe_member tests.test_csumb_vdatum_bridge tests.test_bigcreek_original_grids tests.test_bigcreek_rov_original_cells tests.test_lopez_backscatter_source -v
       - name: Reuse original CSUMB archives
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             var/noaa-native-cache/SCC_Block*_additional_products.tar.gz
@@ -928,7 +928,7 @@ jobs:
           --verify dist/data/bss03-original-vessel-tpu-inputs.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: csumb-scc-native-review
           path: |
@@ -952,8 +952,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned native BAG reader
@@ -963,7 +963,7 @@ jobs:
           PYTHONPATH: src:.
         run: python -m unittest tests.test_noaa_vr_source_depth -v
       - name: Reuse pinned NOAA deepwater BAGs
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             var/noaa-native-cache/H13089-*.bag
@@ -979,7 +979,7 @@ jobs:
           --verify dist/data/noaa-central-deepwater-native-depth-screen.json
       - name: Upload unpublished native-depth receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: noaa-central-deepwater-native-depth-screen
           path: var/review/noaa-central-deepwater-native-depth-screen.json
@@ -988,8 +988,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned native GIS readers
@@ -1039,7 +1039,7 @@ jobs:
           --verify dist/data/san-miguel-original-habitat-vr-review.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: san-miguel-original-habitat-review
           path: |
@@ -1053,20 +1053,20 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Load latest public MPA snapshot
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: data
           path: var/published
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned geospatial reader
         run: python -m pip install -r requirements-survey.txt
       - name: Reuse verified original-source archives
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             var/nbs-cache
@@ -1259,7 +1259,7 @@ jobs:
           --verify dist/data/usgs-offshore-aptos-noaa-mllw-overlap-review.json
       - name: Upload unpublished Aptos native and measured-depth receipts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-aptos-original-and-noaa-depth-review
           path: |
@@ -1419,7 +1419,7 @@ jobs:
           --output-dir var/review
       - name: Upload source audit and unpublished review layers
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cdfw-ds3091-review
           path: var/review/
@@ -1429,8 +1429,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned geospatial audit dependencies
@@ -1457,7 +1457,7 @@ jobs:
           --output var/review/nbs-hard-footprint-depth-audit.json
       - name: Upload unpublished native-depth source receipts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nbs-hard-footprint-native-depth-review
           path: |
@@ -1470,8 +1470,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned original-grid reader
@@ -1483,7 +1483,7 @@ jobs:
           --output var/review/usgs-sur-arguello-sediment-audit.json
       - name: Upload unpublished geologic-context source audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-sur-arguello-sediment-source
           path: var/review/usgs-sur-arguello-sediment-audit.json
@@ -1493,8 +1493,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify source-lead contract
@@ -1512,7 +1512,7 @@ jobs:
           --output var/review/csumb-bss-source-leads.json
       - name: Upload unpublished survey-source receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: csumb-scc-source-leads
           path: |
@@ -1524,14 +1524,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Load latest public MPA snapshot
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: data
           path: var/published
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned original-grid reader
@@ -1615,7 +1615,7 @@ jobs:
           --verify dist/data/noaa-h11983-native-source-review.json
       - name: Upload only coordinate-free review receipts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: h11983-original-source-review
           path: |
@@ -1628,8 +1628,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install native raster reader
@@ -1655,7 +1655,7 @@ jobs:
           --verify dist/data/usgs-ds781-character-semantics.json
       - name: Upload unpublished source-change receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: usgs-ds781-native-character-review
           path: |

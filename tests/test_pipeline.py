@@ -1,82 +1,95 @@
 from datetime import datetime, timezone
-import unittest
-from unittest.mock import patch
-import ssl
 from pathlib import Path
-from urllib.error import HTTPError, URLError
+import unittest
+import ssl
+from skippercast import http
 from skippercast.pipeline import parsers
-from skippercast.pipeline.collect import Client, source, system_tls_official_watch, validate
+from skippercast.pipeline import coastal_watch, collect
+from skippercast.pipeline.collect import Client, source, validate
 from skippercast.pipeline.settings import settings
+from tests import http_fixture
 
 PORTS = settings('morro-bay')['report_ports']
+NOW = datetime(2026, 9, 24, tzinfo=timezone.utc)
 
 
 class PipelineTests(unittest.TestCase):
-    def test_cdfw_system_tls_fallback_is_exact_url_only(self):
-        with self.assertRaisesRegex(ValueError, 'exact reviewed watch'):
-            system_tls_official_watch('https://wildlife.ca.gov/unreviewed', 100)
-        with self.assertRaisesRegex(ValueError, 'restricted to reviewed state agencies'):
-            system_tls_official_watch('https://example.org/unreviewed', 100)
-
-    def test_cdfw_certificate_failure_uses_verified_fallback(self):
+    def test_certificate_failure_fails_closed_without_a_curl_fallback(self):
+        # The former /usr/bin/curl fallback is gone: a certificate that does not verify
+        # fails the source (retained/failed upstream), is not retried, and says how to fix it.
         url = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs'
-        class Opener:
-            def open(self, *_args, **_kwargs):
-                raise URLError(ssl.SSLCertVerificationError('untrusted local Python certificate chain'))
-        with patch('skippercast.pipeline.collect.check_public_address'), \
-                patch('skippercast.pipeline.collect.build_opener', return_value=Opener()), \
-                patch('skippercast.pipeline.collect.system_tls_official_watch',
-                      return_value=(b'<html>official page</html>', {'content-type': 'text/html'})) as fallback:
-            client = Client(datetime(2026, 9, 24, tzinfo=timezone.utc))
-            self.assertIn('official page', client.get(url))
-        fallback.assert_called_once_with(url, 5_000_000)
-        self.assertEqual(client.requests[-1]['transport'], 'system curl; TLS verified; redirects disabled')
-
-    def test_system_tls_fallback_rejects_an_official_redirect(self):
-        url = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs'
-        def redirect(args, **_kwargs):
-            self.assertNotIn('--location', args)
-            Path(args[args.index('--dump-header') + 1]).write_text(
-                'HTTP/2 301\r\nLocation: https://wildlife.ca.gov/other\r\n\r\n')
-            Path(args[args.index('--output') + 1]).write_bytes(b'redirect')
-        with patch('skippercast.pipeline.collect.subprocess.run', side_effect=redirect):
-            with self.assertRaisesRegex(ValueError, 'redirected'):
-                system_tls_official_watch(url, 5_000_000)
+        failure = ssl.SSLCertVerificationError(1, 'certificate verify failed')
+        failure.verify_message = 'unable to get local issuer certificate'
+        session, script, sleeps = http_fixture.session(failure, failure)
+        client = Client(NOW, session=session)
+        with self.assertRaises(http.TLSVerificationError) as raised:
+            client.get(url)
+        self.assertIn('trust store', str(raised.exception))
+        self.assertEqual(len(script.requests), 1)
+        self.assertEqual(sleeps, [])
+        self.assertEqual(client.requests[-1]['error_class'], 'TLSVerificationError')
+        self.assertNotIn('transport', client.requests[-1])
+        for module in (collect, coastal_watch):
+            self.assertNotIn('/usr/bin/curl', Path(module.__file__).read_text())
 
     def test_coastwatch_403_is_retried_but_other_hosts_stay_denied(self):
-        class Response:
-            status = 200
-            headers = {}
-            url = 'https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json'
-
-            def __enter__(self): return self
-            def __exit__(self, *args): return False
-            def read(self, _): return b'{"table": {"rows": []}}'
-
-        class Opener:
-            calls = 0
-            def open(self, request, timeout):
-                self.calls += 1
-                if self.calls == 1:
-                    raise HTTPError(request.full_url, 403, 'transient provider denial', {}, None)
-                return Response()
-
-        opener = Opener()
-        with patch('skippercast.pipeline.collect.check_public_address'), \
-                patch('skippercast.pipeline.collect.build_opener', return_value=opener), \
-                patch('skippercast.pipeline.collect.time.sleep'):
-            client = Client(datetime(2026, 9, 24, tzinfo=timezone.utc))
-            self.assertEqual(client.get(Response.url, as_json=True)['table']['rows'], [])
-        self.assertEqual(opener.calls, 2)
+        url = 'https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json'
+        session, script, sleeps = http_fixture.session((403, b'transient provider denial'),
+                                                       (200, b'{"table": {"rows": []}}'))
+        client = Client(NOW, session=session)
+        self.assertEqual(client.get(url, as_json=True)['table']['rows'], [])
+        self.assertEqual(len(script.requests), 2)
         self.assertEqual([r.get('http_status') for r in client.requests], [403, 200])
+        self.assertEqual([r['attempt'] for r in client.requests], [1, 2])
+        self.assertEqual(len(sleeps), 1)
 
-        opener = Opener()
-        with patch('skippercast.pipeline.collect.check_public_address'), \
-                patch('skippercast.pipeline.collect.build_opener', return_value=opener), \
-                patch('skippercast.pipeline.collect.time.sleep'):
-            with self.assertRaises(HTTPError):
-                Client(datetime(2026, 9, 24, tzinfo=timezone.utc)).get('https://example.org/data')
-        self.assertEqual(opener.calls, 1)
+        session, script, _ = http_fixture.session((403, b'denied'), (200, b'{}'))
+        with self.assertRaises(http.HTTPStatusError) as raised:
+            Client(NOW, session=session).get('https://www.ndbc.noaa.gov/data/realtime2/46028.txt')
+        self.assertEqual(raised.exception.status, 403)
+        self.assertEqual(len(script.requests), 1)
+
+    def test_server_errors_are_retried_then_recorded_per_attempt(self):
+        url = 'https://www.ndbc.noaa.gov/data/realtime2/46028.txt'
+        session, script, _ = http_fixture.session((503, b'busy'), (503, b'busy'))
+        client = Client(NOW, session=session)
+        with self.assertRaises(http.HTTPStatusError):
+            client.get(url)
+        self.assertEqual(len(script.requests), 2)  # two attempts, as before
+        self.assertEqual([(r['attempt'], r['http_status']) for r in client.requests], [(1, 503), (2, 503)])
+        self.assertTrue(all(r['error'].startswith('HTTPStatusError') for r in client.requests))
+
+    def test_successful_receipt_keeps_the_published_fields(self):
+        url = 'https://www.ndbc.noaa.gov/data/realtime2/46028.txt'
+        headers = {'Date': 'Thu, 24 Sep 2026 12:00:00 GMT', 'Content-Type': 'text/plain',
+                   'Last-Modified': 'Thu, 24 Sep 2026 11:50:00 GMT'}
+        session, script, _ = http_fixture.session((200, b'#YY MM DD\n', headers))
+        client = Client(NOW, session=session)
+        client.get(url)
+        record = client.requests[-1]
+        for key in ('url', 'attempt', 'retrieved_at', 'http_status', 'http_date', 'final_url', 'content_type',
+                    'last_modified', 'bytes', 'sha256'):
+            self.assertIn(key, record)
+        self.assertEqual((record['http_status'], record['final_url'], record['bytes']), (200, url, 10))
+        self.assertEqual(script.requests[0]['headers']['User-Agent'], http.USER_AGENT)
+        self.assertEqual(script.requests[0]['headers']['Accept-Encoding'], 'gzip')
+
+    def test_private_and_unlisted_hosts_fail_closed_and_are_recorded(self):
+        def private(host, port, **_):
+            return [(2, 1, 6, '', ('10.0.0.8', port))]
+        session, script, _ = http_fixture.session((200, b'secret'), resolver=private)
+        client = Client(NOW, session=session)
+        with self.assertRaisesRegex(ValueError, 'non-public'):
+            client.get('https://www.ndbc.noaa.gov/data/realtime2/46028.txt')
+        with self.assertRaisesRegex(ValueError, 'allowlist'):
+            client.get('https://unreviewed.example.org/data')
+        self.assertEqual(script.requests, [])
+        self.assertEqual([r['error_class'] for r in client.requests], ['DisallowedHost', 'DisallowedHost'])
+        result = source('x', 'X', 'observation', 'https://unreviewed.example.org/data', 6,
+                        lambda c: c.get('https://unreviewed.example.org/data'), NOW,
+                        client_factory=lambda now: Client(now, session=session))
+        self.assertEqual(result['status'], 'failed')
+        self.assertIn('DisallowedHost', result['issue'])
 
     def test_trip_counts_preserve_release_zero_and_unknown_location(self):
         page = '''Fish Counts September 20, 2026

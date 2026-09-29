@@ -21,9 +21,7 @@ class DraftRehearsalTests(unittest.TestCase):
         draft['status'] = 'draft'
         with tempfile.TemporaryDirectory(dir=REPO / 'var') as directory:
             output = Path(directory)
-            data = {'generated_at': '2026-09-24T00:00:00Z', 'completed_at': '2026-09-24T00:00:01Z',
-                    'health': {'status': 'degraded', 'issues': ['fixture']},
-                    'regulations': {}, 'sources': {}}
+            data = {**fixture('daily-latest.json'), 'region_id': 'crescent-city'}
             with patch('scripts.refresh_regions.load_region', return_value=draft), \
                     patch('scripts.refresh_regions.daily', return_value=data) as collector, \
                     patch('scripts.refresh_regions.coverage', return_value={'status': 'fixture', 'species': {}}):
@@ -46,9 +44,14 @@ class DraftRehearsalTests(unittest.TestCase):
                 refresh('daily', Path(directory), only_region='crescent-city', include_drafts=True)
 
 
+def fixture(name):
+    """A schema-valid feed sample (tests/fixtures/feeds), since writers validate before publishing."""
+    return json.loads((REPO / 'tests/fixtures/feeds' / name).read_text())
+
+
 def live_feed(now, prior, region_id):
-    return {'schema_version': 1, 'region_id': region_id, 'generated_at': '2026-09-28T12:00:00Z',
-            'completed_at': '2026-09-28T12:00:05Z', 'sources': {}, 'health': {'status': 'ok', 'issues': []}}
+    return {**fixture('live-latest.json'), 'region_id': region_id, 'generated_at': '2026-09-28T12:00:00Z',
+            'completed_at': '2026-09-28T12:00:05Z', 'health': {'status': 'ok', 'issues': []}}
 
 
 def raising_for(*broken, error=ValueError):
