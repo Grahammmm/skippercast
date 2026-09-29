@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {cacheKey, overLimit} from '../server/edge-cache.js';
-import {useBucket, EDGE_CACHE_MAX_BYTES} from '../server/feeds.js';
+import {cacheKey, overLimit} from '../server/edge-cache.ts';
+import {useBucket, EDGE_CACHE_MAX_BYTES} from '../server/feeds.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {};
 globalThis.BUILD_ID = 'b1';
-const {default: worker} = await import('../server/worker.js');
+const {default: worker} = await import('../server/index.ts');
 
 // A stand-in for caches.default with the Workers Cache API semantics the Worker
 // relies on: put() refuses 206 and no-store; match() answers Range from a

@@ -1,6 +1,6 @@
 import {build} from 'esbuild';
 import {readdir,readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
-import {headersFile} from '../server/security-headers.js';
+import {headersFile} from '../server/security-headers.ts';
 import {fingerprint} from './fingerprint.mjs';
 
 const regions={};const draftRegions=[];
@@ -20,7 +20,7 @@ const {buildId,shells}=await fingerprint('dist/client');
 // Cloudflare applies these to static assets it serves without running the Worker.
 await writeFile('dist/client/_headers',headersFile());
 
-await build({entryPoints:['server/worker.js'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',
+await build({entryPoints:['server/index.ts'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',
   define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment),SHELLS:JSON.stringify(shells),BUILD_ID:JSON.stringify(buildId)},sourcemap:false});
 console.log(`Built shared regional Worker and public assets (build ${buildId}).`);
 

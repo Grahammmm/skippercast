@@ -38,7 +38,7 @@ on:
       - "deployments/**"
 
 # Each job gets only what it needs. The OIDC token for private trip checks is
-# issued to the notify job only; server/job-auth.js pins this workflow file
+# issued to the notify job only; server/job-auth.ts pins this workflow file
 # (workflow_ref), so the jobs stay in live-conditions.yml.
 permissions: {}
 
@@ -95,7 +95,7 @@ jobs:
     permissions:
       contents: read   # watch the conditions branch head
       actions: read    # see when the refresh job has finished
-      id-token: write  # short-lived identity for /api/jobs/check (server/job-auth.js)
+      id-token: write  # short-lived identity for /api/jobs/check (server/job-auth.ts)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

@@ -10,12 +10,12 @@
 | --- | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | GitHub Actions secret | `deploy-cloudflare.yml`, `live-conditions.yml`, `daily-data.yml`, `forecast-tiles.yml`, `seafloor.yml` (via `scripts/cloudflare_deploy.sh`, `scripts/publish_r2.py`, `src/skippercast/seafloor/publish.py`) | Workers, D1 and R2 edit on the account; its id and SHA-256 are also the R2 S3 key pair |
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions secret | same | Not a credential; an identifier |
-| `ANTHROPIC_API_KEY` | GitHub Actions secret → Worker secret (uploaded by `cloudflare_deploy.sh`) | `server/boat-lookup.js` via `/api/boat/lookup` | Spends Anthropic credit |
-| `WATCHDOG_GITHUB_TOKEN` | GitHub Actions secret → Worker secret `GITHUB_TOKEN` | `server/watchdog.js` | Fine-grained token: Actions read and write on this repository only |
-| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | ChatGPT Sites project (secret / runtime value) | `server/worker.js` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
-| `EXTRA_ORIGINS` | GitHub Actions variable → Worker secret | `server/worker.js` Origin check | Not a credential; adds allowed origins |
+| `ANTHROPIC_API_KEY` | GitHub Actions secret → Worker secret (uploaded by `cloudflare_deploy.sh`) | `server/boat-lookup.ts` via `/api/boat/lookup` | Spends Anthropic credit |
+| `WATCHDOG_GITHUB_TOKEN` | GitHub Actions secret → Worker secret `GITHUB_TOKEN` | `server/watchdog.ts` | Fine-grained token: Actions read and write on this repository only |
+| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | ChatGPT Sites project (secret / runtime value) | `server/trips.ts` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
+| `EXTRA_ORIGINS` | GitHub Actions variable → Worker secret | `server/http.ts` `requireOrigin` (origins from `server/middleware/context.ts`) | Not a credential; adds allowed origins |
 
-No secret exists for: the scheduler (GitHub OIDC; the policy is the public `deployments/production.json`, see `server/job-auth.js`), the Actions `github.token` (issued per run), D1 and R2 bindings (granted by the Worker's configuration). Repository variables `CLOUDFLARE_SITE_URL` and, after PR #30, `FEEDS_PUBLIC_BASE` are not secrets.
+No secret exists for: the scheduler (GitHub OIDC; the policy is the public `deployments/production.json`, see `server/job-auth.ts`), the Actions `github.token` (issued per run), D1 and R2 bindings (granted by the Worker's configuration). Repository variables `CLOUDFLARE_SITE_URL` and, after PR #30, `FEEDS_PUBLIC_BASE` are not secrets.
 
 ## General order
 

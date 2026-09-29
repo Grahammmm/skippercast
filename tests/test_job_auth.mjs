@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validJobClaims,verifyJobToken} from '../server/job-auth.js';
+import {validJobClaims,verifyJobToken} from '../server/job-auth.ts';
 const policy=JSON.parse(readFileSync(new URL('../deployments/production.json',import.meta.url)));
 const now=1800590400,s=policy.scheduler;
 const claims={iss:'https://token.actions.githubusercontent.com',aud:policy.public_origin+'/api/jobs/check',sub:`repo:${s.repository}:ref:${s.ref}`,repository:s.repository,repository_id:s.repository_id,repository_owner_id:s.owner_id,ref:s.ref,workflow_ref:s.repository+'/'+s.workflow+'@'+s.ref,event_name:'schedule',iat:now,nbf:now,exp:now+300,jti:'unique-test-run'};

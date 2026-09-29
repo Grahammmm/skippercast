@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {assessTrip,alertDecision,alertMessage,tripChopLimit} from '../server/alert-policy.js';
+import {assessTrip,alertDecision,alertMessage,tripChopLimit} from '../server/alert-policy.ts';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 globalThis.REGIONS={'morro-bay':read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
 import {withSessions} from './fixtures/test-sessions.mjs';
-const {default:deployed,validateSubscription,checkTrips,validateTripBoat}=await import('../server/worker.js');
+const {default:deployed,validateSubscription,checkTrips,validateTripBoat}=await import('../server/index.ts');
 // Owner-isolation tests sign in through real session cookies (fixtures/test-sessions.mjs);
 // deployed.fetch is the Worker exactly as deployed.
 const worker=withSessions(deployed);
@@ -148,7 +148,7 @@ test('the cron trigger prunes expired records without any job call',async()=>{
   }finally{globalThis.fetch=originalFetch;sql.close();}
 });
 test('boat lookup settings: kill switch, global cap and model id come from Worker vars',async()=>{
-  const {lookupSettings,DEFAULT_MODEL,DEFAULT_GLOBAL_DAILY_LIMIT}=await import('../server/boat-lookup.js');
+  const {lookupSettings,DEFAULT_MODEL,DEFAULT_GLOBAL_DAILY_LIMIT}=await import('../server/boat-lookup.ts');
   assert.deepEqual(lookupSettings({}),{enabled:true,model:DEFAULT_MODEL,globalDailyLimit:DEFAULT_GLOBAL_DAILY_LIMIT});
   assert.equal(DEFAULT_GLOBAL_DAILY_LIMIT,500);
   for(const off of ['false','FALSE',' false '])assert.equal(lookupSettings({BOAT_LOOKUP_ENABLED:off}).enabled,false);

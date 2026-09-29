@@ -77,7 +77,7 @@ Every item here must be closed, licensed or removed before SkipperCast charges m
 
 | Service | Id | Licence / terms | Attribution required | Commercial use OK | Where used in app | Action | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| OpenStreetMap standard tiles | `osm-tiles` | ODbL data; OSMF tile usage policy | yes | **unknown** | `dist/chart-map.js`, `dist/map-test-common.js`, `server/security-headers.js` (CSP) | [Blocker B6](#b6--openstreetmap-tile-service) | Engineering |
+| OpenStreetMap standard tiles | `osm-tiles` | ODbL data; OSMF tile usage policy | yes | **unknown** | `dist/chart-map.js`, `dist/map-test-common.js`, `server/security-headers.ts` (CSP) | [Blocker B6](#b6--openstreetmap-tile-service) | Engineering |
 | NOAA Chart Display Service (ENC WMS) | `noaa-enc-display` | US public domain | no (credit requested) | yes | `dist/chart-map.js`, `dist/map-test-common.js` | None | Engineering |
 
 The browser also calls NWS (`api.weather.gov`) and NOAA CO-OPS (`api.tidesandcurrents.noaa.gov`) directly; they are public domain and covered by the `nws-weather` and `noaa-tides` rows.

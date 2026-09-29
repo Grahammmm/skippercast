@@ -41,11 +41,11 @@ def check_vendor_integrity(pinned):
 
     The integrity value must match both the file and scripts/web-vendor-sha256.json,
     so a vendor update has to change all three together. Pages carry no meta CSP:
-    the policy is sent as a header from server/security-headers.js.
+    the policy is sent as a header from server/security-headers.ts.
     """
     for path in WEB.glob("*.html"):
         text = path.read_text()
-        assert 'http-equiv="Content-Security-Policy"' not in text, (path, "CSP belongs in server/security-headers.js")
+        assert 'http-equiv="Content-Security-Policy"' not in text, (path, "CSP belongs in server/security-headers.ts")
         parser = AssetParser()
         parser.feed(text)
         for tag, attrs in parser.tags:
