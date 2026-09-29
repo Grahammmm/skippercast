@@ -1,12 +1,12 @@
 # Web app
 
-The app is a mobile-first map workspace with three views: **Map, Conditions, and Guide**. Its source lives in `dist/` and is tracked directly; no framework build or package installation is required. Serve that directory with any static HTTP server:
+The app is a mobile-first map workspace with four views in the bottom navigation: **Map, Conditions, Export and Guide**. Its source lives in `dist/` as plain, tracked files with no framework. To view it locally, no build or package installation is needed; serve that directory with any static HTTP server:
 
 ```bash
 python3 -m http.server 8485 --directory dist
 ```
 
-Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site.
+Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site. Deployment does need a build: `pnpm install --frozen-lockfile && pnpm build` (`scripts/build-worker.mjs`) copies `dist/` to `dist/client`, renames every script, style and page with a content hash, and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). A plain static server cannot answer the Worker's `/feeds/` and `/api/` routes, so published feeds and forecasts fail there; to run the whole app locally, build and then start `npx --yes wrangler@4.142.0 dev`.
 
 ## What works
 
