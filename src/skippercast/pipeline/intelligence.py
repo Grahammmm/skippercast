@@ -5,8 +5,8 @@ import argparse
 import json
 import math
 from pathlib import Path
-from urllib.parse import urlencode
 from .collect import Client, source, stamp, model_loader, MODEL_META
+from ..forecast import ensemble as forecast_ensemble
 from ..forecast import local as forecast_local
 from .ocean import collect_ocean
 from .parsers import ndbc
@@ -16,45 +16,63 @@ from .forecast_coverage import audit_forecast_coverage
 from ..platform.contracts import load_region, atomic_json, read_json
 
 
+KNOTS_PER_MS=3600/1852
+
+
+def _member_value(series,t,times):
+    """A member's value at unix time t, linear between native three-hour steps; None if a neighbour is missing."""
+    if t in times:
+        value=series[times.index(t)]
+        return value if isinstance(value,(int,float)) and math.isfinite(value) else None
+    after=next(i for i,x in enumerate(times) if x>t);before=after-1
+    a,b=series[before],series[after]
+    if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (a,b)):return None
+    return a+(b-a)*(t-times[before])/(times[after]-times[before])
+
+
 def ensemble(client,region):
+    """GEFS wind members at the region's forecast points from SkipperCast's own NOAA build.
+
+    `forecast.ensemble` reads the members from NOAA's AWS bucket once per cycle for
+    every region; this samples that build and keeps the hourly frame shape the app uses."""
     model=region['intelligence']['wind_ensemble_model'];points=region['forecast_points']
     if model!='gfs025':raise ValueError('Ensemble model requires a reviewed adapter')
-    meta_url='https://ensemble-api.open-meteo.com/data/ncep_gefs025/static/meta.json'
-    meta=client.get(meta_url,True)
-    params={'latitude':','.join(str(p['latitude']) for p in points),'longitude':','.join(str(p['longitude']) for p in points),
-            'models':model,'hourly':'wind_speed_10m,wind_gusts_10m','wind_speed_unit':'kn','timeformat':'unixtime',
-            'timezone':'UTC','cell_selection':'sea','forecast_days':8}
-    url='https://ensemble-api.open-meteo.com/v1/ensemble?'+urlencode(params)
-    data=client.get(url,True);data=data if isinstance(data,list) else [data]
-    after=client.get(meta_url,True)
-    if any(meta.get(k)!=after.get(k) for k in ('last_run_initialisation_time','last_run_modification_time')):raise ValueError('Ensemble updated during collection; retry next run')
+    manifest=forecast_ensemble.read('manifest.json',client)
+    data=forecast_ensemble.read(f"regions/{region['id']}.json",client)
+    after=forecast_ensemble.read('manifest.json',client)
+    meta,later=manifest.get('meta') or {},after.get('meta') or {}
+    if any(meta.get(k)!=later.get(k) for k in ('last_run_initialisation_time','last_run_modification_time')):raise ValueError('Ensemble updated during collection; retry next run')
     cycle=meta.get('last_run_initialisation_time')
-    if not isinstance(cycle,(int,float)):raise ValueError('Ensemble initialization absent')
-    if len(data)!=len(points):raise ValueError('Ensemble regional point mismatch')
+    if not isinstance(cycle,(int,float)) or data.get('cycle')!=cycle or manifest.get('model')!=forecast_ensemble.MODEL_ID:raise ValueError('Ensemble initialization absent or inconsistent')
+    times=data.get('times',[]);members=data.get('members')
+    if members!=forecast_ensemble.MEMBERS or data.get('units')!={'wind_speed_10m':'m/s','wind_gusts_10m':'m/s'}:raise ValueError('Ensemble members or units changed')
+    if not times or times[0]!=cycle or any(b-a!=3*3600 for a,b in zip(times,times[1:])):raise ValueError('Invalid ensemble time axis')
+    rows=data.get('points',[])
+    if len(rows)!=len(points) or any([r.get('latitude'),r.get('longitude')]!=[p['latitude'],p['longitude']] for r,p in zip(rows,points)):
+        raise ValueError('Ensemble regional point mismatch; waiting for the next build')
     out=[]
-    for requested,p in zip(points,data,strict=True):
-        h=p.get('hourly',{});units=p.get('hourly_units',{});times=h.get('time',[])
-        if units.get('time')!='unixtime' or p.get('utc_offset_seconds')!=0 or len(set(times))!=len(times):raise ValueError('Invalid ensemble time axis')
+    for requested,p in zip(points,rows,strict=True):
+        wind_series,gust_series=p.get('wind_speed_10m',[]),p.get('wind_gusts_10m',[])
+        if len(wind_series)!=members or len(gust_series)!=members or any(len(s)!=len(times) for s in wind_series+gust_series):raise ValueError('Ensemble member series length mismatch')
         frames=[]
-        for i,t in enumerate(times):
-            if t>meta.get('data_end_time',t):continue
-            members=[]
-            for member in range(31):
-                suffix='' if member==0 else f'_member{member:02d}'
-                keys=['wind_speed_10m'+suffix,'wind_gusts_10m'+suffix]
-                values=[]
-                for key in keys:
-                    values.append(h[key][i] if units.get(key)=='kn' and len(h.get(key,[]))==len(times) else None)
-                wind,gust=values
-                if not isinstance(wind,(int,float)) or not math.isfinite(wind) or wind<0:continue
-                gust=gust if isinstance(gust,(int,float)) and math.isfinite(gust) and gust>=wind else None
-                members.append([member,wind,gust])
-            frames.append({'time':t,'members':members})
+        for t in range(times[0],times[-1]+1,3600):
+            if p.get('grid') is None:break
+            values=[]
+            for member in range(members):
+                wind=_member_value(wind_series[member],t,times);gust=_member_value(gust_series[member],t,times)
+                if wind is None or wind<0:continue
+                wind=round(wind*KNOTS_PER_MS,1);gust=None if gust is None else round(gust*KNOTS_PER_MS,1)
+                gust=gust if gust is not None and gust>=wind else None
+                values.append([member,wind,gust])
+            frames.append({'time':t,'members':values})
         out.append({'point_id':requested['id'],'requested':[requested['latitude'],requested['longitude']],
-                    'grid':[p.get('latitude'),p.get('longitude')],'frames':frames})
-    return {'provider':'NOAA GEFS via Open-Meteo','model':'ncep_gefs025','issued_at':stamp(datetime.fromtimestamp(cycle,timezone.utc)),
-            'meta':meta,'expected_members':31,'native_step_hours':3,'api_step_hours':1,'resolution_km':25,'points':out,'source_url':'https://open-meteo.com/en/docs/ensemble-api',
-            'limitations':'Fractions of actual ensemble members, not calibrated probabilities. Provider interpolates native 3-hour forecasts to hourly output. Missing members and inconsistent gusts are excluded; no independent-hour multiplication.'}
+                    'grid':p.get('grid'),'distance_km':p.get('distance_km'),'frames':frames})
+    upstream=manifest.get('upstream') or {}
+    return {'provider':'NOAA GEFS (NOAA Open Data Dissemination on AWS)','model':forecast_ensemble.MODEL_ID,'issued_at':stamp(datetime.fromtimestamp(cycle,timezone.utc)),
+            'meta':meta,'expected_members':members,'native_step_hours':3,'api_step_hours':1,'resolution_km':25,'points':out,
+            'source_url':forecast_ensemble.DOCUMENTATION,'upstream':{k:upstream.get(k) for k in ('cycle_prefix','product','fields','land_mask','messages','messages_sha256','missing')},
+            'sampling':f"Nearest GFS-0.25° sea cell within {manifest.get('sea_radius_km',forecast_ensemble.SEA_RADIUS_KM)} km; returned coordinates and distance accompany every point.",
+            'limitations':'Fractions of actual ensemble members, not calibrated probabilities. SkipperCast linearly interpolates native 3-hour member output to hourly. Missing members and inconsistent gusts are excluded; no independent-hour multiplication.'}
 
 
 def model_source(model,region,now,previous):
@@ -105,7 +123,7 @@ def run(region_id,output,previous_root=None,now=None):
     previous=prior.get('sources',{});models=['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam']
     def one(model):return 'model-'+model,model_source(model,region,now,previous.get('model-'+model))
     with ThreadPoolExecutor(max_workers=4) as pool:sources=dict(pool.map(one,models))
-    sources['ensemble']=source('ensemble','NOAA GEFS ensemble','forecast','https://open-meteo.com/en/docs/ensemble-api',36,lambda c:ensemble(c,region),now,previous.get('ensemble'))
+    sources['ensemble']=source('ensemble','NOAA GEFS ensemble','forecast',forecast_ensemble.DOCUMENTATION,36,lambda c:ensemble(c,region),now,previous.get('ensemble'))
     # Expensive regional current reads are shared for an hour; their original times remain intact.
     if prior and (now.timestamp()-datetime.fromisoformat(prior['generated_at'].replace('Z','+00:00')).timestamp())<3600 and prior.get('ocean_collected_at') and (now.timestamp()-datetime.fromisoformat(prior['ocean_collected_at'].replace('Z','+00:00')).timestamp())<3600:
         sources.update({k:v for k,v in previous.items() if k.startswith(('hfr-','spectra-')) or k=='wcofs'});ocean_at=prior['ocean_collected_at']

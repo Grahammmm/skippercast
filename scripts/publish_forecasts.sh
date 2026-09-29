@@ -32,6 +32,24 @@ for model, state in index['models'].items():
         print(f"{model}: {state['state']} {state['cycle']}")
 PY
 
+# GEFS wind-ensemble members at the regions' forecast points (no tiles). A failure
+# keeps the previous build and must not stop the tiles from publishing.
+if ! python -m skippercast.forecast.ensemble --output "$out" --previous "$pub" ${FORCE:+--force} > var/forecast-ensemble.json; then
+  echo "::warning title=GEFS wind ensemble::build failed and no previous build exists"
+fi
+python - <<'PY'
+import json
+try:
+    report = json.load(open('var/forecast-ensemble.json'))
+except (OSError, ValueError):
+    report = {'ncep_gefs025': {'status': 'failed', 'issue': 'no build report'}}
+for model, state in report.items():
+    if state['status'] != 'ok':
+        print(f"::warning title=Forecast model {model}::{state.get('issue')} (kept previous: {state.get('kept_previous')})")
+    else:
+        print(f"{model}: {state['state']} {state['cycle']}")
+PY
+
 rsync -a --delete --exclude .git "$out"/ "$pub"/
 cp docs/forecast-data.md "$pub"/README.md
 git -C "$pub" add -A

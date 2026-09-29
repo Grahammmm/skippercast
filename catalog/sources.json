@@ -1267,19 +1267,19 @@
     },
     {
       "id": "noaa-gefs-members",
-      "name": "NOAA GEFS wind ensemble via Open-Meteo",
-      "provider": "NOAA GEFS wind ensemble via Open-Meteo",
+      "name": "NOAA GEFS 0.25° wind ensemble members",
+      "provider": "NOAA NCEP GEFS (NOAA Open Data Dissemination on AWS)",
       "needs": [
         "wind-ensemble"
       ],
-      "documentation_url": "https://open-meteo.com/en/docs/ensemble-api",
-      "adapter": "open-meteo-ensemble",
+      "documentation_url": "https://registry.opendata.aws/noaa-gefs/",
+      "adapter": "gefs-grib2-points",
       "review_status": "approved",
       "reviewed_at": "2026-09-22",
       "rights": {
-        "license": "CC-BY-4.0",
-        "attribution": "NOAA GEFS wind ensemble via Open-Meteo",
-        "terms_url": "https://open-meteo.com/en/docs/ensemble-api"
+        "license": "public-domain",
+        "attribution": "NOAA NCEP Global Ensemble Forecast System (GEFS)",
+        "terms_url": "https://registry.opendata.aws/noaa-gefs/"
       },
       "authenticity": {
         "basis": "Official provider documentation and a successful regional response with units, time axes, masks and request hashes reviewed.",
@@ -1287,11 +1287,12 @@
       },
       "coverage_note": "Regional grid, actual populated times and returned sampling coordinates are preserved.",
       "limitations": [
-        "31 members; provider interpolates native three-hour output to hourly.",
-        "Fractions are uncalibrated and not independent hourly probabilities. Free noncommercial access has usage limits."
+        "31 members (control and 30 perturbations) at native three-hour steps from the pgrb2sp25 GRIB2 files; SkipperCast linearly interpolates each member to hourly and samples the nearest GFS 0.25° sea cell within 30 km of each forecast point.",
+        "Fractions are uncalibrated and not independent hourly probabilities."
       ],
       "allowed_hosts": [
-        "ensemble-api.open-meteo.com"
+        "noaa-gefs-pds.s3.amazonaws.com",
+        "noaa-gfs-bdp-pds.s3.amazonaws.com"
       ]
     },
     {
