@@ -99,7 +99,7 @@ flowchart TB
     class api,jobs,future planned
 ```
 
-The web app uses static HTML, CSS, JavaScript, Leaflet, and OpenStreetMap, with Sites configured for static hosting. It requests forecasts directly from providers. The Python core uses the standard library and runs independently. An application API, database, nautical chart provider, and durable public-app jobs remain unimplemented.
+The web app uses static HTML, CSS, JavaScript, Leaflet, and OpenStreetMap, served by SkipperCast's Cloudflare Worker. It requests forecasts directly from providers. The Python core uses the standard library and runs independently. An application API, database, nautical chart provider, and durable public-app jobs remain unimplemented.
 
 The existing personal forecast monitor and private Telegram integration operate separately from the public app. They can inform a later integration, but cloning this repository does not start a schedule or connect a messaging account. See [the web app guide](web-app.md) for current hosting and local-use instructions.
 

@@ -21,17 +21,16 @@ const db=env=>{if(!env.DB)throw Error('storage unavailable');return env.DB;};
 export class ClientError extends Error {}
 export class RateLimited extends Error {}
 const regionById=id=>typeof id==='string'&&Object.hasOwn(regions,id)?regions[id]:null;
-// Identity comes from the host platform. ChatGPT Sites injects the OpenAI identity
-// headers after authenticating the visitor and strips any the visitor sends. Any
-// other host (our own Cloudflare Worker) must never trust them: a visitor could
-// forge them and act as any owner. wrangler.jsonc sets IDENTITY_PROVIDER to
-// "none"; the Sites package carries no wrangler config, so the var is absent there.
-let identityProvider='chatgpt-sites';
-const SIGN_IN={'chatgpt-sites':'/signin-with-chatgpt?return_to=%2F%23forecast'};
-function user(request){
-  if(identityProvider!=='chatgpt-sites')return null;
-  const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return id&&email?id:null;
-}
+// Identity is SkipperCast's own. No request header names a user: a visitor can
+// send any header, so none is ever trusted. IDENTITY_PROVIDER (wrangler.jsonc)
+// selects how a request is tied to an account; an absent, empty or unknown
+// value means no identity at all, so every private route answers 401 (fail
+// closed). No provider exists yet: sign-in arrives with SkipperCast accounts.
+const IDENTITY={};
+const SIGN_IN={};
+let identityProvider='none';
+const signInPath=()=>Object.hasOwn(SIGN_IN,identityProvider)?SIGN_IN[identityProvider]:null;
+const noIdentity=async()=>null;
 async function body(request){
   if(Number(request.headers.get('content-length'))>8192)throw new ClientError('body too large');
   const reader=request.body?.getReader();if(!reader)throw new ClientError('invalid empty body');
@@ -49,8 +48,7 @@ async function readFeed(url){
     const stored=await readBucketJSON(url);if(stored!==undefined)return stored;
     stage='cache';
     const key=new Request(url);let cache,cached;
-    // Sites isolates named caches. Its shared default cache is intentionally
-    // unavailable; an optional cache failure must never disable public feeds.
+    // The named cache is optional; a cache failure must never disable public feeds.
     try{cache=await globalThis.caches?.open('skippercast-public-feeds-v1');cached=await cache?.match(key);}catch{cache=null;}
     if(cached)return cached.json();
     // Workers supports manual redirects; response.ok rejects every 3xx below.
@@ -102,7 +100,7 @@ async function deliver(env,event){
 }
 // Retention: expired rate-limit rows, 90-day trips/events/receipts, 365-day feedback.
 // Runs from the Cloudflare cron (scheduled) and after each job page, so it never
-// depends on the GitHub Actions chain alone (the Sites host has no cron trigger).
+// depends on the GitHub Actions chain alone.
 export async function prune(env,now=Date.now()){
   const cutoff=new Date(now-90*86400000).toISOString();
   await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
@@ -158,28 +156,38 @@ function recordLookupUsage(env,usage,outcome){
 }
 function bind(env){
   useBucket(env);
-  identityProvider=env?.IDENTITY_PROVIDER??'chatgpt-sites';
+  identityProvider=String(env?.IDENTITY_PROVIDER??'none');
   // Extra origins (e.g. a workers.dev staging copy) may post; production origins come from the deployment policy.
   extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
 }
 export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(Promise.all([watchdog(env),scheduledPrune(env)]));},
 // Every response, including shells, assets, feeds and errors, carries the security headers.
-async fetch(request,env,ctx){return secure(await route(request,env,ctx));}};
+async fetch(request,env,ctx){return handle(request,env,ctx);}};
+// The identity resolver is chosen from IDENTITY_PROVIDER. Tests may pass their
+// own resolver here; the deployed Worker only ever goes through fetch above.
+export async function handle(request,env,ctx,identify){bind(env);return secure(await route(request,env,ctx,identify||(Object.hasOwn(IDENTITY,identityProvider)?IDENTITY[identityProvider]:noIdentity)));}
 const build=()=>typeof BUILD_ID==='undefined'?'dev':BUILD_ID;
 const PUBLIC_TTL='public, max-age=300, s-maxage=300';
-async function route(request,env,ctx){
-  bind(env);
+// www.skippercast.com is attached to the Worker only to send visitors to the
+// one canonical host (cookies, passkeys and caches are per host).
+export function canonicalRedirect(url){
+  if(!url.hostname.startsWith('www.'))return null;
+  const target=new URL(url);target.hostname=url.hostname.slice(4);target.hash='';
+  return new Response(null,{status:301,headers:{Location:target.href,'Cache-Control':'public, max-age=3600'}});
+}
+async function route(request,env,ctx,identify){
   const url=new URL(request.url),path=url.pathname;
+  const canonical=canonicalRedirect(url);if(canonical)return canonical;
   if(request.method==='GET'&&path.startsWith('/feeds/')){
-    // Per-IP limits apply only where the Rate Limiting binding exists (not on Sites).
+    // Per-IP limits apply only where the Rate Limiting binding exists (not in local tests).
     if(await overLimit(env.FEED_LIMITER,'feeds:'+clientIP(request)))return tooManyRequests();
     const served=await serveFeed(request,path,env.ASSETS,{ctx,build:build()});if(served)return served;
     return new Response('Not found',{status:404});
   }
   if(!path.startsWith('/api/')){
     if(!env.ASSETS)return new Response('Not found',{status:404});
-    // The Sites edge can retain a previously deployed asset at a stable URL, so
-    // scripts, styles and pages are published under content-hashed names
+    // Browsers and caches can retain a previously deployed asset at a stable URL,
+    // so scripts, styles and pages are published under content-hashed names
     // (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
     if(path==='/sw.js'){
       // Stable service-worker URL (see scripts/fingerprint.mjs STABLE): revalidate on every check.
@@ -241,9 +249,9 @@ async function route(request,env,ctx){
         return path==='/api/forecast'?{response:forecast,extra:[[key('/api/intelligence'),intelligence]]}:{response:intelligence,extra:[[key('/api/forecast'),forecast]]};
       });
     }
-    const owner=user(request);
-    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:SIGN_IN[identityProvider]||null});
-    if(!owner)return json({error:SIGN_IN[identityProvider]?'Sign in to save private trips or feedback':'Accounts are not available on this site yet',signIn:SIGN_IN[identityProvider]||null},401);
+    const owner=await identify(request,env);
+    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:signInPath()});
+    if(!owner)return json({error:signInPath()?'Sign in to save private trips or feedback':'Accounts are not available on this site yet',signIn:signInPath()},401);
     if(request.method!=='GET'){requireOrigin(request);await budget(env,owner);}
     if(path==='/api/boat/lookup'&&request.method==='POST'){
       // AI spec lookup for the boat profile: signed-in only, 20 per person per day,

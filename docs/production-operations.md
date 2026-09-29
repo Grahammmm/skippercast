@@ -1,6 +1,6 @@
 # Operating SkipperCast
 
-The public map uses shared browser components and reviewed regional packages. A small Sites Worker serves cached environmental data and private, sign-in-only trip alerts and comfort feedback in D1. The existing personal Telegram monitor stays separate: its credentials, delivery records and route remain outside this site and repository.
+The public map uses shared browser components and reviewed regional packages. A small Cloudflare Worker serves cached environmental data and private, sign-in-only trip alerts and comfort feedback in D1. The existing personal Telegram monitor stays separate: its credentials, delivery records and route remain outside this site and repository.
 
 | Process | Owner and cadence | Failure behavior |
 |---|---|---|
@@ -14,14 +14,14 @@ Schedules can be delayed. Freshness uses actual source/run times, not the schedu
 
 ## Deploy and configure
 
-SkipperCast can also deploy to its own Cloudflare account with feeds in R2; see [Cloudflare](cloudflare.md). skippercast.com stays on Sites until sign-in moves off ChatGPT.
+SkipperCast runs only on its own Cloudflare account: the Worker, static site, D1, R2 feeds and cron watchdog. The workers.dev address is staging; skippercast.com and www.skippercast.com attach as Worker custom domains once the zone is on Cloudflare (www redirects to the apex). See [Cloudflare](cloudflare.md).
 
 1. Edit reviewed region/source/jurisdiction/ecology configuration. Run the region compiler and offline tests.
-2. `pnpm install --frozen-lockfile`, then `pnpm build`. Authored web files remain in `dist/`; generated `dist/client`, `dist/server` and `dist/.openai` are ignored. The build copies committed Drizzle migrations into `dist/.openai/drizzle`.
-3. Publish the exact committed source through Sites. `.openai/hosting.json` declares logical binding `DB`; the platform provisions it and applies migrations. Never create tables in request handlers. Add migrations rather than rewriting a deployed one.
-4. Keep `VAPID_PRIVATE_KEY` in Sites as a secret and its matching `VAPID_PUBLIC_KEY` as a runtime value. Preserve the pair across releases so existing subscriptions remain valid. Neither belongs in public feeds or logs.
-5. `deployments/production.json` defines the public and allowed origins, plus the scheduler's immutable GitHub repository/owner IDs, branch and workflow. A new deployment must change these reviewed settings. No long-lived scheduler password is needed.
-6. Preserve public audience. Anonymous readers use maps and weather. Platform-owned `/signin-with-chatgpt` enables private features; server ownership uses only platform-injected user headers.
+2. `pnpm install --frozen-lockfile`, then `pnpm build`. Authored web files remain in `dist/`; generated `dist/client` and `dist/server` are ignored.
+3. Merge to `main`. After Offline checks pass, `.github/workflows/deploy-cloudflare.yml` backs up D1, applies the committed `drizzle/` migrations (`migrations_dir` in `wrangler.jsonc`), deploys and smoke-tests. Never create tables in request handlers. Add migrations rather than rewriting a deployed one.
+4. Keep `VAPID_PRIVATE_KEY` as a Worker secret and its matching `VAPID_PUBLIC_KEY` as a runtime value. Preserve the pair across releases so existing subscriptions remain valid. Neither belongs in public feeds or logs.
+5. `deployments/production.json` defines the public and allowed origins, plus the scheduler's immutable GitHub repository/owner IDs, branch and workflow. A new deployment must change these reviewed settings. No long-lived scheduler password is needed. The `EXTRA_ORIGINS` secret adds the workers.dev staging origin.
+6. Preserve public audience. Anonymous readers use maps and weather. Private features need a SkipperCast account; no request header is ever trusted as identity, and `IDENTITY_PROVIDER` in `wrangler.jsonc` must name the sign-in method explicitly (absent or `none` closes every private route).
 
 The scheduler obtains a short-lived OIDC token for the exact `/api/jobs/check` audience. The Worker accepts RS256 signatures from GitHub's fixed JWKS endpoint and verifies issuer, audience, subject, repository ID, owner ID, branch, workflow, event and validity period. Pull-request identities cannot run production alerts. Tokens are not logged or saved. See [GitHub's claims documentation](https://docs.github.com/en/actions/reference/security/oidc).
 

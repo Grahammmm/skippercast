@@ -96,7 +96,7 @@ test('/api/habitat is cached per region', () => withEdge(async () => {
   assert.equal(reads, 1);
 }));
 
-test('without caches.default (ChatGPT Sites) the endpoints still answer', async () => {
+test('without caches.default the endpoints still answer', async () => {
   const originalCaches = globalThis.caches, originalFetch = globalThis.fetch;
   globalThis.caches = {get default() { throw Error('default cache forbidden'); }, async open() { throw Error('no'); }};
   globalThis.fetch = async () => Response.json({schema_version: 1, region_id: 'morro-bay', layers: {}});

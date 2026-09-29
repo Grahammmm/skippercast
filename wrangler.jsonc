@@ -1,12 +1,14 @@
 {
-  // SkipperCast on its own Cloudflare account: the same Worker and static site
-  // that ChatGPT Sites serves today, plus R2 feeds and a cron watchdog.
-  // Deployed by .github/workflows/deploy-cloudflare.yml, which fills in the D1
-  // database id; see docs/cloudflare.md.
+  // SkipperCast on its own Cloudflare account: the Worker, the static site, D1,
+  // R2 feeds and a cron watchdog. Deployed by .github/workflows/deploy-cloudflare.yml,
+  // which fills in the D1 database id and, from the CUSTOM_DOMAINS repository
+  // variable, the skippercast.com custom domains; see docs/cloudflare.md.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "skippercast",
   "main": "dist/server/index.js",
   "compatibility_date": "2026-09-01",
+  // The workers.dev address stays on as staging, also once custom domains exist.
+  "workers_dev": true,
   "assets": {
     "directory": "dist/client",
     "binding": "ASSETS"
@@ -22,8 +24,9 @@
   "r2_buckets": [
     { "binding": "FEEDS", "bucket_name": "skippercast-feeds" }
   ],
-  // Never trust platform identity headers here: only ChatGPT Sites injects and
-  // strips them. Private features stay off until SkipperCast has its own sign-in.
+  // IDENTITY_PROVIDER picks how requests are tied to accounts. "none" (or no
+  // value) means no identity: every private route answers 401. No request
+  // header is ever trusted as identity.
   // BOAT_LOOKUP_ENABLED "false" is the AI boat-lookup kill switch;
   // BOAT_LOOKUP_GLOBAL_DAILY_LIMIT caps lookups across all owners per UTC day.
   // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.js).
@@ -34,7 +37,7 @@
   },
   // Per-IP limits for the anonymous read endpoints (server/edge-cache.js):
   // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer
-  // string unique to this account. Absent on ChatGPT Sites, where they no-op.
+  // string unique to this account. Without the bindings (tests) they no-op.
   "ratelimits": [
     { "name": "PUBLIC_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
     { "name": "FEED_LIMITER", "namespace_id": "1002", "simple": { "limit": 300, "period": 60 } }

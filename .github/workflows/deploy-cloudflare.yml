@@ -1,8 +1,11 @@
 name: Deploy to Cloudflare
 
-# Deploys main to SkipperCast's own Cloudflare account (staging on workers.dev
-# until sign-in moves off ChatGPT; see docs/cloudflare.md). Does nothing until
-# the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets exist.
+# Deploys main to SkipperCast's Cloudflare account: always the workers.dev
+# address, plus the hosts in the CUSTOM_DOMAINS repository variable (e.g.
+# skippercast.com,www.skippercast.com) once that zone is on Cloudflare; see
+# docs/cloudflare.md. Does nothing until the CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID secrets exist. CLOUDFLARE_SITE_URL names the host the
+# smoke test checks (the custom domain once it is attached).
 #
 # Only a main commit that passed "Offline checks" is deployed, and exactly that
 # commit. After deploying, the site is smoke-tested; a failure rolls the Worker
@@ -68,6 +71,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
           EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
+          CUSTOM_DOMAINS: ${{ vars.CUSTOM_DOMAINS }}
         run: |
           mkdir -p var
           bash scripts/cloudflare_deploy.sh
