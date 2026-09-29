@@ -74,7 +74,18 @@ export function validateTrip(input,now=Date.now()){
   const today=dateInZone(now,r.timezone),last=dateInZone(now+7*86400000,r.timezone);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||input.date<today||input.date>last)throw new ClientError('date must be within the next seven days');
   for(const [key,min,max] of [['start_hour',0,22],['end_hour',1,23],['wind_limit',1,30],['gust_limit',1,40],['sea_limit',.5,10]])if(typeof input[key]!=='number'||!Number.isFinite(input[key])||input[key]<min||input[key]>max)throw new ClientError('invalid '+key);
-  if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw new ClientError('invalid window or thresholds');return input;
+  if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw new ClientError('invalid window or thresholds');
+  return {...input,boat:validateTripBoat(input.boat)};
+}
+// The saved boat travels with the trip (profiles live in the browser). Ranges match
+// boatFactors() in dist/boat-handling.js; null means the reference boat.
+export function validateTripBoat(boat){
+  if(boat===undefined||boat===null)return null;
+  if(typeof boat!=='object'||Array.isArray(boat))throw new ClientError('invalid boat');
+  const out={};
+  for(const [key,min,max] of [['sea',.45,2.6],['wind',.6,1.8],['chop_period',2,15]])if(typeof boat[key]!=='number'||!Number.isFinite(boat[key])||boat[key]<min||boat[key]>max)throw new ClientError('invalid boat '+key);else out[key]=Math.round(boat[key]*1000)/1000;
+  out.name=typeof boat.name==='string'?boat.name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,80):'';
+  return out;
 }
 async function deliver(env,event){
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all()).results;
@@ -303,7 +314,7 @@ async function route(request,env,ctx,identify){
     if(path==='/api/trips'&&request.method==='GET')return json({trips:(await db(env).prepare('SELECT * FROM trips WHERE owner=? ORDER BY date DESC LIMIT 50').bind(owner).all()).results,events:(await db(env).prepare('SELECT id,trip_id,kind,message,status,created_at FROM alert_events WHERE owner=? ORDER BY created_at DESC LIMIT 30').bind(owner).all()).results});
     if(path==='/api/trips'&&request.method==='POST'){
       const t=validateTrip(await body(request));const count=await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner,dateInZone(Date.now(),regions[t.region].timezone)).first();if(count.n>=20)return json({error:'Limit of 20 active trips'},409);
-      const id=crypto.randomUUID();await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?)').bind(id,owner,t.region,t.point,t.species,t.date,t.start_hour,t.end_hour,t.wind_limit,t.gust_limit,t.sea_limit,new Date().toISOString()).run();return json({id},201);
+      const id=crypto.randomUUID();await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?)').bind(id,owner,t.region,t.point,t.species,t.date,t.start_hour,t.end_hour,t.wind_limit,t.gust_limit,t.sea_limit,new Date().toISOString(),t.boat?.name??null,t.boat?.sea??null,t.boat?.wind??null,t.boat?.chop_period??null).run();return json({id},201);
     }
     if(path==='/api/trips'&&request.method==='DELETE'){
       const {id}=await body(request);if(typeof id!=='string'||!id||id.length>64)throw new ClientError('trip id required');

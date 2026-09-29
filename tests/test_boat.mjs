@@ -93,3 +93,16 @@ test('lookup usage adds billed tokens and searches across paused turns', async (
   await assert.rejects(lookupBoat('x', {apiKey: 'k', fetcher: async () => new Response('no', {status: 500}), usage: failed}));
   assert.equal(failed.turns, 1);
 });
+
+test('trip alert defaults start from the saved boat; the reference boat keeps 8 / 12 kt and 3 ft', async () => {
+  const { tripDefaults, tripBoat } = await import('../dist/trip-alerts.js');
+  const { boatFactors } = await import('../dist/boat-handling.js');
+  assert.deepEqual(tripDefaults(boatFactors(null)), { wind: 8, gust: 12, sea: 3 });
+  const skiff = boatFactors({ loa_ft: 16, hull: 'flat', layout: 'skiff' });
+  const d = tripDefaults(skiff);
+  assert.ok(d.sea < 3 && d.wind <= 8 && d.gust >= d.wind);
+  assert.equal(tripBoat(boatFactors(null), null), null, 'no saved boat sends nothing');
+  const sent = tripBoat(skiff, { name: 'Skiff' });
+  assert.deepEqual(Object.keys(sent).sort(), ['chop_period', 'name', 'sea', 'wind']);
+  assert.ok(sent.sea >= 0.45 && sent.sea <= 2.6 && sent.wind >= 0.6 && sent.wind <= 1.8);
+});

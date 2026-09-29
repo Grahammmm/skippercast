@@ -7,6 +7,8 @@ export const trips=sqliteTable('trips',{
   windLimit:real('wind_limit').notNull(),gustLimit:real('gust_limit').notNull(),seaLimit:real('sea_limit').notNull(),
   enabled:integer('enabled').notNull().default(1), createdAt:text('created_at').notNull(),
   lastAssessment:text('last_assessment'),finalDeliveredAt:text('final_delivered_at'),
+  // Saved boat when the trip was saved (dist/boat-handling.js factors); null = reference boat.
+  boatName:text('boat_name'),boatSea:real('boat_sea'),boatWind:real('boat_wind'),boatChopPeriod:real('boat_chop_period'),
 },t=>[index('trip_owner').on(t.owner),index('trip_due').on(t.enabled,t.date)]);
 export const subscriptions=sqliteTable('subscriptions',{
   id:text('id').primaryKey(),owner:text('owner').notNull(),endpoint:text('endpoint').notNull(),
