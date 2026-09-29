@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install spatial readers
@@ -27,7 +27,7 @@ jobs:
           --output var/review/nos-seabed-monterey-gap-audit.json
       - name: Upload aggregate review without sample coordinates
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nos-seabed-monterey-gap-audit
           path: var/review/nos-seabed-monterey-gap-audit.json
@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Check rounded-position and changed-source safeguards
@@ -56,7 +56,7 @@ jobs:
           --verify dist/data/central-dataone-rov-300ft-spot-precision.json
       - name: Upload aggregate review without observation coordinates
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: central-dataone-rov-spot-precision
           path: var/review/central-dataone-rov-300ft-spot-precision.json
@@ -65,8 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned original-grid readers
@@ -154,7 +154,7 @@ jobs:
           cmp dist/data/estero-2012-vdatum-spatial-diagnostic.json var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Upload research-only source audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: estero-original-200-300ft-research
           path: |
@@ -178,8 +178,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pinned raster readers
@@ -288,7 +288,7 @@ jobs:
         run: python scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: point-buchon-original-paired-review
           path: |
@@ -315,8 +315,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install spatial join dependencies
@@ -342,7 +342,7 @@ jobs:
         run: python -m unittest tests.test_monterey_rov_research_overlap -v
       - name: Upload research-only ROV summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: central-rov-200-300ft-evidence
           path: |
@@ -353,8 +353,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify bounded public evidence contract
@@ -367,7 +367,7 @@ jobs:
         run: cmp dist/data/central-ccfrp-area-evidence.json var/review/central-ccfrp-area-evidence.json
       - name: Upload review-only area evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ccfrp-open-reference-area-evidence
           path: var/review/central-ccfrp-area-evidence.json
@@ -376,8 +376,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify conservative band overlap handling
@@ -390,7 +390,7 @@ jobs:
         run: cmp dist/data/monterey-300-native-research-queue.json var/review/monterey-300-native-research-queue.json
       - name: Upload research-only depth-band review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: monterey-300-native-research-priority
           path: var/review/monterey-300-native-research-queue.json
@@ -399,8 +399,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install reviewed polygon reader
@@ -414,7 +414,7 @@ jobs:
           --output var/review/noaa-vdatum-offshore-monterey-samples.json
       - name: Upload unpublished datum-service review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: noaa-vdatum-monterey-coverage-review
           path: var/review/noaa-vdatum-offshore-monterey-samples.json
@@ -423,8 +423,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify missing-value and block-location handling
@@ -435,7 +435,7 @@ jobs:
           --output var/review/cdfw-crfs-rcgl-2004-2024.json
       - name: Upload unpublished CDFW survey review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cdfw-crfs-rcgl-review
           path: var/review/cdfw-crfs-rcgl-2004-2024.json
@@ -444,8 +444,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify all-species scope and missing-value handling
@@ -456,7 +456,7 @@ jobs:
           --output var/review/cdfw-crfs-all-2004-2024.json
       - name: Upload unpublished survey-coverage review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cdfw-crfs-all-species-review
           path: var/review/cdfw-crfs-all-2004-2024.json
@@ -465,8 +465,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Verify survey aggregation contract
@@ -477,7 +477,7 @@ jobs:
           --output var/review/noaa-dismap-groundfish-2023-2025.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: noaa-dismap-groundfish-review
           path: var/review/noaa-dismap-groundfish-2023-2025.json
