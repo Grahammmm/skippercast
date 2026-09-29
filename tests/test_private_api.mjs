@@ -9,7 +9,9 @@ globalThis.DEPLOYMENT=read('../deployments/production.json');
 const {default:worker,validateSubscription,checkTrips}=await import('../server/worker.js');
 
 function database(){
-  const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../drizzle/0000_spicy_kinsey_walden.sql',import.meta.url),'utf8'));
+  // Apply every migration in journal order, as `wrangler d1 migrations apply` does.
+  const sql=new DatabaseSync(':memory:'),journal=read('../drizzle/meta/_journal.json');
+  for(const {tag} of [...journal.entries].sort((a,b)=>a.idx-b.idx))sql.exec(readFileSync(new URL(`../drizzle/${tag}.sql`,import.meta.url),'utf8'));
   const adapter={prepare(query){let args=[];const statement=sql.prepare(query);return {bind(...a){args=a;return this;},async first(){return statement.get(...args)||null;},async all(){return {results:statement.all(...args)};},async run(){const info=statement.run(...args);return {meta:{changes:Number(info.changes)}};}};},async batch(queries){sql.exec('BEGIN');try{const result=[];for(const q of queries)result.push(await q.run());sql.exec('COMMIT');return result;}catch(e){sql.exec('ROLLBACK');throw e;}}};return {sql,adapter};
 }
 const origin='https://skippercast.com';
@@ -105,4 +107,31 @@ test('the stable service worker is served with no-cache',async()=>{
   const response=await worker.fetch(new Request(origin+'/sw.js'),{ASSETS});
   assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-cache');
   assert.equal(await response.text(),'self.x=1');
+});
+test('the cron trigger prunes expired records without any job call',async()=>{
+  const {sql,adapter}=database(),originalFetch=globalThis.fetch,now=Date.now(),sec=Math.floor(now/1000);
+  assert.ok(sql.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='limit_expires'").get(),'request_limits.expires_at is indexed');
+  const old=new Date(now-100*86400000).toISOString(),recent=new Date(now-86400000).toISOString(),soon=new Date(now+86400000).toISOString().slice(0,10);
+  sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?),(?,?,?)').run('stale',1,sec-10,'live',1,sec+600);
+  const trip='INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)';
+  sql.prepare(trip).run('old-trip','alice','morro-bay','north','reef',old.slice(0,10),7,13,8,12,3,old);
+  sql.prepare(trip).run('new-trip','alice','morro-bay','north','reef',soon,7,13,8,12,3,recent);
+  const event='INSERT INTO alert_events(id,trip_id,owner,kind,message,created_at) VALUES(?,?,?,?,?,?)';
+  sql.prepare(event).run('old-event','old-trip','alice','change','m',old);sql.prepare(event).run('new-event','new-trip','alice','change','m',recent);
+  sql.prepare('INSERT INTO delivery_receipts(id,event_id,subscription_id,status,attempt_at) VALUES(?,?,?,?,?),(?,?,?,?,?)').run('r-old','old-event','s','accepted',old,'r-new','new-event','s','accepted',recent);
+  const feedback='INSERT INTO comfort_feedback(id,owner,region,observed_at,rating,context) VALUES(?,?,?,?,?,?)';
+  sql.prepare(feedback).run('f-old','alice','morro-bay',new Date(now-400*86400000).toISOString(),5,'{}');sql.prepare(feedback).run('f-new','alice','morro-bay',old,5,'{}');
+  let jobCalls=0;
+  // The watchdog sees a fresh live feed, so the cron makes no GitHub or job call.
+  globalThis.fetch=async url=>{if(String(url).includes('/api/jobs/'))jobCalls++;return Response.json({completed_at:new Date().toISOString()});};
+  try{
+    const pending=[];await worker.scheduled({cron:'*/15 * * * *',scheduledTime:now},{DB:adapter},{waitUntil:p=>pending.push(p)});
+    await Promise.all(pending);
+    const ids=table=>sql.prepare(`SELECT id FROM ${table} ORDER BY id`).all().map(r=>r.id);
+    assert.deepEqual(ids('request_limits'),['live']);assert.deepEqual(ids('trips'),['new-trip']);
+    assert.deepEqual(ids('alert_events'),['new-event']);assert.deepEqual(ids('delivery_receipts'),['r-new']);
+    assert.deepEqual(ids('comfort_feedback'),['f-new']);assert.equal(jobCalls,0);
+    // Without D1 bound (a static-only deploy) the cron still runs the watchdog and does not throw.
+    const without=[];await worker.scheduled({},{},{waitUntil:p=>without.push(p)});await Promise.all(without);
+  }finally{globalThis.fetch=originalFetch;sql.close();}
 });

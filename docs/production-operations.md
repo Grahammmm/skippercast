@@ -33,7 +33,7 @@ Saving a trip does not grant notification permission. Permission is requested on
 
 Checks compare the entire saved hour window, rougher wind/seas, hazards, advisories and reviewed trip-date rules. Source loss retracts prior threshold fit. The final previous-evening assessment is required even when unchanged; a missed final is labeled honestly once. These preference alerts do not certify a route, entrance, bite or whole trip. They do not replace the separate 9/10 personal morning-monitor rubric.
 
-Trips and assessments are retained for 90 days; comfort feedback for one year. Users can export records or delete records and subscriptions. Feedback is private and descriptive; it does not silently train public catch or vessel-motion models. Account IDs and notification endpoints never enter public Git branches.
+Trips and assessments are retained for 90 days; comfort feedback for one year. Pruning (and removal of expired rate-limit rows) runs on the Cloudflare 15-minute cron and after each `/api/jobs/check` page, so it does not depend on the GitHub scheduler alone. Users can export records or delete records and subscriptions. Feedback is private and descriptive; it does not silently train public catch or vessel-motion models. Account IDs and notification endpoints never enter public Git branches.
 
 ## Health, recovery and scale
 
