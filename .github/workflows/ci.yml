@@ -81,6 +81,8 @@ jobs:
           version: 10
       - name: Install locked web dependencies
         run: pnpm install --frozen-lockfile
+      - name: Type-check the Worker (tsc --noEmit, strict)
+        run: pnpm typecheck
       - name: Forecast handling and GPX checks
         run: node --test tests/test_*.mjs
       - name: Design token contrast (WCAG 4.5:1, light and dark)

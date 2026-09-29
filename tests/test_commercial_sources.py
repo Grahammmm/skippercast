@@ -137,7 +137,7 @@ KNOWN_BLOCKERS = {
         'data/charter-grounds.json', 'data/daily-evidence.json',
     }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
-        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.js',
+        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.ts',
     }),
 }
 
@@ -218,7 +218,7 @@ def usages():
             for ident in region['source_bindings'].get(need, []):
                 if sources[ident]['adapter'] == 'open-meteo' and sources[ident]['review_status'] == 'approved':
                     found.add((f'region.json:source_bindings.{need}', ident))
-    files = [*sorted((ROOT / 'src').rglob('*.py')), *sorted((ROOT / 'server').glob('*.js')),
+    files = [*sorted((ROOT / 'src').rglob('*.py')), *sorted((ROOT / 'server').rglob('*.js')), *sorted((ROOT / 'server').rglob('*.ts')),
              *sorted((ROOT / 'dist').glob('*.js'))]
     for path in files:
         text = path.read_text(encoding='utf-8')

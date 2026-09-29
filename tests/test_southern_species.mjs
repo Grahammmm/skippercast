@@ -5,7 +5,7 @@ import {getRegion,setRegion} from '../dist/region.js';
 import {validRegulations,regulationState,ruleMethods} from '../dist/regulations.js';
 import {habitatMatches,habitatDetails} from '../dist/survey-habitat.js';
 import {hourScores} from '../dist/morning-outlook.js';
-import {assessTrip} from '../server/alert-policy.js';
+import {assessTrip} from '../server/alert-policy.ts';
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const source=read('regions/southern-california/region.json'),targets=read('catalog/targets.json').targets;
 const region={...source,target_options:source.species.map(id=>({id,...targets[id]}))};

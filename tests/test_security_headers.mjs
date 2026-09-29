@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
-import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.js';
+import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/sources.html': '/sources.0123456789.html'};
 globalThis.BUILD_ID = 'test';
-const {default: worker} = await import('../server/worker.js');
+const {default: worker} = await import('../server/index.ts');
 
 const directives = Object.fromEntries(CSP.split(';').map(d => d.trim().split(/\s+/)).map(([name, ...values]) => [name, values]));
 
@@ -46,7 +46,7 @@ test('every origin the client code names is allowed by the CSP or is a plain lin
       if (!allowed.has(match[1]) && !LINK_ONLY.has(match[1])) unknown.add(`${match[1]} (${name})`);
     }
   }
-  assert.deepEqual([...unknown], [], 'add new fetch/tile hosts to server/security-headers.js, or to LINK_ONLY if only linked');
+  assert.deepEqual([...unknown], [], 'add new fetch/tile hosts to server/security-headers.ts, or to LINK_ONLY if only linked');
 });
 
 test('page shells, assets, APIs, feeds and errors all carry the security headers', async () => {

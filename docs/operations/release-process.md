@@ -19,7 +19,7 @@ Every PR with a user-facing or operational change adds one line under `## Unrele
    - `package.json` → `"version"`;
    - `pyproject.toml` → `version`;
    - `src/skippercast/__init__.py` → `__version__`;
-   - `server/worker.js` → the `version` reported by `/api/health`.
+   - `server/routes/public.ts` → the `version` reported by `/api/health`.
 
    `tests/test_versions.py` fails if the first three and the newest CHANGELOG heading disagree.
 2. **Cut the changelog** in the same PR: rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD`, keep its `### Internal` subsection, and add a new empty `## Unreleased` above it. Check the notes with `python3 scripts/changelog_section.py vX.Y.Z`.

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {REFERENCE, boatFactors, describeFactors, normalizeBoat} from '../dist/boat-handling.js';
 import {hourScores} from '../dist/morning-outlook.js';
-import {buildRequest, lookupBoat, parseResponse, validQuery} from '../server/boat-lookup.js';
+import {buildRequest, lookupBoat, parseResponse, validQuery} from '../server/boat-lookup.ts';
 
 const rough = {wind: 12, gust: 16, sea: {height: 6}, chop: {height: 3, period: 5}, swell: {from: 300}, secondary: {height: 0, from: 200}};
 const other = {wind: 12, gust: 16, sea: {height: 6}};

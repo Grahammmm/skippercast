@@ -1,0 +1,26 @@
+{
+  // Type-checks the Worker (server/). esbuild bundles it (scripts/build-worker.mjs)
+  // and Node runs it directly in tests by stripping types, so tsc never emits:
+  // erasableSyntaxOnly keeps every file runnable by Node's type stripping, and
+  // imports name the .ts file they load.
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true
+  },
+  "include": ["server/**/*.ts"]
+}

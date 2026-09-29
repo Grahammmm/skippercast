@@ -1,17 +1,18 @@
 # HTTP API reference
 
-Every route the SkipperCast Worker answers, derived by reading `server/worker.js`, `server/feeds.js`, `server/model-api.js` and `server/boat-lookup.js` on `main` (after PR #24, [P0-01]). The same Worker runs on ChatGPT Sites (skippercast.com today) and on SkipperCast's own Cloudflare account ([Cloudflare](../cloudflare.md)). Where an open PR changes a route, the change is listed under **Pending changes** so this page describes the system as it will be once they merge. The guide's target (P5-03, P3-01) is to generate this from typed route definitions (Hono + zod → OpenAPI); until then this page is maintained by hand. When you change a route, update this page in the same PR.
+Every route the SkipperCast Worker answers, derived by reading `server/app.ts` and `server/routes/`, `server/feeds.ts`, `server/model-api.js` and `server/boat-lookup.ts` on `main` (after PR #24, [P0-01]). The same Worker runs on ChatGPT Sites (skippercast.com today) and on SkipperCast's own Cloudflare account ([Cloudflare](../cloudflare.md)). Where an open PR changes a route, the change is listed under **Pending changes** so this page describes the system as it will be once they merge. The guide's target (P5-03, P3-01) is to generate this from typed route definitions (Hono + zod → OpenAPI); until then this page is maintained by hand. When you change a route, update this page in the same PR.
 
 Examples below were produced by running the Worker in Node with an in-memory D1, a fake R2 bucket and synthetic forecast tiles, the same way `tests/test_private_api.mjs` does.
 
 ## Conventions
 
-- **Order of matching** (`server/worker.js` `fetch`): `GET /feeds/*` → any path not under `/api/` (static site) → `/api/*`. Unknown `/api/` paths answer `401` to anonymous callers and `404` to signed-in ones, because the identity check comes before the final `404`.
+- **Order of matching** (`server/app.ts`, a Hono app; each route module is under `server/routes/`): `GET /feeds/*` → public `/api/` routes → `/api/auth/*` → `/api/session` → the private gate (`server/middleware/auth.ts`) → private `/api/` routes → `/api/*` `404` → any other path (static site). Routing uses the raw, still percent-encoded path. `HEAD` is answered as `GET` without a body. Unknown `/api/` paths answer `401` to anonymous callers and `404` to signed-in ones, because the identity check comes before the final `404`.
 - **JSON responses** from `/api/*` carry `Content-Type: application/json`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, unless a route below sets a public `Cache-Control`.
 - **Identity.** A request is signed in only when `IDENTITY_PROVIDER` is `chatgpt-sites` *and* both `oai-authenticated-user-id` and `oai-authenticated-user-email` headers are present; the owner id is the first. ChatGPT Sites injects those headers and strips visitor copies. The Cloudflare deployment sets `IDENTITY_PROVIDER=none` in `wrangler.jsonc`, so no request is ever signed in there and every private route answers `401`. The variable defaults to `chatgpt-sites` when absent (the Sites package has no Wrangler config).
 - **Mutations** (any non-GET private route) require an `Origin` header in `deployments/production.json` `allowed_origins` or the `EXTRA_ORIGINS` Worker secret, and a budget of 30 requests per owner per minute (`request_limits` table).
 - **Bodies** are JSON objects of at most 8,192 bytes, read as a stream; anything else is `400`.
-- **Errors** (the `catch` at the end of `fetch`):
+- **Request ids.** Every response carries `X-Request-Id` (a UUID, or a well-formed incoming `X-Request-Id` of 8–64 letters, digits, `-` or `_`), and every JSON error body repeats it as `request_id`, e.g. `{"error": "origin rejected", "request_id": "…"}`. Failures are logged with the same id (`server/middleware/request-id.ts`).
+- **Errors** (`server/middleware/error.ts`, for paths under `/api/`; the bodies below also carry `request_id`):
 
   | Status | Body | When |
   | --- | --- | --- |
@@ -19,13 +20,13 @@ Examples below were produced by running the Worker in Node with an in-memory D1,
   | `429` | `{"error": "Please try again shortly"}` | The 30-per-minute mutation budget |
   | `503` | `{"error": "This service is temporarily unavailable. Your existing records are preserved."}` | Anything else: storage missing, a feed unreadable, a region mismatch |
 
-  On `main` a message is classed as a validation error by a regular expression (`/invalid|unknown|origin|body|date must|push|subscription|trip id/`). PR #45 ([P3-06]) replaces this with `ClientError` and `RateLimited` classes; the statuses and messages stay the same.
+  A thrown `ClientError` (or `AuthError`) is a validation error, `RateLimited` is `429`, and anything else is `503` (`server/errors.ts`).
 
 ## Public feeds
 
 ### `GET /feeds/<branch>/<path>`
 
-Published feeds and tiles. `server/feeds.js` `serveFeed`.
+Published feeds and tiles. `server/feeds.ts` `serveFeed`.
 
 - **Path:** `<branch>` is `conditions`, `data`, `forecasts` or `tiles`; the whole key must match `^(conditions|data|forecasts|tiles)/(?!.*\.\.)[A-Za-z0-9._/-]{1,300}$`. Anything else answers `404` `Not found` (text). Only `GET` reaches this route; `HEAD` falls through to the static site.
 - **Source order:** R2 bucket `FEEDS` if bound and the object exists → for `tiles/*`, the static assets → otherwise `https://raw.githubusercontent.com/Grahammmm/skippercast/<branch>/<path>` (18 s timeout, no redirects). The response header `X-Feed-Source` says which: `r2`, `assets` or `github`. An R2 *error* (as opposed to a missing object) is not caught and fails the request.
@@ -133,7 +134,7 @@ On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signI
 
 Runs saved-trip checks for one page of 25 trips, delivers push alerts and prunes expired rows. Called by `scripts/check_saved_trips.py` from `live-conditions.yml`.
 
-- **Auth:** `Authorization: Bearer <GitHub Actions OIDC token>` with audience `<public_origin>/api/jobs/check`, verified by `server/job-auth.js` against GitHub's fixed JWKS: RS256; issuer, subject, repository, repository id, owner id, ref, workflow and event (`schedule`, `workflow_dispatch`, `push`) must match `deployments/production.json` `scheduler`; lifetime at most 600 s. Anything else → `401` `{"error": "Unauthorized"}`.
+- **Auth:** `Authorization: Bearer <GitHub Actions OIDC token>` with audience `<public_origin>/api/jobs/check`, verified by `server/job-auth.ts` against GitHub's fixed JWKS: RS256; issuer, subject, repository, repository id, owner id, ref, workflow and event (`schedule`, `workflow_dispatch`, `push`) must match `deployments/production.json` `scheduler`; lifetime at most 600 s. Anything else → `401` `{"error": "Unauthorized"}`.
 - **Body:** `{"cursor": "<last trip id>"}` or `{}`; cursor at most 50 characters.
 - **Limit:** 30 calls per token (`jti`) per minute.
 - **Response:** `{"checked": 25, "changes": 1, "delivered": 1, "held": 0, "in_app": 0, "next_cursor": "<id>|null"}`. The script pages until `next_cursor` is `null` (at most 100 pages).
@@ -142,7 +143,7 @@ Runs saved-trip checks for one page of 25 trips, delivers push alerts and prunes
 
 ### Cron (`scheduled`)
 
-Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.js` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret. ChatGPT Sites has no cron.
+Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret. ChatGPT Sites has no cron.
 
 ## Private API (signed in)
 
@@ -174,7 +175,7 @@ Example `GET /api/trips`:
 {"trips":[{"id":"e3a9a976-d65f-4ab4-af0e-d7fe7f205b1b","owner":"alice","region":"morro-bay","point":"north","species":"reef","date":"2026-09-29","start_hour":7,"end_hour":13,"wind_limit":8,"gust_limit":12,"sea_limit":3,"enabled":1,"created_at":"2026-09-29T04:44:01.204Z","last_assessment":null,"final_delivered_at":null}],"events":[]}
 ```
 
-The boat lookup sends the query to Anthropic's Messages API with web search (`server/boat-lookup.js`); `boat` holds the fields of the manual boat form (`loa_ft`, `beam_ft`, `hull`, `layout`, …) validated by `normalizeBoat` in `dist/boat-handling.js`, and `sources` up to six cited URLs.
+The boat lookup sends the query to Anthropic's Messages API with web search (`server/boat-lookup.ts`); `boat` holds the fields of the manual boat form (`loa_ft`, `beam_ft`, `hull`, `layout`, …) validated by `normalizeBoat` in `dist/boat-handling.js`, and `sources` up to six cited URLs.
 
 **Pending changes:** PR #29 ([P0-08]) adds a global daily cap (`BOAT_LOOKUP_GLOBAL_DAILY_LIMIT`, default 500 → `429` `AI boat lookup is busy today…`), a kill switch (`BOAT_LOOKUP_ENABLED=false` → `503`), the model id from `BOAT_AI_MODEL`, and a usage log line per lookup. PR #45 validates `POST /api/events/ack` ids as 64-hex (`400` `event id required`) and trip ids as at most 64 characters. The guide's P3-02 replaces ChatGPT identity with SkipperCast accounts; this whole section changes then.
 

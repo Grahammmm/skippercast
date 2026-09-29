@@ -86,3 +86,33 @@ test('bad queries are rejected and meta mirrors Open-Meteo', async () => {
   await assert.rejects(answer('forecast', new URLSearchParams({latitude: '1,2', longitude: '2'}), store), /matching/);
   assert.equal((await meta('gfs_global', store)).last_run_initialisation_time, 0);
 });
+
+test('scripts/model_api.mjs (the Python pipeline sampler) runs under plain node and matches answer()', async () => {
+  // src/skippercast/forecast/local.py runs exactly this command; model-api stays
+  // plain JavaScript so it needs no TypeScript support from the node it finds.
+  const {mkdtempSync, mkdirSync, writeFileSync, rmSync} = await import('node:fs');
+  const {tmpdir} = await import('node:os');
+  const {join} = await import('node:path');
+  const {spawnSync} = await import('node:child_process');
+  const root = mkdtempSync(join(tmpdir(), 'sc-tiles-'));
+  try {
+    for (const [model, tile] of [['gfs_global', windTile], ['ncep_gfswave016', waveTile]]) {
+      mkdirSync(join(root, model, 'tiles'), {recursive: true});
+      writeFileSync(join(root, model, 'manifest.json'), JSON.stringify(manifest(model)));
+      writeFileSync(join(root, model, 'tiles', '35_-121.json'), JSON.stringify(tile));
+    }
+    const query = 'latitude=35.25&longitude=-120.75&models=gfs_global&hourly=wind_speed_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=UTC&timeformat=unixtime&forecast_days=1';
+    const script = new URL('../scripts/model_api.mjs', import.meta.url).pathname;
+    const run = (...args) => spawnSync(process.execPath, ['--no-experimental-strip-types', script, root, ...args], {encoding: 'utf8', env: {...process.env, SKIPPERCAST_NOW: '3600'}});
+    const out = run('forecast', query);
+    assert.equal(out.status, 0, out.stderr);
+    const cli = JSON.parse(out.stdout), direct = await answer('forecast', new URLSearchParams(query), store, 3600);
+    delete cli.generationtime_ms; delete direct.generationtime_ms;
+    assert.deepEqual(cli, direct);
+    const described = run('meta', 'gfs_global');
+    assert.equal(described.status, 0, described.stderr);
+    assert.deepEqual(JSON.parse(described.stdout), await meta('gfs_global', store));
+    const rejected = run('meta', 'nope');
+    assert.equal(rejected.status, 3);assert.equal(JSON.parse(rejected.stdout).reason, 'Unknown model');
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});

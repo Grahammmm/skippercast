@@ -25,18 +25,18 @@
     { "binding": "FEEDS", "bucket_name": "skippercast-feeds" }
   ],
   // IDENTITY_PROVIDER picks how requests are tied to accounts: "skippercast"
-  // is SkipperCast's own passkey sign-in and session cookie (server/auth.js).
+  // is SkipperCast's own passkey sign-in and session cookie (server/auth.ts).
   // "none" (or no value) means no identity: every private route answers 401.
   // No request header is ever trusted as identity.
   // BOAT_LOOKUP_ENABLED "false" is the AI boat-lookup kill switch;
   // BOAT_LOOKUP_GLOBAL_DAILY_LIMIT caps lookups across all owners per UTC day.
-  // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.js).
+  // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.ts).
   "vars": {
     "IDENTITY_PROVIDER": "skippercast",
     "BOAT_LOOKUP_ENABLED": "true",
     "BOAT_LOOKUP_GLOBAL_DAILY_LIMIT": "500"
   },
-  // Per-IP limits for the anonymous read endpoints (server/edge-cache.js):
+  // Per-IP limits for the anonymous read endpoints (server/edge-cache.ts):
   // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer
   // string unique to this account. Without the bindings (tests) they no-op.
   "ratelimits": [

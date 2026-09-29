@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.js';
-import {feedAgeMinutes, watchdog} from '../server/watchdog.js';
+import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.ts';
+import {feedAgeMinutes, watchdog} from '../server/watchdog.ts';
 import {feedURL, withFeeds} from '../dist/feeds.js';
 
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';

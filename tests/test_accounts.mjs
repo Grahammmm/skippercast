@@ -12,8 +12,8 @@ const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.BUILD_ID = 'build-test';
-const {default: worker} = await import('../server/worker.js');
-const {SESSION_SECONDS, COOKIE} = await import('../server/auth.js');
+const {default: worker} = await import('../server/index.ts');
+const {SESSION_SECONDS, COOKIE} = await import('../server/auth.ts');
 
 function database() {
   const sql = new DatabaseSync(':memory:'), journal = read('../drizzle/meta/_journal.json');

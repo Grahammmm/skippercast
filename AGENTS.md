@@ -31,7 +31,7 @@ the commit.
 | --- | --- | --- |
 | Region coverage, notes, contracts (`dist/regions/*/coverage.json`, `region.json`, `manifest.json`, `region-default.js`) | `regions/<id>/region.json`, `catalog/`, `src/skippercast/platform/` | `PYTHONPATH=src python -m skippercast.platform.build` |
 | Species search plans (`dist/regions/*/search-plans.json`) | `regions/`, `catalog/search-methods.json`, `scripts/build_search_plans.py` | `python scripts/build_search_plans.py` (needs `requirements-survey.txt`) |
-| Worker and client bundle (`dist/client`, `dist/server`) | `dist/*.js`, `dist/*.html`, `server/` (plain names; the build fingerprints them, so never add `-v200` copies or `?v=` tags) | `pnpm build && node scripts/check_client.mjs` |
+| Worker and client bundle (`dist/client`, `dist/server`) | `dist/*.js`, `dist/*.html`, `server/` (TypeScript, entry `server/index.ts`; plain names; the build fingerprints them, so never add `-v200` copies or `?v=` tags) | `pnpm typecheck && pnpm build && node scripts/check_client.mjs` |
 
 Commit the regenerated files in the same PR as the source change.
 
@@ -46,6 +46,7 @@ PYTHONPATH=src python -m skippercast.platform.build && git diff --exit-code
 python scripts/check_repository.py
 python scripts/check_web.py
 node --test tests/test_*.mjs
+pnpm typecheck
 pnpm build
 ```
 

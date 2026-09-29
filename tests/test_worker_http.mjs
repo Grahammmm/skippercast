@@ -12,7 +12,7 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
-const {default: deployed, checkTrips, ClientError} = await import('../server/worker.js');
+const {default: deployed, checkTrips, ClientError} = await import('../server/index.ts');
 // Private routes are reached through real session cookies (fixtures/test-sessions.mjs).
 const worker = withSessions(deployed);
 
@@ -29,6 +29,14 @@ function request(path, {owner, method = 'GET', body} = {}) {
   if (owner) headers['x-test-owner'] = owner;
   if (method !== 'GET') headers.Origin = origin;
   return new Request(origin + path, {method, headers, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body)});
+}
+// JSON error bodies carry the request id from the X-Request-Id header; the rest
+// of the body is compared exactly.
+async function errorBody(response) {
+  const {request_id, ...rest} = await response.json();
+  assert.match(request_id, /^[\w-]{8,64}$/);
+  assert.equal(request_id, response.headers.get('X-Request-Id'));
+  return rest;
 }
 const b64url = bytes => Buffer.from(bytes).toString('base64url');
 async function pushKeys() {
@@ -81,7 +89,7 @@ test('the per-owner budget allows 30 writes a minute, then answers 429', async (
     const body = {region: 'morro-bay', rating: 7, phase: 'fishing'};
     for (let i = 0; i < 30; i++) assert.equal((await worker.fetch(request('/api/comfort', {owner: 'alice', method: 'POST', body}), {DB: adapter})).status, 201);
     const limited = await worker.fetch(request('/api/comfort', {owner: 'alice', method: 'POST', body}), {DB: adapter});
-    assert.equal(limited.status, 429);assert.deepEqual(await limited.json(), {error: 'Please try again shortly'});
+    assert.equal(limited.status, 429);assert.deepEqual(await errorBody(limited), {error: 'Please try again shortly'});
     assert.equal((await worker.fetch(request('/api/comfort', {owner: 'bob', method: 'POST', body}), {DB: adapter})).status, 201, 'budgets are per owner');
     assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM comfort_feedback').get().n, 31);
   } finally { Date.now = realNow; sql.close(); }
@@ -148,9 +156,9 @@ test('only typed client errors answer 400 with their message; dependency errors 
   const {sql, adapter} = database();
   try {
     const bad = await worker.fetch(request('/api/trips', {owner: 'alice', method: 'POST', body: '{"region":'}), {DB: adapter});
-    assert.equal(bad.status, 400);assert.deepEqual(await bad.json(), {error: 'invalid JSON body'});
+    assert.equal(bad.status, 400);assert.deepEqual(await errorBody(bad), {error: 'invalid JSON body'});
     const proto = await worker.fetch(request('/api/trips', {owner: 'alice', method: 'POST', body: {region: '__proto__', point: 'x', species: 'y'}}), {DB: adapter});
-    assert.equal(proto.status, 400);assert.deepEqual(await proto.json(), {error: 'unknown area or species'});
+    assert.equal(proto.status, 400);assert.deepEqual(await errorBody(proto), {error: 'unknown area or species'});
     assert.equal((await worker.fetch(request('/api/intelligence?region=constructor'), {})).status, 404);
     assert.ok(new ClientError('x') instanceof Error);
   } finally { sql.close(); }
@@ -163,7 +171,7 @@ test('alert acknowledgement binds only a well-formed event id and only the calle
   try {
     for (const bad of [{id: {}}, {id: ['x']}, {id: 7}, {}, {id: 'short'}, {id: 'A'.repeat(64)}]) {
       const response = await worker.fetch(request('/api/events/ack', {owner: 'alice', method: 'POST', body: bad}), env);
-      assert.equal(response.status, 400, JSON.stringify(bad));assert.deepEqual(await response.json(), {error: 'event id required'});
+      assert.equal(response.status, 400, JSON.stringify(bad));assert.deepEqual(await errorBody(response), {error: 'event id required'});
     }
     assert.equal((await worker.fetch(request('/api/events/ack', {owner: 'bob', method: 'POST', body: {id}}), env)).status, 404);
     assert.deepEqual(await (await worker.fetch(request('/api/events/ack', {owner: 'alice', method: 'POST', body: {id}}), env)).json(), {read: true});

@@ -1,7 +1,17 @@
 // AI boat-spec lookup: a Claude model with web search finds the builder's
 // specifications for a named boat and returns them as JSON for the person to
 // confirm. Values are validated with the same rules as manual entry.
-import {HULLS, LAYOUTS, normalizeBoat} from '../dist/boat-handling.js';
+import * as handling from '../dist/boat-handling.js';
+import type {ExternalJSON} from './types.ts';
+
+// dist/boat-handling.js is browser code shared with the Worker; its validated shape:
+export type Boat = Record<string, number | string | null> & {name: string; loa_ft: number | null};
+const {HULLS, LAYOUTS} = handling;
+const normalizeBoat = handling.normalizeBoat as (input: unknown) => Boat;
+
+export interface LookupSettings {enabled: boolean; model: string; globalDailyLimit: number}
+export interface LookupUsage {model?: string; turns?: number; input_tokens?: number; output_tokens?: number; web_search_requests?: number}
+export interface LookupResult {boat: Boat; confidence: string; estimated: string[]; notes: string; sources: {url: string; title: string}[]}
 
 // The one place the default model id lives; override per deploy with BOAT_AI_MODEL.
 export const DEFAULT_MODEL = 'claude-sonnet-5';
@@ -10,7 +20,7 @@ export const DEFAULT_MODEL = 'claude-sonnet-5';
 export const DEFAULT_GLOBAL_DAILY_LIMIT = 500;
 
 /** Lookup settings from Worker vars: {enabled, model, globalDailyLimit}. */
-export function lookupSettings(env = {}) {
+export function lookupSettings(env: {BOAT_LOOKUP_GLOBAL_DAILY_LIMIT?: string; BOAT_AI_MODEL?: string; BOAT_LOOKUP_ENABLED?: string} = {}): LookupSettings {
   const raw = String(env.BOAT_LOOKUP_GLOBAL_DAILY_LIMIT ?? '').trim(), limit = Number(raw);
   const model = typeof env.BOAT_AI_MODEL === 'string' && /^[\w.:@-]{1,100}$/.test(env.BOAT_AI_MODEL.trim()) ? env.BOAT_AI_MODEL.trim() : DEFAULT_MODEL;
   return {enabled: String(env.BOAT_LOOKUP_ENABLED ?? '').trim().toLowerCase() !== 'false', model,
@@ -30,33 +40,33 @@ Reply with ONLY one JSON object, no prose, with these keys:
  "notes": string (under 200 characters: which variant or years the numbers apply to, and any doubt)}
 Convert units to feet, pounds, degrees, knots and US gallons. Use null for anything you cannot find or reasonably infer. Never invent a boat that does not exist; if the model is unclear, give your best match and set confidence to "low".`;
 
-export function buildRequest(query, model = DEFAULT_MODEL) {
+export function buildRequest(query: string, model = DEFAULT_MODEL) {
   return {model, max_tokens: 1500, system: SYSTEM,
     tools: [{type: 'web_search_20250305', name: 'web_search', max_uses: 4}],
-    messages: [{role: 'user', content: `Boat: ${query}`}]};
+    messages: [{role: 'user', content: `Boat: ${query}`}] as ExternalJSON[]};
 }
 
-export function validQuery(query) {
+export function validQuery(query: unknown): string | null {
   if (typeof query !== 'string') return null;
   const q = query.replace(/\s+/g, ' ').trim();
   return q.length >= 3 && q.length <= 120 ? q : null;
 }
 
 /** Messages API response -> {boat, confidence, estimated, notes, sources}. */
-export function parseResponse(data) {
-  const blocks = Array.isArray(data?.content) ? data.content : [];
+export function parseResponse(data: ExternalJSON): LookupResult {
+  const blocks: ExternalJSON[] = Array.isArray(data?.content) ? data.content : [];
   // The answer is the text after the last search; earlier text is narration.
   let last = -1;
   blocks.forEach((b, i) => { if (b.type !== 'text') last = i; });
   const text = blocks.slice(last + 1).filter(b => b.type === 'text').map(b => b.text).join('');
   const start = text.indexOf('{'), end = text.lastIndexOf('}');
   if (start < 0 || end <= start) throw Error('lookup returned no specification');
-  let raw;
+  let raw: ExternalJSON;
   try { raw = JSON.parse(text.slice(start, end + 1)); } catch { throw Error('lookup returned unreadable specification'); }
   const boat = normalizeBoat(raw);
   if (!boat.loa_ft) throw Error('lookup could not find this boat');
-  const sources = [];
-  const add = (url, title) => {
+  const sources: {url: string; title: string}[] = [];
+  const add = (url: unknown, title: unknown) => {
     if (typeof url !== 'string' || !/^https:\/\//.test(url) || sources.some(s => s.url === url) || sources.length >= 6) return;
     sources.push({url: url.slice(0, 500), title: String(title || new URL(url).hostname).slice(0, 140)});
   };
@@ -64,32 +74,33 @@ export function parseResponse(data) {
     for (const c of b.citations || []) add(c.url, c.title);
     if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) add(r.url, r.title);
   }
-  const estimated = Array.isArray(raw.estimated) ? raw.estimated.filter(k => typeof k === 'string' && k in boat).slice(0, 12) : [];
+  const estimated: string[] = Array.isArray(raw.estimated) ? raw.estimated.filter((k: unknown): k is string => typeof k === 'string' && k in boat).slice(0, 12) : [];
   return {boat, confidence: ['high', 'medium', 'low'].includes(raw.confidence) ? raw.confidence : 'low',
     estimated, notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 300) : '', sources};
 }
 
-const count = value => Number.isFinite(value) && value > 0 ? value : 0;
+const count = (value: unknown): number => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
 
 /**
  * Call the Messages API. `fetcher` is injectable for tests. `usage`, when
  * given, is filled with the tokens and searches billed across every turn,
  * including turns of a lookup that later fails.
  */
-export async function lookupBoat(query, {apiKey, model, fetcher = fetch, usage = {}}) {
+export async function lookupBoat(query: string, {apiKey, model, fetcher = fetch, usage = {}}: {apiKey: string; model?: string; fetcher?: (url: string, init: RequestInit) => Promise<Response>; usage?: LookupUsage}): Promise<LookupResult> {
   const request = buildRequest(query, model || DEFAULT_MODEL);
   Object.assign(usage, {model: request.model, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0});
-  const all = [];
+  const all: ExternalJSON[] = [];
+  const tally = usage as Required<LookupUsage>;
   for (let turn = 0; turn < 3; turn++) {
     const response = await fetcher(API, {method: 'POST', signal: AbortSignal.timeout(60000),
       headers: {'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
       body: JSON.stringify(request)});
-    usage.turns++;
+    tally.turns++;
     if (!response.ok) throw Error(`lookup service HTTP ${response.status}`);
-    const data = await response.json();
-    usage.input_tokens += count(data.usage?.input_tokens) + count(data.usage?.cache_creation_input_tokens) + count(data.usage?.cache_read_input_tokens);
-    usage.output_tokens += count(data.usage?.output_tokens);
-    usage.web_search_requests += count(data.usage?.server_tool_use?.web_search_requests);
+    const data: ExternalJSON = await response.json();
+    tally.input_tokens += count(data.usage?.input_tokens) + count(data.usage?.cache_creation_input_tokens) + count(data.usage?.cache_read_input_tokens);
+    tally.output_tokens += count(data.usage?.output_tokens);
+    tally.web_search_requests += count(data.usage?.server_tool_use?.web_search_requests);
     all.push(...(data.content || []));
     // A long search turn can pause; send the partial assistant turn back to continue.
     if (data.stop_reason !== 'pause_turn') return parseResponse({content: all});
