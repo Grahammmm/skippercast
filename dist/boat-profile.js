@@ -38,7 +38,7 @@ function sheet() {
     <p class="home-port-intro">Enter your boat and SkipperCast scales its comfort and drift-control ratings to its size and hull.
       Without a boat, ratings use a 23 ft, 20° deep-V walkaround.</p>
     <label for="boat-query">Make, model and year</label>
-    <div class="boat-query-row"><input id="boat-query" type="text" autocomplete="off" maxlength="120" placeholder="e.g. 2019 Parker 2320 SL" value="${esc(saved?.query || saved?.boat?.name || '')}" />
+    <div class="boat-query-row"><input id="boat-query" type="text" autocomplete="off" maxlength="120" placeholder="e.g. Boston Whaler 230 Vantage" value="${esc(saved?.query || saved?.boat?.name || '')}" />
       <button type="button" id="boat-lookup">Look up with AI</button></div>
     <p id="boat-status" class="home-port-feedback" role="status"></p>
     <div id="boat-sources"></div>

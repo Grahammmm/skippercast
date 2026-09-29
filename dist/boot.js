@@ -23,9 +23,12 @@ try {
   }
   }
 } catch(error) {
+  // Log the detail for debugging; show people a plain message and a way forward.
+  console.error('SkipperCast failed to start',error);
   const panel=document.getElementById("map-empty");panel.hidden=false;
-  panel.replaceChildren();const title=document.createElement("strong");title.textContent="This region could not load";
-  const reason=document.createElement("p");reason.textContent=error.message;
-  const retry=document.createElement("a");retry.href="/?region=morro-bay#map";retry.textContent="Open Morro Bay";
-  panel.append(title,reason,retry);console.error(error);
+  panel.replaceChildren();const title=document.createElement("strong");title.textContent="SkipperCast couldn't load this area";
+  const reason=document.createElement("p");reason.textContent="Check your connection and try again.";
+  const retry=document.createElement("button");retry.type="button";retry.id="boot-retry";retry.textContent="Try again";retry.addEventListener("click",()=>location.reload());
+  const fallback=document.createElement("p");const link=document.createElement("a");link.href="/?region=morro-bay#map";link.textContent="Open Morro Bay instead";fallback.append(link);
+  panel.append(title,reason,retry,fallback);
 }

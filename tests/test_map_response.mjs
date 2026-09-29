@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {mappedPackageAt,revisionCache,habitatGroups} from '../dist/map-response.js';
+import {mappedPackageAt,revisionCache,habitatGroups,batchedNotice} from '../dist/map-response.js';
 import {pointInGeometry} from '../dist/geo-screen.js';
 import {coastURL} from '../dist/coasts.js';
 const read=p=>JSON.parse(fs.readFileSync(new URL(p,import.meta.url)));
@@ -28,4 +28,21 @@ test('fast point rejection preserves holes and boundary exclusion semantics',()=
 test('overview clusters group habitat bounds without inventing fishing records',()=>{
   const entries=[[5,5],[10,8],[200,200]].map(([x,y])=>({bounds:{getCenter:()=>({x,y})}}));
   const groups=habitatGroups(entries,p=>p);assert.deepEqual(groups.map(g=>g.length),[2,1]);assert.equal(groups.flat().length,entries.length);
+});
+
+test('batchedNotice reports failures that arrive together once, listing each name once', (t) => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const shown = [];
+  const report = batchedNotice(names => shown.push(names), 800);
+  for (const name of ['Species search plan', 'Ocean habitat', 'Survey habitat', 'Ocean habitat', 'Charter context']) {
+    report(name);
+    t.mock.timers.tick(200);
+  }
+  assert.deepEqual(shown, []);
+  t.mock.timers.tick(800);
+  assert.deepEqual(shown, [['Species search plan', 'Ocean habitat', 'Survey habitat', 'Charter context']]);
+  report('Commercial AIS');
+  t.mock.timers.tick(800);
+  assert.equal(shown.length, 2);
+  assert.ok(shown[1].includes('Commercial AIS'));
 });

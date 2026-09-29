@@ -7,6 +7,7 @@ import {mountSpotEvidence} from './spot-evidence.js';
 import {initIntelligence} from './intelligence.js';
 import {initHabitatDynamics} from './habitat-map.js';
 import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js';
+import {batchedNotice} from './map-response.js';
 let tripExport;
 import { getRegion, assetURL } from "./region.js";
 import { mountBottom } from "./bottom-view.js";
@@ -587,7 +588,10 @@ try {
   const intelligence=initIntelligence(map);
   initTripAlerts(intelligence);
   registerTools();
-  const optional=async(name,work)=>{try{return await work();}catch{toast(`${name} could not load. The map and other layers remain available.`);return undefined;}};
+  // On a bad connection several optional layers fail within moments of each
+  // other; report them together in one toast instead of overwriting it per layer.
+  const reportLayerFailure=batchedNotice(names=>toast(names.length===1?`${names[0]} could not load. The map and other layers remain available.`:`${names.length} layers could not load: ${names.join(', ')}. The map and other layers remain available.`));
+  const optional=async(name,work)=>{try{return await work();}catch(error){console.warn(`${name} could not load`,error);reportLayerFailure(name);return undefined;}};
   void optional('Species search plan',()=>initSearchPlans(map,protectedAreas,showAreaDetails));
   void optional('Ocean habitat',()=>initHabitatDynamics(map,protectedAreas,area=>{locationUI?.select(area);weather.selectLocation(area);}));
   void optional("Survey habitat",()=>initSurveyHabitat(map, protectedAreas, (html, area) => showAreaDetails(html, area, "survey-weather"), area=>weather.selectLocation(area)));

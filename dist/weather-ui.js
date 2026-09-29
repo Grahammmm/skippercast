@@ -67,6 +67,23 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
   }
+  // #boat-heading is re-created by every render(); one delegated listener on the
+  // persistent detail body replaces a per-render addEventListener.
+  let encounterSwellFrom = null;
+  function explainEncounter() {
+    const note = $("encounter-note");
+    if (!note) return;
+    const a = angleBetween(heading, encounterSwellFrom);
+    note.textContent =
+      a === null || heading < 0 || heading >= 360
+        ? "Enter a heading from 0° to 359°; swell direction must be available."
+        : `Primary swell approaches approximately ${a < 45 ? "from ahead" : a > 135 ? "from behind" : "across the beam"} (${num(a, 0)}° off the bow). Beam seas can increase roll; head seas can shorten time between encounters.`;
+  }
+  $("marine-detail-body").addEventListener("input", (e) => {
+    if (e.target.id !== "boat-heading") return;
+    heading = e.target.value === "" ? NaN : Number(e.target.value);
+    explainEncounter();
+  });
   const methodNote=document.createElement('p');methodNote.className='small';methodNote.id='forecast-method-note';
   const noteForMethod=()=>{methodNote.hidden=lastSpecies!=='lobster';methodNote.textContent='Lobster: daily ratings summarize 7 a.m.–1 p.m. comfort, not a night hoop-net outing. Select every hour of your actual fishing and return window; daylight scores do not rate diving safety.';};
   $('forecast-content').prepend(methodNote);noteForMethod();
@@ -465,18 +482,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       heading,
     });
     for (const disclosure of body.querySelectorAll("[data-disclosure]")) disclosure.open = expanded.includes(disclosure.dataset.disclosure);
-    const explain = () => {
-      const a = angleBetween(heading, c.swell.from);
-      $("encounter-note").textContent =
-        a === null || heading < 0 || heading >= 360
-          ? "Enter a heading from 0° to 359°; swell direction must be available."
-          : `Primary swell approaches approximately ${a < 45 ? "from ahead" : a > 135 ? "from behind" : "across the beam"} (${num(a, 0)}° off the bow). Beam seas can increase roll; head seas can shorten time between encounters.`;
-    };
-    $("boat-heading").addEventListener("input", (e) => {
-      heading = e.target.value === "" ? NaN : Number(e.target.value);
-      explain();
-    });
-    explain();
+    encounterSwellFrom = c.swell.from;
+    explainEncounter();
     applyDetailTab();
   }
   async function loadLive() {
