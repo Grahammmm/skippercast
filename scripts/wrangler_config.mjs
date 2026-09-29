@@ -33,7 +33,7 @@ export function deployConfig(text, databaseId, bucket) {
   return config;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [databaseId, bucket, out = 'wrangler.deploy.jsonc'] = process.argv.slice(2);
   const config = deployConfig(readFileSync('wrangler.jsonc', 'utf8'), databaseId || '', bucket || '');
   writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
