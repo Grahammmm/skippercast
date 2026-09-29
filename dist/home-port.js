@@ -1,5 +1,7 @@
 // First-run preference only. Port match positions are approximate and never exported.
 export const HOME_PORT_KEY = 'skippercast-home-port-v1';
+// Must equal FIRST_RUN_KEY in first-run.js (not imported: that module needs the region loaded).
+export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
 let directory;
 
 export function hasAreaLink(url) {
@@ -46,7 +48,7 @@ function chooser(ports, firstRun) {
   const scrim = document.createElement('div');
   scrim.className = 'home-port-scrim';
   scrim.innerHTML = `<section class="home-port-card" role="dialog" aria-modal="true" aria-labelledby="home-port-title">
-    <div class="home-port-kicker">SKIPPERCAST · CALIFORNIA</div>
+    <div class="home-port-kicker">${firstRun ? 'STEP 1 OF 3 · YOUR HARBOR' : 'SKIPPERCAST · CALIFORNIA'}</div>
     <h1 id="home-port-title">Where do you fish from?</h1>
     <p class="home-port-intro">Choose a launch area to open nearby fishing maps, species and the seven-day ocean forecast.</p>
     <label for="home-port-search">Find a home port</label>
@@ -79,7 +81,7 @@ function chooser(ports, firstRun) {
       const name = document.createElement('strong'); name.textContent = port.name;
       const detail = document.createElement('span'); detail.textContent = `${port.status === 'active' ? 'Mapped area' : 'Regional preview'} · ${port.forecast_name}`;
       button.append(name, detail);
-      button.addEventListener('click', () => { savePort(port.id); location.assign(portURL(location.href, port)); });
+      button.addEventListener('click', () => { savePort(port.id); if (firstRun) { try { localStorage.setItem(FIRST_RUN_KEY, 'boat'); } catch { /* flow is optional */ } } location.assign(portURL(location.href, port)); });
       results.append(button);
     }
     if (!query && !showAll && !specific) {

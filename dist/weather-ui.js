@@ -16,7 +16,7 @@ import {
 } from "./marine-data.js";
 import { esc, num, local, full, day } from "./marine-charts.js";
 import { rankTimelineDays, renderOutlook } from "./morning-outlook.js";
-import { planTomorrow, tomorrowHTML } from "./tomorrow.js";
+import { planTomorrow, tomorrowHTML, publishTomorrow } from "./tomorrow.js";
 import { savedBoat } from "./boat-handling.js";
 import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js";
 import { localDate } from "./forecast.js";
@@ -428,7 +428,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     if (nextKey !== outlookKey && bundle) {
       dayRatings=rankTimelineDays(selectedBundle,point,lastSpecies,hours);
       renderOutlook(dayRatings.filter(r=>r.date>isoDay(hours[0])),point);
-      $("tomorrow-outlook").innerHTML=tomorrowHTML(planTomorrow(selectedBundle,point,lastSpecies),{boatName:savedBoat()?.boat?.name||"",pointName:POINTS[point].name});
+      {const days=planTomorrow(selectedBundle,point,lastSpecies);$("tomorrow-outlook").innerHTML=tomorrowHTML(days,{boatName:savedBoat()?.boat?.name||"",pointName:POINTS[point].name});publishTomorrow(days,POINTS[point].name);}
       outlookKey=nextKey;
     }
     const dates = new Map();

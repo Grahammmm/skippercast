@@ -21,6 +21,7 @@ try {
     void initCoastalContext(catalog,coast);
     void initRecentDiscussions(url.searchParams.get('region')||'morro-bay');
     await import("./app.js");
+    void import("./first-run.js").then(m=>m.initFirstRun()).catch(error=>console.warn("First-run flow unavailable",error));
   }
   }
 } catch(error) {
