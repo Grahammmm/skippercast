@@ -4,6 +4,7 @@
     run.add_input("var/forecasts-published/gfs_global/manifest.json")
     run.source("gfs_global", "ok", duration_ms=31800, detail="built 2026-09-28T18:00:00Z")
     run.add_output("var/forecasts/index.json")
+    run.region("morro-bay", "degraded", sources_ok=58, sources_total=62)  # multi-region jobs
     run.finish(exit_code=0)
     run.write("var/runs/forecast-build.json")
 
@@ -95,6 +96,7 @@ class RunManifest:
         self.inputs = []
         self.outputs = []
         self.sources = {}
+        self.regions = {}
         self._clock = clock
         self._started = clock()
 
@@ -139,8 +141,18 @@ class RunManifest:
         self.sources[str(ident)] = row
         return row
 
+    def region(self, ident, status, **fields):
+        """Per-region outcome for jobs that loop over regions: status plus counts, issues, error_class, ..."""
+        if not ident or not isinstance(status, str) or not status:
+            raise ValueError("A region outcome needs an id and a status")
+        row = {"status": status, **{k: v for k, v in fields.items() if v is not None}}
+        if isinstance(row.get("error"), str):
+            row["error"] = row["error"][:ERROR_CHARS]
+        self.regions[str(ident)] = row
+        return row
+
     def finish(self, exit_code=0, *, error=None, status=None):
-        """Close the run. Status: failed on a non-zero exit, degraded if any source is not ok, else ok."""
+        """Close the run. Status: failed on a non-zero exit, degraded if any source or region is not ok, else ok."""
         self.finished_at = datetime.now(timezone.utc)
         self.duration_ms = max(0, round((self._clock() - self._started) * 1000))
         self.exit_code = int(exit_code)
@@ -149,7 +161,8 @@ class RunManifest:
         if status is None:
             if self.exit_code != 0 or self.error:
                 status = "failed"
-            elif any(row["status"] not in OK_SOURCE_STATES for row in self.sources.values()):
+            elif any(row["status"] not in OK_SOURCE_STATES
+                     for row in (*self.sources.values(), *self.regions.values())):
                 status = "degraded"
             else:
                 status = "ok"
@@ -190,6 +203,7 @@ class RunManifest:
             "inputs": list(self.inputs),
             "outputs": list(self.outputs),
             "sources": dict(self.sources),
+            "regions": dict(self.regions),
         }
 
     def write(self, path):
@@ -216,4 +230,7 @@ def validate(document):
     if not isinstance(document["sources"], dict) or not all(isinstance(r, dict) and "status" in r
                                                              for r in document["sources"].values()):
         raise ValueError("Run manifest sources must map ids to status rows")
+    regions = document.get("regions", {})  # optional: added for the regional refresh jobs
+    if not isinstance(regions, dict) or not all(isinstance(r, dict) and "status" in r for r in regions.values()):
+        raise ValueError("Run manifest regions must map ids to status rows")
     return document
