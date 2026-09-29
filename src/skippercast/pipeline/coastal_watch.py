@@ -5,36 +5,19 @@ from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
 import hashlib
 import re
-import subprocess
-import tempfile
-import ssl
-from urllib.error import URLError
 from urllib.parse import urlencode, urlsplit
 from pathlib import Path
 from .collect import Client, publication, source, stamp, age_hours
-from ..platform.contracts import REPO, read_json, atomic_json
+from ..platform.contracts import read_json, atomic_json
 from ..platform.coasts import compile_coasts
 
 MPA = 'https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query'
 
 
-class CoastalClient(Client):
-    def get(self, url, as_json=False, **kwargs):
-        try:
-            return super().get(url, as_json, **kwargs)
-        except URLError as error:
-            # macOS' system TLS store can complete CDFW's chain when Python cannot.
-            # No redirects or relaxed TLS. Only these fixed, reviewed HTML documents qualify.
-            allowed={r['rules_url'] for r in read_json(REPO/'catalog/coasts.json')['regions']}
-            if url not in allowed or as_json or not isinstance(error.reason, ssl.SSLCertVerificationError): raise
-            with tempfile.TemporaryDirectory() as folder:
-                body=Path(folder)/'body';headers=Path(folder)/'headers'
-                subprocess.run(['/usr/bin/curl','--fail','--silent','--show-error','--proto','=https','--max-time','25','--max-filesize','5000000','--dump-header',str(headers),'--output',str(body),url],check=True,capture_output=True,timeout=30)
-                raw=body.read_bytes();head=headers.read_text()
-                if len(raw)>5_000_000 or not re.search(r'^HTTP/\S+ 200\b',head,re.M) or 'text/html' not in head.lower(): raise ValueError('Invalid CDFW HTML response')
-                self.requests.append({'url':url,'final_url':url,'retrieved_at':stamp(),'http_status':200,'bytes':len(raw),
-                                      'sha256':hashlib.sha256(raw).hexdigest(),'transport':'system curl; TLS verified; redirects disabled'})
-                return raw.decode('utf-8')
+# The coastal watch reads through the shared collector client. Its former curl
+# fallback for CDFW certificate failures is covered by skippercast.http's
+# trust-store handling (see that module's docstring).
+CoastalClient = Client
 
 
 class PageText(HTMLParser):

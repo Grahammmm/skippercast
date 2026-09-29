@@ -8,10 +8,12 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from skippercast import http
 from skippercast.platform.contracts import atomic_json, read_json
 from skippercast.seafloor import publish, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
+from tests import http_fixture
 
 
 class Missing(Exception):
@@ -142,20 +144,22 @@ class PublicationTests(unittest.TestCase):
     def test_public_probe_rejects_an_old_backend_or_wrong_archive(self):
         manifest = {'region': 'morro-bay', 'status': 'ready', 'archive': 'seafloor-morro-bay.pmtiles',
                     'archive_sha256': 'a'*64, 'archive_bytes': 500}
+        headers = {'Content-Range': 'bytes 0-126/500', 'X-Feed-Source': 'r2', 'Cache-Control': 'no-store'}
         for status, digest in ((200, 'a'*64), (206, 'b'*64), (206, 'a'*64)):
-            def opener(request, **kwargs):
-                self.assertEqual(request.get_header('User-agent'), 'SkipperCast-Seafloor/1.0')
-                if request.full_url.endswith('.json'):
-                    return io.BytesIO(json.dumps({**manifest, 'archive_sha256': digest}).encode())
-                response = io.BytesIO(b'PMTiles\x03'+b'\0'*119)
-                response.status = status
-                response.headers = {'Content-Range': 'bytes 0-126/500', 'X-Feed-Source': 'r2', 'Cache-Control': 'no-store'}
-                self.assertEqual(request.get_header('Range'), 'bytes=0-126')
-                return response
+            session, script, _ = http_fixture.session(
+                (200, json.dumps({**manifest, 'archive_sha256': digest}).encode()),
+                (status, b'PMTiles\x03'+b'\0'*119, headers))
             if status == 206 and digest == 'a'*64:
-                self.assertEqual(verify_public('morro-bay', manifest, opener=opener)['range_status'], 206)
+                self.assertEqual(verify_public('morro-bay', manifest, session=session)['range_status'], 206)
+                self.assertEqual(script.requests[1]['headers']['Range'], 'bytes=0-126')
             else:
-                with self.assertRaises(ValueError): verify_public('morro-bay', manifest, opener=opener)
+                with self.assertRaises(ValueError): verify_public('morro-bay', manifest, session=session)
+            self.assertEqual(script.requests[0]['headers']['User-Agent'], http.USER_AGENT)
+            self.assertEqual(script.requests[0]['headers']['Cache-Control'], 'no-cache')
+        # A backend that ignores Range sends the whole archive: over the probe's byte bound.
+        session, _, _ = http_fixture.session((200, json.dumps(manifest).encode()),
+                                             (206, b'PMTiles\x03'+b'\0'*500, headers))
+        with self.assertRaises(ValueError): verify_public('morro-bay', manifest, session=session)
 
     def test_prepare_refresh_failure_holds_existing_public_alias(self):
         with tempfile.TemporaryDirectory() as tmp:
