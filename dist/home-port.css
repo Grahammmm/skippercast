@@ -24,3 +24,14 @@
 .home-port-close{position:absolute;right:17px;top:15px;width:35px;height:35px;border:0;border-radius:50%;background:#e7eff0;color:#214550;font-size:1.45rem;cursor:pointer}
 @media(max-width:600px){.home-port-button{width:42px;min-width:42px;padding:0;font-size:.72rem}.masthead .coast-control{flex-basis:115px;min-width:85px}.masthead .best-day-banner{flex-basis:112px;max-width:34%}.home-port-scrim{padding:0;align-items:end}.home-port-card{width:100%;max-height:92dvh;border-radius:22px 22px 0 0;padding:24px 19px max(20px,env(safe-area-inset-bottom))}.home-port-results{max-height:34dvh}}
 @media(max-width:360px){.masthead .best-day-banner{flex-basis:98px}.masthead .coast-control{flex-basis:95px}}
+
+/* First run (first-run.js): steps 2 and 3 reuse the port chooser card. */
+.first-run-boats { display: grid; gap: 8px; }
+.first-run-verdict { font-size: 2.2rem; margin: 4px 0 2px; }
+.first-run-verdict.tw-go { color: #1f7a5a; }
+.first-run-verdict.tw-marginal { color: #9a5b12; }
+.first-run-verdict.tw-no-go { color: #a33a3a; }
+.first-run-detail { font-size: 1.05rem; font-weight: 600; margin: 0 0 6px; }
+.first-run-meta { font-size: .85rem; color: #5b6b75; margin: 0 0 10px; }
+.first-run-why summary { cursor: pointer; font-weight: 600; }
+.first-run-why p { font-size: .85rem; }

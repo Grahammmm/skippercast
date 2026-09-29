@@ -151,3 +151,12 @@ export function tomorrowHTML(days, { boatName = "", pointName = "" } = {}) {
   const reasons = [...new Set(days.flatMap((d) => d.reasons))];
   return `<section class="tomorrow" aria-labelledby="tomorrow-heading"><h3 id="tomorrow-heading">Tomorrow${pointName ? ` · ${esc(pointName)}` : ""}</h3><p class="tomorrow-boat">${boatName ? `For ${esc(boatName)}` : "For the reference 23 ft boat · set your boat for your own limits"}</p>${rows}<details class="tomorrow-why"><summary>Why?</summary><p class="small">Each two-hour window from 5 a.m. to 7 p.m. takes the rougher hour. Go means a conditions score of ${GO}/10 or more for your boat, marginal ${NO_GO}–${GO - 0.1}, no-go below ${NO_GO} or any marine advisory. The limit names the largest single penalty (wind, gusts, seas, chop or crossing swell) in the first window of the day’s worst rating. Back-by is the end of the first unbroken run of go hours. Confidence is how often NOAA GFS and ECMWF agree within 4 kt of wind and 1 ft of seas. This is a planning heuristic: it is not a routed trip, a harbor-bar clearance or a safety certification, and bite potential is not scored.</p>${reasons.length ? `<ul class="small">${reasons.slice(0, 6).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}</details></section>`;
 }
+
+// The latest plan the app computed, for the first-run answer (first-run.js).
+let latest = null;
+export function publishTomorrow(days, pointName = '') {
+  latest = { days, pointName };
+  globalThis.document?.dispatchEvent(new CustomEvent('skippercast:tomorrow', { detail: latest }));
+  return latest;
+}
+export function latestTomorrow() { return latest; }
