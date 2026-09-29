@@ -16,12 +16,9 @@ for arg in "$@"; do
 done
 
 mkdir -p var/live
-# Load the last published generation once; later cycles reuse the worktree,
-# which always holds what this job last pushed.
-if [ ! -d var/live-published ] && git ls-remote --exit-code --heads origin conditions >/dev/null; then
-  git fetch origin conditions --depth=1
-  git worktree add --detach var/live-published FETCH_HEAD
-fi
+# Load the last published generation. Later cycles reuse the worktree, which
+# holds what this job last pushed; it is reloaded only if someone else published.
+bash scripts/publish_branch_snapshot.sh --load conditions var/live-published
 if [ -f var/live-published/latest.json ]; then
   cp var/live-published/latest.json var/live/previous.json
 fi
@@ -41,12 +38,6 @@ fi
 python scripts/refresh_regions.py habitat --output var/live --previous-root var/live-published
 
 # Publish.
-if [ ! -d var/live-published ]; then
-  mkdir -p var/live-published
-  git -C var/live-published init -b conditions
-  git -C var/live-published remote add origin "$(git remote get-url origin)"
-  git -C var/live-published config http.https://github.com/.extraheader "$(git config --get http.https://github.com/.extraheader)"
-fi
 cp var/live/latest.json var/live/intelligence-health.json var/live/habitat-health.json var/live-published/
 mkdir -p var/live-published/regions
 python scripts/prune_habitat_tiles.py var/live-published var/live
@@ -59,11 +50,8 @@ for region in Path('var/live-published/regions').iterdir():
         prune_archive(region)
 PY
 cp docs/live-conditions.md var/live-published/README.md
-git -C var/live-published config user.name 'github-actions[bot]'
-git -C var/live-published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-git -C var/live-published add latest.json intelligence-health.json habitat-health.json regions README.md
-git -C var/live-published diff --cached --quiet || git -C var/live-published commit -q -m 'Refresh regional ocean evidence and forecast archive'
-git -C var/live-published push -q origin HEAD:refs/heads/conditions
+# One parentless commit, force-pushed with a lease: the branch never grows history.
+bash scripts/publish_branch_snapshot.sh conditions var/live-published 'Refresh regional ocean evidence and forecast archive'
 echo "published"
 bash scripts/publish_branch_r2.sh var/live-published conditions
 # The site serves R2 first: confirm it now serves this cycle, not an older one.
