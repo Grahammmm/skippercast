@@ -34,7 +34,7 @@ The Point Buchon [CDFW MPA page](https://wildlife.ca.gov/Conservation/Marine/MPA
 
 ## AIS remains separate
 
-The expanded eleven-date NOAA sample contains zero independently verified local sportfishing-charter identities; see [the commercial AIS follow-up](commercial-ais-research.md). This turn also checked the `TRY MAGIC` name lead: its reported 14 × 10 m dimensions and sailing type do not match the [26 × 9 ft Magic charter listing](https://sportfishingreport.com/charter_boats/magic-morrobay.php). It contributes no charter-track evidence. No raw individual vessel trajectory is published.
+The expanded eleven-date NOAA sample contains zero independently verified local sportfishing-charter identities; see [the commercial AIS follow-up](archive/commercial-ais-research.md). This turn also checked the `TRY MAGIC` name lead: its reported 14 × 10 m dimensions and sailing type do not match the [26 × 9 ft Magic charter listing](https://sportfishingreport.com/charter_boats/magic-morrobay.php). It contributes no charter-track evidence. No raw individual vessel trajectory is published.
 
 The older DS1091 interview-based fishing-ground layer remains excluded while reuse terms are unresolved. This new report layer does not reuse it or restore its annotations. See [source rights and AIS coverage](data-sources.md#ais-evidence).
 

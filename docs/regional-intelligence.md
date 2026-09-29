@@ -1,6 +1,6 @@
 # Regional forecast and fishing intelligence
 
-The selected product-review items use one regional process. See the [implementation ledger](implementation-2026-09.md) and [operations guide](production-operations.md).
+The selected product-review items use one regional process. See the [implementation ledger](archive/implementation-2026-09.md) and [operations guide](production-operations.md).
 
 ```mermaid
 flowchart LR

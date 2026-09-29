@@ -9,7 +9,7 @@ Read `docs/regions.md` and `catalog/data-needs.json` in the user's SkipperCast r
 
 Read `docs/region-pipeline.md` for the complete rollout and model-use policy. Routine collection and validation use deterministic code; a small/fast assistant may prepare candidates and notes, while ambiguous legal, rights or scientific changes require explicit review. Do not make routine refreshes depend on an LLM.
 
-For California, begin with `docs/statewide-buildout.md` and the matching entry in `catalog/coastal-sectors.json`. The dated NOAA survey-discovery feed lists intersecting BAG survey leads, not verified bottom coverage. Inspect exact native BAG cells and the original report before considering any lead for a target. Keep the sector status as discovery even if one partial package has point candidates within it.
+For California, begin with `docs/archive/statewide-buildout.md` and the matching entry in `catalog/coastal-sectors.json`. The dated NOAA survey-discovery feed lists intersecting BAG survey leads, not verified bottom coverage. Inspect exact native BAG cells and the original report before considering any lead for a target. Keep the sector status as discovery even if one partial package has point candidates within it.
 
 The separate NOAA product-link feed identifies which original catalog pages link BAG grids and reports; links alone do not qualify a grid. For USGS classified seafloor, use `catalog/usgs-seafloor-sources.json` and `research/scripts/import_usgs_seafloor_character.py` only after pinning the original raster digest, reading its metadata and reviewing class semantics. Generalized class polygons remain context until legal depth and complete exclusion geometry are independently reviewed.
 

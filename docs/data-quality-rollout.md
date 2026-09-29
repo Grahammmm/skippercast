@@ -22,7 +22,7 @@ flowchart LR
 
 ## What this release establishes
 
-- Eleven measured, uncertainty-screened reef patches near Anacapa and eastern Santa Cruz. Their original NOAA surveys have named MLLW reference, 1–4 m eligible native cells and recorded product uncertainty. Their maps and bottom images do not identify individual boulders or verify catches. [Survey method and exact sources](island-target-quality.md).
+- Eleven measured, uncertainty-screened reef patches near Anacapa and eastern Santa Cruz. Their original NOAA surveys have named MLLW reference, 1–4 m eligible native cells and recorded product uncertainty. Their maps and bottom images do not identify individual boulders or verify catches. [Survey method and exact sources](archive/island-target-quality.md).
 - Source-resolution regional temperature analysis, temperature gradients, chlorophyll observations and NOAA surface-temperature/current forecasts. The shared date selector changes actual ocean forecast frames; satellite observations retain their original dates. [Dynamic habitat method](dynamic-species-method.md).
 - Local forecast verification with station/grid matching, provisional observation quality, unique weather hours, missing coverage and fair model comparisons. Compressed, checksummed shards preserve the prospective archive without a growing single JSON file. [Verification and storage](forecast-verification-quality.md).
 

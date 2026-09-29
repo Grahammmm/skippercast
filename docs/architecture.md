@@ -2,7 +2,7 @@
 
 SkipperCast is one shared mobile web app, one Cloudflare-style Worker, and a set of scheduled Python jobs that turn reviewed regional configuration and public data into published feeds. Regions are configuration, not forks: adding a coast is a data task. This page is the current map of the system; start here, then follow the links. The full documentation index is [docs/README.md](README.md).
 
-> The older [system overview](system-overview.md) is a superseded design snapshot. Detailed, dated rollout and research logs are listed as *research log* in the [index](README.md).
+> The older [system overview](archive/system-overview.md) is a superseded design snapshot. Detailed, dated rollout and research logs are in the [archive](archive/README.md).
 
 ## System context
 
@@ -115,6 +115,7 @@ flowchart LR
 | --- | --- | --- |
 | `live-conditions.yml` | Every 30 minutes (:07, :37) inside a ~5.5-hour self-chaining run; restarted by the watchdog and the freshness check | `conditions` branch + R2: live observations, intelligence (models, ensembles, currents, verification), habitat dynamics; forecast tiles to `forecasts`; then private trip checks |
 | `daily-data.yml` | 04:17 America/Los_Angeles | `data` branch + R2: dated reports, regulations and their review state, recent discussions, survey discovery |
+| `research-daily.yml` | After each `daily-data.yml` run, or manually | Research inventories (NOAA BAG checks, ENC hazard reviews, USGS map-block and DOI audits) as workflow artifacts, with a read-only token; not product feeds |
 | `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes |
 | `seafloor.yml` | Mondays 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
