@@ -5,6 +5,7 @@ import {lookupBoat,validQuery} from './boat-lookup.js';
 import {useBucket,readBucketJSON,serveFeed} from './feeds.js';
 import {watchdog} from './watchdog.js';
 import {secure} from './security-headers.js';
+import {cached,cacheKey,overLimit,clientIP,tooManyRequests} from './edge-cache.js';
 import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
@@ -140,12 +141,16 @@ function bind(env){
 }
 export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(watchdog(env));},
 // Every response, including shells, assets, feeds and errors, carries the security headers.
-async fetch(request,env){return secure(await route(request,env));}};
-async function route(request,env){
+async fetch(request,env,ctx){return secure(await route(request,env,ctx));}};
+const build=()=>typeof BUILD_ID==='undefined'?'dev':BUILD_ID;
+const PUBLIC_TTL='public, max-age=300, s-maxage=300';
+async function route(request,env,ctx){
   bind(env);
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&path.startsWith('/feeds/')){
-    const served=await serveFeed(request,path,env.ASSETS);if(served)return served;
+    // Per-IP limits apply only where the Rate Limiting binding exists (not on Sites).
+    if(await overLimit(env.FEED_LIMITER,'feeds:'+clientIP(request)))return tooManyRequests();
+    const served=await serveFeed(request,path,env.ASSETS,{ctx,build:build()});if(served)return served;
     return new Response('Not found',{status:404});
   }
   if(!path.startsWith('/api/')){
@@ -170,13 +175,17 @@ async function route(request,env){
     // SkipperCast's own NOAA/ECMWF forecast service, answering Open-Meteo-style queries.
     const om=path.match(/^\/api\/om\/(?:v1\/(forecast|marine)|data\/([a-z0-9_]+)\/static\/meta\.json)$/);
     if(request.method==='GET'&&om){
+      if(await overLimit(env.PUBLIC_LIMITER,'om:'+clientIP(request)))return tooManyRequests();
       const base=deployment.forecast_feed,store={
         manifest:model=>FORECAST_MODELS[model]?readFeed(`${base}/${model}/manifest.json`):null,
         tile:(model,key)=>FORECAST_MODELS[model]&&/^-?\d{1,3}_-?\d{1,3}$/.test(key)?readFeed(`${base}/${model}/tiles/${key}.json`):null};
-      try{
-        const data=om[1]?await modelAnswer(om[1],url.searchParams,store):await modelMeta(om[2],store);
-        const response=json(data);response.headers.set('Cache-Control','public,max-age=300');return response;
-      }catch(error){if(error instanceof QueryError)return json({error:true,reason:error.message},400);throw error;}
+      // Keyed on the normalised query (parameter order does not split the cache).
+      return await cached(cacheKey(url,{build:build()}),ctx,async()=>{
+        try{
+          const data=om[1]?await modelAnswer(om[1],url.searchParams,store):await modelMeta(om[2],store);
+          const response=json(data);response.headers.set('Cache-Control',PUBLIC_TTL);return {response};
+        }catch(error){if(error instanceof QueryError)return {response:json({error:true,reason:error.message},400)};throw error;}
+      });
     }
     if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,feeds:env.FEEDS?'r2':'github',notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
     if(path==='/api/jobs/check'&&request.method==='POST'){
@@ -188,14 +197,24 @@ async function route(request,env){
     }
     if(request.method==='GET'&&path==='/api/habitat'){
       const region=regions[url.searchParams.get('region')];if(!region?.habitat_feed)return json({error:'Unknown region'},404);
-      const feed=await readFeed(region.habitat_feed);if(feed.region_id!==region.id||feed.schema_version!==1)throw Error('region mismatch');
-      const response=json(feed);response.headers.set('Cache-Control','public,max-age=300');return response;
+      return await cached(cacheKey(url,{params:['region'],build:build()}),ctx,async()=>{
+        const feed=await readFeed(region.habitat_feed);if(feed.region_id!==region.id||feed.schema_version!==1)throw Error('region mismatch');
+        const response=json(feed);response.headers.set('Cache-Control',PUBLIC_TTL);return {response};
+      });
     }
     if(request.method==='GET'&&['/api/intelligence','/api/forecast'].includes(path)){
       const region=regions[url.searchParams.get('region')];if(!region)return json({error:'Unknown region'},404);
-      const feed=await readFeed(region.intelligence_feed);if(feed.region_id!==region.id)throw Error('region mismatch');
-      if(path==='/api/forecast'){const response=json(feed.forecast);response.headers.set('Cache-Control','public,max-age=300');return response;}
-      return json({...feed,forecast:undefined,sources:Object.fromEntries(Object.entries(feed.sources).map(([k,v])=>[k,k.startsWith('model-')||k.startsWith('verify-')?{name:v.name,status:v.status,issue:v.issue,url:v.url,checked_at:v.checked_at}:v]))});
+      const key=p=>cacheKey(new URL(p+'?region='+encodeURIComponent(region.id),url),{params:['region'],build:build()});
+      return await cached(key(path),ctx,async()=>{
+        // One read and parse of the regional feed answers both endpoints; the
+        // sibling response is cached too, so the feed is decoded once per TTL.
+        const feed=await readFeed(region.intelligence_feed);if(feed.region_id!==region.id)throw Error('region mismatch');
+        const forecast=json(feed.forecast);forecast.headers.set('Cache-Control',PUBLIC_TTL);
+        const intelligence=json({...feed,forecast:undefined,sources:Object.fromEntries(Object.entries(feed.sources).map(([k,v])=>[k,k.startsWith('model-')||k.startsWith('verify-')?{name:v.name,status:v.status,issue:v.issue,url:v.url,checked_at:v.checked_at}:v]))});
+        // Live conditions refresh often: one minute, matching intelligence.json on /feeds/.
+        intelligence.headers.set('Cache-Control','public, max-age=60, s-maxage=60');
+        return path==='/api/forecast'?{response:forecast,extra:[[key('/api/intelligence'),intelligence]]}:{response:intelligence,extra:[[key('/api/forecast'),forecast]]};
+      });
     }
     const owner=user(request);
     if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:SIGN_IN[identityProvider]||null});
