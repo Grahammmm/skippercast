@@ -55,7 +55,7 @@ jobs:
     outputs:
       started: ${{ steps.start.outputs.started }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The forecast sampler shared with the Worker runs on Node.
       - uses: actions/setup-node@v4
         with:
@@ -97,7 +97,7 @@ jobs:
       actions: read    # see when the refresh job has finished
       id-token: write  # short-lived identity for /api/jobs/check (server/job-auth.js)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
