@@ -22,7 +22,7 @@ DISTRIBUTION = {
     'affine': 'affine', 'boto3': 'boto3', 'botocore': 'boto3', 'eccodes': 'eccodes', 'gribapi': 'eccodes',
     'h5py': 'h5py', 'jsonschema': 'jsonschema', 'referencing': 'jsonschema',  # installed with jsonschema 'laspy': 'laspy', 'lazrs': 'lazrs', 'lerc': 'pylerc',
     'netCDF4': 'netCDF4', 'numpy': 'numpy', 'pypdf': 'pypdf', 'pyproj': 'pyproj', 'rasterio': 'rasterio',
-    'scipy': 'scipy', 'shapefile': 'pyshp', 'shapely': 'shapely',
+    'scipy': 'scipy', 'shapefile': 'pyshp', 'shapely': 'shapely', 'truststore': 'truststore',
 }
 # Not distributions: the package itself, and the repository's scripts/ directory, which two
 # seafloor modules still import from a source checkout (engineering audit finding A9).

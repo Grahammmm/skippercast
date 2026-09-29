@@ -13,19 +13,16 @@ import json
 import math
 from pathlib import Path
 import re
-import shutil
-import subprocess
 import sys
-import tempfile
-from urllib.error import HTTPError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from .. import http
 from ..forecast import local as forecast_local
 
 
-UA = "SkipperCast/0.1 (personal marine forecast research)"
+UA = http.USER_AGENT
+MAX_BYTES = 20_000_000  # a page or model response; far above any source this profile reads
 FORECAST_API = forecast_local.API  # https://skippercast.com/api/om, built from NOAA and ECMWF open data
 WIND_MODELS = ("ecmwf_ifs025", "gfs_global")
 WAVE_MODELS = ("ecmwf_wam", "ncep_gfswave016")
@@ -118,45 +115,21 @@ def _write_json(path, value):
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
-def fetch(name, url, out):
-    """Save one response and its transport metadata, including failed reads."""
+def fetch(name, url, out, session=None):
+    """Save one response and its transport metadata, including failed reads.
+
+    Non-200 answers are saved and recorded, not raised, so the run keeps the evidence.
+    """
     record = {"name": name, "url": url, "retrieved_at": datetime.now(timezone.utc).isoformat()}
     try:
-        curl = shutil.which("curl") if url.startswith("https://wildlife.ca.gov/") else None
-        if curl:
-            # Some systems expose the CDFW trust chain through curl's TLS store.
-            # If curl is absent, urllib uses its default verified TLS context.
-            with tempfile.TemporaryDirectory() as temp:
-                headers, content = Path(temp) / "headers", Path(temp) / "content"
-                result = subprocess.run(
-                    [curl, "--silent", "--show-error", "--location", "--max-time", "25",
-                     "--user-agent", UA, "--dump-header", str(headers), "--output", str(content),
-                     "--write-out", "%{http_code}", url],
-                    capture_output=True, text=True, timeout=30,
-                )
-                if result.returncode:
-                    raise RuntimeError(f"TLS-verified curl failed with exit {result.returncode}")
-                parsed_headers = {}
-                for line in headers.read_text(encoding="utf-8", errors="replace").splitlines():
-                    if ":" in line:
-                        key, value = line.split(":", 1)
-                        parsed_headers[key.lower()] = value.strip()
-                data = content.read_bytes()
-                record.update(status=int(result.stdout), http_date=parsed_headers.get("date"),
-                              content_type=parsed_headers.get("content-type"),
-                              last_modified=parsed_headers.get("last-modified"),
-                              transport="curl, TLS verified")
-        else:
-            try:
-                response = urlopen(Request(url, headers={"User-Agent": UA}), timeout=25)
-            except HTTPError as error:
-                response = error
-            with response:
-                data = response.read()
-                record.update(status=response.status, http_date=response.headers.get("Date"),
-                              content_type=response.headers.get("Content-Type"),
-                              last_modified=response.headers.get("Last-Modified"),
-                              transport="urllib, TLS verified")
+        response = (session or http.default_session()).get(
+            url, timeout=25, max_bytes=MAX_BYTES, raise_for_status=False)
+        data = response.body
+        record.update(status=response.status, http_date=response.headers.get("Date"),
+                      content_type=response.headers.get("Content-Type"),
+                      last_modified=response.headers.get("Last-Modified"),
+                      final_url=response.final_url, attempts=response.receipt.attempts,
+                      transport=http.TRANSPORT)
         record.update(bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
         (out / f"{name}.raw.txt").write_bytes(data)
         body = data.decode("utf-8", errors="replace")
