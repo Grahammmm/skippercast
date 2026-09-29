@@ -4,6 +4,7 @@ import {verifyJobToken} from './job-auth.js';
 import {lookupBoat,validQuery} from './boat-lookup.js';
 import {useBucket,readBucketJSON,serveFeed} from './feeds.js';
 import {watchdog} from './watchdog.js';
+import {secure} from './security-headers.js';
 import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
@@ -138,7 +139,9 @@ function bind(env){
   extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
 }
 export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(watchdog(env));},
-async fetch(request,env){
+// Every response, including shells, assets, feeds and errors, carries the security headers.
+async fetch(request,env){return secure(await route(request,env));}};
+async function route(request,env){
   bind(env);
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&path.startsWith('/feeds/')){
@@ -249,4 +252,4 @@ async fetch(request,env){
     }
     return json({error:'Not found'},404);
   }catch(error){const message=error.message||'';const client=/invalid|unknown|origin|body|date must|push|subscription|trip id/.test(message);const limited=message==='rate limited';console.error('SkipperCast request failed',{path,type:client?'validation':limited?'rate':'dependency'});return json({error:limited?'Please try again shortly':client?message:'This service is temporarily unavailable. Your existing records are preserved.'},limited?429:client?400:503);}
-}};
+}
