@@ -44,6 +44,29 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
 5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `curl -sI <staging>/feeds/conditions/latest.json` shows `X-Feed-Source: r2`.
 
+## Feed branches and retention
+
+**Git branches hold one commit.** `scripts/publish_branch_snapshot.sh` publishes the `conditions` (live loop), `data` (daily job) and `forecasts` branches:
+
+- `--load <branch> <dir>` puts the currently published commit in `<dir>`, so collectors read the previous `latest.json`, history and verification archive as files. It reloads only if another job published since.
+- `<branch> <dir> <message>` commits the whole directory as one commit **with no parent** and force-pushes it with a lease on the commit it was loaded from. If another job published in between, the push is refused and the cycle fails; nothing is overwritten, and the next cycle reloads and publishes on top. Unchanged content is not re-published.
+- Each job pushes only its own branch: the live loop `conditions` and `forecasts`, the daily job `data`, the manual Forecast tiles workflow `forecasts`. The lease is what keeps the last two from clobbering each other; they are in different concurrency groups.
+
+Nothing reads branch history: the app, the Worker's GitHub fallback and the collectors read files. History the pipeline needs is kept as files inside the snapshot: `data` keeps `history/` and `regions/<id>/history/` for 90 days, and `conditions` keeps each region's `verification-archive/` for 30 days.
+
+**Existing history is squashed automatically.** The first publish after this change replaces each branch with a single commit; `git rev-list --count origin/conditions` then stays at 1. The owner does not need to rewrite anything by hand. The repository's size on GitHub shrinks only after GitHub garbage-collects the unreachable commits, which it does on its own schedule; GitHub Support can run it on request. Existing clones keep the old objects until their reflogs expire and `git gc` runs.
+
+**R2 lifecycle rules** (`scripts/r2_lifecycle.py`) are applied on every deploy by `scripts/cloudflare_deploy.sh`. They use `wrangler r2 bucket lifecycle set`, which replaces the whole rule set, so re-running is a no-op and a new region gets its rules on the next deploy:
+
+| Prefix | Expires after | Why |
+| --- | --- | --- |
+| `runs/` | 7 days | Run manifests; nothing else deletes them. |
+| `data/history/`, `data/regions/<id>/history/` | 100 days | Backstop. The daily job keeps 90 days and the R2 sync deletes what leaves the snapshot. |
+| `conditions/regions/<id>/verification-archive/` | 45 days | Backstop. The live job keeps 30 days of rows. |
+| all (multipart uploads) | 7 days | R2's default rule, restated because `set` replaces it. |
+
+R2 counts age from upload, so each backstop expires files some days *after* the pipeline stops referencing them, never before; a file still listed in a feed must not disappear from R2. The backstops catch objects the hash-indexed sync can no longer see, such as after a lost `.r2-sync.json` index. `latest.json`, tiles and other current files have no expiry. To inspect the rules without applying them, run `python3 scripts/r2_lifecycle.py --print`; `npx wrangler r2 bucket lifecycle list skippercast-feeds` shows what is live. If the deploy logs an `R2 lifecycle` warning (most likely the deploy token lacks **Workers R2 Storage · Edit**), the rules were not changed; feeds are unaffected.
+
 ## Cost
 
 These are the free-tier allowances as published by Cloudflare; check current pricing.

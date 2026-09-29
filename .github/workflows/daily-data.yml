@@ -69,9 +69,8 @@ jobs:
       - name: Load previous published facts
         run: |
           mkdir -p var/daily
-          if git ls-remote --exit-code --heads origin data >/dev/null; then
-            git fetch origin data --depth=1
-            git worktree add --detach var/published FETCH_HEAD
+          bash scripts/publish_branch_snapshot.sh --load data var/published
+          if git -C var/published rev-parse -q --verify HEAD >/dev/null; then
             cp var/published/latest.json var/previous.json
             cp -R var/published/history var/daily/history
           fi
@@ -140,7 +139,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -d var/published ]; then
+          if git -C var/published rev-parse -q --verify HEAD >/dev/null; then
             cp var/daily/latest.json var/daily/health.json var/daily/source-access.json var/published/
             if [ -f var/daily/recent-intel.json ]; then cp var/daily/recent-intel.json var/published/; fi
             if [ -f var/daily/survey-discovery.json ]; then cp var/daily/survey-discovery.json var/published/; fi
@@ -157,38 +156,25 @@ jobs:
             if [ -f var/daily/usgs-doi-metadata.json ]; then cp var/daily/usgs-doi-metadata.json var/published/; fi
             mkdir -p var/published/regions
             cp -R var/daily/regions/. var/published/regions/
+            # Each collected region's history was pruned to 90 days in var/daily; replace
+            # the published copy so old days are dropped (a failed region keeps its own).
+            for history in var/daily/regions/*/history; do
+              [ -d "$history" ] || continue
+              region=$(basename "$(dirname "$history")")
+              rm -rf "var/published/regions/$region/history"
+              cp -R "$history" "var/published/regions/$region/history"
+            done
             mkdir -p var/published/coastal
             cp -R var/daily/coastal/. var/published/coastal/
             if [ -f var/daily/noaa-federal-areas.json ]; then cp var/daily/noaa-federal-areas.json var/published/; fi
             rm -rf var/published/history
             cp -R var/daily/history var/published/history
           else
-            mkdir -p var/published
-            git -C var/published init -b data
-            git -C var/published remote add origin "$(git remote get-url origin)"
-            git -C var/published config http.https://github.com/.extraheader "$(git config --get http.https://github.com/.extraheader)"
             cp -R var/daily/. var/published/
           fi
           cp docs/data-feed-readme.md var/published/README.md
-          git -C var/published config user.name 'github-actions[bot]'
-          git -C var/published config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C var/published add latest.json health.json source-access.json history regions coastal README.md
-          if [ -f var/published/recent-intel.json ]; then git -C var/published add recent-intel.json; fi
-          if [ -f var/published/survey-discovery.json ]; then git -C var/published add survey-discovery.json; fi
-          if [ -f var/published/survey-products.json ]; then git -C var/published add survey-products.json; fi
-          if [ -f var/published/bag-head-inventory.json ]; then git -C var/published add bag-head-inventory.json; fi
-          if [ -f var/published/enc-hazards/santa-barbara-island.geojson ]; then git -C var/published add enc-hazards/santa-barbara-island.geojson; fi
-          if [ -f var/published/enc-hazards/point-reyes-tomales.geojson ]; then git -C var/published add enc-hazards/point-reyes-tomales.geojson; fi
-          if [ -f var/published/enc-hazards/h11967-greenwood-tile.geojson ]; then git -C var/published add enc-hazards/h11967-greenwood-tile.geojson; fi
-          if [ -f var/published/usgs-map-blocks.json ]; then git -C var/published add usgs-map-blocks.json; fi
-          if [ -f var/published/usgs-map-metadata.json ]; then git -C var/published add usgs-map-metadata.json; fi
-          if [ -f var/published/usgs-csmp-map-blocks.json ]; then git -C var/published add usgs-csmp-map-blocks.json; fi
-          if [ -f var/published/usgs-csmp-map-metadata.json ]; then git -C var/published add usgs-csmp-map-metadata.json; fi
-          if [ -f var/published/usgs-doi-releases.json ]; then git -C var/published add usgs-doi-releases.json; fi
-          if [ -f var/published/usgs-doi-metadata.json ]; then git -C var/published add usgs-doi-metadata.json; fi
-          if [ -f var/published/noaa-federal-areas.json ]; then git -C var/published add noaa-federal-areas.json; fi
-          git -C var/published commit -m 'Refresh public fishing evidence'
-          git -C var/published push origin HEAD:refs/heads/data
+          # One parentless commit, force-pushed with a lease: the branch never grows history.
+          bash scripts/publish_branch_snapshot.sh data var/published 'Refresh public fishing evidence'
           bash scripts/publish_branch_r2.sh var/published data
       - name: Verify the public site serves this snapshot
         if: vars.FEEDS_PUBLIC_BASE != ''

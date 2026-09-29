@@ -44,7 +44,7 @@ def classify(names):
 # are limited to modules exercising this code, so an unrelated survey-science
 # test can never stop the 30-minute public feed from refreshing.
 LIVE_CODE = re.compile(r'skippercast\.pipeline|skippercast import pipeline|scripts[./](refresh_regions|'
-                       r'check_saved_trips|prune_habitat_tiles|live_loop|report_conditions)')
+                       r'check_saved_trips|prune_habitat_tiles|live_loop|report_conditions|publish_branch_snapshot)')
 
 
 def select(root, scope):

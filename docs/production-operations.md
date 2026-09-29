@@ -41,7 +41,7 @@ Inspect `/api/health`, the GitHub workflows and regional source health. The hour
 
 Held/uncertain deliveries require receipt reconciliation before a resend. Preserve event identity; do not create a new ID to retry the same send. Users can acknowledge the assessment in the private UI. The scheduler processes 25-trip pages to avoid starving records beyond a single fixed batch.
 
-Retain the previous site version and feed commits. Roll back a coherent site/package version; keep private data intact with forward-compatible migrations. Back up/export D1 before a destructive future migration. Recheck anonymous/private routing and source freshness after publishing. Site publication and feed publication are distinct outcomes.
+Retain the previous site version. Feed branches keep only the current snapshot as one commit; a bad feed generation is replaced by the next good run, not reverted. Roll back a coherent site/package version; keep private data intact with forward-compatible migrations. Back up/export D1 before a destructive future migration. Recheck anonymous/private routing and source freshness after publishing. Site publication and feed publication are distinct outcomes.
 
 The Worker caches reviewed regional feeds, not arbitrary URLs. Before coast-wide growth, measure provider budgets, Git feed size, Worker limits and database load. Deduplicate shared station/model requests across regions and move growing archives to immutable object storage when measured size requires it. Open-Meteo free service is for noncommercial access with limits; upstream terms remain separate from the personal-use source license.
 
