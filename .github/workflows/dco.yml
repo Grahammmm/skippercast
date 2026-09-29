@@ -17,7 +17,7 @@ jobs:
   sign-off:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Use the base branch's checker
         # A pull request must not be able to edit its own gate. The first PR that
         # adds the checker has no base copy, so it falls back to its own.
