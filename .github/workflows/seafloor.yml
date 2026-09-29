@@ -20,6 +20,7 @@ on:
       - catalog/seafloor-screen.json
       - catalog/reaches.json
       - src/skippercast/seafloor/**
+      - src/skippercast/platform/bottom_targets.py
       - scripts/build_map_tiles.py
       - .github/workflows/seafloor.yml
 

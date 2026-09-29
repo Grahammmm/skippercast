@@ -44,5 +44,22 @@ class SeafloorKeyFileTests(unittest.TestCase):
         self.assertIn("'platform/bottom_targets.py'", ingest)
 
 
+    def test_changing_a_key_file_triggers_the_seafloor_workflow(self):
+        # A key-file change must re-run ingestion on main, so the workflow's
+        # push filter has to cover every pinned file.
+        from fnmatch import fnmatch
+        workflow = (ROOT / '.github/workflows/seafloor.yml').read_text()
+        push = workflow.split('push:', 1)[1].split('paths:', 1)[1]
+        patterns = []
+        for line in push.splitlines()[1:]:
+            stripped = line.strip()
+            if not stripped.startswith('- '):
+                break
+            patterns.append(stripped[2:].strip().strip("'\""))
+        for name in PINNED:
+            with self.subTest(name):
+                self.assertTrue(any(fnmatch(name, p.replace('**', '*')) for p in patterns), f'{name} is not in seafloor.yml push paths')
+
+
 if __name__ == '__main__':
     unittest.main()
