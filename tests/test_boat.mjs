@@ -77,3 +77,19 @@ test('lookup requests web search and continues paused turns', async () => {
   assert.equal(r.boat.hull, 'deep-v');
   await assert.rejects(lookupBoat('x', {apiKey: 'k', fetcher: async () => new Response('no', {status: 500})}), /HTTP 500/);
 });
+
+test('lookup usage adds billed tokens and searches across paused turns', async () => {
+  let n = 0;
+  const fetcher = async () => {
+    n++;
+    return new Response(JSON.stringify(n === 1
+      ? {content: answer.content.slice(0, 3), stop_reason: 'pause_turn', usage: {input_tokens: 1000, output_tokens: 50, server_tool_use: {web_search_requests: 2}}}
+      : {content: answer.content.slice(3), stop_reason: 'end_turn', usage: {input_tokens: 3000, output_tokens: 400, cache_read_input_tokens: 500, server_tool_use: {web_search_requests: 1}}}), {status: 200});
+  };
+  const usage = {};
+  await lookupBoat('Parker 2320 SL', {apiKey: 'k', model: 'm-1', fetcher, usage});
+  assert.deepEqual(usage, {model: 'm-1', turns: 2, input_tokens: 4500, output_tokens: 450, web_search_requests: 3});
+  const failed = {};
+  await assert.rejects(lookupBoat('x', {apiKey: 'k', fetcher: async () => new Response('no', {status: 500}), usage: failed}));
+  assert.equal(failed.turns, 1);
+});

@@ -3,7 +3,19 @@
 // confirm. Values are validated with the same rules as manual entry.
 import {HULLS, LAYOUTS, normalizeBoat} from '../dist/boat-handling.js';
 
+// The one place the default model id lives; override per deploy with BOAT_AI_MODEL.
 export const DEFAULT_MODEL = 'claude-sonnet-5';
+// Spend guards (see docs/boat-profile.md): a global daily ceiling across all
+// owners and a kill switch, both from Worker vars.
+export const DEFAULT_GLOBAL_DAILY_LIMIT = 500;
+
+/** Lookup settings from Worker vars: {enabled, model, globalDailyLimit}. */
+export function lookupSettings(env = {}) {
+  const raw = String(env.BOAT_LOOKUP_GLOBAL_DAILY_LIMIT ?? '').trim(), limit = Number(raw);
+  const model = typeof env.BOAT_AI_MODEL === 'string' && /^[\w.:@-]{1,100}$/.test(env.BOAT_AI_MODEL.trim()) ? env.BOAT_AI_MODEL.trim() : DEFAULT_MODEL;
+  return {enabled: String(env.BOAT_LOOKUP_ENABLED ?? '').trim().toLowerCase() !== 'false', model,
+    globalDailyLimit: raw !== '' && Number.isInteger(limit) && limit >= 0 ? limit : DEFAULT_GLOBAL_DAILY_LIMIT};
+}
 const API = 'https://api.anthropic.com/v1/messages';
 
 export const SYSTEM = `You identify recreational fishing and power boats and report their specifications.
@@ -57,16 +69,27 @@ export function parseResponse(data) {
     estimated, notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 300) : '', sources};
 }
 
-/** Call the Messages API. `fetcher` is injectable for tests. */
-export async function lookupBoat(query, {apiKey, model, fetcher = fetch}) {
+const count = value => Number.isFinite(value) && value > 0 ? value : 0;
+
+/**
+ * Call the Messages API. `fetcher` is injectable for tests. `usage`, when
+ * given, is filled with the tokens and searches billed across every turn,
+ * including turns of a lookup that later fails.
+ */
+export async function lookupBoat(query, {apiKey, model, fetcher = fetch, usage = {}}) {
   const request = buildRequest(query, model || DEFAULT_MODEL);
+  Object.assign(usage, {model: request.model, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0});
   const all = [];
   for (let turn = 0; turn < 3; turn++) {
     const response = await fetcher(API, {method: 'POST', signal: AbortSignal.timeout(60000),
       headers: {'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
       body: JSON.stringify(request)});
+    usage.turns++;
     if (!response.ok) throw Error(`lookup service HTTP ${response.status}`);
     const data = await response.json();
+    usage.input_tokens += count(data.usage?.input_tokens) + count(data.usage?.cache_creation_input_tokens) + count(data.usage?.cache_read_input_tokens);
+    usage.output_tokens += count(data.usage?.output_tokens);
+    usage.web_search_requests += count(data.usage?.server_tool_use?.web_search_requests);
     all.push(...(data.content || []));
     // A long search turn can pause; send the partial assistant turn back to continue.
     if (data.stop_reason !== 'pause_turn') return parseResponse({content: all});

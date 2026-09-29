@@ -135,3 +135,43 @@ test('the cron trigger prunes expired records without any job call',async()=>{
     const without=[];await worker.scheduled({},{},{waitUntil:p=>without.push(p)});await Promise.all(without);
   }finally{globalThis.fetch=originalFetch;sql.close();}
 });
+test('boat lookup settings: kill switch, global cap and model id come from Worker vars',async()=>{
+  const {lookupSettings,DEFAULT_MODEL,DEFAULT_GLOBAL_DAILY_LIMIT}=await import('../server/boat-lookup.js');
+  assert.deepEqual(lookupSettings({}),{enabled:true,model:DEFAULT_MODEL,globalDailyLimit:DEFAULT_GLOBAL_DAILY_LIMIT});
+  assert.equal(DEFAULT_GLOBAL_DAILY_LIMIT,500);
+  for(const off of ['false','FALSE',' false '])assert.equal(lookupSettings({BOAT_LOOKUP_ENABLED:off}).enabled,false);
+  for(const on of ['true','1',''])assert.equal(lookupSettings({BOAT_LOOKUP_ENABLED:on}).enabled,true);
+  assert.equal(lookupSettings({BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:'0'}).globalDailyLimit,0);
+  assert.equal(lookupSettings({BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:'40'}).globalDailyLimit,40);
+  for(const bad of ['','-1','1.5','lots'])assert.equal(lookupSettings({BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:bad}).globalDailyLimit,500);
+  assert.equal(lookupSettings({BOAT_AI_MODEL:'claude-haiku-5'}).model,'claude-haiku-5');
+  assert.equal(lookupSettings({BOAT_AI_MODEL:'bad model"id'}).model,DEFAULT_MODEL);
+  const text=readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8').replace(/^\s*\/\/.*$/mg,''),vars=JSON.parse(text).vars;
+  assert.equal(vars.BOAT_LOOKUP_ENABLED,'true');assert.equal(vars.BOAT_LOOKUP_GLOBAL_DAILY_LIMIT,'500');
+});
+test('boat lookup kill switch and global daily cap stop spend before the model is called',async()=>{
+  const {sql,adapter}=database(),originalFetch=globalThis.fetch,originalLog=console.log;let calls=0;const logged=[],points=[];
+  const answer={content:[{type:'text',text:JSON.stringify({name:'Parker 2320',loa_ft:23,beam_ft:8.5,hull:'deep-v',deadrise_deg:20,confidence:'high'})}],stop_reason:'end_turn',
+    usage:{input_tokens:1200,output_tokens:300,cache_read_input_tokens:100,server_tool_use:{web_search_requests:2}}};
+  globalThis.fetch=async url=>{calls++;assert.equal(url,'https://api.anthropic.com/v1/messages');return Response.json(answer);};
+  console.log=line=>logged.push(line);
+  const lookup=(owner,env,query='Parker 2320 '+owner)=>worker.fetch(request('boat/lookup',{owner,method:'POST',body:{query}}),{DB:adapter,ANTHROPIC_API_KEY:'k',...env});
+  try{
+    const off=await lookup('alice',{BOAT_LOOKUP_ENABLED:'false'});
+    assert.equal(off.status,503);assert.match((await off.json()).error,/switched off/);assert.equal(calls,0);
+    const env={BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:'2',BOAT_AI_MODEL:'claude-test-model',ANALYTICS:{writeDataPoint:p=>points.push(p)}};
+    assert.equal((await lookup('alice',env)).status,200);assert.equal((await lookup('bob',env)).status,200);
+    const capped=await lookup('carol',env);assert.equal(capped.status,429);assert.match((await capped.json()).error,/busy today/);
+    assert.equal(calls,2,'the global cap refuses before calling the model');
+    const day=Math.floor(Date.now()/86400000);assert.equal(sql.prepare('SELECT count FROM request_limits WHERE id=?').get('global:boat:'+day).count,3);
+    const lines=logged.map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(l=>l?.event==='boat_lookup');
+    assert.equal(lines.length,2);
+    assert.deepEqual(lines[0],{event:'boat_lookup',outcome:'ok',model:'claude-test-model',turns:1,input_tokens:1300,output_tokens:300,web_search_requests:2});
+    assert.ok(!logged.some(l=>String(l).includes('Parker')),'usage logs never carry the query');
+    assert.equal(points.length,2);assert.deepEqual(points[0].doubles,[1300,300,2,1]);assert.deepEqual(points[0].blobs,['boat_lookup','ok','claude-test-model']);
+    // A failed model call is still logged with its billed turns.
+    globalThis.fetch=async()=>new Response('overloaded',{status:529});
+    assert.equal((await lookup('dave',{BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:'10'})).status,502);
+    assert.equal(logged.map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(l=>l?.event==='boat_lookup').at(-1).outcome,'error');
+  }finally{globalThis.fetch=originalFetch;console.log=originalLog;sql.close();}
+});
