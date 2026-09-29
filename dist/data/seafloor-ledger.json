@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3206.80125,
-    "tier1_km2": 100.713125,
-    "tier2_km2": 16.611763,
+    "tier0_km2": 3199.17625,
+    "tier1_km2": 108.338125,
+    "tier2_km2": 16.902844,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 98.15196
+    "selected_valid_km2": 105.243315
   },
   "reaches": [
     {
@@ -3818,12 +3818,12 @@
       "id": "cambria-san-simeon-r02",
       "region": "cambria-san-simeon",
       "order": 8,
-      "status": "unassessed",
+      "status": "habitat-screened",
       "cell_count": 1276,
       "band_km2": 75.9775,
-      "tier0_km2": 75.9775,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 68.3525,
+      "tier1_km2": 7.625,
+      "tier2_km2": 0.291080966,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.035625,
       "polygons_by_grade": {
@@ -3831,12 +3831,119 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 3,
+        "metric-support-incomplete": 3,
+        "overlap-cdfw-mpa": 11
+      },
+      "surveys_used": [
+        "bathymetry-offshorepointestero-zip-7e3be5eb12"
+      ],
+      "last_survey_run": "2026-09-29T23:21:11.754630+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 7.09135527,
+      "coverage_rule_version": "native-coverage-habitat-v1",
+      "survey_run_hash": "ed3d4d3a4baed14f871046640505ec7360bb801c050642cff3888451a1c6025b",
+      "habitat_count": 45,
+      "held_candidate_count": 14,
+      "habitat_by_grade": {
+        "A": 4,
+        "B": 12,
+        "C": 29
+      },
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "2053a720451e825dab75547883f07f617bfcb782a905d688213f34d3b1d96214",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.6,
+                35.05
+              ],
+              [
+                -120.6,
+                35.65
+              ],
+              [
+                -121.3,
+                35.65
+              ],
+              [
+                -121.3,
+                35.05
+              ],
+              [
+                -120.6,
+                35.05
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-29T23:21:02.714956+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T23:20:35.817553+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T23:20:35.817583+00:00",
+            "file": "noaa-federal-7460c1c1eaaf8b26e240afb246a5de19794e96b69b8ee041333c8a28aa10a6d0.json",
+            "sha256": "78dfdfb4deb21913e595c6d1048162d02fce8b46f72cb87969b8380a8300f8a7",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T23:21:02.714956+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 1,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "a623a93b6168f249d220c1c792108269d04c27bb50d511a3622f16cbee922ac6",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "roughness_thresholds": {
+        "vrm_samples": 1757794,
+        "vrm": 0.0007714721141383052,
+        "bpi_fine_m_samples": 1714472,
+        "bpi_fine_m": 0.418589232234285
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 1,
+        "reproduced_count": 1,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "morro-bay-r08",
