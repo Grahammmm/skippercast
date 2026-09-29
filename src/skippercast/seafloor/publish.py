@@ -31,7 +31,7 @@ def flat_properties(properties):
     return result
 
 
-def region_layers(root, region, *, rerun=True):
+def region_layers(root, region, *, rerun=True, now=None):
     root = Path(root)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     rows = [r for r in ledger['reaches'] if r['region'] == region]
@@ -78,17 +78,18 @@ def region_layers(root, region, *, rerun=True):
                      'band_area_m2': c['band_area_m2'], 'planning_notice': NOTICE}}
                 for c in sorted(cells.values(), key=lambda c: c['id'])]
     expires = min((datetime.fromisoformat(s.replace('Z', '+00:00'))+timedelta(days=35)
-                   for s in dates), default=datetime.now(timezone.utc))
+                   for s in dates), default=now or datetime.now(timezone.utc))
     return {'cells': features, 'habitat': habitat}, receipts, expires
 
 
-def build(region, *, root=REPO, tool=None):
+def build(region, *, root=REPO, tool=None, now=None):
     from scripts.build_map_tiles import build_vector_archive
     root = Path(root)
     tool = tool or os.environ.get('TIPPECANOE') or shutil.which('tippecanoe')
     if not tool:
         raise ValueError('Install pinned tippecanoe or set TIPPECANOE')
-    layers, receipts, expires = region_layers(root, region)
+    now = now or datetime.now(timezone.utc)
+    layers, receipts, expires = region_layers(root, region, now=now)
     folder = root/'var/seafloor/public'/region
     archive = folder/f'seafloor-{region}.pmtiles'
     build_vector_archive(tool, layers, archive, title=f'SkipperCast seafloor — {region}',
@@ -98,7 +99,7 @@ def build(region, *, root=REPO, tool=None):
     selected = [r for r in ledger['reaches'] if r['region'] == region]
     atomic_json(folder/'ledger.json', {'region': region, 'reaches': selected, 'reference': ledger['reference']})
     manifest = {'schema_version': 1, 'region': region, 'status': 'ready' if layers['habitat'] else 'held',
-                'expires_at': expires.isoformat(), 'built_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': expires.isoformat(), 'built_at': now.isoformat(),
                 'archive': archive.name, 'archive_sha256': sha256(archive), 'archive_bytes': archive.stat().st_size,
                 'layers': {name: len(features) for name, features in layers.items()},
                 'ledger_sha256': sha256(folder/'ledger.json'),
@@ -118,8 +119,11 @@ def credentials():
     return client(token, account), os.environ.get('R2_BUCKET', 'skippercast-feeds')
 
 
-def publish_bundle(s3, bucket, folder):
-    """Isolated sync prefix avoids deleting other map layers or regions."""
+def publish_bundle(s3, bucket, folder, *, now=None):
+    """Isolated sync prefix avoids deleting other map layers or regions.
+
+    A ready bundle whose screen expired by ``now`` (default: the current time) is refused.
+    """
     from scripts.publish_r2 import sync
     folder = Path(folder)
     manifest = read_json(folder/'manifest.json')
@@ -127,7 +131,7 @@ def publish_bundle(s3, bucket, folder):
     if not re.fullmatch('[a-z0-9-]+', region):
         raise ValueError('Invalid publication region')
     expiry = datetime.fromisoformat(manifest['expires_at'])
-    if manifest['status'] == 'ready' and expiry <= datetime.now(timezone.utc):
+    if manifest['status'] == 'ready' and expiry <= (now or datetime.now(timezone.utc)):
         raise ValueError('Screen expired before upload')
     if manifest['archive'] != f'seafloor-{region}.pmtiles':
         raise ValueError('Invalid publication archive path')

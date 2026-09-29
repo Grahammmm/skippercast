@@ -9,7 +9,7 @@ How SkipperCast is tested, how to run each layer, how to add a test or fixture, 
 - **Never lower the bar.** No deleted tests, no `continue-on-error`, no expected-fail markers to get green (guide §0). `xfail_strict` is on.
 - **Generated files are checked by rebuilding.** Change the source and rebuild; CI fails when the committed output differs (see the table in [AGENTS.md](../../AGENTS.md)).
 - **No path tricks.** Tests never edit `sys.path` and never compute the repository from `__file__`: import `ROOT` and `FIXTURES` from `tests/_support.py` (research tests: `research.lib.paths.ROOT`). `tests/contract/test_test_layout.py` enforces this.
-- **Fast and clock-free.** The suite runs in seconds; keep new tests free of sleeps and real clocks (pass `now` in, as `server/trips.ts` `validateTrip(input, now)` and most pipeline functions already allow). CI prints the 15 slowest tests (`--durations=15`).
+- **Fast and clock-free.** The suite runs in seconds; keep new tests free of sleeps and real clocks. Code that needs the time takes it as a parameter (`now=` in most pipeline functions, `validateTrip(input, now)` in `server/trips.ts`; `clock=`/`wall_clock=` on `skippercast.http.Session` and `runs.RunManifest`; `now=` on `seafloor.publish.publish_bundle`/`build` and `platform.build.build`; `clock=` on `pipeline.intelligence.run`). Tests pass `tests._support.NOW` (a fixed aware instant) or a `FakeClock` (`clock()`, `clock.timestamp()`, `clock.advance(minutes=5)`); `test_test_layout.py` fails if a product test calls `datetime.now()`, `date.today()` or `time.time()`. CI prints the 15 slowest tests (`--durations=15`).
 
 ## Running the Python tests
 
@@ -105,4 +105,4 @@ The Python layers above follow the guide's plan inside today's tree; when the mo
 | Load | `oha` against staging | before each production deploy | `/api/om`, `/feeds/*`, cache hit ratio, p95 latency |
 | Visual | Storybook screenshots | every PR | < 0.5 % diff |
 
-Still planned for Python: an injectable clock everywhere and coverage in the CI summary.
+Still planned for Python: coverage in the CI summary, and a clock parameter for the research scripts whose freshness checks read the real clock (their tests pair it with real-clock inputs today: `test_usgs_context_pipeline`, `test_habitat_shortlist_closures`, `test_regular_bag_hard`).

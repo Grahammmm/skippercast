@@ -1,13 +1,13 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
 import tempfile
-import time
 import unittest
 
 from scripts.live_loop import intelligence_due, next_slot
 from scripts.report_conditions import summarize
+from tests._support import NOW
 
 
 def utc(h, m, s=0):
@@ -25,11 +25,13 @@ class LiveLoopTests(unittest.TestCase):
     def test_intelligence_due_by_age_or_absence(self):
         with tempfile.TemporaryDirectory() as root:
             marker = Path(root) / 'intelligence-health.json'
-            now = datetime.now(timezone.utc)
+            now = NOW
             self.assertTrue(intelligence_due(marker, now, 55))
             marker.write_text('{}')
+            fresh = (now - timedelta(minutes=54)).timestamp()
+            os.utime(marker, (fresh, fresh))
             self.assertFalse(intelligence_due(marker, now, 55))
-            old = time.time() - 56 * 60
+            old = (now - timedelta(minutes=56)).timestamp()
             os.utime(marker, (old, old))
             self.assertTrue(intelligence_due(marker, now, 55))
 

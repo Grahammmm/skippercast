@@ -80,14 +80,17 @@ def public_path(path, roots=None):
 class RunManifest:
     """Mutable record of one job run; to_dict() is the published JSON."""
 
-    def __init__(self, job, run_id, *, run_attempt=None, git_sha=None, started_at=None, clock=time.monotonic):
+    def __init__(self, job, run_id, *, run_attempt=None, git_sha=None, started_at=None, clock=time.monotonic,
+                 wall_clock=None):
         if not job or not isinstance(job, str):
             raise ValueError("A run manifest needs a job name")
         self.job = job
         self.run_id = run_id
         self.run_attempt = run_attempt
         self.git_sha = git_sha
-        self.started_at = started_at or datetime.now(timezone.utc)
+        # clock times the run (monotonic); wall_clock stamps started_at/finished_at (aware UTC datetimes).
+        self._wall_clock = wall_clock or (lambda: datetime.now(timezone.utc))
+        self.started_at = started_at or self._wall_clock()
         self.finished_at = None
         self.duration_ms = None
         self.exit_code = None
@@ -153,7 +156,7 @@ class RunManifest:
 
     def finish(self, exit_code=0, *, error=None, status=None):
         """Close the run. Status: failed on a non-zero exit, degraded if any source or region is not ok, else ok."""
-        self.finished_at = datetime.now(timezone.utc)
+        self.finished_at = self._wall_clock()
         self.duration_ms = max(0, round((self._clock() - self._started) * 1000))
         self.exit_code = int(exit_code)
         if error is not None:

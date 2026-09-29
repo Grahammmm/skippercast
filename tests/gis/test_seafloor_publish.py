@@ -1,5 +1,5 @@
 """Offline publication, private recovery and revision/expiry gate regressions."""
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 import io
 import json
 from pathlib import Path
@@ -14,6 +14,7 @@ from skippercast.seafloor import publish, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
 from tests import http_fixture
+from tests._support import NOW
 
 
 class Missing(Exception):
@@ -58,7 +59,7 @@ def bundle(root):
     archive.write_bytes(b'PMTiles\x03fixture')
     atomic_json(folder/'ledger.json', {'region': 'morro-bay'})
     manifest = {'region': 'morro-bay', 'status': 'ready',
-        'expires_at': (datetime.now(timezone.utc)+timedelta(days=1)).isoformat(),
+        'expires_at': (NOW+timedelta(days=1)).isoformat(),
         'archive': archive.name, 'archive_sha256': sha256(archive),
         'archive_bytes': archive.stat().st_size, 'ledger_sha256': sha256(folder/'ledger.json')}
     atomic_json(folder/'manifest.json', manifest)
@@ -72,7 +73,7 @@ class PublicationTests(unittest.TestCase):
             s3 = Bucket()
             other = 'tiles/seafloor/regions/other/retained.pmtiles'
             s3.objects[other] = b'keep'
-            key = publish.publish_bundle(s3, 'b', folder)
+            key = publish.publish_bundle(s3, 'b', folder, now=NOW)
             self.assertEqual(s3.objects[other], b'keep')
             control = 'tiles/seafloor/manifest-morro-bay.json'
             self.assertEqual(s3.puts[-1], control)
@@ -88,21 +89,22 @@ class PublicationTests(unittest.TestCase):
             s3 = Bucket()
             s3.corrupt_alias = True
             with self.assertRaisesRegex(ValueError, 'read-back'):
-                publish.publish_bundle(s3, 'b', folder)
+                publish.publish_bundle(s3, 'b', folder, now=NOW)
             self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'updating')
 
     def test_bad_bundle_and_expired_screen_never_upload(self):
-        for case in ('extra', 'archive', 'ledger', 'expired', 'path'):
+        for case in ('extra', 'archive', 'ledger', 'expired', 'expires-now', 'path'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 folder, manifest = bundle(tmp)
                 if case == 'extra': (folder/'source.bag').write_bytes(b'private')
                 if case == 'archive': (folder/manifest['archive']).write_bytes(b'corrupt')
                 if case == 'ledger': (folder/'ledger.json').write_text('{}')
                 if case == 'expired': manifest['expires_at'] = '2000-01-01T00:00:00+00:00'
+                if case == 'expires-now': manifest['expires_at'] = NOW.isoformat()
                 if case == 'path': manifest['archive'] = '../seafloor-morro-bay.pmtiles'
                 atomic_json(folder/'manifest.json', manifest)
                 s3 = Bucket()
-                with self.assertRaises(ValueError): publish.publish_bundle(s3, 'b', folder)
+                with self.assertRaises(ValueError): publish.publish_bundle(s3, 'b', folder, now=NOW)
                 self.assertEqual(s3.puts, [])
 
     def test_missing_credentials_is_failure_and_branch_cannot_upload(self):

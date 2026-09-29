@@ -11,6 +11,7 @@ import unittest
 from unittest import mock
 
 from skippercast import log, report, runs
+from tests._support import FakeClock
 
 
 class FakeTerminal(io.StringIO):
@@ -125,6 +126,15 @@ class Manifests(unittest.TestCase):
         self.assertGreaterEqual(document['duration_ms'], 0)
         self.assertEqual(run.r2_key(), 'runs/forecast-build/555-2.json')
         self.assertIs(runs.validate(document), document)
+
+    def test_wall_clock_stamps_start_and_finish(self):
+        wall, ticks = FakeClock(), iter([10.0, 12.5])
+        run = runs.RunManifest('forecast-build', '7', wall_clock=wall, clock=lambda: next(ticks))
+        wall.advance(minutes=3)
+        run.finish(0)
+        document = run.to_dict()
+        self.assertEqual((document['started_at'], document['finished_at'], document['duration_ms']),
+                         ('2026-09-28T12:00:00Z', '2026-09-28T12:03:00Z', 2500))
 
     def test_paths_never_leak_machine_locations(self):
         outside = tempfile.NamedTemporaryFile(delete=False, dir=tempfile.gettempdir(), suffix='.json')

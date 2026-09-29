@@ -139,8 +139,10 @@ def collection_health(sources):
             'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral')]}
 
 
-def run(region_id,output,previous_root=None,now=None):
-    now=now or datetime.now(timezone.utc);region=load_region(region_id);prior={};state={}
+def run(region_id,output,previous_root=None,now=None,clock=None):
+    # now: the run's reference time; clock: wall time, so observations are never evaluated before they could exist.
+    clock=clock or (lambda:datetime.now(timezone.utc))
+    now=now or clock();region=load_region(region_id);prior={};state={}
     if previous_root:
         path=previous_root/'regions'/region_id/'intelligence.json'
         if path.is_file():prior=read_json(path)
@@ -180,7 +182,7 @@ def run(region_id,output,previous_root=None,now=None):
             if w.get('data_retrieved_at') and w.get('data'):
                 received=datetime.fromisoformat(w['data_retrieved_at'].replace('Z','+00:00')).timestamp()
                 new_observations+=derived_wind_records(station,w['data'],received,wind_url)
-    evaluated_at=max(now.timestamp(),datetime.now(timezone.utc).timestamp())
+    evaluated_at=max(now.timestamp(),clock().timestamp())
     observed=merge_observations(state.get('observations',[]),new_observations,evaluated_at)
     verification=verify(records,observed,evaluated_at,stations)
     verification['collection_issues']={k:s.get('verification_issue') or s.get('issue') or (s.get('verification_deferral') or {}).get('reason') for k,s in sources.items()

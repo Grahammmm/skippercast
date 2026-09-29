@@ -4,7 +4,7 @@ The TLS tests run a real HTTPS server on 127.0.0.1 with a throwaway CA; a stub
 resolver maps test hostnames to addresses, so the real socket, TLS, SNI and
 address-pinning path is exercised without DNS or the network.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 import email.utils
 import gzip
 import hashlib
@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 from skippercast import __version__, http
 from tests import http_fixture
+from tests._support import FakeClock
 
 LOOPBACK = ipaddress.ip_address('127.0.0.1')
 ADDRESSES = {'source.test': '127.0.0.1', 'other.test': '127.0.0.1', 'wrong.test': '127.0.0.1',
@@ -174,14 +175,16 @@ class RetryTests(TLSFixture):
         self.assertEqual([delays(n) for n in range(1, 6)], [1.0, 2.0, 4.0, 5.0, 5.0])
 
     def test_retry_after_seconds_date_and_cap(self):
-        later = email.utils.format_datetime(datetime.now(timezone.utc) + timedelta(seconds=20), usegmt=True)
-        for header, expected in (('7', (7.0, 7.0)), (later, (17.0, 20.0)), ('9999', (60.0, 60.0))):
+        clock = FakeClock()
+        later = email.utils.format_datetime(clock() + timedelta(seconds=20), usegmt=True)
+        past = email.utils.format_datetime(clock() - timedelta(seconds=5), usegmt=True)
+        # A date already passed means retry now: no sleep at all.
+        for header, expected in (('7', [7.0]), (later, [20.0]), (past, []), ('9999', [60.0])):
             with self.subTest(header=header):
                 self.sleeps.clear()
                 self.server.routes['/limited'] = [(429, b'', {'Retry-After': header}), (200, b'ok')]
-                self.session(retry_after_cap=60).get(self.url('/limited'))
-                self.assertEqual(len(self.sleeps), 1)
-                self.assertTrue(expected[0] <= self.sleeps[0] <= expected[1], self.sleeps)
+                self.session(retry_after_cap=60, wall_clock=clock.timestamp).get(self.url('/limited'))
+                self.assertEqual(self.sleeps, expected)
 
     def test_exhausted_retries_raise_with_a_receipt(self):
         self.server.routes['/busy'] = [(504, b'gateway')]
