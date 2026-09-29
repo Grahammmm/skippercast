@@ -76,9 +76,16 @@ class HashTests(unittest.TestCase):
                 self.assertEqual(bottom_targets_sha256(path), expected)
                 self.assertEqual(sha256_file(str(path)), expected)
 
-    def test_call_sites_use_the_shared_helper(self):
+    def test_seafloor_key_files_keep_their_own_equivalent_copies(self):
+        # platform/bottom_targets.py is hashed into the seafloor ingestion
+        # cache key, so it keeps its reviewed bytes and its own sha256
+        # (tests/test_seafloor_key_files.py). It must still agree with the
+        # shared helper; seafloor/io.py re-exports the shared helper.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'sample.bin'
+            path.write_bytes(bytes(range(256)) * 5000)
+            self.assertEqual(bottom_targets.sha256(path), sha256_file(path))
         self.assertIs(seafloor_io.sha256, sha256_file)
-        self.assertIs(bottom_targets.sha256, sha256_file)
 
 
 class LintConfigTests(unittest.TestCase):
