@@ -46,3 +46,9 @@ Retain the previous site version and feed commits. Roll back a coherent site/pac
 The Worker caches reviewed regional feeds, not arbitrary URLs. Before coast-wide growth, measure provider budgets, Git feed size, Worker limits and database load. Deduplicate shared station/model requests across regions and move growing archives to immutable object storage when measured size requires it. Open-Meteo free service is for noncommercial access with limits; upstream terms remain separate from the personal-use source license.
 
 Release checks include Python contracts/parsers; JS forecast, GPX, private API and outbox tests; signed-job rejection tests; regional compilation; asset/secret checks; Worker build with migrations; cloud receipts; and a mobile browser pass when authorized tooling is available. An unavailable browser or device check is a limitation, never a pass.
+
+## Logs and run manifests
+
+Python jobs log through `skippercast.log`: one JSON object per line on stderr with `run_id` (the GitHub run id, as in the feeds' `run_id`), `job`, and when known `region`, `source_id`, `duration_ms`, `http_status` and `error_class`. A terminal gets readable lines instead; set `SKIPPERCAST_LOG=text` or `json` to choose. Stdout stays reserved for a command's machine-readable result.
+
+A job records what it read, wrote and concluded in a run manifest (`skippercast.runs.RunManifest`: job, run id and attempt, commit, start/finish, duration, exit code, per-source status, and sha256 of inputs and outputs). `python -m skippercast.report <manifest.json> --append-summary` turns it into the GitHub step summary. The forecast tile builder is the first job wired in (`--run-manifest PATH`); the other jobs, the heredoc reporters in the workflows and the upload to R2 `runs/<job>/<run_id>.json` follow.
