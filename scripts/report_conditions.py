@@ -36,6 +36,9 @@ def summarize(output, outcome):
             lines.append('\n### ' + name)
             for region in data['regions']:
                 lines.append('- ' + region['region_id'] + ': ' + region['status'])
+                if region.get('error_class'):
+                    lines.append(f"  - Refresh failed ({region['error_class']}): {region.get('error', '')}; "
+                                 'its last publication stays in place')
                 coverage = region.get('forecast_coverage')
                 if coverage:
                     lines.append(f"  - Seven-day wind + seas: {coverage['rated_point_days']}/{coverage['point_days']} point-days; "
