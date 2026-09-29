@@ -1,7 +1,7 @@
 const VIEW_NAMES = new Set(["map", "forecast", "guide", "export"]);
 export function viewFromHash(hash) {
   const key = hash.replace(/^#/, "");
-  if (key === "grade-guide" || key === "charter-evidence") return "guide";
+  if (key === "grade-guide" || key === "charter-evidence" || key === "account") return "guide";
   return VIEW_NAMES.has(key) ? key : "map";
 }
 export function initNavigation({ onMapVisible }) {

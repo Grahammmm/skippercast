@@ -6,11 +6,11 @@ import {assessTrip,alertDecision} from '../server/alert-policy.js';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 globalThis.REGIONS={'morro-bay':read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
-const {default:deployed,handle,validateSubscription,checkTrips}=await import('../server/worker.js');
-// Owner-isolation tests inject a test-only identity resolver through handle();
-// the deployed Worker (deployed.fetch) never reads this header.
-const testIdentity=async request=>request.headers.get('x-test-owner');
-const worker={fetch:(request,env,ctx)=>handle(request,env,ctx,testIdentity),scheduled:deployed.scheduled};
+import {withSessions} from './fixtures/test-sessions.mjs';
+const {default:deployed,validateSubscription,checkTrips}=await import('../server/worker.js');
+// Owner-isolation tests sign in through real session cookies (fixtures/test-sessions.mjs);
+// deployed.fetch is the Worker exactly as deployed.
+const worker=withSessions(deployed);
 
 function database(){
   // Apply every migration in journal order, as `wrangler d1 migrations apply` does.
@@ -87,14 +87,14 @@ test('alert changes and source loss retract prior threshold fit; final is mandat
 const forgedHeaders=(owner)=>({'oai-authenticated-user-id':owner,'oai-authenticated-user-email':owner+'@example.test','x-test-owner':owner});
 test('no request header ever authenticates, whatever IDENTITY_PROVIDER says',async()=>{
   const {sql,adapter}=database();
-  for(const provider of [undefined,'none','','chatgpt-sites','cloudflare','constructor','__proto__','toString']){
+  for(const provider of [undefined,'none','','skippercast','chatgpt-sites','cloudflare','constructor','__proto__','toString']){
     const env={DB:adapter,ANTHROPIC_API_KEY:'k'};if(provider!==undefined)env.IDENTITY_PROVIDER=provider;
     const label=`provider ${JSON.stringify(provider)}`;
     const denied=await deployed.fetch(new Request(origin+'/api/trips',{headers:forgedHeaders('alice')}),env);
     assert.equal(denied.status,401,label+' must not trust forged headers');
-    assert.equal((await denied.json()).signIn,null);
+    assert.equal((await denied.json()).signIn,provider==='skippercast'?'/#account':null);
     const session=await(await deployed.fetch(new Request(origin+'/api/session',{headers:forgedHeaders('alice')}),env)).json();
-    assert.equal(session.signedIn,false,label);assert.equal(session.signIn,null,label);
+    assert.equal(session.signedIn,false,label);assert.equal(session.signIn,provider==='skippercast'?'/#account':null,label);
     const post=await deployed.fetch(new Request(origin+'/api/boat/lookup',{method:'POST',headers:{...forgedHeaders('alice'),'Content-Type':'application/json',Origin:origin},body:JSON.stringify({query:'Parker 2320'})}),env);
     assert.equal(post.status,401,label);
   }
@@ -103,7 +103,7 @@ test('no request header ever authenticates, whatever IDENTITY_PROVIDER says',asy
 });
 test('the Cloudflare deployment config names the identity provider explicitly',()=>{
   const text=readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8').replace(/^\s*\/\/.*$/mg,'');
-  assert.equal(JSON.parse(text).vars?.IDENTITY_PROVIDER,'none');
+  assert.equal(JSON.parse(text).vars?.IDENTITY_PROVIDER,'skippercast');
 });
 test('www redirects to the apex host with a 301 that keeps path and query',async()=>{
   for(const [from,to] of [['https://www.skippercast.com/','https://skippercast.com/'],['https://www.skippercast.com/sources.html?region=morro-bay&x=1#map','https://skippercast.com/sources.html?region=morro-bay&x=1'],['https://www.skippercast.com/api/session','https://skippercast.com/api/session']]){

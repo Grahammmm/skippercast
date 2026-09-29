@@ -19,5 +19,7 @@
   "dist/vendor/maplibre-5.24.0/maplibre-gl-csp.js": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95",
   "dist/vendor/maplibre-5.24.0/maplibre-gl.css": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
   "dist/vendor/pmtiles-4.5.0/LICENSE.txt": "0371c38f338835f7fc13ed71176f3d92144e22c8b736a31cced57adbbeb647b3",
-  "dist/vendor/pmtiles-4.5.0/pmtiles.js": "caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c"
+  "dist/vendor/pmtiles-4.5.0/pmtiles.js": "caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c",
+  "dist/vendor/simplewebauthn-browser-14.0.0/LICENSE.md": "bd9e3f45696472076c7160c7f66e54b2d62d38bc2646c812d19be83ee4400c63",
+  "dist/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js": "29bb0699b45bc39a350d992a13bfc1a4d40d89531390581e1f57f1142c6e221d"
 }

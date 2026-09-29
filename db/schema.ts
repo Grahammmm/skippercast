@@ -28,3 +28,23 @@ export const feedback=sqliteTable('comfort_feedback',{
 export const limits=sqliteTable('request_limits',{
   id:text('id').primaryKey(),count:integer('count').notNull(),expiresAt:integer('expires_at').notNull(),
 },t=>[index('limit_expires').on(t.expiresAt)]);
+
+// SkipperCast accounts (passkeys only; no passwords or email). `owner` in the
+// tables above holds users.id. Sessions and challenges store only what the
+// server issued: sessions.id is sha256(token), never the cookie value.
+export const users=sqliteTable('users',{
+  id:text('id').primaryKey(),createdAt:text('created_at').notNull(),displayName:text('display_name'),
+});
+export const passkeys=sqliteTable('passkeys',{
+  id:text('id').primaryKey(),userId:text('user_id').notNull(),publicKey:text('public_key').notNull(),
+  counter:integer('counter').notNull().default(0),transports:text('transports'),
+  createdAt:text('created_at').notNull(),lastUsedAt:text('last_used_at'),
+},t=>[index('passkey_user').on(t.userId)]);
+export const sessions=sqliteTable('sessions',{
+  id:text('id').primaryKey(),userId:text('user_id').notNull(),createdAt:text('created_at').notNull(),
+  expiresAt:integer('expires_at').notNull(),userAgent:text('user_agent'),
+},t=>[index('session_user').on(t.userId),index('session_expires').on(t.expiresAt)]);
+export const challenges=sqliteTable('auth_challenges',{
+  id:text('id').primaryKey(),challenge:text('challenge').notNull(),kind:text('kind').notNull(),
+  userId:text('user_id'),expiresAt:integer('expires_at').notNull(),
+},t=>[uniqueIndex('challenge_value').on(t.challenge),index('challenge_expires').on(t.expiresAt)]);

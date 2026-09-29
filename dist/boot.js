@@ -1,6 +1,7 @@
 try {
   // Optional; a failure here must never block the map.
   void import('./boat-profile.js').then(m=>m.initBoatProfile()).catch(error=>console.warn('Boat profile unavailable',error));
+  void import('./account.js').then(m=>m.initAccount()).catch(error=>console.warn('Account unavailable',error));
   const {initHomePort}=await import('./home-port.js');
   if(!await initHomePort()) {
     // First visit is choosing a port, or a saved port is navigating to its region.

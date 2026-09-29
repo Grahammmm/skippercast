@@ -6,6 +6,7 @@ import {useBucket,readBucketJSON,serveFeed} from './feeds.js';
 import {watchdog} from './watchdog.js';
 import {secure} from './security-headers.js';
 import {cached,cacheKey,overLimit,clientIP,tooManyRequests} from './edge-cache.js';
+import {authRoute,sessionUser,relyingParty,exportAccount,deleteAccountStatements,clearCookie,AuthError,SIGN_IN_PATH} from './auth.js';
 import {answer as modelAnswer,meta as modelMeta,MODELS as FORECAST_MODELS,QueryError} from './model-api.js';
 
 // Injected from reviewed region manifests by the build; never visitor-supplied URLs.
@@ -23,14 +24,15 @@ export class RateLimited extends Error {}
 const regionById=id=>typeof id==='string'&&Object.hasOwn(regions,id)?regions[id]:null;
 // Identity is SkipperCast's own. No request header names a user: a visitor can
 // send any header, so none is ever trusted. IDENTITY_PROVIDER (wrangler.jsonc)
-// selects how a request is tied to an account; an absent, empty or unknown
-// value means no identity at all, so every private route answers 401 (fail
-// closed). No provider exists yet: sign-in arrives with SkipperCast accounts.
-const IDENTITY={};
-const SIGN_IN={};
+// selects how a request is tied to an account: "skippercast" means a passkey
+// session cookie (server/auth.js). An absent, empty or unknown value means no
+// identity at all, so every private route answers 401 (fail closed).
+const IDENTITY={skippercast:(request,env)=>sessionUser(request,()=>db(env))};
+const SIGN_IN={skippercast:SIGN_IN_PATH};
 let identityProvider='none';
 const signInPath=()=>Object.hasOwn(SIGN_IN,identityProvider)?SIGN_IN[identityProvider]:null;
 const noIdentity=async()=>null;
+const accountsEnabled=()=>Object.hasOwn(IDENTITY,identityProvider);
 async function body(request){
   if(Number(request.headers.get('content-length'))>8192)throw new ClientError('body too large');
   const reader=request.body?.getReader();if(!reader)throw new ClientError('invalid empty body');
@@ -40,7 +42,7 @@ async function body(request){
   try{const value=JSON.parse(new TextDecoder().decode(bytes));if(!value||typeof value!=='object'||Array.isArray(value))throw Error();return value;}catch{throw new ClientError('invalid JSON body');}
 }
 function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!(origins.has(origin)||extraOrigins.has(origin)))throw new ClientError('origin rejected');}
-async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>30)throw new RateLimited('rate limited');}
+async function budget(env,owner,limit=30){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>limit)throw new RateLimited('rate limited');}
 async function readFeed(url){
   let stage='r2';
   try{
@@ -98,12 +100,14 @@ async function deliver(env,event){
   else await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind(subscriptions.length?'held':'in-app',event.id).run();
   return delivered;
 }
-// Retention: expired rate-limit rows, 90-day trips/events/receipts, 365-day feedback.
+// Retention: expired rate-limit rows, sessions and sign-in challenges, 90-day
+// trips/events/receipts, 365-day feedback.
 // Runs from the Cloudflare cron (scheduled) and after each job page, so it never
 // depends on the GitHub Actions chain alone.
 export async function prune(env,now=Date.now()){
   const cutoff=new Date(now-90*86400000).toISOString();
-  await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
+  await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),
+    db(env).prepare('DELETE FROM sessions WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM auth_challenges WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
     db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE created_at<?)').bind(cutoff),db(env).prepare('DELETE FROM alert_events WHERE created_at<?').bind(cutoff),db(env).prepare('DELETE FROM trips WHERE date<?').bind(cutoff.slice(0,10))]);
 }
 async function scheduledPrune(env){
@@ -157,15 +161,22 @@ function recordLookupUsage(env,usage,outcome){
 function bind(env){
   useBucket(env);
   identityProvider=String(env?.IDENTITY_PROVIDER??'none');
-  // Extra origins (e.g. a workers.dev staging copy) may post; production origins come from the deployment policy.
-  extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
+  // Extra origins (e.g. a workers.dev staging copy, or http://localhost:8787 for
+  // wrangler dev) may post and use passkeys; production origins come from the deployment policy.
+  extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)||/^http:\/\/localhost(:\d{1,5})?$/.test(s)));
 }
 export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(Promise.all([watchdog(env),scheduledPrune(env)]));},
 // Every response, including shells, assets, feeds and errors, carries the security headers.
-async fetch(request,env,ctx){return handle(request,env,ctx);}};
-// The identity resolver is chosen from IDENTITY_PROVIDER. Tests may pass their
-// own resolver here; the deployed Worker only ever goes through fetch above.
-export async function handle(request,env,ctx,identify){bind(env);return secure(await route(request,env,ctx,identify||(Object.hasOwn(IDENTITY,identityProvider)?IDENTITY[identityProvider]:noIdentity)));}
+async fetch(request,env,ctx){
+  bind(env);
+  // The identity resolver is chosen from IDENTITY_PROVIDER only. A session that
+  // was renewed while answering carries its refreshed cookie on the response.
+  const resolve=accountsEnabled()?IDENTITY[identityProvider]:noIdentity,state={};
+  const identify=async(request,env)=>(state.user=await resolve(request,env));
+  const response=await route(request,env,ctx,identify);
+  if(state.user?.renewed&&!response.headers.has('Set-Cookie'))response.headers.append('Set-Cookie',state.user.renewed);
+  return secure(response);
+}};
 const build=()=>typeof BUILD_ID==='undefined'?'dev':BUILD_ID;
 const PUBLIC_TTL='public, max-age=300, s-maxage=300';
 // www.skippercast.com is attached to the Worker only to send visitors to the
@@ -249,8 +260,19 @@ async function route(request,env,ctx,identify){
         return path==='/api/forecast'?{response:forecast,extra:[[key('/api/intelligence'),intelligence]]}:{response:intelligence,extra:[[key('/api/forecast'),forecast]]};
       });
     }
-    const owner=await identify(request,env);
-    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:signInPath()});
+    if(path.startsWith('/api/auth/')){
+      if(!accountsEnabled())return json({error:'Accounts are not available on this site',signIn:null},404);
+      // Per-IP budget on every auth call; mutations also need an allowed Origin.
+      await budget(env,'auth:'+clientIP(request),20);
+      if(request.method!=='GET')requireOrigin(request);
+      const current=await identify(request,env);
+      const rp=relyingParty(url,new Set([...origins,...extraOrigins]));
+      const answered=await authRoute(request,{path,db:db(env),rp,body,json,current});
+      if(answered)return answered;
+      return json({error:'Not found'},404);
+    }
+    const who=await identify(request,env),owner=who?.id||null;
+    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:signInPath(),user:owner?{id:owner,display_name:who.display_name??null}:null});
     if(!owner)return json({error:signInPath()?'Sign in to save private trips or feedback':'Accounts are not available on this site yet',signIn:signInPath()},401);
     if(request.method!=='GET'){requireOrigin(request);await budget(env,owner);}
     if(path==='/api/boat/lookup'&&request.method==='POST'){
@@ -309,10 +331,12 @@ async function route(request,env,ctx,identify){
       await db(env).prepare('INSERT INTO comfort_feedback(id,owner,region,observed_at,rating,context) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),owner,b.region,new Date().toISOString(),b.rating,JSON.stringify({phase:b.phase,wind:b.wind??null,sea:b.sea??null,period:b.period??null,heading:b.heading??null,point:b.point??null})).run();return json({saved:true},201);
     }
     if(path==='/api/comfort'&&request.method==='GET')return json({feedback:(await db(env).prepare('SELECT * FROM comfort_feedback WHERE owner=? ORDER BY observed_at DESC LIMIT 100').bind(owner).all()).results});
-    if(path==='/api/privacy'&&request.method==='GET')return json({trips:(await db(env).prepare('SELECT * FROM trips WHERE owner=?').bind(owner).all()).results,feedback:(await db(env).prepare('SELECT * FROM comfort_feedback WHERE owner=?').bind(owner).all()).results,events:(await db(env).prepare('SELECT message,created_at,status FROM alert_events WHERE owner=?').bind(owner).all()).results});
+    if(path==='/api/privacy'&&request.method==='GET')return json({account:await exportAccount(db(env),owner),trips:(await db(env).prepare('SELECT * FROM trips WHERE owner=?').bind(owner).all()).results,feedback:(await db(env).prepare('SELECT * FROM comfort_feedback WHERE owner=?').bind(owner).all()).results,events:(await db(env).prepare('SELECT message,created_at,status FROM alert_events WHERE owner=?').bind(owner).all()).results});
     if(path==='/api/privacy'&&request.method==='DELETE'){
-      await db(env).batch([db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE owner=?)').bind(owner),...['trips','subscriptions','alert_events','comfort_feedback'].map(t=>db(env).prepare(`DELETE FROM ${t} WHERE owner=?`).bind(owner))]);return json({deleted:true});
+      // Deleting records deletes the account too: its passkeys, sessions and user row.
+      await db(env).batch([db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE owner=?)').bind(owner),...['trips','subscriptions','alert_events','comfort_feedback'].map(t=>db(env).prepare(`DELETE FROM ${t} WHERE owner=?`).bind(owner)),...deleteAccountStatements(db(env),owner)]);
+      const done=json({deleted:true,signedIn:false});done.headers.append('Set-Cookie',clearCookie());return done;
     }
     return json({error:'Not found'},404);
-  }catch(error){const client=error instanceof ClientError,limited=error instanceof RateLimited,message=error.message||'';console.error('SkipperCast request failed',{path,type:client?'validation':limited?'rate':'dependency'});return json({error:limited?'Please try again shortly':client?message:'This service is temporarily unavailable. Your existing records are preserved.'},limited?429:client?400:503);}
+  }catch(error){const client=error instanceof ClientError||error instanceof AuthError,limited=error instanceof RateLimited,message=error.message||'';console.error('SkipperCast request failed',{path,type:client?'validation':limited?'rate':'dependency'});return json({error:limited?'Please try again shortly':client?message:'This service is temporarily unavailable. Your existing records are preserved.'},limited?429:client?400:503);}
 }
