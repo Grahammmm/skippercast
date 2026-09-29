@@ -5,7 +5,7 @@ let directory;
 export function hasAreaLink(url) {
   const u = new URL(url);
   return ['region', 'coast', 'view', 'focus', 'spot', 'target'].some(key => u.searchParams.has(key)) ||
-    ['#map', '#forecast', '#export', '#guide', '#spot'].includes(u.hash);
+    ['#map', '#forecast', '#export', '#guide', '#spot', '#account'].includes(u.hash);
 }
 
 export function portURL(href, port) {

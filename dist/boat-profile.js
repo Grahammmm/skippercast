@@ -2,6 +2,7 @@
 // numbers, and save them in this browser. Saved profiles scale the conditions
 // ratings (boat-handling.js). Nothing here is sent anywhere except the name
 // typed for an AI lookup, and only when the person asks for one.
+import {signInHref} from './account.js';
 import {BOAT_KEY, HULLS, LAYOUTS, REFERENCE, boatFactors, describeFactors, normalizeBoat, savedBoat} from './boat-handling.js';
 
 const FIELDS = [
@@ -89,8 +90,9 @@ function sheet() {
         body: JSON.stringify({query}), signal: AbortSignal.timeout(90000)});
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        const signIn = typeof data.signIn === 'string' ? data.signIn : '';
-        status.innerHTML = signIn && signIn.startsWith('/') ? `Sign in to use AI lookup, or enter the numbers below by hand. <a href="${signIn}">Sign in</a>` : 'AI lookup needs an account, which is coming soon. Enter the numbers below by hand.';
+        const signIn = signInHref(data.signIn);
+        status.innerHTML = signIn ? `AI lookup needs a SkipperCast account (a passkey, no password). <a href="${esc(signIn)}">Sign in or create an account</a>, or enter the numbers below by hand.` : 'AI lookup needs an account, which this site does not offer. Enter the numbers below by hand.';
+        status.querySelector('a')?.addEventListener('click', () => close());
         return;
       }
       if (!response.ok) { status.textContent = data.error || 'Lookup failed. Enter the numbers below by hand.'; return; }

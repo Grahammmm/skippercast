@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="boat-position.css" />
     <link rel="stylesheet" href="home-port.css" />
     <link rel="stylesheet" href="boat-profile.css" />
+    <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="bite-evidence.css" />
     <link rel="stylesheet" href="regulations.css" />
     <link rel="stylesheet" href="live-conditions.css" />
@@ -50,10 +51,12 @@
     <link rel="stylesheet" href="platform.css" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
+    <script src="vendor/simplewebauthn-browser-14.0.0/index.umd.min.js" integrity="sha256-KbsGmbRbw5o1DZkqE7/BpNQNiVMTkFgeH1fxFCxuIh0=" defer></script>
     <script type="module" src="boot.js"></script>
     <!-- Boot chain and app.js static module graph (tests/test_modulepreload.mjs keeps this list in sync). -->
     <link rel="modulepreload" href="home-port.js" />
     <link rel="modulepreload" href="boat-profile.js" />
+    <link rel="modulepreload" href="account.js" />
     <link rel="modulepreload" href="boat-handling.js" />
     <link rel="modulepreload" href="region.js" />
     <link rel="modulepreload" href="region-default.js" />
@@ -207,6 +210,7 @@
           <h1>Field guide</h1>
           <p>Choose what you want to explore.</p>
         </div>
+        <button id="account-entry" class="account-entry" type="button" hidden><strong>Your account</strong><span>Sign in or create an account</span></button>
         <details id="coastal-seasonal" class="guide-topic"><summary>Regional species & seasonal watch</summary></details>
         <details id="recent-discussions" class="guide-topic"><summary>Recent local fishing discussions</summary><div class="coastal-notes recent-discussions-body">Loading dated public links…</div></details>
         <details class="guide-topic"><summary>Regional data coverage</summary><div id="region-coverage"></div></details>

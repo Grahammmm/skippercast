@@ -1,0 +1,26 @@
+/* Account sheet. Reuses the home-port sheet layout (home-port.css) and the
+   :root tokens in styles.css; each var() carries its fallback so the sheet
+   still reads if loaded without styles.css. */
+.account-entry{display:grid;gap:3px;width:100%;min-height:64px;margin:14px 0;padding:14px 20px;border:1px solid var(--line,#dbe4e7);border-radius:14px;background:var(--white,#fff);color:var(--ink,#102f3b);text-align:left;font:inherit;cursor:pointer}
+.account-entry[hidden]{display:none}
+.account-entry strong{font-size:1rem;font-weight:650}
+.account-entry span{color:var(--muted,#526773);font-size:.85rem}
+.account-entry:hover,.account-entry:focus-visible{border-color:var(--teal,#007f73);background:var(--paper,#f3f7f8);outline:2px solid var(--teal,#007f73);outline-offset:2px}
+.account-hint{color:var(--muted,#526773);font-weight:600}
+.account-card .home-port-actions{margin-top:4px}
+.account-card .account-primary{background:var(--navy,#082e3b);color:var(--white,#fff);border-color:var(--navy,#082e3b)}
+.account-card .account-primary:hover,.account-card .account-primary:focus-visible{background:var(--teal,#007f73)}
+.account-card button:disabled{opacity:.6;cursor:not-allowed}
+.account-subhead{margin:6px 0 8px;font-size:.95rem}
+.account-passkeys{display:grid;gap:7px;margin:0 0 6px;padding:0;list-style:none}
+.account-passkeys li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border:1px solid var(--line,#dbe4e7);border-radius:11px;background:var(--paper,#f3f7f8);font-size:.85rem}
+.account-passkeys button{min-height:44px;padding:0 12px;border:1px solid var(--line,#dbe4e7);border-radius:10px;background:var(--white,#fff);color:var(--navy,#082e3b);font:700 .82rem system-ui,sans-serif;cursor:pointer}
+.account-danger{margin-top:16px;font-size:.85rem;color:var(--muted,#526773)}
+.account-danger summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:#8a2a1c}
+.account-danger button{min-height:44px;padding:0 14px;border:1px solid #b2412f;border-radius:10px;background:var(--white,#fff);color:#8a2a1c;font:700 .85rem system-ui,sans-serif;cursor:pointer}
+/* In-page confirmation (confirmInPage in account.js), also used by trip alerts. */
+.account-confirm{margin:10px 0;padding:12px 14px;border:1px solid #b2412f;border-radius:12px;background:#fdf3f1;color:var(--ink,#102f3b);font-size:.88rem}
+.account-confirm p{margin:0 0 8px}
+.account-confirm .home-port-actions{display:flex;flex-wrap:wrap;gap:8px}
+.account-confirm button{min-height:44px;padding:0 14px;border:1px solid var(--line,#dbe4e7);border-radius:10px;background:var(--white,#fff);color:var(--ink,#102f3b);font:700 .85rem system-ui,sans-serif;cursor:pointer}
+.account-confirm .account-destructive{background:#8a2a1c;border-color:#8a2a1c;color:#fff}

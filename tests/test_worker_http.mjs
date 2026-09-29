@@ -11,9 +11,10 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
-const {default: deployed, handle, checkTrips, ClientError} = await import('../server/worker.js');
-// A test-only identity resolver, passed through handle(); the deployed fetch never reads it.
-const worker = {fetch: (request, env, ctx) => handle(request, env, ctx, async r => r.headers.get('x-test-owner')), scheduled: deployed.scheduled};
+import {withSessions} from './fixtures/test-sessions.mjs';
+const {default: deployed, checkTrips, ClientError} = await import('../server/worker.js');
+// Private routes are reached through real session cookies (fixtures/test-sessions.mjs).
+const worker = withSessions(deployed);
 
 function database() {
   const sql = new DatabaseSync(':memory:'), journal = read('../drizzle/meta/_journal.json');
