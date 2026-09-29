@@ -78,3 +78,25 @@ test('alert changes and source loss retract prior threshold fit; final is mandat
   const result=assessTrip({point:'north'},REGIONS['morro-bay'],null,null,null);
   assert.notEqual(result.status,'within limits');
 });
+test('identity headers are refused unless the host is ChatGPT Sites',async()=>{
+  const {sql,adapter}=database();
+  const forged={owner:'alice'};
+  for(const provider of ['none','cloudflare','']){
+    const env={DB:adapter,IDENTITY_PROVIDER:provider};
+    const denied=await worker.fetch(request('trips',forged),env);
+    assert.equal(denied.status,401,`provider ${JSON.stringify(provider)} must not trust forged headers`);
+    assert.equal((await denied.json()).signIn,null);
+    const session=await(await worker.fetch(request('session',forged),env)).json();
+    assert.equal(session.signedIn,false);assert.equal(session.signIn,null);
+    assert.equal((await worker.fetch(request('boat/lookup',{...forged,method:'POST',body:{query:'Parker 2320'}}),{...env,ANTHROPIC_API_KEY:'k'})).status,401);
+  }
+  const sites=await(await worker.fetch(request('session',forged),{DB:adapter,IDENTITY_PROVIDER:'chatgpt-sites'})).json();
+  assert.equal(sites.signedIn,true);assert.match(sites.signIn,/^\/signin-with-chatgpt/);
+  const absent=await(await worker.fetch(request('session',forged),{DB:adapter})).json();
+  assert.equal(absent.signedIn,true,'the Sites package has no wrangler vars and keeps its platform sign-in');
+  sql.close();
+});
+test('the Cloudflare deployment config disables platform identity headers',()=>{
+  const text=readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8').replace(/^\s*\/\/.*$/mg,'');
+  assert.equal(JSON.parse(text).vars?.IDENTITY_PROVIDER,'none');
+});
