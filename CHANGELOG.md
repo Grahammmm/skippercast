@@ -21,6 +21,7 @@
 
 - Internal: removed duplicate and unused client files (including the unused 2.3 MB og.png), renamed -vN modules to canonical names, and made check_web.py reject -vN names in dist/.
 
+- Legal: a data-rights register records, for every source and runtime service, whether a paid product may use it; a CI gate fails if a new asset depends on a source not cleared for commercial use. See [data-rights register](docs/legal/data-rights-register.md).
 - Security: the Cloudflare Worker no longer trusts ChatGPT identity headers; private features there return 401 until SkipperCast has its own sign-in.
 - Fixed: trip-alert push notifications could never be enabled because the build renamed the service worker away from `/sw.js`.
 - Seafloor runner setup now installs the schema validator and checks the manifest before processing or publishing.

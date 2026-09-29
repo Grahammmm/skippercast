@@ -30,6 +30,8 @@ Other retrieved forecasts, observations, rules, charts, service responses, and d
 
 See [data sources and processing](docs/data-sources.md) for dataset metadata, the published subset, and remaining limitations.
 
+Whether each source may be used in a paid product is tracked separately in the [data-rights register](docs/legal/data-rights-register.md); several sources above are not yet cleared for commercial use.
+
 ## Web map dependencies
 
 The static app bundles Leaflet 1.9.4 under its BSD 2-Clause license, preserved in [LEAFLET-LICENSE.txt](dist/vendor/LEAFLET-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace Leaflet's terms.
