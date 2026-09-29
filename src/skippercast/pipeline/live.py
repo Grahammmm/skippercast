@@ -10,13 +10,6 @@ from .collect import publication, source, stamp
 from .parsers import ndbc
 from .settings import settings, previous_for_region
 
-BUOYS = (
-    ("diablo", "46215", "Diablo Canyon", False),
-    ("diablo-spectrum", "46215", "Diablo Canyon swell and wind waves", True),
-    ("offshore", "46028", "Cape San Martin · 55 nm WNW of Morro Bay", False),
-)
-
-
 def collect(now=None, previous=None, region_id="morro-bay"):
     now = now or datetime.now(timezone.utc)
     previous = previous_for_region(previous, region_id)
