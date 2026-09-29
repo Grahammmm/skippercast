@@ -20,6 +20,7 @@ from .runs import validate
 
 MARK = {"ok": "✅ ok", "degraded": "⚠️ degraded", "failed": "❌ failed"}
 DETAIL_KEYS = ("detail", "error_class", "http_status", "region", "issue")
+REGION_ORDER = {"failed": 0, "degraded": 1}
 
 
 def cell(value):
@@ -45,9 +46,15 @@ def render(manifest):
               f"| {run} | {cell(sha)} | {cell(m['started_at'])} | {seconds(m.get('duration_ms'))} | {cell(m.get('exit_code'))} |", ""]
     if m.get("error"):
         lines += [f"**Error:** `{cell(m['error'].get('class'))}` {cell(m['error'].get('message'))}", ""]
+    regions = m.get("regions") or {}
+    if regions:
+        lines += regions_table(regions)
     if m["sources"]:
-        lines += ["| Source | Status | Duration | Detail |", "| --- | --- | --- | --- |"]
-        for ident, row in sorted(m["sources"].items(), key=lambda item: (item[1]["status"] == "ok", item[0])):
+        # A regional job records every region's sources; list only the ones that need attention.
+        shown = {k: v for k, v in m["sources"].items() if not regions or v["status"] != "ok"}
+        if shown:
+            lines += ["| Source | Status | Duration | Detail |", "| --- | --- | --- | --- |"]
+        for ident, row in sorted(shown.items(), key=lambda item: (item[1]["status"] == "ok", item[0])):
             detail = "; ".join(f"{k}: {row[k]}" if k != "detail" else str(row[k]) for k in DETAIL_KEYS if row.get(k) not in (None, ""))
             lines.append(f"| {cell(ident)} | {MARK.get(row['status'], cell(row['status']))} | {seconds(row.get('duration_ms'))} | {cell(detail)} |")
         counts = {}
@@ -61,6 +68,24 @@ def render(manifest):
             lines += [f"| {cell(f.get('path'))} | {f.get('bytes', '–')} | `{cell((f.get('sha256') or '')[:12])}` |" for f in files]
             lines += ["", "</details>", ""]
     return "\n".join(lines).rstrip() + "\n"
+
+
+def regions_table(regions):
+    """One row per region: failed first, then degraded, then ok."""
+    lines = ["| Region | Status | Sources ok | Duration | Issues / error |", "| --- | --- | ---: | --- | --- |"]
+    for ident, row in sorted(regions.items(), key=lambda item: (REGION_ORDER.get(item[1]["status"], 2), item[0])):
+        total = row.get("sources_total")
+        ok = f"{row.get('sources_ok', 0)}/{total}" if total else "–"
+        if row.get("error_class"):
+            detail = f"{row['error_class']}: {row.get('error', '')}"
+        else:
+            detail = ", ".join(str(i) for i in (row.get("issues") or [])[:8])
+        lines.append(f"| {cell(ident)} | {MARK.get(row['status'], cell(row['status']))} | {ok} | "
+                     f"{seconds(row.get('duration_ms'))} | {cell(detail)} |")
+    counts = {}
+    for row in regions.values():
+        counts[row["status"]] = counts.get(row["status"], 0) + 1
+    return lines + ["", "Regions: " + ", ".join(f"{n} {s}" for s, n in sorted(counts.items())), ""]
 
 
 def main(argv=None):

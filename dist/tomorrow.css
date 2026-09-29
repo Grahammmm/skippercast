@@ -1,0 +1,20 @@
+/* Tomorrow: go / marginal / no-go per two-hour window (dist/tomorrow.js). */
+.tomorrow { margin: 12px 0; display: grid; gap: 10px; }
+.tomorrow h3 { margin: 0; font-size: 1.05rem; }
+.tomorrow-boat { margin: -6px 0 0; font-size: .82rem; color: var(--muted, #5b6b75); }
+.tomorrow-day { border: 1px solid var(--line, #d7e0e4); border-radius: 12px; padding: 10px 12px; background: var(--panel, #fff); }
+.tomorrow-day header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tomorrow-verdict { font-weight: 700; }
+.tomorrow-day.tw-go .tomorrow-verdict { color: #1f7a5a; }
+.tomorrow-day.tw-marginal .tomorrow-verdict { color: #9a5b12; }
+.tomorrow-day.tw-no-go .tomorrow-verdict { color: #a33a3a; }
+.tomorrow-windows { list-style: none; margin: 8px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.tomorrow-windows li { border-radius: 6px; padding: 4px 0; text-align: center; font-size: .7rem; line-height: 1.2; background: #e8edf0; color: #33434c; }
+.tomorrow-windows li span { display: block; opacity: .8; }
+.tomorrow-windows li b { display: block; font-size: .66rem; }
+.tomorrow-windows li.tw-go { background: #d5efe3; color: #145a41; }
+.tomorrow-windows li.tw-marginal { background: #f8e6c8; color: #7a460c; }
+.tomorrow-windows li.tw-no-go { background: #f6d5d2; color: #862f2f; }
+.tomorrow-limit, .tomorrow-confidence { margin: 2px 0 0; font-size: .85rem; }
+.tomorrow-confidence { color: var(--muted, #5b6b75); }
+.tomorrow-why summary { cursor: pointer; font-weight: 600; }

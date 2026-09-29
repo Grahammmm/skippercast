@@ -25,6 +25,7 @@ on:
       - "src/skippercast/pipeline/habitat_dynamics.py"
       - "src/skippercast/pipeline/wave_ensemble.py"
       - "scripts/check_saved_trips.py"
+      - "scripts/trip_check_loop.py"
       - "scripts/run_core_tests.py"
       - "scripts/live_loop.py"
       - "scripts/live_cycle.sh"
@@ -36,10 +37,10 @@ on:
       - "requirements-ocean.txt"
       - "deployments/**"
 
-permissions:
-  actions: write
-  contents: write
-  id-token: write
+# Each job gets only what it needs. The OIDC token for private trip checks is
+# issued to the notify job only; server/job-auth.js pins this workflow file
+# (workflow_ref), so the jobs stay in live-conditions.yml.
+permissions: {}
 
 concurrency:
   group: live-buoy-observations
@@ -49,6 +50,10 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 355
+    permissions:
+      contents: write  # pushes the conditions and forecasts branches
+    outputs:
+      started: ${{ steps.start.outputs.started }}
     steps:
       - uses: actions/checkout@v4
       # The forecast sampler shared with the Worker runs on Node.
@@ -69,25 +74,56 @@ jobs:
           PYTHONPATH: src
         run: python scripts/run_core_tests.py --scope live
       - name: Record loop start
-        run: echo "LOOP_STARTED=$(date +%s)" >> "$GITHUB_ENV"
+        id: start
+        run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
       # One job refreshes every 30 minutes for about 5.5 hours; pushes run one cycle.
       # Degraded individual sources are warnings; a failed cycle means no publication.
+      # Trip checks run in the notify job, so a delivery failure cannot fail a cycle.
       - name: Refresh and publish every 30 minutes
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # R2_PUBLISH_TOKEN (R2 object read/write on the feed bucket only) is preferred;
+          # the broad deploy token remains the fallback until the owner creates it.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
-        run: python scripts/live_loop.py ${{ github.event_name == 'push' && '--once' || '--budget-minutes 330' }}
-      # Scheduled runs are throttled by GitHub (they started only every 3-5 hours);
-      # dispatched runs are not, so each loop starts its successor.
-      - name: Start the next loop
-        if: always() && !cancelled() && github.event_name != 'push' && github.ref == 'refs/heads/main'
+        run: python scripts/live_loop.py --skip-trips ${{ github.event_name == 'push' && '--once' || '--budget-minutes 330' }}
+
+  # Private saved-trip checks after each publication, beside the refresh job.
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read   # watch the conditions branch head
+      actions: read    # see when the refresh job has finished
+      id-token: write  # short-lived identity for /api/jobs/check (server/job-auth.js)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check saved trips after each publication
         env:
           GH_TOKEN: ${{ github.token }}
+        run: python scripts/trip_check_loop.py ${{ github.event_name == 'push' && '--once --budget-minutes 60' || '--budget-minutes 345' }}
+
+  # Scheduled runs are throttled by GitHub (they started only every 3-5 hours);
+  # dispatched runs are not, so each loop starts its successor.
+  next:
+    needs: refresh
+    if: always() && !cancelled() && github.event_name != 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write  # dispatch the next run of this workflow
+    steps:
+      - name: Start the next loop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STARTED: ${{ needs.refresh.outputs.started }}
         run: |
-          elapsed=$(( $(date +%s) - LOOP_STARTED ))
+          elapsed=$(( $(date +%s) - ${STARTED:-$(date +%s)} ))
           if [ "$elapsed" -lt 3600 ]; then
             echo "::warning::Loop ended after ${elapsed}s; not chaining so a fast failure cannot repeat. The schedule or freshness check will restart it."
             exit 0
           fi
-          gh workflow run live-conditions.yml --ref main
+          gh workflow run live-conditions.yml --ref main --repo "$GITHUB_REPOSITORY"

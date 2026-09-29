@@ -32,7 +32,8 @@ concurrency:
 
 env:
   PYTHONPATH: src:.
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.
+  CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
 jobs:

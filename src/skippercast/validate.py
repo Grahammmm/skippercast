@@ -8,6 +8,15 @@ intelligence-feed from the document's shape. Exit status: 0 valid, 1 invalid,
 2 when the optional `jsonschema` package is missing (core runtime stays
 dependency-free; install requirements-test.txt).
 
+Writers call check(kind, document) before publishing (contracts.atomic_json
+does it when given kind=): a document that does not match its schema raises
+ContractError and is never written. check() is a no-op when jsonschema is not
+installed or when SKIPPERCAST_VALIDATE=off (an emergency switch for a schema
+bug that would otherwise block a correct feed).
+
+Patterns use ECMA-262 anchors: `$` matches only at the end of the string, as
+in browsers and zod, not before a trailing newline as Python's re does.
+
 The schemas are the shape contract shared by Python, the Worker and the
 browser. Semantic cross-references (a region's sources exist in the catalog,
 legal bindings match the registry) stay in platform.contracts and
@@ -17,10 +26,16 @@ from __future__ import annotations
 
 import argparse
 from functools import lru_cache
+import logging
+import os
 from pathlib import Path
+import re
 import sys
 
-from .platform.contracts import REPO, read_json
+from .platform.contracts import REPO, ContractError, read_json
+
+__all__ = ["KINDS", "ContractError", "MissingDependency", "available", "check", "detect_feed",
+           "enabled", "errors", "validator"]
 
 SCHEMA_DIR = REPO / "schemas"
 KINDS = {
@@ -41,6 +56,9 @@ KINDS = {
     "forecast-tile": "forecast-tile.schema.json",
 }
 INSTALL_HINT = "JSON Schema validation needs the optional 'jsonschema' package: pip install -r requirements-test.txt"
+SWITCH = "SKIPPERCAST_VALIDATE"
+OFF = frozenset({"off", "0", "false", "no"})
+LOG = logging.getLogger("skippercast.validate")
 
 
 class MissingDependency(RuntimeError):
@@ -68,15 +86,92 @@ def validator(kind, directory=SCHEMA_DIR):
     return _validator(kind, Path(directory))
 
 
+def ecma_pattern(pattern):
+    """Python regex with ECMA-262 `$`: end of input only (Python's `$` also matches before a final newline)."""
+    out, escaped, in_class = [], False, False
+    for char in pattern:
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == "[" and not in_class:
+            in_class = True
+        elif char == "]" and in_class:
+            in_class = False
+        elif char == "$" and not in_class:
+            out.append(r"\Z")
+            continue
+        out.append(char)
+    return "".join(out)
+
+
+@lru_cache(maxsize=None)
+def _compiled(pattern):
+    return re.compile(ecma_pattern(pattern))
+
+
 @lru_cache(maxsize=None)
 def _validator(kind, directory):
-    from jsonschema import Draft202012Validator
+    from jsonschema import Draft202012Validator, ValidationError, validators
     from referencing import Registry, Resource
+
+    def pattern(validator, patrn, instance, schema):
+        if validator.is_type(instance, "string") and not _compiled(patrn).search(instance):
+            yield ValidationError(f"{instance!r} does not match {patrn!r}")
+
+    Strict = validators.extend(Draft202012Validator, {"pattern": pattern})
     registry = Registry().with_resources((ident, Resource.from_contents(schema))
                                          for ident, schema in schemas(directory).items())
     schema = read_json(directory / KINDS[kind])
     Draft202012Validator.check_schema(schema)
-    return Draft202012Validator(schema, registry=registry)
+    return Strict(schema, registry=registry)
+
+
+def available():
+    """True when the optional jsonschema (and referencing) packages can be imported."""
+    try:
+        import jsonschema  # noqa: F401
+        import referencing  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def enabled(environ=None):
+    """False only when SKIPPERCAST_VALIDATE is off/0/false/no."""
+    environ = os.environ if environ is None else environ
+    return (environ.get(SWITCH) or "").strip().lower() not in OFF
+
+
+_warned = set()
+
+
+def check(kind, document, *, environ=None, directory=SCHEMA_DIR):
+    """Raise ContractError unless the document matches its schema.
+
+    Returns True when it was validated, False when validation was skipped
+    because jsonschema is not installed or SKIPPERCAST_VALIDATE=off. Callers
+    validate before their first write so a bad shape never publishes.
+    """
+    if not enabled(environ):
+        reason = f"{SWITCH}=off"
+    elif not available():
+        reason = "jsonschema is not installed"
+    else:
+        if kind == "feed":
+            try:
+                kind = detect_feed(document)
+            except ValueError as error:
+                raise ContractError(str(error)) from None
+        problems = errors(kind, document, directory)
+        if problems:
+            shown = "; ".join(problems[:5]) + (f"; ... {len(problems) - 5} more" if len(problems) > 5 else "")
+            raise ContractError(f"{kind} does not match schemas/{KINDS[kind]} ({len(problems)} error(s)): {shown}")
+        return True
+    if reason not in _warned:  # once per process, so a skipped check is visible in job logs
+        _warned.add(reason)
+        LOG.warning("schema validation skipped: %s", reason)
+    return False
 
 
 def detect_feed(document):

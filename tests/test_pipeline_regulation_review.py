@@ -1,7 +1,6 @@
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
 import gzip
-from io import BytesIO
 import json
 from unittest import TestCase
 from unittest.mock import patch
@@ -9,6 +8,7 @@ from unittest.mock import patch
 from skippercast.platform.contracts import REPO
 from skippercast.pipeline import regulations as rules
 from skippercast.pipeline.collect import Client
+from tests import http_fixture
 from skippercast.pipeline.parsers import page_watch
 from skippercast.pipeline.regulation_review import approved_registry, coverage
 
@@ -120,20 +120,14 @@ class FederalAndCompressedSources(TestCase):
                 with self.assertRaises(ValueError):rules._ecfr_section(Fake(),spec)
 
     def test_gzip_is_supported_and_decompressed_size_is_bounded(self):
-        class Response(BytesIO):
-            status=200;url='https://www.ecfr.gov/api/test'
-            headers={'Content-Encoding':'gzip','Content-Type':'application/json'}
-        class Opener:
-            def __init__(self, body):self.body=body
-            def open(self, request, timeout):
-                self.request=request
-                return Response(gzip.compress(self.body))
+        url='https://www.ecfr.gov/api/test'
+        headers={'Content-Encoding':'gzip','Content-Type':'application/json'}
         for body, succeeds in [(b'{"ok":true}',True),(b'x'*5_000_001,False)]:
-            c=Client(datetime(2026,9,22,tzinfo=timezone.utc));opener=Opener(body)
-            with patch('skippercast.pipeline.collect.check_public_address'),patch('skippercast.pipeline.collect.build_opener',return_value=opener):
-                if succeeds:
-                    self.assertEqual(c.get(Response.url,as_json=True),{'ok':True})
-                    self.assertEqual(opener.request.get_header('Accept-encoding'),'gzip')
-                    self.assertIn('compressed_bytes',c.requests[0])
-                else:
-                    with self.assertRaises(ValueError):c.get(Response.url)
+            session,script,_=http_fixture.session((200,gzip.compress(body),headers))
+            c=Client(datetime(2026,9,22,tzinfo=timezone.utc),session=session)
+            if succeeds:
+                self.assertEqual(c.get(url,as_json=True),{'ok':True})
+                self.assertEqual(script.requests[0]['headers']['Accept-Encoding'],'gzip')
+                self.assertIn('compressed_bytes',c.requests[0])
+            else:
+                with self.assertRaises(ValueError):c.get(url)
