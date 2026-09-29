@@ -156,7 +156,7 @@ def audit(manifest, cache, contexts, *, checked_at=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("research/catalog/usgs-video-cruises.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--contexts", type=Path, default=Path("dist/data"))
     parser.add_argument("--context-name", action="append",

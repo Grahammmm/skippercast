@@ -134,12 +134,12 @@ def main():
     root = Path('.')
     result = reconcile(
         root/'dist/data/northern-nbs-usgs-hard-research-context.geojson',
-        json.loads((root/'catalog/usgs-video-cruises.json').read_text()),
+        json.loads((root/'research/catalog/usgs-video-cruises.json').read_text()),
         root/'var/usgs-video-cache', root/'var/noaa-h11975-native-audit.json',
         root/'var/usgs-doi-native-audit.json', root/'var/usgs-doi-metadata.json',
         root/'var/noaa-native-cache', root/'var/usgs-doi-native-cache',
         root/'var/qualification-current/coastal/latest.json', root/'var/noaa-federal-areas.json',
-        root/'catalog/noaa-survey-hazards.json', root/'var/noaa-report-cache')
+        root/'research/catalog/noaa-survey-hazards.json', root/'var/noaa-report-cache')
     output = root / 'research/receipts/h11975-original-camera-cell-review.json'
     output.write_text(json.dumps(result, indent=2)+'\n')
     print(result['total_camera_windows'], result['centers_on_qualified_original_cells'])

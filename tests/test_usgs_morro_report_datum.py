@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class MorroReportDatumTests(unittest.TestCase):
     def setUp(self):
-        self.manifest = json.loads((ROOT / 'catalog/usgs-morro-report-datum-source.json').read_text())
+        self.manifest = json.loads((ROOT / 'research/catalog/usgs-morro-report-datum-source.json').read_text())
         self.raw = (b'<html><body>Depth, as referred to in this report, is relative to mean lower low water (MLLW) from verified tides. '
                     b'Bathymetry, backscatter intensity, and benthic habitat offshore of Morro Bay '
                     b'Bathymetry, backscatter intensity, and benthic habitat offshore of Point Estero '

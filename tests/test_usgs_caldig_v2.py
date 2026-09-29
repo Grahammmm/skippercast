@@ -25,7 +25,7 @@ class CalDigV2AuditTest(unittest.TestCase):
         self.assertNotIn('targets', report)
 
     def test_changed_archive_cannot_be_silently_used(self):
-        manifest = json.loads((ROOT / 'catalog/usgs-caldig-v2.json').read_text())
+        manifest = json.loads((ROOT / 'research/catalog/usgs-caldig-v2.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
             cache = Path(directory)
             (cache / 'Cal_DIG_I_v2_Bathymetry.zip').write_bytes(b'incomplete')

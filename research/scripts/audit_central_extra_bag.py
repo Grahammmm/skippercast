@@ -40,7 +40,7 @@ def audit(pin, products, cache, fetch):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pin", type=Path, default=Path("catalog/central-extra-bag-pin.json"))
+    parser.add_argument("--pin", type=Path, default=Path("research/catalog/central-extra-bag-pin.json"))
     parser.add_argument("--products", type=Path, default=Path("dist/data/noaa-survey-products.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/noaa-native-cache"))
     parser.add_argument("--output", type=Path, default=Path("research/receipts/f00844-original-fifth-bag-review.json"))

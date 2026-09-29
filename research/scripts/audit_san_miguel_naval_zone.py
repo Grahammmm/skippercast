@@ -57,7 +57,7 @@ def verify(manifest, now=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--manifest', type=Path, default=Path('catalog/san-miguel-naval-danger-zone.json'))
+    parser.add_argument('--manifest', type=Path, default=Path('research/catalog/san-miguel-naval-danger-zone.json'))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     receipt = verify(json.loads(args.manifest.read_text()))

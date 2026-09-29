@@ -85,7 +85,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--enc', type=Path, required=True)
     parser.add_argument('--context', type=Path, default=Path('dist/data/sf-native-hard-context.geojson'))
-    parser.add_argument('--historical', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
+    parser.add_argument('--historical', type=Path, default=Path('research/catalog/noaa-survey-hazards.json'))
     parser.add_argument('--projected-crs', choices=('EPSG:32610', 'EPSG:32611'), default='EPSG:32610')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()

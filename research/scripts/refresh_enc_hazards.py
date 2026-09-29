@@ -106,7 +106,7 @@ def main():
     parser.add_argument("--output", type=Path,
         help="Optional unpublished var/ review or data-feed output")
     args = parser.parse_args()
-    config = json.loads((ROOT / "catalog/noaa-enc-hazard-scopes.json").read_text())
+    config = json.loads((ROOT / "research/catalog/noaa-enc-hazard-scopes.json").read_text())
     if config.get("source_url") != BASE or config.get("schema_version") != 1:
         raise ValueError("Unreviewed NOAA ENC provider config")
     scopes = [row for row in config["scopes"] if row["id"] == args.scope]

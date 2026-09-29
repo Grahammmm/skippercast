@@ -177,7 +177,7 @@ def audit(manifest, sectors, cache, outlines, *, download=False, checked_at=None
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("research/catalog/usgs-video-cruises.json"))
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/usgs-video-cache"))
     parser.add_argument("--outlines", type=Path, default=Path("dist/data/cape-mendocino-native-hard-context.geojson"))

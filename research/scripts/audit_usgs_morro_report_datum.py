@@ -97,7 +97,7 @@ def fetch_product_xml(url):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path,
-                        default=Path('catalog/usgs-morro-report-datum-source.json'))
+                        default=Path('research/catalog/usgs-morro-report-datum-source.json'))
     parser.add_argument('--ledger', type=Path,
                         default=Path('dist/data/usgs-depth-datum-ledger.json'))
     parser.add_argument('--cache', type=Path,

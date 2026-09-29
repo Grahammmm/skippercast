@@ -110,7 +110,7 @@ def main():
     parser.add_argument("--source", type=Path, default=ROOT / "var/review/rov-zenodo-10929417.csv")
     parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/central-rov-200-300ft-evidence.json")
     args = parser.parse_args()
-    pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
+    pin = json.loads((ROOT / "research/catalog/central-rov-2024-source.json").read_text())
     if args.fetch:
         fetch(pin, args.source)
     result = build(pin, args.source)

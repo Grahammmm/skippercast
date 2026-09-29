@@ -33,7 +33,7 @@ class SanMiguelOriginalHabitatTests(unittest.TestCase):
         self.assertNotIn('coordinates', str(variable['counts']))
 
     def test_exact_danger_zone_polygon_is_research_only(self):
-        source = json.loads((ROOT / 'catalog/san-miguel-naval-danger-zone.json').read_text())
+        source = json.loads((ROOT / 'research/catalog/san-miguel-naval-danger-zone.json').read_text())
         polygon = danger_polygon(source)
         self.assertAlmostEqual(degrees('34°01′32″'), 34.025555555555556)
         self.assertAlmostEqual(polygon.bounds[0], -120.38805555555557)

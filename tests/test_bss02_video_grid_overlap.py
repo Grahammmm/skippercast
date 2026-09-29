@@ -65,7 +65,7 @@ class VideoGridOverlapTest(unittest.TestCase):
             self.skipTest('Original archives not cached locally')
         bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
                    if source['survey_id'] == 'BSS_Block02')
-        video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
+        video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
         expected = json.loads((RECEIPTS / 'bss02-video-grid-overlap.json').read_text())
         self.assertEqual(actual, expected)
@@ -78,7 +78,7 @@ class VideoGridOverlapTest(unittest.TestCase):
             self.skipTest('Original archives not cached locally')
         bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
                    if source['survey_id'] == 'BSS_Block03')
-        video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
+        video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
         expected = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
         self.assertEqual(actual, expected)

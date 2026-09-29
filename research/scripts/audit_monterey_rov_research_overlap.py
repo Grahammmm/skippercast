@@ -23,7 +23,7 @@ from research.scripts.build_central_rov_depth_evidence import fetch, source_byte
 
 CONTEXT = ROOT / "dist/data/usgs-offshore-monterey-hard-context.geojson"
 MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
-PIN = ROOT / "catalog/central-rov-2024-source.json"
+PIN = ROOT / "research/catalog/central-rov-2024-source.json"
 ROCKFISH = ("Copper_rf", "Gopher_rf", "Vermilion_rf", "Canary_rf",
             "Quillback_rf", "Yelloweye_rf", "Brown_rf")
 MARGINS = (0, 10, 25)

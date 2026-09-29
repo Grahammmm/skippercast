@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NCEIMultibeamDiscovery(unittest.TestCase):
     def test_all_sector_searches_match_the_reviewed_latitude_partitions(self):
-        config = json.loads((ROOT / 'catalog/ncei-multibeam-search.json').read_text())
+        config = json.loads((ROOT / 'research/catalog/ncei-multibeam-search.json').read_text())
         sectors = json.loads((ROOT / 'catalog/coastal-sectors.json').read_text())
         validate_config(config, sectors)
         bad = json.loads(json.dumps(config))
@@ -65,7 +65,7 @@ class NCEIMultibeamDiscovery(unittest.TestCase):
                 normalize_feature(row)
 
     def test_cross_sector_survey_metadata_is_stored_only_once(self):
-        config = json.loads((ROOT / 'catalog/ncei-multibeam-search.json').read_text())
+        config = json.loads((ROOT / 'research/catalog/ncei-multibeam-search.json').read_text())
         sectors = json.loads((ROOT / 'catalog/coastal-sectors.json').read_text())
         fields = ('OBJECTID', 'SURVEY_ID', 'PLATFORM', 'SURVEY_YEAR', 'SOURCE', 'NGDC_ID',
                   'DOWNLOAD_URL', 'START_TIME', 'END_TIME', 'INSTRUMENT', 'FILE_COUNT')

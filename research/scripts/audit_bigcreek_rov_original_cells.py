@@ -32,7 +32,7 @@ from skippercast.platform.contracts import atomic_json
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PIN = ROOT / "catalog/central-rov-2024-source.json"
+PIN = ROOT / "research/catalog/central-rov-2024-source.json"
 ROV = ROOT / "var/review/rov-zenodo-10929417.csv"
 ARCHIVE = ROOT / "var/noaa-native-cache/BigCreek_additional_products.tar.gz"
 OUTPUT = ROOT / "research/receipts/bigcreek-lopez-rov-original-cell-join.json"

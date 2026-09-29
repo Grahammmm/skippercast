@@ -49,7 +49,7 @@ def audit(region_id, enc_path, federal_path, *, root=REPO, now=None):
         raise ValueError("Expected reviewed original hard-bottom source context")
     enc_raw = Path(enc_path).read_bytes()
     enc = json.loads(enc_raw)
-    scopes = json.loads((root / "catalog/noaa-enc-hazard-scopes.json").read_text())["scopes"]
+    scopes = json.loads((root / "research/catalog/noaa-enc-hazard-scopes.json").read_text())["scopes"]
     scope = next((s for s in scopes if s["id"] == enc.get("scope_id")), None)
     if (scope is None or scope.get("region_id") != region_id
             or enc.get("region_id") != region_id or enc.get("bounds") != scope["bounds"]

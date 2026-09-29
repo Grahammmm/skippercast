@@ -28,7 +28,7 @@ from research.scripts.build_central_rov_depth_evidence import fetch, source_byte
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PIN = ROOT / "catalog/central-rov-2024-source.json"
+PIN = ROOT / "research/catalog/central-rov-2024-source.json"
 ARCHIVE = ROOT / "var/review/point-buchon-additional-products/Pt_Buchon_control_additional_products.tar.gz"
 CHARACTER = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon.zip"
 CHARACTER_METADATA = ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon_metadata.xml"

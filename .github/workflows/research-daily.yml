@@ -1,0 +1,133 @@
+name: "Research: daily native-seabed source inventory"
+
+# Research-only source discovery that used to run inside daily-data.yml. Nothing
+# here is loaded by the app, so it publishes nothing: results are workflow
+# artifacts, and a failure here can never block or stale the product feed.
+# Incremental state (--previous) is carried between runs in the Actions cache.
+
+on:
+  workflow_run:
+    workflows: ["Daily fishing evidence"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-daily
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: src
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Restore previous research inventories
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: var/research-previous
+          key: research-daily-${{ github.run_id }}
+          restore-keys: research-daily-
+      - name: Load published NOAA survey inputs (and seed state once from the data branch)
+        run: |
+          mkdir -p var/research-previous var/research-daily/enc-hazards
+          bash scripts/publish_branch_snapshot.sh --load data var/published
+          for name in bag-head-inventory.json usgs-map-blocks.json usgs-csmp-map-blocks.json \
+                      usgs-map-metadata.json usgs-csmp-map-metadata.json usgs-doi-releases.json usgs-doi-metadata.json; do
+            if [ ! -f "var/research-previous/$name" ] && [ -f "var/published/$name" ]; then
+              cp "var/published/$name" "var/research-previous/$name"
+            fi
+          done
+          test -f var/published/survey-discovery.json
+          test -f var/published/survey-products.json
+      - name: Check original NOAA BAG file access
+        run: python research/scripts/triage_noaa_bag_files.py --discovery var/published/survey-discovery.json --products var/published/survey-products.json --output var/research-daily/bag-head-inventory.json --previous var/research-previous/bag-head-inventory.json --max-age-days 30
+      - name: Refresh bounded NOAA ENC danger review
+        if: ${{ !cancelled() }}
+        run: python research/scripts/refresh_enc_hazards.py --scope santa-barbara-island --output var/research-daily/enc-hazards/santa-barbara-island.geojson
+      - name: Refresh Point Reyes and Tomales NOAA ENC danger review
+        if: ${{ !cancelled() }}
+        run: python research/scripts/refresh_enc_hazards.py --scope point-reyes-tomales --output var/research-daily/enc-hazards/point-reyes-tomales.geojson
+      - name: Refresh Greenwood NOAA ENC danger review
+        if: ${{ !cancelled() }}
+        run: python research/scripts/refresh_enc_hazards.py --scope h11967-greenwood-tile --output var/research-daily/enc-hazards/h11967-greenwood-tile.geojson
+      - name: Discover USGS state-waters map-block products
+        if: ${{ !cancelled() }}
+        run: python research/scripts/discover_usgs_map_blocks.py --output var/research-daily/usgs-map-blocks.json --previous var/research-previous/usgs-map-blocks.json --max-age-days 30
+      - name: Discover additional official USGS CSMP map-block products
+        if: ${{ !cancelled() }}
+        run: python research/scripts/discover_usgs_map_blocks.py --catalog-family csmp --output var/research-daily/usgs-csmp-map-blocks.json --previous var/research-previous/usgs-csmp-map-blocks.json --max-age-days 30
+      - name: Verify original USGS map-block XML metadata
+        if: ${{ !cancelled() }}
+        run: python research/scripts/audit_usgs_map_metadata.py --blocks var/research-daily/usgs-map-blocks.json --output var/research-daily/usgs-map-metadata.json --previous var/research-previous/usgs-map-metadata.json --max-age-days 30
+      - name: Verify original USGS CSMP XML metadata
+        if: ${{ !cancelled() }}
+        run: python research/scripts/audit_usgs_map_metadata.py --blocks var/research-daily/usgs-csmp-map-blocks.json --output var/research-daily/usgs-csmp-map-metadata.json --previous var/research-previous/usgs-csmp-map-metadata.json --max-age-days 30
+      - name: Discover newer USGS DOI release products
+        if: ${{ !cancelled() }}
+        run: python research/scripts/discover_usgs_doi_releases.py --output var/research-daily/usgs-doi-releases.json --previous var/research-previous/usgs-doi-releases.json --max-age-days 30
+      - name: Verify original USGS DOI XML metadata
+        if: ${{ !cancelled() }}
+        run: python research/scripts/audit_usgs_doi_metadata.py --releases var/research-daily/usgs-doi-releases.json --output var/research-daily/usgs-doi-metadata.json --previous var/research-previous/usgs-doi-metadata.json --max-age-days 30
+      - name: Keep this run's inventories as the next run's previous state
+        if: ${{ !cancelled() }}
+        run: |
+          for path in var/research-daily/*.json; do
+            [ -f "$path" ] && cp "$path" var/research-previous/
+          done
+      - name: Upload research inventories
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: research-daily-inventory
+          path: var/research-daily
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Report NOAA ENC danger-source coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('\n## NOAA ENC danger review\n')
+              for scope in ('santa-barbara-island', 'point-reyes-tomales', 'h11967-greenwood-tile'):
+                  path = Path(f'var/research-daily/enc-hazards/{scope}.geojson')
+                  if not path.is_file():
+                      raise SystemExit(f'NOAA ENC danger-layer refresh produced no {scope} snapshot')
+                  data = json.loads(path.read_text())
+                  if (data.get('status') != 'charted-danger-screen-only'
+                          or data.get('scope_id') != scope
+                          or len(data.get('query_receipts', [])) != 18):
+                      raise SystemExit(f'NOAA ENC danger-layer review incomplete: {scope}')
+                  out.write(f"{scope}: {len(data['features'])} charted features across 18 complete layer queries; retrieved {data['checked_at']}. Not navigation clearance.\n")
+          PY
+      - name: Report native-product discovery coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          lines=['\n## Native seabed source inventory']
+          unhealthy=[]
+          for name,label in [('bag-head-inventory.json','NOAA BAG files'),('usgs-map-blocks.json','USGS DS 781 map blocks'),('usgs-map-metadata.json','USGS DS 781 original XML records'),('usgs-csmp-map-blocks.json','USGS CSMP map blocks'),('usgs-csmp-map-metadata.json','USGS CSMP original XML records'),('usgs-doi-releases.json','USGS newer DOI releases'),('usgs-doi-metadata.json','USGS newer DOI XML records')]:
+              p=Path('var/research-daily')/name
+              if not p.is_file():
+                  lines.append(f'- {label}: missing inventory')
+                  unhealthy.append(label)
+                  continue
+              d=json.loads(p.read_text())
+              count=next((d[key] for key in ('accessible_file_count','block_count','verified_metadata_count','release_count') if key in d),0)
+              lines.append(f"- {label}: {d['health']['status']} · {count} checked files, blocks, releases or XML records; fishing locations remain unapproved")
+              if d['health']['status']!='ok': unhealthy.append(label)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(lines)+'\n')
+          if unhealthy: raise SystemExit('Native seabed discovery degraded or unavailable: '+', '.join(unhealthy))
+          PY

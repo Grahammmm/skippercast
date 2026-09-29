@@ -164,7 +164,7 @@ def main():
     p.add_argument('--usgs-cache',type=Path,default=Path('var/usgs-doi-native-cache'))
     p.add_argument('--mpas',type=Path,default=Path('var/qualification-current/coastal/latest.json'))
     p.add_argument('--federal-areas',type=Path,default=Path('var/noaa-federal-areas.json'))
-    p.add_argument('--hazards',type=Path,default=Path('catalog/noaa-survey-hazards.json'))
+    p.add_argument('--hazards',type=Path,default=Path('research/catalog/noaa-survey-hazards.json'))
     p.add_argument('--report-cache',type=Path,default=Path('var/noaa-report-cache'))
     p.add_argument('--screen',type=Path,default=Path('dist/data/noaa-h11975-cape-mendocino-hard-depth-screen.json'))
     p.add_argument('--output',type=Path,default=Path('dist/data/cape-mendocino-native-hard-context.geojson'))

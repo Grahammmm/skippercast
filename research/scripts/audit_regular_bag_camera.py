@@ -186,7 +186,7 @@ def review(audit, manifest, snapshot, cache, video_cache, *, survey_id="H11981",
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--audit", type=Path, default=Path("var/noaa-native-audit-100mb-refined.json"))
-    p.add_argument("--manifest", type=Path, default=Path("catalog/usgs-video-cruises.json"))
+    p.add_argument("--manifest", type=Path, default=Path("research/catalog/usgs-video-cruises.json"))
     p.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     p.add_argument("--cache", type=Path, default=Path("var/noaa-native-cache"))
     p.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))

@@ -41,7 +41,7 @@ class Bss03AccessTest(unittest.TestCase):
         from research.scripts.audit_bss03_access_blocks import source_blocks, stable
         bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']
                    if source['survey_id'] == 'BSS_Block03')
-        video = json.loads((ROOT / 'catalog/usgs-video-cruises.json').read_text())
+        video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
         blocks = source_blocks(bss, video, ROOT / 'var/review/csumb-bss-cache', ROOT / 'var/usgs-video-cache')
         official = [json.loads(path.read_text()) for path in paths[2:]]
         result, private = screen(blocks, *official)

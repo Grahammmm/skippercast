@@ -126,7 +126,7 @@ def main():
     p.add_argument('--region', type=Path, required=True)
     p.add_argument('--cruise', required=True)
     p.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
-    p.add_argument('--manifest', type=Path, default=Path('catalog/usgs-video-cruises.json'))
+    p.add_argument('--manifest', type=Path, default=Path('research/catalog/usgs-video-cruises.json'))
     p.add_argument('--cache', type=Path, default=Path('var/noaa-native-cache'))
     p.add_argument('--video-cache', type=Path, default=Path('var/usgs-video-cache'))
     p.add_argument('--output', type=Path, required=True)

@@ -275,7 +275,7 @@ def main():
     parser.add_argument('--usgs-metadata', type=Path, default=Path('var/usgs-map-metadata.json'))
     parser.add_argument('--mpas', type=Path, default=Path('var/qualification-current/coastal/latest.json'))
     parser.add_argument('--federal-areas', type=Path, default=Path('var/noaa-federal-areas.json'))
-    parser.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
+    parser.add_argument('--hazards', type=Path, default=Path('research/catalog/noaa-survey-hazards.json'))
     parser.add_argument('--bag-cache', type=Path, default=Path('var/noaa-native-cache'))
     parser.add_argument('--usgs-cache', type=Path, default=Path('var/usgs-native-cache'))
     parser.add_argument('--report-cache', type=Path, default=Path('var/noaa-report-cache'))
