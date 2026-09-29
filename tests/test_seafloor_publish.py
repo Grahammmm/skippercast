@@ -144,6 +144,7 @@ class PublicationTests(unittest.TestCase):
                     'archive_sha256': 'a'*64, 'archive_bytes': 500}
         for status, digest in ((200, 'a'*64), (206, 'b'*64), (206, 'a'*64)):
             def opener(request, **kwargs):
+                self.assertEqual(request.get_header('User-agent'), 'SkipperCast-Seafloor/1.0')
                 if request.full_url.endswith('.json'):
                     return io.BytesIO(json.dumps({**manifest, 'archive_sha256': digest}).encode())
                 response = io.BytesIO(b'PMTiles\x03'+b'\0'*119)

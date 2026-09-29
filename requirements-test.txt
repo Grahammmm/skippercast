@@ -1,3 +1,4 @@
 # Standard JSON Schema validation required by the seafloor M0 acceptance gate.
-# Test-only; the application and dependency-light core runner remain stdlib.
+# Also required by the seafloor batch manifest validator. The web app and
+# dependency-light core runner do not require it.
 jsonschema==4.26.0
