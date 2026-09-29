@@ -15,7 +15,8 @@ from rasterio.transform import from_origin
 from rasterio.windows import Window
 
 from skippercast.seafloor.adapters import bag, usgs_geotiff
-from skippercast.seafloor.fetch import fetch_source, restore_private, upload_private
+from skippercast.http import FakeSession
+from skippercast.seafloor.fetch import PREFIXES, fetch_source, restore_private, upload_private
 from skippercast.seafloor.ingest import ingest
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.raster import bounds_window, read_native
@@ -109,12 +110,12 @@ class AdapterTests(unittest.TestCase):
         cache = self.root / 'cache'
         source, downloaded = fetch_source(self.row, cache, local=self.tif)
         self.assertFalse(downloaded)
-        with patch('skippercast.seafloor.fetch.urlopen') as request:
-            self.assertEqual(fetch_source(self.row, cache, fetch=True), (source, False))
-            request.assert_not_called()
-            source.write_bytes(b'corrupt')
-            with self.assertRaisesRegex(ValueError, 'checksum'):
-                fetch_source(self.row, cache, fetch=True)
+        session = FakeSession()
+        self.assertEqual(fetch_source(self.row, cache, fetch=True, session=session), (source, False))
+        self.assertEqual(session.calls, [])
+        source.write_bytes(b'corrupt')
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            fetch_source(self.row, cache, fetch=True, session=session)
 
     def test_failed_import_does_not_cache_wrong_bytes(self):
         row = dict(self.row, sha256='0' * 64)
@@ -131,7 +132,7 @@ class AdapterTests(unittest.TestCase):
         first, downloaded, reused = ingest(row, bounds, root=self.root, local=path)
         self.assertFalse(downloaded or reused)
         self.assertEqual(first['nominal_0_300ft_pixels_in_requested_bounds'], 64*64-16)
-        with patch('skippercast.seafloor.fetch.urlopen') as request:
+        with patch('skippercast.http.default_session', side_effect=AssertionError('no network')) as request:
             second, downloaded, reused = ingest(row, bounds, root=self.root, fetch=True)
             self.assertEqual(first, second)
             self.assertTrue(reused)
@@ -171,15 +172,14 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(output.read_masks(1)[20, 20], 0)
 
     def test_first_download_and_second_fetch_uses_hash_cache(self):
-        stream = BytesIO(self.tif.read_bytes())
-        stream.geturl = lambda: self.row['url']
-        with patch('skippercast.seafloor.fetch.urlopen', return_value=stream) as request:
-            first, downloaded = fetch_source(self.row, self.root / 'download', fetch=True)
-            self.assertTrue(downloaded)
-            second, downloaded = fetch_source(self.row, self.root / 'download', fetch=True)
-            self.assertEqual(first, second)
-            self.assertFalse(downloaded)
-            request.assert_called_once()
+        session = FakeSession({self.row['url']: self.tif.read_bytes()})
+        first, downloaded = fetch_source(self.row, self.root / 'download', fetch=True, session=session)
+        self.assertTrue(downloaded)
+        second, downloaded = fetch_source(self.row, self.root / 'download', fetch=True, session=session)
+        self.assertEqual(first, second)
+        self.assertFalse(downloaded)
+        self.assertEqual(len(session.calls), 1)
+        self.assertEqual(session.calls[0][2]['allowed_prefixes'], PREFIXES)
 
     def test_private_cache_streams_and_rejects_corruption_and_oversize(self):
         destination = self.root / 'restore/source.tif'

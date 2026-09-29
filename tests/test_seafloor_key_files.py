@@ -1,0 +1,48 @@
+"""Files whose bytes are part of the seafloor pipeline's cache keys.
+
+seafloor/ingest.py keys each normalized survey grid (COG) on the SHA-256 of
+these source files, and the published COG hash must equal the reviewed
+``adapter_review.cog_sha256`` in catalog/surveys.json. Any byte change here,
+even a refactor or a new import, turns every cached grid into a cache miss.
+Normalizing again on a different machine does not reproduce the reviewed
+bytes, so the scheduled "Screen and publish seafloor" job fails with
+"Normalized source differs from reviewed manifest" and the public layer stays
+unavailable.
+
+That happened on 2026-09-29, when a shared-helper refactor edited
+platform/bottom_targets.py. To change one of these files, do it in a seafloor
+PR that re-runs ingestion, re-reviews the COG hashes and updates this list in
+the same change.
+"""
+import hashlib
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+PINNED = {
+    # seafloor/ingest.py: metadata_parser and implementation
+    'src/skippercast/platform/bottom_targets.py': 'feece80a42529aeab5850bc4b775835ffdcafdbb779ac38d6e3cc7c33c7d192f',
+    'src/skippercast/seafloor/ingest.py': 'f1fd4ae89478225f6d38dc4a4748fdc18abaf80af6ca7621617e832c1d0f060a',
+    'src/skippercast/seafloor/raster.py': '30885cdbaed6be8089f4b3661a4d6715a33d6900274486793fceb53079729ca5',
+    'src/skippercast/seafloor/adapters/bag.py': 'f89211791ecc448f3d8d4b32589ee4c7cc016604e7788db46b17405c9858853c',
+    'src/skippercast/seafloor/adapters/usgs_geotiff.py': '51dee0633a7733c9937856b3c09704b8f5197bf9c96e3dc5f3d2aa8b65f4a24a',
+}
+
+
+class SeafloorKeyFileTests(unittest.TestCase):
+    def test_key_files_keep_their_reviewed_bytes(self):
+        for name, expected in PINNED.items():
+            with self.subTest(name):
+                actual = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+                self.assertEqual(actual, expected, f'{name} is part of a seafloor cache key; see this module docstring')
+
+    def test_pinned_list_covers_every_file_the_keys_hash(self):
+        ingest = (ROOT / 'src/skippercast/seafloor/ingest.py').read_text()
+        for name in ('ingest.py', 'raster.py', 'adapters/bag.py', 'adapters/usgs_geotiff.py'):
+            self.assertIn(f"'{name}'", ingest)
+            self.assertIn(f'src/skippercast/seafloor/{name}', PINNED)
+        self.assertIn("'platform/bottom_targets.py'", ingest)
+
+
+if __name__ == '__main__':
+    unittest.main()

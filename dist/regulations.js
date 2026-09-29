@@ -142,16 +142,71 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
   return localizeRuleState(geographicSeasonState(state,window,location),location);
 }
 
+// Compact first row (P4-07): status · bag · size · depth · verified date · one
+// official link. Every value comes from the reviewed registry and the same
+// state as the detail below; nothing here can show "Open" when the detail
+// withholds it. Text is cut to its first clause, never rewritten.
+const SUMMARY_STATUS = { open: "Open", restricted: "Open · limits", closed: "Closed", scheduled: "Opener unconfirmed", excluded: "Protected area", unknown: "Check rules" };
+export function firstClause(text, max = 48) {
+  const t = String(text ?? "").trim();
+  if (!t) return null;
+  let clause = t.split(/;|\.(?:\s|$)|\s\((?=or\b)/)[0].trim().replace(/\bminimum\b/, "min");
+  if (clause.length > max) clause = clause.slice(0, max).replace(/\s+\S*$/, "") + "…";
+  const more = /\bexcept\b|\bno more than\b|\bwith an allowance\b|\balternat/i.test(t.slice(clause.length));
+  return more ? `${clause} (exceptions below)` : clause;
+}
+export function depthLimit(profile, today) {
+  const window = profile?.windows?.find((w) => today >= w.start && today <= w.end);
+  if (!window) return null;
+  if (window.access === "shoreward-50fm") return "Inside 50-fm line";
+  if (window.access === "seaward-50fm") return "Outside 50-fm line";
+  if (window.access || window.restriction) return null; // described in the detail, not summarised
+  return /\ball depths\b/i.test(profile.season || "") ? "All depths" : null;
+}
+const shortDate = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleDateString("en-US", { timeZone: getRegion().timezone, month: "short", day: "numeric" }) : null;
+export function ruleSummary(data, species, state) {
+  const ids = species === "reef" ? ["lingcod", "rockfish"] : [species];
+  const profiles = validRegulations(data) ? ids.map((id) => data.species?.[id]).filter(Boolean) : [];
+  const status = SUMMARY_STATUS[state.status] ? state.status : "unknown";
+  const summary = { status, label: SUMMARY_STATUS[status], bag: [], size: [], depth: null, verified: null, checked: null, link: "https://wildlife.ca.gov/Fishing/Ocean", linkLabel: "Official CDFW rules" };
+  if (profiles.length !== ids.length) return summary;
+  const named = profiles.length > 1;
+  for (const p of profiles) {
+    const bag = firstClause(p.bag), size = firstClause(p.size);
+    if (bag) summary.bag.push(named ? `${p.name}: ${bag}` : bag);
+    if (size) summary.size.push(named ? `${p.name}: ${size}` : size);
+  }
+  if (["open", "restricted"].includes(status)) {
+    const depths = [...new Set(profiles.map((p) => depthLimit(p, state.today)))];
+    summary.depth = depths.length === 1 ? depths[0] : null;
+  }
+  const sourceIds = [...new Set(profiles.flatMap((p) => p.source_ids))];
+  const times = sourceIds.map((id) => data.checks?.[id]?.data_retrieved_at).filter((s) => Number.isFinite(Date.parse(s)));
+  const oldest = times.length === sourceIds.length ? times.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
+  if (oldest && !state.issues?.length && data.rules_review_status === "reviewed") summary.verified = shortDate(oldest);
+  else summary.checked = shortDate(oldest);
+  const primary = species === "reef" ? "rules-groundfish" : profiles[0].primary_source_id || profiles[0].source_ids[0];
+  if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url); summary.linkLabel = species === "reef" ? "Official groundfish rules" : "Official rules"; }
+  return summary;
+}
+export function ruleSummaryHTML(s) {
+  const cell = (label, values) => values?.length ? `<div><dt>${label}</dt>${values.map((v) => `<dd>${esc(v)}</dd>`).join("")}</div>` : "";
+  const when = s.verified ? `Verified ${esc(s.verified)}` : s.checked ? `Needs recheck · last check ${esc(s.checked)}` : "Not verified";
+  return `<div class="reg-summary-row" role="group" aria-label="Rules at a glance"><span class="reg-badge reg-${s.status}">${esc(s.label)}</span><dl>${cell("Bag", s.bag)}${cell("Size", s.size)}${cell("Depth", s.depth ? [s.depth] : [])}</dl><p><span class="reg-verified${s.verified ? "" : " reg-unverified"}">${when}</span><a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.linkLabel)} ↗</a></p></div>`;
+}
+
 export function regulationsHTML(data, species, now = Date.now(), fallback = false, tripDate = null, method = null, tripInstant = null, includeAreas = true, location = null) {
   const state = regulationState(data, species, now, tripDate, method, tripInstant, location);
   const summary = `<summary><span>Rules</span><span class="reg-badge reg-${state.status}" aria-live="polite">${esc(state.label)}</span><span class="reg-chevron" aria-hidden="true">⌄</span></summary>`;
   const localNote=location?`<p class="reg-local"><strong>${esc(location.source)} · ${esc(location.name)}</strong><br>${location.point.latitude.toFixed(5)}, ${location.point.longitude.toFixed(5)}${location.targetNote?`<br>${esc(location.targetNote)}${location.targetSource?` <a href="${esc(officialURL(location.targetSource))}" target="_blank" rel="noopener">Official source ↗</a>`:''}`:''}</p>`:'';
-  if(location && (location.coverage!=='covered'||location.regionId!==getRegion().id))return summary+`<div class="reg-body">${localNote}<p>${esc(state.reason)}</p><p>${location.coverage==='discovery'?'Offshore targets are search references, with fish presence unverified. Check U.S. versus Mexican waters, federal rules and trip-wide possession limits before fishing.':'Pan back into a mapped region or choose one in Options. Neighboring rules are not transferred to this location.'}</p><a class="reg-official" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map" target="_blank" rel="noopener">Official CDFW regional rules ↗</a></div>`;
+  // Reef member cards (includeAreas=false) sit inside the combined card, which already has the row.
+  const row = includeAreas ? ruleSummaryHTML(ruleSummary(data, species, state)) : "";
+  if(location && (location.coverage!=='covered'||location.regionId!==getRegion().id))return summary+`<div class="reg-body">${row}${localNote}<p>${esc(state.reason)}</p><p>${location.coverage==='discovery'?'Offshore targets are search references, with fish presence unverified. Check U.S. versus Mexican waters, federal rules and trip-wide possession limits before fishing.':'Pan back into a mapped region or choose one in Options. Neighboring rules are not transferred to this location.'}</p><a class="reg-official" href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map" target="_blank" rel="noopener">Official CDFW regional rules ↗</a></div>`;
   if (species === "reef" && validRegulations(data)) {
     const ids = ["lingcod", "rockfish"];
     const seasonsMatch = data.species.lingcod.season === data.species.rockfish.season;
     return summary + `<div class="reg-body" tabindex="0" aria-label="Lingcod and rockfish regulation details">
-      ${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
+      ${row}${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
       <h2>Lingcod &amp; rockfish</h2><p class="reg-area">${esc(getRegion().name)} · recreational boat fishing</p>
       <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
       ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
@@ -162,13 +217,13 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
       <a class="reg-official" href="${esc(officialURL(data.sources["rules-groundfish"].url))}" target="_blank" rel="noopener">Official groundfish rules ↗</a>
     </div>`;
   }
-  if (!state.profile) return summary + `<div class="reg-body"><p>${esc(state.reason)}</p><a href="https://wildlife.ca.gov/Fishing/Ocean" target="_blank" rel="noopener">Official CDFW rules ↗</a></div>`;
+  if (!state.profile) return summary + `<div class="reg-body">${row}<p>${esc(state.reason)}</p><a href="https://wildlife.ca.gov/Fishing/Ocean" target="_blank" rel="noopener">Official CDFW rules ↗</a></div>`;
   const p = state.profile;
   const timestamps = p.source_ids.map((id) => data.checks[id]?.data_retrieved_at).filter((s) => Number.isFinite(Date.parse(s)));
   const checked = timestamps.length === p.source_ids.length ? timestamps.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
   const links = p.source_ids.map((id) => `<a href="${esc(officialURL(data.sources[id].url))}" target="_blank" rel="noopener">${esc(data.sources[id].name)} ↗</a>`).join("");
   return summary + `<div class="reg-body" tabindex="0" aria-label="${esc(p.name)} regulation details">
-    ${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
+    ${row}${localNote}<div class="reg-context">Trip date · ${esc(state.today)} · ${esc(getRegion().timezone)}</div>
     <h2>${esc(p.name)}</h2><p class="reg-area">${esc(data.area)}</p>
     <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
     ${state.timingNote ? `<p>${esc(state.timingNote)}</p>` : ''}
@@ -187,6 +242,7 @@ export function initRegulations(card, select, {resolveLocation=(v)=>v}={}) {
   let spotViews=[];
   let tripDate = null, tripInstant = null, method = null, followForecast = true;
   let locationContext=null;
+  let lastGlance="";
   document.addEventListener('skippercast:location',event=>{locationContext=event.detail;species=select.value;render();});
   card.addEventListener('change',event=>{
     if(event.target.id==='rules-trip-date'){tripDate=event.target.value;tripInstant=null;followForecast=false;render();}
@@ -213,6 +269,12 @@ export function initRegulations(card, select, {resolveLocation=(v)=>v}={}) {
     let html = regulationsHTML(registry ? {...registry, area: getRegion().name + " · " + getRegion().jurisdiction} : null, species, Date.now(), fallback, tripDate, method, tripInstant,true,locationContext);
     const controls=`<div class="rule-controls"><label>Fishing date<input id="rules-trip-date" type="date" value="${tripDate||dateFormat.format(new Date())}"></label><label>Method<select id="rules-method">${options.map(([id,name])=>`<option value="${id}" ${method===id?"selected":""}>${name}</option>`).join("")}</select></label>${followForecast?"":'<button id="rules-follow-forecast">Use forecast date</button>'}</div>`;
     html=html.replace("</summary>","</summary>"+controls);
+    // Change-alert hook (P4-10 alerts): announce the at-a-glance state whenever it changes,
+    // including an official source that changed after review (status "unknown", changed ids listed).
+    const glance=ruleSummary(registry,species,regulationState(registry,species,Date.now(),tripDate,method,tripInstant,locationContext));
+    const changed=registry?[...new Set((species==='reef'?['lingcod','rockfish']:[species]).flatMap(id=>registry.species?.[id]?.source_ids||[]))].filter(id=>registry.checks?.[id]?.status==='changed'):[];
+    const glanceKey=JSON.stringify([getRegion().id,species,glance,changed]);
+    if(glanceKey!==lastGlance){lastGlance=glanceKey;document.dispatchEvent(new CustomEvent('skippercast:rules-status',{detail:{regionId:getRegion().id,species,...glance,changedSources:changed}}));}
     if (card.innerHTML !== html) {
       const expanded = [...card.querySelectorAll("[data-reg-section][open]")].map((x) => x.dataset.regSection);
       card.innerHTML = html;

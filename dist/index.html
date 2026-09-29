@@ -35,6 +35,7 @@
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
     />
+    <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="vendor/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="marine.css" />
@@ -45,9 +46,11 @@
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="bite-evidence.css" />
     <link rel="stylesheet" href="regulations.css" />
+    <link rel="stylesheet" href="meteogram.css" />
     <link rel="stylesheet" href="live-conditions.css" />
     <link rel="stylesheet" href="calm-layout.css" />
     <link rel="stylesheet" href="planning.css" />
+    <link rel="stylesheet" href="tomorrow.css" />
     <link rel="stylesheet" href="platform.css" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
@@ -89,6 +92,7 @@
     <link rel="modulepreload" href="regional-context.js" />
     <link rel="modulepreload" href="geology.js" />
     <link rel="modulepreload" href="weather-ui.js" />
+    <link rel="modulepreload" href="tomorrow.js" />
     <link rel="modulepreload" href="forecast-matrix.js" />
     <link rel="modulepreload" href="bite-evidence.js" />
     <link rel="modulepreload" href="target-groups.js" />
@@ -109,6 +113,8 @@
   <link rel="stylesheet" href="insights.css"/>
   <link rel="stylesheet" href="export.css"/>
   <link rel="stylesheet" href="mobile-polish.css"/>
+  <link rel="stylesheet" href="offline.css"/>
+  <script type="module" src="offline.js"></script>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 </head>
@@ -195,7 +201,9 @@
         <p id="forecast-status" role="status">
           Loading wind, waves, temperature, and NOAA tides…
         </p>
+        <details id="meteogram-card" class="meteogram-card" open><summary>Next 7 days <small>Tap or drag to pick an hour</small></summary><div id="meteogram"><p class="meteogram-loading">Loading forecast graph…</p></div><ul class="meteogram-legend"><li><i class="lg-wind"></i>Wind kt</li><li><i class="lg-gust"></i>Gust</li><li><i class="lg-sea"></i>Seas ft</li><li><i class="lg-tide"></i>Tide ft</li><li><i class="lg-go"></i>Score 7+</li><li><i class="lg-caution"></i>4–6.9</li><li><i class="lg-rough"></i>Under 4 or hazard</li><li><i class="lg-unknown"></i>No score</li><li><i class="lg-differ"></i>Models differ</li><li><i class="lg-hatch"></i>Outlook after 72 h</li></ul><script type="module" src="meteogram-ui.js"></script></details>
         <div id="forecast-content"></div>
+        <div id="tomorrow-outlook"></div>
         <div id="morning-outlook"></div>
         <div id="bite-evidence" aria-label="Recent fishing evidence"></div>
       </section>
@@ -341,6 +349,7 @@
           </button>
         </section>
         </details>
+        <details id="offline-pack-topic" class="guide-topic"><summary>Offline trip pack</summary><section id="offline-pack" class="offline-pack" aria-label="Save this region for offline use"></section></details>
       </section>
       <section id="export-panel" class="export-panel app-panel" data-panel="export" aria-labelledby="export-heading" hidden>
         <div class="view-heading"><h1 id="export-heading">Your day on the water</h1><p>A small fishing plan, ready for your chartplotter.</p></div>

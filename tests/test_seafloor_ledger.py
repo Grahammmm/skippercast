@@ -1,14 +1,13 @@
 """Dependency-light checks of the committed baseline, including CI without caches."""
 import hashlib
-import io
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
 
+from skippercast.http import FakeSession
 from skippercast.seafloor.io import verified_file
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,24 +99,22 @@ class LedgerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'fixture'
             path.write_bytes(content)
-            with patch('skippercast.seafloor.io.urlopen') as request:
-                self.assertEqual(verified_file(url, digest, path, True), digest)
-                request.assert_not_called()
-                path.write_bytes(b'tampered')
-                with self.assertRaises(ValueError):
-                    verified_file(url, digest, path, True)
-                request.assert_not_called()
+            session = FakeSession({url: content})
+            self.assertEqual(verified_file(url, digest, path, True, session=session), digest)
+            self.assertEqual(session.calls, [])
+            path.write_bytes(b'tampered')
+            with self.assertRaises(ValueError):
+                verified_file(url, digest, path, True, session=session)
+            self.assertEqual(session.calls, [])
 
     def test_failed_download_does_not_poison_cache(self):
         url = 'https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/fixture'
-        response = io.BytesIO(b'bad bytes')
-        response.headers = {}
-        response.geturl = lambda: url
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'fixture'
-            with patch('skippercast.seafloor.io.urlopen', return_value=response):
-                with self.assertRaises(ValueError):
-                    verified_file(url, '0' * 64, path, True)
+            session = FakeSession({url: b'bad bytes'})
+            with self.assertRaises(ValueError):
+                verified_file(url, '0' * 64, path, True, session=session)
+            self.assertEqual(len(session.calls), 1)
             self.assertFalse(path.exists())
             self.assertFalse(path.with_suffix('.part').exists())
 

@@ -3,16 +3,17 @@ import hashlib
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
-from urllib.request import urlopen
 
+from skippercast import http
 from skippercast.platform.contracts import atomic_json
 from .io import sha256
 
 PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
             'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/')
+HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
 
 
-def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000):
+def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000, session=None):
     url, expected = row['url'], row['sha256']
     if not url.startswith(PREFIXES) or any(s in url.lower() for s in ('bluetopo', '/modeling/')):
         raise ValueError('Unreviewed original-source URL')
@@ -35,23 +36,28 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
     temporary = cache / (hashlib.sha256(url.encode()).hexdigest() + '.part')
     try:
         if local is not None:
-            stream = Path(local).open('rb')
+            digest, size = hashlib.sha256(), 0
+            with Path(local).open('rb') as stream, temporary.open('wb') as output:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                    size += len(chunk)
+                    if size > max_bytes:
+                        raise ValueError('Original source exceeds byte limit')
+                    digest.update(chunk)
+                    output.write(chunk)
+            actual = digest.hexdigest()
         else:
-            stream = urlopen(url, timeout=60)
-            if not stream.geturl().startswith(PREFIXES):
-                stream.close()
-                raise ValueError('Original source redirected outside reviewed publishers')
-        digest, size = hashlib.sha256(), 0
-        with stream, temporary.open('wb') as output:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                size += len(chunk)
-                if size > max_bytes:
-                    raise ValueError('Original source exceeds byte limit')
-                digest.update(chunk)
-                output.write(chunk)
+            with temporary.open('wb') as output:
+                try:
+                    receipt = (session or http.default_session()).download(
+                        url, output, timeout=60, max_bytes=max_bytes,
+                        allowed_hosts=HOSTS, allowed_prefixes=PREFIXES).receipt
+                except http.BodyTooLarge as error:
+                    raise ValueError('Original source exceeds byte limit') from error
+                except http.DisallowedHost as error:
+                    raise ValueError('Original source redirected outside reviewed publishers') from error
+            actual, size = receipt.sha256, receipt.bytes
         if size == 0:
             raise ValueError('Original source is empty')
-        actual = digest.hexdigest()
         if expected != 'unknown' and actual != expected:
             raise ValueError('Original source checksum mismatch')
         if row['bytes'] != 'unknown' and row['bytes'] != size:
