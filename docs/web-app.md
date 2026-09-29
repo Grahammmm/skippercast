@@ -88,14 +88,14 @@ image URL without running JavaScript. All hash views share this site-wide card.
 
 The [published share image](../dist/skippercast-parker-preview.jpg) is a 1736 × 906
 JPEG, 493,062 bytes. It preserves the composition and dimensions of the
-[original PNG](../dist/og.png), generated from this [prompt](social-preview-prompt.txt).
-The original 2.3 MB PNG exceeded [Signal Desktop's 1 MiB image download limit](https://github.com/signalapp/Signal-Desktop/blob/main/ts/linkPreviews/linkPreviewFetch.preload.ts),
+original generated PNG (from this [prompt](social-preview-prompt.txt)), which is no
+longer shipped; recover it from git history if needed. The original 2.3 MB PNG exceeded [Signal Desktop's 1 MiB image download limit](https://github.com/signalapp/Signal-Desktop/blob/main/ts/linkPreviews/linkPreviewFetch.preload.ts),
 so Signal displayed the title and description without the boat image. The JPEG
 uses a new URL and is less than half that limit. Keep social-preview images below
 1,048,576 bytes, publicly accessible as JPEG or PNG, and declared in the initial
 HTML. This is separate from ordinary in-app attachment size limits.
 
-Both image hashes are recorded in `scripts/web-vendor-sha256.json`. Keep image
+The image hash is recorded in `scripts/web-vendor-sha256.json`. Keep image
 dimensions, media type and hashes in sync when replacing the card. To check a
 change, remove the existing unsent link and paste it into Signal again; an already
 sent preview is embedded in its message and is not updated by redeploying the site.

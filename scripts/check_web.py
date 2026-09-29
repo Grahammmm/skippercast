@@ -181,8 +181,18 @@ def check_h11876_sidescan_context():
                for row in review['transects'])
 
 
+VERSIONED_NAME = re.compile(r"-v\d")
+
+
+def check_no_versioned_client_names():
+    """AGENTS.md: the build fingerprints assets, so never ship -vN copies."""
+    versioned = sorted(path.name for path in WEB.iterdir() if VERSIONED_NAME.search(path.name))
+    assert not versioned, f"versioned file names in dist/ (use the canonical name): {versioned}"
+
+
 def main():
     assert (WEB / "index.html").is_file()
+    check_no_versioned_client_names()
     induration = json.loads((WEB / 'data/h11967-noaa-induration-camera-review.json').read_text())
     chart = json.loads((WEB / 'data/h11967-enc-camera-research-screen.json').read_text())
     assert induration['scope'] == 'original-bag-camera-versus-noaa-2017-induration-research'

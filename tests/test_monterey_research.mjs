@@ -22,10 +22,10 @@ test('original Monterey seabed is visible only as historical research context',(
   assert.throws(()=>validateMontereyResearch({...context,features:context.features.map((f,i)=>i?f:{...f,properties:{...f.properties,fishing_target:true}})},depth));
   assert.throws(()=>validateMontereyResearch(context,{...depth,mllw_conversion_reviewed:true}));
   assert.throws(()=>matchMontereyToStatewide({...statewide,coast_id:'southern'},context,depth));
-  const module=readFileSync(new URL('../dist/coastal-discovery-v4.js',import.meta.url),'utf8');
+  const module=readFileSync(new URL('../dist/coastal-discovery.js',import.meta.url),'utf8');
   const boot=readFileSync(new URL('../dist/boot.js',import.meta.url),'utf8');
   const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
   assert.match(module,/matchMontereyToStatewide\(data,/);
-  assert.match(boot,/coastal-discovery-v4\.js/);
+  assert.match(boot,/coastal-discovery\.js/);
   assert.match(html,/src="boot\.js/);
 });
