@@ -283,15 +283,15 @@
       "kind": "bathymetry",
       "year": 2008,
       "resolution_m": 2.0,
-      "horizontal_crs": "unknown",
+      "horizontal_crs": "EPSG:32610",
       "vertical_datum": "unknown",
       "license": "public-domain-us-gov",
       "sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
-      "bytes": "unknown",
+      "bytes": 63660952,
       "derived_from": [],
-      "status": "candidate",
-      "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Acquisition independence unresolved; do not count as independent corroboration.",
+      "status": "hold",
+      "hold_reason": "format-unsupported",
+      "notes": "Opened and hash-verified original USGS raster in reviewed window; valid nominal 0\u2013300 ft pixels found. Hold: producer metadata says depths below 80 m came from a 5 m source grid upsampled into the delivered 2 m raster. Current adapter cannot carry the depth-dependent effective resolution into tier-2 feature labels, so pile-scale publication would overstate detail. Public-domain use requires USGS/CSUMB/UCSC source attribution; no navigation use. Vertical datum and interpolation mask remain unknown.",
       "archive_member": "unknown",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/47/archive_url",
@@ -308,7 +308,28 @@
         "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/26/native_resolution_m"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+        "cog_sha256": "1615b4d23712d7af686bdd07ce11899fa73216f1ace6af3374eac93efb2ae3e7",
+        "requested_bounds_wgs84": [
+          -121.12,
+          35.2,
+          -120.83,
+          35.33
+        ],
+        "valid_pixels_in_requested_bounds": 16054288,
+        "nominal_0_300ft_pixels_in_requested_bounds": 12537695,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+      }
     },
     {
       "id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",

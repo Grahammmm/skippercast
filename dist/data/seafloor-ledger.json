@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3206.80125,
-    "tier1_km2": 100.713125,
-    "tier2_km2": 16.611763,
+    "tier0_km2": 3158.32625,
+    "tier1_km2": 149.188125,
+    "tier2_km2": 23.319001,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 98.15196
+    "selected_valid_km2": 145.257366
   },
   "reaches": [
     {
@@ -3351,12 +3351,12 @@
       "surveys_used": [
         "bathymetry-offshoremorrobay-zip-fad659557e"
       ],
-      "last_survey_run": "2026-09-29T21:32:45.945919+00:00",
+      "last_survey_run": "2026-09-29T22:13:13.032016+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 12.000923066,
       "coverage_rule_version": "native-coverage-habitat-v1",
-      "survey_run_hash": "f712cd97a87463b41c7f24d1a680344c9b22ab83e1a7b092221eed379fc90d69",
+      "survey_run_hash": "87cc4d81bb57bfbfbc9c1c9d604c7b60c43e1ba1a740f51287d43491bf9438c9",
       "held_candidate_count": 1,
       "roughness_thresholds": {
         "vrm_samples": 2988420,
@@ -3382,7 +3382,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "13465a9d56ca59134646c70eb85a64b9f4856a213fca899e1f255bd8bd8ec5d5",
+        "snapshot_sha256": "d0e5ff52a753cf0e9de41a87a694e911298cfbdc5f6da2af66ab73ad4f9b275e",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3410,11 +3410,11 @@
             ]
           ]
         },
-        "snapshot": "2026-09-29T21:32:00.258709+00:00",
+        "snapshot": "2026-09-29T22:11:46.407839+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493509+00:00",
+            "checked_at": "2026-09-29T22:11:19.077424+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3424,9 +3424,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493530+00:00",
-            "file": "noaa-federal-3427a9f6906f2717f90663988481d91359af54bba2f59595096708a8962af1e7.json",
-            "sha256": "ce6509cbd8af1fa069920bf4b188021a937d083a16a4670b5c78d8caefc15eab",
+            "checked_at": "2026-09-29T22:11:19.077447+00:00",
+            "file": "noaa-federal-85749841d81d32bd07530f1448c7d1924e422d1d5d9c5b0f76367bea82f28613.json",
+            "sha256": "28aec824962e17b7712010227e1ca853bfa9a2964147072e0699a8974d177252",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3434,22 +3434,22 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:32:00.258709+00:00",
-            "file": "security-65fdf7f28d32fd71de8829b094bbb43d7a4c41a24c6fd0e45e69b4b588bc0b91.json",
-            "sha256": "6fcfffa8208dd5ee92f0715b035402801cc886d906b9521439ffc03c6c8f9885",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+            "checked_at": "2026-09-29T22:11:46.407839+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
             "feature_count": 1,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "ade7718b7abcc89de60600d72dad455a5b48095fb0138b771ebd56db46632778",
+              "titles_sha256": "d01a50897b0bcddf3da51e0e24db66b12ae63056ccf246415bbcb45bd417a6c3",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-09-25"
+                  "up_to_date_as_of": "2026-09-28"
                 }
               ],
-              "up_to_date_as_of": "2026-09-25"
+              "up_to_date_as_of": "2026-09-28"
             },
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3466,7 +3466,7 @@
       "band_km2": 35.340625,
       "tier0_km2": 3.689375,
       "tier1_km2": 31.65125,
-      "tier2_km2": 4.27326563,
+      "tier2_km2": 4.273267629,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.105625,
       "polygons_by_grade": {
@@ -3481,12 +3481,12 @@
       "surveys_used": [
         "bathymetry-offshoremorrobay-zip-fad659557e"
       ],
-      "last_survey_run": "2026-09-29T21:33:09.255398+00:00",
+      "last_survey_run": "2026-09-29T22:13:28.784028+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 30.873397558,
       "coverage_rule_version": "native-coverage-habitat-v1",
-      "survey_run_hash": "d2757bfe1f4bee2dd2d2d46ef4d4420b79ee1ed36ba297c21724cd8992f987ab",
+      "survey_run_hash": "d6904ae34ab95a93d0ee2968ea555a41fac76e46c2e38b98379b2f563cb8c2f3",
       "held_candidate_count": 3,
       "roughness_thresholds": {
         "vrm_samples": 7673043,
@@ -3512,7 +3512,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "13465a9d56ca59134646c70eb85a64b9f4856a213fca899e1f255bd8bd8ec5d5",
+        "snapshot_sha256": "d0e5ff52a753cf0e9de41a87a694e911298cfbdc5f6da2af66ab73ad4f9b275e",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3540,11 +3540,11 @@
             ]
           ]
         },
-        "snapshot": "2026-09-29T21:32:00.258709+00:00",
+        "snapshot": "2026-09-29T22:11:46.407839+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493509+00:00",
+            "checked_at": "2026-09-29T22:11:19.077424+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3554,9 +3554,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493530+00:00",
-            "file": "noaa-federal-3427a9f6906f2717f90663988481d91359af54bba2f59595096708a8962af1e7.json",
-            "sha256": "ce6509cbd8af1fa069920bf4b188021a937d083a16a4670b5c78d8caefc15eab",
+            "checked_at": "2026-09-29T22:11:19.077447+00:00",
+            "file": "noaa-federal-85749841d81d32bd07530f1448c7d1924e422d1d5d9c5b0f76367bea82f28613.json",
+            "sha256": "28aec824962e17b7712010227e1ca853bfa9a2964147072e0699a8974d177252",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3564,22 +3564,22 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:32:00.258709+00:00",
-            "file": "security-65fdf7f28d32fd71de8829b094bbb43d7a4c41a24c6fd0e45e69b4b588bc0b91.json",
-            "sha256": "6fcfffa8208dd5ee92f0715b035402801cc886d906b9521439ffc03c6c8f9885",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+            "checked_at": "2026-09-29T22:11:46.407839+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
             "feature_count": 1,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "ade7718b7abcc89de60600d72dad455a5b48095fb0138b771ebd56db46632778",
+              "titles_sha256": "d01a50897b0bcddf3da51e0e24db66b12ae63056ccf246415bbcb45bd417a6c3",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-09-25"
+                  "up_to_date_as_of": "2026-09-28"
                 }
               ],
-              "up_to_date_as_of": "2026-09-25"
+              "up_to_date_as_of": "2026-09-28"
             },
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3591,12 +3591,12 @@
       "id": "morro-bay-r05",
       "region": "morro-bay",
       "order": 3,
-      "status": "unassessed",
+      "status": "habitat-screened",
       "cell_count": 481,
       "band_km2": 27.2425,
-      "tier0_km2": 27.2425,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 6.938125,
+      "tier1_km2": 20.304375,
+      "tier2_km2": 0.960830634,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.05375,
       "polygons_by_grade": {
@@ -3604,12 +3604,117 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 1,
+        "metric-support-incomplete": 1,
+        "overlap-cdfw-mpa": 1
+      },
+      "surveys_used": [
+        "bathymetry-offshoremorrobay-zip-fad659557e"
+      ],
+      "last_survey_run": "2026-09-29T22:12:08.822779+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 19.861929278,
+      "coverage_rule_version": "native-coverage-habitat-v1",
+      "survey_run_hash": "696f1e00fae435ae59337ecb63d9758d6f02715ae24600221823f5827427fca0",
+      "habitat_count": 144,
+      "held_candidate_count": 1,
+      "habitat_by_grade": {
+        "C": 144
+      },
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "d0e5ff52a753cf0e9de41a87a694e911298cfbdc5f6da2af66ab73ad4f9b275e",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.6,
+                35.05
+              ],
+              [
+                -120.6,
+                35.65
+              ],
+              [
+                -121.3,
+                35.65
+              ],
+              [
+                -121.3,
+                35.05
+              ],
+              [
+                -120.6,
+                35.05
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-29T22:11:46.407839+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:19.077424+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:19.077447+00:00",
+            "file": "noaa-federal-85749841d81d32bd07530f1448c7d1924e422d1d5d9c5b0f76367bea82f28613.json",
+            "sha256": "28aec824962e17b7712010227e1ca853bfa9a2964147072e0699a8974d177252",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:46.407839+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 1,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "d01a50897b0bcddf3da51e0e24db66b12ae63056ccf246415bbcb45bd417a6c3",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "roughness_thresholds": {
+        "vrm_samples": 4930543,
+        "vrm": 1.5811991033842787e-05,
+        "bpi_fine_m_samples": 4858037,
+        "bpi_fine_m": 0.05774547099658083
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "morro-bay-r02",
@@ -3620,7 +3725,7 @@
       "band_km2": 80.8625,
       "tier0_km2": 23.975,
       "tier1_km2": 56.8875,
-      "tier2_km2": 11.535873521,
+      "tier2_km2": 11.535872978,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.136875,
       "polygons_by_grade": {
@@ -3636,12 +3741,12 @@
         "bathymetry-offshoremorrobay-zip-fad659557e",
         "bathymetry-offshorepointestero-zip-7e3be5eb12"
       ],
-      "last_survey_run": "2026-09-29T21:33:22.479587+00:00",
+      "last_survey_run": "2026-09-29T22:13:59.708984+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.277639219,
       "coverage_rule_version": "native-coverage-habitat-v1",
-      "survey_run_hash": "2a2fe1528f04de3f0cdcdd7c98a99f4c3d6ffa58f3c6b57ff1f5c8fa783ad5f6",
+      "survey_run_hash": "7bc288e00a985a5c353f87065529f07cfe6cf4b97741a211d0011ca7af71107a",
       "held_candidate_count": 24,
       "roughness_thresholds": {
         "vrm_samples": 13712697,
@@ -3667,7 +3772,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "13465a9d56ca59134646c70eb85a64b9f4856a213fca899e1f255bd8bd8ec5d5",
+        "snapshot_sha256": "d0e5ff52a753cf0e9de41a87a694e911298cfbdc5f6da2af66ab73ad4f9b275e",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3695,11 +3800,11 @@
             ]
           ]
         },
-        "snapshot": "2026-09-29T21:32:00.258709+00:00",
+        "snapshot": "2026-09-29T22:11:46.407839+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493509+00:00",
+            "checked_at": "2026-09-29T22:11:19.077424+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3709,9 +3814,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:31:56.493530+00:00",
-            "file": "noaa-federal-3427a9f6906f2717f90663988481d91359af54bba2f59595096708a8962af1e7.json",
-            "sha256": "ce6509cbd8af1fa069920bf4b188021a937d083a16a4670b5c78d8caefc15eab",
+            "checked_at": "2026-09-29T22:11:19.077447+00:00",
+            "file": "noaa-federal-85749841d81d32bd07530f1448c7d1924e422d1d5d9c5b0f76367bea82f28613.json",
+            "sha256": "28aec824962e17b7712010227e1ca853bfa9a2964147072e0699a8974d177252",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3719,22 +3824,22 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-09-29T21:32:00.258709+00:00",
-            "file": "security-65fdf7f28d32fd71de8829b094bbb43d7a4c41a24c6fd0e45e69b4b588bc0b91.json",
-            "sha256": "6fcfffa8208dd5ee92f0715b035402801cc886d906b9521439ffc03c6c8f9885",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+            "checked_at": "2026-09-29T22:11:46.407839+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
             "feature_count": 1,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "ade7718b7abcc89de60600d72dad455a5b48095fb0138b771ebd56db46632778",
+              "titles_sha256": "d01a50897b0bcddf3da51e0e24db66b12ae63056ccf246415bbcb45bd417a6c3",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-25/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-09-25"
+                  "up_to_date_as_of": "2026-09-28"
                 }
               ],
-              "up_to_date_as_of": "2026-09-25"
+              "up_to_date_as_of": "2026-09-28"
             },
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3746,12 +3851,12 @@
       "id": "morro-bay-r06",
       "region": "morro-bay",
       "order": 5,
-      "status": "unassessed",
+      "status": "habitat-screened",
       "cell_count": 1457,
       "band_km2": 86.476875,
-      "tier0_km2": 86.476875,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 58.30625,
+      "tier1_km2": 28.170625,
+      "tier2_km2": 5.746405815,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.215625,
       "polygons_by_grade": {
@@ -3759,12 +3864,117 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 7,
+        "metric-support-incomplete": 7
+      },
+      "surveys_used": [
+        "bathymetry-offshoremorrobay-zip-fad659557e"
+      ],
+      "last_survey_run": "2026-09-29T22:12:33.355370+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial restrictions; missing evidence or overlaps held. Publication remains M4. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 27.243476431,
+      "coverage_rule_version": "native-coverage-habitat-v1",
+      "survey_run_hash": "fcf6025f42fb847b1ce50a6ee2d739cbb823536b717ca06ee5f5d74cffa907c0",
+      "habitat_count": 308,
+      "held_candidate_count": 7,
+      "habitat_by_grade": {
+        "B": 13,
+        "C": 295
+      },
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "d0e5ff52a753cf0e9de41a87a694e911298cfbdc5f6da2af66ab73ad4f9b275e",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.6,
+                35.05
+              ],
+              [
+                -120.6,
+                35.65
+              ],
+              [
+                -121.3,
+                35.65
+              ],
+              [
+                -121.3,
+                35.05
+              ],
+              [
+                -120.6,
+                35.05
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-29T22:11:46.407839+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:19.077424+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:19.077447+00:00",
+            "file": "noaa-federal-85749841d81d32bd07530f1448c7d1924e422d1d5d9c5b0f76367bea82f28613.json",
+            "sha256": "28aec824962e17b7712010227e1ca853bfa9a2964147072e0699a8974d177252",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-29T22:11:46.407839+00:00",
+            "file": "security-4b4b5f23983bb484d33823292e76a9bed890198448e84d7b38e3790d07e215ca.json",
+            "sha256": "02bc909d3dbf2896532c37ac5a4ed459ea765e5ba86aa790da52bf60b59b2680",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 1,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "d01a50897b0bcddf3da51e0e24db66b12ae63056ccf246415bbcb45bd417a6c3",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "roughness_thresholds": {
+        "vrm_samples": 6760575,
+        "vrm": 0.0007084191311150789,
+        "bpi_fine_m_samples": 6667519,
+        "bpi_fine_m": 0.31620551067126035
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 20,
+        "reproduced_count": 9,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "morro-bay-r01",

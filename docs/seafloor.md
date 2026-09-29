@@ -6,12 +6,13 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M3 part 2, held habitat candidates
+## Current stage: M5, Central Coast reach batches
 
 The [candidate manifest](../catalog/surveys.json) contains 385 source products.
 The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Three original bathymetry products have native-adapter receipts; the other 382
-remain candidates. Metadata alone cannot promote a source. `usable` means the
+identities and lineage. Four original bathymetry products have native-adapter receipts:
+three are usable and Point Buchon is held for a mixed-resolution limitation.
+The other 381 remain candidates. Metadata alone cannot promote a source. `usable` means the
 reviewed source window can be processed, not that its whole file envelope has
 valid depth or that a reach has been mapped.
 
@@ -19,10 +20,10 @@ The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
 packages into **46 reaches**, approximately 10 km alongshore, ordered outward
 from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
 **55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
-Cells start at tier 0. M3 now classifies original-survey coverage for the first
-three Morro Bay reaches and produces ranked, private habitat candidates; current totals are in the ledger. Tier 2 remains zero
-until a fresh whole-polygon legal screen is complete. This does not
-mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
+Cells start at tier 0. Five Morro Bay reaches have original-survey coverage and
+screened habitat candidates; current totals are in the ledger. The remaining
+unassessed reaches are not evidence that surveys or fish habitat are absent.
+The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
 remains a separate research receipt; it is not reclassified as new coverage.
 
 ### Run and reproduce
@@ -84,8 +85,7 @@ cannot share a cell. Centers projecting to terminal endpoints are excluded.
 
 Full cell assignments, sample receipts and run hashes stay in ignored
 `var/seafloor/reference/`; only reach geometry and the small summary ledger are
-committed. There are no new habitat tiles or front-end changes in M3. The
-coverage runs update tier 1; all tier-2 totals remain zero until screening.
+committed. Screened habitat tiles are published through the separate M4 feed.
 
 ## Original-survey ingestion
 
@@ -149,6 +149,16 @@ explicitly states CC0/public-domain reuse. NOAA H11953's embedded metadata recor
 2008-08-29 through 2008-09-05 and product uncertainty. Neither source supports
 navigation clearance or independent corroboration just by being gridded.
 
+The [Point Buchon publisher metadata](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml)
+says the released 2 m raster incorporates a 5 m source grid at depths greater
+than 80 m. The current adapter reads that raster and found 12,537,695 valid
+nominal 0–300 ft pixels in the reviewed window, but cannot preserve the
+depth-dependent effective resolution in habitat features. Its manifest status
+is `hold` (`format-unsupported`) until that distinction is carried through the
+pipeline; the 2 m pixel spacing alone must not imply pile-scale detail below
+80 m. The same limitation is stated in the Point Estero metadata, so its
+deeper existing candidates need a resolution audit before pile-scale use.
+
 **M2 acceptance location resolved on 2026-09-28.** After the owner delegated the
 choice, Codex selected the original H11953 regular BAG near Point Conception to
 validate the reader, retaining USGS for Morro Bay. [NOAA's survey record](https://www.ngdc.noaa.gov/nos/H10001-H12000/H11953.html)
@@ -164,10 +174,9 @@ credited only to its own inspected window. M3's actual coverage and real seam
 checks and M4's legal screening remain required. PR #14 is merged and all 34
 M2 seafloor checks passed on that main revision.
 
-`fetch.py` also supplies tested, streaming private-object cache hooks accepting
-an externally configured S3-compatible client. They have not been deployed or
-connected to credentials. Weekly scheduling, R2 publication and the legal gate
-remain M4 work.
+`fetch.py` supplies tested, streaming private-object cache hooks through the
+R2-backed M4 runner. The published layer still depends on a current legal
+screen and a successful public read-back after each main-branch update.
 
 ## Coverage, terrain and habitat runs (M3)
 
@@ -464,7 +473,7 @@ PYTHONPATH=src:. python -m skippercast.seafloor run --reach morro-bay-r03
 `screen_sources.py` reuses the complete-inventory CDFW MPA and NOAA federal-area
 collectors. Its private snapshot points to content-addressed geometry files;
 retrieval dates and file hashes are checked on every run. The first security
-review covers only the three Morro Bay pilot reaches listed in
+review covers only the five Morro Bay pilot reaches listed in
 `catalog/seafloor-screen.json`. Other reaches remain held until their local
 security restrictions are reviewed. The scope is explicit and is never inferred
 from a provider's program name.
@@ -644,7 +653,7 @@ checks the public manifest,
 PMTiles v3 header, 206 range response, byte size and Worker cache policy; private
 R2 success alone does not count as a successful website deployment.
 
-### Local validation and remaining live acceptance
+### Local validation and live acceptance
 
 The September 28 local archive is 6,941,072 bytes, with 10,101 cells and 1,006
 habitat polygons. Decoding zoom 15 reproduces every input habitat ID. Rebuilding
@@ -653,11 +662,13 @@ with the pinned encoder gives the identical SHA-256
 Offline tests cover stale/held inputs, corruption, interrupted promotion, private
 scope/path restrictions, missing credentials and public response verification.
 
-**M4 is not accepted yet:** after this implementation merges, deploy the Worker
-from main, dispatch `morro-bay`, and verify the live URL and nonzero regional
-ledger. Local credentials are unavailable; no R2 upload is claimed here. Once
-that passes, open “Seafloor tiers layer in the app” for Claude, linking this
-contract, before beginning M5 reach expansion.
+M4 live acceptance was verified against the public
+[Morro Bay feed](https://skippercast.g4651.workers.dev/feeds/tiles/seafloor/manifest-morro-bay.json)
+after its main-only dispatch; the app-layer work is tracked separately. The
+two-reach M5 batch adds r05 and r06 from the original Morro Bay survey. A local
+PMTiles rebuild includes 10,101 coverage cells and 1,458 screened habitat
+polygons across five assessed reaches. Public publication of this expanded
+bundle remains pending until the batch is reviewed and merged.
 
 ### First-run recovery — September 28, 2026
 

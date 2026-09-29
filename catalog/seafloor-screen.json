@@ -3,7 +3,9 @@
   "reviewed_reaches": [
     "morro-bay-r02",
     "morro-bay-r03",
-    "morro-bay-r04"
+    "morro-bay-r04",
+    "morro-bay-r05",
+    "morro-bay-r06"
   ],
   "bounds_wgs84": [
     -121.3,
@@ -11,7 +13,7 @@
     -120.6,
     35.65
   ],
-  "scope_note": "Morro Bay pilot permanent spatial-restriction planning screen only. New reaches require review of applicable security boundaries. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons are conservatively excluded; this is not a seasonal or method-specific fishing permission. Dynamic USCG notices and vessel security zones require trip-time checks.",
+  "scope_note": "Morro Bay pilot permanent spatial-restriction planning screen through adjacent southern reaches r05 and r06. The reviewed Diablo Canyon security circle lies south of r06; the source inventory still includes it. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons are conservatively excluded; this is not a seasonal or method-specific fishing permission. Dynamic USCG notices and vessel security zones require trip-time checks.",
   "security_zones": [
     {
       "id": "diablo-canyon",
