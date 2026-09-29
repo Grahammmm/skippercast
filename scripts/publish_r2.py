@@ -11,7 +11,9 @@ files upload before pointer files (latest/index/manifest), so readers never
 see a pointer to a file that is not there yet; removed files go last.
 
 Without CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID this does nothing, so
-pipelines keep working before R2 is set up. S3 credentials are derived from
+pipelines keep working before R2 is set up. With credentials, any upload error
+exits non-zero: the Worker serves R2 first, so a failed upload means users see
+stale data and the publishing job must go red. S3 credentials are derived from
 the API token as Cloudflare documents: access key = token id, secret =
 SHA-256 of the token value.
 """
@@ -121,11 +123,17 @@ def sync(s3, bucket, source, prefix):
             f'{len(deletions)} removed, {len(local) - len(uploads)} unchanged.')
 
 
-if __name__ == '__main__':
+def run():
+    """Exit status for the command line: 0 when synced or not configured, 1 on any upload error."""
     try:
         main()
     except SystemExit:
         raise
-    except Exception as error:  # publishing to R2 must never break the GitHub publication
-        print(f'::warning title=R2 publish failed::{type(error).__name__}: {str(error)[:300]}')
-        sys.exit(0)
+    except Exception as error:  # R2 is what the site serves: a failed upload must fail the job
+        print(f'::error title=R2 publish failed::{type(error).__name__}: {str(error)[:300]}')
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(run())

@@ -7,7 +7,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
+from scripts import publish_r2
 from scripts.publish_r2 import INDEX, plan, scan
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +35,63 @@ class PlanTests(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith('CLOUDFLARE_')}
         out = subprocess.run([sys.executable, str(ROOT / 'scripts/publish_r2.py'), str(ROOT / 'docs'), 'conditions'],
                              capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(out.returncode, 0)
+        self.assertIn('R2 not configured', out.stdout)
+
+
+class FailureTests(unittest.TestCase):
+    """With credentials configured, any R2 error must fail the publishing job."""
+    ENV = {'CLOUDFLARE_API_TOKEN': 'token', 'CLOUDFLARE_ACCOUNT_ID': 'account'}
+
+    def test_upload_error_exits_non_zero_when_configured(self):
+        def broken(token, account):
+            raise RuntimeError('could not verify CLOUDFLARE_API_TOKEN')
+        with patch.dict(os.environ, self.ENV), patch.object(publish_r2, 'client', broken), \
+                patch.object(sys, 'argv', ['publish_r2.py', str(ROOT / 'docs'), 'conditions']), \
+                patch('builtins.print') as printed:
+            self.assertEqual(publish_r2.run(), 1)
+        self.assertIn('::error title=R2 publish failed::RuntimeError', printed.call_args[0][0])
+
+    def test_successful_sync_exits_zero(self):
+        with patch.dict(os.environ, self.ENV), patch.object(publish_r2, 'client', lambda t, a: object()), \
+                patch.object(publish_r2, 'sync', lambda *a: 'R2 fake: 0 uploaded'), \
+                patch.object(sys, 'argv', ['publish_r2.py', str(ROOT / 'docs'), 'conditions']), \
+                patch('builtins.print'):
+            self.assertEqual(publish_r2.run(), 0)
+
+
+class BranchScriptTests(unittest.TestCase):
+    """publish_branch_r2.sh passes upload failures through; it no-ops without credentials."""
+
+    def run_script(self, python_status, credentials=True):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            tree, bin_dir = root / 'tree', root / 'bin'
+            tree.mkdir(); bin_dir.mkdir()
+            (tree / 'latest.json').write_text('{}')
+            git = ['git', '-C', str(tree), '-c', 'user.name=t', '-c', 'user.email=t@t']
+            subprocess.run(['git', 'init', '-q', str(tree)], check=True)
+            subprocess.run(git + ['add', 'latest.json'], check=True)
+            subprocess.run(git + ['commit', '-q', '-m', 'x'], check=True)
+            fake = bin_dir / 'python'  # stands in for scripts/publish_r2.py
+            fake.write_text(f'#!/bin/sh\nexit {python_status}\n'); fake.chmod(0o755)
+            env = {k: v for k, v in os.environ.items() if not k.startswith('CLOUDFLARE_')}
+            env['PATH'] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+            if credentials:
+                env.update(FailureTests.ENV)
+            return subprocess.run(['bash', str(ROOT / 'scripts/publish_branch_r2.sh'), str(tree), 'conditions'],
+                                  capture_output=True, text=True, env=env, cwd=root, timeout=60)
+
+    def test_upload_failure_fails_the_script(self):
+        out = self.run_script(1)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn('::error title=R2 publish::conditions upload failed', out.stdout)
+
+    def test_upload_success_passes(self):
+        self.assertEqual(self.run_script(0).returncode, 0)
+
+    def test_without_credentials_it_skips(self):
+        out = self.run_script(1, credentials=False)
         self.assertEqual(out.returncode, 0)
         self.assertIn('R2 not configured', out.stdout)
 
@@ -67,6 +126,18 @@ class WiringTests(unittest.TestCase):
         # The sync must sit after the if/else, or a new bucket stays empty until tiles change.
         self.assertGreater(script.index('publish_branch_r2.sh "$pub" forecasts'),
                            script.index('echo "Forecast tiles unchanged."'))
+
+    def test_live_and_daily_jobs_verify_the_public_feed_after_r2(self):
+        root = Path(__file__).resolve().parents[1]
+        cycle = (root / 'scripts' / 'live_cycle.sh').read_text()
+        self.assertGreater(cycle.index('verify_published_feed.py'),
+                           cycle.index('publish_branch_r2.sh var/live-published conditions'))
+        self.assertIn('if [ -n "${FEEDS_PUBLIC_BASE:-}" ]', cycle)
+        daily = (root / '.github' / 'workflows' / 'daily-data.yml').read_text()
+        self.assertGreater(daily.index('verify_published_feed.py'), daily.index('publish_branch_r2.sh var/published data'))
+        self.assertIn("if: vars.FEEDS_PUBLIC_BASE != ''", daily)
+        live = (root / '.github' / 'workflows' / 'live-conditions.yml').read_text()
+        self.assertIn('FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}', live)
 
 
 if __name__ == '__main__':
