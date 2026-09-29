@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/forecast-tile.schema.json",
+  "title": "SkipperCast forecast tile",
+  "description": "<model>/tiles/<lat>_<lon>.json on the forecasts branch, written by forecast.build.write_tiles(). Each field is little-endian int16 (times x nlat x nlon), base64-encoded, missing = -32768, value = raw * scale; sea is a packed bit mask (nlat x nlon). Array lengths versus times/nlat/nlon are not expressible in JSON Schema and are checked by tests/test_schemas.py for the committed sample.",
+  "type": "object",
+  "required": ["schema_version", "model", "cycle", "key", "times", "lat0", "lon0", "dlat", "dlon", "nlat", "nlon", "sea", "fields"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model": {"$ref": "forecast-manifest.schema.json#/$defs/model_id"},
+    "cycle": {"type": "integer"},
+    "key": {"$ref": "forecast-manifest.schema.json#/$defs/tile_key"},
+    "times": {"$ref": "forecast-manifest.schema.json#/$defs/times"},
+    "lat0": {"type": "number", "minimum": -90, "maximum": 90},
+    "lon0": {"type": "number", "minimum": -180, "maximum": 180},
+    "dlat": {"type": "number", "exclusiveMinimum": 0},
+    "dlon": {"type": "number", "exclusiveMinimum": 0},
+    "nlat": {"type": "integer", "minimum": 2},
+    "nlon": {"type": "integer", "minimum": 2},
+    "sea": {"$ref": "#/$defs/base64"},
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[a-z0-9_]+$"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["scale", "data"],
+        "properties": {
+          "scale": {"type": "number", "exclusiveMinimum": 0},
+          "data": {"$ref": "#/$defs/base64"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "base64": {"type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$"}
+  }
+}

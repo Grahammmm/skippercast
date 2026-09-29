@@ -20,7 +20,7 @@ MIRRORED = ('ocean', 'sst', 'survey', 'publish', 'test', 'seafloor')
 # Top-level import name -> the distribution that provides it.
 DISTRIBUTION = {
     'affine': 'affine', 'boto3': 'boto3', 'botocore': 'boto3', 'eccodes': 'eccodes', 'gribapi': 'eccodes',
-    'h5py': 'h5py', 'jsonschema': 'jsonschema', 'laspy': 'laspy', 'lazrs': 'lazrs', 'lerc': 'pylerc',
+    'h5py': 'h5py', 'jsonschema': 'jsonschema', 'referencing': 'jsonschema',  # installed with jsonschema 'laspy': 'laspy', 'lazrs': 'lazrs', 'lerc': 'pylerc',
     'netCDF4': 'netCDF4', 'numpy': 'numpy', 'pypdf': 'pypdf', 'pyproj': 'pyproj', 'rasterio': 'rasterio',
     'scipy': 'scipy', 'shapefile': 'pyshp', 'shapely': 'shapely',
 }

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/intelligence-feed.schema.json",
+  "title": "SkipperCast regional intelligence feed",
+  "description": "regions/<id>/intelligence.json on the conditions branch, written by pipeline.intelligence.run(): model, ensemble, ocean and verification sources, forecast verification, and (since the forecast-coverage audit) a forecast block that server/alert-policy.js reads for saved-trip checks. The committed dist/regions/<id>/intelligence.json snapshots predate the forecast block, so it is optional here. Verification internals are versioned by verification.method_version and left open.",
+  "type": "object",
+  "required": ["schema_version", "region_id", "generated_at", "completed_at", "sources", "verification", "health"],
+  "allOf": [{"$ref": "common.schema.json#/$defs/publication"}],
+  "properties": {
+    "schema_version": {"const": 1},
+    "region_id": {"$ref": "common.schema.json#/$defs/id"},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "completed_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "ocean_collected_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "published_at": true,
+    "run_id": true,
+    "sources": {"$ref": "common.schema.json#/$defs/sources_map"},
+    "verification": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "method_version": {"type": ["integer", "string"]},
+        "status": {"type": "string", "minLength": 1},
+        "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+        "collection_issues": {"type": "object"},
+        "collection_deferrals": {"type": "object"}
+      }
+    },
+    "forecast": {
+      "type": "object",
+      "required": ["region_id", "requested_points", "models", "retrieved"],
+      "properties": {
+        "region_id": {"$ref": "common.schema.json#/$defs/id"},
+        "requested_points": {
+          "description": "[point id, latitude, longitude] in regional order; alert-policy refuses a feed whose points differ from the region.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [{"type": "string"}, {"type": "number"}, {"type": "number"}],
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
+        "models": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["data", "meta", "error"],
+            "properties": {
+              "data": {"type": "array"},
+              "meta": {"type": ["object", "null"]},
+              "error": {"type": ["string", "null"]}
+            }
+          }
+        },
+        "retrieved": {"type": "integer", "description": "Epoch milliseconds."},
+        "coverage": {"type": "object"}
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": ["status", "issues", "coverage_gaps"],
+      "properties": {
+        "status": {"enum": ["ok", "degraded"]},
+        "issues": {"$ref": "common.schema.json#/$defs/string_list"},
+        "coverage_gaps": {"$ref": "common.schema.json#/$defs/string_list"},
+        "forecast_coverage": {"$ref": "#/$defs/forecast_coverage"}
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "forecast_coverage": {
+      "type": "object",
+      "required": ["point_days", "incomplete_point_days"],
+      "properties": {
+        "point_days": {"type": "integer", "minimum": 0},
+        "rated_point_days": {"type": "integer", "minimum": 0},
+        "two_model_point_days": {"type": "integer", "minimum": 0},
+        "incomplete_point_days": {"type": "integer", "minimum": 0},
+        "unavailable_point_days": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

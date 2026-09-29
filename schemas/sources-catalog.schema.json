@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/sources-catalog.schema.json",
+  "title": "SkipperCast source catalog",
+  "description": "catalog/sources.json. Ids must be unique (checked by contracts.indexed).",
+  "type": "object",
+  "required": ["schema_version", "sources"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "description": {"type": "string"},
+    "sources": {"type": "array", "items": {"$ref": "source.schema.json"}}
+  },
+  "additionalProperties": false
+}
