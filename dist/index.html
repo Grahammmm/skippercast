@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="live-conditions.css" />
     <link rel="stylesheet" href="calm-layout.css" />
     <link rel="stylesheet" href="planning.css" />
+    <link rel="stylesheet" href="tomorrow.css" />
     <link rel="stylesheet" href="platform.css" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <script src="vendor/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
@@ -201,6 +202,7 @@
         </p>
         <details id="meteogram-card" class="meteogram-card" open><summary>Next 7 days <small>Tap or drag to pick an hour</small></summary><div id="meteogram"><p class="meteogram-loading">Loading forecast graph…</p></div><ul class="meteogram-legend"><li><i class="lg-wind"></i>Wind kt</li><li><i class="lg-gust"></i>Gust</li><li><i class="lg-sea"></i>Seas ft</li><li><i class="lg-tide"></i>Tide ft</li><li><i class="lg-go"></i>Score 7+</li><li><i class="lg-caution"></i>4–6.9</li><li><i class="lg-rough"></i>Under 4 or hazard</li><li><i class="lg-unknown"></i>No score</li><li><i class="lg-differ"></i>Models differ</li><li><i class="lg-hatch"></i>Outlook after 72 h</li></ul><script type="module" src="meteogram-ui.js"></script></details>
         <div id="forecast-content"></div>
+        <div id="tomorrow-outlook"></div>
         <div id="morning-outlook"></div>
         <div id="bite-evidence" aria-label="Recent fishing evidence"></div>
       </section>
