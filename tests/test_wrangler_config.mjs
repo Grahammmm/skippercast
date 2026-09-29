@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features} from '../scripts/wrangler_config.mjs';
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
@@ -54,4 +54,45 @@ test('the CLI passes the fourth argument through as custom domains', () => {
     const plain = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', '12345678-1234-1234-1234-123456789abc', 'skippercast-feeds', out, ''], {cwd: fileURLToPath(new URL('..', import.meta.url)), encoding: 'utf8'});
     assert.equal(plain.status, 0, plain.stderr);assert.equal(JSON.parse(readFileSync(out, 'utf8')).routes, undefined);
   } finally { rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('queues are added only when ENABLE_QUEUES is "true" (any case), and their binding is typed in Env', () => {
+  const text = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8'), id = '12345678-1234-1234-1234-123456789abc';
+  for (const value of [undefined, '', 'false', '1', 'yes', 'TRUE ']) assert.equal(features({ENABLE_QUEUES: value}).queues, value === 'TRUE ', String(value));
+  assert.equal(deployConfig(text, id, 'skippercast-feeds').queues, undefined, 'off by default');
+  assert.equal(JSON.parse(stripJsonComments(text)).queues, undefined, 'the committed config never binds queues itself');
+  const config = deployConfig(text, id, 'skippercast-feeds', '', {queues: true});
+  assert.deepEqual(config.queues.producers, [{queue: 'skippercast-trip-checks', binding: 'TRIP_QUEUE'}]);
+  const [main, dlq] = config.queues.consumers;
+  assert.equal(main.queue, 'skippercast-trip-checks');
+  assert.equal(main.dead_letter_queue, 'skippercast-trip-checks-dlq');
+  assert.equal(main.max_batch_size, 25);
+  assert.equal(main.max_retries, 3);
+  assert.equal(dlq.queue, 'skippercast-trip-checks-dlq');
+  const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
+  for (const {binding} of config.queues.producers) assert.match(env, new RegExp(`^\\s+${binding}\\?:`, 'm'), `server/env.ts declares ${binding}`);
+});
+
+test('the CLI reads ENABLE_QUEUES from the environment', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wrangler-config-')), out = join(dir, 'w.json'), cwd = fileURLToPath(new URL('..', import.meta.url));
+  try {
+    const on = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', '12345678-1234-1234-1234-123456789abc', 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8', env: {...process.env, ENABLE_QUEUES: 'true'}});
+    assert.equal(on.status, 0, on.stderr);
+    assert.match(on.stdout, /with queues/);
+    assert.equal(JSON.parse(readFileSync(out, 'utf8')).queues.producers[0].binding, 'TRIP_QUEUE');
+    const off = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', '12345678-1234-1234-1234-123456789abc', 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8', env: {...process.env, ENABLE_QUEUES: ''}});
+    assert.equal(off.status, 0, off.stderr);
+    assert.equal(JSON.parse(readFileSync(out, 'utf8')).queues, undefined);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('the deploy script creates the queues only when enabled, before the config that binds them', () => {
+  const script = readFileSync(new URL('../scripts/cloudflare_deploy.sh', import.meta.url), 'utf8');
+  const create = script.indexOf('queues create'), generate = script.indexOf('node scripts/wrangler_config.mjs');
+  assert.ok(create > 0 && create < generate, 'queues exist before the Worker is deployed with their bindings');
+  assert.match(script, /if \[ "\$\{ENABLE_QUEUES:-\}" = "true" \]/);
+  assert.match(script, /queues info "\$queue"/, 'an existing queue is left alone');
+  assert.ok(script.indexOf('skippercast-trip-checks-dlq') < script.indexOf('skippercast-trip-checks;'), 'the dead-letter queue is created first');
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /ENABLE_QUEUES: \$\{\{ vars\.ENABLE_QUEUES \}\}/);
 });

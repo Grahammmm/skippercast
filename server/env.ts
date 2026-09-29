@@ -3,6 +3,7 @@
 // where one is absent: local tests, a bare `wrangler dev`, a new deployment.
 // tests/test_worker_types.mjs checks this list against wrangler.jsonc.
 import type {SessionUser} from './auth.ts';
+import type {TripCheckMessage} from './trip-queue.ts';
 
 export interface Env {
   // Bindings (wrangler.jsonc)
@@ -12,6 +13,8 @@ export interface Env {
   PUBLIC_LIMITER?: RateLimit;        // ratelimits: /api/om, 60 a minute per IP
   FEED_LIMITER?: RateLimit;          // ratelimits: /feeds/, 300 a minute per IP
   ANALYTICS?: AnalyticsEngineDataset; // optional Workers Analytics Engine dataset (boat lookup usage)
+  // Added to the deploy config only with ENABLE_QUEUES=true (scripts/wrangler_config.mjs):
+  TRIP_QUEUE?: Queue<TripCheckMessage>; // queues.producers: skippercast-trip-checks (server/trip-queue.ts)
   // Variables (wrangler.jsonc "vars", or the dashboard)
   IDENTITY_PROVIDER?: string;        // "skippercast" (passkeys) or none
   BOAT_LOOKUP_ENABLED?: string;      // "false" is the kill switch

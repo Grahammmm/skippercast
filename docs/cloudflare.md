@@ -14,6 +14,7 @@ SkipperCast runs only on a Cloudflare account the owner controls: the Worker, th
   - When the repository variable `FEEDS_PUBLIC_BASE` is set (for example `https://skippercast.g4651.workers.dev`), the live cycle and daily job then fetch `/feeds/<branch>/latest.json` from that site with `scripts/verify_published_feed.py` and fail unless it serves this run.
   - `scripts/check_feed_freshness.py` (hourly, `feed-freshness.yml`) checks the public route first — `FEEDS_PUBLIC_BASE`, defaulting to the workers.dev host (set it to `https://skippercast.com` once the custom domain is attached) — and reports the GitHub branch age second. A stale public route opens the `feed-stale` issue.
 - **Watchdog (`server/watchdog.ts`)**: every 15 minutes, if the live feed is more than 45 minutes old and no refresh is running, it dispatches the live-conditions workflow. This replaces reliance on GitHub's throttled schedules. It needs `WATCHDOG_GITHUB_TOKEN`. The same cron prunes expired trips, alert events, feedback and rate-limit rows in D1 (see [production operations](production-operations.md)).
+- **Trip-check queue (optional, `server/trip-queue.ts`)**: with the repository variable `ENABLE_QUEUES=true`, the same cron queues saved-trip checks itself after each new live publication, and the GitHub `notify` job stands aside. Off by default; see [Trip-check queue](#trip-check-queue).
 - **Edge cache and rate limits (`server/edge-cache.ts`)**:
   - `/api/om/*`, `/api/forecast`, `/api/intelligence`, `/api/habitat` and R2-served `/feeds/*` use the Workers Cache API (`caches.default`). Responses carry `X-SC-Cache: hit|miss`.
   - API keys are the path plus sorted query parameters (region only, for the region endpoints) plus the build id.
@@ -95,7 +96,29 @@ R2 lifecycle rules are bucket configuration, which an Object Read & Write token 
 | `notify` | `id-token: write`, `contents: read`, `actions: read` | Runs beside `refresh`. It watches the `conditions` head and runs `check_saved_trips.py` once per new publication, after a 90-second wait for R2 (`scripts/trip_check_loop.py`). A failed delivery turns only this job red, and the next publication is still checked. It stops when `refresh` finishes. |
 | `next` | `actions: write` | After `refresh`, dispatches the next loop, unless `refresh` ended within an hour. It holds no secrets. |
 
+With `ENABLE_QUEUES=true`, `notify` runs only when the workflow is dispatched by hand with **check_trips**; the Worker queues trip checks itself ([Trip-check queue](#trip-check-queue)).
+
 All three jobs stay in `live-conditions.yml` because `server/job-auth.ts` accepts the OIDC token only when its `workflow_ref` is `deployments/production.json`'s `scheduler.workflow`, which is this file. Moving trip checks to another workflow file, or to a `workflow_run` trigger (a different `event_name`), would need a reviewed change to that policy. The `refresh` job keeps `contents: write` for as long as the git branches are published.
+
+## Trip-check queue
+
+Saved-trip checks can run inside Cloudflare instead of from GitHub Actions. This removes the 2,500-trip ceiling of the paged job (`scripts/check_saved_trips.py` pages 25 trips at a time, at most 100 pages) and the dependency on the GitHub loop for alerts.
+
+**How it works.** Every 15 minutes the cron reads `conditions/latest.json`. When its `run_id` and `completed_at` name a publication not yet queued, and it is at least 2 minutes old (so the rest of that cycle's files are in R2), the cron records it in the D1 table `job_state` (migration 0004) and sends one message per owner with due trips to the queue `skippercast-trip-checks`, 100 messages per send. The consumer takes batches of up to 25 owners, at most 5 batches at once, and runs the same per-trip assessment and delivery as the manual job (`checkTrip` in `server/trips.ts`). A failed check is retried after 30 seconds and more (up to 3 retries); after that the message goes to `skippercast-trip-checks-dlq`, whose consumer logs `trip_check_dead_letter` (a count, never an owner) and drops it. That owner's trips are checked again with the next publication. Re-delivered messages, and the manual job running at the same time, never send a second notification: alert events and deliveries are claimed with stable ids.
+
+**Turn it on (owner).**
+1. Check the plan. Queues is on the Workers Free plan with 10,000 operations a day; a delivered message typically costs 3 (write, read, delete). With 48 publications a day, the free allowance covers about 69 owners with active trips. Beyond that, use the Workers Paid plan ($5 a month, 1 million operations a month included, then $0.40 a million: about 21.6 million a month, roughly $8, for 5,000 owners). These are Cloudflare's published prices; check current pricing.
+2. The deploy token needs **Account · Queues · Edit** to create the queues and attach the consumer. Edit the `CLOUDFLARE_API_TOKEN` token and add it if it is not listed.
+3. Set the repository variable `ENABLE_QUEUES` to `true` and run **Deploy to Cloudflare**. The deploy creates both queues if they are missing (`wrangler queues info`, then `queues create`), then deploys the Worker with the producer and consumer bindings (`scripts/wrangler_config.mjs` adds them only when the variable is `true`).
+4. After the next live publication, the Worker logs show `trip_check_schedule` with `"action":"enqueued"` and then `trip_check_batch` lines. **Workers & Pages → Queues** shows both queues and their backlog.
+
+**Turn it off.** Set `ENABLE_QUEUES` to anything but `true` and redeploy. The `notify` job resumes on the next live run. If the dashboard still lists the Worker as the queue's consumer, remove it: `npx wrangler queues consumer remove skippercast-trip-checks skippercast`.
+
+**Manual trigger and fallback.** `POST /api/jobs/check` (GitHub OIDC, `server/job-auth.ts`) still checks trips 25 at a time, with or without the queue. While the queue is on, run it with **Actions → Live regional conditions and trip alerts → Run workflow** with **check_trips** ticked; this also runs a conditions cycle. Without the queue binding (a local `wrangler dev`, the variable unset) the cron queues nothing and the `notify` job runs as before.
+
+**Local check.** `ENABLE_QUEUES=true node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.dev.jsonc`, then `npx --yes wrangler@4.142.0 dev -c wrangler.dev.jsonc --test-scheduled` and `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`. Wrangler runs the queues locally.
+
+See also the [trip-check runbook](operations/runbooks/trip-checks.md).
 
 ## Custom domain
 

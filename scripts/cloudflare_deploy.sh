@@ -41,6 +41,19 @@ if ! python3 scripts/r2_lifecycle.py --bucket "$BUCKET"; then
   echo "::warning title=R2 lifecycle::rules not applied to $BUCKET; feeds are unaffected (see docs/cloudflare.md)"
 fi
 
+# Trip-check queues (ENABLE_QUEUES=true repository variable; docs/cloudflare.md).
+# Created before the deploy that binds them; `queues info` makes this idempotent.
+if [ "${ENABLE_QUEUES:-}" = "true" ]; then
+  for queue in skippercast-trip-checks-dlq skippercast-trip-checks; do
+    if $WRANGLER queues info "$queue" >/dev/null 2>&1; then continue; fi
+    if ! out=$($WRANGLER queues create "$queue" 2>&1); then
+      echo "$out" | grep -qiE "already (exist|taken)" || { echo "$out"; echo "::error::Could not create queue $queue (Queues needs the Workers plan to allow it; see docs/cloudflare.md)"; exit 1; }
+    else
+      echo "Created queue $queue"
+    fi
+  done
+fi
+
 # CUSTOM_DOMAINS (repository variable, e.g. "skippercast.com,www.skippercast.com")
 # attaches those hosts as Worker custom domains; unset means workers.dev only.
 # The zone must already be active on this Cloudflare account (docs/cloudflare.md).

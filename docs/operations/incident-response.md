@@ -26,6 +26,7 @@ When unsure, pick the higher level; downgrade later in the timeline. Fail-closed
 | `/feeds/*` failing or R2 behind GitHub | [r2-outage](runbooks/r2-outage.md) |
 | Private records lost or corrupted; D1 down | [d1-restore](runbooks/d1-restore.md) |
 | Secret leaked, expired or revoked | [secrets-rotation](runbooks/secrets-rotation.md) |
+| Trip alerts late or missing; `trip_check_dead_letter` in Worker logs | [trip-checks](runbooks/trip-checks.md) |
 | A deploy broke the site | `docs/operations/runbooks/rollback-release.md`, added by PR #26 ([P0-03]); until it merges, redeploy the previous good `main` commit with **Actions → Deploy to Cloudflare → Run workflow** from that commit, and republish the previous version on ChatGPT Sites |
 
 Background: [production operations](../production-operations.md) and [Cloudflare](../cloudflare.md).
