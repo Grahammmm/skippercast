@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/live-feed.schema.json",
+  "title": "SkipperCast live conditions feed",
+  "description": "latest.json on the conditions branch (and regions/<id>/latest.json), written every 30 minutes by pipeline.live.collect(). Source rows are NOAA NDBC buoy observations keyed by buoy id, with legacy aliases (diablo, diablo-spectrum, offshore) for regions without local contexts. published_at/run_id (PR #30) are optional but come as a pair.",
+  "type": "object",
+  "required": ["schema_version", "region_id", "generated_at", "completed_at", "schedule_minutes", "sources", "health"],
+  "allOf": [{"$ref": "common.schema.json#/$defs/publication"}],
+  "properties": {
+    "schema_version": {"const": 1},
+    "region_id": {"$ref": "common.schema.json#/$defs/id"},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "completed_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "published_at": true,
+    "run_id": true,
+    "schedule_minutes": {"type": "integer", "minimum": 1},
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "allOf": [
+          {"$ref": "common.schema.json#/$defs/collected_source"},
+          {
+            "properties": {
+              "kind": {"const": "observation"},
+              "station_url": {"$ref": "common.schema.json#/$defs/https_url"},
+              "data": {
+                "if": {"type": "object"},
+                "then": {
+                  "required": ["station", "observations"],
+                  "properties": {
+                    "station": {"type": "string"},
+                    "sample_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+                    "units": {"type": "object"},
+                    "observations": {"type": "array", "maxItems": 24, "items": {"type": "object", "required": ["time"]}}
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": ["status", "issues"],
+      "properties": {
+        "status": {"enum": ["ok", "degraded"]},
+        "issues": {"$ref": "common.schema.json#/$defs/string_list"}
+      }
+    }
+  },
+  "additionalProperties": false
+}

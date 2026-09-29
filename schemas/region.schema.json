@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/region.schema.json",
+  "title": "SkipperCast region configuration",
+  "description": "regions/<id>/region.json and its compiled copy dist/regions/<id>/region.json. Required keys are the ones the pipeline, platform build or web client index directly. Cross-references (catalog sources, needs, jurisdictions, legal notices, ecology dossiers, asset files) and bounding-box ordering stay in platform.contracts.validate_region, which remains authoritative. Additional top-level keys are allowed because regions carry optional, reviewed extensions (habitat_policy, target_labels, closure_check, preview_label, ...) and the compiled copy adds target_options and regulatory_authority_hosts.",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "name", "status", "timezone", "bounds", "fishing_bounds",
+    "jurisdiction", "jurisdiction_id", "boat", "harbor", "stations", "marine_zones",
+    "forecast_points", "species", "source_bindings", "pipeline_sources", "assets",
+    "landing_names", "mpa", "map", "coverage", "coverage_note"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "common.schema.json#/$defs/id"},
+    "name": {"type": "string", "minLength": 1},
+    "status": {"enum": ["active", "preview", "draft"]},
+    "timezone": {"type": "string", "pattern": "^[A-Za-z_]+(/[A-Za-z0-9_+-]+)+$"},
+    "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+    "fishing_bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+    "jurisdiction": {"type": "string", "minLength": 1},
+    "jurisdiction_id": {"$ref": "common.schema.json#/$defs/id"},
+    "boat": {
+      "type": "object",
+      "required": ["name", "bottom_depth_limit_ft", "cruise_knots"],
+      "properties": {
+        "name": {"type": "string"},
+        "bottom_depth_limit_ft": {"type": "number", "exclusiveMinimum": 0, "maximum": 2000},
+        "cruise_knots": {"type": "number", "exclusiveMinimum": 0, "maximum": 100}
+      }
+    },
+    "harbor": {
+      "type": "object",
+      "required": ["name", "latitude", "longitude", "information_url", "watch_keywords"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+        "longitude": {"type": "number", "minimum": -180, "maximum": 180},
+        "information_url": {"$ref": "common.schema.json#/$defs/https_url"},
+        "watch_keywords": {"$ref": "common.schema.json#/$defs/string_list"},
+        "entrance_note": {"type": "string"}
+      }
+    },
+    "stations": {"$ref": "#/$defs/stations"},
+    "marine_zones": {
+      "description": "NWS marine zone ids by role; 'coastal' and 'offshore' are always read.",
+      "type": "object",
+      "required": ["coastal", "offshore"],
+      "additionalProperties": {"$ref": "#/$defs/marine_zone"}
+    },
+    "contexts": {
+      "description": "Optional local sub-areas, each with its own stations and scheduled marine zones.",
+      "type": "object",
+      "propertyNames": {"$ref": "common.schema.json#/$defs/id"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "marine_zones", "stations"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "marine_zones": {
+            "type": "object",
+            "required": ["coastal", "offshore"],
+            "additionalProperties": {"$ref": "#/$defs/marine_zone"}
+          },
+          "stations": {"$ref": "#/$defs/stations"}
+        }
+      }
+    },
+    "forecast_points": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "latitude", "longitude"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string"},
+          "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+          "longitude": {"type": "number", "minimum": -180, "maximum": 180},
+          "context": {"type": "string"},
+          "offshore": {"type": "boolean"}
+        }
+      }
+    },
+    "default_forecast_point": {"type": "string"},
+    "species": {
+      "description": "Reviewed target ids from catalog/targets.json, distinct.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "source_bindings": {
+      "description": "Need id -> preferred, distinct catalog source ids.",
+      "type": "object",
+      "propertyNames": {"$ref": "common.schema.json#/$defs/id"},
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {"$ref": "common.schema.json#/$defs/id"}
+      }
+    },
+    "pipeline_sources": {
+      "description": "Scheduled grid kinds (settings.settings maps these to needs).",
+      "type": "object",
+      "propertyNames": {"enum": ["sst", "chlorophyll", "currents"]},
+      "additionalProperties": {"$ref": "common.schema.json#/$defs/id"}
+    },
+    "assets": {
+      "description": "Paths under dist/ (null = not published). atlas, habitats, bottom_index, regulations and ecology are read unconditionally by the build.",
+      "type": "object",
+      "required": ["atlas", "habitats", "bottom_index", "regulations"],
+      "additionalProperties": {"type": ["string", "null"], "pattern": "^[^/\\\\][^\\\\]*$"}
+    },
+    "landing_names": {"$ref": "common.schema.json#/$defs/string_list"},
+    "landing_note": {"type": "string"},
+    "mpa": {
+      "type": "object",
+      "required": ["bounds", "minimum_features"],
+      "properties": {
+        "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+        "minimum_features": {"type": "integer", "minimum": 0}
+      }
+    },
+    "map": {
+      "type": "object",
+      "properties": {
+        "center": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+        "zoom": {"type": "integer"},
+        "discovery_bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+        "region_notice_ids": {"$ref": "common.schema.json#/$defs/string_list"},
+        "focus_areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "bounds"],
+            "properties": {
+              "id": {"$ref": "common.schema.json#/$defs/id"},
+              "name": {"type": "string", "minLength": 1},
+              "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+              "forecast_point": {"type": "string"}
+            }
+          }
+        },
+        "local_areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "bounds"],
+            "properties": {
+              "id": {"$ref": "common.schema.json#/$defs/id"},
+              "name": {"type": "string", "minLength": 1},
+              "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+              "notice_ids": {"$ref": "common.schema.json#/$defs/string_list"},
+              "hidden_targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "reason", "source_url"],
+                  "properties": {
+                    "id": {"type": "string"},
+                    "reason": {"type": "string", "minLength": 1},
+                    "source_url": {"$ref": "common.schema.json#/$defs/https_url"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "unavailable_targets": {"type": "object", "additionalProperties": {"type": "string"}},
+        "unavailable_target_sources": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/https_url"}}
+      }
+    },
+    "coverage": {
+      "description": "Reviewed evidence per need; need_status() only reads status and reason.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "status": {"enum": ["ready", "partial", "missing", "research", "not-applicable"]},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "coverage_note": {"type": "string"},
+    "source_names": {"type": "object", "additionalProperties": {"type": "string"}},
+    "daily_feed": {"$ref": "common.schema.json#/$defs/https_url"},
+    "conditions_feed": {"$ref": "common.schema.json#/$defs/https_url"},
+    "intelligence_feed": {"$ref": "common.schema.json#/$defs/https_url"},
+    "habitat_feed": {"$ref": "common.schema.json#/$defs/https_url"},
+    "ecology_profile": {"$ref": "common.schema.json#/$defs/id"},
+    "closure_check": {
+      "type": "object",
+      "required": ["url", "source_id"],
+      "properties": {
+        "url": {"$ref": "common.schema.json#/$defs/https_url"},
+        "source_id": {"$ref": "common.schema.json#/$defs/id"}
+      }
+    },
+    "target_labels": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 80}},
+    "intelligence": {
+      "type": "object",
+      "required": ["regional_current_model", "wind_ensemble_model", "wave_ensemble_provider", "providers", "verification_stations"],
+      "properties": {
+        "regional_current_model": {"const": "wcofs"},
+        "wind_ensemble_model": {"const": "gfs025"},
+        "wave_ensemble_provider": {"const": "noaa-gefs"},
+        "ecology_profile": {"$ref": "common.schema.json#/$defs/id"},
+        "hfr_resolutions_km": {"type": "array", "items": {"type": "number", "exclusiveMinimum": 0}},
+        "comfort_defaults": {
+          "type": "object",
+          "properties": {
+            "wind_knots": {"type": "number"},
+            "gust_knots": {"type": "number"},
+            "sea_feet": {"type": "number"}
+          }
+        },
+        "providers": {
+          "type": "object",
+          "required": ["hfr", "regional_current", "wind_ensemble", "wave_ensemble", "spectra"],
+          "additionalProperties": {"$ref": "common.schema.json#/$defs/id"}
+        },
+        "verification_stations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "latitude", "longitude", "source_url"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^[A-Za-z0-9]{5}$"},
+              "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+              "longitude": {"type": "number", "minimum": -180, "maximum": 180},
+              "name": {"type": "string"},
+              "variables": {"$ref": "common.schema.json#/$defs/string_list"},
+              "wind_verification": {"const": "ndbc-derived-10m"},
+              "source_url": {"$ref": "common.schema.json#/$defs/https_url"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "if": {"properties": {"status": {"enum": ["active", "preview"]}}},
+  "then": {"required": ["intelligence"]},
+  "additionalProperties": true,
+  "$defs": {
+    "marine_zone": {"type": "string", "pattern": "^[A-Z]{3}\\d{3}$"},
+    "stations": {
+      "type": "object",
+      "required": ["tide", "airport", "nearshore_buoy", "offshore_buoy", "nearshore_buoy_name", "offshore_buoy_name"],
+      "properties": {
+        "tide": {"type": "string", "pattern": "^\\d{7}$"},
+        "airport": {"type": "string", "pattern": "^[A-Z0-9]{4}$"},
+        "nearshore_buoy": {"type": "string", "pattern": "^[A-Za-z0-9]{5}$"},
+        "offshore_buoy": {"type": "string", "pattern": "^[A-Za-z0-9]{5}$"},
+        "nearshore_buoy_name": {"type": "string"},
+        "offshore_buoy_name": {"type": "string"}
+      },
+      "additionalProperties": {"type": "string"}
+    }
+  }
+}

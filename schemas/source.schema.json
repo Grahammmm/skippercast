@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/source.schema.json",
+  "title": "SkipperCast catalog source",
+  "description": "One entry of catalog/sources.json (also copied to dist/data/source-catalog.json). Adapter-specific keys (request, model, dataset_id, bounds, native_resolution_m, report_ports, ...) vary by adapter, so additional properties are allowed. contracts.load_catalogs remains authoritative for need references and the approved-rights gate.",
+  "type": "object",
+  "required": [
+    "id", "name", "provider", "needs", "documentation_url", "adapter", "review_status",
+    "reviewed_at", "rights", "authenticity", "coverage_note", "limitations", "allowed_hosts"
+  ],
+  "properties": {
+    "id": {"$ref": "common.schema.json#/$defs/id"},
+    "name": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "needs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "common.schema.json#/$defs/id"}
+    },
+    "documentation_url": {"$ref": "common.schema.json#/$defs/https_url"},
+    "adapter": {"type": "string", "minLength": 1},
+    "review_status": {"enum": ["approved", "candidate", "restricted", "unavailable"]},
+    "reviewed_at": {"$ref": "common.schema.json#/$defs/date"},
+    "rights": {
+      "description": "Redistribution licence plus, from PR #33, the separate commercial-use review (commercial_use, attribution_required, commercial_note). The commercial fields are optional here so this schema accepts catalogs from before and after that change; load_catalogs enforces them once #33 is merged.",
+      "type": "object",
+      "required": ["license", "attribution", "terms_url"],
+      "properties": {
+        "license": {"type": "string", "minLength": 1},
+        "attribution": {"type": "string"},
+        "terms_url": {"$ref": "common.schema.json#/$defs/https_url"},
+        "scope": {"type": "string"},
+        "redistribution_reviewed": {"type": ["boolean", "string"]},
+        "commercial_use": {"enum": ["allowed", "prohibited", "permission-required", "unknown"]},
+        "attribution_required": {"type": "boolean"},
+        "commercial_note": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "authenticity": {
+      "type": "object",
+      "required": ["basis", "transport"],
+      "properties": {
+        "basis": {"type": "string"},
+        "transport": {"type": "string"}
+      }
+    },
+    "coverage_note": {"type": "string"},
+    "limitations": {"$ref": "common.schema.json#/$defs/string_list"},
+    "allowed_hosts": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"}
+    },
+    "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+    "max_age_hours": {"type": ["number", "null"]},
+    "request": {
+      "description": "Scheduled grid request (settings.settings merges it into the job).",
+      "type": "object",
+      "required": ["base_url", "dataset"],
+      "properties": {
+        "base_url": {"$ref": "common.schema.json#/$defs/https_url"},
+        "dataset": {"type": "string", "minLength": 1},
+        "variables": {"$ref": "common.schema.json#/$defs/string_list"},
+        "stride": {"type": "integer", "minimum": 1},
+        "max_age_hours": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "report_ports": {
+      "description": "Publisher landing label -> port name (PR for P2-08).",
+      "type": "object",
+      "additionalProperties": {"type": "string", "minLength": 1}
+    }
+  },
+  "if": {"properties": {"review_status": {"const": "approved"}}},
+  "then": {
+    "properties": {
+      "rights": {"properties": {"license": {"enum": ["public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"]}}}
+    }
+  },
+  "additionalProperties": true
+}

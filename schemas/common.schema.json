@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/common.schema.json",
+  "title": "SkipperCast shared definitions",
+  "description": "Building blocks referenced by the other schemas. Not a document schema on its own.",
+  "$defs": {
+    "id": {
+      "description": "Identifier accepted by skippercast.platform.contracts.ID.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "timestamp": {
+      "description": "ISO 8601 date-time with an explicit zone (Z or +hh:mm), as written by stamp() or datetime.isoformat(). parsers.iso_time rejects naive times.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "https_url": {
+      "description": "contracts.public_url() additionally rejects credentials, ports and private hosts.",
+      "type": "string",
+      "pattern": "^https://[^/?#@\\s]+(/\\S*)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bbox": {
+      "description": "West, south, east, north in WGS84 degrees. Ordering and ranges are checked by contracts.bbox().",
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"type": "number", "minimum": -180, "maximum": 180}
+    },
+    "string_list": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "source_status": {
+      "description": "Fail-closed collection states from pipeline.collect.source(). 'ok' is the only state that means fresh data was parsed this run.",
+      "enum": ["ok", "stale", "missing", "failed", "retained"]
+    },
+    "health_status": {
+      "enum": ["ok", "degraded", "failed"]
+    },
+    "request_receipt": {
+      "description": "One HTTP attempt recorded by pipeline.collect.Client.get(). Providers' headers are optional because failures and TLS fallbacks omit them.",
+      "type": "object",
+      "required": ["url", "attempt", "retrieved_at"],
+      "properties": {
+        "url": {"type": "string"},
+        "attempt": {"type": "integer", "minimum": 1},
+        "retrieved_at": {"$ref": "#/$defs/timestamp"},
+        "http_status": {"type": "integer"},
+        "http_date": {"type": ["string", "null"]},
+        "final_url": {"type": ["string", "null"]},
+        "content_type": {"type": ["string", "null"]},
+        "last_modified": {"type": ["string", "null"]},
+        "bytes": {"type": "integer", "minimum": 0},
+        "compressed_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "error": {"type": "string"},
+        "transport": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "collected_source": {
+      "description": "A source row written by pipeline.collect.source(). Adapters may add fields (station_url, reused, changed_since_previous, verification_issue, ...), so additional properties are allowed. A row whose status is 'ok' must carry parsed data (collect.validate).",
+      "type": "object",
+      "required": ["id", "name", "kind", "url", "checked_at", "max_age_hours", "status", "data"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string"},
+        "kind": {"type": "string", "minLength": 1},
+        "url": {"type": "string"},
+        "checked_at": {"$ref": "#/$defs/timestamp"},
+        "max_age_hours": {"type": "number", "exclusiveMinimum": 0},
+        "status": {"$ref": "#/$defs/source_status"},
+        "data": {"type": ["object", "null"]},
+        "issue": {"type": ["string", "null"]},
+        "last_success_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "data_retrieved_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "requests": {"type": "array", "items": {"$ref": "#/$defs/request_receipt"}}
+      },
+      "if": {"properties": {"status": {"const": "ok"}}},
+      "then": {"properties": {"data": {"type": "object"}}},
+      "additionalProperties": true
+    },
+    "sources_map": {
+      "description": "Source rows keyed by their id. The key/id match is checked in code (collect.validate); JSON Schema cannot express it.",
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/collected_source"}
+    },
+    "publication": {
+      "description": "Optional run identity added by collect.publication() (PR #30). When either field is present both must be (collect.validate).",
+      "properties": {
+        "published_at": {"$ref": "#/$defs/timestamp"},
+        "run_id": {"type": "string", "minLength": 1}
+      },
+      "dependentRequired": {
+        "published_at": ["run_id"],
+        "run_id": ["published_at"]
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/forecast-index.schema.json",
+  "title": "SkipperCast forecast build index",
+  "description": "index.json on the forecasts branch, written by forecast.build.build(): one status row per model. A failed model keeps its previous tiles when kept_previous is true.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "box", "models"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "box": {
+      "type": "object",
+      "required": ["south", "north", "west", "east"],
+      "properties": {
+        "south": {"type": "number"}, "north": {"type": "number"},
+        "west": {"type": "number"}, "east": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "models": {
+      "type": "object",
+      "propertyNames": {"$ref": "forecast-manifest.schema.json#/$defs/model_id"},
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["status", "state", "cycle", "built_at", "tiles"],
+            "properties": {
+              "status": {"const": "ok"},
+              "state": {"enum": ["built", "current"]},
+              "cycle": {"$ref": "common.schema.json#/$defs/timestamp"},
+              "built_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+              "tiles": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["status", "issue", "kept_previous"],
+            "properties": {
+              "status": {"const": "failed"},
+              "issue": {"type": "string", "maxLength": 300},
+              "kept_previous": {"type": "boolean"}
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}
