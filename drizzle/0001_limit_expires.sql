@@ -1,0 +1,1 @@
+CREATE INDEX `limit_expires` ON `request_limits` (`expires_at`);

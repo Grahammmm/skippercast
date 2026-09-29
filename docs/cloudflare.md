@@ -10,7 +10,7 @@ SkipperCast's Worker, static site, private-trip database (D1), published feeds (
   - After each GitHub push, `scripts/publish_branch_r2.sh` mirrors that branch's committed files to R2 under the same path.
   - `scripts/publish_r2.py` hashes files and uploads only changes. The conditions feed has about 1,500 files, and most don't change each cycle. Data files go before `latest`/`index`/`manifest` pointers, and deletions go last.
   - It runs in the live loop (conditions and forecasts) and the daily job (data), and does nothing without credentials.
-- **Watchdog (`server/watchdog.js`)**: every 15 minutes, if the live feed is more than 45 minutes old and no refresh is running, it dispatches the live-conditions workflow. This replaces reliance on GitHub's throttled schedules. It needs `WATCHDOG_GITHUB_TOKEN`.
+- **Watchdog (`server/watchdog.js`)**: every 15 minutes, if the live feed is more than 45 minutes old and no refresh is running, it dispatches the live-conditions workflow. This replaces reliance on GitHub's throttled schedules. It needs `WATCHDOG_GITHUB_TOKEN`. The same cron prunes expired trips, alert events, feedback and rate-limit rows in D1 (see [production operations](production-operations.md)).
 - **Edge cache and rate limits (`server/edge-cache.js`)**:
   - `/api/om/*`, `/api/forecast`, `/api/intelligence`, `/api/habitat` and R2-served `/feeds/*` use the Workers Cache API (`caches.default`). Responses carry `X-SC-Cache: hit|miss`.
   - API keys are the path plus sorted query parameters (region only, for the region endpoints) plus the build id.

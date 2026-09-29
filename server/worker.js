@@ -94,6 +94,18 @@ async function deliver(env,event){
   else await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind(subscriptions.length?'held':'in-app',event.id).run();
   return delivered;
 }
+// Retention: expired rate-limit rows, 90-day trips/events/receipts, 365-day feedback.
+// Runs from the Cloudflare cron (scheduled) and after each job page, so it never
+// depends on the GitHub Actions chain alone (the Sites host has no cron trigger).
+export async function prune(env,now=Date.now()){
+  const cutoff=new Date(now-90*86400000).toISOString();
+  await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
+    db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE created_at<?)').bind(cutoff),db(env).prepare('DELETE FROM alert_events WHERE created_at<?').bind(cutoff),db(env).prepare('DELETE FROM trips WHERE date<?').bind(cutoff.slice(0,10))]);
+}
+async function scheduledPrune(env){
+  if(!env?.DB)return;
+  try{await prune(env);}catch(error){console.error('Retention prune failed',{reason:String(error.message).slice(0,200)});}
+}
 export async function checkTrips(env,cursor=''){
   const now=Date.now(),trips=(await db(env).prepare('SELECT * FROM trips WHERE enabled=1 AND final_delivered_at IS NULL AND id>? ORDER BY id LIMIT 25').bind(cursor).all()).results;
   const feeds=new Map();let changes=0,delivered=0,held=0,inApp=0;
@@ -127,9 +139,7 @@ export async function checkTrips(env,cursor=''){
       else held++;
     }
   }
-  const cutoff=new Date(now-90*86400000).toISOString();
-  await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
-    db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE created_at<?)').bind(cutoff),db(env).prepare('DELETE FROM alert_events WHERE created_at<?').bind(cutoff),db(env).prepare('DELETE FROM trips WHERE date<?').bind(cutoff.slice(0,10))]);
+  await prune(env,now);
   return {checked:trips.length,changes,delivered,held,in_app:inApp,next_cursor:trips.length===25?trips.at(-1).id:null};
 }
 
@@ -139,7 +149,7 @@ function bind(env){
   // Extra origins (e.g. a workers.dev staging copy) may post; production origins come from the deployment policy.
   extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
 }
-export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(watchdog(env));},
+export default {async scheduled(controller,env,ctx){bind(env);ctx.waitUntil(Promise.all([watchdog(env),scheduledPrune(env)]));},
 // Every response, including shells, assets, feeds and errors, carries the security headers.
 async fetch(request,env,ctx){return secure(await route(request,env,ctx));}};
 const build=()=>typeof BUILD_ID==='undefined'?'dev':BUILD_ID;

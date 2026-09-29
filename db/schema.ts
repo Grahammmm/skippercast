@@ -27,4 +27,4 @@ export const feedback=sqliteTable('comfort_feedback',{
 },t=>[index('feedback_owner').on(t.owner)]);
 export const limits=sqliteTable('request_limits',{
   id:text('id').primaryKey(),count:integer('count').notNull(),expiresAt:integer('expires_at').notNull(),
-});
+},t=>[index('limit_expires').on(t.expiresAt)]);
