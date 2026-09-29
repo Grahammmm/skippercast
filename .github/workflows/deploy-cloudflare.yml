@@ -3,10 +3,23 @@ name: Deploy to Cloudflare
 # Deploys main to SkipperCast's own Cloudflare account (staging on workers.dev
 # until sign-in moves off ChatGPT; see docs/cloudflare.md). Does nothing until
 # the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets exist.
+#
+# Only a main commit that passed "Offline checks" is deployed, and exactly that
+# commit. After deploying, the site is smoke-tested; a failure rolls the Worker
+# back to the previous version automatically. D1 migrations are forward-only:
+# the deploy script backs up the database first (docs/operations/runbooks/rollback-release.md).
 on:
-  push:
+  workflow_run:
+    workflows: ["Offline checks"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy the current main, or roll back to the previous Worker version"
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
 
 permissions:
   contents: read
@@ -15,15 +28,28 @@ concurrency:
   group: deploy-cloudflare
   cancel-in-progress: false
 
+env:
+  WRANGLER: npx --yes wrangler@4.142.0
+
 jobs:
   deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The commit CI tested, not whatever main is by the time this runs.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -36,7 +62,8 @@ jobs:
         run: |
           pnpm build
           node scripts/check_client.mjs
-      - name: Deploy
+      - name: Back up D1, migrate and deploy
+        id: deploy
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
@@ -44,13 +71,41 @@ jobs:
         run: |
           mkdir -p var
           bash scripts/cloudflare_deploy.sh
-      - name: Check the deployed site
-        if: env.CLOUDFLARE_API_TOKEN != ''
+      - name: Smoke-test the deployed site
+        id: smoke
+        if: steps.deploy.outputs.deployed == 'true'
         env:
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
         run: |
-          if [ -z "$SITE" ]; then echo "Set the CLOUDFLARE_SITE_URL repository variable to check the deployment."; exit 0; fi
+          if [ -z "$SITE" ]; then echo "::warning::Set the CLOUDFLARE_SITE_URL repository variable so deploys are smoke-tested."; exit 0; fi
+          bash scripts/smoke_test.sh "$SITE"
+      - name: Roll back after a failed smoke test
+        if: failure() && steps.deploy.outputs.deployed == 'true'
+        run: |
+          node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
+          $WRANGLER rollback --config wrangler.rollback.jsonc --yes --message "Smoke test failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"
+          echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was rolled back. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+
+  rollback:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Roll back to the previous Worker version
+        run: |
+          node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
+          $WRANGLER rollback --config wrangler.rollback.jsonc --yes --message "Manual rollback by ${GITHUB_ACTOR} (run ${GITHUB_RUN_ID})"
+      - name: Smoke-test after rollback
+        env:
+          SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
+        run: |
+          if [ -z "$SITE" ]; then exit 0; fi
           sleep 10
-          curl -fsS "$SITE/api/health" | tee /dev/stderr | grep -q '"service":"SkipperCast"'
-          curl -fsS -o /dev/null -w "home page %{http_code}\n" "$SITE/"
-          curl -fsS -o /dev/null -w "live feed %{http_code}\n" "$SITE/feeds/conditions/latest.json"
+          bash scripts/smoke_test.sh "$SITE"

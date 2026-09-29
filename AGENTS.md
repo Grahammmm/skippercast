@@ -75,8 +75,10 @@ Approve, or request changes with specific lines. The repository owner merges.
 
 ## Releases
 
-Deploy only from `main`. Tag releases (`v0.3.1`, `v0.4.0`) after merging a
-user-facing change; roll back by redeploying the previous tag. The scheduled
+Deploy only from `main`: the Cloudflare deploy runs only after Offline checks
+pass on a `main` commit, smoke-tests the site and rolls back automatically on
+failure. Tag releases (`v0.3.1`, `v0.4.0`) after merging a user-facing change.
+Manual rollback: [roll back a release](docs/operations/runbooks/rollback-release.md). The scheduled
 data jobs publish to the `conditions` and `data` branches and do not go
 through PRs.
 

@@ -11,7 +11,7 @@ SkipperCast's Worker, static site, private-trip database (D1), published feeds (
   - `scripts/publish_r2.py` hashes files and uploads only changes. The conditions feed has about 1,500 files, and most don't change each cycle. Data files go before `latest`/`index`/`manifest` pointers, and deletions go last.
   - It runs in the live loop (conditions and forecasts) and the daily job (data), and does nothing without credentials.
 - **Watchdog (`server/watchdog.js`)**: every 15 minutes, if the live feed is more than 45 minutes old and no refresh is running, it dispatches the live-conditions workflow. This replaces reliance on GitHub's throttled schedules. It needs `WATCHDOG_GITHUB_TOKEN`.
-- **Deploy (`.github/workflows/deploy-cloudflare.yml`)**: on every push to `main`, it builds, creates the D1 database and R2 bucket if missing, applies `drizzle/` migrations, deploys, and uploads optional secrets.
+- **Deploy (`.github/workflows/deploy-cloudflare.yml`)**: after **Offline checks** pass on a `main` commit, it builds exactly that commit, creates the D1 database and R2 buckets if missing, records a D1 Time Travel bookmark, exports D1 to the private `skippercast-backups` bucket, applies `drizzle/` migrations, deploys and uploads optional secrets. `scripts/smoke_test.sh` then checks the site; a failure rolls the Worker back automatically. Manual rollback: run the workflow with action **rollback**. See [roll back a release](operations/runbooks/rollback-release.md).
 
 Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
 - pages, the forecast API, `/feeds/` from R2 and from GitHub, and path-traversal refusal;
@@ -31,7 +31,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
 4. **Add repository variables** on the same page, under the Variables tab:
    - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`, for the post-deploy check;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
-5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or push to `main`. The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `/api/health` on staging shows `"feeds": "r2"`.
+5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `/api/health` on staging shows `"feeds": "r2"`.
 
 ## Cost
 
