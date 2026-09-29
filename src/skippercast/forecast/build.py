@@ -1,7 +1,8 @@
 """Build SkipperCast forecast tiles from NOAA and ECMWF GRIB data.
 
     PYTHONPATH=src python -m skippercast.forecast.build --output var/forecasts \
-        [--previous var/forecasts-published] [--models gfs_global,ecmwf_wam] [--force]
+        [--previous var/forecasts-published] [--models gfs_global,ecmwf_wam] [--force] \
+        [--run-manifest var/runs/forecast-build.json]
 
 For each model: find the newest complete cycle; if it is already published,
 reuse the previous tiles; otherwise download the needed fields for every
@@ -252,11 +253,13 @@ def build_one(model, output, previous, force, log):
     return manifest, 'built'
 
 
-def build(output, previous=None, models=None, force=False, log=log_err):
+def build(output, previous=None, models=None, force=False, log=log_err, run=None):
+    """Build every model; `run` (a skippercast.runs.RunManifest) receives one source row per model."""
     output.mkdir(parents=True, exist_ok=True)
     status = {}
     for model_id in models or MODELS:
         model = MODELS[model_id]
+        started = time.monotonic()
         try:
             manifest, state = build_one(model, output, previous, force, log)
             status[model_id] = {'status': 'ok', 'state': state, 'cycle': manifest['cycle_iso'],
@@ -271,22 +274,59 @@ def build(output, previous=None, models=None, force=False, log=log_err):
                     shutil.copytree(previous / model_id, target)
                 kept = True
             status[model_id] = {'status': 'failed', 'issue': str(error)[:300], 'kept_previous': kept}
+            if run is not None:
+                run.source(model_id, 'failed', error_class=type(error).__name__, kept_previous=kept,
+                           duration_ms=round((time.monotonic() - started) * 1000), detail=str(error))
+        else:
+            if run is not None:
+                run.source(model_id, 'ok', state=state, cycle=manifest['cycle_iso'], tiles=len(manifest['tiles']),
+                           duration_ms=round((time.monotonic() - started) * 1000),
+                           detail=f"{state} {manifest['cycle_iso']}, {len(manifest['tiles'])} tiles")
     index = {'schema_version': SCHEMA, 'generated_at': stamp(), 'box': BOX, 'models': status}
     (output / 'index.json').write_text(json.dumps(index, indent=1))
     return index
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--previous', type=Path)
     parser.add_argument('--models', help='comma-separated subset of: ' + ','.join(MODELS))
     parser.add_argument('--force', action='store_true', help='rebuild even if the cycle is already published')
-    args = parser.parse_args()
-    index = build(args.output, args.previous, args.models.split(',') if args.models else None, args.force)
-    print(json.dumps(index, indent=1))
-    if all(m['status'] == 'failed' and not m.get('kept_previous') for m in index['models'].values()):
-        sys.exit(1)
+    parser.add_argument('--run-manifest', type=Path,
+                        help='also write a run manifest (skippercast.runs) here; render it with python -m skippercast.report')
+    args = parser.parse_args(argv)
+    # Progress goes to stderr as structured log records; stdout stays the index JSON
+    # that scripts/publish_forecasts.sh captures.
+    from ..log import configure
+    from ..runs import RunManifest
+    logger = configure(job='forecast-build')
+    run = RunManifest.start('forecast-build')
+    selected = args.models.split(',') if args.models else list(MODELS)
+    if args.previous:
+        for model_id in selected:
+            run.add_input(args.previous / model_id / 'manifest.json', optional=True)
+    code = 0
+    try:
+        index = build(args.output, args.previous, selected, args.force, log=logger.info, run=run)
+        print(json.dumps(index, indent=1))
+        if all(m['status'] == 'failed' and not m.get('kept_previous') for m in index['models'].values()):
+            logger.error('every model failed and none kept a previous generation')
+            code = 1
+        run.add_output(args.output / 'index.json')
+        for model_id, row in index['models'].items():
+            if row['status'] == 'ok' or row.get('kept_previous'):
+                run.add_output(args.output / model_id / 'manifest.json')
+        run.finish(code)
+    except Exception as error:
+        run.finish(1, error=error)
+        raise
+    finally:
+        if args.run_manifest:
+            run.write(args.run_manifest)
+            logger.info('run manifest written', extra={'duration_ms': run.duration_ms})
+    if code:
+        sys.exit(code)
 
 
 if __name__ == '__main__':
