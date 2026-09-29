@@ -26,7 +26,7 @@ One UTC clock drives hourly comparison and map conditions. Regional timezones fo
 
 | Product | Provenance and limits |
 |---|---|
-| Wind uncertainty | Actual 31-member NOAA GEFS via [Open-Meteo](https://open-meteo.com/en/docs/ensemble-api). Native three-hour output is provider-interpolated to hourly. Member ranges/counts and raw threshold fractions are not calibrated odds. |
+| Wind uncertainty | Actual 31-member NOAA GEFS 0.25° members read directly from [NOAA open data on AWS](https://registry.opendata.aws/noaa-gefs/) once per cycle (see [forecast data](forecast-data.md#gefs-wind-ensemble)). Each member is sampled at the nearest sea cell and its native three-hour output is linearly interpolated to hourly by SkipperCast. Member ranges/counts and raw threshold fractions are not calibrated odds. |
 | Wave uncertainty | [NOAA GEFS Wave](https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml) exceedance fields. Displayed threshold: 1 m = 3.28 ft, not 3 ft. Preserve actual three-hour snapshots and returned sea-cell coordinates/distance. |
 | Observed currents | [NOAA/IOOS HFR](https://dods.ndbc.noaa.gov/thredds/catalog/hfradar.html), separately at 1 and 6 km. Check masks, contributing sites and geometry. Empty cells remain blank; observations are not moved into future hours. |
 | Regional currents | [NOAA WCOFS](https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html): approximately 4 km, NAD83, surface layer, actual populated horizon up to 72 hours. Radar assimilation means the two are not independent validation. Neither supplies bottom/bar currents. |

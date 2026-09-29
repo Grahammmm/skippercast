@@ -80,7 +80,7 @@ A proposed repeated-visit screen would first require independent vessel/MMSI and
 
 ## Forecast and observation services
 
-Wind and wave forecasts now come from SkipperCast's own tiles, built directly from NOAA GFS/GFS-Wave (public domain) and ECMWF IFS/WAM open data ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credit ECMWF). Both allow commercial use. Method, sampling and known differences: [forecast data](forecast-data.md). The Open-Meteo notes below still apply to the GEFS ensemble, ocean currents and the browser's direct requests until they are switched over.
+Wind and wave forecasts now come from SkipperCast's own tiles, built directly from NOAA GFS/GFS-Wave (public domain) and ECMWF IFS/WAM open data ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credit ECMWF). Both allow commercial use. Method, sampling and known differences: [forecast data](forecast-data.md). The GEFS wind ensemble is read directly from NOAA's GEFS open data on AWS (public domain). The Open-Meteo notes below still apply to ocean currents and the browser's direct requests until they are switched over.
 
 [Open-Meteo](https://open-meteo.com/en/licence) is the access service for several forecast models; it is not another independent weather model. Comparisons retain **ECMWF IFS versus NOAA GFS** for wind and **ECMWF WAM versus NOAA GFS Wave** for seas. Model initialization, publication/availability, grid coordinates, units, and populated coverage are needed to interpret a response. Retrieval time is not forecast issue time.
 

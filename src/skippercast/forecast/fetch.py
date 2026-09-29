@@ -6,6 +6,7 @@ request, so a run downloads megabytes per hour of forecast, not whole files.
 """
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from http.client import HTTPException
 import json
 import random
 import time
@@ -34,7 +35,7 @@ def http(url, byte_range=None, method='GET', timeout=60, retries=RETRIES):
                 return None
             if attempt == retries - 1:
                 raise
-        except (URLError, TimeoutError, ConnectionError):
+        except (URLError, TimeoutError, ConnectionError, HTTPException):  # HTTPException: IncompleteRead on a cut transfer
             if attempt == retries - 1:
                 raise
         # S3 answers bursts with 503 Slow Down; back off with jitter.

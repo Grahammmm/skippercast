@@ -22,6 +22,16 @@ NOAA data are U.S. public domain. ECMWF open data are [CC BY 4.0](https://creati
 
 Layout on the `forecasts` branch: `index.json` (per-model status), `<model>/manifest.json` (cycle, times, tiles, Open-Meteo-style `meta`), `<model>/tiles/<lat>_<lon>.json`.
 
+## GEFS wind ensemble
+
+The regional "Forecast range & uncertainty" card uses the 31 members of NOAA's Global Ensemble Forecast System (control `gec00` and perturbations `gep01`–`gep30`), read directly from [NOAA's GEFS bucket on AWS](https://registry.opendata.aws/noaa-gefs/) (U.S. public domain).
+
+- `python -m skippercast.forecast.ensemble` runs in `scripts/publish_forecasts.sh` after the tiles. It waits until both the control and the last member publish the final step, then reads `gefs.YYYYMMDD/HH/atmos/pgrb2sp25/<member>.tHHz.pgrb2s.0p25.fFFF` for steps 0–192 h every 3 h. Only `UGRD`/`VGRD` at 10 m (one range request for the adjacent pair) and surface `GUST` are downloaded, located through each file's `.idx`, with the same retry and backoff as the tiles.
+- It keeps no grid. Each regional forecast point (every region whose `intelligence.wind_ensemble_model` is `gfs025`) is sampled at the nearest sea cell within 30 km, using the land mask (`LAND`) of the same-cycle GFS 0.25° analysis, which is on the same grid. Points with no sea cell in range stay empty; nothing is filled.
+- Output on the `forecasts` branch: `ncep_gefs025/manifest.json` (cycle, Open-Meteo-style `meta`, and an upstream receipt: bucket prefix, message count, bytes, a SHA-256 over every message's URL, offset and hash, the land-mask hash, and any missing member-steps) and `ncep_gefs025/regions/<region>.json` (per point: sampled grid cell, distance, and member × step wind speed and gust in m/s). More than 10% missing member-steps fails the build; a failed build keeps the previous one.
+- `pipeline/intelligence.py` reads that build (locally in the live job, otherwise from the branch), records a receipt with the file's SHA-256, checks cycle, members, units, time axis and point coordinates, and linearly interpolates each member to hourly frames in knots. A member with a missing neighbouring step is left out of that hour, and gusts below the wind are dropped.
+- Cost: about 6,000 range requests (≈4 GB) and 6,000 small decodes per 6-hour cycle, a few minutes on a runner; unchanged cycles are reused in seconds.
+
 ## Sampling: what we emulate from Open-Meteo
 
 `server/model-api.js` is the one sampler. The Worker serves it at `/api/om/v1/forecast`, `/api/om/v1/marine` and `/api/om/data/<model>/static/meta.json`, and the Python pipeline runs it through `scripts/model_api.mjs`.
@@ -35,5 +45,5 @@ On September 28, 2026, against Open-Meteo for the same Central Coast points and 
 ## Known differences and follow-ups
 
 - ECMWF open data has no visibility and no swell partitions, so those values are null. ECMWF waves are 0.25°; Open-Meteo shows a 9 km WAM grid.
-- Still on Open-Meteo, to replace next: the GEFS wind ensemble (`pipeline/intelligence.py`), Météo-France currents (`dist/marine-data.js`) and the legacy personal monitor (`monitor/collector.py`).
+- Still on Open-Meteo, to replace next: Météo-France currents (`dist/marine-data.js`) and the legacy personal monitor (`monitor/collector.py`).
 - The browser still calls Open-Meteo directly until the front end switches to `/api/om/…`. That switch lands with the content-hashed build, so the new modules reach visitors.
