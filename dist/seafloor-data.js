@@ -36,13 +36,15 @@ export function manifestState(manifest, region, now = Date.now()) {
 
 /** Fetch and gate the manifest; never throws, never uses a cached copy. */
 export async function loadManifest(region, fetchImpl = globalThis.fetch, now = Date.now()) {
-  if (!REGION.test(region || '')) return manifestState(null, region, now);
+  if (!REGION.test(region || '')) return { ...manifestState(null, region, now), published: false };
   try {
     const response = await fetchImpl(manifestURL(region), { cache: 'no-store' });
     if (response.status === 503) {
       const body = await response.json().catch(() => null);
       return manifestState(body || { status: 'updating' }, region, now);
     }
+    // A 404 means this region has no seafloor publication at all: hide the layer.
+    if (response.status === 404) return { ...manifestState(null, region, now), published: false };
     if (!response.ok) return manifestState(null, region, now);
     return manifestState(await response.json(), region, now);
   } catch {
@@ -235,10 +237,11 @@ export function tilesForBounds([west, south, east, north], z) {
 
 // ---- Styling and provenance ------------------------------------------------
 
+// Purple scale for terrain grade: distinct from MPA pink, survey-habitat teal and the fit blues.
 export const GRADE_STYLE = {
-  A: { color: '#7a3e9d', label: 'A · most rugged terrain' },
-  B: { color: '#b0607f', label: 'B · moderately rugged' },
-  C: { color: '#d59a6a', label: 'C · some relief' },
+  A: { color: '#4b2a8a', label: 'A · most rugged terrain' },
+  B: { color: '#8466c4', label: 'B · moderately rugged' },
+  C: { color: '#c3b3e6', label: 'C · some relief' },
 };
 export const FIT_STYLE = {
   3: { color: '#1f6f8b', label: '3 · strongest physical fit' },

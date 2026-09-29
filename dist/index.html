@@ -93,6 +93,8 @@
     <link rel="modulepreload" href="geology.js" />
     <link rel="modulepreload" href="weather-ui.js" />
     <link rel="modulepreload" href="tomorrow.js" />
+    <link rel="modulepreload" href="seafloor-layer.js" />
+    <link rel="modulepreload" href="seafloor-data.js" />
     <link rel="modulepreload" href="forecast-matrix.js" />
     <link rel="modulepreload" href="bite-evidence.js" />
     <link rel="modulepreload" href="target-groups.js" />
@@ -449,6 +451,13 @@
               weather overlay</label
             >
             <label><input id="layer-central-coverage" type="checkbox" /> Survey evidence gaps · Central Coast</label>
+          </div>
+          <div id="seafloor-options" class="seafloor-options" hidden>
+            <label><input id="layer-seafloor" type="checkbox" /> Seafloor habitat candidates</label>
+            <label class="seafloor-sub"><input id="layer-seafloor-cells" type="checkbox" /> Survey coverage cells</label>
+            <label class="seafloor-sub" for="seafloor-view">Color by</label>
+            <select id="seafloor-view" class="seafloor-sub" aria-label="Color seafloor habitat by"></select>
+            <p id="seafloor-status" class="small" role="status">Checking seafloor publication…</p>
           </div>
           <p id="central-coverage-status" class="small" role="status">Checking Central Coast source coverage…</p>
           <p id="mpa-status" class="small" role="status">Loading protected-area boundaries…</p>
