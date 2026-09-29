@@ -41,10 +41,19 @@ test = ["jsonschema==4.26.0"]
 # Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
 seafloor = ["skippercast[survey,publish,test]"]
 # Everything a contributor needs to run the full suite and every job locally.
-dev = ["skippercast[ocean,survey,publish,test]"]
+dev = ["skippercast[ocean,survey,publish,test]", "ruff==0.16.9"]
 
 [project.scripts]
 skippercast = "skippercast.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Lint gate: syntax errors and undefined names only, so it passes on today's code.
+# Style rules (format, imports, E/W) are added later, one reviewed step at a time.
+[tool.ruff]
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

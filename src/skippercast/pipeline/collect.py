@@ -23,6 +23,7 @@ from .regulations import regulatory_snapshot, watch_jobs
 from .settings import settings, previous_for_region
 from ..platform.contracts import REPO, public_url
 from ..platform.source_audit import PublicRedirect, check_public_address
+from ..util.time import stamp
 
 UA = "SkipperCast/0.2 (https://github.com/Grahammmm/skippercast)"
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap"
@@ -71,10 +72,6 @@ def system_tls_official_watch(url, limit):
     fields = {name.lower(): value.strip() for name, value in
               re.findall(r'^([\w-]+):\s*(.*)$', final_headers, re.M)}
     return body, fields
-
-
-def stamp(now=None):
-    return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def age_hours(value, now):

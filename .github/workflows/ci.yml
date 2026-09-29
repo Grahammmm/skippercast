@@ -69,6 +69,10 @@ jobs:
           fi
       - name: Documentation and publication checks
         run: python scripts/check_repository.py
+      - name: Lint Python (syntax errors and undefined names)
+        run: |
+          python -m pip install ruff==0.16.9
+          ruff check src
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

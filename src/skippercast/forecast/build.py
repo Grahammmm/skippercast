@@ -27,14 +27,14 @@ import numpy as np
 
 from .fetch import download_all, latest_cycle, plan_step
 from .models import BOX, MODELS
+from ..util.time import stamp as util_stamp
 
 SCHEMA = 1
 MISSING = -32768
 
 
 def stamp(moment=None):
-    moment = moment or datetime.now(timezone.utc)
-    return moment.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return util_stamp(moment, to_utc=False)
 
 
 # ---- decoding ------------------------------------------------------------------

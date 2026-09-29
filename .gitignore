@@ -44,3 +44,4 @@ dist/.openai/
 wrangler.deploy.jsonc
 .wrangler/
 wrangler.rollback.jsonc
+.ruff_cache/
