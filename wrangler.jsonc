@@ -25,6 +25,13 @@
   // Never trust platform identity headers here: only ChatGPT Sites injects and
   // strips them. Private features stay off until SkipperCast has its own sign-in.
   "vars": { "IDENTITY_PROVIDER": "none" },
+  // Per-IP limits for the anonymous read endpoints (server/edge-cache.js):
+  // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer
+  // string unique to this account. Absent on ChatGPT Sites, where they no-op.
+  "ratelimits": [
+    { "name": "PUBLIC_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+    { "name": "FEED_LIMITER", "namespace_id": "1002", "simple": { "limit": 300, "period": 60 } }
+  ],
   "triggers": { "crons": ["*/15 * * * *"] },
   "observability": { "enabled": true }
 }
