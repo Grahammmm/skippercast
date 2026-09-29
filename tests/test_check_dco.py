@@ -25,12 +25,22 @@ SIGNED = commit('d', 'Pat Doe', 'pat@example.org', 'Fix typo\n\nSigned-off-by: P
 UNSIGNED = commit('e', 'Pat Doe', 'pat@example.org', 'Fix typo', login='patdoe')
 WRONG_EMAIL = commit('f', 'Pat Doe', 'pat@example.org', 'Fix\n\nSigned-off-by: Pat Doe <other@example.org>', login='patdoe')
 UNLINKED = commit('9', 'Sam Roe', 'sam@example.net', 'Tweak')
+DEPENDABOT = commit('6', 'dependabot[bot]', '49699333+dependabot[bot]@users.noreply.github.com',
+                    'Bump actions/checkout from 4 to 7', login='dependabot[bot]')
+SPOOFED_BOT = commit('5', 'dependabot[bot]', 'dependabot@example.com', 'Bump', login='mallory')
 SPOOFED_NAME = commit('8', 'Claude', 'claude@example.com', 'Pretend to be an agent', login='mallory')
 
 
 class DcoTests(unittest.TestCase):
     def test_owner_and_agents_are_exempt(self):
         self.assertEqual(check_dco.offenders([OWNER, CODEX, CLAUDE]), [])
+
+    def test_dependabot_updates_on_repository_branches_are_exempt(self):
+        # Dependabot opens its branches in this repository; its commits carry no sign-off.
+        self.assertEqual(check_dco.offenders([DEPENDABOT]), [])
+        # The exemption follows the GitHub login, not a name anyone can type.
+        self.assertEqual(len(check_dco.offenders([SPOOFED_BOT])), 1)
+        self.assertEqual(len(check_dco.offenders([DEPENDABOT], fork=True)), 1)
 
     def test_outside_contributor_with_matching_sign_off_passes(self):
         self.assertEqual(check_dco.offenders([SIGNED]), [])

@@ -41,8 +41,10 @@ publish = ["boto3==1.43.103", "jsonschema==4.26.0"]
 test = ["jsonschema==4.26.0"]
 # Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
 seafloor = ["skippercast[survey,publish,test]"]
+# Operating-system trust store for skippercast.http (optional; stdlib TLS otherwise).
+tls = ["truststore==0.10.4"]
 # Everything a contributor needs to run the full suite and every job locally.
-dev = ["skippercast[ocean,survey,publish,test]", "ruff==0.16.9"]
+dev = ["skippercast[ocean,survey,publish,test,tls]", "ruff==0.16.9"]
 
 [project.scripts]
 skippercast = "skippercast.__main__:main"

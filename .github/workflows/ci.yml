@@ -83,6 +83,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Forecast handling and GPX checks
         run: node --test tests/test_*.mjs
+      - name: Design token contrast (WCAG 4.5:1, light and dark)
+        run: node scripts/check_contrast.mjs --verbose
       - name: Website assets and data consistency
         run: python scripts/check_web.py
       - name: Build Worker and public assets
