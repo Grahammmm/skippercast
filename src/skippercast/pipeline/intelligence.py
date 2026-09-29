@@ -14,6 +14,7 @@ from .verification import ForecastCollectionDeferred, forecast_records, merge_re
 from .verification_archive import load_archive, write_archive
 from .forecast_coverage import audit_forecast_coverage
 from ..platform.contracts import load_region, atomic_json, read_json
+from .. import validate
 
 
 KNOTS_PER_MS=3600/1852
@@ -201,6 +202,7 @@ def run(region_id,output,previous_root=None,now=None):
     data={'schema_version':1,'region_id':region_id,'generated_at':stamp(now),'completed_at':stamp(),'ocean_collected_at':ocean_at,
           'sources':sources,'verification':verification,'forecast':forecast,
           'health':health}
+    validate.check('intelligence-feed',data)  # before any write, so a bad shape never publishes
     target=output/'regions'/region_id
     write_archive(target,region_id,records,observed,evaluated_at,
                   previous_root/'regions'/region_id if previous_root else None)

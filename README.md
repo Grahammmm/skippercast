@@ -1,6 +1,6 @@
 # SkipperCast
 
-[Statewide buildout ledger](docs/statewide-buildout.md) · [Central Coast coverage and accuracy](docs/central-coast-coverage-and-accuracy.md) · [Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
+[Documentation index](docs/README.md) · [Architecture](docs/architecture.md) · [Statewide buildout ledger](docs/statewide-buildout.md) · [Central Coast coverage and accuracy](docs/central-coast-coverage-and-accuracy.md) · [Region pipeline and full data flow](docs/region-pipeline.md) · [How the regional platform works](docs/platform.md) · [Add a coastline](docs/regions.md) · [Data needs and contracts](docs/data-contracts.md) · [Operating the app](docs/production-operations.md) · [Data-quality rollout](docs/data-quality-rollout.md)
 
 
 **Find structure worth investigating. Collect the evidence for a good morning on the water.**

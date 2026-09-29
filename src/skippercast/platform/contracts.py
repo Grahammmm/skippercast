@@ -24,6 +24,10 @@ PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts
 COMMERCIAL_USE = {"allowed", "prohibited", "permission-required", "unknown"}
 
 
+class ContractError(ValueError):
+    """A document does not match its published contract (schemas/ or the checks here)."""
+
+
 def _unique(pairs):
     result = {}
     for key, value in pairs:
@@ -49,7 +53,13 @@ def ecology_profile_id(region):
     return standalone or legacy
 
 
-def atomic_json(path, value, *, indent=None):
+def atomic_json(path, value, *, indent=None, kind=None):
+    """Write JSON via a temporary file and rename. With kind (a schemas/ kind such as
+    'daily-feed'), the value is validated first and a mismatch raises ContractError
+    before anything is written; see skippercast.validate.check."""
+    if kind is not None:
+        from .. import validate
+        validate.check(kind, value)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = (json.dumps(value, ensure_ascii=False, allow_nan=False, indent=indent,
@@ -140,11 +150,16 @@ def load_region(ident, root=REPO):
     return region
 
 
-def validate_region(region, needs, sources, root=REPO):
+def _region_shape(region):
+    """Shape checks that schemas/region.schema.json also expresses.
+
+    validate_region runs these only when jsonschema is unavailable (or
+    SKIPPERCAST_VALIDATE=off), and to phrase the error when the schema rejects
+    a region. tests/test_region_contract.py proves the two agree on every
+    committed region and on a bad input for each check.
+    """
     if region.get("schema_version") != 1 or not ID.fullmatch(region.get("id", "")):
         raise ValueError("Invalid region schema or id")
-    bounds = bbox(region["bounds"])
-    ZoneInfo(region["timezone"])
     if region["status"] not in {"active", "preview", "draft"}:
         raise ValueError("Unknown region publication state")
     if region["status"] != "draft" and not region.get("intelligence"):
@@ -153,8 +168,65 @@ def validate_region(region, needs, sources, root=REPO):
         raise ValueError("Invalid regional depth limit")
     if isinstance(region["boat"]["cruise_knots"], bool) or not 0 < region["boat"]["cruise_knots"] <= 100:
         raise ValueError("Invalid cruise speed")
+    if not region.get('species') or len(region['species']) != len(set(region['species'])):
+        raise ValueError('Regional species selectors must be distinct reviewed target IDs')
+    local_map=region.get('map',{})
+    for area in local_map.get('focus_areas',[]):
+        if not ID.fullmatch(area.get('id','')) or not area.get('name'):raise ValueError('Invalid regional map focus')
+    for area in local_map.get('local_areas',[]):
+        if not ID.fullmatch(area.get('id','')) or not area.get('name'):
+            raise ValueError('Local discovery areas need unique IDs and names')
+        for hidden in area.get('hidden_targets',[]):
+            if not hidden.get('reason'):
+                raise ValueError('Hidden local targets need a regional ID and evidence-based reason')
+    for ident, context in region.get('contexts',{}).items():
+        if not ID.fullmatch(ident) or not context.get('name'):raise ValueError('Invalid local context')
+        for key in ('coastal','offshore'):
+            if not re.fullmatch(r'[A-Z]{3}\d{3}',context['marine_zones'].get(key,'')):raise ValueError('Local marine zone must be in the scheduled zone set')
+        stations=context['stations']
+        if not re.fullmatch(r'\d{7}',stations.get('tide','')) or not re.fullmatch(r'[A-Z0-9]{4}',stations.get('airport','')):raise ValueError('Invalid local station identity')
+        for key in ('nearshore_buoy','offshore_buoy'):
+            if not re.fullmatch(r'[A-Za-z0-9]{5}',stations.get(key,'')):raise ValueError('Invalid local buoy identity')
+    for bindings in region["source_bindings"].values():
+        if not isinstance(bindings, list) or len(bindings) != len(set(bindings)):
+            raise ValueError("Source bindings must be distinct source ids in preferred order")
+    intelligence=region.get('intelligence')
+    if intelligence:
+        if intelligence.get('regional_current_model')!='wcofs' or intelligence.get('wind_ensemble_model')!='gfs025' or intelligence.get('wave_ensemble_provider')!='noaa-gefs':
+            raise ValueError('A new ocean/ensemble provider needs a reviewed adapter')
+        if not intelligence.get('verification_stations'):raise ValueError('Verification requires reviewed station metadata')
+        for station in intelligence['verification_stations']:
+            if not re.fullmatch(r'[A-Za-z0-9]{5}',station['id']) or not (-90<=station['latitude']<=90 and -180<=station['longitude']<=180):raise ValueError('Invalid verification station')
+
+
+def check_region_shape(region):
+    """Validate the region's shape: schemas/region.schema.json when jsonschema is
+    installed, else the equivalent imperative checks. Returns 'schema' or 'imperative'."""
+    from .. import validate
+    try:
+        if validate.check("region", region):
+            return "schema"
+    except ContractError as schema_error:
+        # The schema is the verdict; the imperative check only supplies the familiar message.
+        try:
+            _region_shape(region)
+        except (KeyError, TypeError, ValueError) as error:
+            what = f"missing or malformed {error}" if isinstance(error, (KeyError, TypeError)) else str(error)
+            raise ContractError(f"{what} ({schema_error})") from None
+        raise
+    _region_shape(region)
+    return "imperative"
+
+
+def validate_region(region, needs, sources, root=REPO):
+    """Shape (see check_region_shape), then the cross-references a schema cannot
+    express: bounding-box ordering, time zones, catalog targets, ecology dossiers,
+    legal notices, forecast points, stations, source bindings and assets."""
+    check_region_shape(region)
+    bounds = bbox(region["bounds"])
+    ZoneInfo(region["timezone"])
     targets = read_json(Path(root) / 'catalog/targets.json')['targets']
-    if not region.get('species') or len(region['species']) != len(set(region['species'])) or not set(region['species']) <= targets.keys():
+    if not set(region['species']) <= targets.keys():
         raise ValueError('Regional species selectors must be distinct reviewed target IDs')
     for ident in region['species']:
         target=targets[ident]
@@ -175,7 +247,6 @@ def validate_region(region, needs, sources, root=REPO):
             raise ValueError('Ecology dossier does not cover this jurisdiction, species set and geography')
     for area in region.get('map',{}).get('focus_areas',[]):
         bbox(area['bounds'])
-        if not ID.fullmatch(area.get('id','')) or not area.get('name'):raise ValueError('Invalid regional map focus')
         if area.get('forecast_point') and area['forecast_point'] not in {p['id'] for p in region['forecast_points']}:
             raise ValueError('Map focus has no matching regional forecast sample')
     local_map=region.get('map',{})
@@ -190,11 +261,11 @@ def validate_region(region, needs, sources, root=REPO):
     local_ids=set()
     for area in local_map.get('local_areas',[]):
         bbox(area['bounds'])
-        if not ID.fullmatch(area.get('id','')) or area['id'] in local_ids or not area.get('name'):
+        if area['id'] in local_ids:
             raise ValueError('Local discovery areas need unique IDs and names')
         local_ids.add(area['id']);assigned.update(area.get('notice_ids',[]))
         for hidden in area.get('hidden_targets',[]):
-            if hidden['id'] not in region['species'] or not hidden.get('reason'):
+            if hidden['id'] not in region['species']:
                 raise ValueError('Hidden local targets need a regional ID and evidence-based reason')
             public_url(hidden['source_url'])
     if not assigned <= notice_ids:
@@ -207,14 +278,9 @@ def validate_region(region, needs, sources, root=REPO):
         if not bounds[0] <= point["longitude"] <= bounds[2] or not bounds[1] <= point["latitude"] <= bounds[3]:
             raise ValueError("Forecast sample lies outside its region bounds")
     contexts=region.get('contexts',{})
-    for ident, context in contexts.items():
-        if not ID.fullmatch(ident) or not context.get('name'):raise ValueError('Invalid local context')
+    for context in contexts.values():
         for key in ('coastal','offshore'):
-            if not re.fullmatch(r'[A-Z]{3}\d{3}',context['marine_zones'].get(key,'')) or context['marine_zones'][key] not in region['marine_zones'].values():raise ValueError('Local marine zone must be in the scheduled zone set')
-        stations=context['stations']
-        if not re.fullmatch(r'\d{7}',stations.get('tide','')) or not re.fullmatch(r'[A-Z0-9]{4}',stations.get('airport','')):raise ValueError('Invalid local station identity')
-        for key in ('nearshore_buoy','offshore_buoy'):
-            if not re.fullmatch(r'[A-Za-z0-9]{5}',stations.get(key,'')):raise ValueError('Invalid local buoy identity')
+            if context['marine_zones'][key] not in region['marine_zones'].values():raise ValueError('Local marine zone must be in the scheduled zone set')
     if any(p.get('context') and p['context'] not in contexts for p in region['forecast_points']):raise ValueError('Forecast sample has no local context')
     if region.get('default_forecast_point') and region['default_forecast_point'] not in seen:raise ValueError('Unknown default forecast point')
     if region.get('closure_check'):
@@ -223,8 +289,6 @@ def validate_region(region, needs, sources, root=REPO):
     for need, bindings in region["source_bindings"].items():
         if need not in needs:
             raise ValueError(f"Unknown regional data need: {need}")
-        if not isinstance(bindings, list) or len(bindings) != len(set(bindings)):
-            raise ValueError("Source bindings must be distinct source ids in preferred order")
         for ident in bindings:
             if ident not in sources or need not in sources[ident]["needs"]:
                 raise ValueError(f"Source {ident} cannot fulfill {need}")
@@ -236,15 +300,11 @@ def validate_region(region, needs, sources, root=REPO):
             public_url(region[name])
     intelligence=region.get('intelligence')
     if intelligence:
-        if intelligence.get('regional_current_model')!='wcofs' or intelligence.get('wind_ensemble_model')!='gfs025' or intelligence.get('wave_ensemble_provider')!='noaa-gefs':
-            raise ValueError('A new ocean/ensemble provider needs a reviewed adapter')
         for role,need in [('hfr','surface-currents'),('regional_current','surface-currents'),('wind_ensemble','wind-ensemble'),('wave_ensemble','wave-ensemble'),('spectra','wave-observations')]:
             source_id=intelligence.get('providers',{}).get(role)
             if source_id not in region['source_bindings'].get(need,[]) or sources[source_id]['review_status']!='approved':
                 raise ValueError('Intelligence provider must have an approved regional source binding: '+role)
-        if not intelligence.get('verification_stations'):raise ValueError('Verification requires reviewed station metadata')
         for station in intelligence['verification_stations']:
-            if not re.fullmatch(r'[A-Za-z0-9]{5}',station['id']) or not (-90<=station['latitude']<=90 and -180<=station['longitude']<=180):raise ValueError('Invalid verification station')
             public_url(station['source_url'])
     return region
 

@@ -39,10 +39,34 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
    - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`: required.
    - `ANTHROPIC_API_KEY`: optional, for the AI boat lookup.
    - `WATCHDOG_GITHUB_TOKEN`: optional, for the watchdog. Create a fine-grained GitHub token for this repository only, with **Actions: Read and write**.
+   - `R2_PUBLISH_TOKEN`: recommended. An R2-only token for the data jobs; see [scoped tokens](#scoped-tokens-for-the-data-jobs). Until it exists, they fall back to `CLOUDFLARE_API_TOKEN`.
 4. **Add repository variables** on the same page, under the Variables tab:
    - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`, for the post-deploy check;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
 5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `curl -sI <staging>/feeds/conditions/latest.json` shows `X-Feed-Source: r2`.
+
+## Feed branches and retention
+
+**Git branches hold one commit.** `scripts/publish_branch_snapshot.sh` publishes the `conditions` (live loop), `data` (daily job) and `forecasts` branches:
+
+- `--load <branch> <dir>` puts the currently published commit in `<dir>`, so collectors read the previous `latest.json`, history and verification archive as files. It reloads only if another job published since.
+- `<branch> <dir> <message>` commits the whole directory as one commit **with no parent** and force-pushes it with a lease on the commit it was loaded from. If another job published in between, the push is refused and the cycle fails; nothing is overwritten, and the next cycle reloads and publishes on top. Unchanged content is not re-published.
+- Each job pushes only its own branch: the live loop `conditions` and `forecasts`, the daily job `data`, the manual Forecast tiles workflow `forecasts`. The lease is what keeps the last two from clobbering each other; they are in different concurrency groups.
+
+Nothing reads branch history: the app, the Worker's GitHub fallback and the collectors read files. History the pipeline needs is kept as files inside the snapshot: `data` keeps `history/` and `regions/<id>/history/` for 90 days, and `conditions` keeps each region's `verification-archive/` for 30 days.
+
+**Existing history is squashed automatically.** The first publish after this change replaces each branch with a single commit; `git rev-list --count origin/conditions` then stays at 1. The owner does not need to rewrite anything by hand. The repository's size on GitHub shrinks only after GitHub garbage-collects the unreachable commits, which it does on its own schedule; GitHub Support can run it on request. Existing clones keep the old objects until their reflogs expire and `git gc` runs.
+
+**R2 lifecycle rules** (`scripts/r2_lifecycle.py`) are applied on every deploy by `scripts/cloudflare_deploy.sh`. They use `wrangler r2 bucket lifecycle set`, which replaces the whole rule set, so re-running is a no-op and a new region gets its rules on the next deploy:
+
+| Prefix | Expires after | Why |
+| --- | --- | --- |
+| `runs/` | 7 days | Run manifests; nothing else deletes them. |
+| `data/history/`, `data/regions/<id>/history/` | 100 days | Backstop. The daily job keeps 90 days and the R2 sync deletes what leaves the snapshot. |
+| `conditions/regions/<id>/verification-archive/` | 45 days | Backstop. The live job keeps 30 days of rows. |
+| all (multipart uploads) | 7 days | R2's default rule, restated because `set` replaces it. |
+
+R2 counts age from upload, so each backstop expires files some days *after* the pipeline stops referencing them, never before; a file still listed in a feed must not disappear from R2. The backstops catch objects the hash-indexed sync can no longer see, such as after a lost `.r2-sync.json` index. `latest.json`, tiles and other current files have no expiry. To inspect the rules without applying them, run `python3 scripts/r2_lifecycle.py --print`; `npx wrangler r2 bucket lifecycle list skippercast-feeds` shows what is live. If the deploy logs an `R2 lifecycle` warning (most likely the deploy token lacks **Workers R2 Storage · Edit**), the rules were not changed; feeds are unaffected.
 
 ## Cost
 
@@ -50,6 +74,28 @@ These are the free-tier allowances as published by Cloudflare; check current pri
 - **Workers free plan:** 100,000 requests a day.
 - **R2:** 10 GB storage and 1 million writes a month free, with no egress charge. SkipperCast's feeds total about 185 MB. Incremental uploads keep writes to changed files only.
 - **Workers paid plan:** $5 a month, once traffic or cron needs exceed the free plan.
+
+## Scoped tokens for the data jobs
+
+The data workflows only upload feed files to R2: the live loop, the daily job, Forecast tiles and Seafloor. They read `secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN`. Once `R2_PUBLISH_TOKEN` exists, the broad deploy token, which can edit Workers, D1 and every R2 bucket, is used only by **Deploy to Cloudflare**. To create the R2-only token:
+
+1. In the Cloudflare dashboard, open **R2 object storage → Overview**. Under **Account Details**, select **Manage** next to **API Tokens**.
+2. Select **Create Account API token**. A user token also works, but it stops working if your user leaves the account.
+3. Under **Permissions**, choose **Object Read & Write**. Scope it to the **`skippercast-feeds`** bucket only. Do not choose Admin, and do not include `skippercast-backups`, which holds D1 exports.
+4. Create it, then copy the **token value**. The Access Key ID and Secret Access Key shown on the same page are not needed: `scripts/publish_r2.py` derives them from the token value as Cloudflare documents (key ID = token id, secret = SHA-256 of the value).
+5. Save it as the repository secret `R2_PUBLISH_TOKEN`. To check it, run **Actions → Forecast tiles → Run workflow**. The log line `R2 skippercast-feeds/forecasts: … uploaded` means it works. If the job fails with `could not verify CLOUDFLARE_API_TOKEN`, delete the secret; the jobs then fall back to the deploy token.
+
+R2 lifecycle rules are bucket configuration, which an Object Read & Write token cannot change. They are therefore applied by the deploy, with the deploy token.
+
+**The live workflow is split into three jobs, so each holds only what it needs:**
+
+| Job | Permissions | Does |
+| --- | --- | --- |
+| `refresh` | `contents: write` | Collects and publishes the `conditions` and `forecasts` branches and R2 every 30 minutes (`live_loop.py --skip-trips`). |
+| `notify` | `id-token: write`, `contents: read`, `actions: read` | Runs beside `refresh`. It watches the `conditions` head and runs `check_saved_trips.py` once per new publication, after a 90-second wait for R2 (`scripts/trip_check_loop.py`). A failed delivery turns only this job red, and the next publication is still checked. It stops when `refresh` finishes. |
+| `next` | `actions: write` | After `refresh`, dispatches the next loop, unless `refresh` ended within an hour. It holds no secrets. |
+
+All three jobs stay in `live-conditions.yml` because `server/job-auth.js` accepts the OIDC token only when its `workflow_ref` is `deployments/production.json`'s `scheduler.workflow`, which is this file. Moving trip checks to another workflow file, or to a `workflow_run` trigger (a different `event_name`), would need a reviewed change to that policy. The `refresh` job keeps `contents: write` for as long as the git branches are published.
 
 ## Custom domain
 

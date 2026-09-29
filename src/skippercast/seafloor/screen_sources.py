@@ -4,36 +4,34 @@ Reuses the statewide CDFW and NOAA collectors. Security boundaries require a
 reviewed local catalog: new geography is held until its restrictions are reviewed.
 """
 from datetime import datetime, timezone
-import gzip
 import hashlib
 import json
 from pathlib import Path
-from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 from pyproj import Geod, Transformer
 from shapely.geometry import Polygon, box, mapping
 
+from skippercast import http
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .io import sha256
 from .screen import VERSION
 
 
-def ecfr_bytes(url):
+def ecfr_bytes(url, session=None):
     if not url.startswith('https://www.ecfr.gov/api/versioner/v1/'):
         raise ValueError('Unreviewed eCFR endpoint')
-    request = Request(url, headers={'Accept-Encoding': 'gzip', 'User-Agent': 'SkipperCast/1.0'})
-    with urlopen(request, timeout=30) as response:
-        if response.url != url:
-            raise ValueError('eCFR redirect refused')
-        raw = response.read(5_000_001)
-        if len(raw) > 5_000_000:
-            raise ValueError('Oversized eCFR response')
-        if response.headers.get('Content-Encoding') == 'gzip':
-            raw = gzip.decompress(raw)
-    if len(raw) > 5_000_000:
-        raise ValueError('Oversized eCFR document')
-    return raw
+    try:
+        response = (session or http.default_session()).get(
+            url, headers={'Accept-Encoding': 'gzip'}, timeout=30, max_bytes=5_000_000,
+            follow_redirects=False, allowed_hosts=['www.ecfr.gov'])
+    except http.BodyTooLarge as error:
+        raise ValueError('Oversized eCFR response') from error
+    except http.ContractError as error:
+        if 'Redirect refused' in str(error):
+            raise ValueError('eCFR redirect refused') from error
+        raise
+    return response.body
 
 
 def security_layer(config, getter=ecfr_bytes):

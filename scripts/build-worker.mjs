@@ -23,3 +23,9 @@ await writeFile('dist/client/_headers',headersFile());
 await build({entryPoints:['server/worker.js'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',target:'es2022',
   define:{REGIONS:JSON.stringify(regions),DEPLOYMENT:JSON.stringify(deployment),SHELLS:JSON.stringify(shells),BUILD_ID:JSON.stringify(buildId)},sourcemap:false});
 console.log(`Built shared regional Worker and public assets (build ${buildId}).`);
+
+// Offline shell (P4-08): dist/client/precache.json lists this build's
+// fingerprinted assets for the service worker, and sw.js carries the build id
+// so each deploy installs a new worker. Kept as one appended block.
+const {writePrecache}=await import('./precache.mjs');
+await writePrecache('dist/client',buildId);

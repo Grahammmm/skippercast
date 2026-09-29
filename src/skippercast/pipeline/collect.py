@@ -3,30 +3,23 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import hashlib
-import gzip
-from io import BytesIO
 import json
 import os
-import re
-import ssl
-import subprocess
-import tempfile
-import time
-from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
-from urllib.request import Request, build_opener
 from zoneinfo import ZoneInfo
+
+from .. import http
 
 from . import parsers
 from ..forecast import local as forecast_local
 from .regulations import regulatory_snapshot, watch_jobs
 from .settings import settings, previous_for_region
-from ..platform.contracts import REPO, public_url
-from ..platform.source_audit import PublicRedirect, check_public_address
+from ..platform.contracts import public_url
 from ..util.time import stamp
 
-UA = "SkipperCast/0.2 (https://github.com/Grahammmm/skippercast)"
+UA = http.USER_AGENT
+# 5xx and 429 are retried (with backoff and Retry-After); other 4xx fail at once.
+RETRY_STATUSES = frozenset(range(500, 600)) | {429}
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap"
 BOUNDS = {"latitude": [34.95, 35.7], "longitude": [-121.95, -120.7]}
 DATASETS = {
@@ -41,38 +34,6 @@ MODEL_META = {model: forecast_local.meta_url(model)
 POINTS = [("Point Estero", 35.45, -121.02), ("Estero Bay", 35.36, -120.94),
           ("Point Buchon", 35.24, -120.94), ("Off Avila", 35.1, -120.82),
           ("Offshore central", 35.3, -121.5)]
-
-
-def system_tls_official_watch(url, limit):
-    """Recover a Mac Python trust-store failure using verified system TLS only.
-
-    The fallback is restricted to exact California agency URLs in reviewed jurisdictions.
-    It does not follow redirects or relax certificate validation.
-    """
-    state_hosts = {'wildlife.ca.gov', 'nrm.dfg.ca.gov', 'fgc.ca.gov'}
-    if urlsplit(url).hostname not in state_hosts:
-        raise ValueError('System TLS fallback is restricted to reviewed state agencies')
-    allowed = set()
-    for path in (REPO / 'jurisdictions').glob('california-*.json'):
-        jurisdiction = json.loads(path.read_text())
-        allowed.update(watch['url'] for watch in jurisdiction['watches'].values()
-                       if urlsplit(watch['url']).hostname in state_hosts)
-    if url not in allowed:
-        raise ValueError('State agency URL is not an exact reviewed watch')
-    with tempfile.TemporaryDirectory() as directory:
-        body_path, header_path = (Path(directory) / name for name in ('body', 'headers'))
-        subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--show-error',
-                        '--proto', '=https', '--max-time', '25', '--max-filesize', str(limit),
-                        '--dump-header', str(header_path), '--output', str(body_path), url],
-                       check=True, capture_output=True, timeout=30)
-        body, headers = body_path.read_bytes(), header_path.read_text()
-    statuses = re.findall(r'^HTTP/\S+\s+(\d{3})\b', headers, re.M)
-    if not statuses or statuses[-1] != '200' or len(body) > limit or not body.strip():
-        raise ValueError('State agency system TLS response was redirected, empty or oversized')
-    final_headers = headers.split('\r\n\r\n')[-2] if '\r\n\r\n' in headers else headers
-    fields = {name.lower(): value.strip() for name, value in
-              re.findall(r'^([\w-]+):\s*(.*)$', final_headers, re.M)}
-    return body, fields
 
 
 def age_hours(value, now):
@@ -94,76 +55,86 @@ def publication(environ=None):
 
 
 class Client:
-    def __init__(self, now):
+    """Bounded source reads for one collected source; `requests` holds one receipt per attempt.
+
+    Transport, redirects, address checks, retries and size limits come from the
+    shared `skippercast.http.Session`; this class keeps the collector's contract
+    (what is retried, byte limits, content checks) and its receipt shape.
+    """
+
+    def __init__(self, now, session=None):
         self.now = now
         self.requests = []
+        self.session = session if session is not None else http.default_session()
+
+    def _record(self, url, receipt, error=None):
+        """Append one receipt row per attempt; returns the last row."""
+        rows = []
+        for entry in receipt.history:
+            row = {"url": url, "attempt": entry["attempt"], "retrieved_at": entry["started_at"]}
+            if entry.get("status") is not None:
+                row["http_status"] = entry["status"]
+            if entry.get("elapsed_ms") is not None:
+                row["elapsed_ms"] = entry["elapsed_ms"]
+            if entry.get("error_class"):
+                row["error_class"] = entry["error_class"]
+                detail = entry.get("error") or (f"HTTP {entry['status']}" if entry.get("status") else "")
+                row["error"] = f"{entry['error_class']}: {detail[:220]}"
+            rows.append(row)
+        if not rows:  # refused before any attempt
+            rows.append({"url": url, "attempt": 1, "retrieved_at": stamp()})
+        last = rows[-1]
+        if error is not None:
+            last.update(error=f"{type(error).__name__}: {str(error)[:220]}",
+                        error_class=getattr(error, "error_class", type(error).__name__))
+        else:
+            last.update(http_status=receipt.status, http_date=receipt.http_date, final_url=receipt.final_url,
+                        content_type=receipt.content_type, last_modified=receipt.last_modified,
+                        bytes=receipt.bytes, sha256=receipt.sha256, elapsed_ms=receipt.elapsed_ms)
+            last.pop("error_class", None)
+            last.pop("error", None)
+            if receipt.compressed_bytes is not None:
+                last["compressed_bytes"] = receipt.compressed_bytes
+            if receipt.from_cache:
+                last["from_cache"] = True
+        self.requests.extend(rows)
+        return last
 
     def get(self, url, as_json=False, as_pdf=False, as_binary=False):
         public_url(url)
         coastwatch = urlsplit(url).hostname == 'coastwatch.pfeg.noaa.gov'
-        attempts = 3 if coastwatch else 2
-        for attempt in range(attempts):
-            record = {"url": url, "attempt": attempt + 1, "retrieved_at": stamp()}
-            try:
-                check_public_address(url)
-                limit = 35_000_000 if as_pdf else 5_000_000
-                try:
-                    response = build_opener(PublicRedirect()).open(Request(url, headers={"User-Agent": UA, "Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"}), timeout=25)
-                except URLError as error:
-                    if not isinstance(error.reason, ssl.SSLCertVerificationError):
-                        raise
-                    body, fields = system_tls_official_watch(url, limit)
-                    record.update(http_status=200, http_date=fields.get('date'), final_url=url,
-                                  content_type=fields.get('content-type'),
-                                  last_modified=fields.get('last-modified'), bytes=len(body),
-                                  sha256=hashlib.sha256(body).hexdigest(),
-                                  transport='system curl; TLS verified; redirects disabled')
-                else:
-                    with response:
-                        body = response.read(limit + 1)
-                        if len(body) > limit:
-                            raise ValueError("Response exceeds bounded collection size")
-                        encoding = response.headers.get('Content-Encoding', 'identity').lower()
-                        if encoding == 'gzip':
-                            record['compressed_bytes'] = len(body)
-                            with gzip.GzipFile(fileobj=BytesIO(body)) as compressed:
-                                body = compressed.read(limit + 1)
-                        elif encoding != 'identity':
-                            raise ValueError('Unsupported response compression')
-                        record.update(http_status=response.status, http_date=response.headers.get("Date"),
-                                      final_url=response.url, content_type=response.headers.get('Content-Type'),
-                                      last_modified=response.headers.get("Last-Modified"), bytes=len(body),
-                                      sha256=hashlib.sha256(body).hexdigest())
-                if len(body) > limit:
-                    raise ValueError("Response exceeds bounded collection size")
-                if not body.strip():
-                    raise ValueError("Empty response")
-                if as_binary:
-                    result = body
-                elif as_pdf:
-                    if not body.startswith(b"%PDF-"):
-                        raise ValueError("Expected an official PDF; received another content type")
-                    result = {"content_sha256": hashlib.sha256(body).hexdigest(),
-                              "normalization": "pdf-bytes-v1",
-                              "interpretation": "manual review required", "permission_to_fish": None}
-                else:
-                    text = body.decode("utf-8")
-                    result = json.loads(text) if as_json else text
-                if isinstance(result, dict) and result.get("error"):
-                    raise ValueError("Provider returned an error response")
-                self.requests.append(record)
-                return result
-            except Exception as error:
-                record["error"] = f"{type(error).__name__}: {str(error)[:220]}"
-                if isinstance(error, HTTPError):
-                    record["http_status"] = error.code
-                self.requests.append(record)
-                retry_coastwatch_forbidden = coastwatch and isinstance(error, HTTPError) and error.code == 403
-                if (attempt == attempts - 1 or
-                        isinstance(error, (ValueError, HTTPError)) and getattr(error, "code", 0) < 500
-                        and not retry_coastwatch_forbidden):
-                    raise
-                time.sleep(1 + attempt)
+        limit = 35_000_000 if as_pdf else 5_000_000
+        # Server errors and throttling are retried; CoastWatch also answers bursts with 403.
+        retry = RETRY_STATUSES | ({403} if coastwatch else set())
+        try:
+            response = self.session.get(
+                url, headers={"Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"},
+                timeout=25, max_bytes=limit, attempts=3 if coastwatch else 2, retry_statuses=retry)
+        except http.SourceError as error:
+            self._record(url, error.receipt or http.Receipt(url=url), error)
+            raise
+        record = self._record(url, response.receipt)
+        try:
+            body = response.body
+            if not body.strip():
+                raise ValueError("Empty response")
+            if as_binary:
+                result = body
+            elif as_pdf:
+                if not body.startswith(b"%PDF-"):
+                    raise ValueError("Expected an official PDF; received another content type")
+                result = {"content_sha256": hashlib.sha256(body).hexdigest(),
+                          "normalization": "pdf-bytes-v1",
+                          "interpretation": "manual review required", "permission_to_fish": None}
+            else:
+                text = body.decode("utf-8")
+                result = json.loads(text) if as_json else text
+            if isinstance(result, dict) and result.get("error"):
+                raise ValueError("Provider returned an error response")
+        except Exception as error:
+            record["error"] = f"{type(error).__name__}: {str(error)[:220]}"
+            raise
+        return result
 
 
 def source(ident, name, kind, url, max_age, loader, now, previous=None, client_factory=Client):

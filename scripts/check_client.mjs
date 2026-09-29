@@ -4,6 +4,7 @@
 import {readdir, readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {STABLE} from './fingerprint.mjs';
+import {FINGERPRINTED} from './precache.mjs';
 
 const dir = process.argv[2] || 'dist/client';
 const files = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile()).map(e => e.name);
@@ -38,8 +39,20 @@ for (const name of assets.filter(n => n.endsWith('.js'))) {
     if (!exists) problems.push(`${name} imports ${spec} (missing)`);
   }
 }
+// The service worker precaches exactly this build's fingerprinted scripts and
+// styles (scripts/precache.mjs); a stale or partial list breaks offline start.
+let precache = null;
+try { precache = JSON.parse(await readFile(join(dir, 'precache.json'), 'utf8')); } catch { problems.push('precache.json missing or invalid'); }
+if (precache) {
+  const listed = [...(precache.assets || [])].sort(), expected = files.filter(n => FINGERPRINTED.test(n)).map(n => `/${n}`).sort();
+  if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the fingerprinted scripts and styles');
+  if (JSON.stringify(precache.shells) !== JSON.stringify(['/'])) problems.push('precache.json must list the app shell "/"');
+  for (const path of precache.static || []) if (!await readFile(join(dir, path.slice(1))).then(() => true, () => false)) problems.push(`precache.json -> ${path} (missing)`);
+  const sw = await readFile(join(dir, 'sw.js'), 'utf8').catch(() => '');
+  if (!sw.includes(`const BUILD = '${precache.build}';`)) problems.push('sw.js does not carry the precache build id');
+}
 if (problems.length) {
   console.error(`Client check failed:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Client check passed: ${assets.length - STABLE.size} fingerprinted assets, ${STABLE.size} stable, ${imports.length} module imports resolve.`);
+console.log(`Client check passed: ${assets.length - STABLE.size} fingerprinted assets, ${STABLE.size} stable, ${imports.length} module imports resolve, ${precache.assets.length + precache.shells.length + precache.static.length} precached for build ${precache.build}.`);

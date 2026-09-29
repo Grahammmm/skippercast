@@ -55,5 +55,6 @@ Forecast grids can represent the same coarse water cell for nearby points, so
 complete data coverage does not imply reef-scale weather accuracy.
 
 The conditions branch is independent of the daily fishing-evidence data branch;
-the two jobs do not write the same files or branch. No API keys or private
+the two jobs do not write the same files or branch. Each cycle replaces the
+branch with one parentless commit, so it carries only the current snapshot. No API keys or private
 observations are used. [Job status](https://github.com/Grahammmm/skippercast/actions/workflows/live-conditions.yml).
