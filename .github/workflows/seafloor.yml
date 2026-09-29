@@ -48,8 +48,10 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: requirements-survey.txt
-      - run: python -m pip install -r requirements-survey.txt -r requirements-publish.txt
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-seafloor.txt
+      - name: Validate manifest and required runtime before any data writes
+        run: python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
       - name: Restore private state and refresh complete restriction inventories
         id: plan
         env:
@@ -77,8 +79,10 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: requirements-survey.txt
-      - run: python -m pip install -r requirements-survey.txt -r requirements-publish.txt
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-seafloor.txt
+      - name: Validate manifest and required runtime before any data writes
+        run: python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
       - name: Validate native source bytes, compute changed reach, save privately
         env:
           REACH: ${{ matrix.reach }}
@@ -97,8 +101,10 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: requirements-survey.txt
-      - run: python -m pip install -r requirements-survey.txt -r requirements-publish.txt
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-seafloor.txt
+      - name: Validate manifest and required runtime before any data writes
+        run: python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
       - uses: actions/checkout@v4
         with:
           repository: felt/tippecanoe

@@ -1,0 +1,4 @@
+# Complete environment for scheduled seafloor ingestion and publication.
+-r requirements-survey.txt
+-r requirements-publish.txt
+-r requirements-test.txt

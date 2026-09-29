@@ -658,3 +658,20 @@ from main, dispatch `morro-bay`, and verify the live URL and nonzero regional
 ledger. Local credentials are unavailable; no R2 upload is claimed here. Once
 that passes, open “Seafloor tiers layer in the app” for Claude, linking this
 contract, before beginning M5 reach expansion.
+
+### First-run recovery — September 28, 2026
+
+The initial runner could not reproduce the pinned reference checksum. The
+existing checksum-verified reference cells and receipt were seeded into the
+**private** R2 content-addressed cache with the existing `state_cache.save`
+inventory format. The next run restored and verified them successfully; no
+checksum or baseline was changed. Preserve/back up this immutable baseline.
+A new deployment needs that reviewed private seed if its native GIS build
+cannot reproduce the original bytes; never replace the accepted denominator
+with a merely similar reconstruction. The exact cross-platform rebuild
+difference remains unverified.
+
+The next runtime failure exposed a missing `jsonschema` dependency: offline CI
+installed it, but the publication workflow did not. `requirements-seafloor.txt`
+now composes the full pinned batch environment, and every job validates the
+manifest before touching data. Web/core dependencies remain unchanged.
