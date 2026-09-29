@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Privacy notice · SkipperCast</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="./">⌁ SkipperCast</a
+      ><a class="download" href="./">Back to the map</a>
+    </header>
+    <main class="source-page">
+      <h1>Privacy notice</h1>
+      <p class="legal-draft" role="note">
+        Draft — pending review by counsel. This notice describes what the
+        current code does; it has not yet been reviewed by a lawyer.
+      </p>
+      <p class="small">Draft dated September 28, 2026.</p>
+
+      <h2 id="summary">In short</h2>
+      <ul>
+        <li>The map, forecasts and downloads work without an account.</li>
+        <li>
+          If you sign in, we store only what you save: trip alerts, notification
+          devices and comfort ratings. You can export or delete it at any time.
+        </li>
+        <li>We do not sell or share personal information, and we run no analytics or advertising trackers.</li>
+        <li>
+          If you use the AI boat lookup, the boat description you type is sent to
+          Anthropic to find its specifications.
+        </li>
+      </ul>
+
+      <h2 id="notice-at-collection">Notice at collection</h2>
+      <p>
+        This section is our notice at collection under the California Consumer
+        Privacy Act (CCPA). It lists the personal information SkipperCast
+        collects, why, whether it is sold or shared, and how long it is kept.
+      </p>
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th scope="col">What we store (only when you are signed in)</th>
+            <th scope="col">Why</th>
+            <th scope="col">How long</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Account identifier supplied by the sign-in provider</th>
+            <td>Links your saved records to you. Your email address is not stored.</td>
+            <td>Kept with your records; removed when you delete them.</td>
+          </tr>
+          <tr>
+            <th scope="row">Trips: area, forecast point, target species, date, hours, wind/gust/sea limits, latest assessment</th>
+            <td>Check the forecast for your trip and send alerts.</td>
+            <td>Deleted 90 days after the trip date, or when you delete the trip.</td>
+          </tr>
+          <tr>
+            <th scope="row">Alert events: the alert text, time and delivery status</th>
+            <td>Show alert history and avoid duplicate notifications.</td>
+            <td>Deleted 90 days after the alert was created, or with its trip.</td>
+          </tr>
+          <tr>
+            <th scope="row">Delivery receipts: which device an alert was sent to, when, and the push service’s response code</th>
+            <td>Avoid resending and detect expired devices.</td>
+            <td>Deleted with their alert (90 days).</td>
+          </tr>
+          <tr>
+            <th scope="row">Push subscriptions: your browser’s push endpoint and encryption keys</th>
+            <td>Deliver notifications to up to five devices.</td>
+            <td>Until you turn notifications off, the push service reports the device expired, or you delete your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">Comfort feedback: area, time, 1–10 rating, trip phase, and the wind, sea, swell period, heading and forecast point you entered</th>
+            <td>Calibrate boat-comfort estimates.</td>
+            <td>Deleted 365 days after the rating, or when you delete your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">Request counters: a one-way hash of your identifier plus a time window, and a count</th>
+            <td>Rate limits (30 requests a minute; 20 boat lookups a day).</td>
+            <td>Removed after they expire: about two minutes for the per-minute counter, two days for the daily lookup counter.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Expired records are removed by a scheduled cleanup job, so deletion can
+        lag the dates above by a short time.
+      </p>
+      <p>
+        <strong>Sale and sharing.</strong> We do not sell personal information
+        and do not share it for cross-context behavioral advertising. We have
+        not done so in the past 12 months.
+      </p>
+      <p>
+        <strong>Sensitive information.</strong> We do not collect sensitive
+        personal information as defined by the CCPA.
+      </p>
+
+      <h2 id="boat-lookup">AI boat lookup</h2>
+      <p>
+        The boat profile is saved only on your device. If you choose “look up”,
+        the boat description you type (for example “Parker 2320 SL 2019”, up to
+        120 characters) is sent to
+        <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>, whose
+        Claude model searches the web for the builder’s specifications. Your
+        account identifier is not sent. The result is cached by our hosting
+        provider for up to 30 days, keyed by the description, so the same lookup
+        is not repeated. Do not type personal information into the boat field.
+      </p>
+
+      <h2 id="device">Stored on your device</h2>
+      <p>
+        Your chosen home port, boat profile and export drafts are kept in your
+        browser’s local storage, and recent forecasts in session storage. They
+        never leave your device unless you export them. If you use “find a
+        nearby port” or the boat-position tool, your location is used in the
+        browser only and is not sent to SkipperCast.
+      </p>
+
+      <h2 id="service-providers">Service providers and data sources</h2>
+      <ul>
+        <li>
+          <strong>Hosting.</strong> SkipperCast runs on Cloudflare and on OpenAI’s
+          ChatGPT Sites. They process your IP address and request details to
+          deliver and secure the service. Sign-in, where available, is provided
+          by ChatGPT.
+        </li>
+        <li>
+          <strong>Push notifications</strong> are delivered through your
+          browser’s push service (Apple, Google, Mozilla or Microsoft).
+        </li>
+        <li>
+          <strong>Map and data providers.</strong> Your browser requests map
+          tiles, charts and some live data directly from providers such as
+          OpenStreetMap, NOAA, the National Weather Service, CDFW and Open-Meteo.
+          Those providers receive your IP address under their own privacy
+          policies.
+        </li>
+      </ul>
+
+      <h2 id="analytics">Analytics and cookies</h2>
+      <p>
+        SkipperCast has no analytics, advertising or tracking scripts today and
+        sets no tracking cookies. If that changes, this notice will be updated
+        first.
+      </p>
+
+      <h2 id="rights">Your choices and rights</h2>
+      <p>
+        California residents have the right to know, access, correct and delete
+        their personal information, and not to be discriminated against for
+        exercising these rights. Anyone can use the controls below.
+      </p>
+      <ul>
+        <li>
+          <strong>Export:</strong> under “My trip alerts”, “Export my records” downloads
+          your trips, comfort feedback and alert history as JSON (served by
+          <code>GET /api/privacy</code>).
+        </li>
+        <li>
+          <strong>Delete:</strong> “Delete all my records” permanently removes your
+          trips, alerts, delivery receipts, notification devices and comfort
+          feedback (<code>DELETE /api/privacy</code>).
+        </li>
+        <li>
+          <strong>Correct:</strong> delete and re-save a trip; “Stop
+          notifications” removes your notification devices.
+        </li>
+      </ul>
+
+      <h2 id="children">Children</h2>
+      <p>
+        SkipperCast is for adults 18 and over and is not directed to children.
+        We do not knowingly collect information from anyone under 18.
+      </p>
+
+      <h2 id="changes">Changes and contact</h2>
+      <p>
+        We will update the date above when this notice changes.
+        <em>Placeholder: operator name and privacy contact address to be added.</em>
+        Until then, contact us through the
+        <a href="https://github.com/Grahammmm/skippercast/issues"
+          >project issue tracker</a
+        >
+        (do not post personal information there).
+      </p>
+
+      <p>
+        <a href="terms.html">Terms of use</a>
+        · <a href="licenses.html">Licences &amp; attributions</a>
+        · <a href="sources.html">Sources &amp; methods</a>
+      </p>
+    </main>
+  </body>
+</html>
