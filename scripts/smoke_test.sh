@@ -24,7 +24,9 @@ get "$SITE/" | grep -q '<title>' || fail "home page has no <title>"
 echo "home page ok"
 
 sw=$(curl -fsS -D - -o /dev/null --max-time 20 "$SITE/sw.js") || fail "/sw.js not served"
-printf '%s' "$sw" | grep -qi '^cache-control: no-cache' || fail "/sw.js must be served with Cache-Control: no-cache"
+# Either the Worker's no-cache (ChatGPT Sites) or Cloudflare static assets'
+# default "max-age=0, must-revalidate": both force revalidation on every check.
+printf '%s' "$sw" | grep -qiE '^cache-control:.*(no-cache|max-age=0)' || fail "/sw.js must be revalidated on every request (no-cache or max-age=0)"
 echo "service worker ok"
 
 get "$SITE/feeds/conditions/latest.json" | python3 -c "import json,sys;json.load(sys.stdin)" || fail "live feed is not valid JSON"
