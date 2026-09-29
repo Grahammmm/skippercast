@@ -18,7 +18,7 @@ flowchart TB
     end
     providers["Public data providers<br/>NOAA NDBC, NWS, CO-OPS, GFS, GFS-Wave, WCOFS,<br/>CoastWatch; ECMWF open data; CDFW; USGS; NCEI"]
     ghub["GitHub<br/>repository, Actions, feed branches"]
-    cloud["Hosting<br/>ChatGPT Sites today; Cloudflare Workers, D1, R2"]
+    cloud["Hosting<br/>Cloudflare Workers, D1, R2"]
     anth["Anthropic API<br/>AI boat lookup"]
     pushsvc["Browser push services"]
     angler -->|"map, forecasts, rules, GPX, saved trips"| app
@@ -94,7 +94,7 @@ flowchart LR
 | Dated habitat atlas | `atlas/avila-point-estero-2026-09-20/`, `src/skippercast/atlas/` | The September 2026 Morro Bay–Avila research atlas and its GPX/notes exporter | [Atlas methodology](atlas-methodology.md) |
 | Web app | `dist/*.html`, `dist/*.js`, `dist/*.css`, `dist/vendor/` | Mobile map (Leaflet), Conditions, Export and Guide views; loads regions from `regions/index.json` and every feed through `/feeds/` | [Web app](web-app.md) |
 | Build | `scripts/build-worker.mjs`, `scripts/fingerprint.mjs`, `scripts/check_client.mjs` | Copies `dist/` to `dist/client`, content-hashes every script, style and page, and bundles the Worker to `dist/server/index.js` with the reviewed regions, deployment policy, page map and build id compiled in | [README](../README.md) |
-| Worker | `server/index.ts`, `server/app.ts` (Hono), `server/routes/`, `server/middleware/` | TypeScript (`pnpm typecheck`). Routes pages (hashed shells served `no-store`), `/feeds/*`, the public API and the private API; identity from ChatGPT Sites headers only when `IDENTITY_PROVIDER=chatgpt-sites` | [Cloudflare](cloudflare.md), [production operations](production-operations.md) |
+| Worker | `server/index.ts`, `server/app.ts` (Hono), `server/routes/`, `server/middleware/` | TypeScript (`pnpm typecheck`). Routes pages (hashed shells served `no-store`), `/feeds/*`, the public API and the private API; identity only from a SkipperCast passkey session when `IDENTITY_PROVIDER=skippercast` (`server/auth.ts`); no request header is trusted | [Cloudflare](cloudflare.md), [production operations](production-operations.md) |
 | Feeds route | `server/feeds.ts` | `GET /feeds/<branch>/<path>`: R2 first (Range, ETag), then static assets for `tiles/`, then the GitHub branch; seafloor archives only with a current receipt | [Cloudflare](cloudflare.md) |
 | Private records | `db/schema.ts`, `drizzle/`, D1 binding `DB` | Saved trips, alert events and delivery receipts, push subscriptions, comfort feedback, rate-limit counters; owner-scoped; 90/365-day retention | [Production operations](production-operations.md) |
 | Trip alerts | `server/alert-policy.ts`, `server/trips.ts` (`checkTrips`, `deliver`), `scripts/check_saved_trips.py` | After each live cycle the job calls `POST /api/jobs/check` with a GitHub OIDC token (`server/job-auth.ts`); the Worker assesses due trips and sends Web Push with idempotent receipts | [Regional intelligence](regional-intelligence.md) |
@@ -105,8 +105,7 @@ flowchart LR
 
 ## Hosting today
 
-- **skippercast.com runs on ChatGPT Sites.** The platform provisions D1 from `.openai/hosting.json`, applies `drizzle/` migrations and injects the signed-in user's identity headers. There is no R2 binding and no cron there, so `/feeds/*` reads GitHub branches, and trip checks run only when the live job calls `/api/jobs/check`.
-- **The same Worker deploys to SkipperCast's own Cloudflare account** (`wrangler.jsonc`, `.github/workflows/deploy-cloudflare.yml`, a workers.dev address) with D1, R2 and the cron watchdog. `IDENTITY_PROVIDER=none` keeps every private route closed there until SkipperCast has its own sign-in (guide P3-02); then the domain moves. See [Cloudflare](cloudflare.md).
+- **skippercast.com runs on SkipperCast's own Cloudflare account** (`wrangler.jsonc`, `.github/workflows/deploy-cloudflare.yml`) with D1, R2 and the 15-minute cron watchdog; the workers.dev address is the always-on staging copy. `IDENTITY_PROVIDER=skippercast` ties private routes to passkey accounts; any other value keeps them closed. See [Cloudflare](cloudflare.md).
 - **Feeds are published twice**: to GitHub branches (history, fallback) and to R2 (what the Cloudflare Worker serves). The guide's direction is R2 as the system of record (P0-04, P2-05).
 
 ## Scheduled jobs

@@ -21,5 +21,6 @@
   "dist/vendor/pmtiles-4.5.0/LICENSE.txt": "0371c38f338835f7fc13ed71176f3d92144e22c8b736a31cced57adbbeb647b3",
   "dist/vendor/pmtiles-4.5.0/pmtiles.js": "caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c",
   "dist/vendor/simplewebauthn-browser-14.0.0/LICENSE.md": "bd9e3f45696472076c7160c7f66e54b2d62d38bc2646c812d19be83ee4400c63",
-  "dist/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js": "29bb0699b45bc39a350d992a13bfc1a4d40d89531390581e1f57f1142c6e221d"
+  "dist/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js": "29bb0699b45bc39a350d992a13bfc1a4d40d89531390581e1f57f1142c6e221d",
+  "docs/images/skippercast-map.png": "405d8dc23a883b45986ee2dc91b3f7af062187d8fd03a2de11883bbdeb72c5a2"
 }
