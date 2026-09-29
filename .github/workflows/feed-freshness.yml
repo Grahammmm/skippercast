@@ -65,11 +65,12 @@ jobs:
           gh label create feed-stale --color B60205 --description "Live conditions feed stopped refreshing" 2>/dev/null || true
           existing="$(gh issue list --label feed-stale --state open --json number --jq '.[0].number')"
           runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/live-conditions.yml"
+          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$MESSAGE"
           else
             gh issue create --label feed-stale --title "Live conditions feed is stale" \
-              --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"
+              --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"$'\n\n'"Runbook: $runbook"
           fi
           exit 1
       - name: Close the stale-feed issue after recovery
