@@ -36,8 +36,14 @@ def settings(region_id="morro-bay", root=REPO):
     harbor=region["harbor"]
     watches['harbor']={'name':harbor['name']+' harbor information','url':public_url(harbor['information_url']),'keywords':harbor['watch_keywords']}
     regulations["area"]=region["name"]+" · "+region["jurisdiction"]
+    # Landing labels the dock-totals publisher uses for the ports it covers. Every region
+    # with landing_names reads this one publisher today; see the source's coverage_note.
+    report_ports=sources["landing-reports"].get("report_ports")
+    if not report_ports or not all(isinstance(k,str) and isinstance(v,str) and k and v for k,v in report_ports.items()):
+        raise ValueError("landing-reports source needs report_ports")
     return {"region":region,"grids":grids,"watches":watches,"jurisdiction":jurisdiction,
-            "regulations":regulations,"legal_source_ids":legal_source_ids,"model_ids":model_ids}
+            "regulations":regulations,"legal_source_ids":legal_source_ids,"model_ids":model_ids,
+            "report_ports":dict(report_ports)}
 
 
 def previous_for_region(previous, region_id):

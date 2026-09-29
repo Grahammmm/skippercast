@@ -6,6 +6,9 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from skippercast.pipeline import parsers
 from skippercast.pipeline.collect import Client, source, system_tls_official_watch, validate
+from skippercast.pipeline.settings import settings
+
+PORTS = settings('morro-bay')['report_ports']
 
 
 class PipelineTests(unittest.TestCase):
@@ -82,7 +85,7 @@ class PipelineTests(unittest.TestCase):
         <td>1,200 Rockfish, 3 Lingcod (up to 9 pounds), 2 Lingcod Released, 0 Halibut</td>
         <tr><td><a href="/boats/other"><b>Other Boat</b></a>Avila Beach, CA</td>
         <td>3 Anglers<br>1/2 Day AM<br><i>Pecho Rock</i></td><td>4 Red Rockcod</td>'''
-        result = parsers.charter_reports(page, "2026-09-20", "https://www.socalfishreports.com/example")
+        result = parsers.charter_reports(page, "2026-09-20", "https://www.socalfishreports.com/example", ports=PORTS)
         a, b = result["reports"]
         self.assertEqual(a["anglers"], 12)
         self.assertEqual(a["catches"][0]["count"], 1200)
@@ -98,7 +101,7 @@ class PipelineTests(unittest.TestCase):
     def test_report_errors_do_not_become_zero_catch(self):
         for page in ("Access denied", "Fish Counts September 19, 2026"):
             with self.assertRaises(ValueError):
-                parsers.charter_reports(page, "2026-09-20", "https://example.org")
+                parsers.charter_reports(page, "2026-09-20", "https://example.org", ports=PORTS)
 
     def test_ndbc_missing_fields_and_units(self):
         page = '#YY MM DD hh mm WDIR WSPD GST WVHT DPD APD MWD PRES ATMP WTMP\n#yr mo dy hr mn degT m/s m/s m sec sec degT hPa degC degC\n2026 09 21 15 56 99 MM MM 1.0 17 6.2 207 MM MM 16.9\n'

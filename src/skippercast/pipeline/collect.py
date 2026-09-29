@@ -330,7 +330,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
             continue
         url = "https://www.socalfishreports.com/dock_totals/boats.php?date=" + day
         report_jobs.append((ident, "Landing reports " + day, "charter-reports", url, 36,
-                            lambda c, u=url, d=day: parsers.charter_reports(c.get(u), d, u)))
+                            lambda c, u=url, d=day: parsers.charter_reports(c.get(u), d, u, ports=config["report_ports"])))
     with ThreadPoolExecutor(max_workers=2) as pool:
         for result in pool.map(run, report_jobs):
             sources[result["id"]] = result

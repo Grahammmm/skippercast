@@ -1,0 +1,121 @@
+{
+ "date": "2026-09-20",
+ "reports": [
+  {
+   "anglers": 12,
+   "boat": "Example Boat",
+   "boat_source_url": "https://www.socalfishreports.com/boats/test",
+   "catches": [
+    {
+     "count": 1200,
+     "disposition": "reported",
+     "label": "Rockfish",
+     "species": "rockfish"
+    },
+    {
+     "count": 3,
+     "disposition": "reported",
+     "label": "Lingcod",
+     "species": "lingcod"
+    },
+    {
+     "count": 2,
+     "disposition": "released",
+     "label": "Lingcod",
+     "species": "lingcod"
+    },
+    {
+     "count": 0,
+     "disposition": "reported",
+     "label": "Halibut",
+     "species": "halibut"
+    }
+   ],
+   "coordinates": null,
+   "date": "2026-09-20",
+   "depth_ft": null,
+   "fishing_hours": null,
+   "ground": "Out Front",
+   "ground_id": null,
+   "id": "bf20a8264f3a2c5f",
+   "port": "Morro Bay",
+   "source_url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-20",
+   "species": [
+    "lingcod",
+    "rockfish"
+   ],
+   "trip_type": "3/4 Day"
+  },
+  {
+   "anglers": 3,
+   "boat": "Other Boat",
+   "boat_source_url": "https://www.socalfishreports.com/boats/other",
+   "catches": [
+    {
+     "count": 4,
+     "disposition": "reported",
+     "label": "Red Rockcod",
+     "species": "rockfish"
+    }
+   ],
+   "coordinates": null,
+   "date": "2026-09-20",
+   "depth_ft": null,
+   "fishing_hours": null,
+   "ground": "Pecho Rock",
+   "ground_id": "CHARTER-PECHO",
+   "id": "071c88d2e0ac0396",
+   "port": "Avila Beach",
+   "source_url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-20",
+   "species": [
+    "rockfish"
+   ],
+   "trip_type": "1/2 Day AM"
+  },
+  {
+   "anglers": 6,
+   "boat": "Twin Port Boat",
+   "boat_source_url": "https://www.socalfishreports.com/boats/both",
+   "catches": [],
+   "coordinates": null,
+   "date": "2026-09-20",
+   "depth_ft": null,
+   "fishing_hours": null,
+   "ground": null,
+   "ground_id": null,
+   "id": "c999c01cc10ea089",
+   "port": "Morro Bay",
+   "source_url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-20",
+   "species": [],
+   "trip_type": "1/2 Day PM"
+  },
+  {
+   "anglers": 12,
+   "boat": "Example Boat",
+   "boat_source_url": "https://www.socalfishreports.com/boats/test",
+   "catches": [
+    {
+     "count": 10,
+     "disposition": "reported",
+     "label": "Rockfish",
+     "species": "rockfish"
+    }
+   ],
+   "coordinates": null,
+   "date": "2026-09-20",
+   "depth_ft": null,
+   "fishing_hours": null,
+   "ground": "Out Front",
+   "ground_id": null,
+   "id": "1a5f6639c0487b46",
+   "port": "Morro Bay",
+   "source_url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-20",
+   "species": [
+    "rockfish"
+   ],
+   "trip_type": "3/4 Day"
+  }
+ ],
+ "sample_date": "2026-09-20",
+ "sample_time_precision": "calendar date only; trip times not published"
+}

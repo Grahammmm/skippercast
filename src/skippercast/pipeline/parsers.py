@@ -37,15 +37,24 @@ def species_id(label):
     return next((key for key, pattern in patterns if re.search(pattern, label, re.I)), None)
 
 
-def charter_reports(body, day, url):
-    """Parse the publisher's sometimes unclosed <tr>s, not arbitrary page prose."""
+def charter_reports(body, day, url, *, ports):
+    """Parse the publisher's sometimes unclosed <tr>s, not arbitrary page prose.
+
+    `ports` maps the publisher's landing label (e.g. "Town, CA") to the port name
+    recorded on each trip; rows from other landings are skipped. It comes from the
+    landing-reports source binding (catalog/sources.json `report_ports`), in order:
+    a row naming several configured landings takes the first.
+    """
+    if not ports:
+        raise ValueError("Landing report parser needs configured ports")
     d = date.fromisoformat(day)
     if f"{d:%B} {d.day}, {d.year}" not in body or "Fish Counts" not in body:
         raise ValueError("Report page/date not recognized; cannot infer zero trips")
     reports, identities, duplicates = [], {}, set()
     for tr in re.split(r"<tr\b[^>]*>", body, flags=re.I):
         cells = re.findall(r"<td\b[^>]*>(.*?)</td>", tr.split("</tr>")[0], flags=re.S | re.I)
-        if len(cells) < 3 or not any(p in cells[0] for p in ("Morro Bay, CA", "Avila Beach, CA")):
+        port = next((name for label, name in ports.items() if label in cells[0]), None) if len(cells) >= 3 else None
+        if port is None:
             continue
         boat = re.search(r"<b>(.*?)</b>", cells[0], re.S | re.I)
         link = re.search(r'href=["\']([^"\']+)["\']', cells[0])
@@ -82,7 +91,7 @@ def charter_reports(body, day, url):
         identities[identity] = identities.get(identity, 0) + 1
         ident = hashlib.sha256(f"{identity}|{identities[identity]}".encode()).hexdigest()[:16]
         reports.append({"id": ident, "date": day, "boat": name,
-                        "port": "Morro Bay" if "Morro Bay, CA" in cells[0] else "Avila Beach",
+                        "port": port,
                         "trip_type": trip_type, "anglers": int(anglers_match[1]) if anglers_match else None,
                         "ground": ground, "ground_id": GROUND_IDS.get((ground or "").lower()),
                         "catches": catches, "species": sorted({c["species"] for c in catches if c["count"] > 0}),

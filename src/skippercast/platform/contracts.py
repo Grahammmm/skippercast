@@ -120,6 +120,11 @@ def load_catalogs(root=REPO):
     return needs, sources
 
 
+# The region the app opens with and the legacy top-level feeds alias. One place;
+# catalog/coasts.json only names a default package per coast, not a global default.
+DEFAULT_REGION = "morro-bay"
+
+
 def load_region(ident, root=REPO):
     if not ID.fullmatch(ident):
         raise ValueError("Invalid region id")

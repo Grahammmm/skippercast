@@ -1007,6 +1007,10 @@
         "transport": "HTTPS; exact provider hosts only"
       },
       "coverage_note": "Morro Bay and Avila operator/landing reports; other regions need their own publisher bindings.",
+      "report_ports": {
+        "Morro Bay, CA": "Morro Bay",
+        "Avila Beach, CA": "Avila Beach"
+      },
       "limitations": [
         "Extract concise factual counts with source links; do not republish articles or images.",
         "Location often broad; targeting, zero trips and effort are incomplete."
