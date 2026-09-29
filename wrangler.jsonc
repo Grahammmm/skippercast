@@ -22,6 +22,9 @@
   "r2_buckets": [
     { "binding": "FEEDS", "bucket_name": "skippercast-feeds" }
   ],
+  // Never trust platform identity headers here: only ChatGPT Sites injects and
+  // strips them. Private features stay off until SkipperCast has its own sign-in.
+  "vars": { "IDENTITY_PROVIDER": "none" },
   "triggers": { "crons": ["*/15 * * * *"] },
   "observability": { "enabled": true }
 }

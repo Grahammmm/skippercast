@@ -88,7 +88,11 @@ function sheet() {
       const response = await fetch('/api/boat/lookup', {method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({query}), signal: AbortSignal.timeout(90000)});
       const data = await response.json().catch(() => ({}));
-      if (response.status === 401) { status.innerHTML = 'Sign in to use AI lookup, or enter the numbers below by hand. <a href="/signin-with-chatgpt?return_to=%2F%23map">Sign in</a>'; return; }
+      if (response.status === 401) {
+        const signIn = typeof data.signIn === 'string' ? data.signIn : '';
+        status.innerHTML = signIn && signIn.startsWith('/') ? `Sign in to use AI lookup, or enter the numbers below by hand. <a href="${signIn.replace('%2F%23forecast', '%2F%23map')}">Sign in</a>` : 'AI lookup needs an account, which is coming soon. Enter the numbers below by hand.';
+        return;
+      }
       if (!response.ok) { status.textContent = data.error || 'Lookup failed. Enter the numbers below by hand.'; return; }
       lookup = data;
       for (const [key] of FIELDS) {

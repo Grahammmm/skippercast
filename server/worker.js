@@ -14,7 +14,17 @@ let extraOrigins=new Set();
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
 const hash=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
 const db=env=>{if(!env.DB)throw Error('storage unavailable');return env.DB;};
-function user(request){const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return id&&email?id:null;}
+// Identity comes from the host platform. ChatGPT Sites injects the OpenAI identity
+// headers after authenticating the visitor and strips any the visitor sends. Any
+// other host (our own Cloudflare Worker) must never trust them: a visitor could
+// forge them and act as any owner. wrangler.jsonc sets IDENTITY_PROVIDER to
+// "none"; the Sites package carries no wrangler config, so the var is absent there.
+let identityProvider='chatgpt-sites';
+const SIGN_IN={'chatgpt-sites':'/signin-with-chatgpt?return_to=%2F%23forecast'};
+function user(request){
+  if(identityProvider!=='chatgpt-sites')return null;
+  const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return id&&email?id:null;
+}
 async function body(request){
   if(Number(request.headers.get('content-length'))>8192)throw Error('body too large');
   const reader=request.body?.getReader();if(!reader)throw Error('invalid empty body');
@@ -123,6 +133,7 @@ export async function checkTrips(env,cursor=''){
 
 function bind(env){
   useBucket(env);
+  identityProvider=env?.IDENTITY_PROVIDER??'chatgpt-sites';
   // Extra origins (e.g. a workers.dev staging copy) may post; production origins come from the deployment policy.
   extraOrigins=new Set(String(env?.EXTRA_ORIGINS||'').split(',').map(s=>s.trim()).filter(s=>/^https:\/\/[a-z0-9.-]+$/.test(s)));
 }
@@ -179,8 +190,8 @@ async fetch(request,env){
       return json({...feed,forecast:undefined,sources:Object.fromEntries(Object.entries(feed.sources).map(([k,v])=>[k,k.startsWith('model-')||k.startsWith('verify-')?{name:v.name,status:v.status,issue:v.issue,url:v.url,checked_at:v.checked_at}:v]))});
     }
     const owner=user(request);
-    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:'/signin-with-chatgpt?return_to=%2F%23forecast'});
-    if(!owner)return json({error:'Sign in to save private trips or feedback'},401);
+    if(path==='/api/session'&&request.method==='GET')return json({signedIn:!!owner,publicKey:env.VAPID_PUBLIC_KEY||null,signIn:SIGN_IN[identityProvider]||null});
+    if(!owner)return json({error:SIGN_IN[identityProvider]?'Sign in to save private trips or feedback':'Accounts are not available on this site yet',signIn:SIGN_IN[identityProvider]||null},401);
     if(request.method!=='GET'){requireOrigin(request);await budget(env,owner);}
     if(path==='/api/boat/lookup'&&request.method==='POST'){
       // AI spec lookup for the boat profile: signed-in only, 20 per person per day, cached by query.
