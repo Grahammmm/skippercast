@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # The forecast sampler shared with the Worker runs on Node.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - uses: actions/setup-python@v7
