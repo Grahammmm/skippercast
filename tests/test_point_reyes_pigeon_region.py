@@ -8,6 +8,7 @@ from shapely.geometry import MultiPolygon, Polygon, mapping, shape
 
 from research.scripts.prepare_regional_mpas import validate_response
 from skippercast.pipeline.settings import settings
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,7 +53,7 @@ class PointReyesPigeonTests(unittest.TestCase):
         self.assertEqual(atlas["drifts"], [])
 
     def test_bolinas_native_fragments_are_held_after_original_cell_review(self):
-        report = json.loads((ROOT / "dist/data/bolinas-native-hard-terrain-review.json").read_text())
+        report = json.loads((RECEIPTS / "bolinas-native-hard-terrain-review.json").read_text())
         source = ROOT / "dist/data/sf-native-hard-context.geojson"
         self.assertEqual(report["region_id"], RID)
         self.assertEqual(report["source_context_sha256"], hashlib.sha256(source.read_bytes()).hexdigest())

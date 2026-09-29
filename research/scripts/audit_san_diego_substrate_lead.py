@@ -126,10 +126,10 @@ def review(features, receipt, pair, camera_raw, invalid_ids=()):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--pairs', type=Path, default=Path('dist/data/noaa-statewide-regular-camera-review.json'))
+    p.add_argument('--pairs', type=Path, default=Path('research/receipts/noaa-statewide-regular-camera-review.json'))
     p.add_argument('--camera-cache', type=Path, default=Path('var/usgs-video-cache/c0111sc_video_observations.zip'))
     p.add_argument('--raw-output', type=Path, default=Path('var/review/cnra-sandag-la-jolla-substrate.geojson'))
-    p.add_argument('--output', type=Path, default=Path('dist/data/cnra-sandag-la-jolla-substrate-review.json'))
+    p.add_argument('--output', type=Path, default=Path('research/receipts/cnra-sandag-la-jolla-substrate-review.json'))
     a = p.parse_args()
     rows = json.loads(a.pairs.read_text())['pair_reviews']
     matches = [r for r in rows if r['survey_id'] == 'H11876' and r['bag_url'].endswith(BAG_SUFFIX)]

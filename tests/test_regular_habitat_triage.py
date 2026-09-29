@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.triage_regular_habitat_outlines import triage
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +22,7 @@ def packet(place):
                     "gaviota-native-hard-review-summary.json",
                     "gaviota-enc-context-review.json"),
     }[place]
-    return tuple(json.loads((ROOT / "dist/data" / name).read_text()) for name in files)
+    return tuple(json.loads(locate("dist/data/" + name).read_text()) for name in files)
 
 
 def checked_now(enc):

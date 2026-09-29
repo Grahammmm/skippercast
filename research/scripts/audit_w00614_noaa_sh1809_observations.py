@@ -24,9 +24,9 @@ FIELDS = ("DatasetID,CatalogNumber,latitude,longitude,DepthInMeters,Locality,"
           "NavType,RecordType")
 SOURCE = ("https://www.ncei.noaa.gov/erddap/tabledap/deep_sea_corals.csv?"
           f"{FIELDS}&DatasetID=%22{DATASET}%22")
-DEPTH = Path("dist/data/w00614-original-300-pigeon-monterey-review.json")
-USGS_GAP = Path("dist/data/w00614-usgs-video-observation-gap.json")
-OUTPUT = Path("dist/data/w00614-noaa-sh1809-observation-gap.json")
+DEPTH = Path("research/receipts/w00614-original-300-pigeon-monterey-review.json")
+USGS_GAP = Path("research/receipts/w00614-usgs-video-observation-gap.json")
+OUTPUT = Path("research/receipts/w00614-noaa-sh1809-observation-gap.json")
 
 
 def fetch():

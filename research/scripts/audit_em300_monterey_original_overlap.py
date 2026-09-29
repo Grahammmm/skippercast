@@ -67,9 +67,9 @@ def build(root, fetch=False):
     cache = root / "var/review/em300-original"
     verify(cache, fetch)
     recent_path = ensure_newer(root, fetch)
-    matrix_path = root / "dist/data/monterey-300-source-evidence-matrix.json"
+    matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     context_path = root / "dist/data/usgs-offshore-monterey-hard-context.geojson"
-    old_receipt_path = root / "dist/data/monterey-1995-original-multibeam-overlap.json"
+    old_receipt_path = root / "research/receipts/monterey-1995-original-multibeam-overlap.json"
     matrix = json.loads(matrix_path.read_text())
     context = json.loads(context_path.read_text())
     old_receipt = json.loads(old_receipt_path.read_text())
@@ -161,7 +161,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-1998-original-em300-overlap.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-1998-original-em300-overlap.json"))
     args = parser.parse_args()
     report = build(args.root.resolve(), args.fetch)
     if args.verify:

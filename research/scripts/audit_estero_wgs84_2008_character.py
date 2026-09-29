@@ -29,11 +29,11 @@ from skippercast.platform.contracts import atomic_json
 
 BLOCKS = ROOT / "var/review/estero-nominal-research-blocks.geojson"
 PRIVATE_OFFSETS = ROOT / "var/review/estero-wgs84-direct-vdatum-blocks.json"
-SOURCE_RECEIPT = ROOT / "dist/data/estero-wgs84-direct-vdatum-review.json"
+SOURCE_RECEIPT = ROOT / "research/receipts/estero-wgs84-direct-vdatum-review.json"
 DEPTH = ROOT / "var/review/estero-bay-2012/WGS84_utm10_EsteroBay.zip"
 METADATA = ROOT / "var/review/estero-bay-2012/WGS84_metadata_EsteroBay.xml"
 CHARACTER = ROOT / "var/review/usgs-point-estero/SeafloorCharacter_OffshorePointEstero.zip"
-OUTPUT = ROOT / "dist/data/estero-wgs84-2008-character-sensitivity.json"
+OUTPUT = ROOT / "research/receipts/estero-wgs84-2008-character-sensitivity.json"
 RADII_M = (10, 25)
 CLASS_NAMES = {1: "soft_flat", 2: "hard_flat", 3: "hard_rugose"}
 

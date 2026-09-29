@@ -16,6 +16,9 @@ from pyproj import Transformer
 from shapely.geometry import box, shape
 from shapely.ops import transform
 from shapely.strtree import STRtree
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -93,12 +96,12 @@ def audit(inputs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/point-buchon-private-block-access-screen.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/point-buchon-private-block-access-screen.json"))
     args = parser.parse_args()
     root = args.root.resolve()
-    inputs = {key: json.loads((root / path).read_text()) for key, path in INPUTS.items()}
+    inputs = {key: json.loads(locate(path, root).read_text()) for key, path in INPUTS.items()}
     report = audit(inputs)
-    report["source_sha256"] = {key: hashlib.sha256((root / path).read_bytes()).hexdigest()
+    report["source_sha256"] = {key: hashlib.sha256(locate(path, root).read_bytes()).hexdigest()
                                 for key, path in INPUTS.items()}
     report["audited_at"] = datetime.now(timezone.utc).isoformat()
     output = root / args.output

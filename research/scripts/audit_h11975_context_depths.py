@@ -131,6 +131,6 @@ def audit(root=ROOT):
 
 if __name__ == '__main__':
     report = audit()
-    target = ROOT / 'dist/data/h11975-research-outline-original-depths.json'
+    target = ROOT / 'research/receipts/h11975-research-outline-original-depths.json'
     target.write_text(json.dumps(report, indent=2) + '\n')
     print(report['outline_count'], 'historical original-cell depth distributions; zero fishing targets')

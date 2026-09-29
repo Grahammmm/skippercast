@@ -100,7 +100,7 @@ def main():
     parser.add_argument("--usgs", type=Path, default=ROOT / "var/review/usgs-point-buchon/Bathymetry_OffshorePointBuchon_metadata.xml")
     parser.add_argument("--pge", type=Path, default=ROOT / "var/review/pge-point-buchon-mbes-datum-comparison.pdf")
     parser.add_argument("--csumb", type=Path, default=ROOT / "var/review/csumb-central-library.html")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-datum-provenance-leads.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-datum-provenance-leads.json")
     parser.add_argument("--fetch", action="store_true", help="Fetch the pinned official USGS, PG&E and CSUMB sources")
     args = parser.parse_args()
     if args.fetch:

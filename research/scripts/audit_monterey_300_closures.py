@@ -127,7 +127,7 @@ def audit(pixel, context, mpas, federal, *, now=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pixel", type=Path, default=Path("dist/data/monterey-original-300-pixel-review.json"))
+    parser.add_argument("--pixel", type=Path, default=Path("research/receipts/monterey-original-300-pixel-review.json"))
     parser.add_argument("--context", type=Path, default=Path("dist/data/usgs-offshore-monterey-hard-context.geojson"))
     parser.add_argument("--mpa-north", type=Path, default=Path("dist/regions/santa-cruz-monterey-bay/protected-areas.geojson"))
     parser.add_argument("--mpa-south", type=Path, default=Path("dist/regions/monterey-point-sur/protected-areas.geojson"))

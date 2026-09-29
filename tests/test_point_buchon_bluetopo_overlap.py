@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchonBlueTopoOverlapTests(unittest.TestCase):
     def test_source_lineage_does_not_promote_interpolated_pixels(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-bluetopo-hard-cell-overlap.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-bluetopo-hard-cell-overlap.json").read_text())
         counts = receipt["contributor_center_counts"]
         self.assertEqual(sum(counts.values()), receipt["original_usgs_hard_rugose_cell_centers"])
         self.assertEqual(receipt["bluetopo_cells_with_finite_elevation_uncertainty_and_contributor"], 804337)

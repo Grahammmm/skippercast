@@ -111,7 +111,7 @@ def main():
     parser.add_argument("--blocks", type=Path, default=ROOT / "var/review/estero-nominal-research-blocks.geojson")
     parser.add_argument("--cache", type=Path, default=ROOT / "var/usgs-video-cache")
     parser.add_argument("--download-video", action="store_true")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/estero-original-camera-block-gap.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/estero-original-camera-block-gap.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     result = build(json.loads(args.manifest.read_text()), json.loads(args.blocks.read_text()),

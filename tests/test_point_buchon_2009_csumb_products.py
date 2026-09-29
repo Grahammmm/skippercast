@@ -8,6 +8,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
 from research.scripts.audit_point_buchon_2009_csumb_products import summarize_grid
+from research.lib.receipts import RECEIPTS
 
 
 class PointBuchon2009ProductsTests(unittest.TestCase):
@@ -32,8 +33,7 @@ class PointBuchon2009ProductsTests(unittest.TestCase):
         self.assertEqual(sum(b["source_datum_depth_cells"] for b in result["bands"].values()), 2)
 
     def test_published_receipt_does_not_promote_source_datum_overlap(self):
-        report = json.loads((Path(__file__).resolve().parents[1] /
-                             "dist/data/point-buchon-2009-csumb-original-overlap.json").read_text())
+        report = json.loads((RECEIPTS / "point-buchon-2009-csumb-original-overlap.json").read_text())
         self.assertEqual(report["inner_grid_metadata_survey_year"], 2009)
         self.assertEqual(report["bundled_bathy_trackline_year"], 2007)
         self.assertFalse(report["cell_acquisition_year_verified"])

@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_monterey_2009_project_raster_metadata import evaluate
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ class ProjectRasterDatumScopeTest(unittest.TestCase):
             evaluate(b"<metadata><datum>MLLW</datum></metadata>")
 
     def test_northern_raster_datum_cannot_qualify_southern_gsf_lines(self):
-        review = json.loads((ROOT / "dist/data/monterey-2009-project-raster-datum-scope.json").read_text())
+        review = json.loads((RECEIPTS / "monterey-2009-project-raster-datum-scope.json").read_text())
         self.assertEqual(review["source_product"], "cmb_n_2mbathy")
         self.assertFalse(review["source_reported_accuracy"]["conservative_upper_product_error_bounded"])
         for ident in ("023", "046"):

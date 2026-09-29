@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EM300ResearchGate(unittest.TestCase):
     def test_original_overlap_is_not_a_fishing_spot(self):
-        report = json.loads((ROOT / "dist/data/monterey-1998-original-em300-overlap.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-1998-original-em300-overlap.json").read_text())
         self.assertEqual(report["outlines_with_original_cells"], 7)
         self.assertEqual(report["rockfish_camera_positive_outlines_with_original_cells"], 1)
         self.assertEqual(report["previously_uncovered_camera_outline_001"]["populated_cells"], 972)

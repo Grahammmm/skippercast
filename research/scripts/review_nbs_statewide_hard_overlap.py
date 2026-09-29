@@ -43,7 +43,7 @@ def compile_statewide(review, sectors, hard_paths, scheme, cache, usgs_audit, us
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--review", type=Path, default=Path("dist/data/nbs-statewide-multiple-camera-tile-review.json"))
+    parser.add_argument("--review", type=Path, default=Path("research/receipts/nbs-statewide-multiple-camera-tile-review.json"))
     parser.add_argument("--sectors", type=Path, default=Path("catalog/coastal-sectors.json"))
     parser.add_argument("--scheme", type=Path, default=Path("var/modeling-tile-scheme-20260923.gpkg"))
     parser.add_argument("--cache", type=Path, default=Path("var/nbs-cache"))
@@ -54,7 +54,7 @@ def main():
     parser.add_argument("--map-cache", type=Path, default=Path("var/usgs-native-cache"))
     parser.add_argument("--mpas", type=Path, default=Path("var/qualification-current/coastal/latest.json"))
     parser.add_argument("--federal", type=Path, default=Path("dist/data/noaa-federal-areas.json"))
-    parser.add_argument("--output", type=Path, default=Path("dist/data/nbs-statewide-usgs-hard-overlap-review.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/nbs-statewide-usgs-hard-overlap-review.json"))
     args = parser.parse_args()
     paths = {coast: args.hard_dir / f"usgs-hard-context-{coast}.geojson" for coast in COASTS}
     report = compile_statewide(json.loads(args.review.read_text()), json.loads(args.sectors.read_text()),

@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_csumb_vdatum_bridge import assess, compile_review, stable
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +25,7 @@ class CsumbVdatumBridgeTests(unittest.TestCase):
         self.assertEqual(assess(payload, -121.2, 35.6, 'NAD83_2011')['status'], 'invalid_response')
 
     def test_original_blocks_remain_unqualified_after_available_samples(self):
-        sources = [json.loads((ROOT / f'dist/data/csumb-{series}-native-source-review.json').read_text())
+        sources = [json.loads((RECEIPTS / f'csumb-{series}-native-source-review.json').read_text())
                    for series in ('scc', 'bss')]
 
         def get(params):

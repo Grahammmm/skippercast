@@ -130,7 +130,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binding", type=Path, default=Path("catalog/central-deep-original-300-bindings.json"))
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=Path("dist/data/central-deep-original-300-refutation.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/central-deep-original-300-refutation.json"))
     args = parser.parse_args()
     report = build(json.loads(args.binding.read_text()), args.fetch)
     args.output.parent.mkdir(parents=True, exist_ok=True)

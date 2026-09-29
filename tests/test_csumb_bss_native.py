@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from research.scripts.audit_csumb_bss_native import audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BigSurSouthNativeReviewTest(unittest.TestCase):
     def test_measured_grid_receipt_cannot_become_a_target(self):
-        report = json.loads((ROOT / 'dist/data/csumb-bss-native-source-review.json').read_text())
+        report = json.loads((RECEIPTS / 'csumb-bss-native-source-review.json').read_text())
         self.assertEqual(report['publication_status'], 'source-evidence-only')
         by_id = {source['source_id']: source for source in report['sources']}
         self.assertEqual(set(by_id), {'csumb-bss-block01', 'csumb-bss-block02', 'csumb-bss-block03', 'csumb-bss-block08', 'csumb-bss-block12', 'csumb-bss-block13'})

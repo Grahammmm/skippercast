@@ -156,7 +156,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fetch", action="store_true", help="Fetch and validate official DataONE objects and metadata")
     parser.add_argument("--cache-dir", type=Path, default=ROOT / "var/review/ccfrp-2024")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/central-ccfrp-area-evidence.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/central-ccfrp-area-evidence.json")
     args = parser.parse_args()
     pin = json.loads((ROOT / "catalog/ccfrp-2024-source.json").read_text())
     if args.fetch:

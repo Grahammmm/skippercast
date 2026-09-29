@@ -6,6 +6,7 @@ import struct
 import unittest
 
 from research.scripts import audit_point_buchon_ncei_multibeam_lead as lead
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchonNCEILeadTest(unittest.TestCase):
     def test_public_receipt_is_only_an_acquisition_lead(self):
-        result = json.loads((ROOT / "dist/data/point-buchon-2007-ncei-multibeam-lead.json").read_text())
+        result = json.loads((RECEIPTS / "point-buchon-2007-ncei-multibeam-lead.json").read_text())
         self.assertEqual(result["scope"], "point-buchon-2007-ncei-multibeam-acquisition-lead")
         self.assertEqual(result["qualified_waypoints"], 0)
         self.assertFalse(result["fishing_target"])

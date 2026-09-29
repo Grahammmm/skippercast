@@ -24,6 +24,7 @@ from skippercast.seafloor.io import sha256, verified_file
 
 from research.scripts.audit_nbs_modeling_tile import contributors, is_measured_survey, item_year
 from research.scripts.review_central_bluetopo_contributor_leads import SCHEME_SHA, SCHEME_URL
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -58,7 +59,7 @@ def tile_rows(scheme, geometries):
 
 
 def build(root, *, fetch=False):
-    matrix_path, context_path = root / MATRIX, root / CONTEXT
+    matrix_path, context_path = locate(MATRIX, root), root / CONTEXT
     matrix, context = json.loads(matrix_path.read_text()), json.loads(context_path.read_text())
     order = matrix.get("review_order", [])
     if matrix.get("scope") != "monterey-300-source-evidence-review-matrix" or len(order) != 17:
@@ -157,7 +158,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-17-bluetopo-contributor-pixels.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-17-bluetopo-contributor-pixels.json"))
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     result = build(args.root.resolve(), fetch=args.fetch)

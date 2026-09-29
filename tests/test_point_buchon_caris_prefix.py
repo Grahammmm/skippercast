@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import audit_point_buchon_caris_prefix as caris
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointBuchonCarisPrefixTest(unittest.TestCase):
     def test_public_receipt_is_only_an_acquisition_lead(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-2007-caris-prefix-lead.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-2007-caris-prefix-lead.json").read_text())
         self.assertEqual(receipt["scope"], "point-buchon-2007-original-caris-prefix-acquisition-lead")
         self.assertEqual(receipt["qualified_waypoints"], 0)
         self.assertFalse(receipt["fishing_target"])

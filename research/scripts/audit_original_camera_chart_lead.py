@@ -124,7 +124,7 @@ def main():
     p.add_argument('--survey-id', required=True)
     p.add_argument('--bag-url', required=True)
     p.add_argument('--cruise', help='Select a camera archive when one BAG has multiple reviewed cruises')
-    p.add_argument('--pairs', type=Path, default=Path('dist/data/noaa-statewide-regular-camera-review.json'))
+    p.add_argument('--pairs', type=Path, default=Path('research/receipts/noaa-statewide-regular-camera-review.json'))
     p.add_argument('--hazards', type=Path, default=Path('catalog/noaa-survey-hazards.json'))
     p.add_argument('--enc', type=Path, required=True)
     p.add_argument('--mpas', type=Path, required=True)

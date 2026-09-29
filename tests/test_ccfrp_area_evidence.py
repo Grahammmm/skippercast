@@ -7,12 +7,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from research.scripts import build_ccfrp_area_evidence as ccfrp
+from research.lib.receipts import RECEIPTS
 
 
 class CcfrpAreaEvidenceTest(unittest.TestCase):
     def test_reviewed_snapshot_contains_only_bounded_reference_context(self):
-        root = Path(__file__).resolve().parents[1]
-        data = json.loads((root / "dist/data/central-ccfrp-area-evidence.json").read_text())
+        data = json.loads((RECEIPTS / "central-ccfrp-area-evidence.json").read_text())
         self.assertFalse(data["fishing_target"])
         self.assertFalse(data["exportable"])
         self.assertEqual(data["source_rows_checked"], 366630)

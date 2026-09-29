@@ -234,7 +234,7 @@ def main():
     parser.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/estero-nominal-research-blocks.geojson")
     parser.add_argument("--depth-2012", type=Path, default=ROOT / "var/review/estero-bay-2012/NAD83_utm10_EsteroBay.zip")
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/csumb-scc-2010-estero-original-block-coverage.json")
     args = parser.parse_args()
     if args.fetch:
         fetch_original(args.block12, 12)

@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class OriginalBeamGate(unittest.TestCase):
     def test_priority_beams_have_unknown_tidal_datum(self):
-        report = json.loads((ROOT / "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-2009-centralmontereybay-valid-beam-review.json").read_text())
         self.assertEqual(report["processed_files_audited"], 5)
         self.assertIn("TIDAL_DATUM=UNKNOWN", report["processing_parameters_common"])
         self.assertFalse(report["fishing_target"])

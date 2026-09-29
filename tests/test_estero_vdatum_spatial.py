@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts import audit_estero_vdatum_spatial as spatial
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EsteroSpatialDatumTests(unittest.TestCase):
     def test_published_surface_diagnostic_does_not_convert_or_rank(self):
-        report = json.loads((ROOT / "dist/data/estero-2012-vdatum-spatial-diagnostic.json").read_text())
+        report = json.loads((RECEIPTS / "estero-2012-vdatum-spatial-diagnostic.json").read_text())
         self.assertEqual(report["scope"], "estero-2012-vdatum-spatial-offset-diagnostic")
         self.assertEqual(report["sample_lattice"]["points"], 28)
         self.assertEqual(report["api_request_horizontal_frame"], "NAD83_2011")

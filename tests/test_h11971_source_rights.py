@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_noaa_usgs_camera_rights import audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class H11971SourceRightsTest(unittest.TestCase):
     def test_reviewed_rights_do_not_promote_historical_camera_points(self):
-        receipt = json.loads((ROOT / "dist/data/h11971-camera-source-rights-review.json").read_text())
+        receipt = json.loads((RECEIPTS / "h11971-camera-source-rights-review.json").read_text())
         candidate = json.loads((ROOT / "catalog/candidates/noaa-h11971-bear-landing-original-camera.json").read_text())
         readiness = json.loads((ROOT / "dist/data/california-atlas-readiness.json").read_text())
         self.assertTrue(candidate["rights"]["redistribution_reviewed"])

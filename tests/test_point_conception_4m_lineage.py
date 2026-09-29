@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PointConceptionFourMeterLineageTests(unittest.TestCase):
     def test_original_datum_uncertainty_and_class_dependence_are_explicit(self):
-        report = json.loads((ROOT / "dist/data/point-conception-original-4m-source-lineage.json").read_text())
+        report = json.loads((RECEIPTS / "point-conception-original-4m-source-lineage.json").read_text())
         self.assertEqual(report["scope"], "point-conception-two-original-4m-patches-noaa-usgs-lineage")
         self.assertEqual(report["usgs_map_report"]["reported_acoustic_source"],
                          "Fugro Pelagos bathymetry and backscatter collected in 2008")

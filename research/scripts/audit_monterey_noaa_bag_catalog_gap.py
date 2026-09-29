@@ -13,7 +13,10 @@ from pathlib import Path
 
 from shapely.geometry import shape
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
 from scripts.discover_noaa_surveys import scan
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,14 +75,14 @@ def build(matrix, context, scan_fn=scan):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-17-noaa-bag-catalog-gap.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-17-noaa-bag-catalog-gap.json"))
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
-    inputs = {name: json.loads((root / path).read_text()) for name, path in
+    inputs = {name: json.loads(locate(path, root).read_text()) for name, path in
               (("matrix", MATRIX), ("context", CONTEXT))}
     report = build(inputs["matrix"], inputs["context"])
-    report["source_sha256"] = {name: hashlib.sha256((root / path).read_bytes()).hexdigest()
+    report["source_sha256"] = {name: hashlib.sha256(locate(path, root).read_bytes()).hexdigest()
                                for name, path in (("matrix", MATRIX), ("context", CONTEXT))}
     if args.verify:
         saved = json.loads(args.verify.read_text())

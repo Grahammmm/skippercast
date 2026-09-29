@@ -53,5 +53,5 @@ const result = {schema_version:1, scope:'central-surveyed-rocky-species-fit',
     'The original raster output datum and product uncertainty are unresolved. The old nominal 200 ft raster filter is not a chart-depth qualification, and none of these 132 coordinates passes the current fishing-spot gate.',
     'Fresh state/federal GIS screening does not certify current chart, local access, route or season/method clearance.'],
   targets};
-writeFileSync('dist/data/central-rocky-species-rankings.json', JSON.stringify(result,null,2)+'\n');
+writeFileSync('research/receipts/central-rocky-species-rankings.json', JSON.stringify(result,null,2)+'\n');
 console.log(rank_counts);

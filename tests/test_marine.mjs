@@ -180,7 +180,7 @@ test("species filters separate reef candidates, sediment windows, and pelagic se
   );
   const soft = JSON.parse(
     fs.readFileSync(
-      new URL("../dist/data/species-habitat.json", import.meta.url),
+      new URL("../research/receipts/species-habitat.json", import.meta.url),
     ),
   );
   assert.equal(Object.keys(PROFILES).length, 8); // Seven species plus their shared reef view.

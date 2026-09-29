@@ -66,9 +66,9 @@ def build(paired, closure, enc):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--paired", type=Path, default=Path("dist/data/monterey-original-300-paired-review.json"))
-    parser.add_argument("--closure", type=Path, default=Path("dist/data/monterey-original-300-closure-review.json"))
-    parser.add_argument("--enc", type=Path, default=Path("dist/data/monterey-original-300-enc-review.json"))
+    parser.add_argument("--paired", type=Path, default=Path("research/receipts/monterey-original-300-paired-review.json"))
+    parser.add_argument("--closure", type=Path, default=Path("research/receipts/monterey-original-300-closure-review.json"))
+    parser.add_argument("--enc", type=Path, default=Path("research/receipts/monterey-original-300-enc-review.json"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = build(*(json.loads(path.read_text()) for path in (args.paired, args.closure, args.enc)))

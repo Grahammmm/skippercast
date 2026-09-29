@@ -174,7 +174,7 @@ def main():
     parser.add_argument("--archive", type=Path, default=ROOT / "var/review/point-buchon-additional-products/Pt_Buchon_control_additional_products.tar.gz")
     parser.add_argument("--character", type=Path, default=ROOT / "var/review/usgs-point-buchon/SeafloorCharacter_OffshorePointBuchon.zip")
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-2009-csumb-original-overlap.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-2009-csumb-original-overlap.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     if args.fetch:

@@ -126,7 +126,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, default=ROOT / "var/review/point-buchon-additional-products/Pt_Buchon_control_additional_products.tar.gz")
     parser.add_argument("--blocks", type=Path, default=ROOT / "var/review/point-buchon-2009-csumb-100m-blocks.geojson")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/point-buchon-block-a3-trackline-lineage.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-buchon-block-a3-trackline-lineage.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     result = audit(args.archive, args.blocks)

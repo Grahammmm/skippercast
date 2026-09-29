@@ -21,7 +21,7 @@ PREFIXES = ("laz/geoid18/2612/supplemental/", "laz/geoid12a/2612/supplemental/")
 FULL_PREFIX = "laz/geoid18/2612/"
 DEM_PREFIX = "dem/California_Topobathy_DEM_2011_2616/"
 WANTED = ("accuracy", "inventory", "source", "acoustic", ".gdb", ".fgdb")
-OUTPUT = ROOT / "dist/data/monterey-2013-merge-public-asset-access.json"
+OUTPUT = ROOT / "research/receipts/monterey-2013-merge-public-asset-access.json"
 NS = {"s": "http://s3.amazonaws.com/doc/2006-03-01/"}
 
 

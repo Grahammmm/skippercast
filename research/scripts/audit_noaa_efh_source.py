@@ -67,7 +67,7 @@ def audit(service, layer, query, hashes, *, checked_at=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', type=Path, default=Path('dist/data/noaa-efh-source-review.json'))
+    parser.add_argument('--output', type=Path, default=Path('research/receipts/noaa-efh-source-review.json'))
     args = parser.parse_args()
     params = urlencode({'where': '1=1', 'outFields': ','.join(sorted(FIELDS)),
                         'returnGeometry': 'false', 'returnDistinctValues': 'true', 'f': 'json'})

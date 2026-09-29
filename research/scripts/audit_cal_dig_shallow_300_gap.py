@@ -21,7 +21,7 @@ SOURCES = {
     "biotic": BASE + "8676dd1cde47458caefd834bb3ed8a87/Cal_DIG_I_Biotic_Component.csv",
     "substrate": BASE + "4334f486b0ae492697ee8215f6515f6f/Cal_DIG_I_Substrate_Component.csv",
 }
-OUTPUT = Path("dist/data/cal-dig-i-original-rov-300ft-gap.json")
+OUTPUT = Path("research/receipts/cal-dig-i-original-rov-300ft-gap.json")
 
 
 def fetch(url):

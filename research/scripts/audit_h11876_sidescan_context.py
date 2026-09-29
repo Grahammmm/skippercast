@@ -132,8 +132,8 @@ def main():
     p.add_argument('--projection-sidecar', type=Path, default=Path('var/noaa-native-cache/H11876_NGDC_SSS_1m.csproj.gz'))
     p.add_argument('--world-file', type=Path, default=Path('var/noaa-native-cache/H11876_NGDC_SSS_1m.tfw.gz'))
     p.add_argument('--camera', type=Path, default=Path('var/usgs-video-cache/c0111sc_video_observations.zip'))
-    p.add_argument('--pairs', type=Path, default=Path('dist/data/noaa-statewide-regular-camera-review.json'))
-    p.add_argument('--output', type=Path, default=Path('dist/data/h11876-original-sidescan-review.json'))
+    p.add_argument('--pairs', type=Path, default=Path('research/receipts/noaa-statewide-regular-camera-review.json'))
+    p.add_argument('--output', type=Path, default=Path('research/receipts/h11876-original-sidescan-review.json'))
     args = p.parse_args()
     pairs = json.loads(args.pairs.read_text())['pair_reviews']
     pair, = [row for row in pairs if row['survey_id'] == 'H11876' and

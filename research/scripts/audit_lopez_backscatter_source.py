@@ -24,7 +24,7 @@ from skippercast.platform.contracts import atomic_json
 
 ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = ROOT / "var/noaa-native-cache/BigCreek_additional_products.tar.gz"
-OUTPUT = ROOT / "dist/data/lopez-original-backscatter-source-review.json"
+OUTPUT = ROOT / "research/receipts/lopez-original-backscatter-source-review.json"
 PRODUCT_NAME = "BigCreek2010/LopezPt.2010_1m_sss.zip"
 MOSAICS = {
     "reson_7125": "Sidescan/LopezPoint_7125_1m_SSS.tif",

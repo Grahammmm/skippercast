@@ -18,7 +18,7 @@ LAYERS = {
     "central_video": ("ciap_seafloor", "ciap_seafloor:cruise_e_videopoints"),
     "fish_display": ("ciap_hex", "ciap_hex:fish_wms"),
 }
-OUTPUT = Path("dist/data/ciap-2016-central-rov-public-service-audit.json")
+OUTPUT = Path("research/receipts/ciap-2016-central-rov-public-service-audit.json")
 
 
 def layer_url(workspace, layer):

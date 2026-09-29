@@ -81,8 +81,8 @@ def stable(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--blocks', type=Path, default=Path('var/review/bss03-camera-100m-blocks.geojson'))
-    parser.add_argument('--access', type=Path, default=Path('dist/data/bss03-camera-access-triage.json'))
-    parser.add_argument('--output', type=Path, default=Path('dist/data/bss03-footprint-vdatum-diagnostic.json'))
+    parser.add_argument('--access', type=Path, default=Path('research/receipts/bss03-camera-access-triage.json'))
+    parser.add_argument('--output', type=Path, default=Path('research/receipts/bss03-footprint-vdatum-diagnostic.json'))
     parser.add_argument('--private', type=Path, default=Path('var/review/bss03-vdatum-responses.json'))
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()

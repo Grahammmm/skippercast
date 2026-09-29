@@ -110,7 +110,7 @@ def triage(context: dict, depths: dict, enc: dict, profile: dict) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--context", type=Path, default=Path("dist/data/cape-mendocino-native-hard-context.geojson"))
-    p.add_argument("--depths", type=Path, default=Path("dist/data/h11975-research-outline-original-depths.json"))
+    p.add_argument("--depths", type=Path, default=Path("research/receipts/h11975-research-outline-original-depths.json"))
     p.add_argument("--enc", type=Path, required=True)
     p.add_argument("--profile", type=Path, default=Path("catalog/original-habitat-triage-profiles.json"))
     p.add_argument("--profile-id", default="cape-mendocino-h11975")

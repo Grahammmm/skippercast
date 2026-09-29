@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from research.scripts.audit_estero_vdatum_frames import classify
+from research.lib.receipts import RECEIPTS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,7 +23,7 @@ class EsteroVdatumFramesTest(unittest.TestCase):
             classify("NAD83_2011", base)
 
     def test_public_receipt_has_no_grid_conversion_claim(self):
-        report = json.loads((ROOT / "dist/data/estero-2012-vdatum-frame-review.json").read_text())
+        report = json.loads((RECEIPTS / "estero-2012-vdatum-frame-review.json").read_text())
         self.assertFalse(report["mllw_raster_converted"])
         self.assertFalse(report["fishing_target"])
         results = {row["requested_horizontal_frame"]: row["status"] for row in report["samples"]}

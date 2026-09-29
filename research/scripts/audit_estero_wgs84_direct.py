@@ -186,7 +186,7 @@ def main():
     p.add_argument('--blocks', type=Path, default=ROOT / 'var/review/estero-nominal-research-blocks.geojson')
     p.add_argument('--archive', type=Path, default=ROOT / 'var/review/estero-bay-2012/WGS84_utm10_EsteroBay.zip')
     p.add_argument('--metadata', type=Path, default=ROOT / 'var/review/estero-bay-2012/WGS84_metadata_EsteroBay.xml')
-    p.add_argument('--output', type=Path, default=ROOT / 'dist/data/estero-wgs84-direct-vdatum-review.json')
+    p.add_argument('--output', type=Path, default=ROOT / 'research/receipts/estero-wgs84-direct-vdatum-review.json')
     p.add_argument('--private', type=Path, default=ROOT / 'var/review/estero-wgs84-direct-vdatum-blocks.json')
     p.add_argument('--verify', type=Path)
     args = p.parse_args()

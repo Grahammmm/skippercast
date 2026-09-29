@@ -5,7 +5,7 @@ import {speciesFit} from '../dist/species-fit.js';
 
 test('published rocky fit inventory matches every surveyed target and remains distinct from evidence confidence', () => {
   const atlas=JSON.parse(readFileSync('dist/data/atlas.json'));
-  const inventory=JSON.parse(readFileSync('dist/data/central-rocky-species-rankings.json'));
+  const inventory=JSON.parse(readFileSync('research/receipts/central-rocky-species-rankings.json'));
   assert.equal(inventory.target_count,atlas.targets.length);
   assert.equal(inventory.source_depth_ceiling_ft,200);
   assert.equal(inventory.boat_planning_depth_ceiling_ft,300);

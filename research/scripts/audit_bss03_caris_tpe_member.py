@@ -20,7 +20,7 @@ from research.scripts.audit_bss03_caris_acquisition import URL
 PREFIX_BYTES = 67_108_864
 ARCHIVE_SIZE = 42_090_312_342
 MEMBER = "BSS_Block03/45HaroldHeath_PPK/2011-277/20111004_140647_Harold_Heath7125/TPE"
-OUTPUT = Path("dist/data/bss03-caris-original-tpe-member-lead.json")
+OUTPUT = Path("research/receipts/bss03-caris-original-tpe-member-lead.json")
 
 
 def fetch():

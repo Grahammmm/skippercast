@@ -90,7 +90,7 @@ def main():
     parser.add_argument('--source-id', default='offshore-monterey-character-2016')
     parser.add_argument('--archive', type=Path, required=True)
     parser.add_argument('--context', type=Path, default=Path('dist/data/usgs-offshore-monterey-hard-context.geojson'))
-    parser.add_argument('--video', type=Path, default=Path('dist/data/usgs-offshore-monterey-video-overlap.json'))
+    parser.add_argument('--video', type=Path, default=Path('research/receipts/usgs-offshore-monterey-video-overlap.json'))
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     catalog = json.loads(Path('catalog/usgs-seafloor-sources.json').read_text())

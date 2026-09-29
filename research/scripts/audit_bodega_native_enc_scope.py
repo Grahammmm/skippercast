@@ -92,7 +92,7 @@ def audit(root=REPO, now=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path,
-                        default=REPO / 'dist/data/bodega-native-enc-scope-review.json')
+                        default=REPO / 'research/receipts/bodega-native-enc-scope-review.json')
     args = parser.parse_args()
     result = audit()
     atomic_json(args.output, result)

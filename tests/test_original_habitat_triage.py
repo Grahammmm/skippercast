@@ -5,13 +5,14 @@ from pathlib import Path
 import unittest
 
 from research.scripts.triage_original_habitat_outlines import triage
+from research.lib.receipts import locate
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def read(path):
-    return json.loads((ROOT / path).read_text())
+    return json.loads(locate(path).read_text())
 
 
 class OriginalHabitatTriageTest(unittest.TestCase):

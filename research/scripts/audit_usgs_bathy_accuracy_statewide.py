@@ -135,7 +135,7 @@ def main():
                         help='Fetch only uncached or hash-invalid originals; cached hashes are still checked')
     parser.add_argument('--strict', action='store_true')
     parser.add_argument('--output', type=Path,
-                        default=Path('dist/data/usgs-bathymetry-accuracy-review.json'))
+                        default=Path('research/receipts/usgs-bathymetry-accuracy-review.json'))
     args = parser.parse_args()
     if args.fetch and args.fetch_missing:
         parser.error('Choose --fetch or --fetch-missing')

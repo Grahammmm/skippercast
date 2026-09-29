@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.build_central_300_qualification_plan import build
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class NceiTracklineGate(unittest.TestCase):
     def test_priority_source_discovery_does_not_qualify_depth(self):
-        report = json.loads((ROOT / "dist/data/monterey-17-ncei-trackline-leads.json").read_text())
+        report = json.loads((RECEIPTS / "monterey-17-ncei-trackline-leads.json").read_text())
         self.assertEqual(report["outlines_reviewed"], 17)
         self.assertEqual(report["camera_positive_outlines_with_2009_central_monterey_trackline"], 2)
         rows = {row["context_id"][-3:]: row for row in report["outlines"]}

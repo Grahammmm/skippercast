@@ -116,7 +116,7 @@ def stable(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', type=Path, default=Path('dist/data/bss03-caris-acquisition-lead.json'))
+    parser.add_argument('--output', type=Path, default=Path('research/receipts/bss03-caris-acquisition-lead.json'))
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
     report = inspect()

@@ -124,9 +124,9 @@ def stable(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scc-review', type=Path,
-                        default=Path('dist/data/csumb-scc-native-source-review.json'))
+                        default=Path('research/receipts/csumb-scc-native-source-review.json'))
     parser.add_argument('--bss-review', type=Path,
-                        default=Path('dist/data/csumb-bss-native-source-review.json'))
+                        default=Path('research/receipts/csumb-bss-native-source-review.json'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()

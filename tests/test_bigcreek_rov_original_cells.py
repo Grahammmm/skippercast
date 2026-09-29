@@ -10,6 +10,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
 from research.scripts.audit_bigcreek_rov_original_cells import neighborhood_consistent
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BigCreekRovOriginalCellsTest(unittest.TestCase):
     def test_research_receipt_has_disjoint_source_tiers_and_no_positions(self):
-        report = json.loads((ROOT / "dist/data/bigcreek-lopez-rov-original-cell-join.json").read_text())
+        report = json.loads((RECEIPTS / "bigcreek-lopez-rov-original-cell-join.json").read_text())
         self.assertFalse(report["fishing_target"])
         self.assertFalse(report["exportable"])
         self.assertFalse(report["chart_mllw_depth_and_upper_uncertainty_verified"])

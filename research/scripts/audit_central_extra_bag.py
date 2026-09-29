@@ -43,7 +43,7 @@ def main():
     parser.add_argument("--pin", type=Path, default=Path("catalog/central-extra-bag-pin.json"))
     parser.add_argument("--products", type=Path, default=Path("dist/data/noaa-survey-products.json"))
     parser.add_argument("--cache", type=Path, default=Path("var/noaa-native-cache"))
-    parser.add_argument("--output", type=Path, default=Path("dist/data/f00844-original-fifth-bag-review.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/f00844-original-fifth-bag-review.json"))
     parser.add_argument("--fetch", action="store_true")
     args = parser.parse_args()
     result = audit(json.loads(args.pin.read_text()), json.loads(args.products.read_text()), args.cache, args.fetch)

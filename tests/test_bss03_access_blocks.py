@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from research.scripts.audit_bss03_access_blocks import screen
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class Bss03AccessTest(unittest.TestCase):
     def test_published_receipt_contains_no_geometry_or_fishing_mark(self):
-        result = json.loads((ROOT / 'dist/data/bss03-camera-access-triage.json').read_text())
+        result = json.loads((RECEIPTS / 'bss03-camera-access-triage.json').read_text())
         self.assertEqual(result['totals']['blocks'], 3)
         self.assertEqual(result['totals']['rock_boulder_cobble_windows'], 11)
         self.assertEqual(result['noaa_enc_query_layers'], 18)
@@ -44,7 +45,7 @@ class Bss03AccessTest(unittest.TestCase):
         blocks = source_blocks(bss, video, ROOT / 'var/review/csumb-bss-cache', ROOT / 'var/usgs-video-cache')
         official = [json.loads(path.read_text()) for path in paths[2:]]
         result, private = screen(blocks, *official)
-        expected = json.loads((ROOT / 'dist/data/bss03-camera-access-triage.json').read_text())
+        expected = json.loads((RECEIPTS / 'bss03-camera-access-triage.json').read_text())
         for key in ('original_source_sha256', 'raw_snapshot_sha256'):
             expected.pop(key, None)
         self.assertEqual(stable(result), stable(expected))

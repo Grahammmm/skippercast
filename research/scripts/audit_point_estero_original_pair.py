@@ -114,7 +114,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--fetch", action="store_true")
     p.add_argument("--base", type=Path, default=ROOT / "var/review/usgs-point-estero")
-    p.add_argument("--output", type=Path, default=ROOT / "dist/data/point-estero-original-paired-200-300ft-review.json")
+    p.add_argument("--output", type=Path, default=ROOT / "research/receipts/point-estero-original-paired-200-300ft-review.json")
     args = p.parse_args()
     if args.fetch:
         leads = json.loads((ROOT / "dist/data/usgs-ds781-source-leads.json").read_text())

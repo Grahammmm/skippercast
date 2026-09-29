@@ -7,6 +7,7 @@ import unittest
 from research.scripts.audit_san_miguel_original_habitat import read_usgs
 from research.scripts.audit_san_miguel_naval_zone import danger_polygon, degrees
 from research.scripts.audit_san_miguel_vr_habitat import stable
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class SanMiguelOriginalHabitatTests(unittest.TestCase):
     def test_original_sources_have_distinct_measured_footprints(self):
-        regular = json.loads((ROOT / 'dist/data/san-miguel-original-habitat-depth-review.json').read_text())
-        variable = json.loads((ROOT / 'dist/data/san-miguel-original-habitat-vr-review.json').read_text())
+        regular = json.loads((RECEIPTS / 'san-miguel-original-habitat-depth-review.json').read_text())
+        variable = json.loads((RECEIPTS / 'san-miguel-original-habitat-vr-review.json').read_text())
         self.assertEqual(regular['usgs_original']['polygon_count'], 2871)
         self.assertEqual(regular['substrate_classes']['h']['depth_uncertainty_eligible_cells'], 0)
         self.assertEqual(regular['noaa_measured_cells_in_window'], 257)
@@ -52,7 +53,7 @@ class SanMiguelOriginalHabitatTests(unittest.TestCase):
                 read_usgs(path, manifest['usgs'])
 
     def test_fresh_retrieval_times_alone_do_not_change_source_overlap(self):
-        report = json.loads((ROOT / 'dist/data/san-miguel-original-habitat-vr-review.json').read_text())
+        report = json.loads((RECEIPTS / 'san-miguel-original-habitat-vr-review.json').read_text())
         changed = {**report, 'reviewed_at': 'later', 'enc_danger_checked_at': 'later',
                    'naval_danger_zone_checked_at': 'later'}
         self.assertEqual(stable(report), stable(changed))

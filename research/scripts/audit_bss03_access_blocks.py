@@ -177,7 +177,7 @@ def main():
     parser.add_argument('--federal', required=True, type=Path)
     parser.add_argument('--enc', required=True, type=Path)
     parser.add_argument('--private-blocks', type=Path, default=ROOT / 'var/review/bss03-camera-100m-blocks.geojson')
-    parser.add_argument('--output', type=Path, default=ROOT / 'dist/data/bss03-camera-access-triage.json')
+    parser.add_argument('--output', type=Path, default=ROOT / 'research/receipts/bss03-camera-access-triage.json')
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
     bss = next(source for source in json.loads((ROOT / 'catalog/csumb-bss-native-sources.json').read_text())['sources']

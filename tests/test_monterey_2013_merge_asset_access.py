@@ -4,6 +4,7 @@ import unittest
 from urllib.parse import parse_qs, urlsplit
 
 from research.scripts.audit_monterey_2013_merge_asset_access import DEM_PREFIX, FULL_PREFIX, PREFIXES, audit, parse_listing
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +20,7 @@ def listing(prefix, keys, truncated=False, token=None):
 
 class PublishedAssetAccess(unittest.TestCase):
     def test_saved_receipt_does_not_promote_supplemental_files(self):
-        saved = json.loads((ROOT / "dist/data/monterey-2013-merge-public-asset-access.json").read_text())
+        saved = json.loads((RECEIPTS / "monterey-2013-merge-public-asset-access.json").read_text())
         self.assertEqual([item["prefix"] for item in saved["listings"]], list(PREFIXES))
         self.assertEqual(saved["requested_accuracy_inventory_or_acoustic_assets_found"], [])
         self.assertEqual(saved["full_archive"]["objects"], 16050)

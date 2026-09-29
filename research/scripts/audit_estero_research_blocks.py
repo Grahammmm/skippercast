@@ -191,7 +191,7 @@ def main():
     p.add_argument("--federal", type=Path, required=True)
     p.add_argument("--enc", type=Path, required=True)
     p.add_argument("--private-blocks", type=Path, default=ROOT / "var/review/estero-nominal-research-blocks.geojson")
-    p.add_argument("--output", type=Path, default=ROOT / "dist/data/estero-2012-depth-class-closure-block-review.json")
+    p.add_argument("--output", type=Path, default=ROOT / "research/receipts/estero-2012-depth-class-closure-block-review.json")
     args = p.parse_args()
     now = datetime.now(timezone.utc)
     mpas = json.loads(args.mpas.read_text())

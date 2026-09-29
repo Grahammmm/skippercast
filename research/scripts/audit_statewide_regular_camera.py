@@ -214,7 +214,7 @@ def main():
     p.add_argument("--bag-cache", type=Path, default=Path("var/noaa-native-cache"))
     p.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))
     p.add_argument("--limit", type=int, help="Bounded diagnostic run; omit for a complete review")
-    p.add_argument("--output", type=Path, default=Path("dist/data/noaa-statewide-regular-camera-review.json"))
+    p.add_argument("--output", type=Path, default=Path("research/receipts/noaa-statewide-regular-camera-review.json"))
     a = p.parse_args()
     result = audit_all(json.loads(a.audit.read_text()), json.loads(a.manifest.read_text()),
                        json.loads(a.mpas.read_text()), json.loads(a.sectors.read_text())["sectors"],

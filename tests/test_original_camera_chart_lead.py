@@ -6,12 +6,12 @@ from pathlib import Path
 
 from research.scripts.audit_original_camera_chart_lead import audit
 from research.scripts.summarize_original_camera_chart_lead import summarize
+from research.lib.receipts import RECEIPTS
 
 
 class OriginalCameraChartLeadTests(unittest.TestCase):
     def test_public_summary_removes_camera_positions_and_requires_complete_hold(self):
-        published = json.loads((Path(__file__).resolve().parents[1] /
-                                'dist/data/h11971-bear-landing-research-review.json').read_text())
+        published = json.loads((RECEIPTS / 'h11971-bear-landing-research-review.json').read_text())
         full = dict(published)
         full['transects'] = [dict(row, camera_position_bounds=[-124.03, 39.93, -124.02, 39.94])
                              for row in published['transects']]
@@ -40,9 +40,8 @@ class OriginalCameraChartLeadTests(unittest.TestCase):
                                       'features': []}, {}, report, b'report')
 
     def test_unheld_arena_bodega_review_preserves_mpa_proximity(self):
-        root = Path(__file__).resolve().parents[1]
         for year, count in ((2008, 40), (2010, 14)):
-            report = json.loads((root / f'dist/data/h11730-arena-bodega-{year}-research-review.json').read_text())
+            report = json.loads((RECEIPTS / f'h11730-arena-bodega-{year}-research-review.json').read_text())
             self.assertIsNone(report['survey_fishing_promotion_hold'])
             self.assertEqual(report['historical_camera_windows'], count)
             self.assertFalse(report['fishing_target'])

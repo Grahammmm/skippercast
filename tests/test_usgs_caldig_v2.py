@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from research.scripts.audit_usgs_caldig_v2 import acquire
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class CalDigV2AuditTest(unittest.TestCase):
     def test_exact_original_scan_has_no_200_or_300_foot_candidates(self):
-        report = json.loads((ROOT / 'dist/data/usgs-caldig-v2-native-review.json').read_text())
+        report = json.loads((RECEIPTS / 'usgs-caldig-v2-native-review.json').read_text())
         self.assertEqual(report['source_use'], 'deepwater habitat research context only')
         self.assertEqual(report['bottom_target_status'], 'not-qualified')
         self.assertEqual(report['bathymetry']['candidate_200ft_cells'], 0)

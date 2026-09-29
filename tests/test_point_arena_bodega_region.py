@@ -7,6 +7,7 @@ import unittest
 from shapely.geometry import shape
 from research.scripts.prepare_regional_mpas import validate_response
 from skippercast.pipeline.settings import settings
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,7 +37,7 @@ class PointArenaBodegaTests(unittest.TestCase):
 
     def test_original_cell_context_is_research_only_and_outside_mpas(self):
         region = json.loads((ROOT / "regions" / RID / "region.json").read_text())
-        report = json.loads((ROOT / "dist/data/arena-native-hard-terrain-review.json").read_text())
+        report = json.loads((RECEIPTS / "arena-native-hard-terrain-review.json").read_text())
         source_path = ROOT / "dist/data/sf-native-hard-context.geojson"
         layer = json.loads((ROOT / "dist" / region["assets"]["survey_habitat"]).read_text())
         mpas = json.loads((ROOT / "dist" / region["assets"]["protected_areas"]).read_text())

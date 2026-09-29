@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import unittest
+from research.lib.receipts import RECEIPTS, locate
 
 try:
     from jsonschema import Draft202012Validator
@@ -17,7 +18,7 @@ SCHEMA = json.loads((ROOT / 'catalog/survey.schema.json').read_text())
 
 def resolve(reference):
     path, pointer = reference.split('#', 1)
-    target = (ROOT / path).resolve()
+    target = locate(path).resolve()
     if not target.is_relative_to(ROOT):
         raise ValueError('Evidence escapes repository')
     value = json.loads(target.read_text())
@@ -57,7 +58,7 @@ class InventoryTests(unittest.TestCase):
 
     def test_evidence_resolves_in_committed_repository(self):
         for path in MANIFEST['inventory_inputs']:
-            self.assertTrue((ROOT / path).is_file(), path)
+            self.assertTrue(locate(path).is_file(), path)
         for row in ROWS:
             self.assertTrue(row['evidence'], row['id'])
             for ref in row['evidence'] + list(row['field_evidence'].values()):
@@ -72,14 +73,16 @@ class InventoryTests(unittest.TestCase):
             ('noaa-regular-native-depth-review.json', 'files', 'bag_url'),
             ('noaa-vr-native-depth-expanded-review.json', 'files', 'bag_url'),
         ]:
-            receipt = json.loads((ROOT / 'dist/data' / filename).read_text())
+            receipt = json.loads(locate('dist/data/' + filename).read_text())
             for record in receipt[collection]:
                 self.assertIn(record[key], urls, filename)
 
     def test_primary_inventory_inputs_are_complete(self):
         expected = {'catalog/sources.json', 'dist/data/central-source-acquisition-queue.json'}
         for pattern in ('*review*.json', '*gap*.json'):
-            expected.update(str(p.relative_to(ROOT)) for p in (ROOT / 'dist/data').glob(pattern))
+            # Receipts moved to research/receipts/ keep their dist/data/ name in the manifest.
+            for directory in (ROOT / 'dist/data', RECEIPTS):
+                expected.update('dist/data/' + p.name for p in directory.glob(pattern))
         self.assertEqual(set(MANIFEST['inventory_inputs']), expected)
 
     def test_reference_compilations_never_enter_depth_manifest(self):

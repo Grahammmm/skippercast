@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from research.scripts.audit_sansimeon_bedrock_overlap import fetch_geology
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ class SanSimeonBedrockReviewTest(unittest.TestCase):
         manifest = json.loads((ROOT / "catalog/usgs-sansimeon-geology.json").read_text())
         self.assertFalse(set(manifest["pure_bedrock_units"]) &
                          set(manifest["composite_sediment_over_bedrock_units_excluded"]))
-        review = json.loads((ROOT / "dist/data/csumb-sansimeon-bedrock-overlap-review.json").read_text())
+        review = json.loads((RECEIPTS / "csumb-sansimeon-bedrock-overlap-review.json").read_text())
         self.assertEqual(review["status"], "research-only")
         self.assertEqual(review["geology_source"]["sha256"], manifest["archive_sha256"])
         self.assertGreaterEqual(review["mpa_source"]["count"], 8)

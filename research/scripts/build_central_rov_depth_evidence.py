@@ -108,7 +108,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--source", type=Path, default=ROOT / "var/review/rov-zenodo-10929417.csv")
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/central-rov-200-300ft-evidence.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/central-rov-200-300ft-evidence.json")
     args = parser.parse_args()
     pin = json.loads((ROOT / "catalog/central-rov-2024-source.json").read_text())
     if args.fetch:

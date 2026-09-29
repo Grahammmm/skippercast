@@ -23,7 +23,7 @@ from research.scripts.audit_usgs_native_overlap import camera_accuracy
 from research.scripts.audit_usgs_video_observations import load_archive, open_original_zip
 
 
-OUTPUT = ROOT / "dist/data/point-conception-original-4m-camera-gap.json"
+OUTPUT = ROOT / "research/receipts/point-conception-original-4m-camera-gap.json"
 MANIFEST = ROOT / "catalog/usgs-video-cruises.json"
 PRIOR = ROOT / "dist/data/point-conception-original-4m-rugged-overlap.json"
 

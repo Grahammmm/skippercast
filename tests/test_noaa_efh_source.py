@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'research/scripts'))
 from audit_noaa_efh_source import FIELDS, audit
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class EfhSourceTests(unittest.TestCase):
     def test_published_receipt_withholds_fishing_and_records_source_mismatch(self):
-        item = json.loads((ROOT / 'dist/data/noaa-efh-source-review.json').read_text())
+        item = json.loads((RECEIPTS / 'noaa-efh-source-review.json').read_text())
         self.assertFalse(item['fishing_target'])
         self.assertFalse(item['exportable'])
         self.assertFalse(item['legal_clearance'])

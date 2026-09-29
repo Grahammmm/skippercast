@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from research.scripts.audit_point_buchon_rov_cell_join import source_depth_at
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +28,7 @@ class PointBuchonRovCellJoinTests(unittest.TestCase):
         self.assertEqual(source_depth_at((0, 0), FakeGrid(None), FakeGrid(None)), (None, None))
 
     def test_public_receipt_stays_aggregate_and_unpromoted(self):
-        receipt = json.loads((ROOT / "dist/data/point-buchon-rov-original-cell-join.json").read_text())
+        receipt = json.loads((RECEIPTS / "point-buchon-rov-original-cell-join.json").read_text())
         self.assertEqual(receipt["scope"], "point-buchon-independent-original-cell-historical-rov-research-join")
         self.assertEqual(receipt["inward_block_sensitivity_m"]["0"]["original_grid_cell_in_source_depth_band"], 94)
         self.assertEqual(receipt["inward_block_sensitivity_m"]["25"]["original_grid_cell_in_source_depth_band"], 26)

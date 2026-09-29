@@ -29,7 +29,7 @@ from research.scripts.refresh_enc_hazards import BASE, SERVICES, fetch_json, que
 from skippercast.platform.contracts import atomic_json
 
 
-OUTPUT = ROOT / "dist/data/point-conception-original-4m-enc-seabed-gap.json"
+OUTPUT = ROOT / "research/receipts/point-conception-original-4m-enc-seabed-gap.json"
 PRIOR = ROOT / "dist/data/point-conception-original-4m-patch-robustness.json"
 SEABED_SUFFIXES = ("Seabed_Area_point", "Seabed_Area_line", "Seabed_Area")
 

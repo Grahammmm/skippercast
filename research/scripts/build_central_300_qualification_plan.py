@@ -9,6 +9,9 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
+from research.lib.receipts import locate
 
 
 TRACKS = (
@@ -110,11 +113,11 @@ SECTOR_OVERRIDES = {
 
 
 def load(root, relative):
-    return json.loads((root / relative).read_text())
+    return json.loads(locate(relative, root).read_text())
 
 
 def digest(root, relative):
-    return hashlib.sha256((root / relative).read_bytes()).hexdigest()
+    return hashlib.sha256(locate(relative, root).read_bytes()).hexdigest()
 
 
 def build(root):
@@ -866,7 +869,7 @@ def build(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
-    parser.add_argument("--output", type=Path, default=Path("dist/data/central-300ft-qualification-plan.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/central-300ft-qualification-plan.json"))
     args = parser.parse_args()
     plan = build(args.root)
     output = args.root / args.output

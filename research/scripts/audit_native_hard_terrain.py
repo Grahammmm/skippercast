@@ -35,7 +35,7 @@ def audit(root=REPO):
     context_path = root / 'dist/data/sf-native-hard-context.geojson'
     context_raw = context_path.read_bytes()
     context = json.loads(context_raw)
-    enc = json.loads((root / 'dist/data/bodega-native-enc-scope-review.json').read_text())
+    enc = json.loads((root / 'research/receipts/bodega-native-enc-scope-review.json').read_text())
     if (enc['source_context_sha256'] != hashlib.sha256(context_raw).hexdigest()
             or enc['research_outlines_in_region'] != 74
             or enc['outlined_footprints_covered_by_all_scopes'] != 74
@@ -149,6 +149,6 @@ def audit(root=REPO):
 
 if __name__ == '__main__':
     result = audit()
-    atomic_json(REPO / 'dist/data/bodega-native-hard-terrain-review.json', result)
+    atomic_json(REPO / 'research/receipts/bodega-native-hard-terrain-review.json', result)
     print(json.dumps({'reviewed': result['reviewed_outlines'], 'grades': result['grades'],
                       'holds': result['hold_reasons']}))

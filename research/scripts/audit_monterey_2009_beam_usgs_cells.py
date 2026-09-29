@@ -144,8 +144,8 @@ def join_outline(lon, lat, source_depth, polygon, bathy, character):
 
 
 def build(root, fetch=False):
-    original = json.loads((root / "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json").read_text())
-    matrix_path = root / "dist/data/monterey-300-source-evidence-matrix.json"
+    original = json.loads((root / "research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json").read_text())
+    matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     matrix = json.loads(matrix_path.read_text())
     if original.get("scope") != "monterey-2009-centralmontereybay-original-valid-beam-research" or original.get("fishing_target") is not False:
         raise ValueError("Original beam audit changed")
@@ -195,7 +195,7 @@ def build(root, fetch=False):
             raise ValueError("Beam-to-cell join exceeds original measured outline cells")
     return {
         "schema_version": 1, "scope": "monterey-2009-original-beams-to-usgs-native-cell-screen",
-        "original_beam_receipt_sha256": hashlib.sha256((root / "dist/data/monterey-2009-centralmontereybay-valid-beam-review.json").read_bytes()).hexdigest(),
+        "original_beam_receipt_sha256": hashlib.sha256((root / "research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json").read_bytes()).hexdigest(),
         "original_usgs_outline_matrix_sha256": hashlib.sha256(matrix_path.read_bytes()).hexdigest(),
         "usgs_bathymetry_sha256": BATHY_SHA, "usgs_character_sha256": CHAR_SHA,
         "method": "Original processed valid GSF beams projected to nearest native USGS 2 m bathymetry cell; original seafloor character resampled nearest-neighbor to that grid. 3x3 is a one-cell sensitivity diagnostic, not a positional confidence interval.",
@@ -215,7 +215,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--verify", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("dist/data/monterey-2009-beam-usgs-cell-screen.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/monterey-2009-beam-usgs-cell-screen.json"))
     args = parser.parse_args()
     report = build(args.root.resolve(), args.fetch)
     if args.verify:

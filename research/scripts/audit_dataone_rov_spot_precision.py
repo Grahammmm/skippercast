@@ -18,7 +18,7 @@ from pathlib import Path
 
 PACKAGE = "https://opc.dataone.org/view/urn:uuid:7353f779-b722-4064-8074-3e9c651ed38e"
 OBJECT = "https://cn.dataone.org/cn/v2/resolve/urn%3Auuid%3Abc58965f-f3b1-421e-8b2a-45690bb695fb"
-OUTPUT = Path("dist/data/central-dataone-rov-300ft-spot-precision.json")
+OUTPUT = Path("research/receipts/central-dataone-rov-300ft-spot-precision.json")
 FIELDS = ["Year", "Month", "Day", "Region", "MPA_Group", "Type", "Designation", "Habitat_Type", "Lat", "Long", "Depth", "Common_Name", "Scientific_Name", "Count"]
 BAND = (Decimal("60.96"), Decimal("91.44"))
 

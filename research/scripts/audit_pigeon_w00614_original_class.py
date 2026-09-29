@@ -66,7 +66,7 @@ def audit(binding, bag_path, character_path):
     if sha256(bag_path) != binding["bag_sha256"] or sha256(character_path) != binding["character_sha256"]:
         raise ValueError("Original source changed")
     uri = f"/vsizip/{character_path.resolve()}/{binding['character_tif']}"
-    source = json.loads(Path("dist/data/w00614-original-300-pigeon-monterey-review.json").read_text())
+    source = json.loads(Path("research/receipts/w00614-original-300-pigeon-monterey-review.json").read_text())
     if (source.get("source_sha256") != binding["bag_sha256"]
             or source.get("source_url") != binding["bag_url"]
             or source.get("counts", {}).get("depth_uncertainty_qualified_200_300ft_cells") != 141331):
@@ -130,7 +130,7 @@ def main():
     parser.add_argument("--bag", type=Path, default=Path("var/review/W00614_MB_VR_MLLW_1of1.bag"))
     parser.add_argument("--character", type=Path, default=Path("var/review/SeafloorCharacter_OffshorePigeonPoint.zip"))
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--output", type=Path, default=Path("dist/data/w00614-pigeon-original-character-overlap.json"))
+    parser.add_argument("--output", type=Path, default=Path("research/receipts/w00614-pigeon-original-character-overlap.json"))
     args = parser.parse_args()
     binding = json.loads(args.binding.read_text())
     acquire(binding["bag_url"], binding["bag_sha256"], args.bag, 80_000_000, args.fetch)

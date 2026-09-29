@@ -98,7 +98,7 @@ def evaluate(raw: bytes, context_path: Path = CONTEXT) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "dist/data/monterey-2009-project-raster-datum-scope.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "research/receipts/monterey-2009-project-raster-datum-scope.json")
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     with urlopen(Request(URL, headers={"User-Agent": "SkipperCast-source-audit/1.0"}), timeout=30) as response:

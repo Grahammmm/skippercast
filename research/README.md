@@ -26,12 +26,27 @@ the scheduled product feeds.
 | Path | What it holds |
 | --- | --- |
 | `scripts/` | Audit, screen, triage, review, discovery, inspect, summarize, queue, compile, reconcile and measure scripts, plus one-off builders for research datasets and manually refreshed app data (for example `build_habitat_regions.py`, `export_web_targets.mjs`). Maintained by Codex. |
-| `lib/` | Helpers shared by several research scripts, so they need not import an unrelated audit for them (`lib/paths.py`: repository `ROOT`). |
+| `lib/` | Helpers shared by several research scripts, so they need not import an unrelated audit for them (`lib/paths.py`: repository `ROOT`; `lib/receipts.py`: `RECEIPTS`, `locate()`). |
+| `receipts/` | Audit receipts (JSON/GeoJSON) that used to ship in `dist/data/`. `receipts/manifest.json` pins each file's sha256; regenerate it with `python -m research.lib.receipts` after a reviewed change. |
 
 Research scripts may import product code (`skippercast.*`, and product tools in
 `scripts/` such as `scripts.discover_noaa_surveys`); the reverse is not allowed.
 Cross-imports between research scripts use `research.scripts.<name>`; when a
 helper is shared by several of them, move it into `research/lib/`.
+
+## Receipts and their historical paths
+
+Receipts, catalog bindings (`catalog/surveys.json` evidence pointers, review
+input lists) and ledgers name each other as `dist/data/<name>`. Those strings are
+hashed evidence, so they were not rewritten when the files moved. Code that
+follows such a reference resolves it with `research.lib.receipts.locate(path)`,
+which returns `research/receipts/<name>` for a moved receipt and the path itself
+otherwise. Tests read receipts through the single `RECEIPTS` constant. New
+receipts are written to `research/receipts/` directly.
+
+`dist/data/` keeps only what the product uses: files the app or Worker loads,
+files named as provenance by a file the app loads (so published links resolve),
+and the few platform-build and seafloor inputs/outputs read by `src/`.
 
 ## Where things stay in `scripts/`
 

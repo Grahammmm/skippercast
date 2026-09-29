@@ -27,7 +27,7 @@ from skippercast.platform.bottom_targets import cells_qualified, vr_transform
 
 CATALOG = 'https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html'
 BASE = 'https://pubs.usgs.gov/ds/781/video_observations/data/'
-DEPTH_RECEIPT = Path('dist/data/w00614-original-300-pigeon-monterey-review.json')
+DEPTH_RECEIPT = Path('research/receipts/w00614-original-300-pigeon-monterey-review.json')
 BAG_PATH = Path('var/review/W00614_MB_VR_MLLW_1of1.bag')
 FILES = (
     'Benthic_Biological_Interpretation.zip', 'c0111sc_video_observations.zip',
@@ -168,7 +168,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bag', type=Path, default=BAG_PATH)
     parser.add_argument('--output', type=Path,
-                        default=Path('dist/data/w00614-usgs-video-observation-gap.json'))
+                        default=Path('research/receipts/w00614-usgs-video-observation-gap.json'))
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
     report = build(args.bag)

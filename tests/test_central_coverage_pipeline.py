@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from research.scripts import build_central_coverage_ledger as coverage
 from research.scripts import build_central_source_queue as sources
+from research.lib.receipts import RECEIPTS
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -207,7 +208,7 @@ class CentralCoveragePipelineTests(unittest.TestCase):
                 sources.build(ROOT)
 
     def test_deep_noaa_cells_near_pigeon_point_are_not_fishing_spots(self):
-        receipt = sources.read(ROOT / "dist/data/w00614-original-300-pigeon-monterey-review.json")
+        receipt = sources.read(RECEIPTS / "w00614-original-300-pigeon-monterey-review.json")
         self.assertGreater(receipt["counts"]["depth_uncertainty_qualified_200_300ft_cells"], 100000)
         self.assertGreater(receipt["eligible_supergrid_center_bounds"][1], 37.1)
         self.assertFalse(receipt["fishing_target"])

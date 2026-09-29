@@ -23,10 +23,10 @@ from skippercast.platform.contracts import atomic_json
 
 
 BLOCKS = ROOT / "var/review/estero-nominal-research-blocks.geojson"
-SOURCE_RECEIPT = ROOT / "dist/data/estero-wgs84-direct-vdatum-review.json"
+SOURCE_RECEIPT = ROOT / "research/receipts/estero-wgs84-direct-vdatum-review.json"
 DEPTH = ROOT / "var/review/estero-bay-2012/WGS84_utm10_EsteroBay.zip"
 METADATA = ROOT / "var/review/estero-bay-2012/WGS84_metadata_EsteroBay.xml"
-OUTPUT = ROOT / "dist/data/estero-noaa-bag-catalog-gap.json"
+OUTPUT = ROOT / "research/receipts/estero-noaa-bag-catalog-gap.json"
 
 
 def build(blocks: dict, receipt: dict, depth: Path, metadata: Path,

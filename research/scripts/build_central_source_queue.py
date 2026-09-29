@@ -7,6 +7,9 @@ import json
 import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
+from research.lib.receipts import locate
 
 
 SECTORS = (
@@ -23,13 +26,13 @@ def build(root):
     root = Path(root)
     discovery = read(root / "dist/data/noaa-survey-discovery.json")
     products = read(root / "dist/data/noaa-survey-products.json")
-    native = read(root / "dist/data/noaa-region-bag-envelope-review.json")
+    native = read(root / "research/receipts/noaa-region-bag-envelope-review.json")
     usgs = read(root / "catalog/usgs-ds781-source-leads.json")
     metadata = read(root / "catalog/usgs-ds781-metadata-review.json")
     ledger = read(root / "dist/data/central-coverage-ledger-v1.json")
     bindings = read(root / "catalog/central-native-depth-review-bindings.json")
     monterey_bindings = read(root / "catalog/monterey-original-bag-overlap-bindings.json")
-    monterey_merge_assets = read(root / "dist/data/monterey-2013-merge-public-asset-access.json")
+    monterey_merge_assets = read(root / "research/receipts/monterey-2013-merge-public-asset-access.json")
     if (monterey_merge_assets.get("scope") != "noaa-2013-merge-m2612-public-distribution-access"
             or len(monterey_merge_assets.get("listings", [])) != 2
             or monterey_merge_assets.get("full_archive", {}).get("objects", 0) < 8000
@@ -40,11 +43,11 @@ def build(root):
             or monterey_merge_assets.get("candidate_acoustic_source_extent_obtained") is not False
             or monterey_merge_assets.get("fishing_target") is not False):
         raise ValueError("NOAA 2013 merge asset-access gate changed")
-    bluetopo = read(root / "dist/data/central-bluetopo-upstream-source-leads.json")
+    bluetopo = read(root / "research/receipts/central-bluetopo-upstream-source-leads.json")
     bluetopo_manifest = read(root / "catalog/bluetopo-statewide-sample.json")
-    multibeam = read(root / "dist/data/noaa-central-multibeam-footprint-leads.json")
-    csumb = read(root / "dist/data/csumb-bss-native-source-review.json")
-    bigcreek = read(root / "dist/data/bigcreek-lopez-original-300-research.json")
+    multibeam = read(root / "research/receipts/noaa-central-multibeam-footprint-leads.json")
+    csumb = read(root / "research/receipts/csumb-bss-native-source-review.json")
+    bigcreek = read(root / "research/receipts/bigcreek-lopez-original-300-research.json")
     if (bigcreek.get("scope") != "original-bigcreek-lopez-300ft-dem-habitat-research"
             or bigcreek.get("source_grid_vertical_datum") != "NAVD88 Geoid09"
             or bigcreek.get("fishing_target") is not False
@@ -60,7 +63,7 @@ def build(root):
     conception_rugged = read(root / "dist/data/point-conception-original-4m-rugged-overlap.json")
     conception_8m = read(root / "dist/data/point-conception-original-8m-hard-overlap.json")
     conception_access = read(root / "dist/data/point-conception-original-4m-access-screen.json")
-    conception_enc_seabed = read(root / "dist/data/point-conception-original-4m-enc-seabed-gap.json")
+    conception_enc_seabed = read(root / "research/receipts/point-conception-original-4m-enc-seabed-gap.json")
     if (conception_enc_seabed.get("scope") != "point-conception-two-original-4m-patches-enc-seabed-feature-gap"
             or {key: row.get("charted_seabed_features_in_100m_envelope")
                 for key, row in conception_enc_seabed.get("by_survey", {}).items()}
@@ -96,14 +99,14 @@ def build(root):
             or conception_access.get("fishing_target") is not False):
         raise ValueError("Point Conception point-in-time access screen changed")
     extra_bag_pin = read(root / "catalog/central-extra-bag-pin.json")
-    extra_bag = read(root / "dist/data/f00844-original-fifth-bag-review.json")
-    estero_depth = read(root / "dist/data/usgs-estero-bay-2012-original-200-300ft-review.json")
-    estero_overlap = read(root / "dist/data/estero-independent-2012-depth-2008-character-overlap.json")
-    scc_estero = read(root / "dist/data/csumb-scc-2010-estero-original-block-coverage.json")
-    estero_vdatum_spatial = read(root / "dist/data/estero-2012-vdatum-spatial-diagnostic.json")
-    estero_direct = read(root / "dist/data/estero-wgs84-direct-vdatum-review.json")
-    estero_direct_character = read(root / "dist/data/estero-wgs84-2008-character-sensitivity.json")
-    estero_bag_gap = read(root / "dist/data/estero-noaa-bag-catalog-gap.json")
+    extra_bag = read(root / "research/receipts/f00844-original-fifth-bag-review.json")
+    estero_depth = read(root / "research/receipts/usgs-estero-bay-2012-original-200-300ft-review.json")
+    estero_overlap = read(root / "research/receipts/estero-independent-2012-depth-2008-character-overlap.json")
+    scc_estero = read(root / "research/receipts/csumb-scc-2010-estero-original-block-coverage.json")
+    estero_vdatum_spatial = read(root / "research/receipts/estero-2012-vdatum-spatial-diagnostic.json")
+    estero_direct = read(root / "research/receipts/estero-wgs84-direct-vdatum-review.json")
+    estero_direct_character = read(root / "research/receipts/estero-wgs84-2008-character-sensitivity.json")
+    estero_bag_gap = read(root / "research/receipts/estero-noaa-bag-catalog-gap.json")
     if (estero_bag_gap.get("scope") != "estero-60-research-block-noaa-nos-bag-catalog-gap"
             or estero_bag_gap.get("bag_survey_count") != 0
             or estero_bag_gap.get("fishing_target") is not False
@@ -116,17 +119,17 @@ def build(root):
             or estero_direct_character.get("full_cellwise_mllw_surface_verified") is not False):
         raise ValueError("Estero direct-frame independent-class screen changed")
     deep_binding = read(root / "catalog/central-deep-original-300-bindings.json")
-    deep_refutation = read(root / "dist/data/central-deep-original-300-refutation.json")
-    buchon_catalog_gap = read(root / "dist/data/point-buchon-noaa-catalog-envelope-gap.json")
-    buchon_original = read(root / "dist/data/point-buchon-original-paired-200-300ft-review.json")
-    buchon_datum_leads = read(root / "dist/data/point-buchon-datum-provenance-leads.json")
+    deep_refutation = read(root / "research/receipts/central-deep-original-300-refutation.json")
+    buchon_catalog_gap = read(root / "research/receipts/point-buchon-noaa-catalog-envelope-gap.json")
+    buchon_original = read(root / "research/receipts/point-buchon-original-paired-200-300ft-review.json")
+    buchon_datum_leads = read(root / "research/receipts/point-buchon-datum-provenance-leads.json")
     if (buchon_datum_leads.get("scope") != "point-buchon-datum-and-original-grid-provenance-leads"
             or buchon_datum_leads.get("usgs_published_raster", {}).get("output_vertical_datum") != "unresolved"
             or buchon_datum_leads.get("related_csmp_mbes_product", {}).get("same_bytes_or_processing_lineage_as_usgs_release_proven") is not False
             or buchon_datum_leads.get("qualified_waypoints") != 0
             or buchon_datum_leads.get("fishing_target") is not False):
         raise ValueError("Point Buchon datum provenance lead changed")
-    buchon_bluetopo = read(root / "dist/data/point-buchon-bluetopo-hard-cell-overlap.json")
+    buchon_bluetopo = read(root / "research/receipts/point-buchon-bluetopo-hard-cell-overlap.json")
     hard_buchon = buchon_original.get("paired_nominal_band_by_character", {}).get("hard_rugose", {})
     if (buchon_original.get("bathymetry_metadata_sha256")
             != "67f5bd344c133d44fdabc3893f15dc7da6f0c69a30017d62ccfcfed60b4eec63"
@@ -139,7 +142,7 @@ def build(root):
             or buchon_original.get("qualified_waypoints") != 0
             or buchon_original.get("fishing_target") is not False):
         raise ValueError("Point Buchon USGS source-gridding resolution review changed")
-    buchon_access = read(root / "dist/data/point-buchon-rov-access-triage.json")
+    buchon_access = read(root / "research/receipts/point-buchon-rov-access-triage.json")
     if (buchon_access.get("scope") != "point-buchon-open-reference-rov-100m-access-triage"
             or buchon_access.get("totals", {}).get("blocks") != 26
             or buchon_access.get("totals", {}).get("subunits") != 183
@@ -204,7 +207,7 @@ def build(root):
             or estero_direct.get("qualified_waypoints") != 0
             or estero_direct.get("fishing_target") is not False):
         raise ValueError("Original Estero direct WGS84 datum diagnostic changed or was promoted")
-    pigeon_class = read(root / "dist/data/w00614-pigeon-original-character-overlap.json")
+    pigeon_class = read(root / "research/receipts/w00614-pigeon-original-character-overlap.json")
     pigeon_binding = read(root / "catalog/pigeon-w00614-original-class-binding.json")
     if (pigeon_class.get("scope") != pigeon_binding.get("scope")
             or pigeon_class.get("depth_source_sha256") != pigeon_binding.get("bag_sha256")
@@ -297,8 +300,8 @@ def build(root):
     if (monterey_bindings.get("scope") != "original-noaa-mllw-bag-overlap-with-17-monterey-research-outlines"
             or monterey_bindings.get("claim") != "no-measured-native-cells-inside-these-17-outlines"):
         raise ValueError("Unreviewed original Monterey BAG overlap claim")
-    original_pixel = read(root / "dist/data/monterey-original-300-pixel-review.json")
-    w00614_300 = read(root / "dist/data/w00614-original-300-pigeon-monterey-review.json")
+    original_pixel = read(root / "research/receipts/monterey-original-300-pixel-review.json")
+    w00614_300 = read(root / "research/receipts/w00614-original-300-pigeon-monterey-review.json")
     if (w00614_300.get("scope") != "original-noaa-vr-300ft-browse-sector-screen"
             or w00614_300.get("survey_id") != "W00614"
             or w00614_300.get("sector_id") != "pigeon-monterey"
@@ -312,12 +315,12 @@ def build(root):
     original_context_sha = hashlib.sha256(
         (root / "dist/data/usgs-offshore-monterey-hard-context.geojson").read_bytes()).hexdigest()
     original_pixel_sha = hashlib.sha256(
-        (root / "dist/data/monterey-original-300-pixel-review.json").read_bytes()).hexdigest()
+        (root / "research/receipts/monterey-original-300-pixel-review.json").read_bytes()).hexdigest()
     monterey_no_overlap = {}
     for binding in monterey_bindings["bindings"]:
         sid = binding["survey_id"]
         path = binding["review_path"]
-        report = read(root / path)
+        report = read(locate(path, root))
         if (sid in monterey_no_overlap
                 or binding["bag_url"] not in surveyed.get(sid, {}).get("products", {}).get("bag", [])
                 or report.get("scope") != "monterey-original-noaa-bag-cell-overlap"
@@ -340,7 +343,7 @@ def build(root):
         paths = binding.get("review_paths", [])
         if not paths or len(paths) != len(set(paths)):
             raise ValueError(f"Missing or duplicate native depth receipts for {sid}")
-        receipts = [read(root / path) for path in paths]
+        receipts = [read(locate(path, root)) for path in paths]
         for receipt in receipts:
             if (receipt.get("survey_id") != sid or receipt.get("source_url") not in catalog_urls
                     or receipt.get("scope") != "original-regular-bag-300-depth-source-review"
