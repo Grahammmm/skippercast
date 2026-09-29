@@ -1,4 +1,8 @@
 {
+  "dist/app-icon-192.png": "67f2500ffa2f0a383a5dd790110e6beb8ef7ebadf05b3926fdceefdd64df08f9",
+  "dist/app-icon-512.png": "74697b1bf40f8303ba8033ff67b1698fe4aaec2b0a6f88e60c7fe355ae793301",
+  "dist/app-icon-maskable-512.png": "e958f7e7c89f94d792c5ba703b7eef85ee7886f098e9f9ff3c8062a8d8cd12d0",
+  "dist/apple-touch-icon.png": "c370704497f6449cd66f430d8ded4d19b307a530da9975d82a35e024878c3d31",
   "dist/skippercast-parker-preview.jpg": "88a1f2c3475e879cebb8dd2476fbaaa82342842cb835cf47ffea894582dc587c",
   "dist/tiles/morro-bay-reef-outlines.pmtiles": "4023258baaf5b668266267d96f2a632bc207e12a60e138c2eb7ff268b2bbfd80",
   "dist/tiles/socal-survey-habitat.pmtiles": "f83be49cddd7e114b2ec3f7c73d1edc9ff49462ac4cfe66df0b72f3db5824802",

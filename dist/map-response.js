@@ -19,3 +19,13 @@ export function habitatGroups(entries,project,cellSize=90) {
   }
   return [...groups.values()];
 }
+// Collect names reported within `delay` ms of each other and hand them to
+// `show` once (e.g. several optional layers failing on one bad connection).
+export function batchedNotice(show,delay=800) {
+  const names=[];let timer;
+  return name=>{
+    if(!names.includes(name))names.push(name);
+    clearTimeout(timer);
+    timer=setTimeout(()=>show([...names]),delay);
+  };
+}
