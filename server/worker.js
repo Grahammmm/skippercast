@@ -16,6 +16,11 @@ let extraOrigins=new Set();
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
 const hash=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
 const db=env=>{if(!env.DB)throw Error('storage unavailable');return env.DB;};
+// Errors caused by the request itself: answered 400 with their (fixed, safe)
+// message. Anything else is a dependency failure and answers a generic 503.
+export class ClientError extends Error {}
+export class RateLimited extends Error {}
+const regionById=id=>typeof id==='string'&&Object.hasOwn(regions,id)?regions[id]:null;
 // Identity comes from the host platform. ChatGPT Sites injects the OpenAI identity
 // headers after authenticating the visitor and strips any the visitor sends. Any
 // other host (our own Cloudflare Worker) must never trust them: a visitor could
@@ -28,15 +33,15 @@ function user(request){
   const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return id&&email?id:null;
 }
 async function body(request){
-  if(Number(request.headers.get('content-length'))>8192)throw Error('body too large');
-  const reader=request.body?.getReader();if(!reader)throw Error('invalid empty body');
+  if(Number(request.headers.get('content-length'))>8192)throw new ClientError('body too large');
+  const reader=request.body?.getReader();if(!reader)throw new ClientError('invalid empty body');
   const chunks=[];let size=0;
-  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8192){await reader.cancel();throw Error('body too large');}chunks.push(value);}
+  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8192){await reader.cancel();throw new ClientError('body too large');}chunks.push(value);}
   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-  try{const value=JSON.parse(new TextDecoder().decode(bytes));if(!value||typeof value!=='object'||Array.isArray(value))throw Error();return value;}catch{throw Error('invalid JSON body');}
+  try{const value=JSON.parse(new TextDecoder().decode(bytes));if(!value||typeof value!=='object'||Array.isArray(value))throw Error();return value;}catch{throw new ClientError('invalid JSON body');}
 }
-function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!(origins.has(origin)||extraOrigins.has(origin)))throw Error('origin rejected');}
-async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>30)throw Error('rate limited');}
+function requireOrigin(request){const origin=request.headers.get('Origin');if(!origin||!(origins.has(origin)||extraOrigins.has(origin)))throw new ClientError('origin rejected');}
+async function budget(env,owner){const minute=Math.floor(Date.now()/60000),id=await hash(owner+':'+minute);const row=await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id,minute*60+120).first();if(row.count>30)throw new RateLimited('rate limited');}
 async function readFeed(url){
   let stage='r2';
   try{
@@ -58,17 +63,18 @@ async function readFeed(url){
   }
 }
 export function validateSubscription(s){
-  if(!s?.endpoint||!s.keys)throw Error('subscription missing');const u=new URL(s.endpoint);
+  if(typeof s?.endpoint!=='string'||!s.keys||typeof s.keys!=='object')throw new ClientError('subscription missing');
+  let u;try{u=new URL(s.endpoint);}catch{throw new ClientError('push endpoint rejected');}
   const allowed=u.hostname==='fcm.googleapis.com'||u.hostname==='updates.push.services.mozilla.com'||u.hostname==='web.push.apple.com'||u.hostname.endsWith('.notify.windows.com');
-  if(u.protocol!=='https:'||u.port||u.username||u.password||!allowed||u.href.length>2000)throw Error('push endpoint rejected');
-  if(!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw Error('push keys invalid');return s;
+  if(u.protocol!=='https:'||u.port||u.username||u.password||!allowed||u.href.length>2000)throw new ClientError('push endpoint rejected');
+  if(!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw new ClientError('push keys invalid');return s;
 }
 export function validateTrip(input,now=Date.now()){
-  const r=regions[input.region];if(!r||!r.forecast_points.some(p=>p.id===input.point)||!r.species.includes(input.species))throw Error('unknown area or species');
+  const r=regionById(input.region);if(!r||!r.forecast_points.some(p=>p.id===input.point)||!r.species.includes(input.species))throw new ClientError('unknown area or species');
   const today=dateInZone(now,r.timezone),last=dateInZone(now+7*86400000,r.timezone);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||input.date<today||input.date>last)throw Error('date must be within the next seven days');
-  for(const [key,min,max] of [['start_hour',0,22],['end_hour',1,23],['wind_limit',1,30],['gust_limit',1,40],['sea_limit',.5,10]])if(typeof input[key]!=='number'||!Number.isFinite(input[key])||input[key]<min||input[key]>max)throw Error('invalid '+key);
-  if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw Error('invalid window or thresholds');return input;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||input.date<today||input.date>last)throw new ClientError('date must be within the next seven days');
+  for(const [key,min,max] of [['start_hour',0,22],['end_hour',1,23],['wind_limit',1,30],['gust_limit',1,40],['sea_limit',.5,10]])if(typeof input[key]!=='number'||!Number.isFinite(input[key])||input[key]<min||input[key]>max)throw new ClientError('invalid '+key);
+  if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw new ClientError('invalid window or thresholds');return input;
 }
 async function deliver(env,event){
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all()).results;
@@ -204,23 +210,25 @@ async function route(request,env,ctx){
         }catch(error){if(error instanceof QueryError)return {response:json({error:true,reason:error.message},400)};throw error;}
       });
     }
-    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID,storage:!!env.DB,feeds:env.FEEDS?'r2':'github',notifications:!!env.VAPID_PUBLIC_KEY&&!!env.VAPID_PRIVATE_KEY});
+    // Public liveness only: which bindings and secrets exist is not published.
+    // Feed storage shows per response in X-Feed-Source on /feeds/.
+    if(path==='/api/health')return json({service:'SkipperCast',version:'0.3.0',build:BUILD_ID});
     if(path==='/api/jobs/check'&&request.method==='POST'){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
       const claims=await verifyJobToken(token,deployment);if(!claims)return json({error:'Unauthorized'},401);
-      const input=await body(request),cursor=input.cursor||'';if(typeof cursor!=='string'||cursor.length>50)throw Error('invalid cursor');
+      const input=await body(request),cursor=input.cursor||'';if(typeof cursor!=='string'||cursor.length>50)throw new ClientError('invalid cursor');
       await budget(env,'job:'+claims.jti);
       return json(await checkTrips(env,cursor));
     }
     if(request.method==='GET'&&path==='/api/habitat'){
-      const region=regions[url.searchParams.get('region')];if(!region?.habitat_feed)return json({error:'Unknown region'},404);
+      const region=regionById(url.searchParams.get('region'));if(!region?.habitat_feed)return json({error:'Unknown region'},404);
       return await cached(cacheKey(url,{params:['region'],build:build()}),ctx,async()=>{
         const feed=await readFeed(region.habitat_feed);if(feed.region_id!==region.id||feed.schema_version!==1)throw Error('region mismatch');
         const response=json(feed);response.headers.set('Cache-Control',PUBLIC_TTL);return {response};
       });
     }
     if(request.method==='GET'&&['/api/intelligence','/api/forecast'].includes(path)){
-      const region=regions[url.searchParams.get('region')];if(!region)return json({error:'Unknown region'},404);
+      const region=regionById(url.searchParams.get('region'));if(!region)return json({error:'Unknown region'},404);
       const key=p=>cacheKey(new URL(p+'?region='+encodeURIComponent(region.id),url),{params:['region'],build:build()});
       return await cached(key(path),ctx,async()=>{
         // One read and parse of the regional feed answers both endpoints; the
@@ -243,7 +251,7 @@ async function route(request,env,ctx){
       const settings=lookupSettings(env);
       if(!settings.enabled)return json({error:'AI boat lookup is switched off for now; enter your boat details by hand.'},503);
       if(!env.ANTHROPIC_API_KEY)return json({error:'AI boat lookup is not configured yet; enter your boat details by hand.'},503);
-      const query=validQuery((await body(request)).query);if(!query)throw Error('invalid boat name');
+      const query=validQuery((await body(request)).query);if(!query)throw new ClientError('invalid boat name');
       const key=new Request('https://skippercast.com/boat-lookup/'+await hash(query.toLowerCase()));
       let cache=null;try{cache=await globalThis.caches?.open('skippercast-boat-lookups-v1');const hit=await cache?.match(key);if(hit)return json({...await hit.json(),cached:true});}catch{cache=null;}
       const day=Math.floor(Date.now()/86400000),id=await hash(owner+':boat:'+day);
@@ -268,11 +276,13 @@ async function route(request,env,ctx){
       const id=crypto.randomUUID();await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?)').bind(id,owner,t.region,t.point,t.species,t.date,t.start_hour,t.end_hour,t.wind_limit,t.gust_limit,t.sea_limit,new Date().toISOString()).run();return json({id},201);
     }
     if(path==='/api/trips'&&request.method==='DELETE'){
-      const {id}=await body(request);if(typeof id!=='string')throw Error('trip id required');
+      const {id}=await body(request);if(typeof id!=='string'||!id||id.length>64)throw new ClientError('trip id required');
       await db(env).batch([db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE trip_id=? AND owner=?)').bind(id,owner),db(env).prepare('DELETE FROM alert_events WHERE trip_id=? AND owner=?').bind(id,owner),db(env).prepare('DELETE FROM trips WHERE id=? AND owner=?').bind(id,owner)]);return json({deleted:true});
     }
     if(path==='/api/events/ack'&&request.method==='POST'){
-      const {id}=await body(request);const event=await db(env).prepare('SELECT * FROM alert_events WHERE id=? AND owner=?').bind(id,owner).first();
+      // Event ids are SHA-256 hex digests; never bind an unchecked value.
+      const {id}=await body(request);if(typeof id!=='string'||!/^[0-9a-f]{64}$/.test(id))throw new ClientError('event id required');
+      const event=await db(env).prepare('SELECT * FROM alert_events WHERE id=? AND owner=?').bind(id,owner).first();
       if(!event)return json({error:'Not found'},404);
       await db(env).prepare('UPDATE alert_events SET status=?,delivered_at=? WHERE id=? AND owner=?').bind('read',new Date().toISOString(),id,owner).run();
       if(['final','missed-final'].includes(event.kind))await db(env).prepare('UPDATE trips SET final_delivered_at=? WHERE id=? AND owner=?').bind(new Date().toISOString(),event.trip_id,owner).run();
@@ -285,9 +295,9 @@ async function route(request,env,ctx){
     }
     if(path==='/api/subscription'&&request.method==='DELETE'){await db(env).prepare('DELETE FROM subscriptions WHERE owner=?').bind(owner).run();return json({enabled:false});}
     if(path==='/api/comfort'&&request.method==='POST'){
-      const b=await body(request);if(!regions[b.region]||!Number.isInteger(b.rating)||b.rating<1||b.rating>10||!['outbound','fishing','return'].includes(b.phase))throw Error('invalid feedback');
-      for(const [key,max] of [['wind',200],['sea',100],['period',60],['heading',360]])if(b[key]!=null&&(typeof b[key]!=='number'||!Number.isFinite(b[key])||b[key]<0||b[key]>max))throw Error('invalid feedback context');
-      if(b.point!=null&&!regions[b.region].forecast_points.some(p=>p.id===b.point))throw Error('invalid feedback point');
+      const b=await body(request);if(!regionById(b.region)||!Number.isInteger(b.rating)||b.rating<1||b.rating>10||!['outbound','fishing','return'].includes(b.phase))throw new ClientError('invalid feedback');
+      for(const [key,max] of [['wind',200],['sea',100],['period',60],['heading',360]])if(b[key]!=null&&(typeof b[key]!=='number'||!Number.isFinite(b[key])||b[key]<0||b[key]>max))throw new ClientError('invalid feedback context');
+      if(b.point!=null&&!regions[b.region].forecast_points.some(p=>p.id===b.point))throw new ClientError('invalid feedback point');
       await db(env).prepare('INSERT INTO comfort_feedback(id,owner,region,observed_at,rating,context) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),owner,b.region,new Date().toISOString(),b.rating,JSON.stringify({phase:b.phase,wind:b.wind??null,sea:b.sea??null,period:b.period??null,heading:b.heading??null,point:b.point??null})).run();return json({saved:true},201);
     }
     if(path==='/api/comfort'&&request.method==='GET')return json({feedback:(await db(env).prepare('SELECT * FROM comfort_feedback WHERE owner=? ORDER BY observed_at DESC LIMIT 100').bind(owner).all()).results});
@@ -296,5 +306,5 @@ async function route(request,env,ctx){
       await db(env).batch([db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE owner=?)').bind(owner),...['trips','subscriptions','alert_events','comfort_feedback'].map(t=>db(env).prepare(`DELETE FROM ${t} WHERE owner=?`).bind(owner))]);return json({deleted:true});
     }
     return json({error:'Not found'},404);
-  }catch(error){const message=error.message||'';const client=/invalid|unknown|origin|body|date must|push|subscription|trip id/.test(message);const limited=message==='rate limited';console.error('SkipperCast request failed',{path,type:client?'validation':limited?'rate':'dependency'});return json({error:limited?'Please try again shortly':client?message:'This service is temporarily unavailable. Your existing records are preserved.'},limited?429:client?400:503);}
+  }catch(error){const client=error instanceof ClientError,limited=error instanceof RateLimited,message=error.message||'';console.error('SkipperCast request failed',{path,type:client?'validation':limited?'rate':'dependency'});return json({error:limited?'Please try again shortly':client?message:'This service is temporarily unavailable. Your existing records are preserved.'},limited?429:client?400:503);}
 }
