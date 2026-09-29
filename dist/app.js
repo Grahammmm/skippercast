@@ -12,6 +12,7 @@ let tripExport;
 import { getRegion, assetURL } from "./region.js";
 import { mountBottom } from "./bottom-view.js";
 import { initSurveyHabitat } from "./survey-habitat.js";
+import { initSeafloor } from "./seafloor-layer.js";
 import { initRegionalContext } from "./regional-context.js";
 import { initGeology } from "./geology.js";
 import { initWeather } from "./weather-ui.js";
@@ -595,6 +596,7 @@ try {
   void optional('Species search plan',()=>initSearchPlans(map,protectedAreas,showAreaDetails));
   void optional('Ocean habitat',()=>initHabitatDynamics(map,protectedAreas,area=>{locationUI?.select(area);weather.selectLocation(area);}));
   void optional("Survey habitat",()=>initSurveyHabitat(map, protectedAreas, (html, area) => showAreaDetails(html, area, "survey-weather"), area=>weather.selectLocation(area)));
+  void optional("Seafloor habitat",()=>initSeafloor(map,(html,area)=>showAreaDetails(html,area,"seafloor-weather")));
   void optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
   void optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
   speciesUI = await optional("Species habitat",()=>initSpecies(map, layers, {
