@@ -54,7 +54,7 @@ def refresh_region(kind, region, output, previous_root, now, default):
         rules_health['region_id'] = ident
         active = {s for target in region['species'] for s in (['lingcod', 'rockfish'] if target == 'reef' else [target])}
         rules_health['species'] = {k: v for k, v in rules_health['species'].items() if k in active}
-    atomic_json(target/"latest.json",data)
+    atomic_json(target/"latest.json",data,kind=kind+"-feed")  # validated before the region's first write
     atomic_json(target/"health.json",{"region_id":ident,"generated_at":data["generated_at"],**data["health"]})
     if kind=="daily":
         atomic_json(target/'regulations-health.json', rules_health)
@@ -109,7 +109,7 @@ def refresh(kind, output, previous_root=None, *, only_region=None, include_draft
         for name in ("latest.json","health.json"):
             shutil.copyfile(output/"regions"/default/name,output/name)
         if kind=="daily": shutil.copytree(output/"regions"/default/"history",output/"history",dirs_exist_ok=True)
-    atomic_json(output/"regions/index.json",{"schema_version":1,"completed_at":datetime.now(timezone.utc).isoformat(),"regions":summaries})
+    atomic_json(output/"regions/index.json",{"schema_version":1,"completed_at":datetime.now(timezone.utc).isoformat(),"regions":summaries},kind="regions-index")
     return summaries
 
 
