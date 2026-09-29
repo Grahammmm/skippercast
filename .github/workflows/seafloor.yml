@@ -43,8 +43,8 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.13'
           cache: pip
@@ -74,8 +74,8 @@ jobs:
       max-parallel: 3
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.13'
           cache: pip
@@ -96,8 +96,8 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.13'
           cache: pip
@@ -105,7 +105,7 @@ jobs:
       - run: python -m pip install -r requirements-seafloor.txt
       - name: Validate manifest and required runtime before any data writes
         run: python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: felt/tippecanoe
           ref: 4f2621186acfec33b63ddf636f665623c0fef2dd
@@ -138,7 +138,7 @@ jobs:
           SEAFLOOR_PUBLIC_BASE: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}
         run: python -m skippercast.seafloor.verify --matrix var/seafloor/matrix.json >> "$GITHUB_STEP_SUMMARY"
       - name: Propose the small ledger change (never push main)
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           branch: codex/seafloor-ledger-refresh
           add-paths: dist/data/seafloor-ledger.json
