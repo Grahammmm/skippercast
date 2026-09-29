@@ -69,7 +69,7 @@ scripts/              Repository checks used locally and in CI
 .github/workflows/    Offline CI and daily public-evidence collection
 ```
 
-Before packaging a Sites release, run `npm run build`. Production serves the generated `dist/client`, where every script, stylesheet and page is renamed with a content hash (`scripts/fingerprint.mjs`) so the hosting edge can never serve a stale copy. Edit the plain files under `dist/` (`index.html`, `boot.js`, `app.js` and so on); never hand-version file names or add `?v=` query strings. `node scripts/check_client.mjs` confirms every reference resolves.
+Before packaging a Sites release, run `npm run build`. Production serves the generated `dist/client`, where every script, stylesheet and page is renamed with a content hash (`scripts/fingerprint.mjs`) so the hosting edge can never serve a stale copy. The one exception is the service worker `sw.js`, which must keep its URL; the Worker serves it with `Cache-Control: no-cache`. Edit the plain files under `dist/` (`index.html`, `boot.js`, `app.js` and so on); never hand-version file names or add `?v=` query strings. `node scripts/check_client.mjs` confirms every reference resolves.
 
 Start with the [quickstart](docs/quickstart.md), then the [forecast workflow](docs/forecast-workflow.md) or [atlas methodology](docs/atlas-methodology.md). The [roadmap](docs/roadmap.md) separates future app work from shipped functionality. See [CONTRIBUTING.md](CONTRIBUTING.md) for development.
 

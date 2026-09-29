@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Security: the Cloudflare Worker no longer trusts ChatGPT identity headers; private features there return 401 until SkipperCast has its own sign-in.
+- Fixed: trip-alert push notifications could never be enabled because the build renamed the service worker away from `/sw.js`.
 - Seafloor runner setup now installs the schema validator and checks the manifest before processing or publishing.
 
 - Tuna search overlays use the regional offshore footprint, reject uniform water and stale frames, support uncertainty-screened satellite fronts, and explain species-aware 1–3 search priorities separately from boat comfort.
