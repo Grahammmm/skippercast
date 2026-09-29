@@ -13,7 +13,9 @@ import subprocess
 import tempfile
 from urllib.parse import urlencode
 
-REPO = Path(__file__).resolve().parents[3]
+from ..paths import repo_root
+
+REPO = repo_root()
 FEED = 'https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts'
 API = 'https://skippercast.com/api/om'
 MARINE = {'ncep_gfswave016', 'ecmwf_wam'}

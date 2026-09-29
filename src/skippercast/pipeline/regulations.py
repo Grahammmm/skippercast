@@ -11,14 +11,14 @@ import math
 import re
 import time
 from threading import Lock
-from pathlib import Path
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
 from zoneinfo import ZoneInfo
 
 from ..platform.contracts import public_url
+from ..paths import repo_root
 
-REGISTRY = Path(__file__).resolve().parents[3] / "dist/data/regulations.json"
+REGISTRY = repo_root() / "dist/data/regulations.json"
 _ecfr_lock = Lock()
 _ecfr_index = {}
 _ecfr_last = 0.0

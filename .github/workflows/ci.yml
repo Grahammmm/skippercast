@@ -44,6 +44,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Package installs and imports outside the checkout
+        run: |
+          python -m pip install -e .
+          cd /tmp && python -c "import skippercast, skippercast.platform.contracts; print(skippercast.__version__)"
       - name: Unit and artifact tests
         env:
           PYTHONPATH: src
