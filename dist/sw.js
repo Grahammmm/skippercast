@@ -50,6 +50,9 @@ function routeFor(request, origin) {
   if (request.mode === 'navigate') return 'shell';
   if (url.pathname === '/sw.js' || url.pathname === '/precache.json') return null;
   if (url.pathname.startsWith('/api/')) return PUBLIC_API.test(url.pathname) ? 'data' : null;
+  // Seafloor habitat is shown only while its screening manifest is current; a
+  // saved copy would outlive the Worker's expiry gate, so it is never cached.
+  if (url.pathname.startsWith('/feeds/tiles/seafloor/')) return null;
   if (DATA_PATH.test(url.pathname)) return 'data';
   if (FINGERPRINTED.test(url.pathname)) return 'immutable';
   return 'static';

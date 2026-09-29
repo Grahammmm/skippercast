@@ -81,7 +81,10 @@ test('loadManifest bypasses caches and fails closed', async () => {
   const busy = async () => ({ ok: false, status: 503, json: async () => { throw new Error('text'); } });
   assert.equal((await loadManifest('morro-bay', busy, NOW)).state, 'updating');
   const missing = async () => ({ ok: false, status: 404, json: async () => ({}) });
-  assert.equal((await loadManifest('morro-bay', missing, NOW)).state, 'unavailable');
+  const none = await loadManifest('morro-bay', missing, NOW);
+  assert.equal(none.state, 'unavailable');
+  assert.equal(none.published, false, 'a 404 means no publication for this region');
+  assert.notEqual((await loadManifest('morro-bay', busy, NOW)).published, false, 'an outage is not "never published"');
   const offline = async () => { throw new TypeError('network'); };
   assert.equal((await loadManifest('morro-bay', offline, NOW)).state, 'unavailable');
   let fetched = false;

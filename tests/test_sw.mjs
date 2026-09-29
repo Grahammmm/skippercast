@@ -99,7 +99,8 @@ test('routing: shell, fingerprinted assets, public data and tiles; private and O
   assert.equal(route(get('/vendor/leaflet.js')), 'static');
   for (const path of ['/api/forecast?region=morro-bay', '/api/intelligence?region=x', '/api/om/v1/marine?a=1', '/feeds/conditions/x.json', '/regions/index.json', '/data/regulations.json'])
     assert.equal(route(get(path)), 'data', path);
-  for (const path of ['/api/session', '/api/trips', '/api/subscription', '/api/boat/lookup', '/sw.js', '/precache.json'])
+  for (const path of ['/api/session', '/api/trips', '/api/subscription', '/api/boat/lookup', '/sw.js', '/precache.json',
+    '/feeds/tiles/seafloor/manifest-morro-bay.json', '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles'])
     assert.equal(route(get(path)), null, path);
   assert.equal(route(new Request(ORIGIN + '/api/forecast', {method: 'POST', body: '{}'})), null);
   assert.equal(route(get('https://tile.openstreetmap.org/10/100/200.png')), null, 'OSM tiles are never cached');
