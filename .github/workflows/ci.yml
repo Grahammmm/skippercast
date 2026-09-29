@@ -38,16 +38,21 @@ jobs:
       - name: Full Python suite (every layer, GIS required)
         env:
           SKIPPERCAST_REQUIRE_GIS: "1"
-        run: python -m pytest --durations=15 --junitxml=pytest-survey.xml
+        # JUnit goes outside the checkout, so no report file can end up in a repository scan.
+        run: python -m pytest --durations=15 --junitxml="$RUNNER_TEMP/pytest-survey.xml"
       - name: Test summary; fail on any skip outside the private-cache allowlist
-        if: always() && hashFiles('pytest-survey.xml') != ''
-        run: python scripts/pytest_report.py pytest-survey.xml --title "Python, full suite (survey-science)" --strict-skips >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+        run: |
+          junit="$RUNNER_TEMP/pytest-survey.xml"
+          if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
+          python scripts/pytest_report.py "$junit" --title "Python, full suite (survey-science)" --strict-skips >> "$GITHUB_STEP_SUMMARY"
       - name: Upload JUnit results
-        if: always() && hashFiles('pytest-survey.xml') != ''
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pytest-survey
-          path: pytest-survey.xml
+          path: ${{ runner.temp }}/pytest-survey.xml
+          if-no-files-found: ignore
           retention-days: 14
   e2e:
     # Browser tests (P4-09a): Playwright + axe against the built site under
@@ -96,16 +101,20 @@ jobs:
       # No survey/GIS packages here: the gis/ test directories run in survey-science.
       # Unit, contract, integration and claims tests run on both Pythons.
       - name: Python tests without GIS packages
-        run: python -m pytest -m "not gis" --durations=15 --junitxml=pytest-core-${{ matrix.python }}.xml
+        run: python -m pytest -m "not gis" --durations=15 --junitxml="$RUNNER_TEMP/pytest-core.xml"
       - name: Test summary
-        if: always() && hashFiles('pytest-core-*.xml') != ''
-        run: python scripts/pytest_report.py pytest-core-${{ matrix.python }}.xml --title "Python ${{ matrix.python }}, no GIS packages" >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+        run: |
+          junit="$RUNNER_TEMP/pytest-core.xml"
+          if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
+          python scripts/pytest_report.py "$junit" --title "Python ${{ matrix.python }}, no GIS packages" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload JUnit results
-        if: always() && hashFiles('pytest-core-*.xml') != ''
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pytest-core-${{ matrix.python }}
-          path: pytest-core-${{ matrix.python }}.xml
+          path: ${{ runner.temp }}/pytest-core.xml
+          if-no-files-found: ignore
           retention-days: 14
       - name: Offline demonstration
         env:
