@@ -190,6 +190,14 @@ jobs:
           git -C var/published commit -m 'Refresh public fishing evidence'
           git -C var/published push origin HEAD:refs/heads/data
           bash scripts/publish_branch_r2.sh var/published data
+      - name: Verify the public site serves this snapshot
+        if: vars.FEEDS_PUBLIC_BASE != ''
+        env:
+          FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
+        run: |
+          published_at=$(python -c 'import json; print(json.load(open("var/published/latest.json")).get("published_at", ""))')
+          python scripts/verify_published_feed.py "${FEEDS_PUBLIC_BASE%/}/feeds/data/latest.json" \
+            "$GITHUB_RUN_ID" --published-at "$published_at"
       - name: Report source health
         run: |
           python - <<'PY'

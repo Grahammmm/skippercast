@@ -6,6 +6,7 @@ import hashlib
 import gzip
 from io import BytesIO
 import json
+import os
 import re
 import ssl
 import subprocess
@@ -79,6 +80,17 @@ def age_hours(value, now):
         return (now - datetime.fromisoformat(value.replace("Z", "+00:00"))).total_seconds() / 3600
     except (AttributeError, ValueError, TypeError):
         return None
+
+
+def run_id(environ=None):
+    """The GitHub Actions run that produced a feed, or "local" outside Actions."""
+    return ((os.environ if environ is None else environ).get("GITHUB_RUN_ID") or "").strip() or "local"
+
+
+def publication(environ=None):
+    """Fields every published latest.json carries so the public copy can be traced
+    to the run that wrote it (scripts/verify_published_feed.py checks them)."""
+    return {"published_at": stamp(), "run_id": run_id(environ)}
 
 
 class Client:
@@ -325,6 +337,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     reports = [r for s in sources.values() if s["kind"] == "charter-reports" and s.get("data")
                for r in s["data"]["reports"]]
     snapshot = {"schema_version": 1, "generated_at": stamp(now), "completed_at": stamp(),
+                **publication(),
                 "schedule": {"cron": "17 4 * * *", "timezone": "America/Los_Angeles", "max_delay_hours": 36},
                 "region_id": region_id, "scope": region["name"], "bounds": region["bounds"],
                 "landing_names": region["landing_names"],
@@ -354,6 +367,11 @@ def validate(snapshot):
     if snapshot.get("schema_version") != 1 or not isinstance(snapshot.get("sources"), dict):
         raise ValueError("Invalid feed schema")
     parsers.iso_time(snapshot["generated_at"])
+    if "published_at" in snapshot or "run_id" in snapshot:
+        if not isinstance(snapshot.get("published_at"), str) or not isinstance(snapshot.get("run_id"), str) \
+                or not snapshot["run_id"]:
+            raise ValueError("Published feed needs both published_at and run_id")
+        parsers.iso_time(snapshot["published_at"])
     if snapshot.get("catch_probability") is not None or snapshot.get("bite_score") is not None:
         raise ValueError("Uncalibrated catch probability must remain absent")
     ids = [r["id"] for r in snapshot["reports"]]

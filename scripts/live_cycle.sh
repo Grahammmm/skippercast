@@ -66,6 +66,12 @@ git -C var/live-published diff --cached --quiet || git -C var/live-published com
 git -C var/live-published push -q origin HEAD:refs/heads/conditions
 echo "published"
 bash scripts/publish_branch_r2.sh var/live-published conditions
+# The site serves R2 first: confirm it now serves this cycle, not an older one.
+if [ -n "${FEEDS_PUBLIC_BASE:-}" ]; then
+  published_at=$(python -c 'import json; print(json.load(open("var/live-published/latest.json")).get("published_at", ""))')
+  python scripts/verify_published_feed.py "${FEEDS_PUBLIC_BASE%/}/feeds/conditions/latest.json" \
+    "${GITHUB_RUN_ID:-local}" --published-at "$published_at"
+fi
 
 if [ "$trips" = 1 ]; then
   python scripts/check_saved_trips.py

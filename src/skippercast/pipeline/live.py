@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
-from .collect import source, stamp
+from .collect import publication, source, stamp
 from .parsers import ndbc
 from .settings import settings, previous_for_region
 
@@ -61,6 +61,7 @@ def collect(now=None, previous=None, region_id="morro-bay"):
         "region_id": region_id,
         "generated_at": stamp(now),
         "completed_at": stamp(),
+        **publication(),
         "schedule_minutes": 30,
         "sources": sources,
         "health": {

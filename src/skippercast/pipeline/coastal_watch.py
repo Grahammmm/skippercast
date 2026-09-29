@@ -11,7 +11,7 @@ import ssl
 from urllib.error import URLError
 from urllib.parse import urlencode, urlsplit
 from pathlib import Path
-from .collect import Client, source, stamp, age_hours
+from .collect import Client, publication, source, stamp, age_hours
 from ..platform.contracts import REPO, read_json, atomic_json
 from ..platform.coasts import compile_coasts
 
@@ -145,7 +145,7 @@ def collect(now=None, previous=None, reports=None, client_factory=CoastalClient)
         return ident,record
     with ThreadPoolExecutor(max_workers=4) as pool: sources=dict(pool.map(run,jobs))
     issues=[key for key,s in sources.items() if s['status']!='ok']
-    return {'schema_version':1,'scope':'california-coast-directory','completed_at':stamp(now),'sources':sources,
+    return {'schema_version':1,'scope':'california-coast-directory','completed_at':stamp(now),**publication(),'sources':sources,
             'regions':{r['id']:{'watch':located_reports(r,reports or [],now,directory['policy'])} for r in directory['regions']},
             'health':{'status':'degraded' if issues else 'ok','issues':issues},'policy':directory['policy']}
 
