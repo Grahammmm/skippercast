@@ -16,7 +16,8 @@
    - `trip_check_batch`: one line per consumer batch with `owners`, `checked`, `changes`, `delivered`, `held`, `in_app`, `retried`.
    - `trip_check_dead_letter`: messages that failed 4 times.
 2. **Workers & Pages → Queues → skippercast-trip-checks**: backlog, delivery rate and retries. A growing backlog means the consumer is failing or too slow.
-3. The last publication queued: `npx wrangler d1 execute skippercast --remote --command "SELECT * FROM job_state"`.
+3. With `ENABLE_ANALYTICS=true`: the latest **Operations report** run summary (tables *Trip-check queue batches* and *Cron runs*), or query `queue_batch` and `cron` points in the `skippercast_events` dataset ([Observability](../../cloudflare.md#observability)).
+4. The last publication queued: `npx wrangler d1 execute skippercast --remote --command "SELECT * FROM job_state"`.
 
 ## Respond
 

@@ -44,5 +44,8 @@
     { "name": "FEED_LIMITER", "namespace_id": "1002", "simple": { "limit": 300, "period": 60 } }
   ],
   "triggers": { "crons": ["*/15 * * * *"] },
-  "observability": { "enabled": true }
+  // Workers Logs: every invocation's console output and outcome. head_sampling_rate
+  // is the share of invocations logged (1 = all); lower it (e.g. 0.1) if daily log
+  // volume nears the plan's allowance (docs/cloudflare.md#observability).
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
 }

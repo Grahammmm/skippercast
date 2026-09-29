@@ -272,8 +272,7 @@ test('the cron handler queues checks when the binding is present', async () => {
   globalThis.fetch = async url => String(url).endsWith('conditions/latest.json') ? Response.json({completed_at: at, published_at: at, run_id: '77'}) : Response.json({}, {status: 503});
   const pending = [];
   try {
-    await worker.scheduled({}, env, {waitUntil: p => pending.push(p)});
-    const {lines} = await quietly(() => Promise.all(pending));
+    const {lines} = await quietly(async () => { await worker.scheduled({}, env, {waitUntil: p => pending.push(p)}); await Promise.all(pending); });
     assert.equal(queue.messages().length, 4);
     assert.ok(lines.some(l => l.includes('"event":"trip_check_schedule"') && l.includes('"action":"enqueued"')));
   } finally { globalThis.fetch = original; }
