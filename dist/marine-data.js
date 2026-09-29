@@ -12,14 +12,10 @@ export const MODELS = [
     resolution: m.id === "gfs_global" ? "~13 km" : "~25 km",
   })),
   ...WAVE_MODELS.map((m) => ({ ...m, kind: "wave", resolution: m.id === "ncep_gfswave016" ? "~18 km" : "~25 km" })),
-  {
-    id: "meteofrance_currents",
-    name: "Météo-France / Copernicus ocean",
-    kind: "ocean",
-    resolution: "~8 km",
-    meta: "https://marine-api.open-meteo.com/data/meteofrance_currents/static/meta.json",
-  },
 ];
+// Surface currents come from NOAA WCOFS samples that the regional pipeline publishes
+// with the shared forecast (`currents`); there is no browser-side ocean-model request.
+export const CURRENT_MAX_AGE_HOURS = 36;
 const windVars = [
   "wind_speed_10m",
   "wind_gusts_10m",
@@ -47,24 +43,11 @@ export function modelURL(model, points = POINTS) {
     models: model.id,
   });
   const marine = model.kind !== "wind";
-  q.set(
-    "hourly",
-    (model.kind === "wind"
-      ? windVars
-      : model.kind === "wave"
-        ? waveVars
-        : [
-            "sea_surface_temperature",
-            "ocean_current_velocity",
-            "ocean_current_direction",
-          ]
-    ).join(","),
-  );
+  q.set("hourly", (model.kind === "wind" ? windVars : waveVars).join(","));
   if (marine) q.set("length_unit", "imperial");
   else q.set("wind_speed_unit", "kn");
   q.set("temperature_unit", "fahrenheit");
-  // Wind and waves come from SkipperCast's own NOAA/ECMWF service; ocean currents still from Open-Meteo.
-  if (model.kind === "ocean") return `https://marine-api.open-meteo.com/v1/marine?${q}`;
+  // Wind and waves come from SkipperCast's own NOAA/ECMWF service.
   return `/api/om/v1/${marine ? "marine" : "forecast"}?${q}`;
 }
 export function sample(data, variable, epoch, unit, meta) {
@@ -92,6 +75,22 @@ export function sample(data, variable, epoch, unit, meta) {
     return null;
   if (variable.endsWith("direction") && n > 360) return null;
   return n;
+}
+// The WCOFS sample for a forecast point nearest to `epoch`: an actual three-hour
+// snapshot within 90 minutes, inside the published horizon, from a fresh run. Never
+// interpolated; a missing sample stays missing.
+export function currentAt(currents, point, epoch, now = Date.now()) {
+  if (currents?.status !== "ok" || currents.source !== "wcofs") return null;
+  const age = (now - Date.parse(currents.issued_at)) / 3600000;
+  if (!Number.isFinite(age) || age < -1 || age > CURRENT_MAX_AGE_HOURS) return null;
+  if (!(epoch >= currents.valid_from && epoch <= currents.valid_through)) return null;
+  const p = POINTS[point];
+  const row = currents.points?.find((r) => r.point_id === p?.id && r.requested?.[0] === p.latitude && r.requested?.[1] === p.longitude);
+  const best = (row?.samples || []).reduce((a, s) => (!a || Math.abs(s[0] - epoch) < Math.abs(a[0] - epoch) ? s : a), null);
+  if (!best || Math.abs(best[0] - epoch) > 5400) return null;
+  const [time, latitude, longitude, speed, toward, distanceKm] = best;
+  if (![speed, toward].every(Number.isFinite) || speed < 0 || toward < 0 || toward > 360) return null;
+  return { time, latitude, longitude, speed, toward, distanceKm };
 }
 export function timeline(now = Date.now()) {
   const start = Math.floor(now / 1000 / HOUR) * HOUR;
@@ -146,11 +145,10 @@ export function readConditions(bundle, point, epoch, family = "gfs") {
     chop: component("wind_wave"),
     swell: component("swell_wave"),
     secondary: component("secondary_swell_wave"),
-    sst: at("meteofrance_currents", "sea_surface_temperature", "°F"),
-    current: ((n) => (n === null ? null : n / 1.852))(
-      at("meteofrance_currents", "ocean_current_velocity", "km/h"),
-    ),
-    currentTo: at("meteofrance_currents", "ocean_current_direction", "°"),
+    // No hourly sea-surface temperature forecast from SkipperCast's own sources yet.
+    sst: null,
+    current: currentAt(bundle.currents, point, epoch)?.speed ?? null,
+    currentTo: currentAt(bundle.currents, point, epoch)?.toward ?? null,
   };
 }
 export function comfort(c, other, advisories = null) {
@@ -363,5 +361,6 @@ export async function loadMarine(previous = null) {
     contexts[id]={tides:tidePoints(tides.value),extremes:tidePoints(extremes.value),tideError:tides.error,alerts:{coastal:parse(alerts),offshore:parse(outerAlerts)},alertError:alerts.error||outerAlerts.error,water:water.value?.data?.[0],waterError:water.error,stations:ctx.stations};
   }));
   const primary=contexts[localContext(getRegion().default_forecast_point).id] || Object.values(contexts)[0];
-  return {models,...primary,contexts,pointSignature:POINT_SIGNATURE,retrieved:Date.now(),sharedForecastAt:shared?.retrieved||null};
+  const currents=shared?.currents || (previous?.pointSignature===POINT_SIGNATURE ? previous.currents : null) || null;
+  return {models,currents,...primary,contexts,pointSignature:POINT_SIGNATURE,retrieved:Date.now(),sharedForecastAt:shared?.retrieved||null};
 }

@@ -72,9 +72,10 @@ sustained wind are retained and flagged for investigation.
 ## Sources and limits
 
 The collector requests ECMWF IFS and NOAA GFS winds, plus ECMWF WAM and NOAA
-GFS Wave seas, through [Open-Meteo](https://open-meteo.com/en/docs). Open-Meteo is
-the access service, not another independent forecast model. Model metadata comes
-from the provider's [model-update endpoints](https://open-meteo.com/en/docs/model-updates).
+GFS Wave seas, from SkipperCast's own forecast service (`https://skippercast.com/api/om`),
+which samples NOAA and ECMWF open data and answers in Open-Meteo's response format
+(see [forecast data](forecast-data.md)). It is an access service, not another
+independent forecast model. Model metadata comes from its `meta.json` endpoints.
 Initialization, availability, and published coverage are recorded separately.
 Retrieval time, HTTP Date, and `generationtime_ms` are not model issue times.
 Latest-run metadata does not establish which run produced every seamless value;

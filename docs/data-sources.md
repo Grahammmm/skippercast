@@ -80,7 +80,7 @@ A proposed repeated-visit screen would first require independent vessel/MMSI and
 
 ## Forecast and observation services
 
-Wind and wave forecasts now come from SkipperCast's own tiles, built directly from NOAA GFS/GFS-Wave (public domain) and ECMWF IFS/WAM open data ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credit ECMWF). Both allow commercial use. Method, sampling and known differences: [forecast data](forecast-data.md). The GEFS wind ensemble is read directly from NOAA's GEFS open data on AWS (public domain). The Open-Meteo notes below still apply to ocean currents and the browser's direct requests until they are switched over.
+Wind and wave forecasts now come from SkipperCast's own tiles, built directly from NOAA GFS/GFS-Wave (public domain) and ECMWF IFS/WAM open data ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credit ECMWF). Both allow commercial use. Method, sampling and known differences: [forecast data](forecast-data.md). The GEFS wind ensemble is read directly from NOAA's GEFS open data on AWS (public domain), and the app's surface currents come from NOAA WCOFS (public domain) through the regional pipeline. SkipperCast no longer calls the Open-Meteo API at runtime; the Open-Meteo notes below are kept for older archived responses and research comparisons.
 
 [Open-Meteo](https://open-meteo.com/en/licence) is the access service for several forecast models; it is not another independent weather model. Comparisons retain **ECMWF IFS versus NOAA GFS** for wind and **ECMWF WAM versus NOAA GFS Wave** for seas. Model initialization, publication/availability, grid coordinates, units, and populated coverage are needed to interpret a response. Retrieval time is not forecast issue time.
 
@@ -92,7 +92,7 @@ Official [NWS marine forecasts](https://forecast.weather.gov/MapClick.php?TextTy
 
 The [species research](species-research.md) records the ecology sources, interpretation limits, dated seasonal review, and new soft-bottom method. The connected sediment regions derive only from the already-reviewed USGS releases; those source rights and credits remain unchanged. No commercial chart tiles, proprietary weather tiles, private catches, or charter trajectories were added.
 
-[NOAA's ENC display service](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html) supplies chart images for the visible map at runtime, with attribution. No offline chart cache is bundled. Open-Meteo supplies explicit ECMWF/NOAA wind and wave models plus Météo-France/Copernicus surface temperature and current forecasts, under the access and attribution terms above. The public app remains noncommercial. NOAA tide predictions and the separately dated water-level observation come from station 9412110.
+[NOAA's ENC display service](https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html) supplies chart images for the visible map at runtime, with attribution. No offline chart cache is bundled. SkipperCast's own NOAA/ECMWF forecast service supplies the wind and wave models, and NOAA WCOFS the surface currents (nearest three-hour snapshot, first 72 hours). The app has no hourly sea-surface temperature forecast of its own yet; the habitat layers show NOAA WCOFS temperature forecasts and dated satellite analyses. NOAA tide predictions and the separately dated water-level observation come from station 9412110.
 
 ## Daily species evidence
 

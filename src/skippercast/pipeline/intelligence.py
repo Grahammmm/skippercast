@@ -75,6 +75,32 @@ def ensemble(client,region):
             'limitations':'Fractions of actual ensemble members, not calibrated probabilities. SkipperCast linearly interpolates native 3-hour member output to hourly. Missing members and inconsistent gusts are excluded; no independent-hour multiplication.'}
 
 
+def forecast_currents(source,points):
+    """WCOFS surface-current samples at each forecast point, for the app's hourly view.
+
+    Replaces the browser's direct Open-Meteo (Météo-France) request. Only the nearest
+    ocean cell within 1.5 grid lengths of the point is kept for each actual three-hour
+    frame; a missing cell stays missing. Stale or failed WCOFS publishes no samples."""
+    data=(source or {}).get('data') or {}
+    out={'source':'wcofs','name':(source or {}).get('name'),'status':(source or {}).get('status','missing'),'issued_at':data.get('issued_at'),
+         'valid_from':data.get('valid_from'),'valid_through':data.get('valid_through'),'resolution_km':data.get('resolution_km'),
+         'source_url':data.get('source_url'),'units':{'speed':'kn','direction':'° toward'},'points':[]}
+    if out['status']!='ok' or not data.get('frames') or not data.get('resolution_km'):return out
+    limit=data['resolution_km']*1.5
+    for point in points:
+        samples=[]
+        for frame in data['frames']:
+            best=None
+            for lat,lon,speed,toward in frame.get('cells',[]):
+                phi,p=math.radians(lat),math.radians(point['latitude'])
+                a=math.sin((phi-p)/2)**2+math.cos(phi)*math.cos(p)*math.sin(math.radians(lon-point['longitude'])/2)**2
+                km=6371*2*math.asin(math.sqrt(min(1,a)))
+                if km<=limit and (best is None or km<best[5]):best=[frame['time'],lat,lon,speed,toward,round(km,2)]
+            if best:samples.append(best)
+        out['points'].append({'point_id':point['id'],'requested':[point['latitude'],point['longitude']],'samples':samples})
+    return out
+
+
 def model_source(model,region,now,previous):
     points=[(p['name'],p['latitude'],p['longitude']) for p in region['forecast_points']]
     points += [(p['name'],p['latitude'],p['longitude']) for p in region['intelligence']['verification_stations']]
@@ -160,7 +186,8 @@ def run(region_id,output,previous_root=None,now=None):
                                        if k.startswith(('model-','verify-')) and (s.get('verification_issue') or s['status']!='ok' or s.get('verification_deferral'))}
     verification['collection_deferrals']={k:s['verification_deferral'] for k,s in sources.items() if s.get('verification_deferral')}
     forecast={'region_id':region_id,'requested_points':[[p['id'],p['latitude'],p['longitude']] for p in region['forecast_points']],'models':{m:{'data':(sources['model-'+m].get('data') or {}).get('points',[])[:npoints],
-        'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},'retrieved':int(now.timestamp()*1000)}
+        'meta':(sources['model-'+m].get('data') or {}).get('meta'),'error':sources['model-'+m].get('issue') if sources['model-'+m]['status']!='ok' else None} for m in models},
+        'currents':forecast_currents(sources.get('wcofs'),region['forecast_points']),'retrieved':int(now.timestamp()*1000)}
     coverage=audit_forecast_coverage(forecast,region,now)
     forecast['coverage']=coverage
     health=collection_health(sources)

@@ -118,3 +118,27 @@ class GefsEnsembleTests(unittest.TestCase):
     def test_the_ensemble_source_no_longer_names_open_meteo(self):
         source=(ROOT/'src/skippercast/pipeline/intelligence.py').read_text()
         self.assertNotIn('open-meteo',source)
+
+
+class ForecastCurrentsTests(unittest.TestCase):
+    """The app's hourly surface current comes from the published WCOFS source, not Open-Meteo."""
+    def test_nearest_cell_per_frame_within_one_and_a_half_grid_lengths(self):
+        from skippercast.pipeline.intelligence import forecast_currents
+        points=[{'id':'near','latitude':35.0,'longitude':-121.0},{'id':'far','latitude':36.0,'longitude':-121.0}]
+        source={'name':'NOAA WCOFS surface currents','status':'ok','data':{'issued_at':'2026-09-28T03:00:00Z','valid_from':100,'valid_through':10900,'resolution_km':4,
+                'source_url':'https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html',
+                'frames':[{'time':100,'cells':[[35.03,-121.0,0.0,90.0],[35.01,-121.0,0.4,180.0]]},{'time':10900,'cells':[[35.2,-121.0,1.0,10.0]]}]}}
+        out=forecast_currents(source,points)
+        near,far=out['points']
+        self.assertEqual(near['requested'],[35.0,-121.0])
+        self.assertEqual(near['samples'],[[100,35.01,-121.0,0.4,180.0,1.11]])  # the second frame's cell is 22 km away: omitted, not filled
+        self.assertEqual(far['samples'],[])
+        self.assertEqual((out['status'],out['valid_through'],out['resolution_km']),('ok',10900,4))
+        self.assertNotIn('open-meteo',json.dumps(out))
+
+    def test_stale_or_failed_wcofs_publishes_no_samples(self):
+        from skippercast.pipeline.intelligence import forecast_currents
+        for status in ('retained','stale','failed'):
+            out=forecast_currents({'status':status,'data':{'frames':[{'time':1,'cells':[[35,-121,1,1]]}],'resolution_km':4}},[{'id':'a','latitude':35,'longitude':-121}])
+            self.assertEqual((out['status'],out['points']),(status,[]))
+        self.assertEqual(forecast_currents(None,[])['status'],'missing')

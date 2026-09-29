@@ -1,5 +1,5 @@
 import {assetURL} from "./region.js";
-import { POINTS, readConditions, distanceNm, directionTo } from "./marine-data.js";
+import { POINTS, readConditions, distanceNm, directionTo, CURRENT_MAX_AGE_HOURS } from "./marine-data.js";
 import { esc, num, full, from } from "./marine-charts.js";
 export function offsetPosition(p, direction, metres) {
   const a=direction*Math.PI/180;
@@ -13,7 +13,7 @@ export function makeDriftGuide(target,speed,toward,minutes=6) {
 export function initDriftGuides(map,{targets,selected,protectedAreas,selectTarget}) {
   const layer=L.layerGroup().addTo(map);
   const host=document.getElementById("drift-options");
-  host.innerHTML=`<strong>Drift setup guides</strong><label>Direction source<select id="drift-mode"><option value="model">Modeled surface current</option><option value="measured">My measured boat drift</option><option value="off">Structure lines only</option></select></label><div class="drift-inputs" id="measured-drift" hidden><label>Speed (kt)<input id="drift-speed" type="number" min="0.1" max="5" step="0.1" inputmode="decimal" placeholder="0.5"></label><label>Course toward (° true)<input id="drift-course" type="number" min="0" max="359" step="1" inputmode="numeric" placeholder="180"></label></div><p id="drift-status" class="small">Zoom in for blue current-guided setup lines.</p><p class="small">Blue: 6-minute surface-current projection through a target, with a trial start 3 minutes upstream. Wind arrow shown separately. Surface flow includes modeled wave/tidal effects; local windage, bottom current and depth along the line are unverified. Make a test drift before dropping gear. Brown: fixed structure alignment.</p>`;
+  host.innerHTML=`<strong>Drift setup guides</strong><label>Direction source<select id="drift-mode"><option value="model">Modeled surface current</option><option value="measured">My measured boat drift</option><option value="off">Structure lines only</option></select></label><div class="drift-inputs" id="measured-drift" hidden><label>Speed (kt)<input id="drift-speed" type="number" min="0.1" max="5" step="0.1" inputmode="decimal" placeholder="0.5"></label><label>Course toward (° true)<input id="drift-course" type="number" min="0" max="359" step="1" inputmode="numeric" placeholder="180"></label></div><p id="drift-status" class="small">Zoom in for blue current-guided setup lines.</p><p class="small">Blue: 6-minute surface-current projection through a target, with a trial start 3 minutes upstream. Wind arrow shown separately. Surface flow is the NOAA WCOFS regional model (about 4 km, nearest three-hour snapshot, first 72 hours only); local windage, bottom current and depth along the line are unverified. Make a test drift before dropping gear. Brown: fixed structure alignment.</p>`;
   const key=L.control({position:"bottomright"});
   key.onAdd=()=>{const el=L.DomUtil.create("div","drift-map-key");el.textContent="Pink: MPAs · brown: structure";L.DomEvent.disableClickPropagation(el);return el;};
   if(!assetURL("survey_habitat"))key.addTo(map);
@@ -29,8 +29,8 @@ export function initDriftGuides(map,{targets,selected,protectedAreas,selectTarge
     const t=context?.time;
     if(!context?.bundle) {status.textContent="Loading current forecast…";return;}
     if(Date.now()-context.bundle.retrieved>3*3600000) {status.textContent="Current forecast stale; setup guides withheld.";return;}
-    const meta=context.bundle.models.meteofrance_currents?.meta;
-    if(mode()==="model" && (!Number.isFinite(meta?.last_run_initialisation_time)||Date.now()/1000-meta.last_run_initialisation_time>48*3600)) {status.textContent="Current-model run unavailable or stale; guides withheld.";return;}
+    const currents=context.bundle.currents,issued=Date.parse(currents?.issued_at);
+    if(mode()==="model" && (currents?.status!=="ok"||!Number.isFinite(issued)||Date.now()-issued>CURRENT_MAX_AGE_HOURS*3600000)) {status.textContent="NOAA WCOFS current run unavailable or stale; guides withheld.";return;}
     if(mode()==="measured" && (!measuredAt || Date.now()-measuredAt>30*60000 || Math.abs(t-Date.now()/1000)>3600)) {status.textContent="Enter a fresh test-drift speed/course at the current hour. Measurements expire after 30 minutes.";return;}
     const focus=selected();
     if(mode()==="measured" && (!focus || focus.id!==measuredTargetId)) {status.textContent="Select the reef where you made the test drift, then enter its speed/course. A measurement applies only to that reef.";return;}

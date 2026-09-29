@@ -13,6 +13,7 @@ import {
   POINTS,
   MODELS,
   modelURL,
+  currentAt,
 } from "../dist/marine-data.js";
 import { matchesSpecies, PROFILES } from "../dist/species.js";
 import { lineChart, waveSketch } from "../dist/marine-charts.js";
@@ -139,24 +140,31 @@ test("tides accept negative levels, reject blank values, and do not bridge missi
     null,
   );
 });
-test("current speed is converted from the actual returned unit, including zero", () => {
-  const d = {
-    utc_offset_seconds: 0,
-    hourly_units: { time: "unixtime", ocean_current_velocity: "km/h" },
-    hourly: { time: [100], ocean_current_velocity: [1.852] },
+test("surface current comes from published NOAA WCOFS snapshots, keeping zero and never interpolating", () => {
+  const p = POINTS[0], issued = Date.parse("2026-09-28T03:00:00Z"), t0 = issued / 1000;
+  const currents = {
+    source: "wcofs", status: "ok", issued_at: "2026-09-28T03:00:00Z", valid_from: t0, valid_through: t0 + 72 * 3600,
+    points: [{ point_id: p.id, requested: [p.latitude, p.longitude], samples: [[t0, p.latitude, p.longitude, 0, 90, 0], [t0 + 10800, p.latitude, p.longitude, 0.6, 180, 1.2]] }],
   };
-  const bundle = { models: { meteofrance_currents: { data: [d] } } };
-  assert.equal(readConditions(bundle, 0, 100).current, 1);
-  d.hourly_units.ocean_current_velocity = "kn";
-  assert.equal(readConditions(bundle, 0, 100).current, null);
+  const bundle = { models: {}, currents };
+  const now = issued + 3600000;
+  assert.deepEqual(currentAt(currents, 0, t0, now), { time: t0, latitude: p.latitude, longitude: p.longitude, speed: 0, toward: 90, distanceKm: 0 });
+  assert.equal(currentAt(currents, 0, t0 + 7200, now).speed, 0.6); // nearest snapshot, not a blend
+  assert.equal(currentAt(currents, 0, t0 + 10800 + 5401, now), null); // beyond 90 minutes of any snapshot
+  assert.equal(currentAt(currents, 0, t0 + 73 * 3600, now), null); // outside the published horizon
+  assert.equal(currentAt(currents, 0, t0, issued + 37 * 3600000), null); // stale run
+  assert.equal(currentAt({ ...currents, status: "retained" }, 0, t0, now), null);
+  assert.equal(currentAt({ ...currents, points: [{ ...currents.points[0], requested: [p.latitude + 0.1, p.longitude] }] }, 0, t0, now), null);
+  assert.equal(readConditions(bundle, 0, t0).sst, null);
+  assert.equal(readConditions({ models: {} }, 0, t0).current, null);
 });
 test("every model request has its own grid, UTC epochs, explicit units and eight days", () => {
   for (const m of MODELS) {
     const url = new URL(modelURL(m), "https://skippercast.com");
     assert.equal(url.searchParams.get("models"), m.id);
-    // Wind and waves come from SkipperCast's own NOAA/ECMWF service.
-    if (m.kind === "ocean") assert.equal(url.hostname, "marine-api.open-meteo.com");
-    else assert.equal(url.pathname, m.kind === "wind" ? "/api/om/v1/forecast" : "/api/om/v1/marine");
+    // Every model comes from SkipperCast's own NOAA/ECMWF service; no third-party forecast API.
+    assert.equal(url.hostname, "skippercast.com");
+    assert.equal(url.pathname, m.kind === "wind" ? "/api/om/v1/forecast" : "/api/om/v1/marine");
     assert.equal(url.searchParams.get("forecast_days"), "8");
     assert.equal(url.searchParams.get("timeformat"), "unixtime");
     assert.equal(url.searchParams.get("timezone"), "UTC");
