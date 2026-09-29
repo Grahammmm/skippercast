@@ -71,3 +71,12 @@ body[data-location-coverage]:not([data-location-coverage="covered"]):not([data-l
   .reg-body { max-height: 35dvh; }
   .regulations-card[open] { z-index: 550; }
 }
+/* Rules at a glance (P4-07): the first row of the card; detail stays below. */
+.reg-summary-row { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--line, #d6e2e6); border-radius: var(--radius-sm, 8px); background: var(--surface, #f4f8f9); }
+.reg-summary-row .reg-badge { display: inline-block; font-size: .8125rem; font-weight: 700; }
+.reg-summary-row dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px 12px; margin: 8px 0 6px; }
+.reg-summary-row dt { font-size: .75rem; font-weight: 700; color: var(--ink-2, #3f5a66); }
+.reg-summary-row dd { margin: 0; font-size: .875rem; font-variant-numeric: tabular-nums; color: var(--ink, #0b2530); }
+.reg-summary-row p { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 0; font-size: .75rem; color: var(--ink-2, #3f5a66); }
+.reg-summary-row .reg-unverified { color: var(--caution, #a46200); font-weight: 700; }
+.reg-summary-row a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; font-size: .8125rem; }
