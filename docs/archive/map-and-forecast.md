@@ -28,7 +28,7 @@ Date buttons show X/10 conditions, confidence and provisional status. Future dat
 
 The selected hour has its own X/10 score, plus wind/gust/direction, combined sea height/period/direction, NOAA primary and secondary swell, wind chop, Port San Luis tide, modeled surface current, air/sea temperature, visibility/rain and the independent model's wind/sea comparison. Detailed wave/tide charts and sources remain below the compact instruments. Phone layouts use two instrument columns and a horizontally scrolling date strip.
 
-The existing [score formula](species-research.md#morning-ratings) remains a disclosed comfort/gear-control heuristic. It does not estimate fish presence or bite probability. Confidence is separate. Sustained winds and combined seas use both models' rougher values; wave components come from GFS because this ECMWF endpoint does not provide those parts.
+The existing [score formula](../species-research.md#morning-ratings) remains a disclosed comfort/gear-control heuristic. It does not estimate fish presence or bite probability. Confidence is separate. Sustained winds and combined seas use both models' rougher values; wave components come from GFS because this ECMWF endpoint does not provide those parts.
 
 A gust below its own model's sustained wind is flagged and omitted. If the other model supplies a valid gust, the numerical estimate can continue using that gust, both sustained winds, Low confidence and a 7.9 maximum. The invalid value remains visible in its source display. If both gusts are inconsistent, critical fields are missing, source runs stale, alerts unavailable, or weather hazards apply, a score is withheld with a reason. This fixes unnecessary blank days without filling missing observations or pretending sources agree. The older qualitative comfort screen remains conservative and can still say Uncertain.
 
@@ -36,7 +36,7 @@ A gust below its own model's sustained wind is flagged and omitted. If the other
 
 Broad Morro Bay catch-report outlines are removed from the map. Pecho Rock and Diablo are still approximate named vicinities supported by 31 dated reports; exact charter stops remain unknown. The separate optional [commercial AIS layer](commercial-ais-research.md) contains three original statistical cells from sampled 2024 data, with unknown depths and no target-species attribution.
 
-The link-preview image now uses a period-informed Parker 2320 Sport Cabin illustration and stronger contour artwork. See the [image sources and generation notes](social-preview-image-sources.md).
+The link-preview image now uses a period-informed Parker 2320 Sport Cabin illustration and stronger contour artwork. See the [image sources and generation notes](../social-preview-image-sources.md).
 
 ## Validation
 

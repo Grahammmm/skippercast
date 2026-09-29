@@ -1,8 +1,8 @@
 # How SkipperCast will work
 
-> **Superseded by [architecture.md](architecture.md).** This is an early design snapshot, kept for history until it moves to the research archive (guide P5-01). It is out of date: the Worker API, private trip records in D1, alert delivery, feeds in R2 and the scheduled jobs are implemented, and the wind and wave forecasts now come from SkipperCast's own NOAA and ECMWF tiles ([forecast data](forecast-data.md)). Do not use it to understand or change the current system.
+> **Superseded by [architecture.md](../architecture.md).** This is an early design snapshot, kept for history until it moves to the research archive (guide P5-01). It is out of date: the Worker API, private trip records in D1, alert delivery, feeds in R2 and the scheduled jobs are implemented, and the wind and wave forecasts now come from SkipperCast's own NOAA and ECMWF tiles ([forecast data](../forecast-data.md)). Do not use it to understand or change the current system.
 
-This is an earlier design snapshot. For the implemented regional pipeline, scheduled feeds, shared app and remaining review gates, use the [current region pipeline](region-pipeline.md).
+This is an earlier design snapshot. For the implemented regional pipeline, scheduled feeds, shared app and remaining review gates, use the [current region pipeline](../region-pipeline.md).
 
 SkipperCast brings together **where to investigate, when a trip is workable, and the evidence behind each recommendation**. The first web map, target notes, GPX downloads, forecast comparisons, Python tools, and dated atlas are built. The complete trip planner, shared evidence store, and public-app delivery integration remain planned.
 
@@ -103,7 +103,7 @@ flowchart TB
 
 The web app uses static HTML, CSS, JavaScript, Leaflet, and OpenStreetMap, served by SkipperCast's Cloudflare Worker. It requests forecasts directly from providers. The Python core uses the standard library and runs independently. An application API, database, nautical chart provider, and durable public-app jobs remain unimplemented.
 
-The existing personal forecast monitor and private Telegram integration operate separately from the public app. They can inform a later integration, but cloning this repository does not start a schedule or connect a messaging account. See [the web app guide](web-app.md) for current hosting and local-use instructions.
+The existing personal forecast monitor and private Telegram integration operate separately from the public app. They can inform a later integration, but cloning this repository does not start a schedule or connect a messaging account. See [the web app guide](../web-app.md) for current hosting and local-use instructions.
 
 ## Recommendation and notification flow
 
@@ -118,6 +118,6 @@ flowchart LR
     next --> final["Evening before the trip:<br/>final for every previously alerted date;<br/>combined initial/final if first qualifying now"]
 ```
 
-Comfort and fishing conditions are separate scores; overall is the lower score. The gate depends on a reviewed assessment, not simply on wind/wave numbers. Trip requirements include four actual fishing hours, legal grounds, the depth limit, and the complete departure-to-return window. Previously alerted dates require a final even if unchanged or retracted. A missed final assessment is reported honestly. Delivery state changes only after a confirmed receipt. See the [fixed rubric](assessment-rubric.md) and [forecast workflow](forecast-workflow.md).
+Comfort and fishing conditions are separate scores; overall is the lower score. The gate depends on a reviewed assessment, not simply on wind/wave numbers. Trip requirements include four actual fishing hours, legal grounds, the depth limit, and the complete departure-to-return window. Previously alerted dates require a final even if unchanged or retracted. A missed final assessment is reported honestly. Delivery state changes only after a confirmed receipt. See the [fixed rubric](../assessment-rubric.md) and [forecast workflow](../forecast-workflow.md).
 
-For exact source rights and the public atlas's smaller geographic coverage, see [data sources](data-sources.md). For the current modules and their boundaries, see [architecture](architecture.md).
+For exact source rights and the public atlas's smaller geographic coverage, see [data sources](../data-sources.md). For the current modules and their boundaries, see [architecture](../architecture.md).

@@ -1,6 +1,6 @@
 # San Pedro Shelf original habitat review
 
-The Los Angeles–Orange atlas sector has a newly inspected source: [USGS Data Series 552](https://pubs.usgs.gov/ds/552/). Its original 4 m inner-shelf and 16 m outer-shelf categorical rasters distinguish historical rugose rock, mixed bottom and sediments. The companion 2004 camera file reports observed bottom material. The [catalog candidate](../catalog/candidates/usgs-ds552-san-pedro.json) records original URLs, SHA-256 digests, coverage and limits.
+The Los Angeles–Orange atlas sector has a newly inspected source: [USGS Data Series 552](https://pubs.usgs.gov/ds/552/). Its original 4 m inner-shelf and 16 m outer-shelf categorical rasters distinguish historical rugose rock, mixed bottom and sediments. The companion 2004 camera file reports observed bottom material. The [catalog candidate](../../catalog/candidates/usgs-ds552-san-pedro.json) records original URLs, SHA-256 digests, coverage and limits.
 
 On September 25, 2026 the pinned source audit counted **197,401 inner-shelf 4 m rugose-rock cells**. There were **151 connected rugose-rock components of at least 2,500 m²**; **24 of these** contained at least one camera record explicitly observing rock, boulder or cobble. Camera observations sampled on the rock class were hard-bottom positive in 102 of 148 records. These are correlated historical samples, not 102 independent reefs or catch reports. The outer 16 m raster is much coarser and is retained as background source evidence.
 

@@ -42,7 +42,7 @@ The export excludes live/current-derived drift projections and does not create a
 
 Use the selected region's established export eligibility check. Each selected waypoint and the complete linked fishing geometry included in the file must pass that region's protected-area screen; checking only a centroid, endpoints or the visible part of a shape is insufficient. Missing regional data, broken geometry links or an unavailable required screen must produce a visible reason rather than a partial-looking success.
 
-An optional `AVOID` track is deliberately a protected-area reference, not a fishing geometry that has passed exclusion screening. Keep these two roles distinct in counts, names and notes. The presence of an exported boundary does not certify its legal currency or completeness. Display the actual source/retrieval dates and freshness state, and preserve the region's existing conservative exclusion rules. See [map protection](map-and-forecast.md) and [regional data contracts](data-contracts.md).
+An optional `AVOID` track is deliberately a protected-area reference, not a fishing geometry that has passed exclusion screening. Keep these two roles distinct in counts, names and notes. The presence of an exported boundary does not certify its legal currency or completeness. Display the actual source/retrieval dates and freshness state, and preserve the region's existing conservative exclusion rules. See [map protection](archive/map-and-forecast.md) and [regional data contracts](data-contracts.md).
 
 ## Import on a device
 

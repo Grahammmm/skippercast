@@ -2,7 +2,7 @@
 
 SkipperCast is one shared application with regional configuration and evidence packages. Adding a coast does **not** require a copy of the UI or a new scheduler. A published map feature is a reviewed claim with a geographic footprint, source, date, uncertainty, rights and a permitted use. Missing coverage remains visible.
 
-The [statewide buildout ledger](statewide-buildout.md) partitions California into 19 discovery sectors and records the first NOAA survey-catalog scan. It is a work queue for packages, not a statewide fishing-ground map.
+The [statewide buildout ledger](archive/statewide-buildout.md) partitions California into 19 discovery sectors and records the first NOAA survey-catalog scan. It is a work queue for packages, not a statewide fishing-ground map.
 
 ```mermaid
 flowchart LR
@@ -55,7 +55,7 @@ Before step 5, rehearse a draft with `PYTHONPATH=src python scripts/refresh_regi
 
 The installed `$skippercast-add-region` skill is the operational checklist. The [data contracts](data-contracts.md) define the reusable types; [regional setup](regions.md) has commands; [quality gates](data-quality-rollout.md) explain where a partial package must stop. A source registered in the catalog is not proof that it covers a new coast, and a forecast or habitat score is not a measured catch probability.
 
-For statewide seabed expansion, the NOAA footprint collector identifies intersecting survey IDs, while the separate original-product audit identifies linked BAG and descriptive-report files. Neither qualifies bottom. The reusable USGS classified-raster adapter accepts a hash-pinned local map block and publishes generalized, non-exportable context geometry. A regional target still needs native depth, substrate, rights, current closures and reviewed species rules for its full footprint; see [California buildout ledger](statewide-buildout.md).
+For statewide seabed expansion, the NOAA footprint collector identifies intersecting survey IDs, while the separate original-product audit identifies linked BAG and descriptive-report files. Neither qualifies bottom. The reusable USGS classified-raster adapter accepts a hash-pinned local map block and publishes generalized, non-exportable context geometry. A regional target still needs native depth, substrate, rights, current closures and reviewed species rules for its full footprint; see [California buildout ledger](archive/statewide-buildout.md).
 
 Where a region has an original-cell habitat layer, a matching per-outline native-depth receipt and a complete bounded 18-layer ENC screen, `research/scripts/triage_original_habitat_outlines.py` can build a **site-review queue**. Add a region-specific entry to `research/catalog/original-habitat-triage-profiles.json` with expected survey and receipt identity, counts, danger buffer and physical thresholds; refresh the ENC receipt before each run. This narrows human chart, route and legal review without making a catch prediction or publishing a fishing mark. The Cape Mendocino profile is the first binding; another region must provide its own three matching inputs and review thresholds.
 
