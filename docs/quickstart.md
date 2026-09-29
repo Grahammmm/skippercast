@@ -41,6 +41,10 @@ skippercast demo
 
 On Windows, activate with `.venv\Scripts\Activate.ps1`. Installing build tools may use the network. Repository data and example profiles stay in this checkout; they are not bundled inside a Python wheel.
 
+Optional extras install the pinned scientific and publishing tools: `ocean` (NetCDF/GRIB decoders), `sst`, `survey` (original-survey and seafloor geometry; Python 3.12+), `publish` (R2), `test` (JSON Schema), `seafloor` (survey + publish + test) and `dev` (all of them), for example `python -m pip install -e ".[survey,test]"`. They mirror the `requirements-*.txt` files, which the scheduled jobs still use; a test fails if the two drift.
+
+Code finds `regions/`, `catalog/` and `dist/` through `skippercast.paths.repo_root()`: the source checkout by default, or the directory named by `SKIPPERCAST_ROOT`.
+
 ## Collect live evidence
 
 From the repository root:

@@ -15,8 +15,10 @@ import re
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
+from ..paths import repo_root
+
 ID = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
-REPO = Path(__file__).resolve().parents[3]
+REPO = repo_root()
 PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"}
 
 

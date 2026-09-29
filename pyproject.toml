@@ -12,6 +12,37 @@ license = { file = "LICENSE" }
 authors = [{ name = "SkipperCast contributors" }]
 dependencies = []
 
+# Optional extras mirror the pinned requirements-*.txt files exactly (tests/test_packaging.py
+# fails when they drift). The core app and scheduled live feed need none of them.
+[project.optional-dependencies]
+# Scheduled ocean collectors: NetCDF/GRIB decoders (requirements-ocean.txt).
+ocean = ["numpy==2.5.3", "netCDF4==1.7.4", "scipy==1.17.1", "eccodes==2.46.0"]
+# Daily NOAA SST subset parser (requirements-sst.txt).
+sst = ["numpy==2.5.3", "scipy==1.17.1"]
+# Original-survey and seafloor geometry (requirements-survey.txt); Python 3.12+ in CI.
+survey = [
+    "numpy==2.5.3",
+    "scipy==1.17.1",
+    "rasterio==1.5.1",
+    "shapely==2.1.2",
+    "pyproj==3.8.0",
+    "h5py==3.15.1",
+    "affine==3.0.1",
+    "pylerc==4.2.0",
+    "pyshp==3.1.6",
+    "pypdf==6.10.0",
+    "laspy[lazrs]==2.6.1",
+    "lazrs==0.7.0",
+]
+# Publishing feeds to Cloudflare R2 (requirements-publish.txt).
+publish = ["boto3==1.43.103"]
+# JSON Schema validation for seafloor manifests (requirements-test.txt).
+test = ["jsonschema==4.26.0"]
+# Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
+seafloor = ["skippercast[survey,publish,test]"]
+# Everything a contributor needs to run the full suite and every job locally.
+dev = ["skippercast[ocean,survey,publish,test]"]
+
 [project.scripts]
 skippercast = "skippercast.__main__:main"
 
