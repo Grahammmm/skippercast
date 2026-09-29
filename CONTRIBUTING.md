@@ -2,6 +2,14 @@
 
 SkipperCast is source-available for personal use under [LICENSE](LICENSE). Contributions must be original work you can offer under those terms; preserve all applicable third-party notices. This is not an OSI open-source project.
 
+## Developer Certificate of Origin
+
+Every commit from a contributor other than the repository owner and the project's own agents must carry a `Signed-off-by:` line certifying the [Developer Certificate of Origin 1.1](https://developercertificate.org/): that you wrote the change or otherwise have the right to submit it under this project's license, and that the contribution and your sign-off are recorded permanently. Add it with `git commit -s`; the name and email must match the commit author. To fix earlier commits on your branch, run `git rebase --signoff origin/main` and force-push your branch.
+
+The [DCO workflow](.github/workflows/dco.yml) (`scripts/check_dco.py`) enforces this on every pull request. On branches of this repository it exempts the owner (`Grahammmm`, including Codex commits authored as the owner) and Claude (`noreply@anthropic.com`). Pull requests from forks get no exemptions: every commit must be signed off, because commit authorship is only an email address that anyone can set.
+
+Licensing and ownership may change before a paid launch; see [ADR 0004](docs/engineering/adr/0004-licensing.md). A sign-off does not transfer copyright; if the project moves to a proprietary license, outside contributors may also be asked to sign a contributor agreement.
+
 ## Get oriented
 
 AI agents (Codex, Claude) and people follow the branch, pull-request and rebuild rules in [AGENTS.md](AGENTS.md).

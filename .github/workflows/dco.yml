@@ -1,0 +1,44 @@
+name: DCO
+
+# Developer Certificate of Origin: outside contributors must sign off each
+# commit (`git commit -s`). The owner (Grahammmm, which includes Codex commits
+# authored as the owner) and Claude <noreply@anthropic.com> are exempt on
+# branches of this repository; pull requests from forks get no exemptions.
+# See CONTRIBUTING.md and docs/engineering/adr/0004-licensing.md.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sign-off:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the base branch's checker
+        # A pull request must not be able to edit its own gate. The first PR that
+        # adds the checker has no base copy, so it falls back to its own.
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git fetch --quiet --depth=1 origin "$BASE" && git cat-file -e "$BASE:scripts/check_dco.py" 2>/dev/null; then
+            git show "$BASE:scripts/check_dco.py" > "$RUNNER_TEMP/check_dco.py"
+          else
+            echo "::notice::No checker on the base branch yet; using this pull request's copy."
+            cp scripts/check_dco.py "$RUNNER_TEMP/check_dco.py"
+          fi
+      - name: Check Signed-off-by on pull-request commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/pulls/${PR}/commits?per_page=100" > "$RUNNER_TEMP/commits.json"
+          if [ "$FORK" = "true" ]; then
+            python3 "$RUNNER_TEMP/check_dco.py" --fork "$RUNNER_TEMP/commits.json"
+          else
+            python3 "$RUNNER_TEMP/check_dco.py" "$RUNNER_TEMP/commits.json"
+          fi
