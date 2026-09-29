@@ -97,7 +97,6 @@ R2 lifecycle rules are bucket configuration, which an Object Read & Write token 
 
 All three jobs stay in `live-conditions.yml` because `server/job-auth.js` accepts the OIDC token only when its `workflow_ref` is `deployments/production.json`'s `scheduler.workflow`, which is this file. Moving trip checks to another workflow file, or to a `workflow_run` trigger (a different `event_name`), would need a reviewed change to that policy. The `refresh` job keeps `contents: write` for as long as the git branches are published.
 
-## Before skippercast.com moves here
 ## Custom domain
 
 The deploy attaches every host in the `CUSTOM_DOMAINS` repository variable as a [Worker custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/): `scripts/wrangler_config.mjs` turns `skippercast.com,www.skippercast.com` into `"routes": [{"pattern": "skippercast.com", "custom_domain": true}, {"pattern": "www.skippercast.com", "custom_domain": true}]` and keeps `workers_dev` on. Without the variable nothing changes (workers.dev only). Cloudflare then creates the DNS records and certificates itself. The Worker answers any `www.` host with a 301 to the apex, keeping path and query, so there is one canonical origin for cookies, passkeys and caches (hashed static files under www may still be served directly; they are identical and harmless). `deployments/production.json` allows `https://skippercast.com` and `https://www.skippercast.com` as Origins; the `EXTRA_ORIGINS` secret keeps the workers.dev origin allowed.
