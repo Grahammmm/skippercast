@@ -9,18 +9,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import math
-from pathlib import Path
 import re
 from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
+from ..util.hashing import sha256_file as sha256  # noqa: F401  (re-exported to scripts)
+
 
 VERSION = "native-bag-habitat-v1"
-
-
-def sha256(path: Path) -> str:
-    with path.open("rb") as stream:
-        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 def source_url_allowed(url: str) -> bool:

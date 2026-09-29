@@ -5,7 +5,6 @@ The web app receives public artifacts only; local paths and credentials stay out
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import ipaddress
 import json
@@ -16,6 +15,7 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from ..paths import repo_root
+from ..util.time import stamp  # noqa: F401  (re-exported; callers import it from here)
 
 ID = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 REPO = repo_root()
@@ -36,10 +36,6 @@ def read_json(path):
         raise ValueError(f"Non-finite JSON number: {value}")
     return json.loads(Path(path).read_text(), object_pairs_hook=_unique,
                       parse_constant=invalid)
-
-
-def stamp(now=None):
-    return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def ecology_profile_id(region):

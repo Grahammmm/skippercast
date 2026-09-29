@@ -2,18 +2,11 @@
 
 Original-survey raster caching and normalization arrive in M2.
 """
-import hashlib
 from urllib.request import urlopen
 
+from ..util.hashing import sha256_file as sha256  # noqa: F401  (re-exported to seafloor modules)
+
 NOAA_PREFIX = 'https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/'
-
-
-def sha256(path):
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def verified_file(url, expected, destination, fetch, *, max_bytes=128 * 1024 * 1024,
