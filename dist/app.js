@@ -1,5 +1,5 @@
-import {speciesFit} from './species-fit-v2.js';
-import {initCentralCoverage} from './central-coverage-v1.js';
+import {speciesFit} from './species-fit.js';
+import {initCentralCoverage} from './central-coverage.js';
 import {initSearchPlans} from './search-plans.js';
 import {initTripAlerts} from './trip-alerts.js';
 import {initExport} from './export-ui.js';
