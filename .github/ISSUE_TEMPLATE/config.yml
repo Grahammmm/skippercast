@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Grahammmm/skippercast/security/policy
+    about: Please report security problems privately, not in a public issue.
+  - name: Current fishing regulations (CDFW)
+    url: https://wildlife.ca.gov/Fishing/Ocean/Regulations
+    about: SkipperCast is not an official source. Check CDFW for current rules.

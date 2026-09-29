@@ -1,0 +1,51 @@
+name: Data issue
+description: A forecast, habitat, regulation, closure or source looks wrong, stale or mis-attributed.
+labels: [data]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        SkipperCast is a planning aid, not a navigation aid or an official source. For current rules always check CDFW and NOAA.
+        If a regulation or closure shown in the app is wrong, please report it here and include the official source.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of data
+      options:
+        - Regulation, season or closure
+        - Protected area boundary
+        - Forecast (wind, waves, currents)
+        - Live observation (buoy, tide, weather)
+        - Habitat, depth or spot
+        - Source attribution or licence
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Region and location
+      description: Region name and the spot, forecast point or coordinates.
+    validations:
+      required: true
+  - type: textarea
+    id: shown
+    attributes:
+      label: What SkipperCast shows
+      description: Include the date and time you saw it and the freshness label if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the source says
+      description: Link the official or original source and quote the relevant part.
+    validations:
+      required: true
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Rights
+      options:
+        - label: Any data or text I share here is mine to share or is public, and I have linked its source.
+          required: true

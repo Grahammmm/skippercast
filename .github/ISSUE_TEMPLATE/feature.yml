@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do on the water or when planning, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would like SkipperCast to do. Mock-ups welcome.
+  - type: textarea
+    id: data
+    attributes:
+      label: Data it needs
+      description: Any data source it depends on, with its licence and terms if you know them.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you use today

@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in the app, feeds or tools does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not include personal information, account identifiers or private trip details.
+        For a security problem, do not open an issue; see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: A minimal sequence, ideally with a synthetic example.
+      placeholder: |
+        1. Open the map for Morro Bay
+        2. Select …
+        3. See …
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Page or URL, region, and screen (Map, Spots, Forecast, Guide, Export), or the script/workflow name.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 15, Safari 19 · or · macOS, Chrome 140
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, console output or logs
+      description: Remove any personal information first.

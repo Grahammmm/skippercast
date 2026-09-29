@@ -1,0 +1,10 @@
+# The owner reviews changes to licensing, legal documents, deployment,
+# the server and CI. See docs/engineering/adr/0004-licensing.md.
+/LICENSE              @Grahammmm
+/NOTICE.md            @Grahammmm
+/docs/legal/          @Grahammmm
+/deployments/         @Grahammmm
+/wrangler.jsonc       @Grahammmm
+/server/              @Grahammmm
+/.github/workflows/   @Grahammmm
+/.github/CODEOWNERS   @Grahammmm
