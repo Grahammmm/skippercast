@@ -1,3 +1,7 @@
+// Runs as an async function, not top-level await: Vite bundles the page's
+// module scripts (boot.js, offline.js, meteogram-ui.js) into one entry, and a
+// top-level await here would hold the others until the whole app had loaded.
+void (async()=>{
 try {
   // Optional; a failure here must never block the map.
   void import('./boat-profile.js').then(m=>m.initBoatProfile()).catch(error=>console.warn('Boat profile unavailable',error));
@@ -34,3 +38,4 @@ try {
   const fallback=document.createElement("p");const link=document.createElement("a");link.href="/?region=morro-bay#map";link.textContent="Open Morro Bay instead";fallback.append(link);
   panel.append(title,reason,retry,fallback);
 }
+})();

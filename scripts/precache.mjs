@@ -1,9 +1,9 @@
 // Service-worker precache manifest for one build.
 //
-// After fingerprinting, dist/client/precache.json lists what the offline shell
-// needs: the stable app shell '/', every fingerprinted script and stylesheet
-// of this build, and the few unhashed static files the shell loads (vendored
-// Leaflet, icons, the web manifest). The worker (dist/sw.js) fetches it at
+// After the Vite build, dist/client/precache.json lists what the offline shell
+// needs: the stable app shell '/', every hashed script and stylesheet of this
+// build (dist/client/assets/), and the few unhashed static files the shell
+// loads (vendored Leaflet, icons, the web manifest). The worker (dist/sw.js) fetches it at
 // install, so no hashed name is ever hard-coded in sw.js. Fingerprinted pages
 // are not listed: the Worker serves them only from their stable paths.
 // The build id is written into sw.js so every deploy installs a new worker.
@@ -24,7 +24,7 @@ export async function precacheManifest(dir, buildId) {
     schema_version: 1,
     build: buildId,
     shells: ['/'],
-    assets: top.filter(n => FINGERPRINTED.test(n)).map(n => `/${n}`),
+    assets: (await readdir(join(dir, 'assets')).catch(() => [])).filter(n => FINGERPRINTED.test(n)).sort().map(n => `/assets/${n}`),
     static: [...top.filter(n => STATIC.test(n)), ...vendor].map(n => `/${n}`),
   };
 }

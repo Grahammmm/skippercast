@@ -38,7 +38,7 @@ Assets, most sensitive first: private records in D1 (owner id, trips, push endpo
 
 | STRIDE | Threat | Current mitigation | Residual | Planned |
 | --- | --- | --- | --- | --- |
-| T | A stale or swapped script is served from an edge cache after a deploy | Every script, style and page is content-hashed (`scripts/fingerprint.mjs`); page shells are served `no-store` (`server/routes/assets.ts`, `SHELLS`); `scripts/check_client.mjs` fails on unhashed references | Low | P4-01 moves hashing to Vite |
+| T | A stale or swapped script is served from an edge cache after a deploy | Every script and style is content-hashed by Vite and pages carry the build id (`scripts/client-build.mjs`); page shells are served `no-store` (`server/routes/assets.ts`, `SHELLS`); `scripts/check_client.mjs` checks the Vite manifest and fails on unhashed or unresolved references | Low | |
 | T / E | Cross-site scripting through rendered feed or third-party text (recent-discussion links, source names) | A meta CSP on `dist/index.html` with `script-src 'self'`; templates escape with `esc()` helpers (`dist/app.js`, `dist/recent-discussions.js`, others) | Medium: 101 `innerHTML` sites; `connect-src`/`img-src` allow any `https:`; other pages have no CSP; no HSTS or `frame-ancestors` | P0-06 (PR #38/#43: header CSP with enumerated hosts, HSTS, `frame-ancestors 'none'`, SRI on vendor files); P4-01 component model |
 | T | A vendored library is modified | SHA-256 of every vendored and binary file in `scripts/web-vendor-sha256.json`, checked by `scripts/check_repository.py` and `scripts/check_web.py` | Low | P0-06 adds `integrity=` attributes |
 | D | Heavy anonymous traffic to pages and assets | Static assets served by the platform; Worker only routes | Low | P0-05 rate limits (PR #43) |

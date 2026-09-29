@@ -22,7 +22,7 @@ How SkipperCast is tested today, how to run each layer, how to add a test or fix
 | Contract drift | Regional contracts and species search plans rebuilt from source must equal the commit | `src/skippercast/platform/build.py`, `scripts/build_search_plans.py` | `PYTHONPATH=src python3 -m skippercast.platform.build && git diff --exit-code`; `python scripts/build_search_plans.py && git diff --exit-code` (needs `requirements-survey.txt`) | `check` and `survey-science` jobs |
 | Repository checks | Local Markdown links resolve; no private paths, credentials or private keys; binary files match `scripts/web-vendor-sha256.json` | `scripts/check_repository.py` | `python3 scripts/check_repository.py` | `check` job |
 | Web checks | Page entry points, asset references, vendor hashes, GPX validity, canonical data copies | `scripts/check_web.py` | `python3 scripts/check_web.py` | `check` job |
-| Build | Worker bundle and fingerprinted site; every reference resolves to a hashed file | `scripts/build-worker.mjs`, `scripts/check_client.mjs` | `pnpm install --frozen-lockfile && pnpm build && node scripts/check_client.mjs` | `check` job |
+| Build | Worker bundle and Vite-built site; the Vite manifest, page references, boot-chain preloads, `sw.js` and `precache.json` agree (`tests/test_client_build.mjs` builds fixtures and the real site) | `scripts/build-worker.mjs`, `scripts/check_client.mjs` | `pnpm install --frozen-lockfile && pnpm build && node scripts/check_client.mjs` | `check` job |
 
 Before a PR, run the full list in [AGENTS.md → Before opening a PR](../../AGENTS.md#before-opening-a-pr). Without the GIS packages, `run_core_tests.py` prints the deferred modules and the package each needs; the `survey-science` job runs them.
 
