@@ -5,7 +5,7 @@ SkipperCast's Worker, static site, private-trip database (D1), published feeds (
 ## What is in place
 
 - **`wrangler.jsonc`**: the Worker (`dist/server/index.js`), the fingerprinted site (`dist/client`), D1 as `DB`, the R2 bucket `skippercast-feeds` as `FEEDS`, and a cron trigger every 15 minutes.
-- **`/feeds/<branch>/<path>`**: the site's single route for published feeds (`conditions`, `data`, `forecasts`). It serves from R2 when the bucket is bound, and otherwise from the GitHub branch through Cloudflare's cache. It supports Range and ETag. The browser uses this route for every feed, so moving storage needs no front-end change. `/api/health` reports `"feeds": "r2"` or `"github"`.
+- **`/feeds/<branch>/<path>`**: the site's single route for published feeds (`conditions`, `data`, `forecasts`). It serves from R2 when the bucket is bound, and otherwise from the GitHub branch through Cloudflare's cache. It supports Range and ETag. The browser uses this route for every feed, so moving storage needs no front-end change. Each response names its source in the `X-Feed-Source` header (`r2`, `github` or `assets`). `/api/health` reports only the service, version and build.
 - **Publishing:**
   - After each GitHub push, `scripts/publish_branch_r2.sh` mirrors that branch's committed files to R2 under the same path.
   - `scripts/publish_r2.py` hashes files and uploads only changes. The conditions feed has about 1,500 files, and most don't change each cycle. Data files go before `latest`/`index`/`manifest` pointers, and deletions go last.
@@ -38,7 +38,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
 4. **Add repository variables** on the same page, under the Variables tab:
    - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`, for the post-deploy check;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
-5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `/api/health` on staging shows `"feeds": "r2"`.
+5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `curl -sI <staging>/feeds/conditions/latest.json` shows `X-Feed-Source: r2`.
 
 ## Cost
 
