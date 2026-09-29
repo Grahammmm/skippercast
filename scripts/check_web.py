@@ -190,9 +190,26 @@ def check_no_versioned_client_names():
     assert not versioned, f"versioned file names in dist/ (use the canonical name): {versioned}"
 
 
+LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
+
+
+def check_legal_pages():
+    """Terms, privacy and licences exist, say they are drafts, and are reachable."""
+    for name in LEGAL_PAGES:
+        text = (WEB / name).read_text()
+        assert "Draft — pending review by counsel" in text, name
+        assert 'href="styles.css"' in text, name
+    for page in ("index.html", "sources.html"):
+        parser = AssetParser()
+        parser.feed((WEB / page).read_text())
+        missing = set(LEGAL_PAGES) - set(parser.refs)
+        assert not missing, (page, sorted(missing))
+
+
 def main():
     assert (WEB / "index.html").is_file()
     check_no_versioned_client_names()
+    check_legal_pages()
     induration = json.loads((WEB / 'data/h11967-noaa-induration-camera-review.json').read_text())
     chart = json.loads((WEB / 'data/h11967-enc-camera-research-screen.json').read_text())
     assert induration['scope'] == 'original-bag-camera-versus-noaa-2017-induration-research'

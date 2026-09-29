@@ -1188,6 +1188,16 @@ th {
 .source-page .evidence-table {
   font-size: 0.875rem;
 }
+.source-page .legal-draft {
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--amber);
+  background: #fff8e8;
+  font-weight: 650;
+}
+.source-page pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .source-page summary {
   min-height: 44px;
   cursor: pointer;
