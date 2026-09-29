@@ -35,6 +35,10 @@ It also runs on changes to its collector and supports manual dispatch. Source
 errors are published before the job reports a failure. This is a near-real-time
 feed, not streaming sensor data: NOAA publication and GitHub scheduling can delay
 updates. The original sample times and failed refresh state remain visible.
+Regions refresh independently: a region whose collector raises is recorded as
+`status: failed` (with `error_class`) in `regions/index.json` and keeps its last
+published files, while the other regions publish; the cycle fails only when the
+default region or more than half of the regions fail.
 The job operates without this Mac or a browser open.
 
 The same job collects NOAA GFS and ECMWF IFS winds plus NOAA GFS Wave 0.16°

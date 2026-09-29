@@ -4,6 +4,7 @@ This branch contains automatically collected public facts. Application source an
 
 - `latest.json`: versioned evidence snapshot, source dates, failures, normalized charter facts and ocean samples.
 - `health.json`: compact collection health. Check both `generated_at` and individual source dates.
+- `regions/index.json`: one row per region. A region whose refresh raised an error is listed as `status: failed` with `error_class` and a short `error`; its files keep the last successful generation. The job fails only when the default region or more than half of the regions fail.
 - `history/YYYY-MM-DD.json`: the latest snapshot for each UTC collection date, retained in the working tree for 90 days. Git history can retain older versions; this is not an erasure policy.
 - `survey-discovery.json`, `survey-products.json`, `bag-head-inventory.json`: NOAA survey leads, original product links, and bounded download-health checks. They are a native-review queue, not approved fishing locations.
 - `enc-hazards/santa-barbara-island.geojson`: a daily bounded NOAA ENC Direct snapshot of charted obstruction, underwater-rock and wreck features across harbor, approach and coastal scale bands. All 18 layer queries must complete. The retrieval timestamp is not a chart issue time; this is a review aid, not navigational clearance or a complete hazard inventory.
