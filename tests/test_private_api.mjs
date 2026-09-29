@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {assessTrip,alertDecision} from '../server/alert-policy.js';
+import {assessTrip,alertDecision,alertMessage,tripChopLimit} from '../server/alert-policy.js';
 const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url)));
 globalThis.REGIONS={'morro-bay':read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT=read('../deployments/production.json');
 import {withSessions} from './fixtures/test-sessions.mjs';
-const {default:deployed,validateSubscription,checkTrips}=await import('../server/worker.js');
+const {default:deployed,validateSubscription,checkTrips,validateTripBoat}=await import('../server/worker.js');
 // Owner-isolation tests sign in through real session cookies (fixtures/test-sessions.mjs);
 // deployed.fetch is the Worker exactly as deployed.
 const worker=withSessions(deployed);
@@ -187,3 +187,35 @@ test('boat lookup kill switch and global daily cap stop spend before the model i
     assert.equal(logged.map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(l=>l?.event==='boat_lookup').at(-1).outcome,'error');
   }finally{globalThis.fetch=originalFetch;console.log=originalLog;sql.close();}
 });
+
+test('a trip saves the boat it was planned for; invalid boats are rejected and no boat stays null',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  try{
+    const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles'}).format(new Date(Date.now()+86400000));
+    const trip={region:'morro-bay',point:'north',species:'reef',date,start_hour:7,end_hour:13,wind_limit:6,gust_limit:10,sea_limit:2};
+    const boat={name:'Skiff\u0007 18',sea:.6,wind:.8,chop_period:5};
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...trip,boat}}),env)).status,201);
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'POST',body:trip}),env)).status,201);
+    for(const bad of [{...boat,sea:3},{...boat,wind:'1'},{...boat,chop_period:null},[1],'boat'])
+      assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...trip,boat:bad}}),env)).status,400,JSON.stringify(bad));
+    const rows=sql.prepare('SELECT boat_name,boat_sea,boat_wind,boat_chop_period FROM trips ORDER BY boat_sea IS NULL').all().map(r=>({...r}));
+    assert.deepEqual(rows,[{boat_name:'Skiff 18',boat_sea:.6,boat_wind:.8,boat_chop_period:5},{boat_name:null,boat_sea:null,boat_wind:null,boat_chop_period:null}]);
+    const listed=(await (await worker.fetch(request('trips',{owner:'alice'}),env)).json()).trips;
+    assert.ok(listed.some(t=>t.boat_name==='Skiff 18'));
+  }finally{sql.close();}
+  assert.equal(validateTripBoat(undefined),null);
+  assert.equal(validateTripBoat({sea:1,wind:1,chop_period:6,name:'x'.repeat(200)}).name.length,80);
+});
+
+test('wind chop is judged for the saved boat and the alert says which boat',()=>{
+  assert.equal(tripChopLimit({}),1);
+  assert.equal(tripChopLimit({boat_sea:.6}),.6);
+  assert.equal(tripChopLimit({boat_sea:1.8}),1.8);
+  assert.equal(tripChopLimit({boat_sea:40}),1,'out-of-range stored values fall back to the reference boat');
+  const region=REGIONS['morro-bay'];
+  const assessment={status:'above limits',legal:'reviewed season',values:{wind:5,gust:7,sea:2,chop:.8},chop_limit:.6,issues:[],checked_at:'2026-09-29T00:00:00Z',runs:{}};
+  const trip={date:'2026-09-30',point:region.forecast_points[0].id,start_hour:7,end_hour:13,boat_name:'Skiff 18',boat_sea:.6};
+  assert.match(alertMessage(trip,region,assessment,'final'),/Boat: Skiff 18 · chop limit 0\.6 ft for this boat\./);
+  assert.doesNotMatch(alertMessage({...trip,boat_name:null,boat_sea:null},region,assessment,'final'),/Boat:/);
+});
+

@@ -6,6 +6,13 @@ export function samplePoint(data,key,time,unit){
   if(data?.hourly_units?.[key]!==unit||data?.hourly_units?.time!=='unixtime'||i<0||!finite(h?.[key]?.[i]))return null;
   return h[key][i];
 }
+// Wind chop is judged against 1 ft for the reference 23 ft boat, scaled by the
+// saved boat's sea factor (dist/boat-handling.js) when the trip carries one.
+export const REFERENCE_CHOP_FT=1;
+export function tripChopLimit(trip){
+  const sea=finite(trip?.boat_sea)&&trip.boat_sea>=.45&&trip.boat_sea<=2.6?trip.boat_sea:1;
+  return Math.round(REFERENCE_CHOP_FT*sea*10)/10;
+}
 export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.now()){
   const point=region.forecast_points.findIndex(p=>p.id===trip.point);
   const issues=[],values={wind:null,gust:null,sea:null,chop:null};
@@ -54,9 +61,10 @@ export function assessTrip(trip,region,intelligence,rules,advisories,now=Date.no
   }
   if(!Array.isArray(advisories))issues.push('Marine advisories unavailable');
   else if(advisories.some(a=>!times.length||(!a.onset||Date.parse(a.onset)<=times.at(-1)*1000)&&(!a.ends&&!a.expires||Date.parse(a.ends||a.expires)>=times[0]*1000)))issues.push('Applicable marine advisory');
-  const within=finite(values.wind)&&finite(values.gust)&&finite(values.sea)&&values.wind<=trip.wind_limit&&values.gust<=trip.gust_limit&&values.sea<=trip.sea_limit&&values.chop<=1;
+  const chopLimit=tripChopLimit(trip);
+  const within=finite(values.wind)&&finite(values.gust)&&finite(values.sea)&&values.wind<=trip.wind_limit&&values.gust<=trip.gust_limit&&values.sea<=trip.sea_limit&&values.chop<=chopLimit;
   const status=issues.length?'unverified':within?'within limits':'above limits';
-  return {status,legal,values,issues:[...new Set(issues)],checked_at:new Date(now).toISOString(),
+  return {status,legal,values,chop_limit:chopLimit,issues:[...new Set(issues)],checked_at:new Date(now).toISOString(),
     runs:Object.fromEntries(Object.entries(models).map(([id,m])=>[id,m.meta?.last_run_initialisation_time??null]))};
 }
 
@@ -73,5 +81,5 @@ export function alertDecision(previous,current,{final=false,missed=false}={}){
 export function alertMessage(trip,region,assessment,kind){
   const value=(v,u)=>finite(v)?v.toFixed(1)+' '+u:'unavailable';
   const name=region.forecast_points.find(p=>p.id===trip.point)?.name||trip.point;
-  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${(region.contexts?.[region.forecast_points.find(p=>p.id===trip.point)?.context]?.marine_zones||region.marine_zones)[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}`;
+  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${finite(trip.boat_sea)?`Boat: ${trip.boat_name||'saved boat'} · chop limit ${(assessment.chop_limit??tripChopLimit(trip)).toFixed(1)} ft for this boat.\n`:''}${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${(region.contexts?.[region.forecast_points.find(p=>p.id===trip.point)?.context]?.marine_zones||region.marine_zones)[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}`;
 }
