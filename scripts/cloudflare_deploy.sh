@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Deploy SkipperCast to its own Cloudflare account (see docs/cloudflare.md).
-# Creates the D1 database and R2 bucket on first run, applies D1 migrations,
-# deploys the built Worker and static site, then uploads optional secrets.
+# Creates the D1 database and R2 buckets on first run, backs up D1, applies
+# migrations, deploys the built Worker and static site, then uploads optional
+# secrets. The workflow smoke-tests the result and rolls back on failure.
 # Requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID; run after `pnpm build`.
 set -euo pipefail
 WRANGLER="npx --yes wrangler@4.142.0"
 DB_NAME=skippercast
 BUCKET=${R2_BUCKET:-skippercast-feeds}
+BACKUP_BUCKET=${R2_BACKUP_BUCKET:-skippercast-backups}   # private; never bound to the Worker
 CONFIG=wrangler.deploy.jsonc   # generated; gitignored
 
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
@@ -34,18 +36,28 @@ else
   echo "Created R2 bucket $BUCKET"
 fi
 
-python3 - "$id" "$BUCKET" <<'PY'
-import json, re, sys
-text = open('wrangler.jsonc').read()
-text = re.sub(r'^\s*//.*$', '', text, flags=re.M)          # strip line comments
-config = json.loads(text)
-config['d1_databases'][0]['database_id'] = sys.argv[1]
-config['r2_buckets'][0]['bucket_name'] = sys.argv[2]
-open('wrangler.deploy.jsonc', 'w').write(json.dumps(config, indent=2))
-PY
+node scripts/wrangler_config.mjs "$id" "$BUCKET" "$CONFIG"
+
+# Before touching the schema, keep a way back. D1 Time Travel can restore to any
+# minute in its retention window; the bookmark below marks this exact point. A
+# full export also goes to the private backup bucket. Never to a workflow
+# artifact: the repository is public and the export holds users' trips and push
+# endpoints.
+bookmark=$($WRANGLER d1 time-travel info "$DB_NAME" --json --config "$CONFIG" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('bookmark',''))" || true)
+echo "D1 restore bookmark before migrations: ${bookmark:-unavailable}"
+if ! out=$($WRANGLER r2 bucket create "$BACKUP_BUCKET" 2>&1); then
+  echo "$out" | grep -qi "already exist" || { echo "$out"; echo "::error::Could not create R2 bucket $BACKUP_BUCKET"; exit 1; }
+fi
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+backup="var/d1-$stamp.sql"
+$WRANGLER d1 export "$DB_NAME" --remote --output "$backup" --config "$CONFIG"
+$WRANGLER r2 object put "$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql" --file "$backup" --remote --config "$CONFIG" >/dev/null
+rm -f "$backup"
+echo "D1 export saved to r2://$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql"
 
 $WRANGLER d1 migrations apply "$DB_NAME" --remote --config "$CONFIG"
-$WRANGLER deploy --config "$CONFIG"
+$WRANGLER deploy --config "$CONFIG" --message "${GITHUB_SHA:-local} run ${GITHUB_RUN_ID:-local}"
+if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
 
 # Optional secrets, uploaded only when provided to this job.
 python3 - <<'PY' > var/cloudflare-secrets.json
