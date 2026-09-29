@@ -2,16 +2,20 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 import numpy as np
+import rasterio
 from rasterio.transform import from_origin
 from shapely.geometry import box, shape, mapping
 from shapely.ops import transform
 from pyproj import Transformer
 
 from skippercast.seafloor.habitat import (
-    thresholds, rough_mask, species_fit, extract_grid, compare_atlas, patch_metrics, validate_rules)
+    thresholds, rough_mask, species_fit, extract_grid, compare_atlas, patch_metrics, validate_rules,
+    source_grid)
+from skippercast.seafloor.resolution_profile import fine_detail_valid
 from skippercast.seafloor.substrate import classify, resolve_bindings
 from skippercast.seafloor.terrain import derivatives
 
@@ -31,6 +35,32 @@ def fixture():
 
 
 class HabitatTests(unittest.TestCase):
+    def test_mixed_resolution_grid_keeps_deep_tier_one_but_excludes_fine_habitat(self):
+        profile = {'fine_to_depth_m': 80, 'coarse_resolution_m': 5,
+                   'source_url': 'https://example.org/producer-metadata.xml'}
+        sample = np.array([[79.9, 80, 85, 91.44]], dtype='float32')
+        np.testing.assert_array_equal(
+            fine_detail_valid(sample, np.ones(sample.shape, bool), {'resolution_profile': profile}),
+            [[True, False, False, False]])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'mixed.tif'
+            values = np.full((200, 200), 60, dtype='float32')
+            values[100:, :] = 85
+            with rasterio.open(path, 'w', driver='GTiff', width=200, height=200,
+                               count=1, dtype='float32', crs='EPSG:3310',
+                               transform=from_origin(0, 400, 2, 2), nodata=np.nan) as target:
+                target.write(values, 1)
+            source = {'path': path, 'geometry': box(0, 0, 400, 400),
+                      'row': {'id': 'mixed', 'resolution_m': 2,
+                              'resolution_profile': profile}}
+            cells = [{'id': '3310:0:0', 'tier': 1, 'source_id': 'mixed'}]
+            grid = source_grid(source, cells, None, root=Path(directory))
+            self.assertIsNotNone(grid)
+            self.assertTrue((grid['depth'][grid['valid']] < 80).all())
+            self.assertTrue(np.isnan(grid['depth'][~grid['valid']]).all())
+            self.assertTrue(grid['inside'].any())
+            self.assertFalse(grid['inside'][grid['depth'].shape[0]-1].any())
+
     def test_reviewed_rules_require_cited_bands_and_planning_ceiling(self):
         self.assertEqual(validate_rules(RULES),RULES)
         rules=deepcopy(RULES); rules['depth_m'][1]=100

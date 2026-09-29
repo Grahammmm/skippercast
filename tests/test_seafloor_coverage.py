@@ -12,7 +12,7 @@ from rasterio.transform import from_origin
 from shapely.geometry import box
 from pyproj import Transformer
 
-from skippercast.seafloor.coverage import classify_cells, valid_depth, footprint
+from skippercast.seafloor.coverage import classify_cells, valid_depth, footprint, priority
 from skippercast.seafloor.terrain import derivatives
 from skippercast.seafloor.ingest import ingest
 from skippercast.seafloor.io import sha256
@@ -32,6 +32,12 @@ def source(ident, resolution, year, geometry):
 
 
 class CoverageTests(unittest.TestCase):
+    def test_mixed_grid_is_ranked_at_its_coarser_native_resolution(self):
+        row = {'id': 'mixed', 'year': 2008, 'resolution_m': 2,
+               'resolution_profile': {'fine_to_depth_m': 80, 'coarse_resolution_m': 5}}
+        self.assertEqual(priority(row)[0], 5)
+        self.assertEqual(priority({'id': 'fine', 'year': 2007, 'resolution_m': 2})[0], 2)
+
     def test_finer_then_newer_wins_and_duplicate_area_is_not_added(self):
         inputs = [source('coarse', 8, 2025, box(0, 0, 250, 250)),
                   source('older', 2, 2008, box(0, 0, 200, 250)),

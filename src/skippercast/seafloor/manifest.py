@@ -22,6 +22,10 @@ def load_manifest(root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        profile = row.get('resolution_profile')
+        if profile and (row['format'] != 'usgs-geotiff' or row['resolution_m'] == 'unknown'
+                        or profile['coarse_resolution_m'] <= row['resolution_m']):
+            raise ValueError('Mixed-resolution profile requires a finer USGS GeoTIFF display grid')
         if row['status'] == 'usable':
             from skippercast.platform.contracts import bbox
             receipt = row['adapter_review']

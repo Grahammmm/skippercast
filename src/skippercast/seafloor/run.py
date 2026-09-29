@@ -26,6 +26,7 @@ from .terrain import derivatives, summarize
 from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
 from .screen import load_snapshot, input_identity, screen_candidates
+from .resolution_profile import fine_detail_valid
 
 VERSION = 'native-coverage-habitat-v1'
 
@@ -43,11 +44,11 @@ def terrain_cells(cells, sources):
                 resolution=row['resolution_m'])
             vrt = stack.enter_context(WarpedVRT(original, crs='EPSG:3310', transform=affine,
                 width=width, height=height, resampling=Resampling.nearest, nodata=np.nan))
-            readers[row['id']] = vrt
+            readers[row['id']] = (vrt, row)
         for cell in cells:
             if cell['tier'] != 1:
                 continue
-            source = readers[cell['source_id']]
+            source, row = readers[cell['source_id']]
             square = cell_geometry(cell)
             # Extra pixels support broad BPI without trusting clipped borders.
             window = from_bounds(*square.buffer(104).bounds, transform=source.transform).round_offsets().round_lengths()
@@ -57,6 +58,8 @@ def terrain_cells(cells, sources):
             if min(depth.shape) < 3:
                 continue
             valid = ~np.ma.getmaskarray(data) & np.isfinite(depth)
+            valid = fine_detail_valid(depth, valid, row)
+            depth = np.where(valid, depth, np.nan)
             yy, xx = np.indices(depth.shape)
             affine = source.window_transform(window)
             x, y = affine * (xx+.5, yy+.5)
@@ -146,7 +149,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False):
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py', 'screen.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py',
+                                           'screen.py', 'resolution_profile.py')}}
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     folder = root / 'var/seafloor/reaches' / reach_id
     receipt_path = folder / 'run.json'

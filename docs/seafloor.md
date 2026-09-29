@@ -130,7 +130,7 @@ only this adapter permits unknown datum, dates and uncertainty metadata.
 | Original product | Exact reviewed WGS84 window (west, south, east, north) | Native spacing / nominal datum | Valid 0–300 ft source pixels | Cached source / COG bytes |
 | --- | --- | --- | --- | --- |
 | [USGS Offshore Morro Bay](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip), member `Bathymetry_OffshoreMorroBay.tif` | -120.98, 35.28, -120.76, 35.46 | 2 m / unknown | 28,337,123 | 45,090,088 / 50,112,014 |
-| [USGS Offshore Point Estero](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip), member `Bathymetry_OffshorePointEstero.tif` | -121.13, 35.37, -120.92, 35.55 | 2 m / unknown | 26,023,976 | 75,792,608 / 55,820,740 |
+| [USGS Offshore Point Estero](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip), member `Bathymetry_OffshorePointEstero.tif` | -121.13, 35.37, -120.92, 35.55 | 2 m display grid; 5 m source deeper than 80 m / unknown | 26,023,976 | 75,792,608 / 55,820,740 |
 | [NOAA H11953 2-of-4](https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag), Point Conception | -120.73, 34.5, -120.58, 34.65 | 2 m / MLLW | 5,517,962 | 42,325,273 / 37,465,806 |
 
 Counts exclude the seam margin and are source pixels, **not deduplicated habitat
@@ -138,6 +138,18 @@ or reach area**. All three full original hashes match the existing inspected cac
 Each stabilized second ingestion verifies hashes, downloads nothing and reuses
 the normalized COG. Synthetic tests independently check orientation, depth sign,
 no-data holes, uncertainty, archive selection, download caching and corruption.
+
+The [Point Estero producer metadata](https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml)
+states that its released 2 m mosaic contains native 5 m data at depths of 80 m
+and deeper. The manifest now records that depth-dependent resolution. The
+pipeline retains producer-gridded deep pixels for tier-1 coverage but extracts
+fine-detail tier-2 habitat only from native 2 m pixels shallower than 80 m.
+On `morro-bay-r02`, the rerun changed tier 2 from 11.535874 to 10.502448 km²
+while tier 1 remained 56.887500 km²; no Point Estero tier-2 feature reaches
+80 m nominal depth. A future coarse-grid path can add appropriately labelled
+broad-area habitat from the deeper data. `morro-bay-r01` requires windowed
+processing: the current reach-wide 2 m habitat window exceeds the 20-million-
+pixel safety bound, so it remains unassessed rather than being downsampled.
 
 USGS's cached original metadata credits USGS, CSU Monterey Bay's Seafloor Mapping
 Lab and UC's Center for Integrated Spatial Research; the 2008 Fugro surveys were
