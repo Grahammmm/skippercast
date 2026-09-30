@@ -28,6 +28,8 @@ Files keep their original names so old links are easy to follow. Do not update t
 
 [Native tiled habitat processing checkpoint](seafloor-tiled-habitat-2026-09-30.md) records issue #95 acceptance, r01 before/after measurements and the exact next batch.
 
+[Monterey original-source batch checkpoint](seafloor-monterey-batch-2026-09-30.md) records source qualification, three new physical reaches, 672 ranked candidates and the remaining batch.
+
 **Central Coast 300 ft evidence program**
 
 | Document | Purpose |

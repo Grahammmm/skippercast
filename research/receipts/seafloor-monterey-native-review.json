@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "bathymetry": {
+    "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+    "sha256": "1c12c1df827d8071565d655368ec35d8c276dc8e6f2c40d45ce4263b15081b12",
+    "retrieval": "HTTP 200 from original publisher on 2026-09-30",
+    "use_constraints": "USGS-authored or produced data and information are in the public domain. These data are marked with a Creative Commons CC0 1.0 Universal License. Acknowledge the U.S. Geological Survey and California State University, Monterey Bay, Seafloor Mapping Lab in products derived from these data. Share data products developed using these data with the U.S. Geological Survey.\nThis information is not intended for navigational purposes. Read and fully comprehend the metadata prior to data use. Uses of these data should not violate the spatial resolution of the data. Where these data are used in combination with other data of different resolution, the resolution of the combined output will be limited by the lowest resolution of all the data.\nThis database has been approved for release and publication by the Director of the USGS. Although this database has been subjected to rigorous review and is substantially complete, the USGS reserves the right to revise the data pursuant to further analysis and review. Furthermore, it is released on condition that neither the USGS nor the United States Government may be held liable for any damages resulting from its authorized or unauthorized use.\nAlthough this Federal Geographic Data Committee-compliant metadata file is intended to document these data in nonproprietary form, as well as in ArcInfo format, this metadata file may include some ArcInfo-specific terminology.",
+    "source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+    "acoustic_years": [
+      1998,
+      2012
+    ],
+    "lidar_years": [
+      2009,
+      2010
+    ],
+    "publication_year": 2016,
+    "reviewed_window_wgs84": [
+      -122.064886,
+      36.532722,
+      -121.811775,
+      36.692799
+    ],
+    "native_pixels_in_window": 51449760,
+    "nominal_shallow_pixels": 32571329,
+    "delivered_spacing_m": 2,
+    "vertical_datum": "NAVD88",
+    "limits": "Published nearshore NOAA TopoBathy Merge resampled by producer to 2 m; separate MBARI 5 m grid not merged. 2 m is grid spacing, not per-cell precision. Mixed acquisition dates; interpolation mask unavailable; not independent of source contributors."
+  },
+  "substrate": {
+    "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+    "sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+    "retrieval": "HTTP 200 from original publisher on 2026-09-30",
+    "use_constraints": "USGS-authored or produced data and information are in the public domain. These data are marked with a Creative Commons CC0 1.0 Universal License. Acknowledge the U.S. Geological Survey and California State University, Monterey Bay, Seafloor Mapping Lab in products derived from these data. Share data products developed using these data with the U.S. Geological Survey.\nThis information is not intended for navigational purposes. Read and fully comprehend the metadata prior to data use. Uses of these data should not violate the spatial resolution of the data. Where these data are used in combination with other data of different resolution, the resolution of the combined output will be limited by the lowest resolution of all the data.\nThis database has been approved for release and publication by the Director of the USGS. Although this database has been subjected to rigorous review and is substantially complete, the USGS reserves the right to revise the data pursuant to further analysis and review. Furthermore, it is released on condition that neither the USGS nor the United States Government may be held liable for any damages resulting from its authorized or unauthorized use.\nAlthough this Federal Geographic Data Committee-compliant metadata file is intended to document these data in nonproprietary form, as well as in ArcInfo format, this metadata file may include some ArcInfo-specific terminology.",
+    "source_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+    "acquisition_processing_years": [
+      1998,
+      2014
+    ],
+    "method": "Video/sample-supervised classification of shared bathymetry and backscatter; not an independent depth survey.",
+    "normalized_class4": "Sediment: exclude conservatively from reef habitat",
+    "limits": "Abstract says steep slope zones absent; raster/VAT contains 101\u2013113. FGDC VALUE explicitly defines slope offset100; preserve and decode those recorded values. Unknown coverage is not classified.",
+    "native_horizontal_crs": "EPSG:32610",
+    "native_grid_spacing_m": 2,
+    "native_valid_codes": [
+      1,
+      2,
+      3,
+      4,
+      11,
+      12,
+      13,
+      14,
+      51,
+      52,
+      53,
+      54,
+      61,
+      62,
+      63,
+      64,
+      101,
+      102,
+      103,
+      111,
+      112,
+      113
+    ]
+  }
+}
