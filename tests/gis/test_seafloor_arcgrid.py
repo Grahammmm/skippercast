@@ -16,6 +16,7 @@ from rasterio.warp import transform_bounds
 from tests._support import FIXTURES
 from skippercast.seafloor.adapters import arcgrid
 from skippercast.seafloor.ingest import ingest
+from skippercast.seafloor.fetch import fetch_source
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.state_cache import allowed
 from skippercast.seafloor.raster import bounds_window
@@ -77,6 +78,30 @@ class ArcGridTests(unittest.TestCase):
         (grid/'w001001.adf').write_bytes(b'changed')
         with self.assertRaisesRegex(ValueError, 'checksum'):
             arcgrid.source_path(self.original, self.row)
+
+    def test_reviewed_noaa_ship_tar_gz_uses_same_native_decoder(self):
+        archive = self.root/'original.tar.gz'
+        archive.write_bytes(self.original.read_bytes())
+        row = dict(self.row, url='https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/products/original.tar.gz')
+        cached, downloaded = fetch_source(row, self.root/'cache', local=archive)
+        self.assertFalse(downloaded)
+        self.assertEqual(cached.name, 'source.tar.gz')
+        with arcgrid.open_source(cached, row) as native, arcgrid.open_source(self.original, self.row) as original:
+            self.assertEqual(native.crs, original.crs)
+            self.assertEqual(native.transform, original.transform)
+            np.testing.assert_array_equal(native.read(1, masked=True), original.read(1, masked=True))
+        self.assertTrue(allowed('big-sur-coast-r02', f'cache/{row["sha256"]}/source.tar.gz'))
+        self.assertFalse(allowed('shared', f'cache/{row["sha256"]}/source.tar.gz'))
+
+    def test_tar_gz_does_not_grant_other_hosts_paths_or_formats(self):
+        for url, format_name in [
+            ('https://pubs.usgs.gov/original.tar.gz', 'arcgrid'),
+            ('https://data.ngdc.noaa.gov/platforms/ocean/ships/other/original.tar.gz', 'arcgrid'),
+            ('https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/original.tar.gz', 'bag'),
+            ('https://example.com/original.tar.gz', 'arcgrid'),
+        ]:
+            with self.subTest(url=url, format_name=format_name), self.assertRaises(ValueError):
+                fetch_source(dict(self.row, url=url, format=format_name), self.root/'cache', local=self.original)
 
     def test_unknown_or_wrong_grid_is_never_guessed(self):
         for name in ['unknown', 'package/other']:
