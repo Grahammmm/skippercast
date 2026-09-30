@@ -99,3 +99,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 - [H11953 full native footprint and next format batch](seafloor-h11953-full-footprint-2026-09-30.md)
 
 - [Original ArcInfo reader verification](seafloor-arcgrid-reader-2026-09-30.md) — native source ingestion and unchanged existing-source science.
+
+- [Carmel and Point Sur original batch](seafloor-carmel-sur-batch-2026-09-30.md) — three new physical reaches, measured footprint and held rankings.

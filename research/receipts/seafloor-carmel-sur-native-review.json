@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "metadata": {
+    "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+    "sha256": "fc62045b9a5a1eb9a392c219903a27e3a066f9d35dc79df88e0a4334b5f9a4c7",
+    "retrieval": "HTTP200 original publisher, Sept30 2026",
+    "acquisition_year": 1998,
+    "survey": "A4-98-MB EM300",
+    "horizontal_crs": "NAD83 / UTM zone10N",
+    "vertical_datum": "unknown",
+    "horizontal_accuracy_m": "unknown",
+    "vertical_accuracy_m": "unknown",
+    "interpolation_mask": "unknown",
+    "constraints": "Recognize USGS; no warranty; not intended for navigation."
+  },
+  "rights": {
+    "url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "sha256": "aa08b3210e96980c34b82f86c6d1fb008b6ff859c40c3e2c6cbef5efbb656256",
+    "retrieval": "HTTP200 direct publisher response, Sept30 2026",
+    "assessment": "USGS-produced data public domain; these original USGS grids have no separate copyright restriction in their own metadata. USGS page thirdparty exceptions remain relevant; do not extend this conclusion to unrelated imagery."
+  },
+  "lineage": "Two spatial parts of the same1998 EM300 survey; not independent. Current USGS Monterey nearshore product also names1998 acquisitions but states separate MBARI5m grid was not merged; neither use cross-product agreement as independent evidence nor invent disjoint underlying soundings. Existing finest-source selection handles overlap.",
+  "sources": [
+    {
+      "id": "usgs-1998-sgf5g-native",
+      "url": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sgf5g.tgz",
+      "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+      "bytes": 23906263,
+      "archive_member": "sgf5gd/sgf5g",
+      "native_resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "bounds_wgs84": [
+        -122.03258875356055,
+        36.360698918821335,
+        -121.91376906583389,
+        36.570952465125835
+      ],
+      "valid_pixels": 6801023,
+      "nominal_0_300ft_pixels": 1006190,
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "61c7cc0b37b6e6d07e15029e9b78ec8f8f922bd5ba9e54e7176c7f9812771f65"
+      },
+      "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a"
+    },
+    {
+      "id": "usgs-1998-sur5g-native",
+      "url": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sur5g.tgz",
+      "source_sha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+      "bytes": 34037216,
+      "archive_member": "sur5gd/sur5g",
+      "native_resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "bounds_wgs84": [
+        -122.08845232365955,
+        36.21525406385439,
+        -121.9144991461588,
+        36.37141762329271
+      ],
+      "valid_pixels": 9947888,
+      "nominal_0_300ft_pixels": 2806415,
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "7b578659dbd15e190c5012b182b077799dfabb2e3d025c8c0cbc34e4e4461e69"
+      },
+      "cog_sha256": "12d57148cf308e0a7349e9479ba53780935a2f4962787bf4e1bfcfd1a038686c"
+    }
+  ]
+}

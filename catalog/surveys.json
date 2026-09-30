@@ -149,7 +149,8 @@
     "dist/data/usgs-sur-arguello-sediment-review.json",
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
-    "dist/data/w00614-usgs-video-observation-gap.json"
+    "dist/data/w00614-usgs-video-observation-gap.json",
+    "dist/data/seafloor-carmel-sur-native-review.json"
   ],
   "surveys": [
     {
@@ -13441,6 +13442,128 @@
         "raster_identity": {
           "version": "normalized-raster-content-v1",
           "sha256": "16a29f682e7cdf7c8dd97f8f07bfcf4bb473af9ce1399cf4f3788476001fcf7e"
+        }
+      }
+    },
+    {
+      "publisher": "USGS",
+      "landing_page": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+      "year": 1998,
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "license": "public-domain-us-gov",
+      "sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+      "bytes": 23906263,
+      "hold_reason": "unknown",
+      "id": "usgs-1998-sgf5g-native",
+      "title": "1998 EM300 SGF5G original5m shelf depth grid",
+      "url": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sgf5g.tgz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "usable",
+      "archive_member": "sgf5gd/sgf5g",
+      "evidence": [
+        "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0",
+        "research/receipts/seafloor-carmel-sur-native-review.json#/metadata",
+        "research/receipts/seafloor-carmel-sur-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0/source_sha256",
+        "bytes": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0/bytes",
+        "resolution_m": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0/native_resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/0/vertical_datum"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+        "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+        "requested_bounds_wgs84": [
+          -122.03258875356055,
+          36.360698918821335,
+          -121.91376906583389,
+          36.570952465125835
+        ],
+        "valid_pixels_in_requested_bounds": 6801023,
+        "nominal_0_300ft_pixels_in_requested_bounds": 1006190,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "61c7cc0b37b6e6d07e15029e9b78ec8f8f922bd5ba9e54e7176c7f9812771f65"
+        }
+      }
+    },
+    {
+      "publisher": "USGS",
+      "landing_page": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+      "year": 1998,
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "license": "public-domain-us-gov",
+      "sha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+      "bytes": 34037216,
+      "hold_reason": "unknown",
+      "id": "usgs-1998-sur5g-native",
+      "title": "1998 EM300 SUR5G original5m shelf depth grid",
+      "url": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sur5g.tgz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [
+        "usgs-1998-sgf5g-native"
+      ],
+      "status": "usable",
+      "archive_member": "sur5gd/sur5g",
+      "evidence": [
+        "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1",
+        "research/receipts/seafloor-carmel-sur-native-review.json#/metadata",
+        "research/receipts/seafloor-carmel-sur-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1/source_sha256",
+        "bytes": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1/bytes",
+        "resolution_m": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1/native_resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-carmel-sur-native-review.json#/sources/1/vertical_datum"
+      },
+      "inspection_level": "native",
+      "lineage_status": "linked-family",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+        "cog_sha256": "12d57148cf308e0a7349e9479ba53780935a2f4962787bf4e1bfcfd1a038686c",
+        "requested_bounds_wgs84": [
+          -122.08845232365955,
+          36.21525406385439,
+          -121.9144991461588,
+          36.37141762329271
+        ],
+        "valid_pixels_in_requested_bounds": 9947888,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2806415,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "7b578659dbd15e190c5012b182b077799dfabb2e3d025c8c0cbc34e4e4461e69"
         }
       }
     }
