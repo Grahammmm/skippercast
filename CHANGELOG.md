@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: process oversized native habitat windows in bounded tiles without downsampling; join habitat across tile edges and preserve reach-wide thresholds. Morro Bay r01 has measured coverage and private ranked candidates pending its spatial screen.
+
 - Add a daily seafloor rollout planner, reusable physical-stage cache, explicit survey promotion and per-reach failure recovery; keep legal screening as the final publication stage.
 
 - Operations: the research inventory workflow keeps its carried state after a degraded run, and NOAA BAG HEAD checks retry `429 Too Many Requests` (honouring `Retry-After`, four workers) instead of reporting a rate-limited rescan as degraded.

@@ -236,10 +236,21 @@ FGDC enumerations reviewed September 25. Their ZIPs lack raster value tables.
 This run reverified cached original ZIP hashes; it does not claim a new successful
 metadata fetch. Paired character and depth are **not independent evidence**.
 
-Each source gets its own native-spacing EPSG:3310 derivative grid. A reach window
-above 20 million pixels fails explicitly instead of downsampling. This is a
-bounded pilot implementation; larger reaches will need tiled extraction with
-halos and component stitching. Relative thresholds use all selected valid
+Each source gets its own native-spacing EPSG:3310 derivative grid. Windows
+above 20 million pixels use 1024-pixel owned tiles, derivative halos, and temporary
+disk-backed arrays rather than downsampling. Reach-wide thresholds and connected
+components are calculated across tiles; horizontal, vertical and diagonal joins
+precede the minimum patch-area filter. Neighborhood grading and final screening
+use the same rules as small grids. The implementation hash invalidates older
+physical outputs once, and unchanged subsequent runs verify and reuse them.
+
+Scratch storage grows with the native window (about 20 bytes/pixel for the
+principal arrays, plus sample vectors and a compressed label raster); it is
+removed after success or exceptions. Insufficient disk fails explicitly and the
+existing coverage checkpoint survives. Tile reads are bounded; OS-mapped pages,
+component records and polygon geometry still consume memory, so this is not a
+fixed resident-memory guarantee. [The dated r01 handoff](archive/seafloor-tiled-habitat-2026-09-30.md)
+records real pixel/read bounds, elapsed time and the next batch. Relative thresholds use all selected valid
 0–300 ft pixels: VRM at/above the 80th percentile or fine BPI above one standard
 deviation. Numerical zero tolerances keep a flat plane from qualifying merely
 because its 80th percentile is zero. Soft-class pixels, invalid depth and depth

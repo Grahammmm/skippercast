@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3206.80125,
-    "tier1_km2": 100.713125,
+    "tier0_km2": 3161.55125,
+    "tier1_km2": 145.963125,
     "tier2_km2": 15.57834,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 98.15196
+    "selected_valid_km2": 142.619872
   },
   "reaches": [
     {
@@ -3779,12 +3779,12 @@
       "id": "morro-bay-r01",
       "region": "morro-bay",
       "order": 6,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 877,
       "band_km2": 51.59125,
-      "tier0_km2": 51.59125,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 6.34125,
+      "tier1_km2": 45.25,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.051875,
       "polygons_by_grade": {
@@ -3792,12 +3792,48 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 6,
+        "metric-support-incomplete": 6,
+        "screen-deferred": 478
+      },
+      "surveys_used": [
+        "bathymetry-offshorepointestero-zip-7e3be5eb12"
+      ],
+      "last_survey_run": "2026-09-30T03:35:05.121587+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 44.467912113,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "25f03ba556988e2a13a8b64ffc27d8a6e931181a6c3dd617168a78c383b7f775",
+      "habitat_count": 0,
+      "held_candidate_count": 478,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 478,
+      "processing_incomplete": false,
+      "physical_input_hash": "536b16c78d57a3d8c0972e65d6df6f032ed74b98946f71448cdbe836ed7a59db",
+      "roughness_thresholds": {
+        "vrm_samples": 9048910,
+        "vrm": 0.0030613199342042208,
+        "bpi_fine_m_samples": 8888211,
+        "bpi_fine_m": 0.4327829271884108
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 13,
+        "reproduced_count": 3,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "morro-bay-r07",

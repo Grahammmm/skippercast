@@ -80,7 +80,7 @@ Observed causes and the concrete response:
 | `jobs.select` formerly selected only processed reaches | `plan` schedules intersections of usable native windows with new reference reaches. Catalog promotion now unlocks work without a hand-edited ledger PR per reach. |
 | Legal snapshot was included in the terrain cache key | `physical.json` hashes source/rule outputs separately. Snapshot changes rescreen saved candidates. `run --physical-only` deliberately defers the legal step. |
 | A worker failure skipped the entire publication job | Per-batch private receipts identify completed, coverage-only and failed work. Aggregation runs after failures; other complete regions can publish. Missing/interrupted receipts never count as current success. |
-| A >20-million-pixel habitat window lost already computed coverage ([#95](https://github.com/Grahammmm/skippercast/issues/95)) | A checked coverage checkpoint survives and is reported as `terrain-pending`. Native bounded-window extraction with seam tests is still a required engineering task; this rollout does not claim to fix that scientific algorithm. |
+| A >20-million-pixel habitat window lost already computed coverage ([#95](https://github.com/Grahammmm/skippercast/issues/95)) | A checked coverage checkpoint survives and is reported as `terrain-pending`. Large native windows now use bounded owned tiles, derivative halos, reach-wide thresholds, and joined components. Run the tiled/untiled parity tests and retain processing pixel/read bounds; insufficient scratch space still preserves the coverage checkpoint. |
 | [Run 36500826580](https://github.com/Grahammmm/skippercast/actions/runs/36500826580) failed in all three workers | Logs show missing `jsonschema`. Main now installs the combined seafloor requirements and validates before writes. Do not diagnose this old run as an MPA failure. |
 | [Run 36617058494](https://github.com/Grahammmm/skippercast/actions/runs/36617058494) failed during normalized-source verification | Logs show a reviewed COG hash mismatch. Preserve byte verification; investigate normalization/runtime differences rather than accepting arbitrary new bytes. Later runs passed. |
 | [Run 36629238770](https://github.com/Grahammmm/skippercast/actions/runs/36629238770) published and verified tiles but failed opening the ledger PR | GitHub Actions lacked PR-creation permission. Later runs passed; #107 added explicit CI dispatch for bot-created PRs. Distinguish data publication from bookkeeping failure. |
@@ -215,12 +215,14 @@ expiry/current-screen checks to hide an operational failure.
    Conception NOAA depth; #110 supplies part of the Vandenberg screen. Check
    current status. This rollout includes the #92 resolution correction; reconcile its
    existing PR instead of applying it twice. Rebuild shared output after merging, never add PR totals.
-2. **Remove the native-window limit (#95).** Implement bounded read tiles with
-   derivative halos, consistent reach-wide thresholds, connected patches across
-   seams, disjoint ownership and correct neighborhood metrics. Compare tiled
-   and untiled output offline, including no-data/soft-bottom/300-ft edges. Do not
-   downsample or merely raise the 20-million-pixel guard. Coverage checkpoints
-   already preserve measured progress while this engineering task is pending.
+2. **Use bounded native processing (#95).** `build_candidates` selects the
+   disk-backed tile path above 20 million pixels; do not split accepted reach
+   ownership or change resolution to avoid the guard. Verify
+   `tests/gis/test_seafloor_habitat_tiles.py`, then retain the run receipt and
+   `candidates.geojson` processing metadata. Budget scratch space for the native
+   window, sample vectors and labels; resource failures retain coverage and
+   must be investigated instead of repeated blindly. See the
+   [r01 proof and handoff](../../docs/archive/seafloor-tiled-habitat-2026-09-30.md).
 3. **Finish the inspected Monterey product.** Reuse the original DS781 2 m ZIP
    and private draft if present; verify bytes and mixed 1998–2012/2009–2010 input
    dates. Qualify the native window, then run all intersecting reaches. It is
