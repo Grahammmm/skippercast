@@ -92,6 +92,8 @@ class ArcGridTests(unittest.TestCase):
             np.testing.assert_array_equal(native.read(1, masked=True), original.read(1, masked=True))
         self.assertTrue(allowed('big-sur-coast-r02', f'cache/{row["sha256"]}/source.tar.gz'))
         self.assertFalse(allowed('shared', f'cache/{row["sha256"]}/source.tar.gz'))
+        self.assertTrue(allowed('big-sur-coast-r02', 'private-reaches/big-sur-coast-r02/physical.json'))
+        self.assertFalse(allowed('big-sur-coast-r01', 'private-reaches/big-sur-coast-r02/physical.json'))
 
     def test_tar_gz_does_not_grant_other_hosts_paths_or_formats(self):
         for url, format_name in [
