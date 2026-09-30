@@ -6,14 +6,34 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M3 part 2, held habitat candidates
+## Current stage: M5, reach-by-reach Central Coast mapping
 
-The [candidate manifest](../catalog/surveys.json) contains 385 source products.
+The Morro Bay regional PMTiles archive is live, and the current mapped and
+screened areas are recorded in the [ledger](../dist/data/seafloor-ledger.json).
+On September 29, 2026, a run of the original NOAA H11953 2 m, 4 m and 8 m
+BAG depth bands added 59.275625 km² of tier-1 planning cells (56.452623 km²
+of selected valid native footprint) in Point Arguello–Conception reach r06.
+The bands come from one survey and are not independent evidence; the 8 m band
+supports broad-area mapping, not individual rock piles. All 1,281 extracted
+habitat candidates remain **held**, so this is not a published fishing-area layer.
+The screen has not reviewed this reach: [33 CFR 334.1130](https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1130)
+defines Vandenberg danger zones there, including a standing no-stopping rule in
+Zone 4 and launch-dependent closures. The current screen handles the Diablo
+Canyon circle but cannot yet represent those zone polygons or live closures.
+The local Point Arguello–Conception PMTiles build is marked `held`, with zero
+habitat features. Legal screening and a fresh run are required before release.
+
+The sections below retain the dated implementation and acceptance history;
+their early-stage counts are not current coverage totals.
+
+## M3 implementation record: held habitat candidates
+
+The [candidate manifest](../catalog/surveys.json) contains 386 source products.
 The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Three original bathymetry products have native-adapter receipts; the other 382
-remain candidates. Metadata alone cannot promote a source. `usable` means the
-reviewed source window can be processed, not that its whole file envelope has
-valid depth or that a reach has been mapped.
+identities and lineage. Five original bathymetry products have native-adapter
+receipts; 380 remain candidates and one is held. Metadata alone cannot promote
+a source. `usable` means the reviewed source window can be processed, not
+that its whole file envelope has valid depth or that a reach has been mapped.
 
 The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
 packages into **46 reaches**, approximately 10 km alongshore, ordered outward
