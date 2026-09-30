@@ -38,7 +38,8 @@ export function featuresGPX(atlas,features,title,options={}) {
     t.label,
     t.terrain_interpretation,
     `Terrain ${t.habitat_grade} ${t.habitat_score}/100; not catch probability.`,
-    `Center ${t.center_depth_ft} ft; nearby ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum === 'MLLW' ? 'MLLW' : 'source raster, vertical datum unverified; research only, not chart-depth qualified'}.`,
+    t.canonical_habitat ? `Interior reef reference point; point depth not sampled; reef ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum||'unknown datum'} nominal.` : `Center ${t.center_depth_ft} ft; nearby ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum === 'MLLW' ? 'MLLW' : 'source raster, vertical datum unverified; research only, not chart-depth qualified'}.`,
+    ...(t.evidence_confidence ? [`C${t.evidence_confidence.percent}% is the ${t.evidence_confidence.version} habitat evidence index; not catch odds. Trip priority ${t.trip_rank??'unassigned'}; physical habitat fit ${t.trip_fit??'unknown'} of 3.`] : []),
     t.evidence_status,
     t.ais_status,
     `Survey ${t.survey_year}; screen ${atlas.source_validation_date}.`,
@@ -47,7 +48,10 @@ export function featuresGPX(atlas,features,title,options={}) {
   ].join(" ");
   return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(t.name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(notes)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   });
-  const tracks=features.areas.map(a=>geometryTrack(a.id,a.extent_note,a.geometry));
+  const tracks=features.areas.map(a=>{
+    const t=features.selected.find(t=>t.canonical_habitat&&t.area_ids.includes(a.id));
+    return geometryTrack(t?t.name+' reef':a.id,`${t?a.id+' · ':''}${a.extent_note}`,a.geometry);
+  });
   for(const drift of features.drifts)tracks.push(geometryTrack(drift.id,`${drift.basis} Not a navigation route.`,drift.geometry));
   for(const f of options.exclusions||[])tracks.push(geometryTrack(`AVOID ${f.properties.NAME}`,`Protected-area reference. ${f.properties.FULLNAME||f.properties.NAME}. ${f.properties.CCR||''} Exported ${options.checkedAt||'with snapshot'}. Static outline; not a live legal boundary service. Consult official charts and rules.`,f.geometry));
   return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SkipperCast" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${xml(title)}</name><desc>WGS84 coordinates. Habitat research; tracks show outlines and structure alignments, not navigation routes. Check current rules and charted hazards.</desc>${options.createdAt?`<time>${xml(options.createdAt)}</time>`:""}</metadata>${points.join('')}${tracks.join("")}</gpx>\n`;

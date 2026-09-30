@@ -567,6 +567,11 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   load();
   loadLive();
   return {
+    selectDate(date) {
+      const chosen=hours.findIndex(t=>isoDay(t)===date && Number(local(t,{hour:'numeric',hour12:false}))>=7);
+      if(chosen<0 || !bundle)return false;
+      index=chosen;render();return true;
+    },
     selectLocation(p) {
       requested = p;
       point = nearestPoint(p);

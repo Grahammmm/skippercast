@@ -98,13 +98,16 @@ def make_ca(directory):
         'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=serverAuth\n'
         'subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid\n'
         'subjectAltName=' + ','.join('DNS:' + name for name in HOSTNAMES) + '\n')
-    key = ['-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes']
+    # Named curves verify under modern Python/OpenSSL; macOS LibreSSL otherwise
+    # emits explicit EC parameters that the client's trust policy rejects.
+    key = ['-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1',
+           '-pkeyopt', 'ec_param_enc:named_curve', '-nodes']
     steps = [
-        [openssl, 'req', '-x509', *key, '-keyout', 'ca.key', '-out', 'ca.pem', '-days', '2',
+        [openssl, 'req', '-x509', '-sha256', *key, '-keyout', 'ca.key', '-out', 'ca.pem', '-days', '2',
          '-subj', '/CN=SkipperCast test CA', '-addext', 'basicConstraints=critical,CA:TRUE',
          '-addext', 'keyUsage=critical,keyCertSign,cRLSign'],
-        [openssl, 'req', '-new', *key, '-keyout', 'leaf.key', '-out', 'leaf.csr', '-subj', '/CN=source.test'],
-        [openssl, 'x509', '-req', '-in', 'leaf.csr', '-CA', 'ca.pem', '-CAkey', 'ca.key', '-CAcreateserial',
+        [openssl, 'req', '-new', '-sha256', *key, '-keyout', 'leaf.key', '-out', 'leaf.csr', '-subj', '/CN=source.test'],
+        [openssl, 'x509', '-req', '-sha256', '-in', 'leaf.csr', '-CA', 'ca.pem', '-CAkey', 'ca.key', '-CAcreateserial',
          '-out', 'leaf.pem', '-days', '2', '-extfile', 'leaf.ext'],
     ]
     for step in steps:

@@ -100,15 +100,20 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   // require a current publication receipt, even when old R2 bytes still exist.
   const seafloor = key.startsWith('tiles/seafloor/');
   let publication: ExternalJSON = null;
-  if (seafloor && key.endsWith('.pmtiles')) {
-    const match = /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
+  let expectedHash: string | undefined;
+  if (seafloor && (key.endsWith('.pmtiles') || key.endsWith('.geojson'))) {
+    const exporting = key.endsWith('.geojson');
+    const match = exporting
+      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/habitat-export\.geojson$/.exec(key)
+      : /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
     if (!match || !bucket) return new Response('Not found', {status: 404});
     let manifest: ExternalJSON;
     try { manifest = await (await bucket.get(`tiles/seafloor/manifest-${match[1]}.json`))?.json(); }
     catch { manifest = null; }
     publication = manifest;
+    expectedHash = exporting ? manifest?.export_sha256 : manifest?.archive_sha256;
     const expires = Date.parse(manifest?.expires_at);
-    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(manifest?.archive_sha256 || '')) {
+    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(expectedHash || '')) {
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }
@@ -121,7 +126,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     if (edge.hit) return edge.hit;
     const object = await bucket.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
     if (object) {
-      if (publication && object.customMetadata?.sha256 !== publication.archive_sha256) {
+      if (publication && object.customMetadata?.sha256 !== expectedHash) {
         return new Response('Seafloor archive revision unavailable', {status: 503, headers});
       }
       headers.set('ETag', object.httpEtag);

@@ -121,3 +121,17 @@ test('seafloor archives require a fresh matching revision and never fall back to
     assert.equal(feedKey('/feeds/seafloor-review/run.json'), null);
   } finally { useBucket({}); }
 });
+
+test('canonical reef export shares the current manifest and revision gate',async()=>{
+ const path='/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson',hash='c'.repeat(64);
+ const m={region:'morro-bay',status:'ready',export_sha256:hash,expires_at:new Date(Date.now()+3600000).toISOString()};
+ const make=(manifest,digest=hash)=>({async get(key){return key.endsWith('manifest-morro-bay.json')?{json:async()=>manifest}:{body:new Blob(['{}']).stream(),size:2,httpEtag:'"c"',customMetadata:{sha256:digest}};}});
+ try{
+  useBucket({FEEDS:make(m)});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,200);
+  for(const manifest of [{...m,status:'held'},{...m,expires_at:'2000-01-01'},{...m,export_sha256:null}]){
+   useBucket({FEEDS:make(manifest)});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,503);
+  }
+  useBucket({FEEDS:make(m,'d'.repeat(64))});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,503);
+  assert.equal((await serveFeed(new Request('https://s/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson'),'/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson')).status,404);
+ }finally{useBucket({});}
+});
