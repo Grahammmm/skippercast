@@ -3,15 +3,16 @@
   "reviewed_reaches": [
     "morro-bay-r02",
     "morro-bay-r03",
-    "morro-bay-r04"
+    "morro-bay-r04",
+    "point-arguello-conception-r06"
   ],
   "bounds_wgs84": [
     -121.3,
-    35.05,
-    -120.6,
+    34.48,
+    -120.5,
     35.65
   ],
-  "scope_note": "Morro Bay pilot permanent spatial-restriction planning screen only. New reaches require review of applicable security boundaries. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons are conservatively excluded; this is not a seasonal or method-specific fishing permission. Dynamic USCG notices and vessel security zones require trip-time checks.",
+  "scope_note": "Morro Bay pilot and Point Arguello-Conception r06 permanent spatial-restriction planning screen only. Vandenberg Zone 4 is conservatively excluded because stopping or loitering is prohibited without permission. Zones 1-3 and 5-9 are normally open but can close for launches; trip-time notices must be checked. Other reaches require local security review. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons are conservatively excluded; this is not a seasonal or method-specific fishing permission. Dynamic USCG notices and vessel security zones require trip-time checks.",
   "security_zones": [
     {
       "id": "diablo-canyon",
@@ -26,6 +27,27 @@
       "source_url": "https://www.ecfr.gov/current/title-33/section-165.1155",
       "reviewed_at": "2026-09-28",
       "source_up_to_date_as_of": "2026-09-24"
+    },
+    {
+      "id": "vandenberg-zone-4",
+      "section": "334.1130",
+      "geometry_method": "reviewed-dms-coastal-envelope",
+      "source_datum": "unknown",
+      "paragraph_marker": "(iv) Zone 4.",
+      "expected_pairs_dms": [
+        [34, 41, 50, 120, 36, 20],
+        [34, 41, 50, 120, 40, 12],
+        [34, 35, 12, 120, 42, 45],
+        [34, 34, 32, 120, 42, 15],
+        [34, 34, 32, 120, 39, 3]
+      ],
+      "longitude_hemisphere": "W",
+      "inland_closure_lon": -120.5,
+      "planning_margin_m": 250,
+      "reviewed_xml_sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+      "source_url": "https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1130",
+      "reviewed_at": "2026-09-29",
+      "source_up_to_date_as_of": "2026-09-28"
     }
   ]
 }

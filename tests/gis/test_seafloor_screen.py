@@ -8,13 +8,13 @@ import tempfile
 import unittest
 
 from pyproj import Transformer, Geod
-from shapely.geometry import box, mapping, Polygon, MultiPolygon, shape
+from shapely.geometry import box, mapping, Point, Polygon, MultiPolygon, shape
 from shapely.ops import transform
 
 from skippercast.seafloor.screen import load_snapshot, screen_candidates, input_identity, exclusion_polygon, VERSION
 from skippercast.seafloor.screen_sources import security_layer
 from skippercast.seafloor.io import sha256
-from skippercast.platform.contracts import atomic_json
+from skippercast.platform.contracts import REPO, atomic_json
 
 NOW = datetime(2026, 9, 28, tzinfo=timezone.utc)
 TO_GEO = Transformer.from_crs(3310, 4326, always_xy=True).transform
@@ -144,6 +144,48 @@ class ScreenTests(unittest.TestCase):
                    for point in shape(layer['features'][0]['geometry']).exterior.coords]
         self.assertAlmostEqual(min(distances),1829.8,places=4)
         self.assertAlmostEqual(max(distances),1829.8,places=4)
+
+    def test_coastal_zone_envelope_covers_published_vertices_and_fails_on_change(self):
+        body=('''<DIV8 N="334.1130"><P>(iv) Zone 4. Beginning at the mouth of the
+            Santa Ynez River latitude 34°41′50″, longitude 120°36′20″; thence
+            to latitude 34°41′50″, longitude 120°40′12″; thence to latitude
+            34°35′12″; longitude 120°42′45″; thence latitude 34°34′32″,
+            longitude 120°42′15″, thence to Point Arguello, latitude
+            34°34′32″, longitude 120°39′03″.</P></DIV8>''').encode()
+        config=json.loads((REPO/'catalog/seafloor-screen.json').read_text())
+        zone=next(z for z in config['security_zones'] if z['id']=='vandenberg-zone-4').copy()
+        zone['reviewed_xml_sha256']=hashlib.sha256(body).hexdigest()
+        def getter(url):
+            return (b'{"titles":[{"number":33,"up_to_date_as_of":"2026-09-28"}]}'
+                    if url.endswith('titles') else body)
+        layer,receipt=security_layer({'security_zones':[zone]},getter)
+        boundary=shape(layer['features'][0]['geometry'])
+        self.assertTrue(boundary.is_valid)
+        self.assertEqual(layer['features'][0]['properties']['datum'],'unknown')
+        self.assertEqual(layer['features'][0]['properties']['planning_margin_m'],250)
+        for lat,lon in ((34+41/60+50/3600,-(120+36/60+20/3600)),
+                        (34+35/60+12/3600,-(120+42/60+45/3600)),
+                        (34+34/60+32/3600,-(120+39/60+3/3600))):
+            self.assertTrue(boundary.covers(Point(lon,lat)))
+        self.assertTrue(boundary.covers(Point(-120.51,34.64)))
+        self.assertFalse(boundary.intersects(Point(-120.9,34.64)))
+        self.assertEqual(receipt['sections'][0]['sha256'],zone['reviewed_xml_sha256'])
+        regional={'version':VERSION,'status':'ready','reasons':[],
+                  'snapshot':NOW.isoformat(),'snapshot_sha256':'a'*64,
+                  'scope':mapping(box(-121.3,34.48,-120.5,35.65)),
+                  'layers':[{'id':name,'features':layer['features'] if name=='security'
+                             else [{'geometry':mapping(box(-122.5,35.8,-122.4,35.9))}]}
+                            for name in ('cdfw-mpa','noaa-federal','security')]}
+        inside=candidate(mapping(box(-120.651,34.639,-120.649,34.641)))
+        outside=candidate(mapping(box(-120.901,34.639,-120.899,34.641)))
+        passed,held,_=screen_candidates({'features':[inside,outside]},regional)
+        self.assertEqual(len(passed['features']),1)
+        self.assertEqual(len(held['features']),1)
+        self.assertIn('overlap-security',held['features'][0]['properties']['hold_reasons'])
+        changed=deepcopy(zone)
+        changed['expected_pairs_dms'][2][5]=46
+        with self.assertRaisesRegex(ValueError,'coordinates changed'):
+            security_layer({'security_zones':[changed]},getter)
 
 
 if __name__ == '__main__':

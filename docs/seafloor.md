@@ -463,11 +463,11 @@ PYTHONPATH=src:. python -m skippercast.seafloor run --reach morro-bay-r03
 
 `screen_sources.py` reuses the complete-inventory CDFW MPA and NOAA federal-area
 collectors. Its private snapshot points to content-addressed geometry files;
-retrieval dates and file hashes are checked on every run. The first security
-review covers only the three Morro Bay pilot reaches listed in
-`catalog/seafloor-screen.json`. Other reaches remain held until their local
-security restrictions are reviewed. The scope is explicit and is never inferred
-from a provider's program name.
+retrieval dates and file hashes are checked on every run. The reviewed security
+scope covers the three Morro Bay pilot reaches and Point Arguello–Conception
+r06 listed in `catalog/seafloor-screen.json`. Other reaches remain held until
+their local security restrictions are reviewed. The scope is explicit and is
+never inferred from a provider's program name.
 
 - CDFW: [original ds582 service](https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0),
   155 features retrieved September 28. Every MPA and special closure is excluded
@@ -484,6 +484,15 @@ from a provider's program name.
   chords cutting inside that circle. Changed legal text invalidates the reviewed
   hash and requires a new boundary review. These public government geometries and
   statutory facts retain publisher links; private raw receipts are not shipped.
+- Vandenberg: [33 CFR 334.1130](https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1130)
+  prohibits stopping or loitering in Zone 4 without permission. Its five published
+  coordinate pairs are checked against a pinned eCFR section hash. Because the
+  section does not state a coordinate datum or trace the shoreline, the screen
+  uses an inland closure and one 250 m planning-cell outward margin; this may withhold
+  otherwise legal water. Zones 1–3 and 5–9 are normally open but may close for
+  launches, so current notices still need a trip-time check. The new permanent
+  screen covers Point Arguello–Conception reach r06; [the H11953 source PR](https://github.com/Grahammmm/skippercast/pull/97)
+  must merge and rerun before it can produce tier-2 habitat there.
 
 Every full habitat polygon is intersected with the exclusions in EPSG:3310,
 including boundary touches. A conflicting candidate is held in its entirety;
