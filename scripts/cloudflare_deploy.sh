@@ -16,6 +16,14 @@ if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; th
   exit 0
 fi
 
+# Web Push cannot work without the VAPID pair. Check before touching Cloudflare, so a
+# missing or malformed key stops the job without a deploy and a rollback.
+if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
+  echo "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set (GitHub secrets); see docs/operations/runbooks/secrets-rotation.md#vapid-key-pair" >&2
+  exit 1
+fi
+case "${#VAPID_PUBLIC_KEY}:${#VAPID_PRIVATE_KEY}" in 87:43) ;; *) echo "VAPID keys have the wrong length (expected 87 and 43 base64url characters)" >&2; exit 1;; esac
+
 db_id() { $WRANGLER d1 list --json 2>/dev/null | python3 -c "
 import json,sys
 rows=json.load(sys.stdin)
@@ -80,13 +88,6 @@ echo "D1 export saved to r2://$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql"
 $WRANGLER d1 migrations apply "$DB_NAME" --remote --config "$CONFIG"
 $WRANGLER deploy --config "$CONFIG" --message "${GITHUB_SHA:-local} run ${GITHUB_RUN_ID:-local}"
 if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
-
-# Web Push cannot work without the VAPID pair; refuse to deploy a build whose alerts would be held.
-if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
-  echo "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set (GitHub secrets); see docs/operations/runbooks/secrets-rotation.md#vapid-key-pair" >&2
-  exit 1
-fi
-case "${#VAPID_PUBLIC_KEY}:${#VAPID_PRIVATE_KEY}" in 87:43) ;; *) echo "VAPID keys have the wrong length (expected 87 and 43 base64url characters)" >&2; exit 1;; esac
 
 # Secrets uploaded to the Worker; optional ones only when provided to this job.
 python3 - <<'PY' > var/cloudflare-secrets.json
