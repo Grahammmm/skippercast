@@ -8,18 +8,38 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+import time
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from skippercast.http import parse_retry_after
 from skippercast.platform.bottom_targets import source_url_allowed
 
 MAX_REVIEW_BYTES = 160_000_000
+# NOAA's NCEI host answers bursts of HEADs with 429. A full rescan (427 files)
+# must wait and retry instead of reporting the whole inventory as degraded.
+RATE_LIMIT_ATTEMPTS = 5
+RATE_LIMIT_MAX_WAIT = 60.0
+WORKERS = 4
 
 
-def head(url):
+def head(url, *, opener=urlopen, sleep=time.sleep):
     if not source_url_allowed(url) or not url.lower().endswith('.bag'):
         raise ValueError('BAG URL outside reviewed NOAA host/path')
     request = Request(url, method='HEAD', headers={'User-Agent':'SkipperCast NOAA BAG metadata inventory/1.0'})
-    with urlopen(request, timeout=18) as response:
+    for attempt in range(RATE_LIMIT_ATTEMPTS):
+        try:
+            return _head_once(request, url, opener)
+        except HTTPError as error:
+            if error.code != 429 or attempt == RATE_LIMIT_ATTEMPTS - 1:
+                raise
+            wait = parse_retry_after(error.headers.get('Retry-After') if error.headers else None)
+            sleep(min(RATE_LIMIT_MAX_WAIT, wait if wait is not None else 2.0 * 2 ** attempt))
+    raise AssertionError('unreachable')
+
+
+def _head_once(request, url, opener):
+    with opener(request, timeout=18) as response:
         if response.status != 200 or response.url != url:
             raise ValueError('BAG HEAD redirected or did not return 200')
         value=response.headers.get('Content-Length','')
@@ -54,7 +74,7 @@ def inventory(discovery, products, previous=None, *, now=None, fetcher=head):
               and survey['products']['report'] and size<=MAX_REVIEW_BYTES else 'inspect-original-product')
         return {'survey_id':urls[url],'url':url,'bytes':size,'last_modified_http':modified,
                 'status':'ok','checked_at':now.isoformat(),'native_review_hint':hint,'issue':None}
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         pending={pool.submit(inspect,url):url for url in sorted(urls)}
         for future in as_completed(pending):
             url=pending[future]

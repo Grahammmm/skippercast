@@ -3,7 +3,8 @@ name: "Research: daily native-seabed source inventory"
 # Research-only source discovery that used to run inside daily-data.yml. Nothing
 # here is loaded by the app, so it publishes nothing: results are workflow
 # artifacts, and a failure here can never block or stale the product feed.
-# Incremental state (--previous) is carried between runs in the Actions cache.
+# Incremental state (--previous) is carried between runs in the Actions cache,
+# saved after every run that was not cancelled (a degraded run included).
 
 on:
   workflow_run:
@@ -31,7 +32,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Restore previous research inventories
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: var/research-previous
           key: research-daily-${{ github.run_id }}
@@ -83,6 +84,15 @@ jobs:
           for path in var/research-daily/*.json; do
             [ -f "$path" ] && cp "$path" var/research-previous/
           done
+      # Saved even when a source is degraded: the combined cache action saves only
+      # after a green job, so one bad day would lose all carried state and force
+      # a full rescan (which NOAA rate-limits) on every later run.
+      - name: Save state for the next run
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: var/research-previous
+          key: research-daily-${{ github.run_id }}
       - name: Upload research inventories
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
