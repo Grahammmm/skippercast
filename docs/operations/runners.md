@@ -30,7 +30,8 @@ variable change, not a code change:
 
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, seafloor, freshness, ops report, legal review, research, rehearsal, forecast tiles | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
@@ -96,4 +97,15 @@ CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
 gate, verify browser system dependencies install without an interactive password,
 parallel pnpm installs use separate directories, and the complete CI suite passes
 on the configured runner. Keep the gate disabled while any prerequisite fails.
-Data jobs continue to use `DATA_RUNNER` independently.
+Other data jobs continue to use `DATA_RUNNER` independently.
+
+## Seafloor isolation
+
+Seafloor refreshes use `SEAFLOOR_RUNNER`, independently of CI and the long-running
+live forecast loop. Leave it unset to use GitHub-hosted Ubuntu. This prevents
+reef publication from waiting behind occupied self-hosted runners. Before setting
+a dedicated self-hosted label, verify that the entire seafloor workflow completes
+on that pool, including source hashes, spatial screens, R2 read-back and public
+archive checks. Unset the variable to return to hosted processing; no checks or
+publication gates are disabled. Existing queued jobs retain their assigned runner;
+rerun an interrupted refresh only after checking its saved progress receipts.
