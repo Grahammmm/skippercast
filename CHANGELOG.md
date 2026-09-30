@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: retain native H11953 4 m/8 m depth bands; add 65.71 km² valid survey footprint near Arguello and 475 spatially screened habitat candidates, pending production verification.
+
 - Seafloor: extend Morro and Arguello permanent planning screens; exclude the Morro entrance channel and Vandenberg Zone 4, releasing 1,880 additional habitat candidates locally pending publication.
 
 - Seafloor: process southern Morro and eastern Cambria native intersections; add 89.68 km² measured coverage and 601 supported ranks in three private reaches.
