@@ -20,17 +20,17 @@
         100.584
       ],
       "source_url": "https://www.adfg.alaska.gov/index.cfm?adfg=lingcod.main",
-      "evidence": "ADF&G species profile: typical rocky reefs at 30–330 feet. Transfer of general West Coast habitat guidance to California; not locally calibrated.",
+      "evidence": "ADF&G species profile: typical rocky reefs at 30\u2013330 feet. Transfer of general West Coast habitat guidance to California; not locally calibrated.",
       "evidence_scope": "General species profile from Alaska agency"
     },
     "rockfish-reef": {
-      "label": "Reef rockfish — copper habitat proxy",
+      "label": "Reef rockfish \u2014 copper habitat proxy",
       "planning_depth_m": [
         22,
         98
       ],
       "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=33863&inline=",
-      "evidence": "CDFG NFMP Appendix D, D-40–41: copper rockfish high-relief reef/rock-sand interfaces; Big Sur observations at 22–98 m. Observation band used as a planning proxy, not an optimum for all rockfish.",
+      "evidence": "CDFG NFMP Appendix D, D-40\u201341: copper rockfish high-relief reef/rock-sand interfaces; Big Sur observations at 22\u201398 m. Observation band used as a planning proxy, not an optimum for all rockfish.",
       "evidence_scope": "Central California copper rockfish; other rockfish differ"
     },
     "gopher-rockfish": {
@@ -40,7 +40,7 @@
         37
       ],
       "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=33863&inline=",
-      "evidence": "CDFG NFMP Appendix D, D-41: adult gopher rockfish commonly 9–37 m on reefs or kelp beds.",
+      "evidence": "CDFG NFMP Appendix D, D-41: adult gopher rockfish commonly 9\u201337 m on reefs or kelp beds.",
       "evidence_scope": "California nearshore adult habitat"
     },
     "cabezon-shallow-reef": {
@@ -118,7 +118,7 @@
       "review_status": "reviewed",
       "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
       "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
-      "review_basis": "Fresh original FGDC metadata and native raster/VAT reviewed 2026-09-30. VALUE offsets add 10 for depth and 50/100 for slope; raster contains the 22 explicitly mapped codes. Abstract says steep slopes absent but raster includes 101–113; use documented VALUE encoding, never discard those codes silently.",
+      "review_basis": "Fresh original FGDC metadata and native raster/VAT reviewed 2026-09-30. VALUE offsets add 10 for depth and 50/100 for slope; raster contains the 22 explicitly mapped codes. Abstract says steep slopes absent but raster includes 101\u2013113; use documented VALUE encoding, never discard those codes silently.",
       "classes": {
         "1": {
           "normalized_code": 1,
@@ -211,6 +211,33 @@
       },
       "same_survey_as_depth": true,
       "lineage_note": "Video/sample-supervised interpretation of shared bathymetry and backscatter; not independent confirmation of depth or fish presence."
+    },
+    {
+      "source_id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+      "source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "depth_source_ids": [
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c"
+      ],
+      "review_status": "reviewed",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ac4288bd38594e1fa6e89e139995ab73/SeafloorCharacter_OffshorePointBuchon_metadata.xml",
+      "metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+      "review_basis": "Fresh original FGDC metadata and native whole-raster class counts verified 2026-09-30. Actual 2 m pixels; inherited >=80 m coarser zone excluded by depth resolution profile.",
+      "classes": {
+        "1": {
+          "normalized_code": 1,
+          "description": "soft and flat fine grain sedimented seafloor"
+        },
+        "2": {
+          "normalized_code": 2,
+          "description": "hard and flat coarse grain sediment and bedrock seafloor"
+        },
+        "3": {
+          "normalized_code": 3,
+          "description": "hard and rugose boulder, megaclast, and bedrock seafloor"
+        }
+      },
+      "same_survey_as_depth": true,
+      "lineage_note": "Paired 2008 sonar-derived bathymetry/backscatter classification with 2012 video supervision; one depth evidence line."
     }
   ]
 }

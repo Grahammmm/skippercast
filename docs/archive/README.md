@@ -84,3 +84,4 @@ Files keep their original names so old links are easy to follow. Do not update t
 | [map-engine-test.md](map-engine-test.md) | MapLibre + PMTiles versus Leaflet + GeoJSON test on one layer |
 
 - [Native normalization recovery](seafloor-normalization-recovery-2026-09-30.md): worker-log diagnosis, portable content verification and resumable Conception proof.
+- [Point Buchon native batch](seafloor-point-buchon-batch-2026-09-30.md): original source qualification, two physical reaches, measured deltas and next operational blocker.

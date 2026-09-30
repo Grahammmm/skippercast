@@ -127,6 +127,9 @@
     "dist/data/reefcheck-statewide-observation-review.json",
     "dist/data/san-miguel-original-habitat-depth-review.json",
     "dist/data/san-miguel-original-habitat-vr-review.json",
+    "dist/data/seafloor-monterey-native-review.json",
+    "dist/data/seafloor-normalized-content-review.json",
+    "dist/data/seafloor-point-buchon-native-review.json",
     "dist/data/statewide-original-class-measured-overlap-review.json",
     "dist/data/usgs-bathymetry-accuracy-review.json",
     "dist/data/usgs-caldig-v2-native-review.json",
@@ -141,9 +144,7 @@
     "dist/data/usgs-sur-arguello-sediment-review.json",
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
-    "dist/data/w00614-usgs-video-observation-gap.json",
-    "dist/data/seafloor-monterey-native-review.json",
-    "dist/data/seafloor-normalized-content-review.json"
+    "dist/data/w00614-usgs-video-observation-gap.json"
   ],
   "surveys": [
     {
@@ -289,15 +290,15 @@
       "kind": "bathymetry",
       "year": 2008,
       "resolution_m": 2.0,
-      "horizontal_crs": "unknown",
+      "horizontal_crs": "EPSG:32610",
       "vertical_datum": "unknown",
       "license": "public-domain-us-gov",
       "sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
-      "bytes": "unknown",
+      "bytes": 63660952,
       "derived_from": [],
-      "status": "candidate",
+      "status": "usable",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Original USGS Point Buchon multibeam acquired 2008, released 2022. Native delivered 2 m grid, but >=80 m uses 5 m data resampled to 2 m; fine habitat is masked there. Nominal depth datum unknown, quantitative accuracy and interpolation mask unknown. Paired substrate is the same sonar evidence line.",
       "archive_member": "unknown",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/47/archive_url",
@@ -305,7 +306,8 @@
         "dist/data/usgs-depth-datum-ledger.json#/sources/26/archive_url",
         "dist/data/usgs-depth-datum-ledger.json#/sources/26/native_resolution_m",
         "dist/data/usgs-ds781-metadata-review.json#/records/47/archive_url",
-        "dist/data/usgs-morro-report-datum-review.json#/sources/1/archive_url"
+        "dist/data/usgs-morro-report-datum-review.json#/sources/1/archive_url",
+        "research/receipts/seafloor-point-buchon-native-review.json#/bathymetry"
       ],
       "field_evidence": {
         "sha256": "dist/data/usgs-depth-datum-ledger.json#/sources/26/archive_url",
@@ -314,7 +316,37 @@
         "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/26/native_resolution_m"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "resolution_profile": {
+        "fine_to_depth_m": 80,
+        "coarse_resolution_m": 5,
+        "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+        "cog_sha256": "216b8bdb5bf8683ffbef6e940cd5289decf777b7112f42dab41fc836a69389ea",
+        "requested_bounds_wgs84": [
+          -120.979799,
+          35.127465,
+          -120.781601,
+          35.296794
+        ],
+        "valid_pixels_in_requested_bounds": 31624451,
+        "nominal_0_300ft_pixels_in_requested_bounds": 27255543,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "a51460614c8998d774f6359a4158fdc82a8ecce9be376927bbec8baf9a8e3761"
+        }
+      }
     },
     {
       "id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
@@ -334,8 +366,8 @@
       "derived_from": [],
       "status": "candidate",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "notes": "Reviewed paired substrate binding only; candidate inventory status does not promote it as depth. Native classes 1/2/3 from original FGDC and whole-raster counts. Sonar 2008, video 2012; same depth/backscatter acquisition, no independent corroboration.",
+      "archive_member": "SeafloorCharacter_OffshorePointBuchon.tif",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/48/archive_url",
         "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/31/source_url",
@@ -344,7 +376,8 @@
         "dist/data/usgs-ds781-native-character-review.json#/products/22",
         "dist/data/usgs-ds781-native-character-review.json#/products/22/archive_url",
         "dist/data/usgs-ds781-native-character-review.json#/products/22/native_crs",
-        "dist/data/usgs-ds781-native-character-review.json#/products/22/native_resolution"
+        "dist/data/usgs-ds781-native-character-review.json#/products/22/native_resolution",
+        "research/receipts/seafloor-point-buchon-native-review.json#/substrate"
       ],
       "field_evidence": {
         "sha256": "dist/data/usgs-ds781-character-semantics.json#/products/12/archive_url",
