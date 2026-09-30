@@ -82,3 +82,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 | [map-and-forecast.md](map-and-forecast.md) | Map protection overlays, drift guides and forecast ratings (September 21 feature note) |
 | [southern-species-research.md](southern-species-research.md) | Southern California species and habitat evidence (September 22 review) |
 | [map-engine-test.md](map-engine-test.md) | MapLibre + PMTiles versus Leaflet + GeoJSON test on one layer |
+
+- [Native normalization recovery](seafloor-normalization-recovery-2026-09-30.md): worker-log diagnosis, portable content verification and resumable Conception proof.

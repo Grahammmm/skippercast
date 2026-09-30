@@ -15,6 +15,7 @@ from .adapters import bag, usgs_geotiff
 from .fetch import fetch_source
 from .io import sha256
 from .raster import bounds_window, chunks, read_native
+from .normalized import raster_identity
 
 VERSION = 'original-native-adapters-v1'
 
@@ -40,6 +41,9 @@ def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
         saved = read_json(receipt_path)
         if saved['inputs'] != key_data or sha256(output) != saved['cog_sha256']:
             raise ValueError('Normalized COG cache failed verification')
+        if 'raster_identity' not in saved:
+            saved['raster_identity'] = raster_identity(output)
+            atomic_json(receipt_path, saved, indent=2)
         return saved, downloaded, True
     metadata = {'vertical_datum': row['vertical_datum'], 'uncertainty_type': 'unknown'}
     if row['format'] == 'bag':
@@ -95,6 +99,7 @@ def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
             saved = {'inputs': key_data, 'adapter_version': VERSION,
                      'source_id': row['id'], 'source_sha256': row['sha256'], 'source_bytes': row['bytes'],
                      'cog_sha256': sha256(output), 'cog_bytes': output.stat().st_size,
+                     'raster_identity': raster_identity(output),
                      'requested_bounds_wgs84': list(bounds), 'seam_margin_m': 100,
                      'valid_pixels_in_requested_bounds': valid_count,
                      'nominal_0_300ft_pixels_in_requested_bounds': band_count,

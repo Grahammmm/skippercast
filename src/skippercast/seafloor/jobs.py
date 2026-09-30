@@ -117,7 +117,8 @@ def process(root, reach, batch):
         traceback.print_exc()
         result = {'reach': reach, 'batch': batch, 'status': 'failed'}
         result['error_type'] = type(error).__name__
-        result['reason'] = ('habitat-window-limit' if '20 million pixels' in str(error)
+        result['reason'] = ('normalized-source-review-mismatch' if 'Normalized' in str(error)
+                            else 'habitat-window-limit' if '20 million pixels' in str(error)
                             else 'processing-failed; inspect this reach before retry')
         if started_run and checkpoint.exists():
             saved = read_json(checkpoint)
@@ -147,7 +148,10 @@ def finish(root, matrix, batch):
             if status['batch'] != batch or status['reach'] != ident:
                 raise ValueError('Batch result mismatch')
             if status['status'] == 'failed':
-                raise ValueError('Reach processing failed')
+                failures.append({'reach': ident, 'reason': status.get('reason', 'processing-failed'),
+                                 'error_type': status.get('error_type', 'unknown')})
+                blocked_regions.add(row['region'])
+                continue
             if not state_cache.restore(s3, bucket, root, ident):
                 raise ValueError('Missing reach state')
             if status['status'] == 'complete':

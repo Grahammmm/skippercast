@@ -27,6 +27,7 @@ from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
 from .screen import load_snapshot, input_identity, screen_candidates
 from .resolution_profile import fine_detail_valid
+from .normalized import verify_review
 
 VERSION = 'native-coverage-habitat-v2'
 
@@ -122,8 +123,6 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         if not transform(project, box(*bounds)).intersects(scope):
             continue
         receipt, _, _ = ingest(row, bounds, root=root, fetch=fetch)
-        if receipt['cog_sha256'] != row['adapter_review']['cog_sha256']:
-            raise ValueError('Normalized source differs from reviewed manifest')
         folder = root / 'var/seafloor/cache' / row['sha256']
         paths = [p.with_suffix('.tif') for p in folder.glob('*.json')
                  if read_json(p).get('cog_sha256') == receipt['cog_sha256']
@@ -133,6 +132,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         selected_path = sorted(paths)[0]
         if sha256(selected_path) != receipt['cog_sha256']:
             raise ValueError('Selected normalized COG failed hash verification')
+        verify_review(receipt, row['adapter_review'], selected_path)
         sources.append({'row': row, 'path': selected_path, 'receipt': receipt})
     rules = validate_rules(read_json(root / 'catalog/habitat-rules.json'))
     bindings = resolve_bindings(rules, manifest)
@@ -151,7 +151,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'resolution_profile.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')}}
     physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')

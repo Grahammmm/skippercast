@@ -65,6 +65,8 @@ def qualify_row(row, receipt, *, rights_url):
         'valid_pixels_in_requested_bounds', 'nominal_0_300ft_pixels_in_requested_bounds',
         'native_resolution_m', 'vertical_datum', 'uncertainty_type', 'interpolation_mask')}
     result['adapter_review']['rights_source_url'] = rights_url
+    if 'raster_identity' in receipt:
+        result['adapter_review']['raster_identity'] = receipt['raster_identity']
     result['notes'] = ('Opened through original-native-adapters-v1; native-resolution COG cached by source hash. '
                        'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
                        'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')

@@ -1,8 +1,10 @@
 """Files whose bytes are part of the seafloor pipeline's cache keys.
 
 seafloor/ingest.py keys each normalized survey grid (COG) on the SHA-256 of
-these source files, and the published COG hash must equal the reviewed
-``adapter_review.cog_sha256`` in catalog/surveys.json. Any byte change here,
+these source files, and legacy sources require the reviewed
+``adapter_review.cog_sha256`` in catalog/surveys.json. Sources with a reviewed
+raster content identity also accept a different lossless file encoding, only
+when every scientific pixel, mask and grid field matches. Any byte change here,
 even a refactor or a new import, turns every cached grid into a cache miss.
 Normalizing again on a different machine does not reproduce the reviewed
 bytes, so the scheduled "Screen and publish seafloor" job fails with
@@ -22,7 +24,7 @@ from tests._support import ROOT
 PINNED = {
     # seafloor/ingest.py: metadata_parser and implementation
     'src/skippercast/platform/bottom_targets.py': 'feece80a42529aeab5850bc4b775835ffdcafdbb779ac38d6e3cc7c33c7d192f',
-    'src/skippercast/seafloor/ingest.py': 'f1fd4ae89478225f6d38dc4a4748fdc18abaf80af6ca7621617e832c1d0f060a',
+    'src/skippercast/seafloor/ingest.py': '07d4d14a7564fd3d2e23865970831a1143d80fd31953fcd1ccbb4d5837fd6e14',
     'src/skippercast/seafloor/raster.py': '30885cdbaed6be8089f4b3661a4d6715a33d6900274486793fceb53079729ca5',
     'src/skippercast/seafloor/adapters/bag.py': 'f89211791ecc448f3d8d4b32589ee4c7cc016604e7788db46b17405c9858853c',
     'src/skippercast/seafloor/adapters/usgs_geotiff.py': '51dee0633a7733c9937856b3c09704b8f5197bf9c96e3dc5f3d2aa8b65f4a24a',

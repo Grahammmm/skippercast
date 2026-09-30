@@ -109,11 +109,25 @@
       "type": "object",
       "description": "Producer-documented native fine depth limit in a mixed-resolution display GeoTIFF. Deeper upsampled pixels remain tier 1 only.",
       "additionalProperties": false,
-      "required": ["fine_to_depth_m", "coarse_resolution_m", "source_url"],
+      "required": [
+        "fine_to_depth_m",
+        "coarse_resolution_m",
+        "source_url"
+      ],
       "properties": {
-        "fine_to_depth_m": {"type": "number", "exclusiveMinimum": 0, "maximum": 91.44},
-        "coarse_resolution_m": {"type": "number", "exclusiveMinimum": 0},
-        "source_url": {"type": "string", "pattern": "^https://[^ ]+$"}
+        "fine_to_depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 91.44
+        },
+        "coarse_resolution_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "source_url": {
+          "type": "string",
+          "pattern": "^https://[^ ]+$"
+        }
       }
     },
     "vertical_datum": {
@@ -284,6 +298,23 @@
         "rights_source_url": {
           "type": "string",
           "pattern": "^https://[^ ]+$"
+        },
+        "raster_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "sha256"
+          ],
+          "properties": {
+            "version": {
+              "const": "normalized-raster-content-v1"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
         }
       }
     }

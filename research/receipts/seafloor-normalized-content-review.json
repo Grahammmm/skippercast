@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "method": "Exact float32 band values, per-band validity, CRS authority, affine, shape, band descriptions and depth/datum tags; original and encoded-file byte SHA256 checks retained. Same-acquisition evidence is unchanged.",
+  "sources": [
+    {
+      "source_id": "bathymetry-offshoremorrobay-zip-fad659557e",
+      "source_sha256": "1f215612bbd0bac0eed8b7738cfc608a8403ebdcb8d1705123e864fd81f24aed",
+      "reviewed_cog_sha256": "c57549d62416903fc2e24bf04cc9aaeb185d29aa43ce96723edcab07529c2eee",
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "ac2b74377292c9553ef8fb452ce462300e4783cc1ed2e9d4961f78f085ae9946"
+      }
+    },
+    {
+      "source_id": "bathymetry-offshorepointestero-zip-7e3be5eb12",
+      "source_sha256": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
+      "reviewed_cog_sha256": "4faf6272e251771bc46a0c3404e9209a99351b4a242d8df4254ae660fa0d7d7a",
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "eb33aa358d605e33c34bbab22616f72e99f7b69856d2cbe2d542de0ab01852c2"
+      }
+    },
+    {
+      "source_id": "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+      "source_sha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+      "reviewed_cog_sha256": "ee44983bf2962cb6ecfe2e3c0ed4b2d5ec265f760bc3f7aec9e3855005054f00",
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "fa7e5b0bd672dd88207e7557349d69d65f0740ce129a4e9c269eb89a5625ce49"
+      }
+    },
+    {
+      "source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "reviewed_cog_sha256": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "233b398cd2595fe806f8e884d60147b5432d1522f319547f8054c4cf00279c44"
+      }
+    }
+  ],
+  "production_failure_evidence": "Run 36731694768 workers for Monterey r01, Morro r01 and Conception r07 raised Normalized source differs from reviewed manifest before terrain. Worker step success did not mean successful processing. Root cause is encoded COG checksum differences; semantic identity must pass on Linux before accepting them.",
+  "real_source_proof": [
+    {
+      "source": "bathymetry-offshoremorrobay-zip-fad659557e",
+      "old_cog": "c57549d62416903fc2e24bf04cc9aaeb185d29aa43ce96723edcab07529c2eee",
+      "new_cog": "c57549d62416903fc2e24bf04cc9aaeb185d29aa43ce96723edcab07529c2eee",
+      "content": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "ac2b74377292c9553ef8fb452ce462300e4783cc1ed2e9d4961f78f085ae9946"
+      },
+      "reused": false
+    },
+    {
+      "source": "bathymetry-offshorepointestero-zip-7e3be5eb12",
+      "old_cog": "4faf6272e251771bc46a0c3404e9209a99351b4a242d8df4254ae660fa0d7d7a",
+      "new_cog": "4faf6272e251771bc46a0c3404e9209a99351b4a242d8df4254ae660fa0d7d7a",
+      "content": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "eb33aa358d605e33c34bbab22616f72e99f7b69856d2cbe2d542de0ab01852c2"
+      },
+      "reused": false
+    },
+    {
+      "source": "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+      "old_cog": "ee44983bf2962cb6ecfe2e3c0ed4b2d5ec265f760bc3f7aec9e3855005054f00",
+      "new_cog": "ee44983bf2962cb6ecfe2e3c0ed4b2d5ec265f760bc3f7aec9e3855005054f00",
+      "content": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "fa7e5b0bd672dd88207e7557349d69d65f0740ce129a4e9c269eb89a5625ce49"
+      },
+      "reused": true
+    },
+    {
+      "source": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "old_cog": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+      "new_cog": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+      "content": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "233b398cd2595fe806f8e884d60147b5432d1522f319547f8054c4cf00279c44"
+      },
+      "reused": false
+    }
+  ],
+  "interpretation": "New normalization was checked against each prior reviewed original and exact scientific raster. Synthetic alternate lossless encoding passes; altered pixels/masks/affine/datum fail. Linux production equivalence remains to verify."
+}
