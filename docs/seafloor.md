@@ -6,24 +6,28 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M3 part 2, held habitat candidates
+## Current stage: M5, reach-by-reach Central Coast mapping
 
-The [candidate manifest](../catalog/surveys.json) contains 385 source products.
-The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Three original bathymetry products have native-adapter receipts; the other 382
-remain candidates. Metadata alone cannot promote a source. `usable` means the
-reviewed source window can be processed, not that its whole file envelope has
-valid depth or that a reach has been mapped.
+The [candidate manifest](../catalog/surveys.json) contains original-survey leads
+and reviewed products; metadata alone cannot promote a source. `usable` applies
+only to its inspected native-pixel window, not the whole survey envelope. The
+[ledger](../dist/data/seafloor-ledger.json) is the current coverage record for
+46 disjoint reaches and a provisional 0–300 ft reference band.
 
-The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
-packages into **46 reaches**, approximately 10 km alongshore, ordered outward
-from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
-**55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
-Cells start at tier 0. M3 now classifies original-survey coverage for the first
-three Morro Bay reaches and produces ranked, private habitat candidates; current totals are in the ledger. Tier 2 remains zero
-until a fresh whole-polygon legal screen is complete. This does not
-mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
-remains a separate research receipt; it is not reclassified as new coverage.
+On September 29, 2026, the original NOAA H11952 2 m, 4 m and 8 m MLLW BAGs
+and the adjacent reviewed H11953 2 m BAG added 60.778125 km² of tier-1
+planning cells in Point Arguello–Conception reaches r07–r08. The H11952 grids
+are one acquisition, selected per cell without double counting; 8 m cells
+can describe only a broad area. Their 720 extracted habitat candidates remain
+held with `screen-scope-unreviewed`. The current screen has not reviewed
+the [Vandenberg danger zones](https://www.ecfr.gov/current/title-33/chapter-II/part-334/section-334.1130)
+or time-sensitive closures for these reaches. A local PMTiles build is `held`
+and contains zero habitat features; nothing from these reaches is a published
+fishing location. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
+remains a separate research receipt, not new coverage.
+
+The dated milestone sections below preserve implementation history; use the
+ledger and current-stage paragraph for present coverage and release status.
 
 ### Run and reproduce
 

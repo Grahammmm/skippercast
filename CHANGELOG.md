@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Seafloor coverage now includes 60.778 km² of original NOAA H11952/H11953 planning cells in Point Arguello–Conception reaches r07–r08; habitat candidates remain held pending a Vandenberg restriction screen.
 - Docs: the README is rewritten as a short product page with a screenshot, coverage list and three-command start; datum and withdrawn-claim details now live in `docs/product/data-confidence.md`. The architecture doc no longer describes ChatGPT Sites hosting.
 - Docs: `docs/product/data-confidence.md` is the single reference for grades, coverage states, freshness, depth datums and withdrawn claims.
 - Docs: 39 dated rollout, source-request and research logs moved to `docs/archive/` (indexed in `docs/archive/README.md`); `docs/README.md` now links the engineering, operations and legal documents.
