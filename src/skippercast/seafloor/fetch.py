@@ -9,7 +9,8 @@ from skippercast.platform.contracts import atomic_json
 from .io import sha256
 
 PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
-            'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/')
+            'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/',
+            'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/')
 HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
 
 
@@ -20,8 +21,13 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
     if not re.fullmatch(r'[a-f0-9]{64}|unknown', expected):
         raise ValueError('Invalid source checksum')
     extension = Path(urlsplit(url).path).suffix.lower()
+    if urlsplit(url).path.lower().endswith('.tar.gz'):
+        extension = '.tar.gz'
     if extension not in {'.zip', '.bag', '.tif', '.tiff'} and not (
-            extension == '.tgz' and row.get('format') == 'arcgrid' and url.startswith('https://pubs.usgs.gov/')):
+            row.get('format') == 'arcgrid' and (
+                extension == '.tgz' and url.startswith('https://pubs.usgs.gov/') or
+                extension == '.tar.gz' and url.startswith(
+                    'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/'))):
         raise ValueError('Unsupported source container')
     cache = Path(cache)
     destination = cache / expected / ('source' + extension)

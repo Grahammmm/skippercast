@@ -28,8 +28,8 @@ def safe_name(name):
 
 def source_path(path, row):
     path = Path(path)
-    if path.suffix.lower() != '.tgz':
-        raise ValueError('ArcInfo adapter requires an original TGZ archive')
+    if not path.name.lower().endswith(('.tgz', '.tar.gz')):
+        raise ValueError('ArcInfo adapter requires an original gzip tar archive')
     member = safe_name(row['archive_member'])
     if member == 'unknown':
         raise ValueError('Select an exact reviewed ArcInfo grid directory')
