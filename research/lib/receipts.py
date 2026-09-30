@@ -42,7 +42,7 @@ def manifest_entries(directory=RECEIPTS):
 def write_manifest(directory=RECEIPTS):
     (directory / 'manifest.json').write_text(json.dumps(
         {'schema_version': 1,
-         'note': 'sha256 of every research receipt; tests/test_receipt_manifest.py fails on drift. '
+         'note': 'sha256 of every research receipt; tests/contract/test_receipt_manifest.py fails on drift. '
                  'Regenerate with: python -m research.lib.receipts',
          'files': manifest_entries(directory)}, indent=1, sort_keys=False) + '\n')
 

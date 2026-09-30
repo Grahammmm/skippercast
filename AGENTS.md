@@ -39,16 +39,18 @@ Commit the regenerated files in the same PR as the source change.
 
 `research/` holds dated audit, screening and discovery tooling (see
 [research/README.md](research/README.md)). Product code (`src/`, `server/`,
-`dist/`, `scripts/`) never imports or runs it; `tests/test_research_boundary.py`
+`dist/`, `scripts/`) never imports or runs it; `tests/contract/test_research_boundary.py`
 fails if it does. New audit scripts go in `research/scripts/`, not `scripts/`.
 
 ## Before opening a PR
 
-Run what CI runs (Python 3.13 with `requirements-survey.txt` for the full suite):
+Run what CI runs (Python 3.13 with the survey stack for the full suite; see
+[docs/engineering/testing.md](docs/engineering/testing.md) for the layers):
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests       # full suite
-PYTHONPATH=src python scripts/run_core_tests.py            # without GIS packages
+python -m pip install -e ".[test]"                         # once; add [survey,ocean,publish] for the full suite
+python -m pytest -m "not gis"                              # without GIS packages (CI check job)
+SKIPPERCAST_REQUIRE_GIS=1 python -m pytest                 # full suite (CI survey-science job)
 PYTHONPATH=src python -m skippercast.platform.build && git diff --exit-code
 python scripts/check_repository.py
 python scripts/check_web.py
@@ -59,7 +61,8 @@ pnpm build
 
 - Tests stay offline. A test that needs a gitignored local file (`var/`) or the
   network must skip cleanly when it is absent, and should also check the
-  committed output so CI still covers it.
+  committed output so CI still covers it. The full run fails on any skip whose
+  reason is not allow-listed in `scripts/pytest_report.py`.
 - Never mark a failing check as expected or delete a test to get green.
 
 ## Reviewing the other agent's PR

@@ -2,7 +2,7 @@
 
 **Status:** first complete pass, 2026-09-28. Not legal advice; rows marked *needs permission* or *unknown* need the owner (and, where noted, counsel).
 **Machine-readable source of truth:** `rights.commercial_use`, `rights.attribution_required` and `rights.commercial_note` on every entry in [`catalog/sources.json`](../../catalog/sources.json).
-**CI gate:** [`tests/test_commercial_sources.py`](../../tests/test_commercial_sources.py).
+**CI gate:** [`tests/contract/test_commercial_sources.py`](../../tests/contract/test_commercial_sources.py).
 
 This register answers one question per dataset: *may a paid, $10/month SkipperCast use it?* That is a different question from the one `rights.license` already answers (may it be redistributed in the free personal-use edition?). A source can be freely redistributable and still not cleared for a commercial product.
 
@@ -10,7 +10,7 @@ It was built from `catalog/sources.json`, [`NOTICE.md`](../../NOTICE.md), [`docs
 
 ## How the gate works
 
-`tests/test_commercial_sources.py` collects every *usage*:
+`tests/contract/test_commercial_sources.py` collects every *usage*:
 
 - every asset bound in a non-draft `regions/*/region.json` (`assets.*`), mapped to catalog sources in the test's `ASSET_SOURCES` table. Empty placeholders (no targets, areas or views) carry no third-party data; search plans inherit the sources of their recorded `input_receipts`; `protected_areas` files must point at CDFW ds582; species ecology dossiers are original SkipperCast summaries that cite agency pages;
 - every runtime provider binding (`intelligence.providers.*`, `pipeline_sources.*`, and the wind/wave forecast bindings the scheduled pipeline samples);

@@ -35,7 +35,7 @@ From the repository root, with Python 3.11+, Node 22 and pnpm:
 
 ```bash
 python3 -m http.server 8485 --directory dist        # the app at http://localhost:8485
-PYTHONPATH=src python3 scripts/run_core_tests.py      # Python tests, offline
+pip install -e ".[test]" && python3 -m pytest -m "not gis"   # Python tests, offline
 pnpm install --frozen-lockfile && pnpm test           # Worker and browser tests
 ```
 

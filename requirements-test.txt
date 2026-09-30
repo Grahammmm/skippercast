@@ -1,4 +1,9 @@
+# Python test tooling (the `test` extra in pyproject.toml; tests/contract/test_packaging.py
+# keeps the two identical).
 # Standard JSON Schema validation required by the seafloor M0 acceptance gate.
-# Also required by the seafloor batch manifest validator. The web app and
-# dependency-light core runner do not require it.
+# Also required by the seafloor batch manifest validator. The web app does not.
 jsonschema==4.26.0
+# Test runner (docs/engineering/testing.md). Tests stay unittest.TestCase classes.
+pytest==9.1.1
+# In-memory S3 for the R2 publisher sync test (tests/integration/test_publish_r2.py).
+moto==5.2.3

@@ -85,7 +85,7 @@ Depth compliance and legality are independent of fish potential. [NOAA VDatum](h
 ```sh
 python research/scripts/build_central_coverage_ledger.py
 python research/scripts/build_central_source_queue.py
-python -m unittest tests.test_central_coverage_pipeline -v
+python -m unittest research.tests.test_central_coverage_pipeline -v
 node research/scripts/build-central-rankings.mjs  # only after a fresh successful closure screen
 ```
 

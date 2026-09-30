@@ -98,7 +98,7 @@ To run locally with Python 3.11 or newer:
 
 ```bash
 PYTHONPATH=src python -m skippercast.pipeline --output var/daily --previous var/previous.json
-PYTHONPATH=src python -m unittest discover -s tests -p 'test_pipeline.py' -v
+python -m pytest tests/unit/test_pipeline.py -v
 node --test tests/test_evidence.mjs
 ```
 

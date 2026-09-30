@@ -93,9 +93,9 @@ Copy and prune happen before the single public Git commit. Include `src/skipperc
 Regression checks:
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -p test_forecast_verification.py
-PYTHONPATH=src python -m unittest discover -s tests -p test_pipeline_intelligence.py
-PYTHONPATH=src python -m unittest discover -s tests -p test_verification_archive.py
+python -m pytest tests/unit/test_forecast_verification.py
+python -m pytest tests/unit/test_pipeline_intelligence.py
+python -m pytest tests/unit/test_verification_archive.py
 ```
 
 As a dated baseline, the public conditions snapshot generated **2026-09-22 16:29:49 UTC** contained 3,018 forecast rows and 132 matches in each central region, but only one observed day. Southern California had 2,212 archived wave forecasts and 28 model/buoy matches, representing only two valid hours at seven buoys. Those counts did not justify a model winner. V2 reprocessing preserved the 132/28 actual matches while revealing only 36/14 distinct station/variable valid-time cases, respectively. The newly enabled Southern wind archive starts prospectively on deployment.

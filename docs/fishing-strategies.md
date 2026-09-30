@@ -8,7 +8,7 @@ The Rules card remains the authority for the selected date, position and method.
 
 ```bash
 python research/scripts/build_primary_strategies.py
-python -m unittest tests.test_primary_strategies -v
+python -m unittest tests.contract.test_primary_strategies -v
 node --test tests/test_primary_strategy.mjs
 ```
 

@@ -17,7 +17,8 @@ macOS / Linux, from the repository root:
 
 ```bash
 PYTHONPATH=src python3 -m skippercast demo
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 -m pip install -e ".[test]"
+python3 -m pytest -m "not gis"
 ```
 
 PowerShell:
@@ -25,10 +26,11 @@ PowerShell:
 ```powershell
 $env:PYTHONPATH = "src"
 python -m skippercast demo
-python -m unittest discover -s tests -v
+python -m pip install -e ".[test]"
+python -m pytest -m "not gis"
 ```
 
-No Python package dependencies are needed for the core tools; the optional Windows `tzdata` package supplies system time-zone data. Tests use saved/synthetic fixtures and temporary directories. They do not contact providers, schedule tasks, or deliver messages.
+No Python package dependencies are needed for the core tools (the tests need the pinned `test` extra: pytest, jsonschema, moto); the optional Windows `tzdata` package supplies system time-zone data. Tests use saved/synthetic fixtures and temporary directories. They do not contact providers, schedule tasks, or deliver messages.
 
 ## Optional editable installation
 

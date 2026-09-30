@@ -50,7 +50,7 @@ node research/scripts/measure_map_test.mjs http://localhost:8787 3
 node research/scripts/measure_map_test.mjs http://localhost:8787 3 layer=socal
 ```
 
-`tests/test_map_tiles.py` checks that the committed archives are PMTiles v3
+`tests/contract/test_map_tiles.py` checks that the committed archives are PMTiles v3
 with one `reefs` layer, zooms 8–15, bounds on the right coast, and no temp
 paths in their metadata.
 

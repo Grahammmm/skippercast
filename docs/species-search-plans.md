@@ -11,7 +11,7 @@ A selected species now has a map shortlist, rather than only a distribution guid
 5. Existing 30-minute habitat/forecast updates supply dated ocean tiles. Pelagic targets can inspect three adjacent populated native WCOFS cells as a single search strip. No masked cells are bridged. Water transitions order otherwise comparable strips; this is an uncalibrated search heuristic. A thermal reference never proves presence or absence. Beyond actual ocean model coverage the dynamic search strips disappear, even when weather has a longer horizon.
 6. The shortlist displays up to three source footprints in the visible map. Current full-polygon MPA screening runs again before drawing. Boat-condition scores do not certify fish presence or legal access; Rules remains the authority-status surface. These exploratory areas are intentionally not depth-qualified chartplotter exports.
 
-Survey changes require rerunning the compiler and reviewing its rejected records. Weather and ocean changes require no copied region-specific code. Run `node --test tests/test_search_plans.mjs` and the native `tests/test_search_plan_geometry.py` fixtures before publishing.
+Survey changes require rerunning the compiler and reviewing its rejected records. Weather and ocean changes require no copied region-specific code. Run `node --test tests/test_search_plans.mjs` and the native `tests/gis/test_search_plan_geometry.py` fixtures before publishing.
 
 ## Research review, September 22, 2026
 

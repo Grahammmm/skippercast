@@ -21,7 +21,7 @@ Every PR with a user-facing or operational change adds one line under `## Unrele
    - `src/skippercast/__init__.py` → `__version__`;
    - `server/routes/public.ts` → the `version` reported by `/api/health`.
 
-   `tests/test_versions.py` fails if the first three and the newest CHANGELOG heading disagree.
+   `tests/contract/test_versions.py` fails if the first three and the newest CHANGELOG heading disagree.
 2. **Cut the changelog** in the same PR: rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD`, keep its `### Internal` subsection, and add a new empty `## Unreleased` above it. Check the notes with `python3 scripts/changelog_section.py vX.Y.Z`.
 3. **Merge** after CI passes.
 4. **Tag the merge commit** (annotated) and push the tag:

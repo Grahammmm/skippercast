@@ -148,7 +148,7 @@ outside this repository.
 ## Offline verification
 
 ```bash
-python -m unittest discover -s tests -p 'test_monitor.py' -v
+python -m pytest tests/unit/test_monitor.py -v
 ```
 
 The fixtures exercise missing variables, truncated arrays, invalid numbers,
