@@ -1,4 +1,7 @@
 import {lockRegion,startURLSync} from '../web/state.ts';
+import {initTelemetry} from '../web/telemetry.ts';
+// Cookie-less funnel and error reporting; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
+initTelemetry();
 // Runs as an async function, not top-level await: Vite bundles the page's
 // module scripts (boot.js, offline.js, meteogram-ui.js) into one entry, and a
 // top-level await here would hold the others until the whole app had loaded.

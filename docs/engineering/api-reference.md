@@ -118,6 +118,14 @@ The region's dynamic-habitat feed (`region.habitat_feed`): `{schema_version, met
 
 **Pending changes (region endpoints):** PR #43 caches all three keyed on `region` only (other parameters ignored), decodes the intelligence feed once for both `/api/forecast` and `/api/intelligence`, and sets `/api/intelligence` to `public, max-age=60, s-maxage=60`. PR #45 looks regions up with `Object.hasOwn`, so `?region=__proto__` and similar are a plain `404`.
 
+### `POST /api/telemetry`
+
+Cookie-less funnel events and client error reports from `web/telemetry.ts` (`navigator.sendBeacon`). Anonymous, but needs an allowed `Origin` (`400 origin rejected`), is limited by `PUBLIC_LIMITER` to 60 a minute per IP (`429` + `Retry-After: 60`) and takes at most 4,096 bytes (`400 body too large`). The body is exactly `{build, events}`: `build` is 10 hex characters or `dev`; `events` holds 1–10 of `{"type": "funnel", "name": "port_selected"|"map_viewed"|"forecast_viewed"|"spot_saved"|"offline_saved"|"install", "region"?}` or `{"type": "error", "kind": "error"|"rejection", "message"?, "source"?, "line"?, "column"?, "request_id"?}`. Any other field or value answers `400 {"error": "invalid telemetry"}`. A funnel event repeated within a batch is written once. Valid batches answer `204` with no body, written to Analytics Engine when `ANALYTICS` is bound and discarded otherwise. `GET` is not a route (it reaches the private gate). See [client telemetry](telemetry.md).
+
+```json
+{"build":"0123456789","events":[{"type":"funnel","name":"map_viewed","region":"morro-bay"},{"type":"error","kind":"error","message":"x is undefined","source":"index.0123456789.js","line":12,"column":7,"request_id":"3f0c…"}]}
+```
+
 ### `GET /api/session`
 
 Whether the caller is signed in, the push public key and the sign-in link.
@@ -181,4 +189,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry). See [testing](testing.md).

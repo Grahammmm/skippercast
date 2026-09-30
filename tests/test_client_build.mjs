@@ -74,6 +74,7 @@ test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor
   assert.match(html, /<link\s+rel="manifest" href="manifest\.webmanifest"\/>/);
   assert.match(html, /<link\s+rel="apple-touch-icon" href="apple-touch-icon\.png"\/>/);
   assert.doesNotMatch(html, /vite-ignore/);
+  assert.ok(html.includes(`<meta name="skippercast-build" content="${buildId}">\n</head>`), 'the page names its build for error reports');
   assert.match(html, /<script type="module" crossorigin src="\.\/assets\/index\.[0-9a-f]{10}\.js">/);
   // The page link stays a stable path; the Worker maps it to the hashed page.
   assert.match(html, /href="about\.html"/);

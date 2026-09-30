@@ -8,13 +8,13 @@ export const json = (data: unknown, status = 200): Response => new Response(JSON
 export const hash = async (text: string): Promise<string> => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))), b => b.toString(16).padStart(2, '0')).join('');
 export const db = (env: Env): D1Database => { if (!env.DB) throw Error('storage unavailable'); return env.DB; };
 
-/** A JSON object body, read as a stream and capped at 8 KiB. */
+/** A JSON object body, read as a stream and capped at `max` bytes (default 8 KiB). */
 export type Body = Record<string, ExternalJSON>;
-export async function body(request: Request): Promise<Body> {
-  if (Number(request.headers.get('content-length')) > 8192) throw new ClientError('body too large');
+export async function body(request: Request, max = 8192): Promise<Body> {
+  if (Number(request.headers.get('content-length')) > max) throw new ClientError('body too large');
   const reader = request.body?.getReader(); if (!reader) throw new ClientError('invalid empty body');
   const chunks: Uint8Array[] = []; let size = 0;
-  for (;;) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > 8192) { await reader.cancel(); throw new ClientError('body too large'); } chunks.push(value); }
+  for (;;) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > max) { await reader.cancel(); throw new ClientError('body too large'); } chunks.push(value); }
   const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   try { const value = JSON.parse(new TextDecoder().decode(bytes)); if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error(); return value; } catch { throw new ClientError('invalid JSON body'); }
 }

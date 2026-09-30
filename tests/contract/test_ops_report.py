@@ -79,6 +79,42 @@ class OpsReportTests(unittest.TestCase):
         self.assertIn('## Cron runs (last 24 h)', text)
         self.assertIn('_No data points in this window._', text)
 
+    def test_report_shows_the_client_funnel_in_order_and_the_top_client_errors(self):
+        answers = {
+            'client_event': [{'event': 'map_viewed', 'events': '40'}, {'event': 'port_selected', 'events': 50},
+                             {'event': 'forecast_viewed', 'events': 12}],
+            'client_error': [{'message': 'TypeError: a | b <img>', 'source': 'index.0123456789.js', 'line': 120.0,
+                              'kind': 'error', 'build': '0123456789', 'reports': '7'}],
+        }
+        seen = []
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / 'summary.md'
+            self.assertEqual(run([], dict(ENV, GITHUB_STEP_SUMMARY=str(summary)), opener_for(answers, seen)), 0)
+            text = summary.read_text()
+        funnel = next(sql for _, _, sql in seen if "index1 = 'client_event'" in sql)
+        self.assertIn('SUM(_sample_interval) AS events', funnel)
+        errors = next(sql for _, _, sql in seen if "index1 = 'client_error'" in sql)
+        self.assertIn('ORDER BY reports DESC LIMIT 10', errors)
+        self.assertIn('## Client funnel (last 24 h)', text)
+        self.assertIn('not per person', text)
+        steps = text.index('| port_selected | 50 |'), text.index('| map_viewed | 40 |'), text.index('| forecast_viewed | 12 |'), text.index('| spot_saved | 0 |')
+        self.assertEqual(list(steps), sorted(steps), 'funnel steps are listed in visit order')
+        self.assertIn('## Top client errors (last 24 h)', text)
+        self.assertIn('| `TypeError: a \\| b <img>` | `index.0123456789.js` | 120 | error | 0123456789 | 7 |', text)
+
+    def test_browser_supplied_text_cannot_forge_links_images_or_code(self):
+        forged = '[Reset your token](https://evil.example/x) ![p](https://evil.example/p.png) `x` <script>'
+        rows = [{'message': forged, 'source': '`](https://evil.example)', 'line': 1, 'kind': 'error', 'build': 'dev', 'reports': 1}]
+        text = ops_report.table(rows)
+        row = text.splitlines()[2]
+        cells = [c.strip() for c in row.strip('|').split(' | ')]
+        self.assertEqual(cells[0], '`[Reset your token](https://evil.example/x) ![p](https://evil.example/p.png) x <script>`')
+        self.assertEqual(cells[1], '`](https://evil.example)`')
+        for value in cells[:2]:
+            self.assertTrue(value.startswith('`') and value.endswith('`'))
+            self.assertNotIn('`', value[1:-1], 'no backtick can close the code span early')
+        self.assertEqual(ops_report.code_cell(''), '—')
+
     def test_api_errors_fail_but_a_never_written_dataset_only_warns(self):
         def error(code, body):
             return HTTPError('u', code, 'err', {}, io.BytesIO(body.encode()))

@@ -6,9 +6,10 @@
 // 2. Static files are copied unchanged: data/, regions/, vendor/, downloads/,
 //    tiles/, icons, the web manifest, and sw.js (STABLE: a service worker's
 //    URL is its identity, and the pages register '/sw.js').
-// 3. Pages are renamed NAME.<buildId>.html. The Worker serves them only from
-//    their stable paths ('/', '/sources.html') with no-store, via the returned
-//    shells map, so a cached page can never pin an old set of assets.
+// 3. Pages get <meta name="skippercast-build"> and are renamed
+//    NAME.<buildId>.html. The Worker serves them only from their stable paths
+//    ('/', '/sources.html') with no-store, via the returned shells map, so a
+//    cached page can never pin an old set of assets.
 // 4. precache.json and the build id in sw.js (scripts/precache.mjs), _headers
 //    (server/security-headers.ts, plus a year's immutable caching for
 //    /assets/*) and .assetsignore (keeps .vite/ off the CDN).
@@ -45,6 +46,11 @@ export async function copyStatic(src, out, {only} = {}) {
   }
 }
 
+/** `html` with <meta name="skippercast-build"> naming `buildId`, just before </head>. */
+export function stampBuild(html, buildId) {
+  return html.includes('</head>') ? html.replace('</head>', `<meta name="skippercast-build" content="${buildId}">\n</head>`) : html;
+}
+
 /** Rename built pages to NAME.<buildId>.html; return {buildId, shells}. */
 export async function hashPages(out, pages) {
   const assets = (await readdir(join(out, 'assets')).catch(() => [])).sort();
@@ -59,6 +65,8 @@ export async function hashPages(out, pages) {
   const buildId = hash.digest('hex').slice(0, 10);
   const shells = {};
   for (const name of pages) {
+    // The page names its build, so client error reports (web/telemetry.ts) can say which build failed.
+    await writeFile(join(out, name), stampBuild(html.get(name), buildId));
     await rename(join(out, name), join(out, hashName(name, buildId)));
     shells[`/${name}`] = `/${hashName(name, buildId)}`;
     if (name === 'index.html') shells['/'] = shells['/index.html'];
