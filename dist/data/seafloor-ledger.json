@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 2788.9825,
-    "tier1_km2": 518.531875,
-    "tier2_km2": 41.143323,
+    "tier0_km2": 2721.63875,
+    "tier1_km2": 585.875625,
+    "tier2_km2": 46.86596,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 507.011262
+    "selected_valid_km2": 572.720159
   },
   "reaches": [
     {
@@ -4869,12 +4869,12 @@
       "id": "point-arguello-conception-r05",
       "region": "point-arguello-conception",
       "order": 22,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1006,
       "band_km2": 61.294375,
       "tier0_km2": 61.294375,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier1_km2": 0.0,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.02125,
       "polygons_by_grade": {
@@ -4884,10 +4884,40 @@
       },
       "held_by_reason": {},
       "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "last_survey_run": "2026-09-30T17:49:12.659550+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 0.0,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "0a2db1df493dbde1effeacd0ce574fc428bc5376643286173fc880fecd0c0d96",
+      "habitat_count": 0,
+      "held_candidate_count": 0,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 0,
+      "processing_incomplete": false,
+      "physical_input_hash": "d7fa870c7c223699b08f581f52cb080fc852aaa979ec570ba9e088fd5bd641a4",
+      "roughness_thresholds": {
+        "vrm_samples": 0,
+        "vrm": "unknown",
+        "bpi_fine_m_samples": 0,
+        "bpi_fine_m": "unknown"
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "big-sur-coast-r04",
@@ -4920,35 +4950,37 @@
       "status": "habitat-screened",
       "cell_count": 3023,
       "band_km2": 182.425625,
-      "tier0_km2": 166.880625,
-      "tier1_km2": 15.545,
-      "tier2_km2": 0.820714848,
+      "tier0_km2": 123.15,
+      "tier1_km2": 59.275625,
+      "tier2_km2": 6.543351694,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.165,
       "polygons_by_grade": {
         "A": 0,
         "B": 0,
-        "C": 73
+        "C": 548
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 55,
-        "metric-support-incomplete": 55,
-        "overlap-cdfw-mpa": 86,
-        "overlap-security": 217
+        "habitat-contract-incomplete": 85,
+        "metric-support-incomplete": 85,
+        "overlap-cdfw-mpa": 79,
+        "overlap-security": 655
       },
       "surveys_used": [
-        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f"
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+        "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+        "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
       ],
-      "last_survey_run": "2026-09-30T17:28:47.635913+00:00",
+      "last_survey_run": "2026-09-30T17:52:04.614002+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
-      "selected_valid_km2": 13.945882504,
+      "selected_valid_km2": 56.452622507,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "fc59006de8982a907d0dc11d231d1ec4468e2835b6820b427870b52534628e7e",
-      "habitat_count": 73,
-      "held_candidate_count": 286,
+      "survey_run_hash": "41df280df111bf6b0d19cdc057d799d783b2d3bb5f02f2f532f1b122a99d792d",
+      "habitat_count": 548,
+      "held_candidate_count": 733,
       "habitat_by_grade": {
-        "C": 73
+        "C": 548
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
@@ -5043,14 +5075,14 @@
           }
         ]
       },
-      "physical_candidate_count": 359,
+      "physical_candidate_count": 1281,
       "processing_incomplete": false,
-      "physical_input_hash": "1fb91d68cba28cc0e423c4c5c58238a3189c2445306f972c4bac3629c8e987ff",
+      "physical_input_hash": "6e7a8a217927f8aa225c87091a0be92928035978234837ed3ab8fcbde4ada434",
       "roughness_thresholds": {
-        "vrm_samples": 3415832,
-        "vrm": 2.4150040189852007e-05,
-        "bpi_fine_m_samples": 3259015,
-        "bpi_fine_m": 0.03452375708102596
+        "vrm_samples": 5850829,
+        "vrm": 1.9833658370771445e-05,
+        "bpi_fine_m_samples": 5669877,
+        "bpi_fine_m": 0.03265038826882923
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -5092,8 +5124,8 @@
       "status": "habitat-held-for-screen",
       "cell_count": 1493,
       "band_km2": 90.038125,
-      "tier0_km2": 69.858125,
-      "tier1_km2": 20.18,
+      "tier0_km2": 46.245,
+      "tier1_km2": 43.793125,
       "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.060625,
@@ -5103,23 +5135,25 @@
         "C": 0
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 27,
-        "metric-support-incomplete": 27,
-        "screen-deferred": 296
+        "habitat-contract-incomplete": 50,
+        "metric-support-incomplete": 50,
+        "screen-deferred": 813
       },
       "surveys_used": [
         "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
         "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
-        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f"
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+        "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+        "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
       ],
-      "last_survey_run": "2026-09-30T16:56:33.016858+00:00",
+      "last_survey_run": "2026-09-30T17:49:55.959441+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
-      "selected_valid_km2": 18.974924497,
+      "selected_valid_km2": 42.177081293,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "aba8388a6e4e9b60174d1c39ef8f3a9b91e1cd8212cbb12990aefbd99a4b9814",
+      "survey_run_hash": "dd485f5462685ad3a99e2910fa9017b60a8b583dccebe07dff54fec993866c3f",
       "habitat_count": 0,
-      "held_candidate_count": 296,
+      "held_candidate_count": 813,
       "habitat_by_grade": {},
       "screen": {
         "version": "deferred",
@@ -5129,14 +5163,14 @@
         ],
         "layers": []
       },
-      "physical_candidate_count": 296,
+      "physical_candidate_count": 813,
       "processing_incomplete": false,
-      "physical_input_hash": "d598dcdae63d1a03c649d978544db29e7f0713e45cc2d5f5ade2e09619899842",
+      "physical_input_hash": "26dc482278caf5acceb65576fd97cdf1c11358602c8c151f2fb42f3c5e2103ca",
       "roughness_thresholds": {
-        "vrm_samples": 3388530,
-        "vrm": 2.6593022994347848e-05,
-        "bpi_fine_m_samples": 3279201,
-        "bpi_fine_m": 0.05504374242507413
+        "vrm_samples": 4673942,
+        "vrm": 2.6409079509903677e-05,
+        "bpi_fine_m_samples": 4557502,
+        "bpi_fine_m": 0.05276313013603826
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
