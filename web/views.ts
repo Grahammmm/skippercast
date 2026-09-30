@@ -2,6 +2,7 @@
 // signals instead of the DOM; web/islands.tsx renders them into existing
 // slots. Erasable TypeScript only: Node tests import it through dist/*.js.
 import {signal} from '@preact/signals';
+import type {Badge, Reading} from './confidence.ts';
 
 /** The header's best-conditions badge (#best-day-banner). */
 export interface Outlook {
@@ -26,3 +27,14 @@ export interface OfflineStatus {
   now: number;
 }
 export const offlineStatus = signal<OfflineStatus>({online: true, savedAt: null, now: 0});
+
+/** The selected spot's confidence badges; app.js sets it after drawing the spot sheet. */
+export interface SpotConfidence {
+  /** Target id. A new object per draw, so the badges mount into the new sheet. */
+  id: string;
+  badges: Badge[];
+}
+export const spotConfidence = signal<SpotConfidence | null>(null);
+
+/** The nearshore buoy's latest wave reading (weather-ui.js), for the freshness pill. */
+export const buoyReadingStatus = signal<Reading | null>(null);

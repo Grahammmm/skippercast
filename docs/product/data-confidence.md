@@ -14,6 +14,18 @@ The single reference for how sure SkipperCast is about what it shows: what each 
 
 The seafloor habitat layer labels every patch **"Habitat candidate, unverified"** and every depth **"Nominal depth; verify on your sounder."** ([`dist/seafloor-data.js`](../../dist/seafloor-data.js)).
 
+## Confidence badges in the app
+
+The spot sheet shows three badges under the spot's name, each with a one-tap "why" ([`web/confidence.ts`](../../web/confidence.ts); moved caveat wording in [`web/disclaimers.ts`](../../web/disclaimers.ts)). A state comes only from fields the target already carries:
+
+| Badge | Verified ✓ | Estimated ~ | Unknown ? |
+| --- | --- | --- | --- |
+| Depth | `depth_qualified` with `qualification.full_geometry_screened` on a named `vertical_datum` (today the 11 Channel Islands patches); the why is the qualification note | a recorded depth without that qualification, including every research-only target (the why is the research-only caveat) | no recorded depth |
+| Terrain | never (the grade is an uncalibrated rank) | any graded target; the why gives the terrain interpretation confidence | no grade |
+| Fish | never | never | always (no verified catch or calibrated catch model) |
+
+The freshness pill beside them words the nearshore buoy's `freshness()` result from `live-conditions.js` ("Buoy 4 min ago", "Buoy stale 2 h", "Buoy unavailable") without changing its state.
+
 ## Coverage states
 
 Each region binds its data needs (bathymetry, substrate, protected areas, regulations, forecasts and so on) to reviewed sources in `regions/<id>/region.json`. The build writes `dist/regions/<id>/coverage.json` with one state per need ([`platform/contracts.py`](../../src/skippercast/platform/contracts.py), `need_status`):

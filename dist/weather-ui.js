@@ -21,7 +21,8 @@ import { savedBoat } from "./boat-handling.js";
 import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summary.js";
 import { localDate } from "./forecast.js";
 import { detailHTML } from "./marine-detail.js";
-import { loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js";
+import { buoyReading, loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js";
+import { buoyReadingStatus } from "../web/views.ts";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -399,6 +400,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     const selectedBundle=pointBundle(bundle,point);
     const expandedLive = [...$("live-conditions").querySelectorAll("[data-live-disclosure][open]")].map((d) => d.dataset.liveDisclosure);
     $("live-conditions").innerHTML = observationsHTML(observations, !!POINTS[point].offshore);
+    const now = Date.now(), buoy = observations ? buoyReading(observations.buoys, POINTS[point].offshore ? "offshore" : "diablo", now) : null;
+    buoyReadingStatus.value = buoy ? { epoch: buoy.waveTime, fresh: buoy.waveState.fresh, label: buoy.waveState.label, now } : null;
     for (const d of $("live-conditions").querySelectorAll("[data-live-disclosure]")) d.open = expandedLive.includes(d.dataset.liveDisclosure);
     applyDetailTab();
     evidence.select(lastSpecies, requested || POINTS[point]);
