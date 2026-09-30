@@ -1,0 +1,1256 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "sources": [
+    {
+      "id": "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag",
+      "sha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+      "bytes": 42325273,
+      "native_resolution_m": 2.0,
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-29T15:13:58",
+        "survey_end": "2008-09-05T21:08:25",
+        "metadata_sha256": "148fac097035e1d47db29a01cb56153542766a7ddcc1128b7c3cf80e4102d0db"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+        "cog_sha256": "479bb152ff4d181a62e2f3547db097bd376295a061f3971b72542a8b390e4f1a",
+        "requested_bounds_wgs84": [
+          -120.75,
+          34.47,
+          -120.53,
+          34.66
+        ],
+        "valid_pixels_in_requested_bounds": 6281842,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6281842,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "4630b8a7ed128d0cd9a8512fcc3e2cdce801b924b6e0279099399e8720e97aae"
+        }
+      },
+      "valid_pixel_count": 6281842
+    },
+    {
+      "id": "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_4m_MLLW_3of4.bag",
+      "sha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+      "bytes": 31098491,
+      "native_resolution_m": 4.0,
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-29T00:00:00",
+        "survey_end": "2008-09-05T00:00:00",
+        "metadata_sha256": "c417db03393023f2bb65199d67a798bb41cfe9371371dee918d2c4fde0630d2b"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+        "cog_sha256": "cfc13d1484fc6dda7cff9d7de0e271eb1adb504fb3ad9363ef41f1ad1f6c1f28",
+        "requested_bounds_wgs84": [
+          -120.73,
+          34.48,
+          -120.55,
+          34.65
+        ],
+        "valid_pixels_in_requested_bounds": 4666652,
+        "nominal_0_300ft_pixels_in_requested_bounds": 4666652,
+        "native_resolution_m": [
+          4.0,
+          4.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "e1c4a32952c4e9eb8c86c08a2d403396c42dffb8ed00ce64d44ead82acf31b4b"
+        }
+      },
+      "valid_pixel_count": 4666652
+    },
+    {
+      "id": "h11953-mb-8m-mllw-4of4-bag-e70772d2bb",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_8m_MLLW_4of4.bag",
+      "sha256": "e70772d2bbfcb310f7a997f0a58a148baa742b79c242b3f0794d6e5a442b97a2",
+      "bytes": 2256254,
+      "native_resolution_m": 8.0,
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-29T00:00:00",
+        "survey_end": "2008-09-05T00:00:00",
+        "metadata_sha256": "ee91925b8d28f942c80a7a972d981d38922f4b3fdf2fc3d3edddade36487ee67"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "e70772d2bbfcb310f7a997f0a58a148baa742b79c242b3f0794d6e5a442b97a2",
+        "cog_sha256": "9ffef755c4b646886314e6cd52645ad66baef8854ad326e02ac12eac47b776a4",
+        "requested_bounds_wgs84": [
+          -120.73,
+          34.48,
+          -120.55,
+          34.65
+        ],
+        "valid_pixels_in_requested_bounds": 307433,
+        "nominal_0_300ft_pixels_in_requested_bounds": 307433,
+        "native_resolution_m": [
+          8.0,
+          8.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "f550520d45180804cec73bc35c7c53e37db8d38b2cf336ca25d0ab8ac81aa495"
+        }
+      },
+      "valid_pixel_count": 307433
+    },
+    {
+      "id": "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "bytes": 40124046,
+      "native_resolution_m": 1.0,
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-29T15:13:58",
+        "survey_end": "2008-09-05T01:14:20",
+        "metadata_sha256": "c23bef1f880b772c46763be7d6303223401ce31c58563270653537c720d1256a"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+        "cog_sha256": "ad4cc09a82d5e3c53634753d406365a67ef663787d20a9e57615fa199eaa1a49",
+        "requested_bounds_wgs84": [
+          -120.65,
+          34.53,
+          -120.55,
+          34.56
+        ],
+        "valid_pixels_in_requested_bounds": 6417802,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6417802,
+        "native_resolution_m": [
+          1.0,
+          1.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "16a29f682e7cdf7c8dd97f8f07bfcf4bb473af9ce1399cf4f3788476001fcf7e"
+        }
+      },
+      "valid_pixel_count": 6417802
+    }
+  ],
+  "rights_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+  "rights_review": "Original NOAA Coast Survey documentation and BAG producer NOAA NOS OCS verified. U.S.-government/public-domain Coast Survey acquisition.",
+  "lineage": "All four bands are the same August 29–September 5, 2008 H11953 acquisition, not independent evidence. Family links do not mean finer bands were resampled from coarser ones.",
+  "full_valid_footprint_check": "Original full-grid counts match all reviewed-window counts: 1m 6417802, 2m 6281842, 4m 4666652, 8m 307433. Original depths for all bands are below 300 feet. Bounding boxes are not full coverage.",
+  "shallow_native_inspection": {
+    "source_id": "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+    "valid_depth_and_uncertainty_pixels": 6417802,
+    "valid_native_pixel_bounds": [
+      8863,
+      9847,
+      17619,
+      12220
+    ],
+    "bbox_wgs84": [
+      -120.64665081194745,
+      34.5327894448102,
+      -120.55068073038417,
+      34.55605584523368
+    ],
+    "bbox_native_pixels": 20789118,
+    "notice": "Valid-data bbox, not full coverage. Original producer interpolation mask unknown."
+  },
+  "before_totals": {
+    "cell_count": 55544,
+    "band_km2": 3307.514375,
+    "tier0_km2": 2721.63875,
+    "tier1_km2": 585.875625,
+    "tier2_km2": 60.110565,
+    "tier3_km2": 0,
+    "unknown_reference_within_band_cells_km2": 5.018125,
+    "selected_valid_km2": 572.720159
+  },
+  "after_totals": {
+    "cell_count": 55544,
+    "band_km2": 3307.514375,
+    "tier0_km2": 2707.22375,
+    "tier1_km2": 600.290625,
+    "tier2_km2": 51.132064,
+    "tier3_km2": 0,
+    "unknown_reference_within_band_cells_km2": 5.018125,
+    "selected_valid_km2": 585.804281
+  },
+  "delta": {
+    "tier1_km2": 14.415,
+    "selected_valid_km2": 13.084122,
+    "tier2_km2": -8.978501
+  },
+  "results": [
+    {
+      "reach": "point-arguello-conception-r06",
+      "before": {
+        "id": "point-arguello-conception-r06",
+        "region": "point-arguello-conception",
+        "order": 24,
+        "status": "habitat-screened",
+        "cell_count": 3023,
+        "band_km2": 182.425625,
+        "tier0_km2": 123.15,
+        "tier1_km2": 59.275625,
+        "tier2_km2": 6.543351694,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.165,
+        "polygons_by_grade": {
+          "A": 0,
+          "B": 0,
+          "C": 548
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 85,
+          "metric-support-incomplete": 85,
+          "overlap-cdfw-mpa": 79,
+          "overlap-security": 655
+        },
+        "surveys_used": [
+          "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+          "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+          "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+        ],
+        "last_survey_run": "2026-09-30T17:52:04.614002+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 56.452622507,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "41df280df111bf6b0d19cdc057d799d783b2d3bb5f02f2f532f1b122a99d792d",
+        "habitat_count": 548,
+        "held_candidate_count": 733,
+        "habitat_by_grade": {
+          "C": 548
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "9e8e21187db81d762027c9b31ed7608f48f48a8786e3a43eba41fe7e1bce72b1",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.5,
+                  34.48
+                ],
+                [
+                  -120.5,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.48
+                ],
+                [
+                  -120.5,
+                  34.48
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T17:24:06.616647+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T17:23:40.361964+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T17:23:40.361978+00:00",
+              "file": "noaa-federal-5d0683008b9bebfce2dac3a2d560fbb2debafe3782b46f7362b19f72b0388333.json",
+              "sha256": "5c4001414f6424d1a8f25fcb544602c6970fae30cfb67c46ec6da75f27347a12",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T17:24:06.616647+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 1281,
+        "processing_incomplete": false,
+        "physical_input_hash": "6e7a8a217927f8aa225c87091a0be92928035978234837ed3ab8fcbde4ada434",
+        "roughness_thresholds": {
+          "vrm_samples": 5850829,
+          "vrm": 1.9833658370771445e-05,
+          "bpi_fine_m_samples": 5669877,
+          "bpi_fine_m": 0.03265038826882923
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "after": {
+        "id": "point-arguello-conception-r06",
+        "region": "point-arguello-conception",
+        "order": 24,
+        "status": "habitat-screened",
+        "cell_count": 3023,
+        "band_km2": 182.425625,
+        "tier0_km2": 122.5875,
+        "tier1_km2": 59.838125,
+        "tier2_km2": 2.838981687,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.165,
+        "polygons_by_grade": {
+          "A": 0,
+          "B": 0,
+          "C": 452
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 118,
+          "metric-support-incomplete": 118,
+          "overlap-cdfw-mpa": 74,
+          "overlap-security": 403
+        },
+        "surveys_used": [
+          "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+          "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+          "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+          "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+        ],
+        "last_survey_run": "2026-09-30T18:42:15.927820+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 56.900908883,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "7df2e09f5cf2c69c6bb7d65c5618ebf140e1cc7c654bcb039f990031d4e60eb4",
+        "habitat_count": 452,
+        "held_candidate_count": 495,
+        "habitat_by_grade": {
+          "C": 452
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "a4bd8b583469e89b5c45cec8bcf12ca19c28a637b15bc06ba6e06bb8f3b1cc2b",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.45,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  34.4
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T18:04:32.061822+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328363+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328383+00:00",
+              "file": "noaa-federal-07cc3acee4357f28c40f34a8c6c53c360c11a972c965eec8b956114dd0455944.json",
+              "sha256": "c8a738d10a712de98453bf61a1d0bf13d490cd549c43dc37483592a8c95bbd14",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:32.061822+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 947,
+        "processing_incomplete": false,
+        "physical_input_hash": "783940590916ab8567ecf1fc18865379b4631e2db4f4f7b3234fe78e30e610d3",
+        "roughness_thresholds": {
+          "vrm_samples": 6562529,
+          "vrm": 2.6688530851970427e-05,
+          "bpi_fine_m_samples": 6206400,
+          "bpi_fine_m": 0.13982023870818852
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "processing": [
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 14467736
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 6566132
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 530206
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 3347060
+        }
+      ],
+      "physical_fit_counts": {
+        "lingcod": {
+          "unknown": 118,
+          "2": 829
+        },
+        "rockfish-reef": {
+          "unknown": 118,
+          "2": 824,
+          "1": 5
+        }
+      },
+      "native_resolution_counts": {
+        "2.0": 407,
+        "4.0": 489,
+        "8.0": 42,
+        "1.0": 9
+      }
+    },
+    {
+      "reach": "point-arguello-conception-r07",
+      "before": {
+        "id": "point-arguello-conception-r07",
+        "region": "point-arguello-conception",
+        "order": 26,
+        "status": "habitat-screened",
+        "cell_count": 1493,
+        "band_km2": 90.038125,
+        "tier0_km2": 46.245,
+        "tier1_km2": 43.793125,
+        "tier2_km2": 8.791908559,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.060625,
+        "polygons_by_grade": {
+          "A": 0,
+          "B": 1,
+          "C": 762
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 50,
+          "metric-support-incomplete": 50
+        },
+        "surveys_used": [
+          "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+          "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+          "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+          "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+          "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+        ],
+        "last_survey_run": "2026-09-30T18:04:39.195966+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 42.177081293,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "eb033db902b1c542d27778dfb55363b5f8b0d5cb88115430ebde4855d82df076",
+        "habitat_count": 763,
+        "held_candidate_count": 50,
+        "habitat_by_grade": {
+          "B": 1,
+          "C": 762
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "a4bd8b583469e89b5c45cec8bcf12ca19c28a637b15bc06ba6e06bb8f3b1cc2b",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.45,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  34.4
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T18:04:32.061822+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328363+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328383+00:00",
+              "file": "noaa-federal-07cc3acee4357f28c40f34a8c6c53c360c11a972c965eec8b956114dd0455944.json",
+              "sha256": "c8a738d10a712de98453bf61a1d0bf13d490cd549c43dc37483592a8c95bbd14",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:32.061822+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 813,
+        "processing_incomplete": false,
+        "physical_input_hash": "26dc482278caf5acceb65576fd97cdf1c11358602c8c151f2fb42f3c5e2103ca",
+        "roughness_thresholds": {
+          "vrm_samples": 4673942,
+          "vrm": 2.6409079509903677e-05,
+          "bpi_fine_m_samples": 4557502,
+          "bpi_fine_m": 0.05276313013603826
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "after": {
+        "id": "point-arguello-conception-r07",
+        "region": "point-arguello-conception",
+        "order": 26,
+        "status": "habitat-screened",
+        "cell_count": 1493,
+        "band_km2": 90.038125,
+        "tier0_km2": 32.3925,
+        "tier1_km2": 57.645625,
+        "tier2_km2": 3.517777966,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.060625,
+        "polygons_by_grade": {
+          "A": 0,
+          "B": 3,
+          "C": 256
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 48,
+          "metric-support-incomplete": 48
+        },
+        "surveys_used": [
+          "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+          "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+          "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+          "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+          "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+          "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+        ],
+        "last_survey_run": "2026-09-30T18:42:57.449804+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 54.812917492,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "d6a1587186bb3ed46682eb855709a9fe868fc9365e93ed263978b713b7a9be2e",
+        "habitat_count": 259,
+        "held_candidate_count": 48,
+        "habitat_by_grade": {
+          "B": 3,
+          "C": 256
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "a4bd8b583469e89b5c45cec8bcf12ca19c28a637b15bc06ba6e06bb8f3b1cc2b",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.45,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  34.4
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T18:04:32.061822+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328363+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328383+00:00",
+              "file": "noaa-federal-07cc3acee4357f28c40f34a8c6c53c360c11a972c965eec8b956114dd0455944.json",
+              "sha256": "c8a738d10a712de98453bf61a1d0bf13d490cd549c43dc37483592a8c95bbd14",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:32.061822+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 307,
+        "processing_incomplete": false,
+        "physical_input_hash": "d475d9032caa3a76c8226a6308a4e52e5a7b6e9e1114d4734bc437f1967337b4",
+        "roughness_thresholds": {
+          "vrm_samples": 10632074,
+          "vrm": 8.389943832298741e-05,
+          "bpi_fine_m_samples": 10047171,
+          "bpi_fine_m": 0.1119566372314292
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "processing": [
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 5839400
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 2641275
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 969850
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 3412310
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 194580
+        },
+        {
+          "method": "native-disk-backed-tiles-v1",
+          "tile_edge_pixels": 1024,
+          "window_pixels": 20487280,
+          "max_read_pixels": 1498176,
+          "read_tiles": 17
+        }
+      ],
+      "physical_fit_counts": {
+        "lingcod": {
+          "2": 258,
+          "unknown": 48,
+          "3": 1
+        },
+        "rockfish-reef": {
+          "2": 214,
+          "1": 44,
+          "unknown": 48,
+          "3": 1
+        }
+      },
+      "native_resolution_counts": {
+        "2.0": 31,
+        "4.0": 214,
+        "8.0": 7,
+        "1.0": 55
+      }
+    },
+    {
+      "reach": "point-arguello-conception-r08",
+      "before": {
+        "id": "point-arguello-conception-r08",
+        "region": "point-arguello-conception",
+        "order": 28,
+        "status": "habitat-screened",
+        "cell_count": 1191,
+        "band_km2": 71.10875,
+        "tier0_km2": 30.510625,
+        "tier1_km2": 40.598125,
+        "tier2_km2": 4.163723617,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.1425,
+        "polygons_by_grade": {
+          "A": 1,
+          "B": 3,
+          "C": 298
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 18,
+          "metric-support-incomplete": 18,
+          "overlap-cdfw-mpa": 109
+        },
+        "surveys_used": [
+          "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+          "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+          "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b"
+        ],
+        "last_survey_run": "2026-09-30T18:04:41.824125+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 38.70375284,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "ab0d982f8d0a657dfa13c55add8f05ee15d9bf8b781a2b6e0e20a20775cda42f",
+        "habitat_count": 302,
+        "held_candidate_count": 122,
+        "habitat_by_grade": {
+          "A": 1,
+          "B": 3,
+          "C": 298
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "a4bd8b583469e89b5c45cec8bcf12ca19c28a637b15bc06ba6e06bb8f3b1cc2b",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.45,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  34.4
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T18:04:32.061822+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328363+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328383+00:00",
+              "file": "noaa-federal-07cc3acee4357f28c40f34a8c6c53c360c11a972c965eec8b956114dd0455944.json",
+              "sha256": "c8a738d10a712de98453bf61a1d0bf13d490cd549c43dc37483592a8c95bbd14",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:32.061822+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 424,
+        "processing_incomplete": false,
+        "physical_input_hash": "9cbc4aede0651cb8ca4c2275cce0a70a00a07313e44f19030cedc3626ba5c5f1",
+        "roughness_thresholds": {
+          "vrm_samples": 4763529,
+          "vrm": 6.210577703313902e-05,
+          "bpi_fine_m_samples": 4608062,
+          "bpi_fine_m": 0.1507861095578967
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "after": {
+        "id": "point-arguello-conception-r08",
+        "region": "point-arguello-conception",
+        "order": 28,
+        "status": "habitat-screened",
+        "cell_count": 1191,
+        "band_km2": 71.10875,
+        "tier0_km2": 30.510625,
+        "tier1_km2": 40.598125,
+        "tier2_km2": 4.163723617,
+        "tier3_km2": 0,
+        "unknown_reference_within_band_cells_km2": 0.1425,
+        "polygons_by_grade": {
+          "A": 1,
+          "B": 3,
+          "C": 298
+        },
+        "held_by_reason": {
+          "habitat-contract-incomplete": 18,
+          "metric-support-incomplete": 18,
+          "overlap-cdfw-mpa": 109
+        },
+        "surveys_used": [
+          "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+          "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+          "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b"
+        ],
+        "last_survey_run": "2026-09-30T18:35:43.423077+00:00",
+        "habitat_rule_version": "seafloor-habitat-v1",
+        "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+        "selected_valid_km2": 38.70375284,
+        "coverage_rule_version": "native-coverage-habitat-v2",
+        "survey_run_hash": "337588bffb92529016a74f39be9065d013ca3be73901fe7438a368f7d1d8ea09",
+        "habitat_count": 302,
+        "held_candidate_count": 122,
+        "habitat_by_grade": {
+          "A": 1,
+          "B": 3,
+          "C": 298
+        },
+        "screen": {
+          "version": "whole-polygon-screen-v1",
+          "status": "ready",
+          "reasons": [],
+          "snapshot_sha256": "a4bd8b583469e89b5c45cec8bcf12ca19c28a637b15bc06ba6e06bb8f3b1cc2b",
+          "scope": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -120.45,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  35.65
+                ],
+                [
+                  -121.3,
+                  34.4
+                ],
+                [
+                  -120.45,
+                  34.4
+                ]
+              ]
+            ]
+          },
+          "snapshot": "2026-09-30T18:04:32.061822+00:00",
+          "layers": [
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328363+00:00",
+              "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+              "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+              "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+              "feature_count": 155,
+              "id": "cdfw-mpa",
+              "nested_or_overlapping_components_unioned": 3
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:03.328383+00:00",
+              "file": "noaa-federal-07cc3acee4357f28c40f34a8c6c53c360c11a972c965eec8b956114dd0455944.json",
+              "sha256": "c8a738d10a712de98453bf61a1d0bf13d490cd549c43dc37483592a8c95bbd14",
+              "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+              "feature_count": 29,
+              "id": "noaa-federal",
+              "nested_or_overlapping_components_unioned": 0
+            },
+            {
+              "status": "ok",
+              "checked_at": "2026-09-30T18:04:32.061822+00:00",
+              "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+              "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+              "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "feature_count": 3,
+              "evidence": {
+                "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+                "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+                "sections": [
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                    "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                    "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                    "up_to_date_as_of": "2026-09-28"
+                  },
+                  {
+                    "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                    "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                    "up_to_date_as_of": "2026-09-28"
+                  }
+                ],
+                "up_to_date_as_of": "2026-09-28"
+              },
+              "source_urls": [
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196"
+              ],
+              "id": "security",
+              "nested_or_overlapping_components_unioned": 0
+            }
+          ]
+        },
+        "physical_candidate_count": 424,
+        "processing_incomplete": false,
+        "physical_input_hash": "09823b3602309d837db436f8464ebee93f54d4d53614202e2fa268f75b06f81d",
+        "roughness_thresholds": {
+          "vrm_samples": 4763529,
+          "vrm": 6.210577703313902e-05,
+          "bpi_fine_m_samples": 4608062,
+          "bpi_fine_m": 0.1507861095578967
+        },
+        "atlas_comparison": {
+          "atlas_target_count": 132,
+          "atlas_outline_count": 107,
+          "applicable_outline_count": 0,
+          "reproduced_count": 0,
+          "threshold": 0.5,
+          "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+        }
+      },
+      "processing": [
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 14604300
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 4122500
+        },
+        {
+          "method": "native-monolithic-v1",
+          "window_pixels": 52355
+        }
+      ],
+      "physical_fit_counts": {
+        "lingcod": {
+          "2": 400,
+          "3": 6,
+          "unknown": 18
+        },
+        "rockfish-reef": {
+          "1": 5,
+          "2": 399,
+          "unknown": 18,
+          "3": 2
+        }
+      },
+      "native_resolution_counts": {
+        "2.0": 88,
+        "4.0": 323,
+        "8.0": 13
+      }
+    }
+  ],
+  "interpretation": "Adding native 1m depth and complete band windows recalculates existing pixel-weighted reach-relative roughness thresholds. Screened area and polygon counts shrink; this is not asserted to prove improved biological accuracy. Source terrain remains processed at its own native spacing. Relative thresholds are a heuristic, not calibrated habitat/catch probability; mixed-resolution weighting remains a methodological limitation for future versioned science review. No thresholds changed to maximize output count.",
+  "scope_gap": "Does not fill northern Arguello r05 or claim the complete coast. Unknown interpolation masks/substrate and nominal original MLLW depths retained.",
+  "publication": "Local result; current-head CI and production byte verification required."
+}

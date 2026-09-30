@@ -95,3 +95,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 - [H11953 deeper-water batch and remaining gaps](seafloor-h11953-deeper-batch-2026-09-30.md)
 
 - [Adjacent Cambria/Conception release review](seafloor-adjacent-release-2026-09-30.md)
+
+- [H11953 full native footprint and next format batch](seafloor-h11953-full-footprint-2026-09-30.md)
