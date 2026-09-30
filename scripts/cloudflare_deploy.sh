@@ -16,11 +16,28 @@ if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; th
   exit 0
 fi
 
-# Web Push cannot work without the VAPID pair. Check before touching Cloudflare, so a
-# missing or malformed key stops the job without a deploy and a rollback.
+# Web Push cannot work without the VAPID pair. GitHub secrets win when set; otherwise the
+# pair lives in the private backup bucket (secrets/vapid.json): the first deploy generates
+# it there and every later deploy reads it back, so pushes are always signed with the same
+# key and existing subscriptions stay valid. Rotation: docs/operations/runbooks/secrets-rotation.md.
+# The check runs before any deploy step, so a malformed key stops the job without a rollback.
+mkdir -p var
 if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
-  echo "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set (GitHub secrets); see docs/operations/runbooks/secrets-rotation.md#vapid-key-pair" >&2
-  exit 1
+  rm -f var/vapid.json
+  if $WRANGLER r2 object get "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote >/dev/null 2>&1 && [ -s var/vapid.json ]; then
+    echo "Web Push keys read from r2://$BACKUP_BUCKET/secrets/vapid.json."
+  else
+    if ! out=$($WRANGLER r2 bucket create "$BACKUP_BUCKET" 2>&1); then
+      echo "$out" | grep -qi "already exist" || { echo "$out"; echo "::error::Could not create R2 bucket $BACKUP_BUCKET"; exit 1; }
+    fi
+    node --input-type=module -e "const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);const b=u=>Buffer.from(u).toString('base64url');console.log(JSON.stringify({VAPID_PUBLIC_KEY:b(await crypto.subtle.exportKey('raw',k.publicKey)),VAPID_PRIVATE_KEY:(await crypto.subtle.exportKey('jwk',k.privateKey)).d}))" > var/vapid.json
+    $WRANGLER r2 object put "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote >/dev/null
+    echo "Web Push keys generated and saved to r2://$BACKUP_BUCKET/secrets/vapid.json."
+  fi
+  VAPID_PUBLIC_KEY=$(python3 -c "import json;print(json.load(open('var/vapid.json'))['VAPID_PUBLIC_KEY'])")
+  VAPID_PRIVATE_KEY=$(python3 -c "import json;print(json.load(open('var/vapid.json'))['VAPID_PRIVATE_KEY'])")
+  export VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY
+  rm -f var/vapid.json
 fi
 case "${#VAPID_PUBLIC_KEY}:${#VAPID_PRIVATE_KEY}" in 87:43) ;; *) echo "VAPID keys have the wrong length (expected 87 and 43 base64url characters)" >&2; exit 1;; esac
 

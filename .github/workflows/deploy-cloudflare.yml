@@ -70,7 +70,8 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
-          # Web Push signing pair; the deploy refuses to run without it (runbook: secrets-rotation.md).
+          # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
+          # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
