@@ -48,6 +48,7 @@ export function detailsHTML(properties, view = 'terrain') {
     <details class="detail-section"><summary>Survey source and screening</summary>
       <p>Source ${sources} · ${esc(String(d.source.year))} · ${esc(d.source.resolution)} cells · vertical datum ${esc(d.source.datum)}.</p>
       <p>${d.screened ? 'Whole polygon screened against current MPA, federal groundfish and security boundaries.' : 'Screening status unknown.'}${d.substrate ? ` Substrate ${d.substrate.sameSurvey === true ? 'comes from the same survey as depth' : 'source differs or is unknown'}; ${d.substrate.independent ? 'independently confirmed' : 'not independently confirmed'}.` : ''}</p>
+      ${d.rights.map(r => `<p class="small"><strong>Source credit</strong>: ${esc(r.credit)} ${esc(r.notice)}${r.policyURL ? ` <a href="${esc(r.policyURL)}" target="_blank" rel="noopener noreferrer">Publisher terms ↗</a>` : ''}</p>`).join('')}
       <p>${esc(d.displayNote)} ${esc(d.notice)}</p>
     </details>`;
 }
