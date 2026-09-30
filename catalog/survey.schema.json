@@ -141,7 +141,8 @@
     "license": {
       "enum": [
         "public-domain-us-gov",
-        "unknown"
+        "unknown",
+        "csumb-public-use-noncommercial"
       ]
     },
     "sha256": {
@@ -318,6 +319,49 @@
           }
         }
       }
+    },
+    "rights_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer",
+        "policy_url",
+        "source_sha256",
+        "reviewed_on",
+        "allowed_use",
+        "attribution",
+        "navigation_use",
+        "for_profit_permission"
+      ],
+      "properties": {
+        "producer": {
+          "const": "CSUMB SFML"
+        },
+        "policy_url": {
+          "const": "https://csumb.edu/undersea/sfml-data-library/"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reviewed_on": {
+          "type": "string",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "allowed_use": {
+          "const": "noncommercial"
+        },
+        "attribution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "navigation_use": {
+          "const": false
+        },
+        "for_profit_permission": {
+          "const": "required-not-obtained"
+        }
+      }
     }
   },
   "allOf": [
@@ -354,7 +398,10 @@
             "pattern": "^[a-f0-9]{64}$"
           },
           "license": {
-            "const": "public-domain-us-gov"
+            "enum": [
+              "public-domain-us-gov",
+              "csumb-public-use-noncommercial"
+            ]
           }
         },
         "required": [
@@ -380,6 +427,20 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "license": {
+            "const": "csumb-public-use-noncommercial"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "rights_review"
+        ]
       }
     }
   ]

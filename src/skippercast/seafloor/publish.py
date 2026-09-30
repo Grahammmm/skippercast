@@ -16,6 +16,7 @@ from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry
 from .io import sha256
 from .run import run
+from .rights import feature_rights
 from .screen import input_identity, load_snapshot
 
 TO_GEO = Transformer.from_crs(3310, 4326, always_xy=True).transform
@@ -44,6 +45,7 @@ def region_layers(root, region, *, rerun=True, now=None):
     ids = {r['id'] for r in rows}
     cells = {c['id']: c for c in read_json(reference)['cells'] if c['reach'] in ids}
     habitat, receipts, dates = [], {}, []
+    sources = None
     for row in rows:
         if row['status'] == 'unassessed':
             continue
@@ -78,7 +80,15 @@ def region_layers(root, region, *, rerun=True, now=None):
             p = f['properties']
             if p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable'] or p['screen']['status'] != 'pass':
                 raise ValueError('Unqualified feature in publication input')
-            habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(p)})
+            if sources is None:
+                sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
+            contributors = list(p['source_ids'])
+            substrate = p.get('substrate', {})
+            if isinstance(substrate, dict) and substrate.get('source_id') not in (None, 'unknown'):
+                contributors.append(substrate['source_id'])
+            public_properties = dict(p, source_rights=feature_rights(contributors, sources,
+                use=os.environ.get('SKIPPERCAST_SOURCE_USE', 'noncommercial')))
+            habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})
         cells.update({c['id']: c for c in read_json(folder/'cells.json')['cells']})
         receipts[ident] = {'input_hash': receipt['input_hash'], 'run_sha256': sha256(folder/'run.json'),
                           'summary': receipt['ledger_summary']}
@@ -106,8 +116,10 @@ def build(region, *, root=REPO, tool=None, now=None):
     layers, receipts, expires = region_layers(root, region, now=now)
     folder = root/'var/seafloor/public'/region
     archive = folder/f'seafloor-{region}.pmtiles'
+    credits = sorted({r['attribution'] for f in layers['habitat']
+                      for r in json.loads(f['properties'].get('source_rights', '[]'))})
     build_vector_archive(tool, layers, archive, title=f'SkipperCast seafloor — {region}',
-        attribution='Original USGS / NOAA surveys; CDFW / NOAA / eCFR spatial restrictions; SkipperCast',
+        attribution='; '.join(credits + ['CDFW / NOAA / eCFR spatial restrictions; SkipperCast']),
         description=NOTICE+' Habitat candidate, unverified. Nominal depth; verify on your sounder.', precise=True)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     # Canonical screened boundaries, not quantized/clipped MVT fragments.
@@ -116,7 +128,7 @@ def build(region, *, root=REPO, tool=None, now=None):
     exports = []
     for f in layers['habitat']:
         p = dict(f['properties'])
-        for key in ('terrain', 'fit', 'substrate', 'screen', 'source_ids', 'independent_evidence'):
+        for key in ('terrain', 'fit', 'substrate', 'screen', 'source_ids', 'independent_evidence', 'source_rights'):
             if isinstance(p.get(key), str):
                 try: p[key] = json.loads(p[key])
                 except json.JSONDecodeError: pass
@@ -148,6 +160,8 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'export_sha256': sha256(export),
                 'export_bytes': export.stat().st_size,
                 'export_decoded_bytes': len(export_bytes),
+                'source_attribution': credits,
+                'source_use_notice': 'Retain source-specific terms and credits; mixed data do not become public-domain.',
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
                 'planning_notice': NOTICE, 'depth_basis': 'nominal',
                 'tile_geometry': 'Display geometry quantized to MVT grid; not a navigable or export boundary.'}

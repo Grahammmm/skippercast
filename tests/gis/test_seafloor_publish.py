@@ -107,6 +107,36 @@ class PublicationTests(unittest.TestCase):
             self.assertFalse((folder/'habitat-export.geojson').exists())
             self.assertEqual(export.read_bytes(), gzip.compress(decoded, mtime=0))
 
+    def test_producer_credit_and_restricted_terms_survive_tiles_and_canonical_export(self):
+        from tests.contract.test_seafloor_source_rights import csumb_row
+        from skippercast.seafloor.rights import CSUMB_CREDIT, CSUMB_LICENSE, feature_rights
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = csumb_row()
+            geometry = {'type':'Polygon','coordinates':[[[-121,35],[-120.99,35],[-120.99,35.01],[-121,35]]]}
+            properties = {'id':'csumb-reef','terrain':{'grade':'A','score':90},
+                          'fit':{'lingcod':3},'source_ids':[source['id']],
+                          'source_rights':feature_rights([source['id']],{source['id']:source})}
+            layers = {'cells':[], 'habitat':[{'type':'Feature','geometry':geometry,
+                       'properties':publish.flat_properties(properties)}]}
+            atomic_json(root/'dist/data/seafloor-ledger.json',{'reference':{},'reaches':[]})
+            atomic_json(root/'catalog/surveys.json',{'surveys':[source]})
+            seen = {}
+            def archive(tool, layers, path, **kwargs):
+                seen.update(kwargs); path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(b'PMTiles\x03fixture')
+            with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
+                 patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
+                folder, manifest = publish.build('morro-bay',root=root,tool='fixture',now=NOW)
+            self.assertIn(CSUMB_CREDIT,seen['attribution'])
+            self.assertEqual(manifest['source_attribution'],[CSUMB_CREDIT])
+            data=json.loads(gzip.decompress((folder/manifest['export_file']).read_bytes()))
+            terms=data['features'][0]['properties']['source_rights'][0]
+            self.assertEqual(terms['license'],CSUMB_LICENSE)
+            self.assertEqual(terms['commercial_use'],'permission-required')
+            self.assertFalse(terms['navigation_use'])
+            self.assertEqual(terms['attribution'],CSUMB_CREDIT)
+
     def test_publication_is_scoped_readback_precedes_ready_and_metadata_matches(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder, manifest = bundle(tmp)

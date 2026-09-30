@@ -28,6 +28,9 @@ def validate_manifest(document, root=REPO):
         if profile and (row['format'] != 'usgs-geotiff' or row['resolution_m'] == 'unknown'
                         or profile['coarse_resolution_m'] <= row['resolution_m']):
             raise ValueError('Mixed-resolution profile requires a finer USGS GeoTIFF display grid')
+        if row['status'] == 'usable':
+            from .rights import source_rights
+            source_rights(row)
         if row['status'] in {'usable', 'physical-only'}:
             from skippercast.platform.contracts import bbox
             receipt = row['adapter_review']
@@ -55,8 +58,11 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
     """Promote only after explicit rights review and a successful native adapter run."""
     from skippercast.platform.contracts import public_url
     public_url(rights_url)
-    if not physical_only and row['license'] != 'public-domain-us-gov':
-        raise ValueError('Source rights must be reviewed before usable status')
+    if not physical_only:
+        from .rights import source_rights
+        source_rights(row)
+        if row['license'] != 'public-domain-us-gov' and rights_url != row['rights_review']['policy_url']:
+            raise ValueError('Producer policy URL conflicts with rights review')
     if (receipt['source_id'] != row['id'] or receipt['source_sha256'] != row['sha256']
             or receipt['adapter_version'] != 'original-native-adapters-v1'
             or not 0 < receipt['nominal_0_300ft_pixels_in_requested_bounds']
