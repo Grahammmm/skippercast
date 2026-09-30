@@ -141,7 +141,8 @@
     "dist/data/usgs-sur-arguello-sediment-review.json",
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
-    "dist/data/w00614-usgs-video-observation-gap.json"
+    "dist/data/w00614-usgs-video-observation-gap.json",
+    "dist/data/seafloor-monterey-native-review.json"
   ],
   "surveys": [
     {
@@ -1281,45 +1282,6 @@
       "lineage_status": "unknown"
     },
     {
-      "id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
-      "publisher": "USGS",
-      "title": "Bathymetry_2m_OffshoreMonterey.zip",
-      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
-      "landing_page": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.txt",
-      "format": "usgs-geotiff",
-      "kind": "bathymetry",
-      "year": "unknown",
-      "resolution_m": 2.0,
-      "horizontal_crs": "EPSG:26910",
-      "vertical_datum": "NAVD88",
-      "license": "unknown",
-      "sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
-      "bytes": 223411714,
-      "derived_from": [],
-      "status": "candidate",
-      "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
-      "evidence": [
-        "catalog/usgs-ds781-metadata-review.json#/records/36/archive_url",
-        "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
-        "dist/data/usgs-depth-datum-ledger.json#/sources/1",
-        "dist/data/usgs-depth-datum-ledger.json#/sources/1/native_resolution_m",
-        "dist/data/usgs-ds781-metadata-review.json#/records/36/archive_url",
-        "dist/data/usgs-offshore-monterey-bathy-context-review.json#/bathymetry_url",
-        "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url"
-      ],
-      "field_evidence": {
-        "sha256": "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
-        "horizontal_crs": "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url",
-        "vertical_datum": "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
-        "bytes": "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url",
-        "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/1/native_resolution_m"
-      },
-      "inspection_level": "native",
-      "lineage_status": "unknown"
-    },
-    {
       "id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
       "publisher": "USGS",
       "title": "Bathymetry_5m_OffshoreMonterey.zip",
@@ -1363,28 +1325,30 @@
       "kind": "substrate",
       "year": "unknown",
       "resolution_m": 2.0,
-      "horizontal_crs": "unknown",
+      "horizontal_crs": "EPSG:32610",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "public-domain-us-gov",
       "sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
       "bytes": 1744935,
       "derived_from": [],
       "status": "candidate",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Original publisher interpreted seafloor character; reviewed category semantics in habitat-rules.json, not independently surveyed depth. Same bathymetry/backscatter lineage with video/sample-supervised classification. Classes 1 and 4 are sediment and conservatively excluded from reef candidates; class 2 remains mixed coarse sediment/rock, class 3 rugose rock/boulder. Producer grid nominal 2 m, approximately to 90 m; unknown coverage remains unknown. Acquisition/processing 1998\u20132014; no precise single acquisition year.",
       "archive_member": "unknown",
       "evidence": [
         "catalog/candidates/usgs-offshore-monterey-original-grids.json#/access_url",
         "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/1/source_url",
         "dist/data/usgs-ds781-metadata-review.json#/records/38/archive_url",
         "dist/data/usgs-ds781-native-character-review.json#/products/17",
-        "dist/data/usgs-ds781-native-character-review.json#/products/17/archive_url"
+        "dist/data/usgs-ds781-native-character-review.json#/products/17/archive_url",
+        "research/receipts/seafloor-monterey-native-review.json#/substrate"
       ],
       "field_evidence": {
         "sha256": "catalog/candidates/usgs-offshore-monterey-original-grids.json#/access_url",
         "resolution_m": "catalog/candidates/usgs-offshore-monterey-original-grids.json#/access_url",
         "vertical_datum": "catalog/candidates/usgs-offshore-monterey-original-grids.json#/access_url",
-        "bytes": "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/1/source_url"
+        "bytes": "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/1/source_url",
+        "horizontal_crs": "research/receipts/seafloor-monterey-native-review.json#/substrate/native_horizontal_crs"
       },
       "inspection_level": "native",
       "lineage_status": "unknown"
@@ -13171,6 +13135,67 @@
       },
       "inspection_level": "catalog",
       "lineage_status": "unknown"
+    },
+    {
+      "id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "publisher": "USGS",
+      "title": "Bathymetry_2m_OffshoreMonterey.zip",
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+      "landing_page": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.txt",
+      "format": "usgs-geotiff",
+      "kind": "bathymetry",
+      "year": "unknown",
+      "resolution_m": 2.0,
+      "horizontal_crs": "EPSG:26910",
+      "vertical_datum": "NAVD88",
+      "license": "public-domain-us-gov",
+      "sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "bytes": 223411714,
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Mixed acquisitions: acoustic 1998\u20132012 and lidar 2009\u20132010; publication/merge processing 2016 is not the acquisition year. This published nearshore grid was resampled by its producer from the 2013 NOAA TopoBathy Merge to 2 m; the separate MBARI 5 m product was not merged into it. 2 m is delivered grid spacing, not a per-cell sounding precision or proof of native fine detail. Source metadata reports accuracy no better than 2 m horizontal / 0.20 m vertical; NAVD88 depths remain nominal. Actual input interpolation/lineage masks unavailable.",
+      "archive_member": "unknown",
+      "evidence": [
+        "catalog/usgs-ds781-metadata-review.json#/records/36/archive_url",
+        "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
+        "dist/data/usgs-depth-datum-ledger.json#/sources/1",
+        "dist/data/usgs-depth-datum-ledger.json#/sources/1/native_resolution_m",
+        "dist/data/usgs-ds781-metadata-review.json#/records/36/archive_url",
+        "dist/data/usgs-offshore-monterey-bathy-context-review.json#/bathymetry_url",
+        "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url",
+        "research/receipts/seafloor-monterey-native-review.json#/bathymetry"
+      ],
+      "field_evidence": {
+        "sha256": "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
+        "horizontal_crs": "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url",
+        "vertical_datum": "dist/data/monterey-original-300-pixel-review.json#/source_archive_url",
+        "bytes": "dist/data/usgs-offshore-monterey-native-audit.json#/products/0/archive_url",
+        "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/1/native_resolution_m"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+        "cog_sha256": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+        "requested_bounds_wgs84": [
+          -122.064886,
+          36.532722,
+          -121.811775,
+          36.692799
+        ],
+        "valid_pixels_in_requested_bounds": 51449760,
+        "nominal_0_300ft_pixels_in_requested_bounds": 32571329,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml"
+      }
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",

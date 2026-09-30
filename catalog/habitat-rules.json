@@ -108,6 +108,109 @@
       },
       "same_survey_as_depth": true,
       "lineage_note": "Paired USGS map-block bathymetry and sonar-derived character; not independent corroboration."
+    },
+    {
+      "source_id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",
+      "source_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "depth_source_ids": [
+        "bathymetry-2m-offshoremonterey-zip-172dbd1794"
+      ],
+      "review_status": "reviewed",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+      "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+      "review_basis": "Fresh original FGDC metadata and native raster/VAT reviewed 2026-09-30. VALUE offsets add 10 for depth and 50/100 for slope; raster contains the 22 explicitly mapped codes. Abstract says steep slopes absent but raster includes 101–113; use documented VALUE encoding, never discard those codes silently.",
+      "classes": {
+        "1": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 1"
+        },
+        "2": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 2"
+        },
+        "3": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 3"
+        },
+        "4": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment in scour depressions; excluded conservatively; original depth/slope-coded value 4"
+        },
+        "11": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 11"
+        },
+        "12": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 12"
+        },
+        "13": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 13"
+        },
+        "14": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment in scour depressions; excluded conservatively; original depth/slope-coded value 14"
+        },
+        "51": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 51"
+        },
+        "52": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 52"
+        },
+        "53": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 53"
+        },
+        "54": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment in scour depressions; excluded conservatively; original depth/slope-coded value 54"
+        },
+        "61": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 61"
+        },
+        "62": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 62"
+        },
+        "63": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 63"
+        },
+        "64": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment in scour depressions; excluded conservatively; original depth/slope-coded value 64"
+        },
+        "101": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 101"
+        },
+        "102": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 102"
+        },
+        "103": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 103"
+        },
+        "111": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 111"
+        },
+        "112": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment/cobble/bedrock; original depth/slope-coded value 112"
+        },
+        "113": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original depth/slope-coded value 113"
+        }
+      },
+      "same_survey_as_depth": true,
+      "lineage_note": "Video/sample-supervised interpretation of shared bathymetry and backscatter; not independent confirmation of depth or fish presence."
     }
   ]
 }

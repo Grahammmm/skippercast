@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3161.55125,
-    "tier1_km2": 145.963125,
+    "tier0_km2": 3059.67875,
+    "tier1_km2": 247.835625,
     "tier2_km2": 15.57834,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 142.619872
+    "selected_valid_km2": 245.145944
   },
   "reaches": [
     {
@@ -4463,12 +4463,12 @@
       "id": "monterey-point-sur-r01",
       "region": "monterey-point-sur",
       "order": 33,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 416,
       "band_km2": 21.995,
-      "tier0_km2": 21.995,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 0.741875,
+      "tier1_km2": 21.253125,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.025625,
       "polygons_by_grade": {
@@ -4476,23 +4476,57 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "screen-deferred": 292
+      },
+      "surveys_used": [
+        "bathymetry-2m-offshoremonterey-zip-172dbd1794"
+      ],
+      "last_survey_run": "2026-09-30T13:40:01.110394+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 21.818019568,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "219352889bc3aae34736cc907a5881d620a7ed8aeb16ae419d70f47586daced8",
+      "habitat_count": 0,
+      "held_candidate_count": 292,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 292,
+      "processing_incomplete": false,
+      "physical_input_hash": "bb7b6979d4d33ecf75f5747a41218d8ff14d7954a7f104def5811d15254eb876",
+      "roughness_thresholds": {
+        "vrm_samples": 5386104,
+        "vrm": 0.020406512543559074,
+        "bpi_fine_m_samples": 5368250,
+        "bpi_fine_m": 1.285815720766332
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "santa-cruz-monterey-bay-r13",
       "region": "santa-cruz-monterey-bay",
       "order": 34,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1387,
       "band_km2": 81.95125,
-      "tier0_km2": 81.95125,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 26.210625,
+      "tier1_km2": 55.740625,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.11875,
       "polygons_by_grade": {
@@ -4500,23 +4534,57 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "screen-deferred": 313
+      },
+      "surveys_used": [
+        "bathymetry-2m-offshoremonterey-zip-172dbd1794"
+      ],
+      "last_survey_run": "2026-09-30T13:40:35.328873+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 55.387306678,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "fcb50b09ebb518e7a3606ba1e2af679c68f802cd1316dd3b35b1415357eba850",
+      "habitat_count": 0,
+      "held_candidate_count": 313,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 313,
+      "processing_incomplete": false,
+      "physical_input_hash": "d8510ec05f4b7c757ce1f63403a00c309834789742e3cf6b1a2f3f62d7845274",
+      "roughness_thresholds": {
+        "vrm_samples": 13778377,
+        "vrm": 0.0017382315127179027,
+        "bpi_fine_m_samples": 13756699,
+        "bpi_fine_m": 0.49603951501364757
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "santa-cruz-monterey-bay-r12",
       "region": "santa-cruz-monterey-bay",
       "order": 35,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 426,
       "band_km2": 24.933125,
-      "tier0_km2": 24.933125,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 0.054375,
+      "tier1_km2": 24.87875,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.020625,
       "polygons_by_grade": {
@@ -4524,12 +4592,46 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "screen-deferred": 67
+      },
+      "surveys_used": [
+        "bathymetry-2m-offshoremonterey-zip-172dbd1794"
+      ],
+      "last_survey_run": "2026-09-30T13:41:01.387749+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 25.320745427,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "1351897003129435a16b021a7820e4f5c031f07c1050a2b1a93800c850db96c8",
+      "habitat_count": 0,
+      "held_candidate_count": 67,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 67,
+      "processing_incomplete": false,
+      "physical_input_hash": "115e0bb7c81578b9f84272ca35842b43a78934e156439da5b16271a2a051345b",
+      "roughness_thresholds": {
+        "vrm_samples": 6302903,
+        "vrm": 0.0002980283461511135,
+        "bpi_fine_m_samples": 6276979,
+        "bpi_fine_m": 0.15962998434455958
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "santa-cruz-monterey-bay-r11",

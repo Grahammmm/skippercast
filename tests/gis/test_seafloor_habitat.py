@@ -104,13 +104,15 @@ class HabitatTests(unittest.TestCase):
     def test_substrate_withdrawal_and_source_hash_change(self):
         manifest=json.loads((ROOT/'catalog/surveys.json').read_text())
         result=resolve_bindings(RULES,manifest)
-        self.assertEqual(len(result),2)
+        expected={ident for binding in RULES['substrate_bindings'] for ident in binding['depth_source_ids']}
+        self.assertEqual(set(result),expected)
         row=next(r for r in manifest['surveys'] if r['id']==RULES['substrate_bindings'][0]['source_id'])
         row['sha256']='a'*64
         with self.assertRaisesRegex(ValueError,'matching original-source'):
             resolve_bindings(RULES,manifest)
         row['status']='withdrawn'
-        self.assertEqual(len(resolve_bindings(RULES,manifest)),1)
+        withdrawn=set(RULES['substrate_bindings'][0]['depth_source_ids'])
+        self.assertEqual(set(resolve_bindings(RULES,manifest)),expected-withdrawn)
 
     def test_depth_fit_does_not_award_outside_band_grade_c(self):
         species={'planning_depth_m':[10,40]}
