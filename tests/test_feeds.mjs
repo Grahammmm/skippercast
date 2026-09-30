@@ -124,7 +124,7 @@ test('seafloor archives require a fresh matching revision and never fall back to
 
 test('canonical reef export shares the current manifest and revision gate',async()=>{
  const path='/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson',hash='c'.repeat(64);
- const m={region:'morro-bay',status:'ready',export_sha256:hash,expires_at:new Date(Date.now()+3600000).toISOString()};
+ const m={region:'morro-bay',status:'ready',export_file:'habitat-export.geojson',export_sha256:hash,expires_at:new Date(Date.now()+3600000).toISOString()};
  const make=(manifest,digest=hash)=>({async get(key){return key.endsWith('manifest-morro-bay.json')?{json:async()=>manifest}:{body:new Blob(['{}']).stream(),size:2,httpEtag:'"c"',customMetadata:{sha256:digest}};}});
  try{
   useBucket({FEEDS:make(m)});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,200);
@@ -132,6 +132,11 @@ test('canonical reef export shares the current manifest and revision gate',async
    useBucket({FEEDS:make(manifest)});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,503);
   }
   useBucket({FEEDS:make(m,'d'.repeat(64))});assert.equal((await serveFeed(new Request('https://s'+path),path)).status,503);
+  const compressed=path+'.gz';useBucket({FEEDS:make({...m,export_file:'habitat-export.geojson.gz'})});
+  const r=await serveFeed(new Request('https://s'+compressed),compressed);
+  assert.equal(r.status,200);assert.equal(r.headers.get('Content-Type'),'application/gzip');
+  assert.equal(r.headers.get('Content-Encoding'),null);
+  assert.equal((await serveFeed(new Request('https://s'+path),path)).status,503);
   assert.equal((await serveFeed(new Request('https://s/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson'),'/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson')).status,404);
  }finally{useBucket({});}
 });

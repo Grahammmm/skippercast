@@ -28,7 +28,7 @@ export async function readBucketJSON(url: string): Promise<ExternalJSON | undefi
   return object ? object.json() : undefined;
 }
 
-const contentType = (key: string): string => key.endsWith('.json') || key.endsWith('.geojson') ? 'application/json'
+const contentType = (key: string): string => key.endsWith('.geojson.gz') ? 'application/gzip' : key.endsWith('.json') || key.endsWith('.geojson') ? 'application/json'
   : key.endsWith('.pmtiles') ? 'application/octet-stream' : key.endsWith('.md') ? 'text/markdown; charset=utf-8' : 'application/octet-stream';
 // Feeds named latest/index/manifest change in place; tiles are replaced per model cycle.
 const cacheFor = (key: string): number => /(^|\/)(latest|index|manifest|status|health|intelligence|habitat-dynamics)[^/]*\.json$/.test(key) ? 60 : 300;
@@ -101,10 +101,10 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   const seafloor = key.startsWith('tiles/seafloor/');
   let publication: ExternalJSON = null;
   let expectedHash: string | undefined;
-  if (seafloor && (key.endsWith('.pmtiles') || key.endsWith('.geojson'))) {
-    const exporting = key.endsWith('.geojson');
+  if (seafloor && (key.endsWith('.pmtiles') || key.endsWith('.geojson') || key.endsWith('.geojson.gz'))) {
+    const exporting = !key.endsWith('.pmtiles');
     const match = exporting
-      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/habitat-export\.geojson$/.exec(key)
+      ? /^tiles\/seafloor\/regions\/([a-z0-9-]+)\/habitat-export\.geojson(?:\.gz)?$/.exec(key)
       : /^tiles\/seafloor\/seafloor-([a-z0-9-]+)\.pmtiles$/.exec(key);
     if (!match || !bucket) return new Response('Not found', {status: 404});
     let manifest: ExternalJSON;
@@ -113,7 +113,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
     publication = manifest;
     expectedHash = exporting ? manifest?.export_sha256 : manifest?.archive_sha256;
     const expires = Date.parse(manifest?.expires_at);
-    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(expectedHash || '')) {
+    if (manifest?.status !== 'ready' || manifest?.region !== match[1] || (exporting && manifest?.export_file !== key.split('/').at(-1)) || !Number.isFinite(expires) || expires <= Date.now() || !/^[a-f0-9]{64}$/.test(expectedHash || '')) {
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }

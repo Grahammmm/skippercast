@@ -1,5 +1,6 @@
 """Offline publication, private recovery and revision/expiry gate regressions."""
 from datetime import timedelta
+import gzip
 import io
 import json
 from pathlib import Path
@@ -88,7 +89,10 @@ class PublicationTests(unittest.TestCase):
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder, manifest = publish.build('morro-bay', root=root, tool='fixture', now=NOW)
-            data = read_json(folder/'habitat-export.geojson')
+            export = folder/manifest['export_file']
+            self.assertEqual(export.name, 'habitat-export.geojson.gz')
+            decoded = gzip.decompress(export.read_bytes())
+            data = json.loads(decoded)
             f = data['features'][0]
             self.assertEqual(f['geometry'], geometry)
             self.assertEqual(f['properties']['terrain'], properties['terrain'])
@@ -97,8 +101,11 @@ class PublicationTests(unittest.TestCase):
             from shapely.geometry import Point
             self.assertTrue(shape(geometry).contains(Point(w['longitude'],w['latitude'])))
             self.assertNotIn('depth',w)
-            self.assertEqual(manifest['export_sha256'], sha256(folder/'habitat-export.geojson'))
-            self.assertEqual(manifest['export_bytes'], (folder/'habitat-export.geojson').stat().st_size)
+            self.assertEqual(manifest['export_sha256'], sha256(export))
+            self.assertEqual(manifest['export_bytes'], export.stat().st_size)
+            self.assertEqual(manifest['export_decoded_bytes'], len(decoded))
+            self.assertFalse((folder/'habitat-export.geojson').exists())
+            self.assertEqual(export.read_bytes(), gzip.compress(decoded, mtime=0))
 
     def test_publication_is_scoped_readback_precedes_ready_and_metadata_matches(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,5 +1,6 @@
 """Qualified regional PMTiles and fail-closed R2 publication; never raw surveys."""
 from datetime import datetime, timedelta, timezone
+import gzip
 import json
 import os
 from pathlib import Path
@@ -125,6 +126,15 @@ def build(region, *, root=REPO, tool=None, now=None):
     atomic_json(folder/'habitat-export.geojson', {'type': 'FeatureCollection', 'schema_version': 1,
                 'region': region, 'expires_at': expires.isoformat(), 'features': exports,
                 'geometry_basis': 'Canonical screened habitat boundaries; not a navigation route'})
+    # Transport compression preserves every native coordinate, hole and part.
+    # Do not simplify canonical boundaries to meet a mobile download limit.
+    raw_export = folder/'habitat-export.geojson'
+    export_bytes = raw_export.read_bytes()
+    export = folder/'habitat-export.geojson.gz'
+    export.write_bytes(gzip.compress(export_bytes, mtime=0))
+    raw_export.unlink()
+    if len(export_bytes) > 128*1024*1024 or export.stat().st_size > 32*1024*1024:
+        raise ValueError('Canonical reef export exceeds browser limits; partition this region')
     selected = [r for r in ledger['reaches'] if r['region'] == region]
     atomic_json(folder/'ledger.json', {'region': region, 'reaches': selected, 'reference': ledger['reference']})
     manifest = {'schema_version': 1, 'region': region, 'status': 'ready' if layers['habitat'] else 'held',
@@ -132,9 +142,10 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'archive': archive.name, 'archive_sha256': sha256(archive), 'archive_bytes': archive.stat().st_size,
                 'layers': {name: len(features) for name, features in layers.items()},
                 'ledger_sha256': sha256(folder/'ledger.json'),
-                'export_file': 'habitat-export.geojson',
-                'export_sha256': sha256(folder/'habitat-export.geojson'),
-                'export_bytes': (folder/'habitat-export.geojson').stat().st_size,
+                'export_file': export.name,
+                'export_sha256': sha256(export),
+                'export_bytes': export.stat().st_size,
+                'export_decoded_bytes': len(export_bytes),
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
                 'planning_notice': NOTICE, 'depth_basis': 'nominal',
                 'tile_geometry': 'Display geometry quantized to MVT grid; not a navigable or export boundary.'}
@@ -172,8 +183,11 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         raise ValueError('Publication archive changed')
     if sha256(folder/'ledger.json') != manifest['ledger_sha256']:
         raise ValueError('Publication ledger changed')
-    export = folder/'habitat-export.geojson'
-    if manifest.get('export_file') != export.name or sha256(export) != manifest.get('export_sha256'):
+    export_name = manifest.get('export_file')
+    if export_name not in ('habitat-export.geojson', 'habitat-export.geojson.gz'):
+        raise ValueError('Invalid publication export path')
+    export = folder/export_name
+    if sha256(export) != manifest.get('export_sha256'):
         raise ValueError('Publication export changed')
     allowed = {archive.name, 'ledger.json', 'manifest.json', export.name}
     if {p.name for p in folder.iterdir()} != allowed:
@@ -186,7 +200,7 @@ def publish_bundle(s3, bucket, folder, *, now=None):
                   ContentType='application/json', CacheControl='no-store')
     export_key = f'tiles/seafloor/regions/{region}/{export.name}'
     s3.put_object(Bucket=bucket, Key=export_key, Body=export.read_bytes(),
-                  ContentType='application/geo+json', CacheControl='no-store',
+                  ContentType='application/gzip' if export.name.endswith('.gz') else 'application/geo+json', CacheControl='no-store',
                   Metadata={'sha256': manifest['export_sha256']})
     with s3.get_object(Bucket=bucket, Key=export_key)['Body'] as stream:
         import hashlib

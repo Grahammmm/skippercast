@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Export: compress full canonical reef boundaries for mobile transfer, preserving every coordinate and hash/current-screen checks. Bound both compressed and decoded sizes so large Morro Bay surveys can load without weakening the limits.
+
 - Seafloor: include full H11953 depth-band footprints and native 1 m nearshore detail; +13.08 km² valid coverage. Existing relative extraction changes screened outlines, with limitations documented.
 - Seafloor: read original USGS ArcInfo GRID archives at native spacing with bounded extraction and checked recovery; unlock older shelf surveys without claiming new published coverage.
 

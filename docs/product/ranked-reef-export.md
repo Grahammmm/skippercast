@@ -56,15 +56,17 @@ candidate list for reconsideration.
 
 1. The existing native-survey pipeline measures terrain, applies the versioned
    species rules and screens **full** habitat polygons against spatial restrictions.
-2. Regional publication writes `habitat-export.geojson` from those canonical
+2. Regional publication writes `habitat-export.geojson.gz` from those canonical
    polygons, including holes and separate parts. An interior reference point
    is generated without inventing a sampled waypoint depth. PMTiles remain
    display-only and are never the export geometry.
 3. The regional manifest records the canonical file's SHA-256, byte length and
    screening expiry. Publication verifies R2 read-back before making the stable
    manifest ready. The Worker refuses stale, held or mismatched export bytes.
-4. The browser loads only the chosen region when requested (32 MiB maximum),
-   verifies its hash, shape, interior points and provenance, then applies filters
+4. The browser loads only the chosen region when requested (32 MiB compressed,
+   128 MiB decoded maximum), verifies compressed bytes before bounded gzip
+   decoding, retains every original coordinate,
+   verifies shape, interior points and provenance, then applies filters
    and the current protected-area screen to both points and entire reefs.
 5. Saved plans contain IDs, priorities, species and publication hash, not cached
    geometry. Reopening verifies the current publication before restoration. A
