@@ -92,12 +92,22 @@ def query(sql, *, account, token, opener=urlopen):
         return json.load(response).get('data', [])
 
 
+# Columns whose text a browser supplied (client error message and file name):
+# printed as code spans so no link, image or HTML in them renders.
+BROWSER_TEXT = frozenset({'message', 'source'})
+
+
+def code_cell(value):
+    text = str(value if value is not None else '').replace('`', '').replace('\n', ' ').replace('\r', ' ').strip()
+    return f"`{text.replace('|', chr(92) + '|')}`" if text else '—'
+
+
 def cell(value):
     if isinstance(value, float):
         return f'{value:,.0f}' if abs(value) >= 10 or value == int(value) else f'{value:.1f}'
     if isinstance(value, int):
         return f'{value:,}'
-    # Client error messages come from browsers: keep them inert in the Markdown summary.
+    # Keep any other text inert in the Markdown summary too.
     text = str(value if value is not None else '').replace('|', '\\|').replace('\n', ' ').replace('<', '&lt;').replace('>', '&gt;')
     return text or '—'
 
@@ -129,7 +139,8 @@ def table(rows):
     columns = list(rows[0])
     lines = ['| ' + ' | '.join(columns) + ' |', '| ' + ' | '.join('---' for _ in columns) + ' |']
     for row in rows:
-        lines.append('| ' + ' | '.join(cell(row.get(c) if c in LABELS else number(row.get(c))) for c in columns) + ' |')
+        lines.append('| ' + ' | '.join(code_cell(row.get(c)) if c in BROWSER_TEXT else cell(row.get(c) if c in LABELS else number(row.get(c)))
+                                      for c in columns) + ' |')
     return '\n'.join(lines) + '\n'
 
 

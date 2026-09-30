@@ -40,9 +40,9 @@ Each carries the region id when one is shown. The server records a region it doe
 **Client errors.** Uncaught errors (`error` on `window`) and unhandled promise rejections (`unhandledrejection`), each with:
 
 - kind (`error` or `rejection`);
-- message: URL queries and fragments removed and cut to 200 characters in the browser; on the server, emails replaced with `[email]`, runs of six or more digits with `#`, and the text cut to 96 characters;
+- message: in the browser and again on the server, the query or fragment after any path-like token (a full URL, `/api/om?latitude=…` or `dir/file#x`) is removed and coordinate-shaped numbers (`35.3658`, `-120.8512`) become `[coord]`; the browser cuts it to 200 characters, and the server also replaces emails with `[email]` and runs of six or more digits with `#`, and cuts it to 96 characters;
 - the script's file name only (no directory, query or fragment), line and column;
-- the last `X-Request-Id` the Worker returned to a same-origin `fetch` on that page (the module wraps `window.fetch` to read the header), stored as the first 16 hex characters of its sha256, the same form as the `request` data points, so an error can be matched to the Worker's request point and logs;
+- the last `X-Request-Id` the Worker returned to a `fetch` on that page (the module wraps `window.fetch` and reads the header only when the response URL has the page's origin), stored as the first 16 hex characters of its sha256, the same form as the `request` data points, so an error can be matched to the Worker's request point and logs;
 - the page's build id, from `<meta name="skippercast-build">`, which `scripts/client-build.mjs` writes into every page.
 
 Identical errors are sent once per page load, and a page sends at most 5 errors and 30 events in all. Cross-origin "Script error." reports without a file name are dropped.
@@ -51,15 +51,15 @@ Identical errors are sent once per page load, and a page sends at most 5 errors 
 
 ## Transport and endpoint
 
-The module batches events and flushes when 10 are waiting, 10 seconds after the first one, or when the page is hidden or unloaded (`visibilitychange`, `pagehide`). Each batch goes out with `navigator.sendBeacon('/api/telemetry', json)` as `text/plain`, at most 3,500 bytes. A refused beacon is dropped, not retried.
+The module batches events (at most 10 a beacon) and flushes when 10 are waiting, 10 seconds after the first one, or when the page is hidden or unloaded (`visibilitychange`, `pagehide`). Each batch goes out with `navigator.sendBeacon('/api/telemetry', json)` as `text/plain`, at most 3,500 bytes. A refused beacon is dropped, not retried.
 
 `POST /api/telemetry` (`server/routes/telemetry.ts`):
 
 1. `PUBLIC_LIMITER`, keyed `telemetry:<ip>` (60 a minute), else `429`.
 2. An allowed `Origin` (production origins or `EXTRA_ORIGINS`), else `400 origin rejected`. Beacons from the site are same-origin and carry it.
 3. A JSON object of at most 4,096 bytes, else `400 body too large`.
-4. Strict validation (`parseBatch`): exactly `{build, events}`; `build` is 10 hex characters or `dev`; 1 to 20 events; each event is `{type: "funnel", name, region?}` or `{type: "error", kind, message?, source?, line?, column?, request_id?}` with the types and bounds in `server/telemetry.ts`. Any other field, name or type is `400 invalid telemetry`; nothing is written from a rejected batch.
-5. One Analytics Engine data point per event, then `204` with `Cache-Control: no-store`.
+4. Strict validation (`parseBatch`): exactly `{build, events}`; `build` is 10 hex characters or `dev`; 1 to 10 events (the client's batch size); each event is `{type: "funnel", name, region?}` or `{type: "error", kind, message?, source?, line?, column?, request_id?}` with the types and bounds in `server/telemetry.ts`. Any other field, name or type is `400 invalid telemetry`; nothing is written from a rejected batch.
+5. A funnel event repeated in one batch (same name and region, after unknown regions become `other`) is kept once. One Analytics Engine data point per remaining event, then `204` with `Cache-Control: no-store`.
 
 ## Analytics Engine columns
 
@@ -75,7 +75,7 @@ Every telemetry request also writes the usual `request` point for route `/api/te
 The daily **Operations report** (`.github/workflows/ops-report.yml`) adds two tables for the last 24 hours:
 
 - **Client funnel:** events per step, in visit order (`port_selected` → `map_viewed` → `forecast_viewed` → `spot_saved`, then `offline_saved` and `install`), with zero for steps not seen. These are page-load counts, not people: there are no visitor ids, and people who opt out are not counted, so ratios between steps are indicative only.
-- **Top client errors:** the 10 most reported message, file, line, kind and build combinations.
+- **Top client errors:** the 10 most reported message, file, line, kind and build combinations. Message and file are printed as code spans with backticks removed, so text from a browser cannot render as a link, image or HTML in the summary.
 
 Ad-hoc queries use the same SQL API, for example:
 

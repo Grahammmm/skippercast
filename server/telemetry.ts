@@ -2,7 +2,7 @@
 // client errors from web/telemetry.ts, validated strictly and written to
 // Workers Analytics Engine (server/analytics.ts) as two more kinds:
 //
-//   client_event  blob2 event, blob3 region id ('' none, 'other' unknown), blob4 page build
+//   client_event  blob2 event (a repeated event and region in one batch is written once), blob3 region id ('' none, 'other' unknown), blob4 page build
 //                 double1 count (always 1)
 //   client_error  blob2 kind (error|rejection), blob3 message (scrubbed, 96 chars),
 //                 blob4 source file basename, blob5 page build, blob6 request-id hash
@@ -24,8 +24,8 @@ export type FunnelEvent = typeof FUNNEL_EVENTS[number];
 export const ERROR_KINDS = ['error', 'rejection'] as const;
 /** Largest accepted body, in bytes; a full client batch is well under half of it. */
 export const MAX_BODY = 4096;
-/** Events per batch (the client sends at most this many). */
-export const MAX_EVENTS = 20;
+/** Events per batch: the client's BATCH_SIZE (web/telemetry.ts). */
+export const MAX_EVENTS = 10;
 export const MESSAGE_MAX = 96;
 
 export type ClientEvent =
@@ -52,11 +52,17 @@ function position(value: unknown): number {
   return value as number;
 }
 
-/** Remove what could identify a person or a query: URL queries and fragments, emails, long numbers. */
+/** Remove what could identify a person, a place or a query: URL and path queries and fragments, emails, coordinates, long numbers. */
+// A path-like token (absolute URL, /relative/path or dir/file) and the query or
+// fragment after it, which is dropped. Kept in step with web/telemetry.ts.
+export const PATH_QUERY = /((?:[a-z][a-z0-9+.-]*:)?[\w.~%-]*\/[^\s?#'"()<>]*)[?#]\S*/gi;
+// Decimal degrees and similar (35.3658, -120.851): a position is never sent.
+export const COORDINATE = /(?<![\w.])-?\d{1,3}\.\d{3,}(?![\d.])/g;
 export function scrub(message: string): string {
   return message
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/[^\s?#'"()<>]*)[?#][^\s'"()<>]*/gi, '$1')
+    .replace(PATH_QUERY, '$1')
     .replace(/[^\s@'"()<>]+@[^\s@'"()<>]+\.[a-z]{2,}/gi, '[email]')
+    .replace(COORDINATE, '[coord]')
     .replace(/\d{6,}/g, '#')
     .replace(/\s+/g, ' ')
     .trim()
@@ -95,7 +101,14 @@ export function parseBatch(body: unknown): Batch {
     }
     return invalid();
   });
-  return {build, events};
+  // A funnel step counts once per page and region; drop repeats within a batch.
+  const seen = new Set<string>();
+  return {build, events: events.filter(event => {
+    if (event.type !== 'funnel') return true;
+    const key = event.name + '\0' + event.region;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  })};
 }
 
 /** Write the batch to Analytics Engine; a no-op without the binding. */

@@ -24,7 +24,7 @@ export type Event =
 /** Per page load: at most this many distinct errors and this many events in all. */
 export const MAX_ERRORS = 5;
 export const MAX_EVENTS = 30;
-/** Flush when this many events wait, or FLUSH_MS after the first one. */
+/** Flush when this many events wait (also the most per beacon; the server's MAX_EVENTS), or FLUSH_MS after the first one. */
 export const BATCH_SIZE = 10;
 export const FLUSH_MS = 10_000;
 /** Keep each beacon well under the server's 4 KiB cap. */
@@ -48,9 +48,20 @@ export function sourceName(url: unknown): string {
   return /^[\w.-]{1,80}$/.test(name) ? name : '';
 }
 
-/** A message with URL queries and fragments removed, cut to MESSAGE_CHARS. */
+// Same patterns as server/telemetry.ts: a path-like token's query or fragment,
+// and coordinate-shaped numbers.
+const PATH_QUERY = /((?:[a-z][a-z0-9+.-]*:)?[\w.~%-]*\/[^\s?#'"()<>]*)[?#]\S*/gi;
+const COORDINATE = /(?<![\w.])-?\d{1,3}\.\d{3,}(?![\d.])/g;
+
+/** A message without path or URL queries and fragments or coordinates, cut to MESSAGE_CHARS. */
 export function cleanMessage(message: unknown): string {
-  return String(message ?? '').replace(/\b([a-z][a-z0-9+.-]*:\/\/[^\s?#'"()<>]*)[?#][^\s'"()<>]*/gi, '$1').replace(/\s+/g, ' ').trim().slice(0, MESSAGE_CHARS);
+  return String(message ?? '').replace(PATH_QUERY, '$1').replace(COORDINATE, '[coord]').replace(/\s+/g, ' ').trim().slice(0, MESSAGE_CHARS);
+}
+
+/** The response's X-Request-Id, only for a response from `origin` (the Worker's own). */
+export function requestIdFrom(response: {url: string; headers: {get(name: string): string | null}}, origin: string): string | null {
+  try { return response.url && new URL(response.url).origin === origin ? response.headers.get('X-Request-Id') : null; }
+  catch { return null; }
 }
 
 /** Error details from an Error-like value: message, and the first stack frame's file, line and column. */
@@ -89,7 +100,7 @@ export function createTelemetry({send, build, region = () => '', schedule = (run
     while (queue.length) {
       // Take as many events as fit in one beacon (at least one).
       let count = 0, body = '';
-      for (let n = 1; n <= queue.length; n++) {
+      for (let n = 1; n <= Math.min(queue.length, BATCH_SIZE); n++) {
         const next = JSON.stringify({build: safeBuild, events: queue.slice(0, n)});
         if (n > 1 && next.length > MAX_BEACON_BYTES) break;
         count = n; body = next;
@@ -166,12 +177,12 @@ export function initTelemetry(): Telemetry | null {
   addEventListener('unhandledrejection', event => telemetry.error('rejection', event.reason));
   addEventListener('pagehide', () => telemetry.flush());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') telemetry.flush(); });
-  // Remember the last request id the Worker returned, so an error can be matched to its logs.
+  // Remember the last request id the Worker (same origin only) returned, so an error can be matched to its logs.
   const original = window.fetch;
   if (typeof original === 'function') {
     window.fetch = function (...args: Parameters<typeof fetch>) {
       return original.apply(window, args).then(response => {
-        try { telemetry.noteRequestId(response.headers.get('X-Request-Id')); } catch { /* opaque response */ }
+        try { telemetry.noteRequestId(requestIdFrom(response, location.origin)); } catch { /* opaque response */ }
         return response;
       });
     } as typeof fetch;

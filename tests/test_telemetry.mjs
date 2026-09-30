@@ -112,6 +112,39 @@ test('unknown regions are recorded as other; messages are scrubbed server-side',
   assert.ok(scrub('y'.repeat(400)).length <= 96);
 });
 
+test('queries after relative paths and coordinate-shaped numbers are removed, on both sides', () => {
+  const raw = 'fetch /api/om/v1/forecast?latitude=35.3658&longitude=-120.8512 failed; see api/x#frag and https://s.test/a?b=c at 35.36584,-120.85121';
+  const expected = 'fetch /api/om/v1/forecast failed; see api/x and https://s.test/a at [coord],[coord]';
+  assert.equal(scrub(raw), expected.slice(0, 96));
+  assert.equal(client.cleanMessage(raw), expected);
+  for (const text of [scrub(raw), client.cleanMessage(raw)]) assert.doesNotMatch(text, /latitude|35\.36|120\.85|frag|b=c/);
+  // Ordinary numbers, versions and file names survive.
+  assert.equal(client.cleanMessage('x is 3.5 in index.0123456789.js line 12'), 'x is 3.5 in index.0123456789.js line 12');
+  assert.equal(scrub('Failed at 12:30 (v1.2)'), 'Failed at 12:30 (v1.2)');
+});
+
+test('at most 10 events a batch, and repeated funnel events in one batch are written once', async () => {
+  assert.equal(MAX_EVENTS, client.BATCH_SIZE);
+  assert.throws(() => parseBatch({build: 'dev', events: Array.from({length: 11}, (_, i) => funnel('map_viewed', 'r' + i))}));
+  const batch = parseBatch({build: 'dev', events: [funnel('map_viewed', 'morro-bay'), funnel('map_viewed', 'morro-bay'), funnel('map_viewed'),
+    funnel('forecast_viewed', 'atlantis'), funnel('forecast_viewed', 'narnia'), {type: 'error', kind: 'error', message: 'a'}, {type: 'error', kind: 'error', message: 'a'}]});
+  assert.deepEqual(batch.events.map(e => e.type === 'funnel' ? `${e.name}:${e.region}` : e.type),
+    ['map_viewed:morro-bay', 'map_viewed:', 'forecast_viewed:other', 'error', 'error'], 'unknown regions collapse to other before the repeat check');
+  const {points, ANALYTICS} = sink();
+  assert.equal((await worker.fetch(post({build: 'dev', events: Array(5).fill(funnel('spot_saved', 'morro-bay'))}), {ANALYTICS})).status, 204);
+  assert.equal(of(points, 'client_event').length, 1);
+});
+
+test('the request id is taken only from same-origin responses', () => {
+  const response = (url, id = 'req-0123456789') => ({url, headers: {get: name => name === 'X-Request-Id' ? id : null}});
+  const site = 'https://skippercast.com';
+  assert.equal(client.requestIdFrom(response('https://skippercast.com/api/om/v1/forecast?x=1'), site), 'req-0123456789');
+  assert.equal(client.requestIdFrom(response('https://api.weather.gov/points/1,2'), site), null);
+  assert.equal(client.requestIdFrom(response('https://skippercast.com.evil.example/'), site), null);
+  assert.equal(client.requestIdFrom(response(''), site), null, 'synthetic responses have no URL');
+  assert.equal(client.requestIdFrom(response('not a url'), site), null);
+});
+
 // Browser module ------------------------------------------------------------
 
 function harness(overrides = {}) {
@@ -167,6 +200,8 @@ test('errors are deduplicated, capped per page, carry the last request id, and f
 test('a page sends at most MAX_EVENTS events, each beacon under the size cap', () => {
   const {t, sent} = harness({region: () => ''});
   for (let i = 0; i < 100; i++) t.track('map_viewed', {region: 'r' + i});
+  t.flush();
+  assert.ok(sent.every(b => b.events.length <= client.BATCH_SIZE));
   for (let i = 0; i < 10; i++) t.error('error', new Error('m'.repeat(300) + i), {source: 'https://x.test/a.js', line: i + 1});
   t.flush();
   const events = sent.flatMap(b => b.events);
