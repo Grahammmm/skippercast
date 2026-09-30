@@ -68,7 +68,7 @@ pnpm build
 
 ## Reviewing the other agent's PR
 
-Each agent reviews the other's PRs before the owner merges. Check that:
+Each agent reviews the other's PRs before merging. Check that:
 
 - the change does what the description says, and nothing else;
 - generated files were rebuilt, not hand-edited;
@@ -77,7 +77,33 @@ Each agent reviews the other's PRs before the owner merges. Check that:
 - tests cover the new behavior;
 - nothing private or third-party-restricted was committed.
 
-Approve, or request changes with specific lines. The repository owner merges.
+Approve, or request changes with specific lines.
+
+## Agent merge authority
+
+The owner authorizes Codex and Claude to merge reviewed PRs within the scope of
+an assigned task, without asking for another confirmation for each merge.
+The agent completing the task owns the merge and deployment verification.
+
+Before merging:
+
+- Obtain an independent review from the other agent or a delegated reviewer;
+  resolve every blocking finding. Do not approve your own work as its only review.
+- Confirm required CI checks pass on the exact current PR head, the branch is
+  up to date with `main`, and no conflicts or unresolved change requests remain.
+  After updating a branch, wait for its new checks before merging.
+- Recheck the final diff for task scope, regenerated output, evidence, privacy
+  and data rights. Merge only PRs needed for the authorized task.
+- Use GitHub's normal protected-branch merge flow. Never bypass required checks,
+  disable branch protection, force-push `main`, or commit directly to `main`.
+
+After merging, confirm the deployed revision and relevant live behavior. For
+data changes, confirm publication state and source freshness before reporting
+that the data is available. Report failed or incomplete deployment honestly.
+
+This authority does not authorize unrelated changes, new paid services, changes
+to credentials or access controls, or weakening security and data-quality gates.
+Ask only when a genuinely new decision needs the owner's authorization.
 
 ## Commits
 
