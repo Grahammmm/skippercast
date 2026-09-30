@@ -137,6 +137,34 @@ license or unsupported-format holds need review/code, not endless retries.
 The scheduler processes usable sources only; it does not automatically resolve
 held licenses or discover missing native formats.
 
+## Reviewed originals awaiting publication rights
+
+Do not mislabel non-government data as public domain. When a native original
+has been reviewed for personal/research processing but public redistribution is
+not yet qualified, use explicit private qualification:
+
+```bash
+python -m skippercast.seafloor promote-survey --draft REVIEWED_DRAFT \
+  --rights-url ORIGINAL_TERMS_URL --physical-only
+python -m skippercast.seafloor plan --physical-only --max-new 3 --json
+python -m skippercast.seafloor run --reach REACH_ID --physical-only
+```
+
+`physical-only` source status requires the same checked native receipt and
+shallow valid pixels, but grants no rights. Default planning/processing excludes
+these sources. Their outputs live in `var/seafloor/private-reaches/<reach>/`,
+are retained by checked private recovery, and do not overwrite public reach
+outputs or advance the committed public ledger. Report their measurements
+separately. Publication rejects private-source receipts even if a legal snapshot
+is available. Public qualification still requires reviewed publication rights.
+
+Original CSUMB gzip-tar grids hosted at NOAA's reviewed `harold_heath` archive
+use `--format arcgrid` and the exact grid directory. Existing archive caches and
+catalog IDs should be reused. Consult the current producer policy alongside the
+original metadata; public-use and for-profit restrictions are different from
+an original-metadata "to be determined" placeholder. Do not infer a license
+from NOAA hosting or treat a format fix as measured geographic expansion.
+
 ## Physical work first, spatial screen last
 
 ```bash

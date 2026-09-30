@@ -47,6 +47,26 @@ class RolloutTests(unittest.TestCase):
                 self.assertTrue(all(not r['screen_reviewed'] for r in result['reaches']))
                 self.assertEqual(len(result['source_review_queue']), 1)
                 self.assertEqual(rollout.plan(root, max_new=0)['new_reaches'], [])
+                private = dict(usable, status='physical-only')
+                with patch.object(rollout, 'load_manifest', return_value={'surveys': [private]}):
+                    self.assertEqual(rollout.plan(root)['new_reaches'], [])
+                    private_plan = rollout.plan(root, physical_only=True)
+                    self.assertEqual(private_plan['new_reaches'], ['r01', 'r02'])
+                    self.assertTrue(private_plan['physical_only'])
+                    output = root/'var/seafloor/private-reaches/r01/cells.json'
+                    atomic_json(output, {'cells': []})
+                    atomic_json(output.parent/'run.json', {
+                        'publication_prohibited': True,
+                        'inputs': {'reference_cells_sha256': sha256(ref), 'sources': [private]},
+                        'outputs': {'cells.json': sha256(output)},
+                        'ledger_summary': {'processing_incomplete': False}})
+                    advanced_private = rollout.plan(root, physical_only=True)
+                    self.assertEqual(advanced_private['new_reaches'], ['r02'])
+                    self.assertEqual(advanced_private['reaches'][0]['tier1_km2'], 0)
+                    self.assertEqual(rollout.plan(root)['new_reaches'], [])
+                    output.write_text('corrupt')
+                    with self.assertRaisesRegex(ValueError, 'checksum'):
+                        rollout.plan(root, physical_only=True)
                 advanced = rollout.plan(root, max_new=1, progress={'r01': {'status': 'complete'}})
                 self.assertEqual(advanced['new_reaches'], ['r02'])
                 self.assertTrue(advanced['reaches'][0]['pending_ledger_merge'])

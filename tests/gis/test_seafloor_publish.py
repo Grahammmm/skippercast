@@ -166,7 +166,7 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(result['terrain_grade'], 'B')
 
     def test_stale_receipt_or_held_feature_is_rejected_before_encoding(self):
-        for case in ('stale', 'held', 'unqualified', 'corrupt'):
+        for case in ('stale', 'held', 'unqualified', 'corrupt', 'private'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 ref = root/'var/seafloor/reference/cells.json'
@@ -179,6 +179,8 @@ class PublicationTests(unittest.TestCase):
                 atomic_json(out/'habitat.geojson', {'features': [{'properties': p}]})
                 receipt = {'inputs': {'screen': 'old' if case == 'stale' else 'now'},
                            'outputs': {'habitat.geojson': 'bad' if case == 'corrupt' else sha256(out/'habitat.geojson')}}
+                if case == 'private':
+                    receipt['inputs']['sources'] = [{'status': 'physical-only'}]
                 atomic_json(out/'run.json', receipt)
                 with patch.object(publish, 'load_snapshot', return_value={'status': 'held' if case == 'held' else 'ready'}), \
                      patch.object(publish, 'input_identity', return_value='now'):

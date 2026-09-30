@@ -179,7 +179,8 @@
         "candidate",
         "usable",
         "hold",
-        "withdrawn"
+        "withdrawn",
+        "physical-only"
       ]
     },
     "hold_reason": {
@@ -359,6 +360,26 @@
         "required": [
           "adapter_review"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "physical-only"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "adapter_review"
+        ],
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
       }
     }
   ]
