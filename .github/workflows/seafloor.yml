@@ -44,7 +44,7 @@ env:
 jobs:
   prepare:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -83,7 +83,7 @@ jobs:
   reaches:
     needs: prepare
     if: needs.prepare.outputs.has_work == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -107,7 +107,7 @@ jobs:
   publish:
     needs: [prepare, reaches]
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
       actions: write

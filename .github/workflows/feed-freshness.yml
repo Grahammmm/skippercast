@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     env:
       # The site that serves /feeds/ (falls back to the workers.dev host when unset).

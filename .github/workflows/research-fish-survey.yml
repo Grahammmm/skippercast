@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   nos-historic-seabed-gap:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,7 +33,7 @@ jobs:
           path: var/review/nos-seabed-monterey-gap-audit.json
           retention-days: 30
   central-dataone-rov-spot-precision:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,7 +62,7 @@ jobs:
           path: var/review/central-dataone-rov-300ft-spot-precision.json
           retention-days: 30
   estero-original-depth-and-independent-character:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -175,7 +175,7 @@ jobs:
             var/review/estero-2012-public-release-inventory.json
           retention-days: 30
   point-buchon-original-pair:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -312,7 +312,7 @@ jobs:
             var/review/point-buchon-rov-access-triage.json
           retention-days: 30
   central-rov-deep-reference:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -350,7 +350,7 @@ jobs:
             var/review/monterey-rov-research-overlap.json
           retention-days: 30
   ccfrp-open-reference-context:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -373,7 +373,7 @@ jobs:
           path: var/review/central-ccfrp-area-evidence.json
           retention-days: 30
   central-300-research-priority:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -396,7 +396,7 @@ jobs:
           path: var/review/monterey-300-native-research-queue.json
           retention-days: 30
   noaa-vdatum-monterey-coverage:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -420,7 +420,7 @@ jobs:
           path: var/review/noaa-vdatum-offshore-monterey-samples.json
           retention-days: 30
   cdfw-crfs-historical-rcgl:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -441,7 +441,7 @@ jobs:
           path: var/review/cdfw-crfs-rcgl-2004-2024.json
           retention-days: 30
   cdfw-crfs-all-species-baseline:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -462,7 +462,7 @@ jobs:
           path: var/review/cdfw-crfs-all-2004-2024.json
           retention-days: 30
   noaa-dismap-groundfish:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
