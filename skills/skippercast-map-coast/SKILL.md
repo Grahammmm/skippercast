@@ -353,3 +353,28 @@ explicitly private until the normal runner applies the current screen. It never
 updates the public ledger or publishes. Existing destination caches are refused
 to preserve prior work; changed scientific inputs require normal recomputation.
 Do not remove or overwrite a destination just to force adoption.
+
+## Nested original ArcInfo products
+
+Reviewed NOAA `ventresca` survey bundles, including BigCreek and SCC, contain
+original bathymetry ZIPs inside their gzip tar. Use the shared `arcgrid` adapter
+with an exact virtual member path: `ZIP_MEMBER/GRID_DIRECTORY`. For example:
+`BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy`.
+Inspect and select each native 2 m/5 m bathymetry grid; never select hillshade,
+slope or interpolated all-depth composites. Only one explicitly named nested
+ZIP is supported. Archive/member/expansion limits, path/link checks and checksums
+apply before extraction. The original archive stays the private recovery object.
+
+A successful adapter proves native access, not publication permission or
+coverage. Record exact embedded acquisition dates/datum, inspect valid pixels,
+retain unknown per-cell uncertainty/interpolation and shared lineage, qualify
+the source, then process real reference intersections. Use private qualification
+when release review is pending; whole-polygon restrictions remain the final
+public/export stage. Do not replace an inspected ZIP with an ad hoc extracted
+file hosted elsewhere. Recheck existing normalized raster identities when the
+adapter implementation changes, and update the reviewed cache-key pin only
+after parity proof. See the dated BigCreek nested-adapter proof.
+
+Use the CI Node major (22) for client validation. On macOS, temporary Vite build
+checks need a canonical TMPDIR path rather than the `/var` symlink alias; retain
+the real checks and do not weaken modulepreload assertions to mask this.

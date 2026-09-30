@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: open explicitly selected native ArcInfo grids inside original NOAA ZIP-in-tar survey bundles, with bounded extraction and checked private recovery. Preserve native pixels and reject unsafe containers; source qualification and public screening remain separate.
+
 - Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
 
 - Map and export: show original survey producer credits in reef details and retain their use restrictions in waypoint, outline and offline notes. New credited publications reject incomplete notices before export; existing government-only publications remain compatible.

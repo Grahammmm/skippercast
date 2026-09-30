@@ -26,7 +26,7 @@ PINNED = {
     'src/skippercast/platform/bottom_targets.py': 'feece80a42529aeab5850bc4b775835ffdcafdbb779ac38d6e3cc7c33c7d192f',
     'src/skippercast/seafloor/ingest.py': 'b3427fc82f962a41d0e36a9962eee13354c06f40e0aac21255f6eb7738aec358',
     'src/skippercast/seafloor/raster.py': 'efa6606e5205670186ec16f0625bd2077bc7b0ff574266f07d6f01ec91902da8',
-    'src/skippercast/seafloor/adapters/arcgrid.py': 'a4a49a7dc99f7f86f4719a4de40b466a44c80c4f6494c2d40c4bf4e3f76ecdf4',
+    'src/skippercast/seafloor/adapters/arcgrid.py': 'a850c5f405a55abe348cce9911dc6df72d2126a2ade1f4a2475e3f6bd29b2bc2',
     'src/skippercast/seafloor/adapters/bag.py': 'f89211791ecc448f3d8d4b32589ee4c7cc016604e7788db46b17405c9858853c',
     'src/skippercast/seafloor/adapters/usgs_geotiff.py': '51dee0633a7733c9937856b3c09704b8f5197bf9c96e3dc5f3d2aa8b65f4a24a',
 }

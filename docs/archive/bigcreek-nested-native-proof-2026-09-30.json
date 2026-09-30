@@ -1,0 +1,231 @@
+{
+  "inspected_on": "2026-09-30",
+  "sources": [
+    {
+      "id": "csumb-bigcreek-bc-n-2m-native",
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.6685923555379,
+        36.08051845818481,
+        -121.61881780623428,
+        36.127220855549595
+      ],
+      "width": 2205,
+      "height": 2560,
+      "acquisition_dates": [
+        "20100514",
+        "20100515",
+        "20100516",
+        "20100518",
+        "20100819",
+        "20100820",
+        "20100514",
+        "20100515",
+        "20100516",
+        "20100518",
+        "20100819",
+        "20100820"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/bc_n_2mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 2081700,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    },
+    {
+      "id": "csumb-bigcreek-bc-n-5m-native",
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_5mbathy",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.67993857104081,
+        36.08246882704793,
+        -121.63452549942052,
+        36.12456630362192
+      ],
+      "width": 805,
+      "height": 923,
+      "acquisition_dates": [
+        "20100514",
+        "20100515",
+        "20100516",
+        "20100518",
+        "20100819",
+        "20100820",
+        "20100514",
+        "20100515",
+        "20100516",
+        "20100518",
+        "20100819",
+        "20100820"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/bc_n_5mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 12608,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    },
+    {
+      "id": "csumb-bigcreek-bc-s-2m-native",
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.63990485795757,
+        36.042488278683464,
+        -121.58742416396665,
+        36.089521912170035
+      ],
+      "width": 2327,
+      "height": 2576,
+      "acquisition_dates": [
+        "20100516",
+        "20100518",
+        "20100820",
+        "20100821",
+        "20100516",
+        "20100518",
+        "20100820",
+        "20100821"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/bc_s_2mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 2008929,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    },
+    {
+      "id": "csumb-bigcreek-bc-s-5m-native",
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_5mbathy",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.65247727840007,
+        36.04179079774861,
+        -121.60130559628361,
+        36.093066491266505
+      ],
+      "width": 906,
+      "height": 1125,
+      "acquisition_dates": [
+        "20100516",
+        "20100518",
+        "20100820",
+        "20100821",
+        "20100516",
+        "20100518",
+        "20100820",
+        "20100821"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/bc_s_5mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 27969,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    },
+    {
+      "id": "csumb-bigcreek-lp-2m-native",
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.60923461972219,
+        36.00995611563809,
+        -121.53144544098275,
+        36.051650094890924
+      ],
+      "width": 3472,
+      "height": 2262,
+      "acquisition_dates": [
+        "20100516",
+        "20100517",
+        "20100821",
+        "20100516",
+        "20100517",
+        "20100821"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/lp_2mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 2658222,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    },
+    {
+      "id": "csumb-bigcreek-lp-5m-native",
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_5mbathy",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "crs": "EPSG:26910",
+      "bounds_wgs84": [
+        -121.62045127998474,
+        36.010405408716075,
+        -121.60043217653353,
+        36.04798970144782
+      ],
+      "width": 349,
+      "height": 829,
+      "acquisition_dates": [
+        "20100516",
+        "20100517",
+        "20100821",
+        "20100516",
+        "20100517",
+        "20100821"
+      ],
+      "vertical_datum": "NAVD88",
+      "metadata_member": "ArcViewGrids/lp_5mbathy/metadata.xml",
+      "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "archive_bytes": 364945509,
+      "nominal_0_300ft_pixels": 16659,
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "note": "Native producer-gridded bathymetry; archive metadata contains shared acquisitions, not independent evidence. Pixel counts are not deduplicated coverage."
+    }
+  ]
+}
