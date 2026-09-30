@@ -15,6 +15,8 @@ def main():
     planning.add_argument('--json', action='store_true')
     planning.add_argument('--physical-only', action='store_true', help='Include reviewed private sources; never grants publication')
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
+    adoption = commands.add_parser('adopt-private-physics', help='Transfer checked private physics after rights-only promotion; screen still required')
+    adoption.add_argument('--reach', required=True)
     publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
     publication.add_argument('--region', required=True)
     publication.add_argument('--upload', action='store_true')
@@ -58,6 +60,10 @@ def main():
             else:
                 folder, manifest = build(args.region)
                 print(json.dumps({'directory': str(folder), **manifest}, indent=2))
+            return
+        if args.command == 'adopt-private-physics':
+            from .adopt import adopt_private
+            print(json.dumps(adopt_private(args.reach), indent=2))
             return
         if args.command == 'refresh-screen':
             from .screen_sources import refresh
