@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 2707.22375,
-    "tier1_km2": 600.290625,
+    "tier0_km2": 2617.34875,
+    "tier1_km2": 690.165625,
     "tier2_km2": 51.132064,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 585.804281
+    "selected_valid_km2": 671.071524
   },
   "reaches": [
     {
@@ -5538,12 +5538,12 @@
       "id": "big-sur-coast-r01",
       "region": "big-sur-coast",
       "order": 29,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 721,
       "band_km2": 41.55375,
-      "tier0_km2": 41.55375,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 41.4925,
+      "tier1_km2": 0.06125,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.024375,
       "polygons_by_grade": {
@@ -5551,23 +5551,59 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 1,
+        "metric-support-incomplete": 1,
+        "screen-deferred": 1
+      },
+      "surveys_used": [
+        "usgs-1998-sur5g-native"
+      ],
+      "last_survey_run": "2026-09-30T19:24:04.776861+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 0.033800802,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "5ce21ed2a5661669d64a1fddf5409ab1b5d4a4518e64a54c08d8959655432359",
+      "habitat_count": 0,
+      "held_candidate_count": 1,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 1,
+      "processing_incomplete": false,
+      "physical_input_hash": "20f296eada446d8644345da1016fb04556a968d0ea4bc46d256d14ccf44a179f",
+      "roughness_thresholds": {
+        "vrm_samples": 1087,
+        "vrm": 0.0010490382555872202,
+        "bpi_fine_m_samples": 968,
+        "bpi_fine_m": 0.23708698144565202
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "monterey-point-sur-r04",
       "region": "monterey-point-sur",
       "order": 30,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1979,
       "band_km2": 117.170625,
-      "tier0_km2": 117.170625,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 40.809375,
+      "tier1_km2": 76.36125,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.1575,
       "polygons_by_grade": {
@@ -5575,23 +5611,60 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 45,
+        "metric-support-incomplete": 45,
+        "screen-deferred": 790
+      },
+      "surveys_used": [
+        "usgs-1998-sgf5g-native",
+        "usgs-1998-sur5g-native"
+      ],
+      "last_survey_run": "2026-09-30T19:24:01.288651+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 73.689364982,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "f7c1375e4600c8e0750ba3d56cbd993c19df0c04a01f05d8fecea7d263399273",
+      "habitat_count": 0,
+      "held_candidate_count": 790,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 790,
+      "processing_incomplete": false,
+      "physical_input_hash": "52e582479df5ea2f7875fc259a7f6f32447a8d06b1092e39ca0cf7b232c6889a",
+      "roughness_thresholds": {
+        "vrm_samples": 2916093,
+        "vrm": 0.0006905513000674546,
+        "bpi_fine_m_samples": 2899797,
+        "bpi_fine_m": 0.41961080714402205
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "monterey-point-sur-r03",
       "region": "monterey-point-sur",
       "order": 31,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 637,
       "band_km2": 35.864375,
-      "tier0_km2": 35.864375,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 22.411875,
+      "tier1_km2": 13.4525,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.080625,
       "polygons_by_grade": {
@@ -5599,12 +5672,48 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 37,
+        "metric-support-incomplete": 37,
+        "screen-deferred": 128
+      },
+      "surveys_used": [
+        "usgs-1998-sgf5g-native"
+      ],
+      "last_survey_run": "2026-09-30T19:24:03.862087+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 11.544077117,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "53576ea98a65234b7a27efdc88af1f65ec45cf6b9b28a18611cb16bdbe836edb",
+      "habitat_count": 0,
+      "held_candidate_count": 128,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 128,
+      "processing_incomplete": false,
+      "physical_input_hash": "d193445880539ec50e8efde4650e48d4fa2810d7fce5b6ba3ac5201f9ac99ff1",
+      "roughness_thresholds": {
+        "vrm_samples": 447306,
+        "vrm": 0.0005724643706344068,
+        "bpi_fine_m_samples": 435262,
+        "bpi_fine_m": 0.42021124711963037
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "monterey-point-sur-r02",
