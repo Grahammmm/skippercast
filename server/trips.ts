@@ -42,10 +42,10 @@ export function pushConfigured(env:Env):boolean{return Boolean(env.VAPID_PUBLIC_
 async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all<SubscriptionRow>()).results;
   if(subscriptions.length&&!pushConfigured(env)){
-    // No VAPID pair on this deployment: hold the event without claiming receipts, so the
-    // next check after the keys are set delivers it instead of leaving it 'uncertain' forever.
+    // No VAPID pair on this deployment: claim no receipts and leave the event 'pending'.
+    // checkTrip only calls deliver() for pending events, so the first check after the
+    // keys are set sends it (a 'held' event would never be retried).
     console.error(JSON.stringify({event:'push_unconfigured',alert:event.id}));
-    await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind('held',event.id).run();
     return false;
   }
   let delivered=false;
