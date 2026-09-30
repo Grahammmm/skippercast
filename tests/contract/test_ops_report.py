@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 
 from scripts import ops_report
+from tests._support import ROOT
 
 
 class FakeResponse(io.BytesIO):
@@ -87,7 +88,7 @@ class OpsReportTests(unittest.TestCase):
         self.assertEqual(run([], dict(ENV), opener_for(denied, [])), 1)
 
     def test_workflow_is_daily_pinned_and_passes_the_optional_token(self):
-        text = (Path(__file__).resolve().parents[1] / '.github' / 'workflows' / 'ops-report.yml').read_text()
+        text = (ROOT / '.github' / 'workflows' / 'ops-report.yml').read_text()
         self.assertIn('schedule:', text)
         self.assertIn('CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}', text)
         self.assertIn('python scripts/ops_report.py', text)
