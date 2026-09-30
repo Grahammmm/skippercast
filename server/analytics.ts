@@ -20,6 +20,8 @@
 //                double6 changes, double7 delivered, double8 held, double9 in_app, double10 ms
 //   cron         blob2 cron, blob3 watchdog action, blob4 trip-check action, blob5 prune outcome
 //                double1 ms, double2 owners queued, double3 live feed age minutes (-1 unknown)
+//   client_event, client_error  funnel events and browser errors posted to
+//                /api/telemetry; columns in server/telemetry.ts
 import type {MiddlewareHandler} from 'hono';
 import {matchedRoutes} from 'hono/route';
 import {hash} from './http.ts';

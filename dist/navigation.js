@@ -1,3 +1,4 @@
+import { track } from "../web/telemetry.ts";
 const VIEW_NAMES = new Set(["map", "forecast", "guide", "export"]);
 export function viewFromHash(hash) {
   const key = hash.replace(/^#/, "");
@@ -14,6 +15,8 @@ export function initNavigation({ onMapVisible }) {
     const view = viewFromHash(location.hash);
     const changing=document.body.dataset.view!==view;
     document.body.dataset.view = view;
+    if (view === "map") track("map_viewed");
+    if (view === "forecast") track("forecast_viewed");
     if(changing||forceClose===true)for(const open of document.querySelectorAll('dialog[open]'))open.close();
     for (const panel of document.querySelectorAll("[data-panel]"))
       panel.hidden = panel.dataset.panel !== view;

@@ -4,7 +4,8 @@
 Queries the dataset the Worker writes (server/analytics.ts, dataset
 `skippercast_events`) through Cloudflare's Analytics Engine SQL API for the last
 24 hours: request counts by route and status class with p95 latency, LLM usage,
-queue batches and cron runs. Prints a Markdown report and appends it to
+queue batches, cron runs, the client funnel and the top client errors
+(web/telemetry.ts via /api/telemetry). Prints a Markdown report and appends it to
 $GITHUB_STEP_SUMMARY when set.
 
 Needs CF_ANALYTICS_TOKEN (an API token with Account · Account Analytics · Read)
@@ -51,16 +52,34 @@ GROUP BY queue, outcome ORDER BY batches DESC LIMIT 20""",
   max(double1) AS max_ms
 FROM {DATASET} WHERE index1 = 'cron' AND {WINDOW}
 GROUP BY watchdog, trip_checks, prune ORDER BY runs DESC LIMIT 20""",
+    'funnel': f"""SELECT blob2 AS event, SUM(_sample_interval) AS events
+FROM {DATASET} WHERE index1 = 'client_event' AND {WINDOW}
+GROUP BY event ORDER BY events DESC LIMIT 20""",
+    'client_errors': f"""SELECT blob3 AS message, blob4 AS source, double1 AS line, blob2 AS kind, blob5 AS build,
+  SUM(_sample_interval) AS reports
+FROM {DATASET} WHERE index1 = 'client_error' AND {WINDOW}
+GROUP BY message, source, line, kind, build ORDER BY reports DESC LIMIT 10""",
 }
 
+# Funnel steps in the order a visit takes them (server/telemetry.ts FUNNEL_EVENTS).
+FUNNEL = ('port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install')
+
 # Text columns; every other column is a number (the API may return numbers as strings).
-LABELS = frozenset({'route', 'feature', 'model', 'outcome', 'queue', 'watchdog', 'trip_checks', 'prune'})
+LABELS = frozenset({'route', 'feature', 'model', 'outcome', 'queue', 'watchdog', 'trip_checks', 'prune',
+                    'event', 'message', 'source', 'line', 'kind', 'build'})
 
 TITLES = {
     'routes': 'Requests by route (last 24 h)',
     'llm': 'LLM calls (last 24 h)',
     'queue': 'Trip-check queue batches (last 24 h)',
     'cron': 'Cron runs (last 24 h)',
+    'funnel': 'Client funnel (last 24 h)',
+    'client_errors': 'Top client errors (last 24 h)',
+}
+
+NOTES = {
+    'funnel': ('Each step counts once per page load and region, not per person: there are no visitor ids. '
+               'Browsers with Do Not Track or Global Privacy Control send nothing.'),
 }
 
 
@@ -78,7 +97,8 @@ def cell(value):
         return f'{value:,.0f}' if abs(value) >= 10 or value == int(value) else f'{value:.1f}'
     if isinstance(value, int):
         return f'{value:,}'
-    text = str(value if value is not None else '').replace('|', '\\|').replace('\n', ' ')
+    # Client error messages come from browsers: keep them inert in the Markdown summary.
+    text = str(value if value is not None else '').replace('|', '\\|').replace('\n', ' ').replace('<', '&lt;').replace('>', '&gt;')
     return text or '—'
 
 
@@ -87,6 +107,20 @@ def number(value):
         return float(value)
     except (TypeError, ValueError):
         return value
+
+
+def line_number(value):
+    try:
+        return str(int(float(value)))
+    except (TypeError, ValueError):
+        return value
+
+
+def funnel_rows(rows):
+    """Funnel steps in visit order, zero where nothing was recorded, then any unknown names."""
+    counts = {str(r.get('event')): number(r.get('events')) for r in rows}
+    ordered = [{'event': name, 'events': counts.pop(name, 0)} for name in FUNNEL]
+    return ordered + [{'event': name, 'events': value} for name, value in counts.items()]
 
 
 def table(rows):
@@ -107,7 +141,15 @@ def report(results):
     if routes:
         out += [f'Requests: {total:,.0f}; 5xx: {errors:,.0f} ({(errors / total * 100 if total else 0):.2f} %).', '']
     for key in QUERIES:
-        out += [f'## {TITLES[key]}', '', table(results.get(key) or [])]
+        rows = results.get(key) or []
+        if key == 'funnel' and rows:
+            rows = funnel_rows(rows)
+        if key == 'client_errors':
+            rows = [{**r, 'line': line_number(r.get('line'))} for r in rows]
+        out += [f'## {TITLES[key]}', '']
+        if key in NOTES:
+            out += [NOTES[key], '']
+        out.append(table(rows))
     return '\n'.join(out)
 
 

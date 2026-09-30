@@ -4,6 +4,7 @@
 // pack card in the Guide.
 import {installHint} from './offline-core.js';
 import {offlineStatus} from '../web/views.ts';
+import {track} from '../web/telemetry.ts';
 import {initOfflinePack} from './offline-pack.js';
 
 const sessionStart = Date.now();
@@ -89,7 +90,7 @@ function mountInstall() {
   const nav = document.querySelector('.app-nav');
   if (nav) nav.before(card); else document.body.append(card);
   addEventListener('beforeinstallprompt', event => { event.preventDefault(); deferredPrompt = event; renderInstall(); });
-  addEventListener('appinstalled', () => { deferredPrompt = null; card.hidden = true; });
+  addEventListener('appinstalled', () => { deferredPrompt = null; card.hidden = true; track('install'); });
   renderInstall();
 }
 

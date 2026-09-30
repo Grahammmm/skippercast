@@ -10,7 +10,7 @@ export interface Env {
   ASSETS?: Fetcher;                  // assets.binding: the built site in dist/client
   DB?: D1Database;                   // d1_databases: accounts, trips, alerts, limits
   FEEDS?: R2Bucket;                  // r2_buckets: published feeds and tiles
-  PUBLIC_LIMITER?: RateLimit;        // ratelimits: /api/om, 60 a minute per IP
+  PUBLIC_LIMITER?: RateLimit;        // ratelimits: /api/om and /api/telemetry, 60 a minute per IP each
   FEED_LIMITER?: RateLimit;          // ratelimits: /feeds/, 300 a minute per IP
   // Added to the deploy config only with ENABLE_ANALYTICS / ENABLE_QUEUES=true (scripts/wrangler_config.mjs):
   ANALYTICS?: AnalyticsEngineDataset; // analytics_engine_datasets: skippercast_events (server/analytics.ts)

@@ -2,7 +2,7 @@
 // order registered, and the first route that answers ends the request.
 //
 //   metrics -> request-id -> security headers (+ renewed session cookie) -> context
-//   -> www redirect -> /feeds/ -> public /api/ -> /api/auth/ -> /api/session
+//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> /api/auth/ -> /api/session
 //   -> private gate (signed in, Origin, budget) -> private /api/ -> /api/ 404
 //   -> static assets and page shells
 //
@@ -18,6 +18,7 @@ import {onError} from './middleware/error.ts';
 import {feeds} from './routes/feeds.ts';
 import {om} from './routes/om.ts';
 import {publicApi} from './routes/public.ts';
+import {telemetry} from './routes/telemetry.ts';
 import {jobs} from './routes/jobs.ts';
 import {auth} from './routes/auth.ts';
 import {session, privacy} from './routes/account.ts';
@@ -40,6 +41,7 @@ app.all('/api', serveAsset);
 app.route('/', feeds);
 app.route('/', om);
 app.route('/', publicApi);
+app.route('/', telemetry);
 app.route('/', jobs);
 app.route('/', auth);
 app.route('/', session);

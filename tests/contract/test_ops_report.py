@@ -79,6 +79,29 @@ class OpsReportTests(unittest.TestCase):
         self.assertIn('## Cron runs (last 24 h)', text)
         self.assertIn('_No data points in this window._', text)
 
+    def test_report_shows_the_client_funnel_in_order_and_the_top_client_errors(self):
+        answers = {
+            'client_event': [{'event': 'map_viewed', 'events': '40'}, {'event': 'port_selected', 'events': 50},
+                             {'event': 'forecast_viewed', 'events': 12}],
+            'client_error': [{'message': 'TypeError: a | b <img>', 'source': 'index.0123456789.js', 'line': 120.0,
+                              'kind': 'error', 'build': '0123456789', 'reports': '7'}],
+        }
+        seen = []
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / 'summary.md'
+            self.assertEqual(run([], dict(ENV, GITHUB_STEP_SUMMARY=str(summary)), opener_for(answers, seen)), 0)
+            text = summary.read_text()
+        funnel = next(sql for _, _, sql in seen if "index1 = 'client_event'" in sql)
+        self.assertIn('SUM(_sample_interval) AS events', funnel)
+        errors = next(sql for _, _, sql in seen if "index1 = 'client_error'" in sql)
+        self.assertIn('ORDER BY reports DESC LIMIT 10', errors)
+        self.assertIn('## Client funnel (last 24 h)', text)
+        self.assertIn('not per person', text)
+        steps = text.index('| port_selected | 50 |'), text.index('| map_viewed | 40 |'), text.index('| forecast_viewed | 12 |'), text.index('| spot_saved | 0 |')
+        self.assertEqual(list(steps), sorted(steps), 'funnel steps are listed in visit order')
+        self.assertIn('## Top client errors (last 24 h)', text)
+        self.assertIn('| TypeError: a \\| b &lt;img&gt; | index.0123456789.js | 120 | error | 0123456789 | 7 |', text)
+
     def test_api_errors_fail_but_a_never_written_dataset_only_warns(self):
         def error(code, body):
             return HTTPError('u', code, 'err', {}, io.BytesIO(body.encode()))

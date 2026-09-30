@@ -1,5 +1,6 @@
 // First-run preference only. Port match positions are approximate and never exported.
 import {navigate} from '../web/state.ts';
+import {track} from '../web/telemetry.ts';
 export const HOME_PORT_KEY = 'skippercast-home-port-v1';
 // Must equal FIRST_RUN_KEY in first-run.js (not imported: that module needs the region loaded).
 export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
@@ -94,7 +95,7 @@ function chooser(ports, firstRun, onChosen = () => {}) {
       const name = document.createElement('strong'); name.textContent = port.name;
       const detail = document.createElement('span'); detail.textContent = `${port.status === 'active' ? 'Mapped area' : 'Regional preview'} · ${port.forecast_name}`;
       button.append(name, detail);
-      button.addEventListener('click', () => { savePort(port.id); if (firstRun) { try { localStorage.setItem(FIRST_RUN_KEY, 'boat'); } catch { /* flow is optional */ } } if (navigate(portChoiceURL(location.href, port)) === 'in-place') { close(); onChosen(); } });
+      button.addEventListener('click', () => { savePort(port.id); track('port_selected', {region: port.region, flush: true}); if (firstRun) { try { localStorage.setItem(FIRST_RUN_KEY, 'boat'); } catch { /* flow is optional */ } } if (navigate(portChoiceURL(location.href, port)) === 'in-place') { close(); onChosen(); } });
       results.append(button);
     }
     if (!query && !showAll && !specific) {

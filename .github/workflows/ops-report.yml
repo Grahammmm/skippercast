@@ -2,7 +2,8 @@ name: Operations report
 
 # Daily summary of the Worker's Analytics Engine data (scripts/ops_report.py):
 # requests by route and status with p95 latency, LLM usage, trip-check queue
-# batches and cron runs, written to this run's summary. Skips cleanly until the
+# batches, cron runs, the client funnel and top client errors, written to this
+# run's summary. Skips cleanly until the
 # owner adds the CF_ANALYTICS_TOKEN secret (Account Analytics: Read) and sets
 # ENABLE_ANALYTICS=true; see docs/cloudflare.md#observability.
 on:

@@ -5,6 +5,7 @@
 // service worker marks anything it answers from here as offline data.
 import {getRegion, getRegionDirectory, localContext} from './region.js';
 import {chartLayers} from './chart-map.js';
+import {track} from '../web/telemetry.ts';
 import {PACK_PREFIX, PACK_META, SHARED_FILES, planTiles, tileURL, tileKey, packRequests, stampedHeaders, formatBytes, relativeTime} from './offline-core.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -120,6 +121,7 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0} =
     await cache.put(PACK_META, new Response(JSON.stringify(meta), {headers: {'Content-Type': 'application/json'}}));
     // The new pack is complete: older packs of the same region go.
     for (const old of (await caches.keys()).filter(n => n !== name && n.startsWith(`${PACK_PREFIX}${region.id}-`))) await caches.delete(old);
+    track('offline_saved', {region: region.id});
     return meta;
   } catch (error) {
     await caches.delete(name);

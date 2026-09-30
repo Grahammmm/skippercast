@@ -56,6 +56,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [social-preview-image-sources.md](social-preview-image-sources.md) | Provenance of the social preview image (prompt in `social-preview-prompt.txt`) |
 
 | [engineering/api-reference.md](engineering/api-reference.md) | Every HTTP route the Worker answers, with examples |
+| [engineering/telemetry.md](engineering/telemetry.md) | Client funnel events and error reports: what is sent, when nothing is, retention |
 | [engineering/testing.md](engineering/testing.md) | Test layers, what each covers and how to add a fixture |
 | [engineering/adr/](engineering/adr/README.md) | Architecture decision records |
 
