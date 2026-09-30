@@ -337,3 +337,19 @@ unchanged scientific inputs, apply current whole-polygon spatial screening,
 and verify live features and export notes. A source-use contract is independent
 of MPA clearance, measured coverage and proof of fish presence. See the
 [release contract](../../docs/archive/seafloor-csumb-release-contract-2026-09-30.md).
+
+After rights-only promotion in place (preserve catalog source ordering), use:
+
+```bash
+python -m skippercast.seafloor adopt-private-physics --reach REACH_ID
+python -m skippercast.seafloor run --reach REACH_ID
+```
+
+Adoption requires a complete private receipt, unchanged reference, scientific
+source metadata, rules, substrate, dependencies and all numerical implementation
+hashes, plus checked original/normalized bytes. It preserves candidate geometry
+and ranking, updates only physical cache identity, and leaves the copied receipt
+explicitly private until the normal runner applies the current screen. It never
+updates the public ledger or publishes. Existing destination caches are refused
+to preserve prior work; changed scientific inputs require normal recomputation.
+Do not remove or overwrite a destination just to force adoption.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
+
 - Map and export: show original survey producer credits in reef details and retain their use restrictions in waypoint, outline and offline notes. New credited publications reject incomplete notices before export; existing government-only publications remain compatible.
 
 - Seafloor: preserve original CSUMB noncommercial use terms and producer credit in tile and canonical-export metadata; unknown rights and for-profit release remain blocked. No source or fishing location is promoted by this contract change.
