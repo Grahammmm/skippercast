@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify three native NOAA Point Conception depth bands; add 76.32 km² measured coverage and 979 supported habitat ranks in three private reaches, preserving 2/4/8 m spacing.
+
 - Seafloor: verify reviewed scientific raster content across lossless GeoTIFF encodings while retaining original/cache checksums; retain exact worker failure reasons during batch aggregation.
 
 - Operations: `/api/daily` counts only edge-cache misses against its per-IP limit, so several people behind one address (carrier NAT, a marina's Wi-Fi) are no longer refused the cached regulation and closure checks.

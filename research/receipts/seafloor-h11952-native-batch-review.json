@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "reconciles_open_prs": [
+    97,
+    104
+  ],
+  "original_rights_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+  "rights_check": "Original NOAA documentation opened 2026-09-30. BAG metadata identifies NOAA NOS OCS Hydrographic Surveys Division; Coast Survey acquired data CC0/public domain. Not inferred from distributor alone.",
+  "lineage": "H11952 files are depth bands of one acquisition (2008-08-26 to 2008-09-04), not three independent surveys. H11953 overlap selected deterministically; duplicate pixels do not increase coverage.",
+  "sources": [
+    {
+      "id": "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "bytes": 36757568,
+      "resolution_m": 2.0,
+      "reviewed_window_wgs84": [
+        -120.65,
+        34.44,
+        -120.46,
+        34.56
+      ],
+      "vertical_datum": "MLLW",
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-26T00:00:00",
+        "survey_end": "2008-09-04T00:00:00",
+        "metadata_sha256": "a23f24509355c3eece8b785d3d69af9df4bd1dd4a9f49bd890d08088d88210ee"
+      },
+      "valid_pixels": 4408374,
+      "nominal_0_300ft_pixels": 4408374,
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "99b2d63a3557a2f3a6edcfd87bcc79486e1e7b8e90f994765f3271ba88fd213e"
+      },
+      "depth_claim": "Nominal original MLLW depths to 91.44 m. Retain actual native spacing; 8 m supports broad terrain only.",
+      "accuracy": "BAG productUncert band retained; grid spacing is not sounding accuracy.",
+      "interpolation_mask": "unknown"
+    },
+    {
+      "id": "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "sha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "bytes": 22836452,
+      "resolution_m": 4.0,
+      "reviewed_window_wgs84": [
+        -120.65,
+        34.44,
+        -120.46,
+        34.56
+      ],
+      "vertical_datum": "MLLW",
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-26T05:23:33",
+        "survey_end": "2008-09-04T23:56:13",
+        "metadata_sha256": "263aa857e3ffc87c4834327769796efb45b558c545feb1ebd0134914e210bfe5"
+      },
+      "valid_pixels": 2258602,
+      "nominal_0_300ft_pixels": 2258602,
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "e3762c05655fc015eff36fb60e50641fb4c4a1d6ac07f77a36cf0c100a0b282c"
+      },
+      "depth_claim": "Nominal original MLLW depths to 91.44 m. Retain actual native spacing; 8 m supports broad terrain only.",
+      "accuracy": "BAG productUncert band retained; grid spacing is not sounding accuracy.",
+      "interpolation_mask": "unknown"
+    },
+    {
+      "id": "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_8m_MLLW_4of4.bag",
+      "sha256": "7a726128f5d4ee4b5f761f5544d16b2b9e9ddcbe0c80f7bb79573e3659e2afd1",
+      "bytes": 4677781,
+      "resolution_m": 8.0,
+      "reviewed_window_wgs84": [
+        -120.65,
+        34.44,
+        -120.46,
+        34.56
+      ],
+      "vertical_datum": "MLLW",
+      "metadata": {
+        "horizontal_wkt": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.2572221010041,AUTHORITY[\"EPSG\",\"7019\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree (supplier to define representation)\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],EXTENSION[\"tx_authority\",\"NA83\"],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\",AUTHORITY[\"EPSG\",\"16010\"]],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "vertical_wkt": "VERT_CS[\"MLLW depth\",\n    VERT_DATUM[\"Mean Lower Low Water\",2005,\n        AUTHORITY[\"EPSG\",\"1089\"]],\n    UNIT[\"metre\",1,\n        AUTHORITY[\"EPSG\",\"9001\"]],\n    AXIS[\"Depth\",DOWN],\n    AUTHORITY[\"EPSG\",\"5866\"]]",
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "survey_start": "2008-08-26T03:30:42",
+        "survey_end": "2008-09-04T23:56:13",
+        "metadata_sha256": "f62fdcfbf80340b682f353790a53c986d817775e1fde83feb17eafa15c1f413e"
+      },
+      "valid_pixels": 53729,
+      "nominal_0_300ft_pixels": 53692,
+      "raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "0d1888f0d570e50108c9294da9c3d9d36667449d0aa70cef4f88d440e740a59b"
+      },
+      "depth_claim": "Nominal original MLLW depths to 91.44 m. Retain actual native spacing; 8 m supports broad terrain only.",
+      "accuracy": "BAG productUncert band retained; grid spacing is not sounding accuracy.",
+      "interpolation_mask": "unknown"
+    }
+  ],
+  "reaches": [
+    {
+      "reach": "point-arguello-conception-r06",
+      "tier1_km2": 15.545,
+      "selected_valid_km2": 13.945882504,
+      "candidate_count": 359,
+      "ranked_count": 304,
+      "incomplete_count": 55,
+      "terrain_grades": {
+        "C": 304
+      },
+      "lingcod_fit": {
+        "2": 304
+      },
+      "rockfish_reef_fit": {
+        "2": 300,
+        "1": 4
+      },
+      "native_resolution_counts": {
+        "2.0": 359
+      },
+      "public_candidate_count": 0
+    },
+    {
+      "reach": "point-arguello-conception-r07",
+      "tier1_km2": 20.18,
+      "selected_valid_km2": 18.974924497,
+      "candidate_count": 296,
+      "ranked_count": 269,
+      "incomplete_count": 27,
+      "terrain_grades": {
+        "C": 269
+      },
+      "lingcod_fit": {
+        "2": 269
+      },
+      "rockfish_reef_fit": {
+        "2": 251,
+        "1": 18
+      },
+      "native_resolution_counts": {
+        "2.0": 217,
+        "4.0": 79
+      },
+      "public_candidate_count": 0
+    },
+    {
+      "reach": "point-arguello-conception-r08",
+      "tier1_km2": 40.598125,
+      "selected_valid_km2": 38.70375284,
+      "candidate_count": 424,
+      "ranked_count": 406,
+      "incomplete_count": 18,
+      "terrain_grades": {
+        "C": 400,
+        "B": 4,
+        "A": 2
+      },
+      "lingcod_fit": {
+        "2": 400,
+        "3": 6
+      },
+      "rockfish_reef_fit": {
+        "1": 5,
+        "2": 399,
+        "3": 2
+      },
+      "native_resolution_counts": {
+        "2.0": 88,
+        "4.0": 323,
+        "8.0": 13
+      },
+      "public_candidate_count": 0
+    }
+  ],
+  "publication": "Physical only, all private pending current spatial review; no new exported or live locations."
+}

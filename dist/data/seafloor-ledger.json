@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 2954.983125,
-    "tier1_km2": 352.53125,
+    "tier0_km2": 2878.66,
+    "tier1_km2": 428.854375,
     "tier2_km2": 15.57834,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 348.409823
+    "selected_valid_km2": 420.034382
   },
   "reaches": [
     {
@@ -4319,12 +4319,12 @@
       "id": "point-arguello-conception-r06",
       "region": "point-arguello-conception",
       "order": 24,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 3023,
       "band_km2": 182.425625,
-      "tier0_km2": 182.425625,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 166.880625,
+      "tier1_km2": 15.545,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.165,
       "polygons_by_grade": {
@@ -4332,12 +4332,48 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 55,
+        "metric-support-incomplete": 55,
+        "screen-deferred": 359
+      },
+      "surveys_used": [
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f"
+      ],
+      "last_survey_run": "2026-09-30T16:56:23.542839+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 13.945882504,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "8793ee422a49c34050b7b26cfafad056003a4828260be4258dfacdfc24e1e7e7",
+      "habitat_count": 0,
+      "held_candidate_count": 359,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 359,
+      "processing_incomplete": false,
+      "physical_input_hash": "1fb91d68cba28cc0e423c4c5c58238a3189c2445306f972c4bac3629c8e987ff",
+      "roughness_thresholds": {
+        "vrm_samples": 3415832,
+        "vrm": 2.4150040189852007e-05,
+        "bpi_fine_m_samples": 3259015,
+        "bpi_fine_m": 0.03452375708102596
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "big-sur-coast-r03",
@@ -4367,12 +4403,12 @@
       "id": "point-arguello-conception-r07",
       "region": "point-arguello-conception",
       "order": 26,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1493,
       "band_km2": 90.038125,
-      "tier0_km2": 90.038125,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 69.858125,
+      "tier1_km2": 20.18,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.060625,
       "polygons_by_grade": {
@@ -4380,12 +4416,50 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 27,
+        "metric-support-incomplete": 27,
+        "screen-deferred": 296
+      },
+      "surveys_used": [
+        "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+        "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f"
+      ],
+      "last_survey_run": "2026-09-30T16:56:33.016858+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 18.974924497,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "aba8388a6e4e9b60174d1c39ef8f3a9b91e1cd8212cbb12990aefbd99a4b9814",
+      "habitat_count": 0,
+      "held_candidate_count": 296,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 296,
+      "processing_incomplete": false,
+      "physical_input_hash": "d598dcdae63d1a03c649d978544db29e7f0713e45cc2d5f5ade2e09619899842",
+      "roughness_thresholds": {
+        "vrm_samples": 3388530,
+        "vrm": 2.6593022994347848e-05,
+        "bpi_fine_m_samples": 3279201,
+        "bpi_fine_m": 0.05504374242507413
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "big-sur-coast-r02",
@@ -4415,12 +4489,12 @@
       "id": "point-arguello-conception-r08",
       "region": "point-arguello-conception",
       "order": 28,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1191,
       "band_km2": 71.10875,
-      "tier0_km2": 71.10875,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 30.510625,
+      "tier1_km2": 40.598125,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.1425,
       "polygons_by_grade": {
@@ -4428,12 +4502,50 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 18,
+        "metric-support-incomplete": 18,
+        "screen-deferred": 424
+      },
+      "surveys_used": [
+        "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+        "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+        "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b"
+      ],
+      "last_survey_run": "2026-09-30T16:56:47.641427+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 38.70375284,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "38a250449d058abb02844c30b7eaf30b9fe8f820e6a182a6e80c92ea0ba98447",
+      "habitat_count": 0,
+      "held_candidate_count": 424,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 424,
+      "processing_incomplete": false,
+      "physical_input_hash": "9cbc4aede0651cb8ca4c2275cce0a70a00a07313e44f19030cedc3626ba5c5f1",
+      "roughness_thresholds": {
+        "vrm_samples": 4763529,
+        "vrm": 6.210577703313902e-05,
+        "bpi_fine_m_samples": 4608062,
+        "bpi_fine_m": 0.1507861095578967
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 0,
+        "reproduced_count": 0,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "big-sur-coast-r01",
