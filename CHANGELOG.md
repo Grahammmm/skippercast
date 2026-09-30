@@ -2,7 +2,9 @@
 
 ## Unreleased
 
+- Operations: every scheduled data workflow and CI reads its runner from a repository variable (`DATA_RUNNER`, `CI_RUNNER`; default `ubuntu-latest`), and `scripts/runner/setup.sh` turns one Ubuntu box into four self-hosted runners, so the jobs cost no billed minutes once the repository is private. Costs and steps in [docs/operations/runners.md](docs/operations/runners.md).
 - Seafloor: screen southern Monterey/Carmel/PointSur whole habitat outlines;904 candidates pass locally, with MPAs excluded and changed Monterey rules holding publication for review.
+- Map: show current screened survey habitat automatically for reef targets, preserve manual off, color by selected species fit and show actual regional publication counts.
 
 - Seafloor: process original Carmel/Point Sur5m surveys in three new reaches; add85.27km² selected measured footprint and836 supported habitat ranks, held privately for spatial screening.
 

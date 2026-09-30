@@ -53,7 +53,7 @@ concurrency:
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 355
     permissions:
       contents: write  # pushes the conditions and forecasts branches
@@ -100,7 +100,7 @@ jobs:
   # dispatched by hand with check_trips; it remains the fallback path.
   notify:
     if: vars.ENABLE_QUEUES != 'true' || inputs.check_trips
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 360
     permissions:
       contents: read   # watch the conditions branch head
@@ -121,7 +121,7 @@ jobs:
   next:
     needs: refresh
     if: always() && !cancelled() && github.event_name != 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     permissions:
       actions: write  # dispatch the next run of this workflow
