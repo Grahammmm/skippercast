@@ -11,7 +11,7 @@ import re
 from .fetch import restore_private, upload_private
 from .io import sha256
 
-SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|json)|[a-f0-9]{64}\.(?:tif|json))|reaches/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|run)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
+SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|json)|[a-f0-9]{64}\.(?:tif|json))|reaches/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
 
 
 def missing(error):
@@ -67,6 +67,8 @@ def restore(s3, bucket, root, name):
     if data['scope'] != name or data['version'] != 1:
         raise ValueError('Private state scope mismatch')
     base = Path(root)/'var/seafloor'
+    if name == 'shared' and not any(e['path'] == 'screen/refresh-failure.json' for e in data['files']):
+        (base/'screen/refresh-failure.json').unlink(missing_ok=True)
     for entry in data['files']:
         if not allowed(name, entry['path']) or not re.fullmatch('[a-f0-9]{64}', entry['sha256']):
             raise ValueError('Unreviewed private restore path')
@@ -84,13 +86,32 @@ def restore(s3, bucket, root, name):
 def reach_paths(root, reach):
     base = Path(root)/'var/seafloor'
     scope_name(reach)
-    # Original caches are immutable and shared; reach inventories remain separate.
-    return [p for directory in (base/'cache', base/'reaches'/reach)
-            for p in directory.rglob('*') if p.is_file() and SAFE.fullmatch(p.relative_to(base).as_posix())]
+    # Do not attach every downloaded survey to every reach: that made each
+    # matrix worker restore unrelated coastal archives as the catalog grew.
+    folder = base/'reaches'/reach
+    hashes = set()
+    checkpoint = folder/'coverage-checkpoint.json'
+    if checkpoint.exists():
+        hashes.update(json.loads(checkpoint.read_text()).get('source_hashes', []))
+    receipt = folder/'run.json'
+    if receipt.exists():
+        inputs = json.loads(receipt.read_text()).get('inputs', {})
+        hashes.update(r['sha256'] for r in inputs.get('sources', []))
+        hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
+    if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
+        raise ValueError('Invalid source hash in private reach state')
+    directories = [folder] + [base/'cache'/h for h in sorted(hashes)]
+    return [p for directory in directories for p in directory.rglob('*')
+            if p.is_file() and SAFE.fullmatch(p.relative_to(base).as_posix())]
 
 
 def shared_paths(root):
     base = Path(root)/'var/seafloor'
-    snapshot = json.loads((base/'screen/snapshot.json').read_text())
-    return [base/'reference/cells.json', base/'reference/run.json', base/'screen/snapshot.json',
-            base/'screen/source-receipts.json'] + [base/'screen'/r['file'] for r in snapshot['layers'].values()]
+    paths = [base/'reference/cells.json', base/'reference/run.json']
+    snapshot = base/'screen/snapshot.json'
+    if snapshot.exists():
+        data = json.loads(snapshot.read_text())
+        paths += [snapshot] + [base/'screen'/r['file'] for r in data['layers'].values()]
+    paths += [base/'screen'/n for n in ('source-receipts.json', 'refresh-failure.json')
+              if (base/'screen'/n).exists()]
+    return paths

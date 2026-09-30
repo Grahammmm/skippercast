@@ -25,7 +25,11 @@ def cell_geometry(cell):
 
 def priority(row):
     year = row['year'] if isinstance(row['year'], int) else -1
-    return row['resolution_m'], -year, row['id']
+    # A fine display grid containing upsampled deep pixels is not uniformly
+    # fine evidence. Rank its overlap conservatively at the coarser resolution.
+    profile = row.get('resolution_profile')
+    resolution = profile['coarse_resolution_m'] if profile else row['resolution_m']
+    return resolution, -year, row['id']
 
 
 def valid_depth(depth, mask, interpolated=None):

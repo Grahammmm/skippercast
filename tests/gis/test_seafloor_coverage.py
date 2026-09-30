@@ -12,11 +12,11 @@ from rasterio.transform import from_origin
 from shapely.geometry import box
 from pyproj import Transformer
 
-from skippercast.seafloor.coverage import classify_cells, valid_depth, footprint
+from skippercast.seafloor.coverage import classify_cells, valid_depth, footprint, priority
 from skippercast.seafloor.terrain import derivatives
 from skippercast.seafloor.ingest import ingest
 from skippercast.seafloor.io import sha256
-from skippercast.seafloor.manifest import qualify_row
+from skippercast.seafloor.manifest import qualify_row, promote_draft
 from skippercast.seafloor.run import run
 from tests._support import ROOT
 
@@ -31,6 +31,12 @@ def source(ident, resolution, year, geometry):
 
 
 class CoverageTests(unittest.TestCase):
+    def test_mixed_grid_is_ranked_at_its_coarser_native_resolution(self):
+        row = {'id': 'mixed', 'year': 2008, 'resolution_m': 2,
+               'resolution_profile': {'fine_to_depth_m': 80, 'coarse_resolution_m': 5}}
+        self.assertEqual(priority(row)[0], 5)
+        self.assertEqual(priority({'id': 'fine', 'year': 2007, 'resolution_m': 2})[0], 2)
+
     def test_finer_then_newer_wins_and_duplicate_area_is_not_added(self):
         inputs = [source('coarse', 8, 2025, box(0, 0, 250, 250)),
                   source('older', 2, 2008, box(0, 0, 200, 250)),
@@ -116,6 +122,15 @@ class ReachRunTests(unittest.TestCase):
             # Stabilized manifest metadata has the same native COG output.
             manifest={'surveys':[row]}
             (root/'catalog/surveys.json').write_text(json.dumps(manifest))
+            draft = root/'draft.json'
+            draft.write_text(json.dumps({'row': row, 'adapter_review': receipt}))
+            self.assertEqual(promote_draft(draft, root=root, rights_url='https://pubs.usgs.gov/fixture'), 'fixture')
+            unchanged_manifest = (root/'catalog/surveys.json').read_bytes()
+            bad = deepcopy(row); bad['license'] = 'unknown'
+            draft.write_text(json.dumps({'row': bad, 'adapter_review': receipt}))
+            with self.assertRaisesRegex(ValueError, 'rights'):
+                promote_draft(draft, root=root, rights_url='https://pubs.usgs.gov/fixture')
+            self.assertEqual((root/'catalog/surveys.json').read_bytes(), unchanged_manifest)
             (root/'catalog/reaches.json').write_text(json.dumps({'input_hash':'grid','reaches':[{'id':'fixture-r01'}]}))
             (root/'var/seafloor/reference/cells.json').write_text(json.dumps({'input_hash':'grid','cells':[cell()]}))
             (root/'var/seafloor/reference/run.json').write_text(json.dumps({'input_hash':'grid',
@@ -130,6 +145,24 @@ class ReachRunTests(unittest.TestCase):
             with patch('skippercast.seafloor.run.footprint') as reading:
                 second,unchanged=run('fixture-r01',root=root)
                 self.assertTrue(unchanged); self.assertEqual(first,second); reading.assert_not_called()
+            # Legal review/freshness changes must not recalculate seafloor physics.
+            deferred, _ = run('fixture-r01', root=root, physical_only=True)
+            self.assertEqual(deferred['ledger_summary']['tier2_km2'], 0)
+            self.assertEqual(deferred['inputs']['screen']['reasons'], ['screen-deferred'])
+            with patch('skippercast.seafloor.run.footprint') as reading, \
+                 patch('skippercast.seafloor.run.build_candidates') as extracting:
+                screened, unchanged = run('fixture-r01', root=root)
+                self.assertFalse(unchanged)
+                self.assertTrue(screened['physical_reused'])
+                reading.assert_not_called(); extracting.assert_not_called()
+            # A large native habitat failure preserves measured coverage.
+            with patch('skippercast.seafloor.run.build_candidates',
+                       side_effect=ValueError('Habitat window exceeds 20 million pixels')):
+                with self.assertRaisesRegex(ValueError, '20 million pixels'):
+                    run('fixture-r01', root=root, force=True)
+            checkpoint = json.loads((root/'var/seafloor/reaches/fixture-r01/coverage-checkpoint.json').read_text())
+            self.assertEqual(checkpoint['ledger_summary']['tier1_km2'], .05)
+            self.assertEqual(checkpoint['ledger_summary']['tier2_km2'], 0)
             output=root/'var/seafloor/reaches/fixture-r01/cells.json'
             saved=output.read_bytes(); output.write_text('corrupt')
             with self.assertRaisesRegex(ValueError,'hash verification'):

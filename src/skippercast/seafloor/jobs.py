@@ -1,15 +1,20 @@
 """Shared CI orchestration; all geography comes from the catalog and ledger."""
 import argparse
 import json
+import os
+import re
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from skippercast.platform.contracts import REPO, read_json
+from skippercast.platform.contracts import REPO, read_json, atomic_json
 from . import state_cache
 from .io import sha256
 from .publish import credentials, upload
 from .restore import restore_reference
 from .run import run, apply_ledger
 from .screen_sources import refresh
+from .rollout import plan, report
 
 
 def select(root, region=None, reach=None):
@@ -23,65 +28,150 @@ def select(root, region=None, reach=None):
     return selected
 
 
-def prepare(root, region=None, reach=None):
+def read_progress(s3, bucket, reaches):
+    """Lightweight scheduling state; never publishes or credits unmerged results."""
+    def read(ident):
+        try:
+            with s3.get_object(Bucket=bucket, Key=f'seafloor-review/progress/{ident}.json')['Body'] as stream:
+                raw = stream.read(1_000_001)
+            if len(raw) > 1_000_000:
+                raise ValueError('Oversized progress receipt')
+            value = json.loads(raw)
+            if value['reach'] != ident or value['status'] not in ('complete', 'coverage-only'):
+                raise ValueError('Invalid progress receipt')
+            return ident, value
+        except Exception as error:
+            if state_cache.missing(error):
+                return ident, None
+            raise
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        return {ident: value for ident, value in pool.map(read, reaches) if value is not None}
+
+
+def prepare(root, region=None, reach=None, max_new=3):
     s3, bucket = credentials()
-    selected = select(root, region, reach)
-    # Publication rebuilds complete affected regions, including unchanged peers.
+    root = Path(root)
+    state_cache.restore(s3, bucket, root, 'shared')
+    reference = root/'var/seafloor/reference/cells.json'
+    expected = read_json(root/'dist/data/seafloor-ledger.json')['reference_cells_sha256']
+    if not reference.exists() or sha256(reference) != expected:
+        restore_reference(root=root, fetch=True)
+    all_rows = read_json(root/'dist/data/seafloor-ledger.json')['reaches']
+    progress = read_progress(s3, bucket, [r['id'] for r in all_rows])
+    rollout = plan(root, region, max_new, progress=progress)
+    atomic_json(root/'var/seafloor/rollout-plan.json', rollout, indent=2)
+    (root/'var/seafloor/rollout-plan.md').write_text(report(rollout))
+    selected = select(root, region, reach) if reach else rollout['selected']
     regions = sorted({r['region'] for r in selected})
-    # A failed/cancelled refresh must not leave an older legal-screen pass live.
+    all_rows = read_json(root/'dist/data/seafloor-ledger.json')['reaches']
+    new_ids = {r.get('reach', r.get('id')) for r in selected}
+    rows = [r for r in all_rows if r['region'] in regions and
+            (r['status'] != 'unassessed' or r['id'] in new_ids or r['id'] in progress)]
+    # Fail closed during this update, but do not let refresh failure stop the
+    # physical mapping workers. Their new candidates will remain private/held.
     for name in regions:
         s3.put_object(Bucket=bucket, Key=f'tiles/seafloor/manifest-{name}.json',
             Body=b'{"status":"updating"}', ContentType='application/json', CacheControl='no-store')
-    all_rows = read_json(Path(root)/'dist/data/seafloor-ledger.json')['reaches']
-    rows = [r for r in all_rows if r['region'] in regions and
-            (r['status'] != 'unassessed' or r['id'] == reach)]
-    state_cache.restore(s3, bucket, root, 'shared')
-    for row in rows:
-        state_cache.restore(s3, bucket, root, row['id'])
-    reference = Path(root)/'var/seafloor/reference/cells.json'
-    expected = read_json(Path(root)/'dist/data/seafloor-ledger.json')['reference_cells_sha256']
-    if not reference.exists() or sha256(reference) != expected:
-        restore_reference(root=root, fetch=True)
     try:
         refresh(root=root)
-    except Exception:
+    except Exception as error:
+        atomic_json(root/'var/seafloor/screen/refresh-failure.json',
+                    {'status': 'failed', 'error_type': type(error).__name__})
         for name in regions:
             s3.put_object(Bucket=bucket, Key=f'tiles/seafloor/manifest-{name}.json',
                 Body=b'{"status":"held","reason":"screen-refresh-failed"}',
                 ContentType='application/json', CacheControl='no-store')
-        raise
     state_cache.save(s3, bucket, root, 'shared', state_cache.shared_paths(root))
-    # Refresh changes the snapshot timestamp/hash, therefore every assessed
-    # reach in these regions has a changed screening input. Workers still use
-    # run()'s exact hash/no-op check; no terrain or grade is invented by the job.
     return {'include': [{'reach': row['id'], 'region': row['region']} for row in rows]}
 
 
-def process(root, reach):
+def batch_key(batch, reach):
+    if not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}', batch or ''):
+        raise ValueError('A unique safe batch ID is required')
+    state_cache.scope_name(reach)
+    return f'seafloor-review/batches/{batch}/{reach}.json'
+
+
+def process(root, reach, batch):
     s3, bucket = credentials()
-    state_cache.restore(s3, bucket, root, reach)
-    state_cache.restore(s3, bucket, root, 'shared')
-    receipt, unchanged = run(reach, root=root, fetch=True)
-    state_cache.save(s3, bucket, root, reach, state_cache.reach_paths(root, reach))
-    # Review receipts are private even though their habitat will be public.
-    folder = Path(root)/'var/seafloor/reaches'/reach
-    for name in ('run.json', 'atlas-comparison.json'):
-        s3.put_object(Bucket=bucket, Key=f'seafloor-review/{reach}/{receipt["input_hash"]}/{name}',
-            Body=(folder/name).read_bytes(), ContentType='application/json', CacheControl='private, no-store')
-    return {'reach': reach, 'unchanged': unchanged, 'tier2_km2': receipt['ledger_summary']['tier2_km2']}
+    key = batch_key(batch, reach)
+    root = Path(root)
+    folder = root/'var/seafloor/reaches'/reach
+    checkpoint = folder/'coverage-checkpoint.json'
+    result = {'reach': reach, 'batch': batch, 'status': 'failed'}
+    started_run = False
+    try:
+        state_cache.restore(s3, bucket, root, reach)
+        state_cache.restore(s3, bucket, root, 'shared')
+        checkpoint.unlink(missing_ok=True)  # never credit a previous failed attempt
+        started_run = True
+        receipt, unchanged = run(reach, root=root, fetch=True)
+        state_cache.save(s3, bucket, root, reach, state_cache.reach_paths(root, reach))
+        result.update(status='complete', unchanged=unchanged, input_hash=receipt['input_hash'],
+                      physical_reused=receipt.get('physical_reused', False),
+                      summary=receipt['ledger_summary'])
+        for name in ('run.json', 'atlas-comparison.json'):
+            s3.put_object(Bucket=bucket, Key=f'seafloor-review/{reach}/{receipt["input_hash"]}/{name}',
+                Body=(folder/name).read_bytes(), ContentType='application/json', CacheControl='private, no-store')
+    except Exception as error:
+        traceback.print_exc()
+        result = {'reach': reach, 'batch': batch, 'status': 'failed'}
+        result['error_type'] = type(error).__name__
+        result['reason'] = ('habitat-window-limit' if '20 million pixels' in str(error)
+                            else 'processing-failed; inspect this reach before retry')
+        if started_run and checkpoint.exists():
+            saved = read_json(checkpoint)
+            if sha256(folder/'coverage-cells.json') == saved['cells_sha256']:
+                result.update(status='coverage-only', summary=saved['ledger_summary'])
+                state_cache.save(s3, bucket, root, reach, state_cache.reach_paths(root, reach))
+    # A same-batch result is mandatory. An interrupted/missing worker can never
+    # be mistaken for a success restored from a previous run.
+    s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(result).encode(),
+                  ContentType='application/json', CacheControl='private, no-store')
+    if result['status'] in ('complete', 'coverage-only'):
+        s3.put_object(Bucket=bucket, Key=f'seafloor-review/progress/{reach}.json',
+                      Body=json.dumps(result).encode(), ContentType='application/json', CacheControl='private, no-store')
+    return result
 
 
-def finish(root, matrix):
+def finish(root, matrix, batch):
     s3, bucket = credentials()
     state_cache.restore(s3, bucket, root, 'shared')
     before = read_json(Path(root)/'dist/data/seafloor-ledger.json')
+    failures, results, blocked_regions = [], [], set()
     for row in matrix['include']:
         ident = row['reach']
-        if not state_cache.restore(s3, bucket, root, ident):
-            raise ValueError('Missing completed reach state')
-        receipt = read_json(Path(root)/'var/seafloor/reaches'/ident/'run.json')
-        apply_ledger(Path(root), ident, receipt['ledger_summary'])
-    results = [upload(region, root=root) for region in sorted({r['region'] for r in matrix['include']})]
+        try:
+            with s3.get_object(Bucket=bucket, Key=batch_key(batch, ident))['Body'] as stream:
+                status = json.loads(stream.read(5_000_000))
+            if status['batch'] != batch or status['reach'] != ident:
+                raise ValueError('Batch result mismatch')
+            if status['status'] == 'failed':
+                raise ValueError('Reach processing failed')
+            if not state_cache.restore(s3, bucket, root, ident):
+                raise ValueError('Missing reach state')
+            if status['status'] == 'complete':
+                receipt = read_json(Path(root)/'var/seafloor/reaches'/ident/'run.json')
+                if receipt['input_hash'] != status['input_hash'] or receipt['ledger_summary'] != status['summary']:
+                    raise ValueError('Reach state differs from this batch')
+            elif status['status'] == 'coverage-only':
+                checkpoint = read_json(Path(root)/'var/seafloor/reaches'/ident/'coverage-checkpoint.json')
+                if checkpoint['ledger_summary'] != status['summary']:
+                    raise ValueError('Coverage checkpoint differs from this batch')
+                failures.append({'reach': ident, 'reason': status['reason']})
+            else:
+                raise ValueError('Unknown reach result')
+            apply_ledger(Path(root), ident, status['summary'])
+        except Exception as error:
+            failures.append({'reach': ident, 'reason': type(error).__name__+': no current completed result'})
+            blocked_regions.add(row['region'])
+    for region in sorted({r['region'] for r in matrix['include']} - blocked_regions):
+        try:
+            results.append(upload(region, root=root))
+        except Exception as error:
+            failures.append({'region': region, 'reason': type(error).__name__+': publication failed'})
+    if (Path(root)/'var/seafloor/screen/refresh-failure.json').exists():
+        failures.append({'reason': 'screen-refresh-failed; physical work retained, habitat held'})
     after = read_json(Path(root)/'dist/data/seafloor-ledger.json')
     old = {r['id']: r for r in before['reaches']}
     lines = ['Automated screened seafloor update. No fish-presence claim.', '',
@@ -92,12 +182,17 @@ def finish(root, matrix):
         if row != prior:
             lines.append(f"| {row['id']} | {prior['tier1_km2']:.6f} → {row['tier1_km2']:.6f} | "
                          f"{prior['tier2_km2']:.6f} → {row['tier2_km2']:.6f} |")
+    lines += ['', 'Failures / incomplete stages: '+json.dumps(failures),
+              'Published bundles: '+str(len(results))]
     lines += ['', 'Zero area delta means refreshed screening/provenance only. Source grids and review receipts remain private.',
               'Validation: current source hashes, full-polygon spatial screening, PMTiles build and R2 byte read-back.']
     destination = Path(root)/'var/seafloor/ledger-pr.md'
     destination.write_text('\n'.join(lines)+'\n')
     delta = after['totals']['tier2_km2']-before['totals']['tier2_km2']
-    return {'published': [r['key'] for r in results], 'title': f'Refresh seafloor ledger ({delta:+.3f} km² tier 2)'}
+    return {'published': [r['key'] for r in results], 'failures': failures,
+            'ready_regions': [r['manifest']['region'] for r in results if r['manifest']['status'] == 'ready'],
+            'held_regions': [r['manifest']['region'] for r in results if r['manifest']['status'] != 'ready'],
+            'title': f'Refresh seafloor ledger ({delta:+.3f} km² tier 2)'}
 
 
 def main():
@@ -106,13 +201,15 @@ def main():
     parser.add_argument('--region')
     parser.add_argument('--reach')
     parser.add_argument('--matrix', type=Path)
+    parser.add_argument('--max-new', type=int, default=3)
+    parser.add_argument('--batch', default=os.environ.get('GITHUB_RUN_ID', '')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT', ''))
     args = parser.parse_args()
     if args.stage == 'prepare':
-        result = prepare(REPO, args.region, args.reach)
+        result = prepare(REPO, args.region, args.reach, args.max_new)
     elif args.stage == 'run':
-        result = process(REPO, args.reach)
+        result = process(REPO, args.reach, args.batch)
     else:
-        result = finish(REPO, read_json(args.matrix))
+        result = finish(REPO, read_json(args.matrix), args.batch)
     print(json.dumps(result))
 
 
