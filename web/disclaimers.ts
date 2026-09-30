@@ -24,6 +24,19 @@ export const RESEARCH_ONLY_LOCATION: Limitation = {
   text: 'Source raster output vertical datum and product uncertainty are unverified. The displayed depths are not chart depths or a verified 200-foot fishing screen. Check your official chart and sounder.',
 };
 
+/**
+ * Depth badge why for a depth-qualified survey target ("Qualified ✓"). Says
+ * what the qualification is (a measured-depth screen), the uncertainty the
+ * source states, and that the skipper still checks the sounder.
+ */
+export const qualifiedDepth = (datum: string, uncertaintyM: number, marginM?: number | null): string =>
+  `Measured-depth screen on ${datum}: the survey states product uncertainty up to ${uncertaintyM} m (${(uncertaintyM * 3.28084).toFixed(1)} ft)`
+  + `${typeof marginM === 'number' && marginM > 0 ? `, and the screen adds a ${marginM} m planning allowance` : ''}.`
+  + ' Not a tide forecast, navigation route or catch probability; verify on your sounder.';
+
+/** Answer-line marker for research-only targets; the full caveat is the depth badge's why. */
+export const RESEARCH_ONLY_MARKER = 'Research-only';
+
 /** Spot sheet "Mapped habitat candidate" note, first half: now the terrain badge's why. */
 export const MAPPED_HABITAT_CANDIDATE = 'Mapped habitat candidate';
 export const terrainConfidence = (confidence: string): string =>

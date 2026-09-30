@@ -11,10 +11,12 @@ const STATION = "https://www.ndbc.noaa.gov/station_page.php?station=";
 const finite = (n) => typeof n === "number" && Number.isFinite(n);
 const time = (value) => typeof value === "string" && /(?:Z|[+-]\d\d:\d\d)$/.test(value) ? Date.parse(value) : NaN;
 const measuredAt = (epoch) => Number.isFinite(epoch) ? local(epoch / 1000, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " PT" : "Time unavailable";
-const sourceCurrent = (feed, source, now) => {
-  const age = (now - time(feed?.generated_at)) / 60000;
-  return source?.status === "ok" && age >= -5 && age <= 90;
-};
+/** A feed source is current when it reports "ok" and the feed was generated in the last 90 minutes. */
+export function sourceFresh(generated, status, now = Date.now()) {
+  const age = (now - generated) / 60000;
+  return status === "ok" && age >= -5 && age <= 90;
+}
+const sourceCurrent = (feed, source, now) => sourceFresh(time(feed?.generated_at), source?.status, now);
 
 export function freshness(epoch, now = Date.now(), sourceOK = true) {
   if (!Number.isFinite(epoch)) return { fresh: false, label: "Unavailable" };
@@ -45,6 +47,7 @@ export function buoyReading(feed, id = "diablo", now = Date.now()) {
     wind: value(wind, "WSPD", "m/s", 1.943844),
     gust: value(wind, "GST", "m/s", 1.943844), windFrom: direction(wind, "WDIR"), windTime,
     windState: freshness(windTime, now, ok),
+    feedTime: time(feed?.generated_at), sourceStatus: source?.status ?? null,
     issue: source?.issue || (!ok ? "Buoy refresh is unavailable or delayed." : null),
   };
 }

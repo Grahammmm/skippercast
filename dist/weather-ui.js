@@ -22,7 +22,7 @@ import { forecastSummaryHTML, boatDayHTML, ratingLabel } from "./forecast-summar
 import { localDate } from "./forecast.js";
 import { detailHTML } from "./marine-detail.js";
 import { buoyReading, loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js";
-import { buoyReadingStatus } from "../web/views.ts";
+import { buoyObservations } from "../web/views.ts";
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -32,6 +32,8 @@ const colors = {
   hazard: "#b0395b",
   unknown: "#778995",
 };
+
+const nearestPoint = (p) => POINTS.reduce((best, s, i) => distanceNm(s, p) < distanceNm(POINTS[best], p) ? i : best, 0);
 
 export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   let bundle = null,
@@ -400,8 +402,6 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     const selectedBundle=pointBundle(bundle,point);
     const expandedLive = [...$("live-conditions").querySelectorAll("[data-live-disclosure][open]")].map((d) => d.dataset.liveDisclosure);
     $("live-conditions").innerHTML = observationsHTML(observations, !!POINTS[point].offshore);
-    const now = Date.now(), buoy = observations ? buoyReading(observations.buoys, POINTS[point].offshore ? "offshore" : "diablo", now) : null;
-    buoyReadingStatus.value = buoy ? { epoch: buoy.waveTime, fresh: buoy.waveState.fresh, label: buoy.waveState.label, now } : null;
     for (const d of $("live-conditions").querySelectorAll("[data-live-disclosure]")) d.open = expandedLive.includes(d.dataset.liveDisclosure);
     applyDetailTab();
     evidence.select(lastSpecies, requested || POINTS[point]);
@@ -499,6 +499,9 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
       const context=localContext(point);
       observations = await loadObservations(undefined,Date.now(),context);
       observationCache.set(context.id,observations);
+      // The spot sheet's freshness pill: this coast's nearshore buoy, by station ("diablo" is its alias in the feed).
+      const station=observations.stations?.nearshore_buoy, nearshore=buoyReading(observations.buoys,"diablo");
+      if(station) buoyObservations.value={...buoyObservations.value,[station]:{station,epoch:nearshore.waveTime,feedEpoch:nearshore.feedTime,sourceStatus:nearshore.sourceStatus}};
       if (bundle) {
         const target=bundle.contexts?.[observations.context_id] || (!getRegion().contexts ? bundle : null);
         if(target) Object.assign(target,{alerts:observations.alerts,alertError:observations.alertError,water:observations.water,waterError:observations.waterError});
@@ -566,12 +569,12 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   return {
     selectLocation(p) {
       requested = p;
-      point = POINTS.reduce(
-        (best, s, i) =>
-          distanceNm(s, p) < distanceNm(POINTS[best], p) ? i : best,
-        0,
-      );
+      point = nearestPoint(p);
       if (bundle) render();
+    },
+    /** The nearshore buoy (NDBC station) of the coast whose conditions this location shows. */
+    nearshoreBuoy(p) {
+      return localContext(nearestPoint(p)).stations?.nearshore_buoy || null;
     },
     setSpecies(id) {
       if (

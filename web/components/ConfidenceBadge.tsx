@@ -1,4 +1,4 @@
-// Confidence badge (guide §5.5): Verified ✓ / Estimated ~ / Unknown ? with a
+// Confidence badge (guide §5.5): Qualified ✓ / Estimated ~ / Unknown ? with a
 // one-line "why". The badge is a disclosure button, so the why opens by tap,
 // click, Enter or Space; Escape or a tap elsewhere closes it and Escape
 // returns focus to the badge (without closing the sheet around it). The why
@@ -8,7 +8,7 @@ import {BADGE_MARK, BADGE_WORD, type Badge} from '../confidence.ts';
 
 let sequence = 0;
 
-export function ConfidenceBadge({label, state, why, defaultOpen = false}: Omit<Badge, 'id'> & {defaultOpen?: boolean}) {
+export function ConfidenceBadge({label, state, why, defaultOpen = false}: Omit<Badge, 'id' | 'open'> & {defaultOpen?: boolean}) {
   const [open, setOpen] = useState(defaultOpen);
   const [whyId] = useState(() => `confidence-why-${++sequence}`);
   const wrap = useRef<HTMLSpanElement>(null);

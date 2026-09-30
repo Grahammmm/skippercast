@@ -1,10 +1,23 @@
 /* Confidence badges and freshness pills (P4-04; guide 5.5 and 5.8).
    web/components/ConfidenceBadge.tsx, FreshnessPill.tsx, SpotConfidence.tsx.
-   Colours are design tokens only: verified/fresh --go, estimated/stale
+   Colours are design tokens only: qualified/fresh --go, estimated/stale
    --caution, unknown/unavailable --unknown (each checked at 4.5:1 on
    --card and --surface by scripts/check_contrast.mjs). */
 .spot-answer {
   font-size: var(--text-16);
+}
+/* Always visible on a research-only target's answer line. */
+.research-marker {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  color: var(--caution);
+  background: var(--card);
+  font-size: var(--text-14);
+  font-weight: 650;
+  white-space: nowrap;
 }
 .spot-sheet .detail .spot-answer {
   margin-bottom: var(--space-2);
@@ -50,8 +63,8 @@
 .confidence-state {
   font-weight: 650;
 }
-.confidence-badge[data-state="verified"] .confidence-mark,
-.confidence-badge[data-state="verified"] .confidence-state,
+.confidence-badge[data-state="qualified"] .confidence-mark,
+.confidence-badge[data-state="qualified"] .confidence-state,
 .freshness-pill[data-state="fresh"] {
   color: var(--go);
 }
@@ -83,4 +96,9 @@
   height: 8px;
   border-radius: 50%;
   background: currentColor;
+}
+/* The target id, rank and coordinates sit under the stats, below the answer. */
+.spot-reference .eyebrow {
+  display: block;
+  margin-bottom: var(--space-1);
 }

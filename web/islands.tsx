@@ -37,6 +37,6 @@ effect(() => {
   untracked(() => {
     if (spotSlot) render(null, spotSlot);
     spotSlot = spot ? document.getElementById('spot-confidence') : null;
-    if (spot) mount(spotSlot, <SpotConfidence badges={spot.badges} />);
+    if (spot) mount(spotSlot, <SpotConfidence badges={spot.badges} buoy={spot.buoy} />);
   });
 });

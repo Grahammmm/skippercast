@@ -2,7 +2,7 @@
 // signals instead of the DOM; web/islands.tsx renders them into existing
 // slots. Erasable TypeScript only: Node tests import it through dist/*.js.
 import {signal} from '@preact/signals';
-import type {Badge, Reading} from './confidence.ts';
+import type {Badge, Observation} from './confidence.ts';
 
 /** The header's best-conditions badge (#best-day-banner). */
 export interface Outlook {
@@ -33,8 +33,14 @@ export interface SpotConfidence {
   /** Target id. A new object per draw, so the badges mount into the new sheet. */
   id: string;
   badges: Badge[];
+  /** The spot's nearshore buoy (NDBC station id), or null when it is not known. */
+  buoy: string | null;
 }
+/** Null whenever #detail shows anything other than a target's spot sheet. */
 export const spotConfidence = signal<SpotConfidence | null>(null);
 
-/** The nearshore buoy's latest wave reading (weather-ui.js), for the freshness pill. */
-export const buoyReadingStatus = signal<Reading | null>(null);
+/**
+ * Latest nearshore buoy observation per station (weather-ui.js sets one each
+ * time it loads a coast's observations). The pill reads its spot's station.
+ */
+export const buoyObservations = signal<Readonly<Record<string, Observation>>>({});

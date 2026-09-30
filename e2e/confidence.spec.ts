@@ -1,8 +1,10 @@
 // Spot sheet answer → badge → why (P4-04): the confidence badges open their
 // one-line "why" by tap, click and keyboard and close by tap, a tap elsewhere
 // and Escape (which must not close the sheet); the limitations that used to
-// sit above the spot's name are inside the badges; the sheet shows at most
-// 60 words above the fold; axe is clean with a why open.
+// sit above the spot's name are inside the badges, and a research-only
+// target's depth why is open from the start with a "Research-only" marker on
+// the answer line; the sheet shows at most 60 words above the fold; axe is
+// clean with a why open.
 import {test, expect, openMap, checkA11y} from './fixtures.ts';
 import type {Page} from '@playwright/test';
 
@@ -53,15 +55,23 @@ test('the spot sheet leads with the answer and keeps limitations in the badges',
     .map(s => document.querySelector(`#detail ${s}`)!.getBoundingClientRect().top));
   expect(order).toEqual([...order].sort((a, b) => a - b));
 
-  // The research-only paragraph is in the depth badge's why, not above the name.
+  // Research-only: a marker on the answer line, an estimated depth, and the
+  // research-only paragraph open in the depth badge's why (not above the name).
+  const answer = page.locator('#detail .spot-answer');
+  await expect(answer.locator('.research-marker')).toHaveText('Research-only');
+  await expect(answer.locator('.research-marker')).toBeInViewport();
+  await expect(answer).toHaveText(/ · ~\d+(\.\d+)? ft \(estimated\)/);
   await expect(page.locator('#detail > .evidence-note')).toHaveCount(0);
   const depth = badgeFor(page, 'Depth');
   await expect(depth.locator('button')).toContainText('Estimated');
-  await expect(depth.locator('.confidence-why')).toBeHidden();
-  await expect(depth.locator('.confidence-why')).toContainText('Research-only location.');
+  await expect(depth.locator('button')).toHaveAttribute('aria-expanded', 'true');
+  await expect(depth.locator('.confidence-why')).toBeVisible();
+  // The caveat's lead is the marker above; its text is open in the why.
+  await expect(depth.locator('.confidence-why')).toContainText('Source raster output vertical datum and product uncertainty are unverified.');
   await expect(depth.locator('.confidence-why')).toContainText('The displayed depths are not chart depths');
-  // Research-only targets never read as verified; fish presence is never better than unknown.
+  // Nothing reads as verified or qualified; fish presence is never better than unknown.
   await expect(page.locator('#spot-confidence')).not.toContainText('Verified');
+  await expect(page.locator('#spot-confidence')).not.toContainText('Qualified');
   await expect(badgeFor(page, 'Fish').locator('button')).toContainText('Unknown');
   await expect(page.locator('#spot-confidence [title]')).toHaveCount(0);
   await expect(page.locator('#spot-confidence .freshness-pill')).toHaveText(/^Buoy (\d+ min ago|stale \d+ (min|h|d)|unavailable|update unavailable|check source time)$/);
@@ -116,13 +126,52 @@ test('a confidence badge opens by keyboard and Escape closes only the why', asyn
   expect(pageErrors).toEqual([]);
 });
 
-test('a depth-qualified survey target shows verified depth, and the rest stay unverified', async ({page, pageErrors}) => {
+test('a depth-qualified survey target shows qualified depth, and the rest stay estimates', async ({page, pageErrors}) => {
   await openSpot(page, '/?region=southern-california&target=reef&view=34.01483,-119.44687,14#map');
   const depth = badgeFor(page, 'Depth');
-  await expect(depth.locator('button')).toContainText('Verified');
+  await expect(depth.locator('button')).toContainText('Qualified');
+  await expect(page.locator('#detail')).not.toContainText('Verified');
+  await expect(page.locator('#detail .spot-answer .research-marker')).toHaveCount(0);
+  await expect(page.locator('#detail .spot-answer')).toHaveText(/ · \d+(\.\d+)? ft$/);
+  await expect(depth.locator('.confidence-why')).toBeHidden();
   await depth.locator('button').click();
-  await expect(depth.locator('.confidence-why')).toContainText('Chart-datum depth screen');
+  const why = depth.locator('.confidence-why');
+  await expect(why).toContainText('Measured-depth screen on MLLW');
+  await expect(why).toContainText('product uncertainty up to 1 m');
+  await expect(why).toHaveText(/verify on your sounder\.$/);
   await expect(badgeFor(page, 'Terrain').locator('button')).toContainText('Estimated');
   await expect(badgeFor(page, 'Fish').locator('button')).toContainText('Unknown');
+  expect(pageErrors).toEqual([]);
+});
+
+test('the spot sheet\'s badges and pill unmount when #detail no longer shows a spot', async ({page, pageErrors}) => {
+  // Count the freshness pill's live 60 s ticks: unmounting the row clears them.
+  await page.addInitScript(() => {
+    const live = new Set<unknown>();
+    const set = window.setInterval.bind(window), clear = window.clearInterval.bind(window);
+    window.setInterval = ((fn: TimerHandler, ms?: number, ...rest: unknown[]) => {
+      const id = set(fn, ms, ...rest);
+      if (ms === 60_000) live.add(id);
+      return id;
+    }) as typeof window.setInterval;
+    window.clearInterval = ((id?: number) => { live.delete(id); clear(id); }) as typeof window.clearInterval;
+    (window as unknown as {pillTicks: () => number}).pillTicks = () => live.size;
+  });
+  const ticks = () => page.evaluate(() => (window as unknown as {pillTicks: () => number}).pillTicks());
+  await openSpot(page, '/?region=morro-bay#map');
+  await expect(page.locator('#spot-confidence .freshness-pill')).toHaveCount(1);
+  const before = await ticks();
+  expect(before).toBeGreaterThan(0);
+  // Filter the selected target out: app.js draws "Pick a target." in its place.
+  await page.evaluate(() => {
+    const grade = document.getElementById('grade') as HTMLSelectElement;
+    const shown = document.querySelector('#detail .detail-top .grade')!.textContent!.trim();
+    grade.value = [...grade.options].map(o => o.value).find(v => v !== 'all' && v !== shown)!;
+    grade.dispatchEvent(new Event('change', {bubbles: true}));
+    grade.dispatchEvent(new Event('input', {bubbles: true}));
+  });
+  await expect(page.locator('#detail .empty-detail h2')).toHaveText('Pick a target.');
+  await expect(page.locator('#spot-confidence, .confidence-badge, .freshness-pill')).toHaveCount(0);
+  await expect.poll(ticks).toBe(before - 1);
   expect(pageErrors).toEqual([]);
 });
