@@ -14,6 +14,20 @@ The single reference for how sure SkipperCast is about what it shows: what each 
 
 The seafloor habitat layer labels every patch **"Habitat candidate, unverified"** and every depth **"Nominal depth; verify on your sounder."** ([`dist/seafloor-data.js`](../../dist/seafloor-data.js)).
 
+## Confidence badges in the app
+
+The spot sheet shows three badges under the spot's name, each with a one-tap "why" ([`web/confidence.ts`](../../web/confidence.ts); moved caveat wording in [`web/disclaimers.ts`](../../web/disclaimers.ts)). A state comes only from fields the target already carries:
+
+| Badge | Qualified ✓ | Estimated ~ | Unknown ? |
+| --- | --- | --- | --- |
+| Depth | `depth_qualified` with `qualification.full_geometry_screened` on a named `vertical_datum` and a stated `maximum_product_uncertainty_m` (today the 11 Channel Islands patches). The why says it is a measured-depth screen, gives the stated uncertainty (and planning allowance) and ends "verify on your sounder". "Qualified" is never "verified": it is a screen of survey depth, not a sounding | a recorded depth without that qualification, including every research-only target (the why is the research-only caveat and opens with the sheet) | no recorded depth |
+| Terrain | never (the grade is an uncalibrated rank) | any graded target; the why gives the terrain interpretation confidence | no grade |
+| Fish | never | never | always (no verified catch or calibrated catch model) |
+
+The answer line under the spot's name writes a qualified depth as "123 ft" and any other depth as "~123 ft (estimated)". Research-only targets also carry a short, always-visible "Research-only" marker on that line.
+
+The freshness pill beside the badges is for the spot's own nearshore buoy (the `nearshore_buoy` of the coast whose conditions the spot shows). It keeps the reading time and the feed's state, not a label, and judges them with `freshness()` from `live-conditions.js` when it renders and every 60 seconds while it is on screen ("Buoy 4 min ago", "Buoy stale 2 h", "Buoy unavailable"). When that buoy has no reading loaded it says "Buoy unavailable"; it never shows another station's reading instead.
+
 ## Coverage states
 
 Each region binds its data needs (bathymetry, substrate, protected areas, regulations, forecasts and so on) to reviewed sources in `regions/<id>/region.json`. The build writes `dist/regions/<id>/coverage.json` with one state per need ([`platform/contracts.py`](../../src/skippercast/platform/contracts.py), `need_status`):

@@ -1,0 +1,104 @@
+/* Confidence badges and freshness pills (P4-04; guide 5.5 and 5.8).
+   web/components/ConfidenceBadge.tsx, FreshnessPill.tsx, SpotConfidence.tsx.
+   Colours are design tokens only: qualified/fresh --go, estimated/stale
+   --caution, unknown/unavailable --unknown (each checked at 4.5:1 on
+   --card and --surface by scripts/check_contrast.mjs). */
+.spot-answer {
+  font-size: var(--text-16);
+}
+/* Always visible on a research-only target's answer line. */
+.research-marker {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  color: var(--caution);
+  background: var(--card);
+  font-size: var(--text-14);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.spot-sheet .detail .spot-answer {
+  margin-bottom: var(--space-2);
+}
+.confidence-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+/* The wrapper lays out as its children, so in a row every open "why" moves
+   below all the badges (order: 1) at full width instead of splitting them. */
+.confidence-badge {
+  display: contents;
+}
+.confidence-badge-button,
+.freshness-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  font: inherit;
+  font-size: var(--text-14);
+  line-height: var(--leading-heading);
+  white-space: nowrap;
+}
+.confidence-badge-button {
+  cursor: pointer;
+  color: var(--ink);
+}
+/* Open: a doubled outline (status text stays on --card, its checked pair). */
+.confidence-badge-button[aria-expanded="true"] {
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.confidence-mark {
+  font-weight: var(--weight-instrument);
+}
+.confidence-state {
+  font-weight: 650;
+}
+.confidence-badge[data-state="qualified"] .confidence-mark,
+.confidence-badge[data-state="qualified"] .confidence-state,
+.freshness-pill[data-state="fresh"] {
+  color: var(--go);
+}
+.confidence-badge[data-state="estimated"] .confidence-mark,
+.confidence-badge[data-state="estimated"] .confidence-state,
+.freshness-pill[data-state="stale"] {
+  color: var(--caution);
+}
+.confidence-badge[data-state="unknown"] .confidence-mark,
+.confidence-badge[data-state="unknown"] .confidence-state,
+.freshness-pill[data-state="unavailable"] {
+  color: var(--unknown);
+}
+.confidence-why {
+  order: 1;
+  flex-basis: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--brand-tint);
+  color: var(--ink);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+}
+.confidence-why[hidden] {
+  display: none;
+}
+.freshness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* The target id, rank and coordinates sit under the stats, below the answer. */
+.spot-reference .eyebrow {
+  display: block;
+  margin-bottom: var(--space-1);
+}

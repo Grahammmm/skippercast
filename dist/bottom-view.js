@@ -125,6 +125,6 @@ export async function mountBottom(container, target) {
     fields.addEventListener('input',()=>{azimuth=read('azimuth');section=read('section');band=fields.querySelector('[data-bottom="band"]').checked;draw();});
     tools.append(fields,profile);const note=document.createElement('p');note.className='small';note.textContent='Bearings follow grid north in the source projection, not true or magnetic north. The section samples the displayed grid. Its depth axis is scaled independently for readability; slopes in this graph are not to scale.';tools.append(note);
     for(const [m,label] of [['relief','Relief'],['plan','From above']]){const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-pressed',String(m==='relief'));b.onclick=()=>{mode=m;for(const s of controls.children)s.setAttribute('aria-pressed',String(s===b));draw();};controls.append(b);}
-    status.remove();figure.append(controls,canvas,caption,sourceNotes,tools);draw();
+    status.remove();figure.append(canvas,controls,caption,sourceNotes,tools);draw();
   } catch(e) { status.textContent=e.message; }
 }
