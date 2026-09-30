@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   rehearse:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
