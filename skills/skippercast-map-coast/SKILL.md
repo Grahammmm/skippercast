@@ -319,3 +319,21 @@ An adapter receipt proves faithful ingestion, not deduplicated geographic
 expansion or published habitat. Adding an adapter changes normalization cache
 keys; unchanged scientific raster identities can still verify prior source
 reviews across lossless encodings.
+
+## Original-producer publication terms
+
+The reviewed NOAA-hosted CSUMB grids have a distinct
+`csumb-public-use-noncommercial` profile; distributor hosting does not grant
+federal public-domain rights. Bind `rights_review` to the original source SHA,
+actual review date and official CSUMB policy, retaining producer acknowledgment,
+noncommercial use and the navigation/for-profit restrictions. The shared
+`source_rights` feature/export metadata and manifest attribution preserve mixed
+source terms. Unknown or conflicting contributors block release. A for-profit
+deployment profile cannot use this permission without express producer approval.
+
+Do not promote private CSUMB rows until map and export consumers display the
+credits/notices. Then transfer hash-verified private physics without recomputing
+unchanged scientific inputs, apply current whole-polygon spatial screening,
+and verify live features and export notes. A source-use contract is independent
+of MPA clearance, measured coverage and proof of fish presence. See the
+[release contract](../../docs/archive/seafloor-csumb-release-contract-2026-09-30.md).

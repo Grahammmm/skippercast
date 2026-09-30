@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: preserve original CSUMB noncommercial use terms and producer credit in tile and canonical-export metadata; unknown rights and for-profit release remain blocked. No source or fishing location is promoted by this contract change.
+
 - Export: compress full canonical reef boundaries for mobile transfer, preserving every coordinate and hash/current-screen checks. Bound both compressed and decoded sizes so large Morro Bay surveys can load without weakening the limits.
 - Fixed: trip-alert push notifications were never deliverable on Cloudflare because the deploy did not upload the VAPID key pair. The deploy now requires `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (GitHub secrets) and uploads them, the smoke test checks that `/api/session` serves the public key, and a Worker without keys leaves alerts pending without claiming receipts, so the first check after the keys arrive sends them (an earlier version marked them held, which is never retried). The key check runs before any Wrangler command, so a missing key stops the job without a deploy and a rollback.
 - Seafloor: allow checked native sources to advance private physical mapping while publication rights remain unqualified; isolate recovery/output caches and keep public maps, exports and ledger unchanged.
