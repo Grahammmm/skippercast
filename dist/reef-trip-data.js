@@ -1,5 +1,5 @@
 // A region-sized canonical export, only while its exact publication is current.
-import {loadManifest,FEED_ROOT,manifestState} from './seafloor-data.js';
+import {loadManifest,FEED_ROOT,manifestState,sourceRightsDetails} from './seafloor-data.js';
 import {evidenceConfidence} from './spot-ranking.js';
 import {pointInGeometry} from './geo-screen.js';
 import {geometryTrack} from './gpx.js';
@@ -46,6 +46,9 @@ export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.n
     geometryTrack(p.id,'',f.geometry);
     if(!pointInGeometry([w.longitude,w.latitude],f.geometry)||!['A','B','C'].includes(p.terrain?.grade)||!Number.isFinite(p.terrain?.score))throw Error('Reef reference point or terrain score is invalid.');
     seen.add(p.id);
+    const rights=sourceRightsDetails(p.source_rights);
+    if(m.source_use_notice&&!rights.length)throw Error('Reef source credits or use terms are incomplete.');
+    const sourceNote=rights.map(r=>`${r.credit} ${r.notice}${r.policyURL?' '+r.policyURL:''}`).join(' ');
     const c=evidenceConfidence(p);
     const t={id:p.id,canonical_habitat:true,name:p.id,label:'Surveyed reef habitat',latitude:w.latitude,longitude:w.longitude,
       center_depth_ft:null,neighborhood_depth_ft:[p.depth_min_ft,p.depth_max_ft],vertical_datum:p.vertical_datum,
@@ -53,11 +56,12 @@ export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.n
       species_fit:p.fit,resolution_m:p.resolution_m,evidence_confidence:c,
       area_ids:[p.id],drift_id:null,source_url:p.source_urls?.[0]||'',survey_year:p.source_year,
       terrain_interpretation:`${p.terrain?.relief_210m_m?.toFixed(1)??'Unknown'} m local relief; ${p.area_ha?.toFixed(1)??'unknown'} ha reef footprint.`,
-      special_note:'Interior reef reference point, not a sampled point depth. Search the reef on your sounder and test your drift.',
+      special_note:'Interior reef reference point, not a sampled point depth. Search the reef on your sounder and test your drift.'+(sourceNote?' '+sourceNote:''),
+      source_rights:rights,
       evidence_status:c?`${c.percent}% habitat evidence index (${c.version}); not catch probability.`:'Evidence confidence unavailable.',
       ais_status:'No charter AIS confirmation implied.'};
     targets.push(t);areas.push({id:p.id,geometry:f.geometry,target_ids:[p.id],area_ha:p.area_ha,
-      extent_note:`Canonical screened reef boundary; nominal ${Math.round(p.depth_min_ft)}-${Math.round(p.depth_max_ft)} ft. ${t.evidence_status}`});
+      extent_note:`Canonical screened reef boundary; nominal ${Math.round(p.depth_min_ft)}-${Math.round(p.depth_max_ft)} ft. ${t.evidence_status}${sourceNote?' '+sourceNote:''}`});
   }
   return {targets,areas,drifts:[],publication:{...m,verified_at:new Date().toISOString()},source_validation_date:m.built_at};
 }

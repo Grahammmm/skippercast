@@ -262,10 +262,22 @@ const parse = (value) => {
 };
 const feet = (n) => (Number.isFinite(n) ? Math.round(n) : null);
 
-/**
- * Plain-language details for one selected habitat feature. Nested evidence is
- * parsed here, only for the selected feature. Unknown values stay unknown.
- */
+/** Public producer credits from either MVT JSON or canonical GeoJSON. */
+export function sourceRightsDetails(value) {
+  const rows = parse(value);
+  if (!Array.isArray(rows)) return [];
+  const result = [];
+  for (const row of rows) {
+    if (!row || typeof row.source_id !== 'string' || typeof row.attribution !== 'string'
+        || !row.attribution || typeof row.notice !== 'string' || !row.notice) return [];
+    let policyURL = '';
+    try { const u = new URL(row.policy_url); if (u.protocol === 'https:') policyURL = u.href; } catch { /* no unsafe link */ }
+    result.push({id: row.source_id, credit: row.attribution, notice: row.notice, policyURL});
+  }
+  return result;
+}
+
+/** Selected habitat details; missing evidence stays unknown. */
 export function habitatDetails(properties = {}) {
   const sources = parse(properties.source_ids);
   const screen = parse(properties.screen);
@@ -277,6 +289,7 @@ export function habitatDetails(properties = {}) {
     value: [1, 2, 3].includes(properties[k]) ? properties[k] : 'unknown',
   }));
   return {
+    rights: sourceRightsDetails(properties.source_rights),
     title: HABITAT_LABEL,
     depth: lo !== null && hi !== null ? `${lo}–${hi} ft nominal` : 'Depth unknown',
     depthNote: DEPTH_NOTE,

@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import { legendHTML, detailsHTML, VIEWS } from '../dist/seafloor-layer.js';
 import { GRADE_STYLE, FIT_STYLE } from '../dist/seafloor-data.js';
 
+test('producer notices survive tile JSON and unsafe credit text cannot become markup', () => {
+  const row={source_id:'original',attribution:'Producer <img src=x>',notice:'Noncommercial; not for navigation.',policy_url:'https://example.org/terms'};
+  const html=detailsHTML({source_rights:JSON.stringify([row])});
+  assert.match(html,/Producer &lt;img src=x&gt;/);
+  assert.match(html,/Noncommercial; not for navigation\./);
+  assert.match(html,/href="https:\/\/example.org\/terms"/);
+  assert.doesNotMatch(html,/<img src=x>/);
+  const unsafe=detailsHTML({source_rights:[{...row,policy_url:'javascript:alert(1)'}]});
+  assert.doesNotMatch(unsafe,/javascript:|Publisher terms/);
+  assert.match(unsafe,/Noncommercial/);
+});
+
 test('terrain and fit legends never share a key, and fit is never called a catch probability', () => {
   const terrain = legendHTML('terrain'), fit = legendHTML('fit_lingcod');
   for (const s of Object.values(GRADE_STYLE)) { assert.ok(terrain.includes(s.color)); assert.ok(!fit.includes(s.color)); }
