@@ -467,6 +467,11 @@
       "kind": "bathymetry",
       "year": 2008,
       "resolution_m": 2.0,
+      "resolution_profile": {
+        "fine_to_depth_m": 80,
+        "coarse_resolution_m": 5,
+        "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+      },
       "horizontal_crs": "EPSG:32610",
       "vertical_datum": "unknown",
       "license": "public-domain-us-gov",
@@ -475,7 +480,7 @@
       "derived_from": [],
       "status": "usable",
       "hold_reason": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Producer metadata states a native 2 m grid shallower than 80 m and a 5 m grid deeper than 80 m, mosaiced into the delivered 2 m GeoTIFF. Deep upsampled pixels count for tier 1 only; tier-2 fine-detail extraction uses the native fine-depth zone. No habitat or legal clearance from this source alone. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
       "archive_member": "unknown",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/52/archive_url",

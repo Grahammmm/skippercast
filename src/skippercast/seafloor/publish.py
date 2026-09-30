@@ -47,6 +47,17 @@ def region_layers(root, region, *, rerun=True, now=None):
         if row['status'] == 'unassessed':
             continue
         ident = row['id']
+        if row['status'] == 'terrain-pending':
+            folder = root/'var/seafloor/reaches'/ident
+            checkpoint = read_json(folder/'coverage-checkpoint.json')
+            if (checkpoint.get('catalog_sha256') != sha256(root/'catalog/surveys.json')
+                    or checkpoint.get('rules_sha256') != sha256(root/'catalog/habitat-rules.json')
+                    or checkpoint.get('reference_sha256') != sha256(reference)):
+                raise ValueError('Coverage checkpoint inputs changed; rerun required')
+            if sha256(folder/'coverage-cells.json') != checkpoint['cells_sha256']:
+                raise ValueError('Coverage checkpoint checksum mismatch')
+            cells.update({c['id']: c for c in read_json(folder/'coverage-cells.json')['cells']})
+            continue  # measured coverage only; no old habitat from a failed run
         if rerun:
             run(ident, root=root)  # validates current manifests, actual source bytes, rules and implementation
         folder = root/'var/seafloor/reaches'/ident

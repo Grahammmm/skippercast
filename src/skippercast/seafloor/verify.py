@@ -35,11 +35,15 @@ def main():
     from skippercast.platform.contracts import atomic_json
     from .publish import credentials
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--matrix', type=Path, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--matrix', type=Path)
+    group.add_argument('--results', type=Path)
     args = parser.parse_args()
     s3, bucket = credentials()
     receipts = []
-    for region in sorted({r['region'] for r in json.loads(args.matrix.read_text())['include']}):
+    regions = (json.loads(args.results.read_text())['ready_regions'] if args.results else
+               sorted({r['region'] for r in json.loads(args.matrix.read_text())['include']}))
+    for region in regions:
         manifest = json.loads((Path('var/seafloor/public')/region/'manifest.json').read_text())
         receipt = verify_public(region, manifest, base=os.environ.get('SEAFLOOR_PUBLIC_BASE', 'https://skippercast.com'))
         receipts.append(receipt)

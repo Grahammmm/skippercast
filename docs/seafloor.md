@@ -6,28 +6,23 @@ Central Coast reach is mapped or explicitly recorded as a hold or true gap, and
 every reach with usable ≤4 m surveys has published habitat tiles. This describes
 physical habitat suitability, never fish presence or catch probability.
 
-## Current stage: M3 part 2, held habitat candidates
+## Execution plan and current state
 
-The [candidate manifest](../catalog/surveys.json) contains 385 source products.
-The runtime loader validates its [row schema](../catalog/survey.schema.json),
-identities and lineage. Three original bathymetry products have native-adapter receipts; the other 382
-remain candidates. Metadata alone cannot promote a source. `usable` means the
-reviewed source window can be processed, not that its whole file envelope has
-valid depth or that a reach has been mapped.
+Use [the canonical mapping skill](../skills/skippercast-map-coast/SKILL.md) for
+source qualification, batch selection, failure recovery and expansion. The
+[ledger](../dist/data/seafloor-ledger.json) is the measured state; the live
+regional manifest is the publication state. Do not infer current coverage from
+this documentation or from a program's stated survey extent.
 
-The [reach catalog](../catalog/reaches.json) partitions seven Central Coast
-packages into **46 reaches**, approximately 10 km alongshore, ordered outward
-from Morro Bay. The [new ledger](../dist/data/seafloor-ledger.json) contains
-**55,544 disjoint 250 m cells and 3,307.514375 km² of provisional reference band**.
-Cells start at tier 0. M3 now classifies original-survey coverage for the first
-three Morro Bay reaches and produces ranked, private habitat candidates; current totals are in the ledger. Tier 2 remains zero
-until a fresh whole-polygon legal screen is complete. This does not
-mean surveys or fish habitat are absent. The [legacy ledger](../dist/data/central-coverage-ledger-v1.json)
-remains a separate research receipt; it is not reclassified as new coverage.
+The daily workflow selects unprocessed reaches intersecting reviewed native
+windows. Physical output has its own hash-verified cache, so changing legal
+snapshots only rescreen the saved candidates. A failed legal refresh does not
+stop physical computation. A failed terrain stage retains measured coverage and
+is explicitly pending; only screened polygons become public fishing candidates.
 
 ### Run and reproduce
 
-Install the pinned `requirements-survey.txt` and `requirements-test.txt`, then:
+Install the pinned `requirements-seafloor.txt`, then:
 
 ```bash
 PYTHONPATH=src python -m skippercast.seafloor ledger --region central-coast

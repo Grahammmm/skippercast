@@ -23,6 +23,7 @@ from pyproj import Transformer
 from skippercast.atlas.scoring import habitat_score, habitat_grade
 from skippercast.platform.contracts import public_url
 from .coverage import cell_geometry
+from .resolution_profile import fine_detail_valid
 from .substrate import read_classes
 from .terrain import derivatives
 
@@ -66,6 +67,8 @@ def source_grid(source, cells, binding, *, root):
     if min(depth.shape) < 3:
         return None
     valid = ~np.ma.getmaskarray(data) & np.isfinite(depth)
+    valid = fine_detail_valid(depth, valid, source['row'])
+    depth = np.where(valid, depth, np.nan)
     inside = geometry_mask([mapping(support)], depth.shape, affine, invert=True) & valid
     terrain = derivatives(depth, valid, source['row']['resolution_m'])
     # Keep only the two extraction layers after computing the shared derivatives.

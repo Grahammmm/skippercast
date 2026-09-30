@@ -143,6 +143,36 @@ class PublicationTests(unittest.TestCase):
                      patch.object(publish, 'input_identity', return_value='now'):
                     with self.assertRaises(ValueError): publish.region_layers(root, 'morro-bay', rerun=False)
 
+    def test_coverage_checkpoint_cannot_republish_old_habitat(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cell = {'id': '3310:0:0', 'reach': 'r01', 'tier': 1,
+                    'source_id': 'native', 'band_area_m2': 62500}
+            ref = root/'var/seafloor/reference/cells.json'
+            atomic_json(ref, {'cells': [cell]})
+            atomic_json(root/'catalog/surveys.json', {'surveys': []})
+            atomic_json(root/'catalog/habitat-rules.json', {'rule_version': 'test'})
+            atomic_json(root/'dist/data/seafloor-ledger.json', {
+                'reference_cells_sha256': sha256(ref), 'reaches': [
+                    {'id': 'r01', 'region': 'morro-bay', 'status': 'terrain-pending'}]})
+            folder = root/'var/seafloor/reaches/r01'
+            atomic_json(folder/'coverage-cells.json', {'cells': [cell]})
+            atomic_json(folder/'habitat.geojson', {'features': [{'stale': 'must never publish'}]})
+            atomic_json(folder/'coverage-checkpoint.json', {
+                'catalog_sha256': sha256(root/'catalog/surveys.json'),
+                'rules_sha256': sha256(root/'catalog/habitat-rules.json'),
+                'reference_sha256': sha256(ref),
+                'cells_sha256': sha256(folder/'coverage-cells.json')})
+            with patch.object(publish, 'run') as rerun:
+                layers, receipts, _ = publish.region_layers(root, 'morro-bay')
+                self.assertEqual(layers['habitat'], [])
+                self.assertEqual(layers['cells'][0]['properties']['tier'], 1)
+                self.assertEqual(receipts, {})
+                rerun.assert_not_called()
+            atomic_json(root/'catalog/habitat-rules.json', {'rule_version': 'changed'})
+            with self.assertRaisesRegex(ValueError, 'inputs changed'):
+                publish.region_layers(root, 'morro-bay')
+
     def test_public_probe_rejects_an_old_backend_or_wrong_archive(self):
         manifest = {'region': 'morro-bay', 'status': 'ready', 'archive': 'seafloor-morro-bay.pmtiles',
                     'archive_sha256': 'a'*64, 'archive_bytes': 500}
@@ -173,8 +203,13 @@ class PublicationTests(unittest.TestCase):
             s3 = Bucket()
             with patch.object(jobs, 'credentials', return_value=(s3, 'b')), \
                  patch.object(state_cache, 'restore', return_value=False), \
+                 patch.object(jobs, 'plan', return_value={'selected': [{'reach': 'r01', 'region': 'morro-bay'}]}), \
+                 patch.object(jobs, 'report', return_value='fixture report'), \
+                 patch.object(state_cache, 'save'), \
                  patch.object(jobs, 'refresh', side_effect=ValueError('publisher unavailable')):
-                with self.assertRaisesRegex(ValueError, 'publisher unavailable'): jobs.prepare(root, 'morro-bay')
+                result = jobs.prepare(root, 'morro-bay')
+                self.assertEqual(result['include'], [{'reach': 'r01', 'region': 'morro-bay'}])
+                self.assertTrue((root/'var/seafloor/screen/refresh-failure.json').exists())
             self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'held')
 
 

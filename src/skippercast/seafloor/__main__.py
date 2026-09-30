@@ -9,10 +9,17 @@ from skippercast.platform.contracts import REPO, read_json
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
+    planning = commands.add_parser('plan', help='Show runnable reaches, source-review backlog and measured progress')
+    planning.add_argument('--region')
+    planning.add_argument('--max-new', type=int, default=3)
+    planning.add_argument('--json', action='store_true')
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
     publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
     publication.add_argument('--region', required=True)
     publication.add_argument('--upload', action='store_true')
+    promotion = commands.add_parser('promote-survey', help='Promote a metadata/rights-reviewed native draft; changes the catalog')
+    promotion.add_argument('--draft', type=Path, required=True)
+    promotion.add_argument('--rights-url', required=True)
     add = commands.add_parser('add-survey', help='Inspect an original URL and write a private candidate draft')
     add.add_argument('--url', required=True)
     add.add_argument('--id')
@@ -25,6 +32,7 @@ def main():
     restore.add_argument('--fetch', action='store_true')
     process = commands.add_parser('run', help='Measure native coverage and rank held habitat candidates')
     process.add_argument('--reach', required=True)
+    process.add_argument('--physical-only', action='store_true', help='Cache measured habitat before legal review; never publish')
     process.add_argument('--force', action='store_true')
     process.add_argument('--fetch', action='store_true', help='Fetch missing reviewed originals; pinned hashes still required')
     for command in ('reaches', 'ledger'):
@@ -36,6 +44,11 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'plan':
+            from .rollout import plan, report
+            result = plan(region=args.region, max_new=args.max_new)
+            print(json.dumps(result, indent=2) if args.json else report(result))
+            return
         if args.command == 'publish':
             from .publish import build, upload
             if args.upload:
@@ -55,8 +68,12 @@ def main():
             return
         if args.command == 'run':
             from .run import run
-            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch)
+            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch, physical_only=args.physical_only)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
+            return
+        if args.command == 'promote-survey':
+            from .manifest import promote_draft
+            print('Qualified original survey: '+promote_draft(args.draft, rights_url=args.rights_url))
             return
         if args.command == 'add-survey':
             from .draft import add_survey

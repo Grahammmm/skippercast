@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a daily seafloor rollout planner, reusable physical-stage cache, explicit survey promotion and per-reach failure recovery; keep legal screening as the final publication stage.
+
 - Operations: the research inventory workflow keeps its carried state after a degraded run, and NOAA BAG HEAD checks retry `429 Too Many Requests` (honouring `Retry-After`, four workers) instead of reporting a rate-limited rescan as degraded.
 - Operations ([P4-11]): cookie-less client telemetry. The app counts a fixed set of funnel steps (port selected, map viewed, forecast viewed, spot saved, offline pack saved, installed) and reports uncaught errors with the page build and last request id, batched through `navigator.sendBeacon` to `POST /api/telemetry` and written to Workers Analytics Engine when `ENABLE_ANALYTICS` is on. Nothing is sent under Do Not Track or Global Privacy Control; no ids, cookies, IPs or query strings. The daily Operations report shows the funnel and top client errors ([docs/engineering/telemetry.md](docs/engineering/telemetry.md)).
 - Testing ([P4-09a]): browser tests with Playwright and axe (`pnpm e2e`, CI job `e2e`) run eight flows at phone and laptop size against the built site under `wrangler dev`; serious or critical accessibility violations fail the build.

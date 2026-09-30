@@ -105,6 +105,19 @@ class InventoryTests(unittest.TestCase):
 
 @unittest.skipUnless(Draft202012Validator, 'Install requirements-test.txt; required in survey-science CI')
 class SchemaTests(unittest.TestCase):
+    def test_mixed_resolution_profile_is_tied_to_fine_original_grid(self):
+        from unittest.mock import patch
+        from skippercast.seafloor.manifest import load_manifest
+        source = next(r for r in ROWS if r['id'] == 'bathymetry-offshorepointestero-zip-7e3be5eb12')
+        self.assertEqual(source['resolution_profile']['fine_to_depth_m'], 80)
+        for changes in ({'resolution_m': 5}, {'format': 'bag'}):
+            document = deepcopy(MANIFEST)
+            row = next(r for r in document['surveys'] if r['id'] == source['id'])
+            row.update(changes)
+            with patch('skippercast.seafloor.manifest.read_json', side_effect=[document, SCHEMA]):
+                with self.assertRaises(ValueError):
+                    load_manifest(ROOT)
+
     def test_runtime_loader_validates_the_same_inventory(self):
         from skippercast.seafloor.manifest import load_manifest
         self.assertEqual(load_manifest(ROOT), MANIFEST)

@@ -2,14 +2,16 @@
 from pathlib import Path
 from copy import deepcopy
 
-from skippercast.platform.contracts import REPO, read_json
+from skippercast.platform.contracts import REPO, read_json, atomic_json
 
 
 def load_manifest(root=REPO):
-    from jsonschema import Draft202012Validator
+    return validate_manifest(read_json(Path(root)/'catalog/surveys.json'), root)
 
+
+def validate_manifest(document, root=REPO):
+    from jsonschema import Draft202012Validator
     root = Path(root)
-    document = read_json(root / 'catalog/surveys.json')
     schema = read_json(root / 'catalog/survey.schema.json')
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)
@@ -22,6 +24,10 @@ def load_manifest(root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        profile = row.get('resolution_profile')
+        if profile and (row['format'] != 'usgs-geotiff' or row['resolution_m'] == 'unknown'
+                        or profile['coarse_resolution_m'] <= row['resolution_m']):
+            raise ValueError('Mixed-resolution profile requires a finer USGS GeoTIFF display grid')
         if row['status'] == 'usable':
             from skippercast.platform.contracts import bbox
             receipt = row['adapter_review']
@@ -63,3 +69,26 @@ def qualify_row(row, receipt, *, rights_url):
                        'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
                        'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')
     return result
+
+
+def promote_draft(path, *, rights_url, root=REPO):
+    """Explicit reviewed promotion, never called by the scheduled discovery job.
+
+    The operator reviews metadata and sets the draft row's license/date/datum
+    before invoking this command. Native bytes and normalized output must still
+    match; a draft or a URL alone cannot approve a source.
+    """
+    from .ingest import ingest
+    root = Path(root)
+    draft = read_json(Path(path))
+    row, previous = draft['row'], draft['adapter_review']
+    current, _, _ = ingest(row, previous['requested_bounds_wgs84'], root=root)
+    if current['source_sha256'] != previous['source_sha256'] or current['cog_sha256'] != previous['cog_sha256']:
+        raise ValueError('Native draft changed; inspect and review it again')
+    qualified = qualify_row(row, current, rights_url=rights_url)
+    document = read_json(root/'catalog/surveys.json')
+    replaced = [r for r in document['surveys'] if r['id'] != row['id']]
+    document['surveys'] = replaced + [qualified]
+    validate_manifest(document, root)
+    atomic_json(root/'catalog/surveys.json', document, indent=2)
+    return qualified['id']
