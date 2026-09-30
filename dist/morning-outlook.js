@@ -9,6 +9,7 @@ import {
 } from "./marine-data.js";
 import { esc, local, num } from "./marine-charts.js";
 import { activeBoatFactors } from "./boat-handling.js";
+import { outlook } from "../web/views.ts";
 const MODELS = [
   "gfs_global",
   "ecmwf_ifs025",
@@ -185,13 +186,14 @@ export function renderOutlook(rows, point) {
   const best = valid[0],
     qualifying = valid.filter((r) => r.conditions >= 8);
   const bestLabel=best?.conditions<4?"Least rough outlook":best?.confidence==="Low"?"Tentative best":"Best";
-  const banner = document.getElementById("best-day-banner");
-  banner.classList.toggle("qualifying", !!qualifying.length);
-  banner.innerHTML = best
-    ? `<span>${comfortOnly?"Daytime boat comfort":best.conditions<4?"Least rough outlook":best.confidence === "Low" ? "Tentative conditions" : best.provisional ? "Provisional best" : "Best conditions"}</span><strong>${local(best.time, { weekday: "short" })} · ${num(best.conditions)}/10</strong>`
-    : "<span>7-day outlook</span><strong>Check conditions</strong>";
-  banner.setAttribute("aria-label", best ? `Open seven-day outlook. ${bestLabel}: ${local(best.time, { weekday: "long" })}, ${num(best.conditions)} out of 10, ${best.confidence} confidence. Bite potential unscored.` : "Open seven-day outlook. Not enough data to rate conditions.");
-  banner.dataset.hour = best?.time || "";
+  // The header badge (#best-day-banner) is web/components/OutlookBadge.tsx.
+  outlook.value = {
+    label: best ? (comfortOnly?"Daytime boat comfort":best.conditions<4?"Least rough outlook":best.confidence === "Low" ? "Tentative conditions" : best.provisional ? "Provisional best" : "Best conditions") : "7-day outlook",
+    value: best ? `${local(best.time, { weekday: "short" })} · ${num(best.conditions)}/10` : "Check conditions",
+    qualifying: !!qualifying.length,
+    ariaLabel: best ? `Open seven-day outlook. ${bestLabel}: ${local(best.time, { weekday: "long" })}, ${num(best.conditions)} out of 10, ${best.confidence} confidence. Bite potential unscored.` : "Open seven-day outlook. Not enough data to rate conditions.",
+    hour: best?.time || "",
+  };
   const host = document.getElementById("morning-outlook");
   host.innerHTML = `<details class="morning-summary"><summary>${best ? `${bestLabel}: ${local(best.time, { weekday: "long" })} · ${num(best.conditions)}/10 conditions` : "Seven-day outlook · ratings unavailable"}<span>${qualifying.length ? `${qualifying.length} morning${qualifying.length === 1 ? "" : "s"} at 8+` : "No verified 8+ conditions yet"}</span></summary><p class="small">${esc(POINTS[point].name)} · 7 a.m.–1 p.m. Pacific. ${comfortOnly?"This ranks modeled boat comfort only; lobster gear handling and diving are unscored. Inspect the actual night fishing and return hours separately.":"This ranks modeled comfort and gear control across the entire window."} Bite potential and an overall bite-plus-comfort rating are unavailable. It is not a routed trip or entrance clearance.</p><div class="morning-days">${rows.map((r) => `<button class="morning-day ${r.conditions >= 8 ? "good" : ""}" data-morning="${r.time}"><strong>${local(r.time, { weekday: "short", month: "numeric", day: "numeric" })}</strong><b>${r.conditions === null ? "Unrated" : num(r.conditions) + "/10"}</b><span>${r.confidence}${r.provisional ? " · provisional" : ""} · ${r.conditions === null ? esc(r.reasons[0]) : r.hazard?'hazard':r.limited?'limited forecast':'comfort '+num(r.comfort)+(comfortOnly?' · gear unscored':' / control '+num(r.control))}</span></button>`).join("")}</div><details><summary>How the rating works</summary><p class="small">${comfortOnly?"Lobster shows the lowest modeled boat-comfort result from 7 a.m. through 1 p.m.; hoop handling, night operations and diving safety are unscored.":"A disclosed planning heuristic: take the lower of comfort and gear-control scores, then the lowest hourly result from 7 a.m. through 1 p.m."} A complete rating uses the rougher model’s wind, gusts and combined seas, plus resolved chop and crossing swells. If wind and combined seas exist but a comparison or secondary detail is missing, a limited estimate is capped at 6.9 with Low confidence. An active marine advisory or visibility hazard caps the score at 1.9. Without usable wind or combined seas, there is no score. Missing whole hours also make the day limited. No estimate certifies a routed trip or harbor entrance. Surface current does not estimate bottom drift; fish presence and bite potential remain unknown.</p><a href="species-research.html#morning-ratings">Full score formula ↗</a></details></details>`;
   return best;

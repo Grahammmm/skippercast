@@ -1,15 +1,19 @@
+import {lockRegion,startURLSync} from '../web/state.ts';
 // Runs as an async function, not top-level await: Vite bundles the page's
 // module scripts (boot.js, offline.js, meteogram-ui.js) into one entry, and a
 // top-level await here would hold the others until the whole app had loaded.
 void (async()=>{
+startURLSync();
 try {
   // Optional; a failure here must never block the map.
   void import('./boat-profile.js').then(m=>m.initBoatProfile()).catch(error=>console.warn('Boat profile unavailable',error));
   void import('./account.js').then(m=>m.initAccount()).catch(error=>console.warn('Account unavailable',error));
   const {initHomePort}=await import('./home-port.js');
   if(!await initHomePort()) {
-    // First visit is choosing a port, or a saved port is navigating to its region.
+    // Leaving the page for another address.
   } else {
+  // Region-bound modules load from here; a region change after this reloads.
+  lockRegion();
   const {initRegion}=await import('./region.js');
   const {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext}=await import('./coasts.js');
   const {initRecentDiscussions}=await import('./recent-discussions.js');

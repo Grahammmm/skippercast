@@ -1,6 +1,7 @@
 import defaultRegion from "./region-default.js";
 import {withFeeds} from "./feeds.js";
 import {loadCoasts,coastForPackage,coastURL} from './coasts.js';
+import {navigate} from '../web/state.ts';
 let active = withFeeds(defaultRegion);
 let directory = [];
 export const getRegion = () => active;
@@ -49,7 +50,7 @@ export async function initRegion() {
   chooser.append(new Option(`Entire ${coast.name} coast · overview`,'coastal-overview'));
   for(const region of index.regions.filter(r=>coast.packages.includes(r.id))){const option=document.createElement("option");option.value=region.id;option.textContent=region.name+(region.status==="preview"?" · preview":"");chooser.append(option);}
   chooser.value=active.id;
-  chooser.addEventListener("change",()=>location.assign(coastURL(location.href,coast,{packageId:chooser.value==='coastal-overview'?null:chooser.value,overview:chooser.value==='coastal-overview',target:species.value})));
+  chooser.addEventListener("change",()=>navigate(coastURL(location.href,coast,{packageId:chooser.value==='coastal-overview'?null:chooser.value,overview:chooser.value==='coastal-overview',target:species.value})));
   const area=document.getElementById("area");area.replaceChildren(new Option("All areas","all"));
   for(const [id,name] of Object.entries(active.source_names))area.add(new Option(name,id));
   const note=document.getElementById("region-note");

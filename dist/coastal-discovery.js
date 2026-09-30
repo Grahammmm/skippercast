@@ -1,4 +1,5 @@
 import {initChart} from './chart-map.js';
+import {outlook} from '../web/views.ts';
 import {initNavigation} from './navigation.js';
 import {esc} from './marine-charts.js';
 import {viewFromURL} from './location-context.js';
@@ -200,7 +201,7 @@ export async function initCoastalDiscovery(catalog,coast) {
   }).catch(()=>{/* NOAA original source links remain available if this optional ledger fails. */});
   const forecastPanel=document.getElementById('forecast-panel');
   document.getElementById('export-panel').innerHTML=`<h1>Fishing-plan export</h1><p>Only reviewed, surveyed fishing areas can be exported. Choose a detailed mapped area; discovery sectors and survey catalog footprints are not waypoints.</p>${links||'<p>This coast’s detailed fishing package is pending.</p>'}<a href="#map">Back to map</a>`;
-  const banner=document.getElementById('best-day-banner');banner.innerHTML='<span>Coastal guide</span><strong>Species & sources</strong>';banner.addEventListener('click',()=>navigation.showView('guide'));
+  outlook.value={label:'Coastal guide',value:'Species & sources'};document.getElementById('best-day-banner').addEventListener('click',()=>navigation.showView('guide'));
   const options=document.getElementById('map-options');
   // Keep the existing chart selector, then discard controls for layers this browse mode does not own.
   const chartLabel=document.getElementById('base-map').closest('label');

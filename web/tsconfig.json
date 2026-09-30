@@ -1,0 +1,29 @@
+{
+  // Type-checks the client TypeScript in web/ (P4-01b). Vite compiles it; the
+  // Node tests load the .ts files (not the .tsx components) by type stripping,
+  // so they use erasable syntax only and import with explicit extensions.
+  // The legacy dist/*.js modules are imported for their inferred types but not
+  // checked (checkJs off) until they are converted.
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

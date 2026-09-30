@@ -1,6 +1,7 @@
 import {getRegion,getRegionDirectory} from './region.js';
 import {esc} from './marine-charts.js';
 import {buildExport,offlineNotes,readDraft,draftKey} from './trip-export.js';
+import {navigate} from '../web/state.ts';
 
 const DEVICE_HELP={
   generic:['Chartplotter model not selected','Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.','https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
@@ -75,7 +76,7 @@ export function initExport({atlas,screen,map,getVisible,navigation}) {
   }
   function open(){navigation.showView('export');updateSummary();$('export-panel').scrollTop=0;$('export-heading').tabIndex=-1;$('export-heading').focus({preventScroll:true});}
   function add(id){if(!atlas.targets.some(t=>t.id===id))return;if(!draft.ids.includes(id))draft.ids.push(id);persist();renderList();updateSummary();}
-  $('export-region').onchange=()=>{persist();const url=new URL(location.href);url.searchParams.set('region',$('export-region').value);for(const key of ['view','focus','spot','target'])url.searchParams.delete(key);url.hash='export';location.assign(url);};
+  $('export-region').onchange=()=>{persist();const url=new URL(location.href);url.searchParams.set('region',$('export-region').value);for(const key of ['view','focus','spot','target'])url.searchParams.delete(key);url.hash='export';navigate(url);};
   for(const [id,key] of [['export-name','name'],['export-date','date']])$(id).addEventListener('input',()=>{draft[key]=$(id).value;persist();});
   $('export-search')?.addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderList();});
   root.addEventListener('change',e=>{

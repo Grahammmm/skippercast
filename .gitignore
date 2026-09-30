@@ -4,6 +4,7 @@
 !.env.example
 config.json
 *.local.json
+*.local.jsonc
 secrets/
 credentials/
 var/

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Front end ([P4-01b]): TypeScript and Preact foundation. A signals store (`web/state.ts`) owns region, coast, view, target and hour in the URL: opening the site with a saved port, choosing the first port, and choosing a port in the region already shown no longer reload the page (the forecast hour and target are kept), and `?hour=` links open that forecast hour. The header outlook badge, the meteogram card and the offline freshness banner are Preact components; `pnpm typecheck` covers `web/`.
 - Build ([P4-01a]): Vite 8 bundles the client (`vite.config.mjs`); first load of the map drops from 84 script and stylesheet requests (242 KB gzip) to 22 (169 KB). Hashed files live in `/assets/` with a year's immutable caching; pages, `/sw.js`, vendored libraries (with SRI), data and the offline precache keep their contract. `scripts/fingerprint.mjs` is retired and `check_client.mjs` checks the Vite manifest.
 - Docs: the README is rewritten as a short product page with a screenshot, coverage list and three-command start; datum and withdrawn-claim details now live in `docs/product/data-confidence.md`. The architecture doc no longer describes ChatGPT Sites hosting.
 - Docs: `docs/product/data-confidence.md` is the single reference for grades, coverage states, freshness, depth datums and withdrawn claims.

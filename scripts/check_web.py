@@ -226,7 +226,8 @@ def main():
             if url.scheme or url.netloc or not url.path:
                 continue
             target = (path.parent / unquote(url.path)).resolve()
-            assert target.is_relative_to(WEB) and target.exists(), (path, ref)
+            # Pages may also load the typed client source in web/, which Vite builds.
+            assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)
     for path in WEB.rglob("*.css"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         for ref in re.findall(r"url\(['\"]?([^)'\"]+)", path.read_text()):
