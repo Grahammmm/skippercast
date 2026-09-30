@@ -153,6 +153,24 @@ jobs:
         run: node --test tests/test_*.mjs
       - name: Design token contrast (WCAG 4.5:1, light and dark)
         run: node scripts/check_contrast.mjs --verbose
+      # Guide 5.8: no two "not" sentences in a row, and no GFS/ECMWF/MLLW/datum
+      # outside a disclosure. Existing copy is in scripts/copy-lint-baseline.json,
+      # which may only shrink relative to the base branch.
+      - name: Copy lint (baseline only shrinks)
+        # Compare with what this change started from: the PR's base commit, or
+        # the branch's previous tip on push. Never the current tip of main, which
+        # may have shrunk the baseline since this branch was cut.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
+            node scripts/check_copy.mjs
+          elif git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
+            node scripts/check_copy.mjs --base FETCH_HEAD
+          else
+            echo "::notice title=Copy lint::base commit $BASE_SHA is not fetchable (force-push); skipped the growth check"
+            node scripts/check_copy.mjs
+          fi
       - name: Website assets and data consistency
         run: python scripts/check_web.py
       - name: Build Worker and public assets

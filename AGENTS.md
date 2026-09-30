@@ -55,6 +55,7 @@ PYTHONPATH=src python -m skippercast.platform.build && git diff --exit-code
 python scripts/check_repository.py
 python scripts/check_web.py
 node --test tests/test_*.mjs
+node scripts/check_copy.mjs                                # copy lint; its baseline only shrinks
 pnpm typecheck
 pnpm build
 ```
