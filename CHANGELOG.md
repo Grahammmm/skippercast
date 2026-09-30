@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: allow reviewed CSUMB originals from NOAA's Ventresca archive under the existing hash-bound noncommercial producer contract. Retain attribution and for-profit/navigation restrictions; unreviewed sources and cruises remain blocked. No catalog source or map is released by this change alone.
+
 - Seafloor: open explicitly selected native ArcInfo grids inside original NOAA ZIP-in-tar survey bundles, with bounded extraction and checked private recovery. Preserve native pixels and reject unsafe containers; source qualification and public screening remain separate.
 
 - Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
