@@ -31,7 +31,7 @@ variable change, not a code change:
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
 | `DATA_RUNNER` | live loop, daily data, seafloor, freshness, ops report, legal review, research, rehearsal, forecast tiles | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
-| `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners |
+| `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
 are short (about 1–3 minutes each) and the deploy holds the Cloudflare token, which we
@@ -68,8 +68,10 @@ Steps:
    and `actions/setup-node` inside each job, cached under the runner's work folder.
 4. Check Settings → Actions → Runners shows four idle runners.
 5. Set the repository variables: `gh variable set DATA_RUNNER --body skippercast` and
-   `gh variable set CI_RUNNER --body skippercast`. The next scheduled run and the next push
-   use the box. To fall back, delete the variables.
+   `gh variable set CI_RUNNER --body skippercast`. The next scheduled data run uses the box.
+   CI remains hosted until the complete readiness checks below pass and you set
+   `CI_SELF_HOSTED_READY=true`. To move CI back to hosted runners, delete that readiness
+   variable or set it to `false`; delete `DATA_RUNNER` to move data jobs back.
 6. Also turn on `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) so the notify job stops
    running all day; the Worker's cron queues trip checks itself.
 
@@ -86,3 +88,12 @@ Steps:
 - Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
   `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH
   key-only; `docs/legal/threat-model.md` lists it as an asset once it exists.
+
+## CI readiness gate
+
+CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
+`CI_RUNNER`. Setting a runner label alone does not move CI. Before enabling the
+gate, verify browser system dependencies install without an interactive password,
+parallel pnpm installs use separate directories, and the complete CI suite passes
+on the configured runner. Keep the gate disabled while any prerequisite fails.
+Data jobs continue to use `DATA_RUNNER` independently.
