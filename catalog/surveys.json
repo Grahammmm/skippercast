@@ -10794,25 +10794,26 @@
       "title": "BSS_Block01_additional_products.tar.gz :: BSS_Block01/Bathymetry/ArcViewGrids/bss01_2mbathy",
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block01/multibeam/data/version2/products/BSS_Block01_additional_products.tar.gz",
       "landing_page": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block01_mb.html",
-      "format": "csumb",
+      "format": "arcgrid",
       "kind": "bathymetry",
       "year": 2011,
       "resolution_m": 2,
-      "horizontal_crs": "EPSG:26910",
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
       "license": "unknown",
       "sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
       "bytes": 137751332,
       "derived_from": [],
-      "status": "candidate",
+      "status": "physical-only",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
       "archive_member": "BSS_Block01/Bathymetry/ArcViewGrids/bss01_2mbathy",
       "evidence": [
-        "catalog/candidates/csumb-bss-block01.json#/access_url",
+        "dist/data/csumb-bss-native-source-review.json#/sources/4/bathymetry",
         "catalog/csumb-bss-native-sources.json#/sources/4/archive_url",
+        "catalog/candidates/csumb-bss-block01.json#/access_url",
         "dist/data/csumb-bss-native-source-review.json#/sources/4/archive_url",
-        "dist/data/csumb-bss-native-source-review.json#/sources/4/bathymetry"
+        "catalog/csumb-bss-native-sources.json#/sources/4"
       ],
       "field_evidence": {
         "sha256": "catalog/candidates/csumb-bss-block01.json#/access_url",
@@ -10823,7 +10824,32 @@
         "bytes": "catalog/csumb-bss-native-sources.json#/sources/4/archive_url"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+        "cog_sha256": "b0471c40a28db3a32d06e4d5540c4131cfbf87f25973353a4f5bf41b0562e82a",
+        "requested_bounds_wgs84": [
+          -121.3929371741432,
+          35.73012963929342,
+          -121.32211131915221,
+          35.7709214117558
+        ],
+        "valid_pixels_in_requested_bounds": 5001340,
+        "nominal_0_300ft_pixels_in_requested_bounds": 5001340,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "c67e0dbe22856f082780d54adb0c91c6d9264a5235739d33eebfeb834c72392a"
+        }
+      }
     },
     {
       "id": "bss-block01-additional-products-tar-gz-27035b7a9b",
@@ -11067,24 +11093,25 @@
       "title": "BSS_Block08_additional_products.tar.gz :: BSS_Block08/Bathymetry/ArcViewGrids/bss08_2mbathy",
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version2/products/BSS_Block08_additional_products.tar.gz",
       "landing_page": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block08_mb.html",
-      "format": "csumb",
+      "format": "arcgrid",
       "kind": "bathymetry",
       "year": 2011,
       "resolution_m": 2,
-      "horizontal_crs": "EPSG:26910",
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
       "license": "unknown",
       "sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
       "bytes": 81146262,
       "derived_from": [],
-      "status": "candidate",
+      "status": "physical-only",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
       "archive_member": "BSS_Block08/Bathymetry/ArcViewGrids/bss08_2mbathy",
       "evidence": [
+        "catalog/csumb-bss-native-sources.json#/sources/5",
+        "dist/data/csumb-bss-native-source-review.json#/sources/5/archive_url",
         "catalog/candidates/csumb-bss-block08.json#/access_url",
         "catalog/csumb-bss-native-sources.json#/sources/5/archive_url",
-        "dist/data/csumb-bss-native-source-review.json#/sources/5/archive_url",
         "dist/data/csumb-bss-native-source-review.json#/sources/5/bathymetry"
       ],
       "field_evidence": {
@@ -11096,7 +11123,32 @@
         "bytes": "catalog/csumb-bss-native-sources.json#/sources/5/archive_url"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
+        "cog_sha256": "1636857ad83f0da22a12c9d57c6b0ec4548bfcf068b24ac47803e943d9696456",
+        "requested_bounds_wgs84": [
+          -121.51771378538365,
+          35.92518108985339,
+          -121.48379824134912,
+          35.964261146349486
+        ],
+        "valid_pixels_in_requested_bounds": 1560971,
+        "nominal_0_300ft_pixels_in_requested_bounds": 1560971,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "5bd08e835cd5a06d5c151bfeb4a917cdf17b085693000fe55de5e3a77a72365b"
+        }
+      }
     },
     {
       "id": "bss-block08-additional-products-tar-gz-c885266cf0",
@@ -11245,25 +11297,26 @@
       "title": "BSS_Block13_additional_products.tar.gz :: BSS_Block13/Bathymetry/ArcViewGrids/bss13_5mbathy",
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block13/multibeam/data/version2/products/BSS_Block13_additional_products.tar.gz",
       "landing_page": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block13_mb.html",
-      "format": "csumb",
+      "format": "arcgrid",
       "kind": "bathymetry",
       "year": 2011,
       "resolution_m": 5,
-      "horizontal_crs": "EPSG:26910",
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
       "license": "unknown",
       "sha256": "3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49",
       "bytes": 164289176,
       "derived_from": [],
-      "status": "candidate",
+      "status": "physical-only",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
       "archive_member": "BSS_Block13/Bathymetry/ArcViewGrids/bss13_5mbathy",
       "evidence": [
-        "catalog/candidates/csumb-bss-block13.json#/access_url",
+        "catalog/csumb-bss-native-sources.json#/sources/3",
+        "dist/data/csumb-bss-native-source-review.json#/sources/3/bathymetry",
         "catalog/csumb-bss-native-sources.json#/sources/3/archive_url",
         "dist/data/csumb-bss-native-source-review.json#/sources/3/archive_url",
-        "dist/data/csumb-bss-native-source-review.json#/sources/3/bathymetry"
+        "catalog/candidates/csumb-bss-block13.json#/access_url"
       ],
       "field_evidence": {
         "sha256": "catalog/candidates/csumb-bss-block13.json#/access_url",
@@ -11274,7 +11327,32 @@
         "bytes": "catalog/csumb-bss-native-sources.json#/sources/3/archive_url"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3bb322d9f68c107e6bc78a492677ad229fb663aa1c8c6b7d9ac249b488324d49",
+        "cog_sha256": "1ebf5bf7e32b210dd6e9e6df853a5507cae9fe2bfe4f8eba9cf610b96a2fae3e",
+        "requested_bounds_wgs84": [
+          -121.91839314508177,
+          36.12079899087153,
+          -121.67063865716908,
+          36.251583407662594
+        ],
+        "valid_pixels_in_requested_bounds": 762998,
+        "nominal_0_300ft_pixels_in_requested_bounds": 12063,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "ac0def6117b2475da4713d0cf27d782ba1aefa666e8817c1ad0a8f34a5170716"
+        }
+      }
     },
     {
       "id": "bss-block13-additional-products-tar-gz-75ef299ce4",
