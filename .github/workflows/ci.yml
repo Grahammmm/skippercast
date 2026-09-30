@@ -3,6 +3,8 @@ name: Offline checks
 on:
   push:
   pull_request:
+  # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
+  workflow_dispatch:
 
 permissions:
   contents: read

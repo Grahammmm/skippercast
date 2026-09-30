@@ -95,6 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     steps:
@@ -140,6 +141,7 @@ jobs:
           SEAFLOOR_PUBLIC_BASE: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}
         run: python -m skippercast.seafloor.verify --matrix var/seafloor/matrix.json >> "$GITHUB_STEP_SUMMARY"
       - name: Propose the small ledger change (never push main)
+        id: ledger-pr
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           branch: codex/seafloor-ledger-refresh
@@ -147,3 +149,12 @@ jobs:
           title: ${{ steps.publication.outputs.title }}
           body-path: var/seafloor/ledger-pr.md
           commit-message: Refresh screened seafloor ledger
+      # GitHub starts no pull_request workflows for pushes made with GITHUB_TOKEN,
+      # so the required survey-science check never appeared on these PRs.
+      # workflow_dispatch is exempt from that rule; its check runs attach to the
+      # branch head and satisfy branch protection.
+      - name: Run Offline checks on the proposed ledger change
+        if: steps.ledger-pr.outputs.pull-request-operation == 'created' || steps.ledger-pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref codex/seafloor-ledger-refresh
