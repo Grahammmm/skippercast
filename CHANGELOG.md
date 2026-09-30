@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: verify reviewed scientific raster content across lossless GeoTIFF encodings while retaining original/cache checksums; retain exact worker failure reasons during batch aggregation.
+
 - Operations: `/api/daily` counts only edge-cache misses against its per-IP limit, so several people behind one address (carrier NAT, a marina's Wi-Fi) are no longer refused the cached regulation and closure checks.
 - Internal: the conditions score, its tuned thresholds and the go / marginal / no-go verdict now live in one module, `web/score.ts`, shared by the Tomorrow card, the meteogram, the search plans and the coming trip planner. Ratings are unchanged: a 150-case golden fixture generated from the previous code passes exactly (`tests/test_score.mjs`).
 - Seafloor: process the remaining two qualified Monterey native intersections; add 27.72 km² of measured coverage and 62 ranked habitat candidates, held privately until spatial screening.

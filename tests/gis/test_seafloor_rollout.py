@@ -86,6 +86,24 @@ class RolloutTests(unittest.TestCase):
             self.assertEqual(result['status'], 'failed')
             self.assertNotIn('summary', result)
 
+    def test_failed_source_review_is_reported_by_aggregation_without_stale_credit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); s3 = Bucket()
+            (root/'var/seafloor').mkdir(parents=True)
+            atomic_json(root/'dist/data/seafloor-ledger.json', {'reaches': [
+                {'id': 'r01', 'region': 'central', 'tier1_km2': 0, 'tier2_km2': 0}],
+                'totals': {'tier2_km2': 0}})
+            with patch.object(jobs, 'credentials', return_value=(s3, 'b')), \
+                 patch.object(state_cache, 'restore', return_value=True), \
+                 patch.object(jobs, 'run', side_effect=ValueError('Normalized source differs from reviewed manifest')), \
+                 patch.object(jobs, 'apply_ledger') as apply, patch.object(jobs, 'upload') as upload:
+                worker = jobs.process(root, 'r01', 'source-failure')
+                result = jobs.finish(root, {'include': [{'reach': 'r01', 'region': 'central'}]}, 'source-failure')
+            self.assertEqual(worker['status'], 'failed')
+            self.assertEqual(result['failures'], [{'reach': 'r01',
+                'reason': 'normalized-source-review-mismatch', 'error_type': 'ValueError'}])
+            apply.assert_not_called(); upload.assert_not_called()
+
     def test_missing_current_batch_does_not_block_another_region(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); s3 = Bucket()

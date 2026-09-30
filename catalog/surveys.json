@@ -142,7 +142,8 @@
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
     "dist/data/w00614-usgs-video-observation-gap.json",
-    "dist/data/seafloor-monterey-native-review.json"
+    "dist/data/seafloor-monterey-native-review.json",
+    "dist/data/seafloor-normalized-content-review.json"
   ],
   "surveys": [
     {
@@ -240,7 +241,11 @@
         "vertical_datum": "unknown",
         "uncertainty_type": "unknown",
         "interpolation_mask": "unknown",
-        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml"
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "ac2b74377292c9553ef8fb452ce462300e4783cc1ed2e9d4961f78f085ae9946"
+        }
       }
     },
     {
@@ -518,7 +523,11 @@
         "vertical_datum": "unknown",
         "uncertainty_type": "unknown",
         "interpolation_mask": "unknown",
-        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "eb33aa358d605e33c34bbab22616f72e99f7b69856d2cbe2d542de0ab01852c2"
+        }
       }
     },
     {
@@ -5978,7 +5987,11 @@
         "vertical_datum": "MLLW",
         "uncertainty_type": "productUncert",
         "interpolation_mask": "unknown",
-        "rights_source_url": "https://www.fisheries.noaa.gov/inport/item/39979"
+        "rights_source_url": "https://www.fisheries.noaa.gov/inport/item/39979",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "fa7e5b0bd672dd88207e7557349d69d65f0740ce129a4e9c269eb89a5625ce49"
+        }
       }
     },
     {
@@ -13194,7 +13207,11 @@
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
         "interpolation_mask": "unknown",
-        "rights_source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml"
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.xml",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "233b398cd2595fe806f8e884d60147b5432d1522f319547f8054c4cf00279c44"
+        }
       }
     }
   ],
