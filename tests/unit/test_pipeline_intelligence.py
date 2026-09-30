@@ -4,10 +4,9 @@ import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
-from datetime import datetime,timezone
 from skippercast.pipeline.verification import forecast_records,merge_records,verify
 from skippercast.pipeline.ocean import dap_arrays,vector,bounds_indices
-from tests._support import ROOT
+from tests._support import NOW, ROOT
 
 
 class IntelligenceTests(unittest.TestCase):
@@ -16,7 +15,7 @@ class IntelligenceTests(unittest.TestCase):
         region={'forecast_points':[{'name':'New island','latitude':34,'longitude':-120}],
                 'intelligence':{'verification_stations':[{'name':'Buoy','latitude':35,'longitude':-121}]}}
         expected=[{'name':'New island','latitude':34,'longitude':-120},{'name':'Buoy','latitude':35,'longitude':-121}]
-        now=datetime.now(timezone.utc)
+        now=NOW
         with patch('skippercast.pipeline.intelligence.source') as capture:
             old={'data':{'requested_points':expected[1:]}}
             model_source('gfs_global',region,now,old)

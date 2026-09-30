@@ -50,6 +50,14 @@ class LayoutTest(unittest.TestCase):
                      for name in top_level_imports(p) if name in GIS_PACKAGES]
         self.assertEqual(offenders, [], 'a module that imports the survey stack belongs in a gis/ directory')
 
+    def test_product_tests_never_read_the_real_clock(self):
+        # Use tests._support.NOW / FakeClock and the code's now=/clock= parameters instead.
+        # test_util_helpers keeps byte-for-byte reference copies of the helpers it replaced.
+        pattern = re.compile(r'datetime\.(now|utcnow)\(|date\.today\(|time\.time\(\)')
+        offenders = [p.relative_to(ROOT).as_posix() for p in sorted((ROOT / 'tests').rglob('test_*.py'))
+                     if p.name != 'test_util_helpers.py' and pattern.search(p.read_text(encoding='utf-8'))]
+        self.assertEqual(offenders, [])
+
     def test_gis_package_list_matches_the_survey_requirements(self):
         # Distribution name -> import name where they differ.
         imports = {'pylerc': 'lerc', 'pyshp': 'shapefile', 'laspy[lazrs]': 'laspy'}

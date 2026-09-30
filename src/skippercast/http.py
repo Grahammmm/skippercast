@@ -445,8 +445,10 @@ def full_jitter(base: float, cap: float, rand: Callable[[], float]) -> Callable[
 class Session:
     """Policy-enforcing HTTP client. Thread-safe; share one per job.
 
-    `resolver`, `sleep`, `clock`, `rand`, `connection_factory` and `address_allowed`
-    exist so tests can run offline and deterministically.
+    `resolver`, `sleep`, `clock`, `wall_clock`, `rand`, `connection_factory` and
+    `address_allowed` exist so tests can run offline and deterministically. `clock` is
+    monotonic (per-host spacing); `wall_clock` is epoch seconds, used only to turn an
+    HTTP-date `Retry-After` into a delay.
     """
 
     def __init__(self, *, allowed_hosts: Iterable[str] | Allowlist | None = None,
@@ -462,6 +464,7 @@ class Session:
                  proxies: Mapping[str, str] | None = None,
                  ports: Iterable[int] = (443,), max_redirects: int = MAX_REDIRECTS,
                  sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
+                 wall_clock: Callable[[], float] = time.time,
                  rand: Callable[[], float] = random.random,
                  connection_factory: Callable[..., http.client.HTTPConnection] | None = None):
         if isinstance(allowed_hosts, Allowlist):
@@ -485,7 +488,7 @@ class Session:
         self.proxies = proxies
         self.ports = frozenset(ports)
         self.max_redirects = max_redirects
-        self.sleep, self.clock = sleep, clock
+        self.sleep, self.clock, self.wall_clock = sleep, clock, wall_clock
         self.connection_factory = connection_factory
         self._lock = threading.Lock()
         self._next_request: dict[str, float] = {}
@@ -753,7 +756,7 @@ class Session:
                 receipt.status, receipt.final_url = hop.status, hop.final_url
                 accepted = from_cache or (hop.status in ok if ok is not None else 200 <= hop.status < 300)
                 if not accepted and hop.status in retry and attempt < attempts:
-                    wait = parse_retry_after(hop.headers.get("Retry-After"))
+                    wait = parse_retry_after(hop.headers.get("Retry-After"), now=self.wall_clock())
                     delay = min(wait, self.retry_after_cap) if wait is not None else backoff(attempt)
                     row.update(error_class="HTTPStatusError", retry_in_s=round(delay, 3))
                 elif not accepted and raise_for_status:
