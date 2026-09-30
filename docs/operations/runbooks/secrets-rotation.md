@@ -2,7 +2,7 @@
 
 **Symptom:** a secret leaked or may have (committed, pasted into an issue or log, a laptop lost, a collaborator removed), a provider revoked it, it expired, or a scheduled rotation is due. Jobs failing with `could not verify CLOUDFLARE_API_TOKEN`, Wrangler `Authentication error`, a watchdog log `dispatch-failed-401`, or AI boat lookups answering 502 also point here.
 **Severity:** SEV1 if a secret that can write data or spend money is known to be exposed; SEV3 for an expired or revoked secret; planned rotation is not an incident.
-**Owner:** repository owner. Only the owner holds the Cloudflare, GitHub, Anthropic and ChatGPT Sites accounts.
+**Owner:** repository owner. Only the owner holds the Cloudflare, GitHub and Anthropic accounts.
 
 ## Inventory
 
@@ -12,7 +12,7 @@
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions secret | same | Not a credential; an identifier |
 | `ANTHROPIC_API_KEY` | GitHub Actions secret → Worker secret (uploaded by `cloudflare_deploy.sh`) | `server/boat-lookup.ts` via `/api/boat/lookup` | Spends Anthropic credit |
 | `WATCHDOG_GITHUB_TOKEN` | GitHub Actions secret → Worker secret `GITHUB_TOKEN` | `server/watchdog.ts` | Fine-grained token: Actions read and write on this repository only |
-| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | ChatGPT Sites project (secret / runtime value) | `server/trips.ts` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
+| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | GitHub Actions secrets → Worker secrets (uploaded by `cloudflare_deploy.sh`, which refuses to deploy without them) | `server/trips.ts` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
 | `EXTRA_ORIGINS` | GitHub Actions variable → Worker secret | `server/http.ts` `requireOrigin` (origins from `server/middleware/context.ts`) | Not a credential; adds allowed origins |
 
 No secret exists for: the scheduler (GitHub OIDC; the policy is the public `deployments/production.json`, see `server/job-auth.ts`), the Actions `github.token` (issued per run), D1 and R2 bindings (granted by the Worker's configuration). Repository variables `CLOUDFLARE_SITE_URL` and, after PR #30, `FEEDS_PUBLIC_BASE` are not secrets.
@@ -54,7 +54,7 @@ Until step 3, R2 publication fails; on `main` that is a warning and GitHub branc
 2. Anthropic Console → **API Keys** → create a new key.
 3. Install: `gh secret set ANTHROPIC_API_KEY`, then either run the deploy workflow (it uploads the secret) or `$W secret put ANTHROPIC_API_KEY --name skippercast`.
 4. Verify: a signed-in boat lookup succeeds (not available on Cloudflare until sign-in exists; there, check that `$W secret list --name skippercast` lists the name).
-5. Revoke the old key in the Console. If the key is also configured on ChatGPT Sites, replace it in the Sites project settings.
+5. Revoke the old key in the Console.
 
 ## WATCHDOG_GITHUB_TOKEN
 
@@ -73,7 +73,7 @@ Rotate only if the private key leaked: every existing push subscription is bound
    node --input-type=module -e "const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);const b=u=>Buffer.from(u).toString('base64url');console.log(JSON.stringify({VAPID_PUBLIC_KEY:b(await crypto.subtle.exportKey('raw',k.publicKey)),VAPID_PRIVATE_KEY:(await crypto.subtle.exportKey('jwk',k.privateKey)).d}))"
    ```
    The public key is 87 characters and the private key 43, the formats `@block65/webcrypto-web-push` expects.
-2. Set both in the ChatGPT Sites project (private key as a secret, public key as a runtime value) and publish. On Cloudflare, once push is enabled there: `$W secret put VAPID_PRIVATE_KEY --name skippercast` and `$W secret put VAPID_PUBLIC_KEY --name skippercast`.
+2. Set both as GitHub Actions secrets (`gh secret set VAPID_PUBLIC_KEY` and `gh secret set VAPID_PRIVATE_KEY`) and run the deploy workflow; the deploy uploads them to the Worker and the smoke test checks that `/api/session` serves the public key.
 3. Old subscriptions now fail; deliveries are recorded as `failed` and alerts as `held`, which makes `scripts/check_saved_trips.py` fail the live job. Remove them in the database that holds them (`DELETE FROM subscriptions`; see [D1 restore](d1-restore.md) for running SQL) and tell users to re-enable notifications from the app. In-app assessments keep working without push.
 4. Verify: `curl -fsS https://skippercast.com/api/session` returns the new `publicKey`; enabling notifications on a test device and saving a trip produces a delivered alert on the next check.
 
@@ -93,7 +93,7 @@ A revoked secret cannot be restored. If the new secret is wrong, create another 
 
 ## Escalate
 
-Provider support (Cloudflare, GitHub, Anthropic, ChatGPT Sites) if the dashboard will not revoke a credential or the audit log shows use you can't explain. Unexplained use of a data-writing secret is SEV1.
+Provider support (Cloudflare, GitHub, Anthropic) if the dashboard will not revoke a credential or the audit log shows use you can't explain. Unexplained use of a data-writing secret is SEV1.
 
 ## Postmortem
 

@@ -77,6 +77,28 @@ test('outbox produces one in-app event for repeated checks and does not silently
     assert.equal(sql.prepare("SELECT kind FROM alert_events WHERE kind='missed-final'").get().kind,'missed-final');
   }finally{globalThis.fetch=originalFetch;sql.close();}
 });
+test('without VAPID keys an alert stays pending with no receipts, and the first check after the keys arrive sends it',async()=>{
+  const {sql,adapter}=database();const originalFetch=globalThis.fetch;
+  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles'}).format(new Date(Date.now()+2*86400000));
+  sql.prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run('trip-1','alice','morro-bay','north','reef',date,7,13,8,12,3,new Date().toISOString());
+  sql.prepare('INSERT INTO subscriptions(id,owner,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?,?)').run('sub-1','alice','https://fcm.googleapis.com/fcm/send/x','p','a',new Date().toISOString());
+  const pushes=[];globalThis.fetch=async(url)=>{if(String(url).startsWith('https://fcm.googleapis.com/')){pushes.push(url);return new Response('',{status:201});}return Response.json({},{status:503});};
+  try{
+    const held=await checkTrips({DB:adapter});assert.equal(held.changes,1);assert.equal(held.held,1);
+    assert.equal(sql.prepare('SELECT status FROM alert_events').get().status,'pending','an unsent alert stays retryable');
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM delivery_receipts').get().n,0,'no receipt is claimed while push is unconfigured');
+    assert.equal(pushes.length,0);
+    const again=await checkTrips({DB:adapter});assert.equal(again.changes,0,'the same decision reuses its event');assert.equal(again.held,1);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM alert_events').get().n,1);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM delivery_receipts').get().n,0);
+    // No manual status reset: the keys arriving is the only change between checks.
+    const keys={VAPID_PUBLIC_KEY:'B'.repeat(87),VAPID_PRIVATE_KEY:'k'.repeat(43)};
+    const delivered=await checkTrips({DB:adapter,...keys}).catch(()=>null);
+    // Signing with placeholder keys fails inside the push library; what matters is that delivery was attempted and a receipt claimed.
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM delivery_receipts').get().n,1,'a receipt is claimed once keys exist');
+    void delivered;
+  }finally{globalThis.fetch=originalFetch;sql.close();}
+});
 test('alert changes and source loss retract prior threshold fit; final is mandatory even when unchanged',()=>{
   const a={status:'within limits',issues:[],values:{wind:4,gust:6,sea:2,chop:.5}};
   assert.equal(alertDecision(a,a),null);assert.equal(alertDecision(a,a,{final:true}),'final');

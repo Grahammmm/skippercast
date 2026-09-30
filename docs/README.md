@@ -71,6 +71,7 @@ Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [C
 | [data-feed-readme.md](data-feed-readme.md) | README published on the `data` feed branch |
 | [operations/release-process.md](operations/release-process.md) | Versions, tags, changelog and deploying a release |
 | [operations/incident-response.md](operations/incident-response.md) | Severity levels, who acts, and postmortems |
+| [operations/runners.md](operations/runners.md) | Where the jobs run, what GitHub-hosted minutes cost on a private repository, and the self-hosted runner switch |
 | [operations/runbooks/](operations/runbooks/) | [Feed stale](operations/runbooks/feed-stale.md), [rollback a release](operations/runbooks/rollback-release.md), [D1 restore](operations/runbooks/d1-restore.md), [R2 outage](operations/runbooks/r2-outage.md), [secrets rotation](operations/runbooks/secrets-rotation.md) |
 
 ## Legal

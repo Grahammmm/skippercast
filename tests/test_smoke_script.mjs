@@ -6,12 +6,12 @@ import {execFile} from 'node:child_process';
 // Runs scripts/smoke_test.sh against a local fake site. The home page is large
 // so a "curl | grep -q" pipeline would hit SIGPIPE under pipefail (the bug that
 // rolled back every deploy after #26).
-function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate'}={}) {
+function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate', publicKey='B'.repeat(87)}={}) {
   const page = '<!doctype html>\n<html><head><title>SkipperCast</title></head>\n<body>\n' + 'x'.repeat(400000) + '</body></html>';
   return createServer((req, res) => {
     const json = body => { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (req.url === '/api/health') return json({service: 'SkipperCast', version: '0.3.0', build: 'abcdef0123'});
-    if (req.url === '/api/session') return json({signedIn: forgedSignedIn && !!req.headers['oai-authenticated-user-id'], signIn: null});
+    if (req.url === '/api/session') return json({signedIn: forgedSignedIn && !!req.headers['oai-authenticated-user-id'], publicKey, signIn: null});
     if (req.url === '/feeds/conditions/latest.json') return json({completed_at: new Date().toISOString()});
     if (req.url === '/sw.js') { res.writeHead(200, {'Content-Type': 'text/javascript', 'Cache-Control': swCache}); return res.end('self.x=1'); }
     if (req.url === '/') {
@@ -43,6 +43,12 @@ test('smoke test fails when forged identity headers are accepted', async () => {
   const {code, out} = await smoke({forgedSignedIn: true});
   assert.notEqual(code, 0);
   assert.match(out, /forged identity header was accepted/);
+});
+
+test('smoke test fails when the Web Push public key is not deployed', async () => {
+  const {code, out} = await smoke({publicKey: null});
+  assert.notEqual(code, 0);
+  assert.match(out, /no Web Push public key/);
 });
 
 test('smoke test fails when the service worker is cached', async () => {

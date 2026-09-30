@@ -11,6 +11,7 @@ from pyproj import Transformer, Geod
 from shapely.geometry import box, mapping, Point, Polygon, MultiPolygon, shape
 from shapely.ops import transform
 
+from tests._support import FIXTURES
 from skippercast.seafloor.screen import load_snapshot, screen_candidates, input_identity, exclusion_polygon, VERSION
 from skippercast.seafloor.screen_sources import security_layer
 from skippercast.seafloor.io import sha256
@@ -239,7 +240,9 @@ class ScreenTests(unittest.TestCase):
             return (REPO/'tests/fixtures/seafloor-security'/f'{ident}.xml').read_bytes()
         layer, receipt = security_layer(config,getter)
         self.assertEqual(len(layer['features']),3)
-        self.assertEqual(len(receipt['sections']),3)
+        self.assertEqual(len(receipt['sections']), len(config['security_zones']) + len(config.get('reviewed_notice_sections', [])))
+        self.assertEqual({r['url'].split('section=')[1] for r in receipt['sections']},
+                         {r['section'] for r in config['security_zones'] + config.get('reviewed_notice_sections', [])})
         for zone in config['security_zones']:
             changed = deepcopy(zone)
             changed['reviewed_xml_sha256'] = '0'*64
@@ -250,3 +253,36 @@ class ScreenTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ReviewedNoticeTests(unittest.TestCase):
+    def test_mobile_and_outside_scope_sections_are_checked_without_fake_geometry(self):
+        for classification in ('outside-reviewed-scope', 'trip-time-vessel-restriction'):
+            body = (FIXTURES/'seafloor-security/334.1150.xml').read_bytes()
+            review = {'section':'334.1150', 'classification':classification,
+                      'review_basis':'Reviewed scope is south of the entire danger area',
+                      'reviewed_xml_sha256':hashlib.sha256(body).hexdigest()}
+            def getter(url):
+                return (b'{"titles":[{"number":33,"up_to_date_as_of":"2026-09-28"}]}'
+                        if url.endswith('titles') else body)
+            config = {'security_zones':[], 'reviewed_notice_sections':[review]}
+            layer, receipt = security_layer(config, getter)
+            self.assertEqual(layer['features'], [])
+            self.assertEqual(receipt['sections'][0]['sha256'], review['reviewed_xml_sha256'])
+            changed = deepcopy(config)
+            changed['reviewed_notice_sections'][0]['reviewed_xml_sha256'] = 'a'*64
+            with self.assertRaisesRegex(ValueError, 'scope review required'):
+                security_layer(changed, getter)
+            changed['reviewed_notice_sections'][0]['classification'] = 'ignore'
+            with self.assertRaisesRegex(ValueError, 'Invalid reviewed notice'):
+                security_layer(changed, getter)
+
+    def test_wrong_or_missing_section_does_not_clear_scope(self):
+        body = b'<DIV8 N="165.1183"><P>Changed</P></DIV8>'
+        review = {'section':'334.1150', 'classification':'outside-reviewed-scope',
+                  'review_basis':'Reviewed', 'reviewed_xml_sha256':hashlib.sha256(body).hexdigest()}
+        def getter(url):
+            return (b'{"titles":[{"number":33,"up_to_date_as_of":"2026-09-28"}]}'
+                    if url.endswith('titles') else body)
+        with self.assertRaisesRegex(ValueError, 'scope review required'):
+            security_layer({'security_zones':[], 'reviewed_notice_sections':[review]}, getter)

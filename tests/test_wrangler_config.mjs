@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, mkdtempSync, rmSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdtempSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -95,4 +95,22 @@ test('the deploy script creates the queues only when enabled, before the config 
   assert.ok(script.indexOf('skippercast-trip-checks-dlq') < script.indexOf('skippercast-trip-checks;'), 'the dead-letter queue is created first');
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   assert.match(workflow, /ENABLE_QUEUES: \$\{\{ vars\.ENABLE_QUEUES \}\}/);
+});
+
+test('the deploy script refuses a missing or malformed VAPID pair before it runs any Wrangler command', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'deploy-'));
+  try {
+    const log = join(dir, 'npx.log');
+    writeFileSync(join(dir, 'npx'), `#!/bin/sh\necho "$@" >> '${log}'\nexit 0\n`, {mode: 0o755});
+    const script = fileURLToPath(new URL('../scripts/cloudflare_deploy.sh', import.meta.url));
+    const run = keys => spawnSync('bash', [script], {cwd: dir, encoding: 'utf8',
+      env: {PATH: `${dir}:${process.env.PATH}`, CLOUDFLARE_API_TOKEN: 't', CLOUDFLARE_ACCOUNT_ID: 'a', ...keys}});
+    const missing = run({});
+    assert.equal(missing.status, 1);
+    assert.match(missing.stderr, /VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set/);
+    const short = run({VAPID_PUBLIC_KEY: 'B'.repeat(86), VAPID_PRIVATE_KEY: 'k'.repeat(43)});
+    assert.equal(short.status, 1);
+    assert.match(short.stderr, /wrong length/);
+    assert.throws(() => readFileSync(log, 'utf8'), /ENOENT/, 'no Wrangler command (deploy, migrations, D1 backup) ran');
+  } finally { rmSync(dir, {recursive: true, force: true}); }
 });

@@ -38,8 +38,16 @@ export function validateTripBoat(boat:ExternalJSON):TripBoat|null{
   out.name=typeof boat.name==='string'?boat.name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,80):'';
   return out;
 }
+export function pushConfigured(env:Env):boolean{return Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY);}
 async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all<SubscriptionRow>()).results;
+  if(subscriptions.length&&!pushConfigured(env)){
+    // No VAPID pair on this deployment: claim no receipts and leave the event 'pending'.
+    // checkTrip only calls deliver() for pending events, so the first check after the
+    // keys are set sends it (a 'held' event would never be retried).
+    console.error(JSON.stringify({event:'push_unconfigured',alert:event.id}));
+    return false;
+  }
   let delivered=false;
   for(const s of subscriptions){
     const id=await hash(event.id+':'+s.id);
@@ -50,7 +58,7 @@ async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
     let status='uncertain',httpStatus:number|null=null;
     try{
       const payload=await buildPushPayload({data:JSON.stringify({title:'SkipperCast trip update',body:event.message.slice(0,1600),eventId:event.id,url:'/#forecast'}),options:{ttl:3600}},
-        {endpoint:s.endpoint,expirationTime:null,keys:{p256dh:s.p256dh,auth:s.auth}},{subject:deployment.public_origin,publicKey:env.VAPID_PUBLIC_KEY!,privateKey:env.VAPID_PRIVATE_KEY!});
+        {endpoint:s.endpoint,expirationTime:null,keys:{p256dh:s.p256dh,auth:s.auth}},{subject:deployment.public_origin,publicKey:env.VAPID_PUBLIC_KEY as string,privateKey:env.VAPID_PRIVATE_KEY as string});
       const response=await fetch(s.endpoint,{...payload,redirect:'manual',signal:AbortSignal.timeout(12000)});httpStatus=response.status;
       status=response.ok?'accepted':response.status===404||response.status===410?'expired':'failed';
       if(status==='expired')await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();

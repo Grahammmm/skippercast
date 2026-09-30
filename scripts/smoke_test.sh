@@ -28,13 +28,17 @@ case "$home" in *'<title>'*) ;; *) fail "home page has no <title>";; esac
 echo "home page ok"
 
 sw=$(curl -fsS -D - -o /dev/null --max-time 20 "$SITE/sw.js") || fail "/sw.js not served"
-# Either the Worker's no-cache (ChatGPT Sites) or Cloudflare static assets'
+# Either the Worker's no-cache or Cloudflare static assets'
 # default "max-age=0, must-revalidate": both force revalidation on every check.
 grep -qiE '^cache-control:.*(no-cache|max-age=0)' <<<"$sw" || fail "/sw.js must be revalidated on every request (no-cache or max-age=0)"
 echo "service worker ok"
 
 get "$SITE/feeds/conditions/latest.json" | python3 -c "import json,sys;json.load(sys.stdin)" || fail "live feed is not valid JSON"
 echo "live feed ok"
+
+session=$(get "$SITE/api/session")
+has "$session" '"publicKey":"' || fail "/api/session has no Web Push public key: VAPID secrets are not deployed"
+echo "push public key ok"
 
 forged=$(get -H 'oai-authenticated-user-id: smoke-test' -H 'oai-authenticated-user-email: smoke@example.test' "$SITE/api/session")
 has "$forged" '"signedIn":false' || fail "a forged identity header was accepted: $forged"

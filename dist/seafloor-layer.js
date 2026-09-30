@@ -71,12 +71,22 @@ function loadPMTiles() {
   return pmtilesLoad;
 }
 
+export function habitatDefaults(target) {
+  return { enabled: ['reef', 'rockfish', 'lingcod'].includes(target),
+    view: target === 'lingcod' ? 'fit_lingcod' : 'fit_rockfish_reef' };
+}
+
+export function publishedReachCount(manifest) {
+  return Object.keys(manifest?.reach_inputs || {}).length;
+}
+
 export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {}) {
   const $ = (id) => document.getElementById(id);
   const toggle = $('layer-seafloor'), cellsToggle = $('layer-seafloor-cells'), viewSelect = $('seafloor-view'), status = $('seafloor-status');
   const box = $('seafloor-options');
   if (!toggle || !status) return null;
-  const region = getRegion().id;
+  const region = getRegion().id, species = $('species-select');
+  let explicitChoice = null, enabling = 0;
   for (const v of VIEWS) viewSelect.add(new Option(v.label, v.id));
   map.createPane('seafloorHabitat').style.zIndex = 421;   // under MPAs (440) and federal closures (438)
   const renderer = L.canvas({ pane: 'seafloorHabitat', padding: 0.3 });
@@ -104,7 +114,7 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
     const zoom = map.getZoom();
     habitatLayer.clearLayers(); cellsLayer.clearLayers();
     legend.getContainer().innerHTML = legendHTML(viewSelect.value);
-    if (zoom < MIN_VIEW_ZOOM) { setStatus(`Zoom in to see seafloor habitat · ${manifest.layers?.habitat ?? 0} screened candidates in 3 assessed reaches`); return; }
+    if (zoom < MIN_VIEW_ZOOM) { setStatus(`Zoom in to see seafloor habitat · ${manifest.layers?.habitat ?? 0} screened candidates across ${publishedReachCount(manifest)} published reach inputs`); return; }
     const b = map.getBounds(), header = await archive.getHeader();
     const view = [Math.max(b.getWest(), header.minLon), Math.max(b.getSouth(), header.minLat), Math.min(b.getEast(), header.maxLon), Math.min(b.getNorth(), header.maxLat)];
     if (view[0] >= view[2] || view[1] >= view[3]) { setStatus('No published seafloor survey in this view · the rest of the coast is not assessed'); return; }
@@ -133,21 +143,27 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
         })
         .addTo(habitatLayer);
     }
-    setStatus(`${habitat.length} habitat candidate${habitat.length === 1 ? '' : 's'} in view · unverified; nominal depth · only 3 of 46 Central Coast reaches assessed`);
+    setStatus(`${habitat.length} habitat candidate${habitat.length === 1 ? '' : 's'} in view · unverified; nominal depth · ${publishedReachCount(manifest)} published reach inputs in this region`);
   }
 
   async function enable() {
+    const request = ++enabling; ++loading;
     if (!toggle.checked) { show(false); setStatus('Off'); return; }
     setStatus('Checking seafloor publication…');
     const gate = await loadManifest(region, fetchImpl);
+    if (request !== enabling || !toggle.checked) return;
+    box.hidden = gate.published === false;
     state = gate.state;
     if (gate.state !== 'ready') { show(false); archive = null; tiles.clear(); setStatus(gate.reason); return; }
+    if (manifest?.archive_sha256 !== gate.manifest.archive_sha256) { archive = null; tiles.clear(); }
     manifest = gate.manifest;
     try {
       const pm = await loadPMTiles();
       if (!archive) archive = new pm.PMTiles(new URL(archiveURL(region), location.href).href);
       await archive.getHeader();
+      if (request !== enabling || !toggle.checked) return;
     } catch {
+      if (request !== enabling || !toggle.checked) return;
       state = 'unavailable'; archive = null; show(false); setStatus('Seafloor layer unavailable · try again later'); return;
     }
     show(true); draw();
@@ -156,10 +172,18 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
   // Only regions with a publication get the control; a 404 hides it.
   loadManifest(region, fetchImpl).then((gate) => {
     box.hidden = gate.published === false;
-    setStatus(gate.state === 'ready' ? 'Off · turn on to show screened habitat candidates' : gate.reason);
+    if (!toggle.checked) setStatus(gate.state === 'ready' ? 'Off · turn on to show screened habitat candidates' : gate.reason);
   });
 
-  toggle.addEventListener('change', enable);
+  toggle.addEventListener('change', () => { explicitChoice = toggle.checked; enable(); });
+  function targetChanged() {
+    const defaults = habitatDefaults(species?.value);
+    toggle.checked = explicitChoice ?? defaults.enabled;
+    if (defaults.enabled) viewSelect.value = defaults.view;
+    enable();
+  }
+  species?.addEventListener('change', targetChanged);
+  targetChanged();
   cellsToggle.addEventListener('change', draw);
   viewSelect.addEventListener('change', draw);
   map.on('moveend', draw);
