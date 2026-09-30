@@ -1,0 +1,7999 @@
+{
+ "generated_from": "dist/morning-outlook.js at origin/main before web/score.ts existed (seed 20260930)",
+ "cases": [
+  {
+   "c": {
+    "wind": 8.7,
+    "gust": 14,
+    "sea": {
+     "height": 0.7,
+     "period": 14,
+     "from": 209
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 5.9,
+     "from": 240
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 13,
+     "from": 143
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 16,
+     "from": 40
+    }
+   },
+   "other": {
+    "wind": 3.7,
+    "gust": 12.6,
+    "sea": {
+     "height": 1.9
+    }
+   },
+   "species": "lingcod",
+   "gust": 14,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.2,
+    "control": 5,
+    "conditions": 5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.1,
+    "gust": 6.3,
+    "sea": {
+     "height": 0.5,
+     "period": 15,
+     "from": 8
+    },
+    "chop": {
+     "height": 1,
+     "period": 4.3,
+     "from": 32
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 12,
+     "from": 26
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 17,
+     "from": 149
+    }
+   },
+   "other": {
+    "wind": 6.5,
+    "gust": 6.3,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "tuna",
+   "gust": 6.3,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.9,
+    "control": 8.9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 15.5,
+    "gust": 19.7,
+    "sea": {
+     "height": 0.3,
+     "period": 10,
+     "from": 42
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 2.5,
+     "from": 97
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 17,
+     "from": 75
+    },
+    "secondary": {
+     "height": 1.1,
+     "period": 15,
+     "from": 236
+    }
+   },
+   "other": {
+    "wind": 13.6,
+    "gust": 17.2,
+    "sea": {
+     "height": 3.9
+    }
+   },
+   "species": "lingcod",
+   "gust": 19.7,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 0,
+    "control": 0,
+    "conditions": 0,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.1,
+    "gust": 8.2,
+    "sea": {
+     "height": 2.3,
+     "period": 16,
+     "from": 46
+    },
+    "chop": {
+     "height": 1.4,
+     "period": 3.4,
+     "from": 331
+    },
+    "swell": {
+     "height": 4.2,
+     "period": 8,
+     "from": 35
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 14,
+     "from": 98
+    }
+   },
+   "other": {
+    "wind": 10.5,
+    "gust": 7.7,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "halibut",
+   "gust": 8.2,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.7,
+    "control": 2.4,
+    "conditions": 2.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.2,
+    "gust": 11.6,
+    "sea": {
+     "height": 2.6,
+     "period": 6,
+     "from": 189
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 2.7,
+     "from": 153
+    },
+    "swell": {
+     "height": 1.6,
+     "period": 14,
+     "from": 352
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 11,
+     "from": 262
+    }
+   },
+   "other": {
+    "wind": 11.1,
+    "gust": 7.3,
+    "sea": {
+     "height": 1.8
+    }
+   },
+   "species": "reef",
+   "gust": 11.6,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.9,
+    "control": 6.6,
+    "conditions": 6.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.1,
+    "gust": 8.6,
+    "sea": {
+     "height": 1.3,
+     "period": 11,
+     "from": 225
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 7,
+     "from": 310
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 17,
+     "from": 324
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 12,
+     "from": 37
+    }
+   },
+   "other": {
+    "wind": 5.6,
+    "gust": 8.1,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "squid",
+   "gust": 8.6,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.4,
+    "control": 9.6,
+    "conditions": 9.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 11.4,
+    "gust": 12.3,
+    "sea": {
+     "height": 3.2,
+     "period": 11,
+     "from": 149
+    },
+    "chop": {
+     "height": 0.8,
+     "period": 6.5,
+     "from": 89
+    },
+    "swell": {
+     "height": 1.2,
+     "period": 11,
+     "from": 126
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 10,
+     "from": 73
+    }
+   },
+   "other": {
+    "wind": 9.9,
+    "gust": 16.4,
+    "sea": {
+     "height": 3.3
+    }
+   },
+   "species": "tuna",
+   "gust": 16.4,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.8,
+    "control": 4.1,
+    "conditions": 2.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.2,
+    "gust": 7.2,
+    "sea": {
+     "height": 3.2,
+     "period": 12,
+     "from": 144
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 6.9,
+     "from": 39
+    },
+    "swell": {
+     "height": 4.4,
+     "period": 12,
+     "from": 18
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 8,
+     "from": 41
+    }
+   },
+   "other": {
+    "wind": 4,
+    "gust": 4.1,
+    "sea": {
+     "height": 1.5
+    }
+   },
+   "species": "tuna",
+   "gust": 7.2,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.8,
+    "control": 9.5,
+    "conditions": 8.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.3,
+    "gust": 5.2,
+    "sea": {
+     "height": 1.3,
+     "period": 8,
+     "from": 283
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 2.3,
+     "from": 214
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 17,
+     "from": 159
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 18,
+     "from": 126
+    }
+   },
+   "other": {
+    "wind": 3.6,
+    "gust": 7.5,
+    "sea": {
+     "height": 1.5
+    }
+   },
+   "species": "halibut",
+   "gust": 7.5,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.1,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 14.7,
+    "gust": 15.2,
+    "sea": {
+     "height": 3.3,
+     "period": 8,
+     "from": 124
+    },
+    "chop": {
+     "height": 1.4,
+     "period": 6.4,
+     "from": 229
+    },
+    "swell": {
+     "height": 2.4,
+     "period": 12,
+     "from": 264
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 13,
+     "from": 334
+    }
+   },
+   "other": {
+    "wind": 5.5,
+    "gust": 18.3,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "lingcod",
+   "gust": 18.3,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 5.9,
+    "control": 5.3,
+    "conditions": 5.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.6,
+    "gust": 5.8,
+    "sea": {
+     "height": 0.3,
+     "period": 13,
+     "from": 276
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 5,
+     "from": 347
+    },
+    "swell": {
+     "height": 1.1,
+     "period": 15,
+     "from": 191
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 13,
+     "from": 31
+    }
+   },
+   "other": {
+    "wind": 5.3,
+    "gust": 5.9,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "lingcod",
+   "gust": 5.9,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.6,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.5,
+    "gust": 10.6,
+    "sea": {
+     "height": 3.6,
+     "period": 6,
+     "from": 134
+    },
+    "chop": {
+     "height": 1.2,
+     "period": 5.5,
+     "from": 350
+    },
+    "swell": {
+     "height": 1.9,
+     "period": 13,
+     "from": 164
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 16,
+     "from": 171
+    }
+   },
+   "other": {
+    "wind": 4,
+    "gust": 10.6,
+    "sea": {
+     "height": 2.6
+    }
+   },
+   "species": "reef",
+   "gust": 10.6,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 4.1,
+    "control": 5.3,
+    "conditions": 4.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12.2,
+    "gust": 16.8,
+    "sea": {
+     "height": 4.8,
+     "period": 17,
+     "from": 154
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 2.5,
+     "from": 243
+    },
+    "swell": {
+     "height": 4.4,
+     "period": 13,
+     "from": 93
+    },
+    "secondary": {
+     "height": 0.9,
+     "period": 16,
+     "from": 1
+    }
+   },
+   "other": {
+    "wind": 8.1,
+    "gust": 18.7,
+    "sea": {
+     "height": 4.4
+    }
+   },
+   "species": "reef",
+   "gust": 18.7,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.6,
+    "control": 7.6,
+    "conditions": 7.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.3,
+    "gust": 3,
+    "sea": {
+     "height": 1.2,
+     "period": 7,
+     "from": 185
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 8.5,
+     "from": 114
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 8,
+     "from": 107
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 13,
+     "from": 252
+    }
+   },
+   "other": {
+    "wind": 2.7,
+    "gust": 4.6,
+    "sea": {
+     "height": 0.8
+    }
+   },
+   "species": "halibut",
+   "gust": 4.6,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.7,
+    "gust": 8.4,
+    "sea": {
+     "height": 0.6,
+     "period": 11,
+     "from": 232
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 3,
+     "from": 132
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 11,
+     "from": 159
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 12,
+     "from": 89
+    }
+   },
+   "other": {
+    "wind": 6.6,
+    "gust": 12.1,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "reef",
+   "gust": 12.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.8,
+    "control": 6.5,
+    "conditions": 6.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.5,
+    "gust": 4.9,
+    "sea": {
+     "height": 1.2,
+     "period": 8,
+     "from": 27
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 3,
+     "from": 333
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 12,
+     "from": 266
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 10,
+     "from": 30
+    }
+   },
+   "other": {
+    "wind": 2.7,
+    "gust": 3.7,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "tuna",
+   "gust": 4.9,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.6,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.3,
+    "gust": 9.3,
+    "sea": {
+     "height": 0.5,
+     "period": 9,
+     "from": 13
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 6.4,
+     "from": 293
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 10,
+     "from": 149
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 11,
+     "from": 67
+    }
+   },
+   "other": {
+    "wind": 5.6,
+    "gust": 7.7,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 9.3,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.8,
+    "control": 9.8,
+    "conditions": 9.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.1,
+    "gust": 10.7,
+    "sea": {
+     "height": 1.9,
+     "period": 16,
+     "from": 298
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 7.9,
+     "from": 304
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 13,
+     "from": 14
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 9,
+     "from": 349
+    }
+   },
+   "other": {
+    "wind": 7.9,
+    "gust": 13.4,
+    "sea": {
+     "height": 2
+    }
+   },
+   "species": "lingcod",
+   "gust": 13.4,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.3,
+    "control": 8.3,
+    "conditions": 8.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.1,
+    "gust": 2.2,
+    "sea": {
+     "height": 0.5,
+     "period": 11,
+     "from": 344
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 4.2,
+     "from": 21
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 12,
+     "from": 340
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 14,
+     "from": 320
+    }
+   },
+   "other": {
+    "wind": 2,
+    "gust": 5.4,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "tuna",
+   "gust": 5.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.7,
+    "gust": 5.6,
+    "sea": {
+     "height": 2.7,
+     "period": 12,
+     "from": 111
+    },
+    "chop": {
+     "height": 1.5,
+     "period": 5.4,
+     "from": 337
+    },
+    "swell": {
+     "height": 3.7,
+     "period": 14,
+     "from": 70
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 13,
+     "from": 252
+    }
+   },
+   "other": {
+    "wind": 7.7,
+    "gust": 3.1,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 5.6,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.8,
+    "control": 7.5,
+    "conditions": 7.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 15,
+    "gust": 19.7,
+    "sea": {
+     "height": 1.5,
+     "period": 11,
+     "from": 195
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 8.4,
+     "from": 305
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 8,
+     "from": 260
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 16,
+     "from": 158
+    }
+   },
+   "other": {
+    "wind": 4.6,
+    "gust": 20.6,
+    "sea": {
+     "height": 3.8
+    }
+   },
+   "species": "lingcod",
+   "gust": 20.6,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.2,
+    "control": 1.8,
+    "conditions": 1.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 8.5,
+    "sea": {
+     "height": 0.4,
+     "period": 10,
+     "from": 50
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 6.4,
+     "from": 86
+    },
+    "swell": {
+     "height": 1.7,
+     "period": 16,
+     "from": 157
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 13,
+     "from": 211
+    }
+   },
+   "other": {
+    "wind": 8.1,
+    "gust": 5.3,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "halibut",
+   "gust": 8.5,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.3,
+    "conditions": 9.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 16.2,
+    "gust": 18.9,
+    "sea": {
+     "height": 3,
+     "period": 18,
+     "from": 304
+    },
+    "chop": {
+     "height": 1.5,
+     "period": 4.5,
+     "from": 137
+    },
+    "swell": {
+     "height": 3,
+     "period": 16,
+     "from": 139
+    },
+    "secondary": {
+     "height": 0.9,
+     "period": 10,
+     "from": 9
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 22.2,
+    "sea": {
+     "height": 3
+    }
+   },
+   "species": "squid",
+   "gust": 22.2,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 4.5,
+    "control": 5,
+    "conditions": 4.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.3,
+    "gust": 7,
+    "sea": {
+     "height": 0.8,
+     "period": 17,
+     "from": 157
+    },
+    "chop": {
+     "height": 1,
+     "period": 7.1,
+     "from": 218
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 9,
+     "from": 112
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 15,
+     "from": 238
+    }
+   },
+   "other": {
+    "wind": 5.9,
+    "gust": 7.4,
+    "sea": {
+     "height": 1.7
+    }
+   },
+   "species": "squid",
+   "gust": 7.4,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.9,
+    "control": 8.9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.5,
+    "gust": 3.3,
+    "sea": {
+     "height": 2.7,
+     "period": 10,
+     "from": 4
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 5,
+     "from": 137
+    },
+    "swell": {
+     "height": 3.5,
+     "period": 10,
+     "from": 51
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 17,
+     "from": 321
+    }
+   },
+   "other": {
+    "wind": 9.4,
+    "gust": 4,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.7,
+    "control": 7.4,
+    "conditions": 7.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.4,
+    "gust": 6.1,
+    "sea": {
+     "height": 0.5,
+     "period": 10,
+     "from": 99
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 7.3,
+     "from": 246
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 10,
+     "from": 112
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 97
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 2.6,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "reef",
+   "gust": 6.1,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3,
+    "gust": 3.4,
+    "sea": {
+     "height": 0.3,
+     "period": 9,
+     "from": 186
+    },
+    "chop": {
+     "height": 0,
+     "period": 3.5,
+     "from": 168
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 15,
+     "from": 329
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 14,
+     "from": 18
+    }
+   },
+   "other": {
+    "wind": 2.3,
+    "gust": 5.7,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 5.7,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 14.5,
+    "gust": 20.4,
+    "sea": {
+     "height": 2.6,
+     "period": 6,
+     "from": 76
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 9,
+     "from": 74
+    },
+    "swell": {
+     "height": 3.4,
+     "period": 9,
+     "from": 27
+    },
+    "secondary": {
+     "height": 1.5,
+     "period": 14,
+     "from": 163
+    }
+   },
+   "other": {
+    "wind": 12.2,
+    "gust": 19.4,
+    "sea": {
+     "height": 2.5
+    }
+   },
+   "species": "lingcod",
+   "gust": 20.4,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3,
+    "control": 2.5,
+    "conditions": 2.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.6,
+    "gust": 6.7,
+    "sea": {
+     "height": 0.6,
+     "period": 10,
+     "from": 174
+    },
+    "chop": {
+     "height": 1.4,
+     "period": 5.2,
+     "from": 303
+    },
+    "swell": {
+     "height": 1.7,
+     "period": 8,
+     "from": 30
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 16,
+     "from": 303
+    }
+   },
+   "other": {
+    "wind": 2.7,
+    "gust": 10,
+    "sea": {
+     "height": 2.8
+    }
+   },
+   "species": "reef",
+   "gust": 10,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.5,
+    "control": 5.9,
+    "conditions": 5.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.7,
+    "gust": 5.5,
+    "sea": {
+     "height": 0.5,
+     "period": 8,
+     "from": 312
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 2.3,
+     "from": 206
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 9,
+     "from": 52
+    },
+    "secondary": {
+     "height": 0,
+     "period": 13,
+     "from": 58
+    }
+   },
+   "other": {
+    "wind": 3.8,
+    "gust": 11.8,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "lingcod",
+   "gust": 11.8,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.7,
+    "control": 6.6,
+    "conditions": 6.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.1,
+    "gust": 4.9,
+    "sea": {
+     "height": 0.4,
+     "period": 14,
+     "from": 16
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 6.3,
+     "from": 110
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 17,
+     "from": 281
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 13,
+     "from": 108
+    }
+   },
+   "other": {
+    "wind": 2.4,
+    "gust": 10.5,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "tuna",
+   "gust": 10.5,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.3,
+    "control": 9.5,
+    "conditions": 9.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3,
+    "gust": 5.8,
+    "sea": {
+     "height": 0.3,
+     "period": 7,
+     "from": 209
+    },
+    "chop": {
+     "height": 0,
+     "period": 5.7,
+     "from": 277
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 13,
+     "from": 103
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 13,
+     "from": 96
+    }
+   },
+   "other": {
+    "wind": 2.9,
+    "gust": 8.4,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "tuna",
+   "gust": 8.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.9,
+    "control": 10,
+    "conditions": 9.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.3,
+    "gust": 8,
+    "sea": {
+     "height": 2.2,
+     "period": 8,
+     "from": 278
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 9.1,
+     "from": 198
+    },
+    "swell": {
+     "height": 2.4,
+     "period": 10,
+     "from": 262
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 10,
+     "from": 113
+    }
+   },
+   "other": {
+    "wind": 3.1,
+    "gust": 9.4,
+    "sea": {
+     "height": 1.6
+    }
+   },
+   "species": "halibut",
+   "gust": 9.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.3,
+    "control": 9.2,
+    "conditions": 9.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 10.4,
+    "gust": 14.4,
+    "sea": {
+     "height": 2.8,
+     "period": 14,
+     "from": 47
+    },
+    "chop": {
+     "height": 1.3,
+     "period": 5.3,
+     "from": 209
+    },
+    "swell": {
+     "height": 2.7,
+     "period": 9,
+     "from": 138
+    },
+    "secondary": {
+     "height": 1,
+     "period": 8,
+     "from": 142
+    }
+   },
+   "other": {
+    "wind": 7.4,
+    "gust": 12.8,
+    "sea": {
+     "height": 2.5
+    }
+   },
+   "species": "halibut",
+   "gust": 14.4,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.6,
+    "control": 6.2,
+    "conditions": 6.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.4,
+    "gust": 8.1,
+    "sea": {
+     "height": 2.8,
+     "period": 13,
+     "from": 64
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 2.4,
+     "from": 291
+    },
+    "swell": {
+     "height": 1,
+     "period": 12,
+     "from": 240
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 12,
+     "from": 223
+    }
+   },
+   "other": {
+    "wind": 3.8,
+    "gust": 12,
+    "sea": {
+     "height": 1.7
+    }
+   },
+   "species": "salmon",
+   "gust": 12,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.8,
+    "control": 9.4,
+    "conditions": 8.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 3.8,
+    "sea": {
+     "height": 1.2,
+     "period": 18,
+     "from": 179
+    },
+    "chop": {
+     "height": 0,
+     "period": 3.6,
+     "from": 46
+    },
+    "swell": {
+     "height": 1.2,
+     "period": 16,
+     "from": 314
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 18,
+     "from": 204
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 6.6,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "tuna",
+   "gust": 6.6,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.5,
+    "gust": 6.7,
+    "sea": {
+     "height": 0.5,
+     "period": 11,
+     "from": 97
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 2.1,
+     "from": 278
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 16,
+     "from": 118
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 219
+    }
+   },
+   "other": {
+    "wind": 3.1,
+    "gust": 8.1,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "reef",
+   "gust": 8.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.8,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.1,
+    "gust": 5.8,
+    "sea": {
+     "height": 0.9,
+     "period": 13,
+     "from": 256
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 7.8,
+     "from": 258
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 10,
+     "from": 274
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 17,
+     "from": 235
+    }
+   },
+   "other": {
+    "wind": 10,
+    "gust": 7.9,
+    "sea": {
+     "height": 3
+    }
+   },
+   "species": "reef",
+   "gust": 7.9,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.1,
+    "control": 7.9,
+    "conditions": 7.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.4,
+    "gust": 9.6,
+    "sea": {
+     "height": 1.6,
+     "period": 13,
+     "from": 59
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 8,
+     "from": 311
+    },
+    "swell": {
+     "height": 1.6,
+     "period": 11,
+     "from": 354
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 15,
+     "from": 331
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 7.7,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "reef",
+   "gust": 9.6,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.7,
+    "control": 7.7,
+    "conditions": 7.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 9.9,
+    "gust": 11.9,
+    "sea": {
+     "height": 2.3,
+     "period": 13,
+     "from": 267
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 7.5,
+     "from": 357
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 17,
+     "from": 72
+    },
+    "secondary": {
+     "height": 1,
+     "period": 13,
+     "from": 232
+    }
+   },
+   "other": {
+    "wind": 9.7,
+    "gust": 12,
+    "sea": {
+     "height": 2.8
+    }
+   },
+   "species": "halibut",
+   "gust": 12,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.1,
+    "control": 6.9,
+    "conditions": 6.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.8,
+    "gust": 8,
+    "sea": {
+     "height": 2.1,
+     "period": 8,
+     "from": 279
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 5.8,
+     "from": 283
+    },
+    "swell": {
+     "height": 1.8,
+     "period": 18,
+     "from": 193
+    },
+    "secondary": {
+     "height": 0,
+     "period": 17,
+     "from": 317
+    }
+   },
+   "other": {
+    "wind": 7.5,
+    "gust": 8.3,
+    "sea": {
+     "height": 1.1
+    }
+   },
+   "species": "reef",
+   "gust": 8.3,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.5,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13.4,
+    "gust": 13.4,
+    "sea": {
+     "height": 4,
+     "period": 13,
+     "from": 171
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 4.6,
+     "from": 146
+    },
+    "swell": {
+     "height": 1.9,
+     "period": 17,
+     "from": 218
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 15,
+     "from": 264
+    }
+   },
+   "other": {
+    "wind": 17.2,
+    "gust": 14.7,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "squid",
+   "gust": 14.7,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 5.5,
+    "control": 6.2,
+    "conditions": 5.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12.5,
+    "gust": 16.1,
+    "sea": {
+     "height": 1.2,
+     "period": 12,
+     "from": 199
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 4.6,
+     "from": 147
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 18,
+     "from": 70
+    },
+    "secondary": {
+     "height": 1,
+     "period": 12,
+     "from": 265
+    }
+   },
+   "other": {
+    "wind": 6.5,
+    "gust": 17.8,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "squid",
+   "gust": 17.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 5.3,
+    "control": 5.7,
+    "conditions": 5.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.1,
+    "gust": 10.1,
+    "sea": {
+     "height": 1.4,
+     "period": 13,
+     "from": 260
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 7.1,
+     "from": 2
+    },
+    "swell": {
+     "height": 2.1,
+     "period": 14,
+     "from": 137
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 16,
+     "from": 71
+    }
+   },
+   "other": {
+    "wind": 3.2,
+    "gust": 8.9,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "tuna",
+   "gust": 10.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.8,
+    "control": 8.1,
+    "conditions": 7.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 18.4,
+    "gust": 21.9,
+    "sea": {
+     "height": 1.9,
+     "period": 11,
+     "from": 106
+    },
+    "chop": {
+     "height": 2.2,
+     "period": 8.1,
+     "from": 341
+    },
+    "swell": {
+     "height": 3.2,
+     "period": 16,
+     "from": 253
+    },
+    "secondary": {
+     "height": 1.8,
+     "period": 17,
+     "from": 251
+    }
+   },
+   "other": {
+    "wind": 18.8,
+    "gust": 21.8,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "halibut",
+   "gust": 21.9,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 4.5,
+    "control": 3.3,
+    "conditions": 3.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.6,
+    "gust": 5.5,
+    "sea": {
+     "height": 0.5,
+     "period": 8,
+     "from": 118
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 4.7,
+     "from": 190
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 10,
+     "from": 54
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 11,
+     "from": 41
+    }
+   },
+   "other": {
+    "wind": 4.7,
+    "gust": 8.1,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "tuna",
+   "gust": 8.1,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.8,
+    "conditions": 9.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.7,
+    "gust": 7.8,
+    "sea": {
+     "height": 3,
+     "period": 10,
+     "from": 5
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 5.4,
+     "from": 173
+    },
+    "swell": {
+     "height": 3.3,
+     "period": 16,
+     "from": 44
+    },
+    "secondary": {
+     "height": 1,
+     "period": 14,
+     "from": 290
+    }
+   },
+   "other": {
+    "wind": 13.2,
+    "gust": 7.4,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "halibut",
+   "gust": 7.8,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.1,
+    "control": 2.2,
+    "conditions": 2.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8.3,
+    "gust": 13.4,
+    "sea": {
+     "height": 0.9,
+     "period": 11,
+     "from": 107
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 3.5,
+     "from": 290
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 11,
+     "from": 216
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 314
+    }
+   },
+   "other": {
+    "wind": 9.9,
+    "gust": 10.6,
+    "sea": {
+     "height": 2.8
+    }
+   },
+   "species": "lingcod",
+   "gust": 13.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.9,
+    "control": 6.7,
+    "conditions": 6.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 15.2,
+    "gust": 19,
+    "sea": {
+     "height": 2.5,
+     "period": 16,
+     "from": 312
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 6.2,
+     "from": 270
+    },
+    "swell": {
+     "height": 1.9,
+     "period": 12,
+     "from": 71
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 10,
+     "from": 216
+    }
+   },
+   "other": {
+    "wind": 14.5,
+    "gust": 18.6,
+    "sea": {
+     "height": 3.9
+    }
+   },
+   "species": "reef",
+   "gust": 19,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 0,
+    "control": 0,
+    "conditions": 0,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.3,
+    "gust": 7.3,
+    "sea": {
+     "height": 0.6,
+     "period": 13,
+     "from": 10
+    },
+    "chop": {
+     "height": 0,
+     "period": 10,
+     "from": 177
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 12,
+     "from": 306
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 17,
+     "from": 182
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 7.5,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "reef",
+   "gust": 7.5,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.1,
+    "gust": 11,
+    "sea": {
+     "height": 1.7,
+     "period": 12,
+     "from": 53
+    },
+    "chop": {
+     "height": 1.7,
+     "period": 9.8,
+     "from": 105
+    },
+    "swell": {
+     "height": 2.7,
+     "period": 16,
+     "from": 94
+    },
+    "secondary": {
+     "height": 1.4,
+     "period": 9,
+     "from": 220
+    }
+   },
+   "other": {
+    "wind": 14.3,
+    "gust": 9.4,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "squid",
+   "gust": 11,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.1,
+    "control": 6.3,
+    "conditions": 6.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.4,
+    "gust": 3.4,
+    "sea": {
+     "height": 0.4,
+     "period": 13,
+     "from": 209
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 3.5,
+     "from": 33
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 12,
+     "from": 147
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 301
+    }
+   },
+   "other": {
+    "wind": 3.7,
+    "gust": 4,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "tuna",
+   "gust": 4,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2,
+    "gust": 5.7,
+    "sea": {
+     "height": 0.3,
+     "period": 7,
+     "from": 128
+    },
+    "chop": {
+     "height": 0,
+     "period": 8.6,
+     "from": 318
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 17,
+     "from": 258
+    },
+    "secondary": {
+     "height": 0,
+     "period": 12,
+     "from": 237
+    }
+   },
+   "other": {
+    "wind": 2,
+    "gust": 6.9,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "reef",
+   "gust": 6.9,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.7,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 6.2,
+    "sea": {
+     "height": 0.6,
+     "period": 10,
+     "from": 2
+    },
+    "chop": {
+     "height": 0,
+     "period": 9,
+     "from": 110
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 14,
+     "from": 247
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 12,
+     "from": 154
+    }
+   },
+   "other": {
+    "wind": 4.4,
+    "gust": 8.8,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "squid",
+   "gust": 8.8,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.3,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 11.8,
+    "gust": 17.6,
+    "sea": {
+     "height": 1,
+     "period": 17,
+     "from": 107
+    },
+    "chop": {
+     "height": 0,
+     "period": 6.1,
+     "from": 102
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 18,
+     "from": 32
+    },
+    "secondary": {
+     "height": 1.4,
+     "period": 11,
+     "from": 346
+    }
+   },
+   "other": {
+    "wind": 11.2,
+    "gust": 19.2,
+    "sea": {
+     "height": 2
+    }
+   },
+   "species": "lingcod",
+   "gust": 19.2,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.1,
+    "control": 2.6,
+    "conditions": 2.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 16.3,
+    "gust": 19.1,
+    "sea": {
+     "height": 0.8,
+     "period": 15,
+     "from": 274
+    },
+    "chop": {
+     "height": 1.9,
+     "period": 6.5,
+     "from": 248
+    },
+    "swell": {
+     "height": 2.3,
+     "period": 9,
+     "from": 20
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 10,
+     "from": 125
+    }
+   },
+   "other": {
+    "wind": 4.7,
+    "gust": 16.6,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "squid",
+   "gust": 19.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.2,
+    "control": 3.7,
+    "conditions": 3.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 9.9,
+    "gust": 13.3,
+    "sea": {
+     "height": 0.9,
+     "period": 14,
+     "from": 102
+    },
+    "chop": {
+     "height": 1,
+     "period": 5.8,
+     "from": 110
+    },
+    "swell": {
+     "height": 1,
+     "period": 15,
+     "from": 218
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 15,
+     "from": 19
+    }
+   },
+   "other": {
+    "wind": 7.2,
+    "gust": 14.5,
+    "sea": {
+     "height": 2.2
+    }
+   },
+   "species": "salmon",
+   "gust": 14.5,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.4,
+    "control": 5.9,
+    "conditions": 5.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8,
+    "gust": 10.6,
+    "sea": {
+     "height": 2.7,
+     "period": 18,
+     "from": 58
+    },
+    "chop": {
+     "height": 1.2,
+     "period": 4.4,
+     "from": 224
+    },
+    "swell": {
+     "height": 4.8,
+     "period": 12,
+     "from": 177
+    },
+    "secondary": {
+     "height": 1.5,
+     "period": 14,
+     "from": 273
+    }
+   },
+   "other": {
+    "wind": 9.8,
+    "gust": 13.7,
+    "sea": {
+     "height": 2
+    }
+   },
+   "species": "halibut",
+   "gust": 13.7,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.6,
+    "control": 3,
+    "conditions": 3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.4,
+    "gust": 11.7,
+    "sea": {
+     "height": 1.2,
+     "period": 14,
+     "from": 130
+    },
+    "chop": {
+     "height": 0,
+     "period": 5.8,
+     "from": 69
+    },
+    "swell": {
+     "height": 1.8,
+     "period": 8,
+     "from": 139
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 16,
+     "from": 193
+    }
+   },
+   "other": {
+    "wind": 6.3,
+    "gust": 9.4,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "squid",
+   "gust": 11.7,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.8,
+    "control": 9,
+    "conditions": 8.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12,
+    "gust": 13.8,
+    "sea": {
+     "height": 3.2,
+     "period": 14,
+     "from": 327
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 6.7,
+     "from": 215
+    },
+    "swell": {
+     "height": 3.2,
+     "period": 12,
+     "from": 281
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 14,
+     "from": 108
+    }
+   },
+   "other": {
+    "wind": 3.1,
+    "gust": 12.9,
+    "sea": {
+     "height": 2.2
+    }
+   },
+   "species": "reef",
+   "gust": 13.8,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5,
+    "control": 4.7,
+    "conditions": 4.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.6,
+    "gust": 10.2,
+    "sea": {
+     "height": 0.8,
+     "period": 7,
+     "from": 227
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 4.9,
+     "from": 107
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 11,
+     "from": 56
+    },
+    "secondary": {
+     "height": 0,
+     "period": 14,
+     "from": 222
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 14.1,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "tuna",
+   "gust": 14.1,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.7,
+    "control": 8.9,
+    "conditions": 8.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2,
+    "gust": 4.6,
+    "sea": {
+     "height": 0.3,
+     "period": 6,
+     "from": 246
+    },
+    "chop": {
+     "height": 0,
+     "period": 6.7,
+     "from": 293
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 13,
+     "from": 92
+    },
+    "secondary": {
+     "height": 0,
+     "period": 18,
+     "from": 110
+    }
+   },
+   "other": {
+    "wind": 2.1,
+    "gust": 4.6,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "halibut",
+   "gust": 4.6,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.6,
+    "gust": 11.2,
+    "sea": {
+     "height": 0.5,
+     "period": 14,
+     "from": 218
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 6.2,
+     "from": 38
+    },
+    "swell": {
+     "height": 1.2,
+     "period": 8,
+     "from": 195
+    },
+    "secondary": {
+     "height": 0,
+     "period": 13,
+     "from": 168
+    }
+   },
+   "other": {
+    "wind": 4.6,
+    "gust": 12.1,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "reef",
+   "gust": 12.1,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.2,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 17.8,
+    "gust": 22.8,
+    "sea": {
+     "height": 4.1,
+     "period": 18,
+     "from": 285
+    },
+    "chop": {
+     "height": 1.8,
+     "period": 3.6,
+     "from": 27
+    },
+    "swell": {
+     "height": 3.1,
+     "period": 13,
+     "from": 52
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 13,
+     "from": 289
+    }
+   },
+   "other": {
+    "wind": 17.8,
+    "gust": 23.2,
+    "sea": {
+     "height": 2.7
+    }
+   },
+   "species": "tuna",
+   "gust": 23.2,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.7,
+    "control": 6.1,
+    "conditions": 5.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12.8,
+    "gust": 14.4,
+    "sea": {
+     "height": 1.6,
+     "period": 17,
+     "from": 235
+    },
+    "chop": {
+     "height": 1,
+     "period": 8,
+     "from": 189
+    },
+    "swell": {
+     "height": 4,
+     "period": 14,
+     "from": 333
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 11,
+     "from": 146
+    }
+   },
+   "other": {
+    "wind": 3.2,
+    "gust": 13.8,
+    "sea": {
+     "height": 1.7
+    }
+   },
+   "species": "halibut",
+   "gust": 14.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.1,
+    "control": 6.4,
+    "conditions": 6.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 16.6,
+    "gust": 22,
+    "sea": {
+     "height": 0.4,
+     "period": 11,
+     "from": 314
+    },
+    "chop": {
+     "height": 1,
+     "period": 5.1,
+     "from": 11
+    },
+    "swell": {
+     "height": 3.8,
+     "period": 16,
+     "from": 157
+    },
+    "secondary": {
+     "height": 1,
+     "period": 9,
+     "from": 131
+    }
+   },
+   "other": {
+    "wind": 7.7,
+    "gust": 20,
+    "sea": {
+     "height": 4.1
+    }
+   },
+   "species": "squid",
+   "gust": 22,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 1.3,
+    "control": 2.6,
+    "conditions": 1.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.1,
+    "gust": 8,
+    "sea": {
+     "height": 0.5,
+     "period": 10,
+     "from": 172
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 8.7,
+     "from": 193
+    },
+    "swell": {
+     "height": 1.9,
+     "period": 15,
+     "from": 311
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 8,
+     "from": 317
+    }
+   },
+   "other": {
+    "wind": 8,
+    "gust": 4.3,
+    "sea": {
+     "height": 2.2
+    }
+   },
+   "species": "salmon",
+   "gust": 8,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.5,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.5,
+    "gust": 8.5,
+    "sea": {
+     "height": 0.9,
+     "period": 17,
+     "from": 246
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 4.8,
+     "from": 246
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 14,
+     "from": 120
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 11,
+     "from": 264
+    }
+   },
+   "other": {
+    "wind": 3.5,
+    "gust": 7.1,
+    "sea": {
+     "height": 0.8
+    }
+   },
+   "species": "tuna",
+   "gust": 8.5,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.6,
+    "control": 8.8,
+    "conditions": 8.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.4,
+    "gust": 7.3,
+    "sea": {
+     "height": 1.6,
+     "period": 17,
+     "from": 250
+    },
+    "chop": {
+     "height": 2.1,
+     "period": 6.7,
+     "from": 40
+    },
+    "swell": {
+     "height": 1.2,
+     "period": 15,
+     "from": 21
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 11,
+     "from": 96
+    }
+   },
+   "other": {
+    "wind": 4,
+    "gust": 4.1,
+    "sea": {
+     "height": 3.9
+    }
+   },
+   "species": "tuna",
+   "gust": 7.3,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.3,
+    "control": 6.5,
+    "conditions": 5.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8.4,
+    "gust": 11.3,
+    "sea": {
+     "height": 2.2,
+     "period": 7,
+     "from": 337
+    },
+    "chop": {
+     "height": 0,
+     "period": 10,
+     "from": 94
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 14,
+     "from": 97
+    },
+    "secondary": {
+     "height": 1,
+     "period": 8,
+     "from": 103
+    }
+   },
+   "other": {
+    "wind": 5.2,
+    "gust": 9.7,
+    "sea": {
+     "height": 0.8
+    }
+   },
+   "species": "tuna",
+   "gust": 11.3,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.4,
+    "control": 8.7,
+    "conditions": 8.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 14.2,
+    "gust": 17.2,
+    "sea": {
+     "height": 1.6,
+     "period": 13,
+     "from": 152
+    },
+    "chop": {
+     "height": 1,
+     "period": 5.7,
+     "from": 172
+    },
+    "swell": {
+     "height": 3,
+     "period": 10,
+     "from": 325
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 18,
+     "from": 173
+    }
+   },
+   "other": {
+    "wind": 12,
+    "gust": 20.6,
+    "sea": {
+     "height": 1.1
+    }
+   },
+   "species": "squid",
+   "gust": 20.6,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.2,
+    "control": 2.9,
+    "conditions": 2.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.3,
+    "gust": 8.8,
+    "sea": {
+     "height": 1.7,
+     "period": 16,
+     "from": 67
+    },
+    "chop": {
+     "height": 1,
+     "period": 4,
+     "from": 129
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 17,
+     "from": 168
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 13,
+     "from": 108
+    }
+   },
+   "other": {
+    "wind": 2.4,
+    "gust": 5.4,
+    "sea": {
+     "height": 2.6
+    }
+   },
+   "species": "reef",
+   "gust": 8.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.3,
+    "control": 8.5,
+    "conditions": 8.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12,
+    "gust": 15.3,
+    "sea": {
+     "height": 0.6,
+     "period": 6,
+     "from": 358
+    },
+    "chop": {
+     "height": 1.3,
+     "period": 8.4,
+     "from": 246
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 8,
+     "from": 210
+    },
+    "secondary": {
+     "height": 1,
+     "period": 13,
+     "from": 142
+    }
+   },
+   "other": {
+    "wind": 4.1,
+    "gust": 17.5,
+    "sea": {
+     "height": 1.3
+    }
+   },
+   "species": "halibut",
+   "gust": 17.5,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.6,
+    "control": 1.3,
+    "conditions": 1.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13.6,
+    "gust": 15.8,
+    "sea": {
+     "height": 3.8,
+     "period": 14,
+     "from": 292
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 7.3,
+     "from": 146
+    },
+    "swell": {
+     "height": 2.4,
+     "period": 15,
+     "from": 33
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 14,
+     "from": 11
+    }
+   },
+   "other": {
+    "wind": 14.6,
+    "gust": 19.6,
+    "sea": {
+     "height": 0.3
+    }
+   },
+   "species": "salmon",
+   "gust": 19.6,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 0.8,
+    "control": 2.2,
+    "conditions": 0.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.6,
+    "gust": 8.2,
+    "sea": {
+     "height": 0.7,
+     "period": 10,
+     "from": 245
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 6.6,
+     "from": 167
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 15,
+     "from": 270
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 13,
+     "from": 33
+    }
+   },
+   "other": {
+    "wind": 2.6,
+    "gust": 8.1,
+    "sea": {
+     "height": 1.1
+    }
+   },
+   "species": "squid",
+   "gust": 8.2,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.3,
+    "control": 9.4,
+    "conditions": 9.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.4,
+    "gust": 10.7,
+    "sea": {
+     "height": 1.4,
+     "period": 11,
+     "from": 9
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 8.1,
+     "from": 167
+    },
+    "swell": {
+     "height": 1.7,
+     "period": 10,
+     "from": 332
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 10,
+     "from": 219
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 12.4,
+    "sea": {
+     "height": 1.7
+    }
+   },
+   "species": "halibut",
+   "gust": 12.4,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.8,
+    "control": 7,
+    "conditions": 6.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.9,
+    "gust": 4.5,
+    "sea": {
+     "height": 0.4,
+     "period": 9,
+     "from": 183
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 7.4,
+     "from": 161
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 15,
+     "from": 266
+    },
+    "secondary": {
+     "height": 0,
+     "period": 12,
+     "from": 322
+    }
+   },
+   "other": {
+    "wind": 2.2,
+    "gust": 6.8,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "halibut",
+   "gust": 6.8,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9,
+    "control": 8.9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.5,
+    "gust": 5.5,
+    "sea": {
+     "height": 0.8,
+     "period": 16,
+     "from": 351
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 9.1,
+     "from": 114
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 10,
+     "from": 232
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 15,
+     "from": 265
+    }
+   },
+   "other": {
+    "wind": 3.5,
+    "gust": 4.1,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "salmon",
+   "gust": 5.5,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.5,
+    "gust": 9.1,
+    "sea": {
+     "height": 0.5,
+     "period": 7,
+     "from": 44
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 8.7,
+     "from": 230
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 13,
+     "from": 131
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 86
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 6.7,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "lingcod",
+   "gust": 9.1,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.8,
+    "control": 8.8,
+    "conditions": 8.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.6,
+    "gust": 10.3,
+    "sea": {
+     "height": 3.4,
+     "period": 16,
+     "from": 317
+    },
+    "chop": {
+     "height": 1.1,
+     "period": 7,
+     "from": 314
+    },
+    "swell": {
+     "height": 3.2,
+     "period": 8,
+     "from": 229
+    },
+    "secondary": {
+     "height": 1.4,
+     "period": 17,
+     "from": 80
+    }
+   },
+   "other": {
+    "wind": 11.8,
+    "gust": 10.7,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "tuna",
+   "gust": 10.7,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.9,
+    "control": 3.9,
+    "conditions": 2.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.9,
+    "gust": 7.5,
+    "sea": {
+     "height": 0.6,
+     "period": 8,
+     "from": 258
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 2.7,
+     "from": 90
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 10,
+     "from": 99
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 16,
+     "from": 123
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 3.3,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "halibut",
+   "gust": 7.5,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.9,
+    "conditions": 9.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 11.2,
+    "gust": 16.9,
+    "sea": {
+     "height": 1.2,
+     "period": 17,
+     "from": 93
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 8.2,
+     "from": 319
+    },
+    "swell": {
+     "height": 3,
+     "period": 8,
+     "from": 140
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 14,
+     "from": 103
+    }
+   },
+   "other": {
+    "wind": 14.3,
+    "gust": 12.7,
+    "sea": {
+     "height": 3.7
+    }
+   },
+   "species": "squid",
+   "gust": 16.9,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 1.4,
+    "control": 2.8,
+    "conditions": 1.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 4.4,
+    "sea": {
+     "height": 0.4,
+     "period": 8,
+     "from": 13
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 7.7,
+     "from": 293
+    },
+    "swell": {
+     "height": 1.5,
+     "period": 13,
+     "from": 312
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 14,
+     "from": 250
+    }
+   },
+   "other": {
+    "wind": 2.7,
+    "gust": 11.8,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "squid",
+   "gust": 11.8,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.8,
+    "control": 9.9,
+    "conditions": 9.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.6,
+    "gust": 6.1,
+    "sea": {
+     "height": 2.5,
+     "period": 15,
+     "from": 68
+    },
+    "chop": {
+     "height": 2,
+     "period": 9,
+     "from": 2
+    },
+    "swell": {
+     "height": 2.4,
+     "period": 14,
+     "from": 152
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 17,
+     "from": 261
+    }
+   },
+   "other": {
+    "wind": 4.4,
+    "gust": 13.6,
+    "sea": {
+     "height": 3.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 13.6,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6,
+    "control": 5.7,
+    "conditions": 5.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.7,
+    "gust": 8.4,
+    "sea": {
+     "height": 1.9,
+     "period": 13,
+     "from": 155
+    },
+    "chop": {
+     "height": 0.8,
+     "period": 8.9,
+     "from": 229
+    },
+    "swell": {
+     "height": 2.1,
+     "period": 14,
+     "from": 278
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 14,
+     "from": 127
+    }
+   },
+   "other": {
+    "wind": 9.2,
+    "gust": 7.6,
+    "sea": {
+     "height": 0.8
+    }
+   },
+   "species": "salmon",
+   "gust": 8.4,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.3,
+    "control": 9.3,
+    "conditions": 9.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.1,
+    "gust": 6.3,
+    "sea": {
+     "height": 0.9,
+     "period": 14,
+     "from": 237
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 4.5,
+     "from": 34
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 11,
+     "from": 295
+    },
+    "secondary": {
+     "height": 0,
+     "period": 9,
+     "from": 308
+    }
+   },
+   "other": {
+    "wind": 6.4,
+    "gust": 12,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "tuna",
+   "gust": 12,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9,
+    "control": 9.2,
+    "conditions": 9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 9.8,
+    "gust": 12.8,
+    "sea": {
+     "height": 1.4,
+     "period": 16,
+     "from": 348
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 7.7,
+     "from": 191
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 16,
+     "from": 316
+    },
+    "secondary": {
+     "height": 0,
+     "period": 15,
+     "from": 20
+    }
+   },
+   "other": {
+    "wind": 6.6,
+    "gust": 16.4,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "lingcod",
+   "gust": 16.4,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.7,
+    "control": 8.5,
+    "conditions": 8.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.3,
+    "gust": 8.6,
+    "sea": {
+     "height": 1.9,
+     "period": 10,
+     "from": 345
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 2.2,
+     "from": 329
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 10,
+     "from": 101
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 13,
+     "from": 102
+    }
+   },
+   "other": {
+    "wind": 6.1,
+    "gust": 6.3,
+    "sea": {
+     "height": 2.4
+    }
+   },
+   "species": "salmon",
+   "gust": 8.6,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.4,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.7,
+    "gust": 7.1,
+    "sea": {
+     "height": 0.6,
+     "period": 15,
+     "from": 222
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 2.7,
+     "from": 327
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 15,
+     "from": 343
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 14,
+     "from": 51
+    }
+   },
+   "other": {
+    "wind": 2.1,
+    "gust": 3.4,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "lingcod",
+   "gust": 7.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.9,
+    "control": 9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.4,
+    "gust": 5.4,
+    "sea": {
+     "height": 1.4,
+     "period": 10,
+     "from": 53
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 7.4,
+     "from": 26
+    },
+    "swell": {
+     "height": 1.8,
+     "period": 9,
+     "from": 278
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 13,
+     "from": 177
+    }
+   },
+   "other": {
+    "wind": 2.2,
+    "gust": 7.4,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "reef",
+   "gust": 7.4,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 5.8,
+    "sea": {
+     "height": 1.2,
+     "period": 12,
+     "from": 181
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 8.4,
+     "from": 46
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 16,
+     "from": 289
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 18,
+     "from": 106
+    }
+   },
+   "other": {
+    "wind": 4.8,
+    "gust": 10.4,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "squid",
+   "gust": 10.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.6,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 17.1,
+    "gust": 18.9,
+    "sea": {
+     "height": 4.1,
+     "period": 10,
+     "from": 208
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 6,
+     "from": 118
+    },
+    "swell": {
+     "height": 3.8,
+     "period": 18,
+     "from": 257
+    },
+    "secondary": {
+     "height": 1.7,
+     "period": 13,
+     "from": 77
+    }
+   },
+   "other": {
+    "wind": 12.3,
+    "gust": 20.1,
+    "sea": {
+     "height": 3.2
+    }
+   },
+   "species": "halibut",
+   "gust": 20.1,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.5,
+    "control": 2.9,
+    "conditions": 2.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.4,
+    "gust": 6.7,
+    "sea": {
+     "height": 1.5,
+     "period": 10,
+     "from": 73
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 5.2,
+     "from": 73
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 17,
+     "from": 359
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 12,
+     "from": 29
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 8.9,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "tuna",
+   "gust": 8.9,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.8,
+    "control": 9.9,
+    "conditions": 9.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.2,
+    "gust": 2.8,
+    "sea": {
+     "height": 0.4,
+     "period": 7,
+     "from": 174
+    },
+    "chop": {
+     "height": 0,
+     "period": 6.7,
+     "from": 61
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 9,
+     "from": 269
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 16,
+     "from": 238
+    }
+   },
+   "other": {
+    "wind": 2.6,
+    "gust": 9.9,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "reef",
+   "gust": 9.9,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.8,
+    "conditions": 9.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 18.7,
+    "gust": 21.8,
+    "sea": {
+     "height": 3.4,
+     "period": 9,
+     "from": 40
+    },
+    "chop": {
+     "height": 1.6,
+     "period": 7,
+     "from": 287
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 15,
+     "from": 59
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 15,
+     "from": 117
+    }
+   },
+   "other": {
+    "wind": 9.6,
+    "gust": 25.8,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "squid",
+   "gust": 25.8,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 1.4,
+    "control": 2.5,
+    "conditions": 1.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.1,
+    "gust": 8.1,
+    "sea": {
+     "height": 1.3,
+     "period": 9,
+     "from": 228
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 9,
+     "from": 263
+    },
+    "swell": {
+     "height": 1.1,
+     "period": 10,
+     "from": 15
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 12,
+     "from": 191
+    }
+   },
+   "other": {
+    "wind": 4.6,
+    "gust": 7.9,
+    "sea": {
+     "height": 1.3
+    }
+   },
+   "species": "salmon",
+   "gust": 8.1,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.8,
+    "conditions": 9.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.7,
+    "gust": 10.6,
+    "sea": {
+     "height": 1.6,
+     "period": 15,
+     "from": 320
+    },
+    "chop": {
+     "height": 1.5,
+     "period": 4.5,
+     "from": 194
+    },
+    "swell": {
+     "height": 1.6,
+     "period": 13,
+     "from": 304
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 9,
+     "from": 97
+    }
+   },
+   "other": {
+    "wind": 5.3,
+    "gust": 12.7,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "reef",
+   "gust": 12.7,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.4,
+    "control": 5.9,
+    "conditions": 5.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8.5,
+    "gust": 12.4,
+    "sea": {
+     "height": 3.9,
+     "period": 11,
+     "from": 14
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 6.5,
+     "from": 4
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 17,
+     "from": 74
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 10,
+     "from": 300
+    }
+   },
+   "other": {
+    "wind": 10.7,
+    "gust": 10.9,
+    "sea": {
+     "height": 3.9
+    }
+   },
+   "species": "squid",
+   "gust": 12.4,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.5,
+    "control": 7.1,
+    "conditions": 6.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.7,
+    "gust": 6.9,
+    "sea": {
+     "height": 1.8,
+     "period": 13,
+     "from": 336
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 9.2,
+     "from": 234
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 16,
+     "from": 327
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 14,
+     "from": 205
+    }
+   },
+   "other": {
+    "wind": 3.6,
+    "gust": 11.3,
+    "sea": {
+     "height": 1.5
+    }
+   },
+   "species": "tuna",
+   "gust": 11.3,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.9,
+    "control": 9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.9,
+    "gust": 7.8,
+    "sea": {
+     "height": 0.9,
+     "period": 9,
+     "from": 261
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 3.7,
+     "from": 147
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 18,
+     "from": 254
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 16,
+     "from": 191
+    }
+   },
+   "other": {
+    "wind": 6.2,
+    "gust": 7.4,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "tuna",
+   "gust": 7.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.4,
+    "control": 9.5,
+    "conditions": 9.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.6,
+    "gust": 9.2,
+    "sea": {
+     "height": 1.1,
+     "period": 17,
+     "from": 346
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 6.2,
+     "from": 319
+    },
+    "swell": {
+     "height": 2.1,
+     "period": 13,
+     "from": 188
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 11,
+     "from": 33
+    }
+   },
+   "other": {
+    "wind": 3.1,
+    "gust": 13.2,
+    "sea": {
+     "height": 1.9
+    }
+   },
+   "species": "halibut",
+   "gust": 13.2,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.4,
+    "control": 8.2,
+    "conditions": 8.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 9.6,
+    "gust": 12.2,
+    "sea": {
+     "height": 2.6,
+     "period": 17,
+     "from": 212
+    },
+    "chop": {
+     "height": 2,
+     "period": 4.4,
+     "from": 203
+    },
+    "swell": {
+     "height": 3.1,
+     "period": 16,
+     "from": 322
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 11,
+     "from": 4
+    }
+   },
+   "other": {
+    "wind": 15.8,
+    "gust": 15.5,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "reef",
+   "gust": 15.5,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.6,
+    "control": 5.9,
+    "conditions": 5.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.5,
+    "gust": 9.1,
+    "sea": {
+     "height": 3.4,
+     "period": 17,
+     "from": 218
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 7.2,
+     "from": 282
+    },
+    "swell": {
+     "height": 4.3,
+     "period": 14,
+     "from": 256
+    },
+    "secondary": {
+     "height": 1.6,
+     "period": 16,
+     "from": 186
+    }
+   },
+   "other": {
+    "wind": 2.2,
+    "gust": 7.8,
+    "sea": {
+     "height": 1.1
+    }
+   },
+   "species": "reef",
+   "gust": 9.1,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.4,
+    "control": 6.3,
+    "conditions": 5.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.5,
+    "gust": 10.2,
+    "sea": {
+     "height": 2.7,
+     "period": 9,
+     "from": 97
+    },
+    "chop": {
+     "height": 1.2,
+     "period": 5.1,
+     "from": 188
+    },
+    "swell": {
+     "height": 2.3,
+     "period": 15,
+     "from": 210
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 14,
+     "from": 121
+    }
+   },
+   "other": {
+    "wind": 11.3,
+    "gust": 9.9,
+    "sea": {
+     "height": 2.4
+    }
+   },
+   "species": "salmon",
+   "gust": 10.2,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.9,
+    "control": 7.1,
+    "conditions": 6.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13.5,
+    "gust": 18.8,
+    "sea": {
+     "height": 1.5,
+     "period": 12,
+     "from": 39
+    },
+    "chop": {
+     "height": 0.7,
+     "period": 4,
+     "from": 82
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 17,
+     "from": 159
+    },
+    "secondary": {
+     "height": 0.9,
+     "period": 14,
+     "from": 280
+    }
+   },
+   "other": {
+    "wind": 4.5,
+    "gust": 18.3,
+    "sea": {
+     "height": 2.8
+    }
+   },
+   "species": "lingcod",
+   "gust": 18.8,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 0.5,
+    "control": 0,
+    "conditions": 0,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.1,
+    "gust": 8.8,
+    "sea": {
+     "height": 0.4,
+     "period": 15,
+     "from": 51
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 9.3,
+     "from": 72
+    },
+    "swell": {
+     "height": 0.8,
+     "period": 9,
+     "from": 58
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 12,
+     "from": 117
+    }
+   },
+   "other": {
+    "wind": 3.1,
+    "gust": 11.3,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "reef",
+   "gust": 11.3,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.7,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8.5,
+    "gust": 10,
+    "sea": {
+     "height": 2.1,
+     "period": 8,
+     "from": 24
+    },
+    "chop": {
+     "height": 1.1,
+     "period": 6.7,
+     "from": 119
+    },
+    "swell": {
+     "height": 2.2,
+     "period": 15,
+     "from": 109
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 9,
+     "from": 103
+    }
+   },
+   "other": {
+    "wind": 6.4,
+    "gust": 14.7,
+    "sea": {
+     "height": 1.8
+    }
+   },
+   "species": "salmon",
+   "gust": 14.7,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.5,
+    "control": 7,
+    "conditions": 6.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 10.8,
+    "gust": 14,
+    "sea": {
+     "height": 2.7,
+     "period": 8,
+     "from": 115
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 5,
+     "from": 61
+    },
+    "swell": {
+     "height": 3.1,
+     "period": 18,
+     "from": 111
+    },
+    "secondary": {
+     "height": 1,
+     "period": 11,
+     "from": 167
+    }
+   },
+   "other": {
+    "wind": 10.4,
+    "gust": 14.8,
+    "sea": {
+     "height": 2.5
+    }
+   },
+   "species": "reef",
+   "gust": 14.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.5,
+    "control": 6.3,
+    "conditions": 6.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13.1,
+    "gust": 15,
+    "sea": {
+     "height": 2.9,
+     "period": 16,
+     "from": 83
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 6.1,
+     "from": 223
+    },
+    "swell": {
+     "height": 2.9,
+     "period": 13,
+     "from": 260
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 15,
+     "from": 351
+    }
+   },
+   "other": {
+    "wind": 10,
+    "gust": 18.4,
+    "sea": {
+     "height": 2.8
+    }
+   },
+   "species": "tuna",
+   "gust": 18.4,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 3.5,
+    "control": 4.5,
+    "conditions": 3.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 11.9,
+    "gust": 13.4,
+    "sea": {
+     "height": 1,
+     "period": 8,
+     "from": 269
+    },
+    "chop": {
+     "height": 1.5,
+     "period": 4.3,
+     "from": 272
+    },
+    "swell": {
+     "height": 2.2,
+     "period": 18,
+     "from": 90
+    },
+    "secondary": {
+     "height": 1,
+     "period": 10,
+     "from": 209
+    }
+   },
+   "other": {
+    "wind": 3.3,
+    "gust": 18,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "squid",
+   "gust": 18,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.2,
+    "control": 5.6,
+    "conditions": 5.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5,
+    "gust": 5.4,
+    "sea": {
+     "height": 1.2,
+     "period": 8,
+     "from": 137
+    },
+    "chop": {
+     "height": 1.1,
+     "period": 5,
+     "from": 194
+    },
+    "swell": {
+     "height": 1,
+     "period": 18,
+     "from": 277
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 15,
+     "from": 66
+    }
+   },
+   "other": {
+    "wind": 9.4,
+    "gust": 8.3,
+    "sea": {
+     "height": 2.4
+    }
+   },
+   "species": "halibut",
+   "gust": 8.3,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.6,
+    "control": 7.1,
+    "conditions": 7.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3,
+    "gust": 3.1,
+    "sea": {
+     "height": 0.8,
+     "period": 15,
+     "from": 132
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 6.5,
+     "from": 160
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 14,
+     "from": 208
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 13,
+     "from": 141
+    }
+   },
+   "other": {
+    "wind": 2.3,
+    "gust": 10.9,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "tuna",
+   "gust": 10.9,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.8,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.9,
+    "gust": 6,
+    "sea": {
+     "height": 0.9,
+     "period": 6,
+     "from": 91
+    },
+    "chop": {
+     "height": 0,
+     "period": 5.6,
+     "from": 94
+    },
+    "swell": {
+     "height": 1.5,
+     "period": 11,
+     "from": 179
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 9,
+     "from": 108
+    }
+   },
+   "other": {
+    "wind": 3.9,
+    "gust": 8.5,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "salmon",
+   "gust": 8.5,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 10,
+    "conditions": 10,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.7,
+    "gust": 8,
+    "sea": {
+     "height": 0.4,
+     "period": 9,
+     "from": 111
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 5.5,
+     "from": 215
+    },
+    "swell": {
+     "height": 1.8,
+     "period": 16,
+     "from": 228
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 11,
+     "from": 294
+    }
+   },
+   "other": {
+    "wind": 7.7,
+    "gust": 11.3,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 11.3,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.4,
+    "control": 6.1,
+    "conditions": 6.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.8,
+    "gust": 6.3,
+    "sea": {
+     "height": 3.5,
+     "period": 10,
+     "from": 193
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 9.7,
+     "from": 295
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 13,
+     "from": 313
+    },
+    "secondary": {
+     "height": 1.1,
+     "period": 10,
+     "from": 99
+    }
+   },
+   "other": {
+    "wind": 7,
+    "gust": 10.6,
+    "sea": {
+     "height": 2.9
+    }
+   },
+   "species": "squid",
+   "gust": 10.6,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.4,
+    "control": 8.1,
+    "conditions": 7.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.7,
+    "gust": 6.4,
+    "sea": {
+     "height": 1.1,
+     "period": 14,
+     "from": 63
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 2.6,
+     "from": 178
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 14,
+     "from": 165
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 9,
+     "from": 44
+    }
+   },
+   "other": {
+    "wind": 4.2,
+    "gust": 8.8,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "salmon",
+   "gust": 8.8,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.1,
+    "control": 9.4,
+    "conditions": 9.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.7,
+    "gust": 4.2,
+    "sea": {
+     "height": 1,
+     "period": 8,
+     "from": 335
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 7.2,
+     "from": 197
+    },
+    "swell": {
+     "height": 2.4,
+     "period": 12,
+     "from": 84
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 16,
+     "from": 325
+    }
+   },
+   "other": {
+    "wind": 9.9,
+    "gust": 5.6,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "reef",
+   "gust": 5.6,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.5,
+    "control": 8.1,
+    "conditions": 8.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 10.8,
+    "gust": 12.7,
+    "sea": {
+     "height": 1.9,
+     "period": 8,
+     "from": 138
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 7.5,
+     "from": 244
+    },
+    "swell": {
+     "height": 0.6,
+     "period": 15,
+     "from": 111
+    },
+    "secondary": {
+     "height": 0.9,
+     "period": 11,
+     "from": 317
+    }
+   },
+   "other": {
+    "wind": 4.1,
+    "gust": 11.2,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "reef",
+   "gust": 12.7,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 5.5,
+    "control": 4.8,
+    "conditions": 4.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 10.6,
+    "gust": 12.3,
+    "sea": {
+     "height": 3,
+     "period": 11,
+     "from": 96
+    },
+    "chop": {
+     "height": 1.2,
+     "period": 9.1,
+     "from": 295
+    },
+    "swell": {
+     "height": 2.2,
+     "period": 16,
+     "from": 127
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 16,
+     "from": 340
+    }
+   },
+   "other": {
+    "wind": 10.7,
+    "gust": 16.5,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "reef",
+   "gust": 16.5,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.4,
+    "control": 6.1,
+    "conditions": 6.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.6,
+    "gust": 4.2,
+    "sea": {
+     "height": 0.5,
+     "period": 15,
+     "from": 204
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 3,
+     "from": 216
+    },
+    "swell": {
+     "height": 0.7,
+     "period": 15,
+     "from": 258
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 11,
+     "from": 264
+    }
+   },
+   "other": {
+    "wind": 4.2,
+    "gust": 6.2,
+    "sea": {
+     "height": 0.4
+    }
+   },
+   "species": "halibut",
+   "gust": 6.2,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 10,
+    "control": 9.9,
+    "conditions": 9.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 8.3,
+    "gust": 8.9,
+    "sea": {
+     "height": 3,
+     "period": 10,
+     "from": 244
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 5.5,
+     "from": 48
+    },
+    "swell": {
+     "height": 1,
+     "period": 16,
+     "from": 12
+    },
+    "secondary": {
+     "height": 1.3,
+     "period": 12,
+     "from": 15
+    }
+   },
+   "other": {
+    "wind": 16.8,
+    "gust": 10.5,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "squid",
+   "gust": 10.5,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.4,
+    "control": 6.8,
+    "conditions": 6.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.8,
+    "gust": 9.2,
+    "sea": {
+     "height": 1.9,
+     "period": 6,
+     "from": 8
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 3.1,
+     "from": 219
+    },
+    "swell": {
+     "height": 1.2,
+     "period": 14,
+     "from": 46
+    },
+    "secondary": {
+     "height": 0.6,
+     "period": 16,
+     "from": 352
+    }
+   },
+   "other": {
+    "wind": 5.4,
+    "gust": 10.1,
+    "sea": {
+     "height": 2.1
+    }
+   },
+   "species": "lingcod",
+   "gust": 10.1,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.9,
+    "control": 8.9,
+    "conditions": 8.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.3,
+    "gust": 8,
+    "sea": {
+     "height": 1.7,
+     "period": 15,
+     "from": 310
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 7,
+     "from": 170
+    },
+    "swell": {
+     "height": 2.9,
+     "period": 18,
+     "from": 95
+    },
+    "secondary": {
+     "height": 0,
+     "period": 9,
+     "from": 164
+    }
+   },
+   "other": {
+    "wind": 7.4,
+    "gust": 11.2,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 11.2,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.4,
+    "conditions": 9.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 9.3,
+    "gust": 14.2,
+    "sea": {
+     "height": 2.1,
+     "period": 17,
+     "from": 92
+    },
+    "chop": {
+     "height": 2.4,
+     "period": 3.7,
+     "from": 78
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 14,
+     "from": 38
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 16,
+     "from": 342
+    }
+   },
+   "other": {
+    "wind": 10.5,
+    "gust": 12,
+    "sea": {
+     "height": 3
+    }
+   },
+   "species": "salmon",
+   "gust": 14.2,
+   "boat": {
+    "loa_ft": 17,
+    "hull": "flat",
+    "layout": "skiff"
+   },
+   "factors": {
+    "sea": 0.5690750937913781,
+    "wind": 0.7618140479134915,
+    "chopPeriod": 5.2,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 4.3,
+    "control": 4.8,
+    "conditions": 4.3,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.8,
+    "gust": 3.9,
+    "sea": {
+     "height": 0.6,
+     "period": 11,
+     "from": 132
+    },
+    "chop": {
+     "height": 0.5,
+     "period": 3.8,
+     "from": 2
+    },
+    "swell": {
+     "height": 1.5,
+     "period": 8,
+     "from": 345
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 15,
+     "from": 225
+    }
+   },
+   "other": {
+    "wind": 6.2,
+    "gust": 8.3,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "tuna",
+   "gust": 8.3,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.8,
+    "control": 9.8,
+    "conditions": 9.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.5,
+    "gust": 3.8,
+    "sea": {
+     "height": 0.5,
+     "period": 8,
+     "from": 200
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 8.9,
+     "from": 256
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 17,
+     "from": 32
+    },
+    "secondary": {
+     "height": 0,
+     "period": 14,
+     "from": 88
+    }
+   },
+   "other": {
+    "wind": 2.7,
+    "gust": 10.4,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "squid",
+   "gust": 10.4,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.8,
+    "conditions": 9.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 10,
+    "gust": 11.6,
+    "sea": {
+     "height": 1.2,
+     "period": 17,
+     "from": 352
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 8.6,
+     "from": 28
+    },
+    "swell": {
+     "height": 2.2,
+     "period": 10,
+     "from": 90
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 16,
+     "from": 184
+    }
+   },
+   "other": {
+    "wind": 13.8,
+    "gust": 13.2,
+    "sea": {
+     "height": 2.4
+    }
+   },
+   "species": "reef",
+   "gust": 13.2,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.4,
+    "control": 1.4,
+    "conditions": 1.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 16,
+    "gust": 17.9,
+    "sea": {
+     "height": 4.7,
+     "period": 7,
+     "from": 233
+    },
+    "chop": {
+     "height": 1,
+     "period": 6.6,
+     "from": 18
+    },
+    "swell": {
+     "height": 1.7,
+     "period": 17,
+     "from": 254
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 17,
+     "from": 256
+    }
+   },
+   "other": {
+    "wind": 7.9,
+    "gust": 17.8,
+    "sea": {
+     "height": 3.5
+    }
+   },
+   "species": "lingcod",
+   "gust": 17.9,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 5.3,
+    "control": 4.8,
+    "conditions": 4.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13.7,
+    "gust": 17,
+    "sea": {
+     "height": 3,
+     "period": 12,
+     "from": 51
+    },
+    "chop": {
+     "height": 1.5,
+     "period": 8.2,
+     "from": 193
+    },
+    "swell": {
+     "height": 3.7,
+     "period": 14,
+     "from": 121
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 14,
+     "from": 285
+    }
+   },
+   "other": {
+    "wind": 15.4,
+    "gust": 16.2,
+    "sea": {
+     "height": 4
+    }
+   },
+   "species": "salmon",
+   "gust": 17,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 0.8,
+    "control": 2.2,
+    "conditions": 0.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.4,
+    "gust": 8.5,
+    "sea": {
+     "height": 1.1,
+     "period": 8,
+     "from": 150
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 4.3,
+     "from": 33
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 17,
+     "from": 241
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 11,
+     "from": 110
+    }
+   },
+   "other": {
+    "wind": 3.4,
+    "gust": 10.3,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "squid",
+   "gust": 10.3,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.4,
+    "control": 9.5,
+    "conditions": 9.4,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.7,
+    "gust": 12.6,
+    "sea": {
+     "height": 0.4,
+     "period": 11,
+     "from": 164
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 7.6,
+     "from": 125
+    },
+    "swell": {
+     "height": 0.3,
+     "period": 15,
+     "from": 322
+    },
+    "secondary": {
+     "height": 0.2,
+     "period": 13,
+     "from": 296
+    }
+   },
+   "other": {
+    "wind": 5.4,
+    "gust": 7,
+    "sea": {
+     "height": 0.7
+    }
+   },
+   "species": "tuna",
+   "gust": 12.6,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.8,
+    "control": 9,
+    "conditions": 8.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.8,
+    "gust": 4.8,
+    "sea": {
+     "height": 3.4,
+     "period": 15,
+     "from": 239
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 5.3,
+     "from": 43
+    },
+    "swell": {
+     "height": 1.5,
+     "period": 14,
+     "from": 77
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 17,
+     "from": 258
+    }
+   },
+   "other": {
+    "wind": 4.1,
+    "gust": 4.5,
+    "sea": {
+     "height": 1.2
+    }
+   },
+   "species": "reef",
+   "gust": 4.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 7.9,
+    "control": 8.6,
+    "conditions": 7.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 12.7,
+    "gust": 12.7,
+    "sea": {
+     "height": 2.2,
+     "period": 15,
+     "from": 85
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 6.5,
+     "from": 196
+    },
+    "swell": {
+     "height": 1,
+     "period": 13,
+     "from": 25
+    },
+    "secondary": {
+     "height": 1.2,
+     "period": 14,
+     "from": 167
+    }
+   },
+   "other": {
+    "wind": 4.7,
+    "gust": 14.4,
+    "sea": {
+     "height": 1.6
+    }
+   },
+   "species": "reef",
+   "gust": 14.4,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.4,
+    "control": 8,
+    "conditions": 8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.6,
+    "gust": 5.1,
+    "sea": {
+     "height": 1.5,
+     "period": 17,
+     "from": 345
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 5.8,
+     "from": 250
+    },
+    "swell": {
+     "height": 1.1,
+     "period": 16,
+     "from": 43
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 11,
+     "from": 301
+    }
+   },
+   "other": {
+    "wind": 5.2,
+    "gust": 6.3,
+    "sea": {
+     "height": 1.4
+    }
+   },
+   "species": "lingcod",
+   "gust": 6.3,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8,
+    "control": 8,
+    "conditions": 8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.9,
+    "gust": 5.2,
+    "sea": {
+     "height": 0.8,
+     "period": 8,
+     "from": 45
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 4.5,
+     "from": 171
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 17,
+     "from": 3
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 15,
+     "from": 240
+    }
+   },
+   "other": {
+    "wind": 2.5,
+    "gust": 6.5,
+    "sea": {
+     "height": 1.6
+    }
+   },
+   "species": "tuna",
+   "gust": 6.5,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.6,
+    "control": 8.4,
+    "conditions": 7.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.7,
+    "gust": 5.2,
+    "sea": {
+     "height": 3.1,
+     "period": 9,
+     "from": 193
+    },
+    "chop": {
+     "height": 0.9,
+     "period": 3.7,
+     "from": 292
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 12,
+     "from": 97
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 15,
+     "from": 4
+    }
+   },
+   "other": {
+    "wind": 9.4,
+    "gust": 7.7,
+    "sea": {
+     "height": 2.9
+    }
+   },
+   "species": "lingcod",
+   "gust": 7.7,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.3,
+    "control": 8.1,
+    "conditions": 8.1,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.7,
+    "gust": 7.7,
+    "sea": {
+     "height": 0.5,
+     "period": 12,
+     "from": 282
+    },
+    "chop": {
+     "height": 0.8,
+     "period": 2.4,
+     "from": 132
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 10,
+     "from": 345
+    },
+    "secondary": {
+     "height": 0.8,
+     "period": 10,
+     "from": 329
+    }
+   },
+   "other": {
+    "wind": 13.3,
+    "gust": 7.2,
+    "sea": {
+     "height": 2.5
+    }
+   },
+   "species": "squid",
+   "gust": 7.7,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6.8,
+    "control": 7,
+    "conditions": 6.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6,
+    "gust": 11,
+    "sea": {
+     "height": 0.4,
+     "period": 10,
+     "from": 93
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 5.3,
+     "from": 132
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 14,
+     "from": 286
+    },
+    "secondary": {
+     "height": 0.4,
+     "period": 10,
+     "from": 47
+    }
+   },
+   "other": {
+    "wind": 2.4,
+    "gust": 8.1,
+    "sea": {
+     "height": 2.1
+    }
+   },
+   "species": "salmon",
+   "gust": 11,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 6.5,
+    "control": 7.3,
+    "conditions": 6.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 5.3,
+    "gust": 7,
+    "sea": {
+     "height": 1.9,
+     "period": 17,
+     "from": 225
+    },
+    "chop": {
+     "height": 0.4,
+     "period": 8.8,
+     "from": 73
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 11,
+     "from": 341
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 12,
+     "from": 162
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 6.9,
+    "sea": {
+     "height": 2
+    }
+   },
+   "species": "salmon",
+   "gust": 7,
+   "boat": {
+    "loa_ft": 23,
+    "hull": "deep-v",
+    "layout": "walkaround"
+   },
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.7,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.7,
+    "gust": 10.4,
+    "sea": {
+     "height": 2.4,
+     "period": 14,
+     "from": 231
+    },
+    "chop": {
+     "height": 0.2,
+     "period": 2.8,
+     "from": 340
+    },
+    "swell": {
+     "height": 1.4,
+     "period": 13,
+     "from": 275
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 12,
+     "from": 188
+    }
+   },
+   "other": {
+    "wind": 3,
+    "gust": 8.8,
+    "sea": {
+     "height": 2.3
+    }
+   },
+   "species": "reef",
+   "gust": 10.4,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.7,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.3,
+    "gust": 4.4,
+    "sea": {
+     "height": 3.2,
+     "period": 10,
+     "from": 226
+    },
+    "chop": {
+     "height": 1.4,
+     "period": 2,
+     "from": 329
+    },
+    "swell": {
+     "height": 2.1,
+     "period": 12,
+     "from": 1
+    },
+    "secondary": {
+     "height": 1,
+     "period": 10,
+     "from": 117
+    }
+   },
+   "other": {
+    "wind": 14.8,
+    "gust": 6.3,
+    "sea": {
+     "height": 2.7
+    }
+   },
+   "species": "tuna",
+   "gust": 6.3,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 1.8,
+    "control": 2.7,
+    "conditions": 1.8,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4.1,
+    "gust": 7.1,
+    "sea": {
+     "height": 1,
+     "period": 7,
+     "from": 337
+    },
+    "chop": {
+     "height": 1.3,
+     "period": 5.3,
+     "from": 330
+    },
+    "swell": {
+     "height": 1.8,
+     "period": 11,
+     "from": 161
+    },
+    "secondary": {
+     "height": 0,
+     "period": 12,
+     "from": 235
+    }
+   },
+   "other": {
+    "wind": 4,
+    "gust": 6.4,
+    "sea": {
+     "height": 2.4
+    }
+   },
+   "species": "halibut",
+   "gust": 7.1,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.4,
+    "control": 8.2,
+    "conditions": 8.2,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7,
+    "gust": 7,
+    "sea": {
+     "height": 0.3,
+     "period": 8,
+     "from": 74
+    },
+    "chop": {
+     "height": 0,
+     "period": 9.9,
+     "from": 315
+    },
+    "swell": {
+     "height": 3.4,
+     "period": 14,
+     "from": 337
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 18,
+     "from": 97
+    }
+   },
+   "other": {
+    "wind": 5.8,
+    "gust": 11.2,
+    "sea": {
+     "height": 0.6
+    }
+   },
+   "species": "salmon",
+   "gust": 11.2,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.6,
+    "control": 9.7,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 4,
+    "gust": 6.5,
+    "sea": {
+     "height": 0.4,
+     "period": 10,
+     "from": 106
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 2.6,
+     "from": 304
+    },
+    "swell": {
+     "height": 0.4,
+     "period": 10,
+     "from": 52
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 14,
+     "from": 232
+    }
+   },
+   "other": {
+    "wind": 5.2,
+    "gust": 6.9,
+    "sea": {
+     "height": 0.9
+    }
+   },
+   "species": "halibut",
+   "gust": 6.9,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 9.7,
+    "control": 9.6,
+    "conditions": 9.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 7.1,
+    "gust": 12.3,
+    "sea": {
+     "height": 0.4,
+     "period": 8,
+     "from": 50
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 8.7,
+     "from": 263
+    },
+    "swell": {
+     "height": 1.3,
+     "period": 14,
+     "from": 259
+    },
+    "secondary": {
+     "height": 0.7,
+     "period": 17,
+     "from": 127
+    }
+   },
+   "other": {
+    "wind": 2.5,
+    "gust": 11.4,
+    "sea": {
+     "height": 1.7
+    }
+   },
+   "species": "squid",
+   "gust": 12.3,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 8.7,
+    "control": 9,
+    "conditions": 8.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 2.8,
+    "gust": 6.4,
+    "sea": {
+     "height": 1.8,
+     "period": 7,
+     "from": 347
+    },
+    "chop": {
+     "height": 0.3,
+     "period": 4.5,
+     "from": 69
+    },
+    "swell": {
+     "height": 1.6,
+     "period": 8,
+     "from": 201
+    },
+    "secondary": {
+     "height": 0.3,
+     "period": 18,
+     "from": 219
+    }
+   },
+   "other": {
+    "wind": 7.7,
+    "gust": 10.6,
+    "sea": {
+     "height": 1.5
+    }
+   },
+   "species": "squid",
+   "gust": 10.6,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 9.5,
+    "control": 9.6,
+    "conditions": 9.5,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 6.1,
+    "gust": 10.2,
+    "sea": {
+     "height": 1.5,
+     "period": 8,
+     "from": 201
+    },
+    "chop": {
+     "height": 0.1,
+     "period": 3.6,
+     "from": 182
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 16,
+     "from": 133
+    },
+    "secondary": {
+     "height": 0.1,
+     "period": 9,
+     "from": 174
+    }
+   },
+   "other": {
+    "wind": 2.6,
+    "gust": 7,
+    "sea": {
+     "height": 1
+    }
+   },
+   "species": "lingcod",
+   "gust": 10.2,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 7.1,
+    "control": 7,
+    "conditions": 7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 13,
+    "gust": 15.5,
+    "sea": {
+     "height": 3.5,
+     "period": 7,
+     "from": 206
+    },
+    "chop": {
+     "height": 1.3,
+     "period": 5.4,
+     "from": 138
+    },
+    "swell": {
+     "height": 0.5,
+     "period": 10,
+     "from": 269
+    },
+    "secondary": {
+     "height": 1.3,
+     "period": 17,
+     "from": 284
+    }
+   },
+   "other": {
+    "wind": 3.7,
+    "gust": 15.1,
+    "sea": {
+     "height": 1.3
+    }
+   },
+   "species": "halibut",
+   "gust": 15.5,
+   "boat": {
+    "loa_ft": 12,
+    "hull": "displacement",
+    "layout": "skiff",
+    "displacement_lb": 300
+   },
+   "factors": {
+    "sea": 0.45,
+    "wind": 0.6,
+    "chopPeriod": 4.3,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 2.3,
+    "control": 1.7,
+    "conditions": 1.7,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 11.6,
+    "gust": 11.6,
+    "sea": {
+     "height": 0.9,
+     "period": 9,
+     "from": 7
+    },
+    "chop": {
+     "height": 0.6,
+     "period": 9.1,
+     "from": 23
+    },
+    "swell": {
+     "height": 1.9,
+     "period": 13,
+     "from": 164
+    },
+    "secondary": {
+     "height": 1.1,
+     "period": 13,
+     "from": 249
+    }
+   },
+   "other": {
+    "wind": 13.5,
+    "gust": 13.8,
+    "sea": {
+     "height": 3.1
+    }
+   },
+   "species": "lingcod",
+   "gust": 13.8,
+   "boat": null,
+   "factors": {
+    "sea": 1,
+    "wind": 1,
+    "chopPeriod": 6,
+    "custom": false
+   },
+   "expected": {
+    "comfort": 6,
+    "control": 5.6,
+    "conditions": 5.6,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  },
+  {
+   "c": {
+    "wind": 3.1,
+    "gust": 8.2,
+    "sea": {
+     "height": 3.2,
+     "period": 16,
+     "from": 170
+    },
+    "chop": {
+     "height": 1.4,
+     "period": 8.9,
+     "from": 45
+    },
+    "swell": {
+     "height": 0.9,
+     "period": 18,
+     "from": 229
+    },
+    "secondary": {
+     "height": 0.5,
+     "period": 12,
+     "from": 183
+    }
+   },
+   "other": {
+    "wind": 12.7,
+    "gust": 6.1,
+    "sea": {
+     "height": 0.5
+    }
+   },
+   "species": "reef",
+   "gust": 8.2,
+   "boat": {
+    "loa_ft": 32,
+    "hull": "catamaran",
+    "layout": "pilothouse",
+    "displacement_lb": 11000
+   },
+   "factors": {
+    "sea": 1.5044579177867639,
+    "wind": 1.3202697625221806,
+    "chopPeriod": 7.1,
+    "custom": true
+   },
+   "expected": {
+    "comfort": 8.5,
+    "control": 7.9,
+    "conditions": 7.9,
+    "score_scope": "comfort-and-control",
+    "bite": null,
+    "overall": null
+   }
+  }
+ ]
+}
