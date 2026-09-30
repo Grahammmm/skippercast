@@ -26,6 +26,8 @@ Files keep their original names so old links are easy to follow. Do not update t
 | [southern-california.md](southern-california.md) | Southern California package rollout |
 | [statewide-buildout.md](statewide-buildout.md) | Statewide buildout ledger and map-area acquisition queue |
 
+[Native tiled habitat processing checkpoint](seafloor-tiled-habitat-2026-09-30.md) records issue #95 acceptance, r01 before/after measurements and the exact next batch.
+
 **Central Coast 300 ft evidence program**
 
 | Document | Purpose |

@@ -5,6 +5,7 @@ They pin a manifest product and metadata digest; a held/withdrawn product is not
 read. Nearest-neighbor projection preserves classes and producer no-data masks.
 """
 from pathlib import Path
+from contextlib import contextmanager
 import re
 
 import numpy as np
@@ -54,9 +55,12 @@ def classify(values, valid, binding):
     return result
 
 
-def read_classes(binding, shape, affine, *, root):
+@contextmanager
+def class_reader(binding, shape, affine, *, root):
+    """Open a verified categorical source once; read bounded nearest tiles."""
     if binding is None:
-        return np.zeros(shape, dtype='uint8')
+        yield lambda window: np.zeros((int(window.height), int(window.width)), dtype='uint8')
+        return
     row = binding['row']
     archive, _ = fetch_source(row, Path(root)/'var/seafloor/cache')
     with rasterio.open(source_path(archive, row)) as source:
@@ -64,8 +68,16 @@ def read_classes(binding, shape, affine, *, root):
             raise ValueError('Substrate resolution changed')
         with WarpedVRT(source, crs='EPSG:3310', transform=affine,
                 width=shape[1], height=shape[0], resampling=Resampling.nearest) as vrt:
-            values = vrt.read(1, masked=True)
-            return classify(values.data, ~np.ma.getmaskarray(values), binding['binding'])
+            def read(window):
+                values = vrt.read(1, window=window, masked=True)
+                return classify(values.data, ~np.ma.getmaskarray(values), binding['binding'])
+            yield read
+
+
+def read_classes(binding, shape, affine, *, root):
+    from rasterio.windows import Window
+    with class_reader(binding, shape, affine, root=root) as read:
+        return read(Window(0, 0, shape[1], shape[0]))
 
 
 def verify_sources(bindings, *, root, fetch=False):

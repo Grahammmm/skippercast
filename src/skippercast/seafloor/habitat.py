@@ -1,11 +1,13 @@
 """Deterministic rough-bottom candidates, held until the separate legal screen.
 
 Each source is processed separately at its native spacing: neither a source
-offset nor its no-data edge can become a false reef. The bounded reach window
-fails explicitly above 20 million pixels instead of silently downsampling.
+offset nor its no-data edge can become a false reef. Large windows use bounded
+native-spacing tiles and disk scratch; they never silently downsample.
 """
 import hashlib
 import math
+from tempfile import TemporaryDirectory
+from pathlib import Path
 
 import numpy as np
 import rasterio
@@ -46,7 +48,7 @@ def validate_rules(rules):
     return rules
 
 
-def source_grid(source, cells, binding, *, root):
+def source_grid(source, cells, binding, *, root, scratch=None, tile_edge=1024):
     selected = [cell_geometry(c) for c in cells if c['tier'] == 1
                 and c['source_id'] == source['row']['id']]
     if not selected:
@@ -60,7 +62,11 @@ def source_grid(source, cells, binding, *, root):
             window = from_bounds(*support.buffer(255).bounds, transform=affine).round_offsets().round_lengths()
             window = window.intersection(Window(0, 0, width, height))
             if window.width*window.height > 20_000_000:
-                raise ValueError('Habitat window exceeds 20 million pixels; split the reach, never downsample')
+                if scratch is None:
+                    raise ValueError('Large native grid requires managed disk scratch; use build_candidates')
+                from .habitat_tiles import source_grid as tiled_grid
+                return tiled_grid(vrt, window, source, support, binding, root=root,
+                                  scratch=scratch, edge=tile_edge)
             data = vrt.read(1, window=window, masked=True).astype('float32')
             affine = vrt.window_transform(window)
     depth = data.filled(np.nan)
@@ -175,63 +181,83 @@ def extract_grid(grid, limits, rules, reach):
     for geometry, ident in shapes(labels.astype('int32'), mask=np.isin(labels, list(kept)),
                                    transform=grid['affine'], connectivity=8):
         polygons[int(ident)] = shapely.make_valid(shape(geometry))
-    to_geo = Transformer.from_crs(3310, 4326, always_xy=True).transform
     features = []
     for ident, polygon in sorted(polygons.items()):
-        polygon = polygon.intersection(grid['support'])
-        # The outline cannot gain unsupported area through simplification.
-        polygon = polygon.simplify(resolution/2, preserve_topology=True).intersection(polygon)
-        polygon = polygonal(shapely.make_valid(polygon))
-        if polygon.area < rules['minimum_patch_m2']:
-            continue
         ys, xs = slices[ident-1]
         mask = labels[ys, xs] == ident
-        depths = grid['depth'][ys, xs][mask]
-        metrics, support = patch_metrics(grid, polygon.representative_point(), rough, rules)
-        binding = grid['binding']
-        categories = grid['classes'][ys, xs][mask]
-        fit = {key: species_fit(float(depths.min()), float(depths.max()), metrics['grade'], value)
-               if metrics else 'unknown' for key, value in rules['species'].items()}
-        ident_hash = hashlib.sha256(source['id'].encode()+shapely.normalize(polygon).wkb).hexdigest()[:16]
-        properties = {'id': f"sc-hab-{reach['id']}-{ident_hash}", 'reach': reach['id'],
-            'region': reach.get('region', 'unknown'), 'tier': 1, 'status': 'held',
-            'hold_reasons': ['legal-screen-pending'] + ([] if metrics else ['metric-support-incomplete']),
-            'exportable': False, 'area_ha': polygon.area/10000, 'source_ids': [source['id']],
-            'source_year': source['year'], 'resolution_m': resolution,
-            'vertical_datum': source['vertical_datum'], 'depth_basis': 'nominal',
-            'depth_min_ft': float(depths.min())/.3048, 'depth_max_ft': float(depths.max())/.3048,
-            'interpolation_mask': 'unknown', 'terrain': metrics or 'unknown',
-            'metric_support_fraction': support, 'fit': fit,
-            'substrate': {'source_id': binding['row']['id'] if binding else 'unknown',
-                'same_survey_as_depth': binding['binding']['same_survey_as_depth'] if binding else 'unknown',
-                'known_fraction': float((categories > 0).mean()),
-                'hard_rugose_fraction': float((categories == 3).mean()),
-                'independent_confirmation': False},
-            'independent_evidence': [], 'screen': {'status': 'pending'},
-            'rule_version': rules['rule_version'],
-            'label': f"Held: legal screen pending. Habitat candidate; nominal depth ({source['vertical_datum']}); verify on your sounder."
-                     + (' Broad area, not an individual pile.' if resolution > 4 else '')}
-        # Projected point-touching components can acquire rounding intersections
-        # in longitude/latitude. Repair again in the output CRS without buffering.
-        geographic = polygonal(shapely.make_valid(transform(to_geo, polygon)))
-        features.append({'type': 'Feature', 'properties': properties, 'geometry': mapping(geographic)})
+        depths, categories = grid['depth'][ys, xs][mask], grid['classes'][ys, xs][mask]
+        stats = {'minimum': float(depths.min()), 'maximum': float(depths.max()),
+                 'count': int(mask.sum()), 'known': int((categories > 0).sum()),
+                 'hard': int((categories == 3).sum())}
+        feature = feature_for_patch(grid, polygon, stats, rough, rules, reach)
+        if feature:
+            features.append(feature)
     return features
 
 
+def feature_for_patch(grid, polygon, stats, rough, rules, reach):
+    source = grid['source']['row']
+    resolution = source['resolution_m']
+    to_geo = Transformer.from_crs(3310, 4326, always_xy=True).transform
+    polygon = polygon.intersection(grid['support'])
+    # The outline cannot gain unsupported area through simplification.
+    polygon = polygon.simplify(resolution/2, preserve_topology=True).intersection(polygon)
+    polygon = polygonal(shapely.make_valid(polygon))
+    if polygon.area < rules['minimum_patch_m2']:
+        return None
+    metrics, support = patch_metrics(grid, polygon.representative_point(), rough, rules)
+    binding = grid['binding']
+    fit = {key: species_fit(stats['minimum'], stats['maximum'], metrics['grade'], value)
+           if metrics else 'unknown' for key, value in rules['species'].items()}
+    ident_hash = hashlib.sha256(source['id'].encode()+shapely.normalize(polygon).wkb).hexdigest()[:16]
+    properties = {'id': f"sc-hab-{reach['id']}-{ident_hash}", 'reach': reach['id'],
+        'region': reach.get('region', 'unknown'), 'tier': 1, 'status': 'held',
+        'hold_reasons': ['legal-screen-pending'] + ([] if metrics else ['metric-support-incomplete']),
+        'exportable': False, 'area_ha': polygon.area/10000, 'source_ids': [source['id']],
+        'source_year': source['year'], 'resolution_m': resolution,
+        'vertical_datum': source['vertical_datum'], 'depth_basis': 'nominal',
+        'depth_min_ft': stats['minimum']/.3048, 'depth_max_ft': stats['maximum']/.3048,
+        'interpolation_mask': 'unknown', 'terrain': metrics or 'unknown',
+        'metric_support_fraction': support, 'fit': fit,
+        'substrate': {'source_id': binding['row']['id'] if binding else 'unknown',
+            'same_survey_as_depth': binding['binding']['same_survey_as_depth'] if binding else 'unknown',
+            'known_fraction': stats['known']/stats['count'],
+            'hard_rugose_fraction': stats['hard']/stats['count'],
+            'independent_confirmation': False},
+        'independent_evidence': [], 'screen': {'status': 'pending'},
+        'rule_version': rules['rule_version'],
+        'label': f"Held: legal screen pending. Habitat candidate; nominal depth ({source['vertical_datum']}); verify on your sounder."
+                 + (' Broad area, not an individual pile.' if resolution > 4 else '')}
+    # Projected point-touching components can acquire rounding intersections
+    # in longitude/latitude. Repair again in the output CRS without buffering.
+    geographic = polygonal(shapely.make_valid(transform(to_geo, polygon)))
+    return {'type': 'Feature', 'properties': properties, 'geometry': mapping(geographic)}
+
+
 def build_candidates(sources, cells, bindings, rules, reach, *, root):
-    grids = []
-    for source in sources:
-        grid = source_grid(source, cells, bindings.get(source['row']['id']), root=root)
-        if grid:
-            grids.append(grid)
-    limits = thresholds(grids, rules)
-    features = [feature for grid in grids for feature in extract_grid(grid, limits, rules, reach)]
-    selected = [(g['source']['row']['id'], g['support']) for g in grids]
-    seams = [{'source_ids': [a, b], 'shared_selected_boundary_m': ga.boundary.intersection(gb.boundary).length,
-              'distance_m': ga.distance(gb)} for i, (a, ga) in enumerate(selected) for b, gb in selected[i+1:]]
-    return {'type': 'FeatureCollection', 'features': features,
-            'rule_version': rules['rule_version'], 'thresholds': limits, 'survey_seams': seams,
-            'status': 'held-for-legal-screen', 'exportable': False}
+    from . import habitat_tiles
+    parent = Path(root)/'var/seafloor/scratch'
+    parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix='habitat-', dir=parent) as directory, habitat_tiles.scratch(directory) as disk:
+        grids = []
+        for source in sources:
+            grid = source_grid(source, cells, bindings.get(source['row']['id']), root=root, scratch=disk)
+            if grid:
+                grids.append(grid)
+        tiled = any(g.get('tiled') for g in grids)
+        limits = habitat_tiles.thresholds(grids, rules, disk) if tiled else thresholds(grids, rules)
+        features = []
+        for grid in grids:
+            features.extend(habitat_tiles.extract_grid(grid, limits, rules, reach, disk)
+                            if grid.get('tiled') else extract_grid(grid, limits, rules, reach))
+        selected = [(g['source']['row']['id'], g['support']) for g in grids]
+        seams = [{'source_ids': [a, b], 'shared_selected_boundary_m': ga.boundary.intersection(gb.boundary).length,
+                  'distance_m': ga.distance(gb)} for i, (a, ga) in enumerate(selected) for b, gb in selected[i+1:]]
+        return {'type': 'FeatureCollection', 'features': features,
+                'rule_version': rules['rule_version'], 'thresholds': limits, 'survey_seams': seams,
+                'processing': [g.get('processing', {'method': 'native-monolithic-v1',
+                    'window_pixels': int(g['depth'].size)}) for g in grids],
+                'status': 'held-for-legal-screen', 'exportable': False}
 
 
 def compare_atlas(atlas, candidates, scope, coverage=None):

@@ -151,7 +151,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'substrate.py', 'resolution_profile.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'resolution_profile.py')}}
     physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
@@ -245,8 +245,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         'physical_input_hash': physical_hash,
         'habitat_rule_version': rules['rule_version'], 'roughness_thresholds': candidates['thresholds'],
         'atlas_comparison': {key: value for key, value in comparison.items() if key != 'areas'},
-        'note': 'Original survey coverage and ranked habitat candidates. Full polygons screened against dated spatial '
-                'restrictions; missing evidence or overlaps held. Publication remains M4. '
+        'note': 'Original survey coverage and ranked physical habitat candidates. Spatial screening status and '
+                'holds are reported separately; only passed polygons can be published. '
                 'Season, gear and current notices still apply. Unknown interpolation masks remain unknown.'}
     atomic_json(folder / 'habitat.geojson', habitat)
     atomic_json(folder / 'held.geojson', held)
