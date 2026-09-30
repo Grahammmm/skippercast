@@ -23,6 +23,25 @@ class WorkflowPinTests(unittest.TestCase):
                     unpinned.append(f'{path.name}: {ref}')
         self.assertEqual(unpinned, [], 'pin these actions to a full commit SHA with a # vX.Y.Z comment')
 
+    def test_bot_pull_requests_get_required_checks(self):
+        # A pull request opened with the default GITHUB_TOKEN starts no
+        # pull_request workflows, so the required survey-science check never
+        # runs on it (#106). Such workflows must dispatch Offline checks on the
+        # branch they propose, which needs `actions: write`.
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        self.assertRegex(ci.split('permissions:', 1)[0], r'\n  workflow_dispatch:', 'ci.yml must accept workflow_dispatch')
+        for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
+            text = path.read_text()
+            for match in re.finditer(r'uses:\s*peter-evans/create-pull-request@\S+.*?\n\s+with:\n((?:\s{10,}.*\n)+)', text):
+                block = match.group(1)
+                if re.search(r'^\s+token:', block, re.M):
+                    continue
+                branch = re.search(r'^\s+branch:\s*(\S+)', block, re.M).group(1)
+                with self.subTest(workflow=path.name, branch=branch):
+                    dispatch = f'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref {branch}'
+                    self.assertTrue(dispatch in text, f'dispatch Offline checks after opening the PR: {dispatch}')
+                    self.assertTrue(re.search(r'\n\s+actions: write\n', text), 'the dispatching job needs actions: write')
+
 
 if __name__ == '__main__':
     unittest.main()
