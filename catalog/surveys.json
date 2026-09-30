@@ -150,7 +150,8 @@
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
     "dist/data/w00614-usgs-video-observation-gap.json",
-    "dist/data/seafloor-carmel-sur-native-review.json"
+    "dist/data/seafloor-carmel-sur-native-review.json",
+    "dist/data/seafloor-monterey-spatial-screen-review.json"
   ],
   "surveys": [
     {

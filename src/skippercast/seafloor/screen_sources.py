@@ -144,6 +144,23 @@ def security_layer(config, getter=ecfr_bytes):
                          'properties': {'id': zone['id'], 'source_url': url,
                                         'datum': datum, 'planning_margin_m': margin}})
         receipts.append({'url': url, 'sha256': digest, 'up_to_date_as_of': issue})
+    # Out-of-scope fixed zones and moving-vessel rules still need a current
+    # hash check. A changed or missing section invalidates the release screen;
+    # no fabricated stationary geometry is created for a mobile restriction.
+    for review in config.get('reviewed_notice_sections', []):
+        if (review.get('classification') not in
+                {'outside-reviewed-scope', 'trip-time-vessel-restriction'}
+                or not review.get('review_basis')
+                or not re.fullmatch(r'[0-9]+\.[0-9]+', review.get('section', ''))):
+            raise ValueError('Invalid reviewed notice section')
+        url = f"https://www.ecfr.gov/api/versioner/v1/full/{issue}/title-33.xml?section={review['section']}"
+        body = getter(url)
+        section = ET.fromstring(body)
+        digest = hashlib.sha256(body).hexdigest()
+        if section.get('N') != review['section'] or digest != review['reviewed_xml_sha256']:
+            raise ValueError('Reviewed notice text changed; scope review required')
+        receipts.append({'url': url, 'sha256': digest, 'up_to_date_as_of': issue,
+                         'classification': review['classification']})
     return {'type': 'FeatureCollection', 'features': features}, {
         'titles_url': titles_url, 'titles_sha256': hashlib.sha256(raw).hexdigest(),
         'sections': receipts, 'up_to_date_as_of': issue}

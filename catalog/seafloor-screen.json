@@ -1,7 +1,12 @@
 {
   "version": 1,
   "reviewed_reaches": [
+    "big-sur-coast-r01",
     "cambria-san-simeon-r02",
+    "monterey-point-sur-r01",
+    "monterey-point-sur-r02",
+    "monterey-point-sur-r03",
+    "monterey-point-sur-r04",
     "morro-bay-r01",
     "morro-bay-r02",
     "morro-bay-r03",
@@ -15,12 +20,12 @@
     "point-arguello-conception-r08"
   ],
   "bounds_wgs84": [
-    -121.3,
+    -122.1,
     34.4,
     -120.45,
-    35.65
+    36.62
   ],
-  "scope_note": "Morro Bay r01–r08, Cambria–San Simeon r02 and Point Arguello–Conception r06–r08 permanent spatial-restriction planning screen. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons excluded. Diablo Canyon and Vandenberg Zone 4 conservatively excluded. Other Vandenberg zones permit fishing except announced launch closures; these require current Notice to Mariners and radio/harbor checks. Morro entrance RNA excluded from fishing recommendations even when transit permitted. Mobile vessel security, fireworks and season/depth/gear rules require trip-time checks. No fishing permission or current closure clearance is implied.",
+  "scope_note": "Morro Bay r01–r08, Cambria–San Simeon r02 and Point Arguello–Conception r06–r08 permanent spatial-restriction planning screen. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons excluded. Diablo Canyon and Vandenberg Zone 4 conservatively excluded. Other Vandenberg zones permit fishing except announced launch closures; these require current Notice to Mariners and radio/harbor checks. Morro entrance RNA excluded from fishing recommendations even when transit permitted. Mobile vessel security, fireworks and season/depth/gear rules require trip-time checks. No fishing permission or current closure clearance is implied. Southern Monterey/Carmel/PointSur r01–r04 and northern BigSur r01 reviewed. Whole reference-cell envelopes lie south of the FortOrd334.1150 boundary including500m conservative south allowance; Navy mining operations lie farther north. These rules remain hash-checked during every refresh.165.1183 moving-vessel buffers require trip-time avoidance and are not stationary bottom exclusions.",
   "security_zones": [
     {
       "id": "diablo-canyon",
@@ -136,6 +141,24 @@
       "planning_margin_m": 25,
       "reviewed_xml_sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
       "source_url": "https://www.ecfr.gov/current/title-33/section-165.1196",
+      "reviewed_at": "2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    }
+  ],
+  "reviewed_notice_sections": [
+    {
+      "section": "334.1150",
+      "classification": "outside-reviewed-scope",
+      "review_basis": "Whole reviewed reach envelopes lie south of FortOrd minimum latitude36.629722, with500m conservative south allowance to36.625177. Scope maximum36.62. Navy mining starts36.968333; even13.5nautical miles entirely south stays above36.74; return bearing50 north. Unknown regulatory datum retained; this is an out-of-scope check, not an exact mapped boundary.",
+      "reviewed_xml_sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+      "reviewed_at": "2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    },
+    {
+      "section": "165.1183",
+      "classification": "trip-time-vessel-restriction",
+      "review_basis": "Monterey moving tanker/cruise/HVA500yd underway and100yd anchored/moored security buffers need trip-time vessel avoidance. No stationary seafloor polygon can represent them.",
+      "reviewed_xml_sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
       "reviewed_at": "2026-09-30",
       "source_up_to_date_as_of": "2026-09-28"
     }
