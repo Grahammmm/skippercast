@@ -70,6 +70,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
+          # Web Push signing pair; the deploy refuses to run without it (runbook: secrets-rotation.md).
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
           CUSTOM_DOMAINS: ${{ vars.CUSTOM_DOMAINS }}
           # "true" adds the trip-check queues (creates them if missing); docs/cloudflare.md.

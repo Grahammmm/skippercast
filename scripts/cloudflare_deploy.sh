@@ -81,10 +81,19 @@ $WRANGLER d1 migrations apply "$DB_NAME" --remote --config "$CONFIG"
 $WRANGLER deploy --config "$CONFIG" --message "${GITHUB_SHA:-local} run ${GITHUB_RUN_ID:-local}"
 if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
 
-# Optional secrets, uploaded only when provided to this job.
+# Web Push cannot work without the VAPID pair; refuse to deploy a build whose alerts would be held.
+if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
+  echo "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set (GitHub secrets); see docs/operations/runbooks/secrets-rotation.md#vapid-key-pair" >&2
+  exit 1
+fi
+case "${#VAPID_PUBLIC_KEY}:${#VAPID_PRIVATE_KEY}" in 87:43) ;; *) echo "VAPID keys have the wrong length (expected 87 and 43 base64url characters)" >&2; exit 1;; esac
+
+# Secrets uploaded to the Worker; optional ones only when provided to this job.
 python3 - <<'PY' > var/cloudflare-secrets.json
 import json, os
 secrets = {name: os.environ[source] for name, source in [
+    ('VAPID_PUBLIC_KEY', 'VAPID_PUBLIC_KEY'),         # Web Push (trip alerts)
+    ('VAPID_PRIVATE_KEY', 'VAPID_PRIVATE_KEY'),
     ('ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'),       # AI boat lookup
     ('GITHUB_TOKEN', 'WATCHDOG_GITHUB_TOKEN'),        # cron watchdog restarts the live refresh
     ('EXTRA_ORIGINS', 'EXTRA_ORIGINS'),               # e.g. https://skippercast.<you>.workers.dev
