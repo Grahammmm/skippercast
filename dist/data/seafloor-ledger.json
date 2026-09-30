@@ -3319,12 +3319,12 @@
   "totals": {
     "cell_count": 55544,
     "band_km2": 3307.514375,
-    "tier0_km2": 3031.958125,
-    "tier1_km2": 275.55625,
+    "tier0_km2": 2954.983125,
+    "tier1_km2": 352.53125,
     "tier2_km2": 15.57834,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
-    "selected_valid_km2": 272.789239
+    "selected_valid_km2": 348.409823
   },
   "reaches": [
     {
@@ -3839,12 +3839,12 @@
       "id": "morro-bay-r07",
       "region": "morro-bay",
       "order": 7,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 1155,
       "band_km2": 68.115625,
-      "tier0_km2": 68.115625,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 11.10125,
+      "tier1_km2": 57.014375,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.1525,
       "polygons_by_grade": {
@@ -3852,12 +3852,48 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 26,
+        "metric-support-incomplete": 26,
+        "screen-deferred": 689
+      },
+      "surveys_used": [
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c"
+      ],
+      "last_survey_run": "2026-09-30T15:53:11.906193+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 55.907729208,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "c9ddaca21ba1233e6ae5b4a985a61910cc17c92279c575848edd1662dc90fedd",
+      "habitat_count": 0,
+      "held_candidate_count": 689,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 689,
+      "processing_incomplete": false,
+      "physical_input_hash": "fc4a717524fdf1b0e7b17bc33f9947559770a90722111de016c0cae01cd609a5",
+      "roughness_thresholds": {
+        "vrm_samples": 11615549,
+        "vrm": 0.0014785010134801269,
+        "bpi_fine_m_samples": 11391934,
+        "bpi_fine_m": 0.4974590933452986
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 19,
+        "reproduced_count": 8,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "cambria-san-simeon-r02",
@@ -3887,12 +3923,12 @@
       "id": "morro-bay-r08",
       "region": "morro-bay",
       "order": 9,
-      "status": "unassessed",
+      "status": "habitat-held-for-screen",
       "cell_count": 2109,
       "band_km2": 128.275625,
-      "tier0_km2": 128.275625,
-      "tier1_km2": 0,
-      "tier2_km2": 0,
+      "tier0_km2": 108.315,
+      "tier1_km2": 19.960625,
+      "tier2_km2": 0.0,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.16625,
       "polygons_by_grade": {
@@ -3900,12 +3936,48 @@
         "B": 0,
         "C": 0
       },
-      "held_by_reason": {},
-      "surveys_used": [],
-      "last_survey_run": "unknown",
-      "habitat_rule_version": "unknown",
-      "note": "Original surveys not processed; zero is pipeline progress, not evidence of a survey gap.",
-      "selected_valid_km2": 0
+      "held_by_reason": {
+        "habitat-contract-incomplete": 9,
+        "metric-support-incomplete": 9,
+        "screen-deferred": 477
+      },
+      "surveys_used": [
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c"
+      ],
+      "last_survey_run": "2026-09-30T15:54:04.047876+00:00",
+      "habitat_rule_version": "seafloor-habitat-v1",
+      "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
+      "selected_valid_km2": 19.712854542,
+      "coverage_rule_version": "native-coverage-habitat-v2",
+      "survey_run_hash": "20e5b8f10f399bd62cfa235ef5712b3bada819328a8a58015c8fc714af95518e",
+      "habitat_count": 0,
+      "held_candidate_count": 477,
+      "habitat_by_grade": {},
+      "screen": {
+        "version": "deferred",
+        "status": "held",
+        "reasons": [
+          "screen-deferred"
+        ],
+        "layers": []
+      },
+      "physical_candidate_count": 477,
+      "processing_incomplete": false,
+      "physical_input_hash": "128846fce8fdef0cb82e347c1ef4133d4a9b6397dec4f7fe271a91601e862961",
+      "roughness_thresholds": {
+        "vrm_samples": 4866676,
+        "vrm": 0.0023329961113631725,
+        "bpi_fine_m_samples": 4804432,
+        "bpi_fine_m": 0.462676618436191
+      },
+      "atlas_comparison": {
+        "atlas_target_count": 132,
+        "atlas_outline_count": 107,
+        "applicable_outline_count": 12,
+        "reproduced_count": 3,
+        "threshold": 0.5,
+        "denominator": "Original outline portion inside this reach; missing survey coverage counts as a miss."
+      }
     },
     {
       "id": "cambria-san-simeon-r01",

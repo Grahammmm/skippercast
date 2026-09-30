@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "bathymetry": {
+    "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml",
+    "metadata_sha256": "67f5bd344c133d44fdabc3893f15dc7da6f0c69a30017d62ccfcfed60b4eec63",
+    "retrieval": "Original metadata HTTP 200; local original archive checksum verified",
+    "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/21b585e020ab4afba49b2754075826a7/Bathymetry_OffshorePointBuchon.zip",
+    "source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+    "source_bytes": 63660952,
+    "reviewed_window_wgs84": [
+      -120.979799,
+      35.127465,
+      -120.781601,
+      35.296794
+    ],
+    "native_resolution_m": 2,
+    "effective_resolution_profile": {
+      "fine_to_depth_m": 80,
+      "coarse_resolution_m": 5,
+      "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+    },
+    "acquisition_year": 2008,
+    "publication_year": 2022,
+    "vertical_datum": "unknown",
+    "depth_claim": "Nominal source-datum depths only; 91.44 m coverage ceiling, fine-detail extraction strictly shallower than 80 m. Delivered 2 m pixels below 80 m originate from a 5 m grid.",
+    "native_valid_pixels_in_window": 31624451,
+    "nominal_0_300ft_pixels_in_window": 27255543,
+    "accuracy": "Unknown quantitative horizontal/vertical accuracy; grid spacing is not sounding accuracy.",
+    "interpolation": "Gridded multibeam; explicit interpolation mask unavailable. Unknown filled cells are not claimed measured soundings.",
+    "raster_identity": {
+      "version": "normalized-raster-content-v1",
+      "sha256": "a51460614c8998d774f6359a4158fdc82a8ecce9be376927bbec8baf9a8e3761"
+    }
+  },
+  "substrate": {
+    "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ac4288bd38594e1fa6e89e139995ab73/SeafloorCharacter_OffshorePointBuchon_metadata.xml",
+    "metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+    "retrieval": "Original metadata HTTP 200; cached original archive checksum verified",
+    "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3963d3925b9841ecb9b6a743b92326d7/SeafloorCharacter_OffshorePointBuchon.zip",
+    "source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+    "source_bytes": 1872472,
+    "native_resolution_m": 2,
+    "raster_dimensions": [
+      9222,
+      9199
+    ],
+    "horizontal_crs": "EPSG:32610",
+    "valid_class_counts": {
+      "1": 15242097,
+      "2": 5781665,
+      "3": 9893604
+    },
+    "classes": {
+      "1": "soft and flat fine grain sedimented seafloor",
+      "2": "hard and flat coarse grain sediment and bedrock seafloor",
+      "3": "hard and rugose boulder, megaclast, and bedrock seafloor"
+    },
+    "acoustic_year": 2008,
+    "ground_truth_video_year": 2012,
+    "metadata_caveat": "Catalog ground-condition year 2011 and metadata 10 m spacing do not establish acoustic/video acquisition dates or actual pixel spacing. Actual raster spacing is 2 m; depth-dependent coarsening inherited from bathymetry remains masked.",
+    "same_survey_as_depth": true,
+    "evidence_claim": "Sonar-derived substrate interpretation using paired bathymetry/backscatter plus video supervision; not independent bathymetric corroboration or fish-presence evidence.",
+    "archive_member": "SeafloorCharacter_OffshorePointBuchon.tif"
+  },
+  "use_constraints": "USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey, the California State University Monterey Bay Seafloor Mapping Lab, and the University of California Center for Integrated Spatial Research as the originators of the dataset and in products derived from these data. This information is not intended for navigation purposes.",
+  "next_gaps": "Fine habitat below 80 m requires a suitable finer original; Carmel/Point Sur r03/r04 NOAA BAG endpoint returned no leads on 2026-09-30, not proof that no other survey exists."
+}
