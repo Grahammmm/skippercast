@@ -48,12 +48,17 @@ export async function store(cache: Cache | null, key: Request, response: Respons
  * `extra` responses produced alongside (same upstream read) are stored too.
  */
 export interface Produced {response: Response; extra?: [Request, Response][]}
-export async function cached(key: Request, ctx: WaitUntil, produce: () => Promise<Produced>): Promise<Response> {
+export async function cached(key: Request, ctx: WaitUntil, produce: () => Promise<Produced>,
+  onMiss?: () => Promise<Response | null>): Promise<Response> {
   const cache = edgeCache();
   if (cache) {
     try { const hit = await cache.match(key); if (hit) return tagged(hit, 'hit'); }
     catch { /* fall through to the origin */ }
   }
+  // A gate that applies only to work the cache could not answer (a per-IP
+  // limit on origin reads, say); a response from it is returned as is.
+  const refused = onMiss ? await onMiss() : null;
+  if (refused) return refused;
   const {response, extra = []} = await produce();
   if (cache && response.status === 200) {
     await store(cache, key, response.clone(), ctx);

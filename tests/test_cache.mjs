@@ -206,14 +206,25 @@ test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry
   assert.equal((await worker.fetch(get('/api/forecast?region=nowhere'), env, ctx())).status, 404, 'other routes are not limited');
 }));
 
-test('/api/daily is limited per IP on PUBLIC_LIMITER (429 with Retry-After), separately from /api/om', () => withEdge(async () => {
-  globalThis.fetch = async () => Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', health: {ok: 1},
-    reports: [], sources: {}, catch_probability: null, bite_score: null, regulations: {}});
+test('/api/daily limits only cache misses per IP on PUBLIC_LIMITER (429 with Retry-After), separately from /api/om', () => withEdge(async cache => {
+  let reads = 0;
+  globalThis.fetch = async () => { reads++; return Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', health: {ok: 1},
+    reports: [], sources: {}, catch_probability: null, bite_score: null, regulations: {}}); };
   const env = {PUBLIC_LIMITER: fakeLimiter(60)};
-  for (let i = 0; i < 60; i++) assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), env, ctx())).status, 200);
-  const limited = await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), env, ctx());
+  const part = (ip) => worker.fetch(get('/api/daily?region=morro-bay&part=regulations', ip ? {'cf-connecting-ip': ip} : {}), env, ctx());
+  // Hits are free: a hundred map loads from one address read the feed once and spend one unit.
+  for (let i = 0; i < 100; i++) assert.equal((await part()).status, 200);
+  assert.equal(reads, 1);
+  assert.equal(env.PUBLIC_LIMITER.counts.get('daily:203.0.113.9'), 1);
+  // Misses count: with the cache empty every request reads the feed, and the 61st is refused.
+  const {match} = cache; cache.match = async () => undefined;
+  for (let i = 1; i < 60; i++) assert.equal((await part()).status, 200);
+  const limited = await part();
   assert.equal(limited.status, 429);assert.equal(limited.headers.get('Retry-After'), '60');
-  assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations', {'cf-connecting-ip': '198.51.100.1'}), env, ctx())).status, 200, 'another IP is unaffected');
+  assert.equal(reads, 60, 'a refused miss does not read the feed');
+  assert.equal((await part('198.51.100.1')).status, 200, 'another IP is unaffected');
+  cache.match = match;
+  assert.equal((await part()).status, 200, 'a limited address still gets cached answers');
   assert.deepEqual([...env.PUBLIC_LIMITER.counts.keys()], ['daily:203.0.113.9', 'daily:198.51.100.1']);
 }));
 
