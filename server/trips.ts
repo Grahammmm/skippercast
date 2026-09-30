@@ -1,5 +1,5 @@
 // Saved trips, push subscriptions and alert delivery: validation, the trip
-// check the scheduler pages through, and retention.
+// check (per trip, per owner for the queue, paged for the manual job), and retention.
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {assessTrip,alertDecision,alertMessage,dateInZone} from './alert-policy.ts';
 import type {Assessment} from './alert-policy.ts';
@@ -8,7 +8,7 @@ import {regions,deployment,regionById} from './config.ts';
 import {db,hash} from './http.ts';
 import {ClientError} from './errors.ts';
 import type {Env} from './env.ts';
-import type {TripRow,AlertEventRow,SubscriptionRow,ExternalJSON} from './types.ts';
+import type {TripRow,AlertEventRow,SubscriptionRow,ExternalJSON,Region,MarineZones} from './types.ts';
 
 export interface PushSubscriptionInput {endpoint:string;keys:{p256dh:string;auth:string}}
 export function validateSubscription(s:ExternalJSON):PushSubscriptionInput{
@@ -77,39 +77,71 @@ export async function scheduledPrune(env:Env):Promise<void>{
   try{await prune(env);}catch(error){console.error('Retention prune failed',{reason:String((error as Error).message).slice(0,200)});}
 }
 export interface CheckResult {checked:number;changes:number;delivered:number;held:number;in_app:number;next_cursor:string|null}
+export type TripOutcome = 'unchanged'|'skipped'|'delivered'|'held'|'in_app';
+/** Parsed public inputs, shared by the trips of one check run (or queue batch). */
+export type FeedCache = Map<string,Promise<ExternalJSON[]>>;
+// Trips still due a check: enabled, and not past their final alert.
+const DUE='enabled=1 AND final_delivered_at IS NULL';
+
+async function tripInputs(feeds:FeedCache,feedKey:string,region:Region,zones:MarineZones):Promise<ExternalJSON[]>{
+  if(!feeds.has(feedKey))feeds.set(feedKey,Promise.allSettled([readFeed(region.intelligence_feed),readFeed(region.daily_feed),...['coastal','offshore'].map(k=>readFeed('https://api.weather.gov/alerts/active?zone='+zones[k]))])
+    .then(loaded=>loaded.map(x=>x.status==='fulfilled'?x.value:null)));
+  return feeds.get(feedKey)!;
+}
+
+/**
+ * Assess one saved trip and deliver its alert when the decision changed. Safe
+ * to run more than once for the same inputs (a retried queue message, the
+ * manual job and the queue together): the event id is stable for a given
+ * decision and both the event and each delivery are claimed with INSERT OR IGNORE.
+ */
+export async function checkTrip(env:Env,trip:TripRow,now:number,feeds:FeedCache):Promise<{outcome:TripOutcome;created:boolean}>{
+  const region=regions[trip.region];if(!region)return {outcome:'skipped',created:false};
+  const today=dateInZone(now,region.timezone),tomorrow=dateInZone(now+86400000,region.timezone);
+  const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
+  const pointConfig=region.forecast_points.find(p=>p.id===trip.point), zones=region.contexts?.[pointConfig?.context??'']?.marine_zones||region.marine_zones;
+  const inputs=await tripInputs(feeds,trip.region+':'+(pointConfig?.context||'default'),region,zones);
+  const intel=inputs[0],rules=inputs[1]?.regulations;
+  const offshore=pointConfig?.offshore,alerts=inputs[offshore?3:2]?.features?.map((f:ExternalJSON)=>f.properties);
+  const assessment=assessTrip(trip,region,intel,rules,alerts,now);let previous:Assessment|null=null;try{previous=JSON.parse(trip.last_assessment as string);}catch{}
+  const final=trip.date===tomorrow&&hour>=18,missed=trip.date<=today&&!trip.final_delivered_at;
+  const kind=alertDecision(previous,assessment,{final,missed});if(!kind)return {outcome:'unchanged',created:false};
+  const material={status:assessment.status,issues:assessment.issues,values:Object.fromEntries(Object.entries(assessment.values).map(([k,v])=>[k,v===null?null:Math.round(v*10)/10]))};
+  const id=await hash(trip.id+':'+(missed?'missed-final':final?'final':kind+':'+(previous?.checked_at||'first')+':'+JSON.stringify(material)));
+  const message=alertMessage(trip,region,assessment,kind);
+  const insert=await db(env).prepare('INSERT OR IGNORE INTO alert_events(id,trip_id,owner,kind,message,created_at) VALUES(?,?,?,?,?,?)').bind(id,trip.id,trip.owner,kind,message,new Date(now).toISOString()).run();
+  const created=Boolean(insert.meta.changes);
+  const event=(await db(env).prepare('SELECT * FROM alert_events WHERE id=?').bind(id).first<AlertEventRow>())!;
+  const accepted=['delivered','read'].includes(event.status)||event.status==='pending'&&await deliver(env,event);
+  if(accepted){await db(env).prepare('UPDATE trips SET last_assessment=?,final_delivered_at=? WHERE id=?').bind(JSON.stringify(assessment),final||missed?new Date(now).toISOString():null,trip.id).run();return {outcome:'delivered',created};}
+  const receipt=(await db(env).prepare('SELECT status FROM alert_events WHERE id=?').bind(id).first<{status:string}>())!;
+  if(receipt.status==='in-app'){await db(env).prepare('UPDATE trips SET last_assessment=? WHERE id=?').bind(JSON.stringify(assessment),trip.id).run();return {outcome:'in_app',created};}
+  return {outcome:'held',created};
+}
+
+function tally(trips:TripRow[],results:{outcome:TripOutcome;created:boolean}[]):Omit<CheckResult,'next_cursor'>{
+  const count=(o:TripOutcome)=>results.filter(r=>r.outcome===o).length;
+  return {checked:trips.length,changes:results.filter(r=>r.created).length,delivered:count('delivered'),held:count('held'),in_app:count('in_app')};
+}
+
+/** One page of 25 due trips after `cursor` (the manual and fallback path: POST /api/jobs/check). */
 export async function checkTrips(env:Env,cursor=''):Promise<CheckResult>{
-  const now=Date.now(),trips=(await db(env).prepare('SELECT * FROM trips WHERE enabled=1 AND final_delivered_at IS NULL AND id>? ORDER BY id LIMIT 25').bind(cursor).all<TripRow>()).results;
-  const feeds=new Map<string,ExternalJSON[]>();let changes=0,delivered=0,held=0,inApp=0;
-  for(const trip of trips){
-    const region=regions[trip.region];if(!region)continue;
-    const today=dateInZone(now,region.timezone),tomorrow=dateInZone(now+86400000,region.timezone);
-    const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
-    let intel,rules,alerts;
-    const pointConfig=region.forecast_points.find(p=>p.id===trip.point), zones=region.contexts?.[pointConfig?.context??'']?.marine_zones||region.marine_zones;
-    const feedKey=trip.region+':'+(pointConfig?.context||'default');
-    if(!feeds.has(feedKey)){
-      const loaded=await Promise.allSettled([readFeed(region.intelligence_feed),readFeed(region.daily_feed),...['coastal','offshore'].map(k=>readFeed('https://api.weather.gov/alerts/active?zone='+zones[k]))]);
-      feeds.set(feedKey,loaded.map(x=>x.status==='fulfilled'?x.value:null));
-    }
-    const inputs=feeds.get(feedKey)!;intel=inputs[0];rules=inputs[1]?.regulations;
-    const offshore=region.forecast_points.find(p=>p.id===trip.point)?.offshore;alerts=inputs[offshore?3:2]?.features?.map((f:ExternalJSON)=>f.properties);
-    const assessment=assessTrip(trip,region,intel,rules,alerts,now);let previous:Assessment|null=null;try{previous=JSON.parse(trip.last_assessment as string);}catch{}
-    const final=trip.date===tomorrow&&hour>=18,missed=trip.date<=today&&!trip.final_delivered_at;
-    const kind=alertDecision(previous,assessment,{final,missed});if(!kind)continue;
-    const material={status:assessment.status,issues:assessment.issues,values:Object.fromEntries(Object.entries(assessment.values).map(([k,v])=>[k,v===null?null:Math.round(v*10)/10]))};
-    const id=await hash(trip.id+':'+(missed?'missed-final':final?'final':kind+':'+(previous?.checked_at||'first')+':'+JSON.stringify(material)));
-    const message=alertMessage(trip,region,assessment,kind);
-    const insert=await db(env).prepare('INSERT OR IGNORE INTO alert_events(id,trip_id,owner,kind,message,created_at) VALUES(?,?,?,?,?,?)').bind(id,trip.id,trip.owner,kind,message,new Date(now).toISOString()).run();
-    if(insert.meta.changes)changes++;
-    const event=(await db(env).prepare('SELECT * FROM alert_events WHERE id=?').bind(id).first<AlertEventRow>())!;
-    const accepted=['delivered','read'].includes(event.status)||event.status==='pending'&&await deliver(env,event);
-    if(accepted){delivered++;await db(env).prepare('UPDATE trips SET last_assessment=?,final_delivered_at=? WHERE id=?').bind(JSON.stringify(assessment),final||missed?new Date(now).toISOString():null,trip.id).run();}
-    else {
-      const receipt=(await db(env).prepare('SELECT status FROM alert_events WHERE id=?').bind(id).first<{status:string}>())!;
-      if(receipt.status==='in-app'){inApp++;await db(env).prepare('UPDATE trips SET last_assessment=? WHERE id=?').bind(JSON.stringify(assessment),trip.id).run();}
-      else held++;
-    }
-  }
+  const now=Date.now(),trips=(await db(env).prepare(`SELECT * FROM trips WHERE ${DUE} AND id>? ORDER BY id LIMIT 25`).bind(cursor).all<TripRow>()).results;
+  const feeds:FeedCache=new Map(),results=[];
+  for(const trip of trips)results.push(await checkTrip(env,trip,now,feeds));
   await prune(env,now);
-  return {checked:trips.length,changes,delivered,held,in_app:inApp,next_cursor:trips.length===25?trips.at(-1)!.id:null};
+  return {...tally(trips,results),next_cursor:trips.length===25?trips.at(-1)!.id:null};
+}
+
+/** Every due trip of one owner (the queue consumer's unit of work). */
+export async function checkOwnerTrips(env:Env,owner:string,now=Date.now(),feeds:FeedCache=new Map()):Promise<Omit<CheckResult,'next_cursor'>>{
+  const trips=(await db(env).prepare(`SELECT * FROM trips WHERE owner=? AND ${DUE} ORDER BY id`).bind(owner).all<TripRow>()).results;
+  const results=[];
+  for(const trip of trips)results.push(await checkTrip(env,trip,now,feeds));
+  return tally(trips,results);
+}
+
+/** Owners with due trips, in pages (the cron producer). */
+export async function ownersWithDueTrips(env:Env,after='',limit=500):Promise<string[]>{
+  return (await db(env).prepare(`SELECT DISTINCT owner FROM trips WHERE ${DUE} AND owner>? ORDER BY owner LIMIT ?`).bind(after,limit).all<{owner:string}>()).results.map(r=>r.owner);
 }

@@ -29,6 +29,13 @@
       "when": 1790714383279,
       "tag": "0003_trip_boat",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790724371451,
+      "tag": "0004_job_state",
+      "breakpoints": true
     }
   ]
 }

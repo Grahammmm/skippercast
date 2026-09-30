@@ -109,6 +109,14 @@ class LiveWorkflowTests(unittest.TestCase):
         self.assertIn('scripts/trip_check_loop.py', notify)
         self.assertEqual(sum('id-token: write' in block for block in self.jobs.values()), 1)
 
+    def test_notify_steps_aside_for_the_queue_but_stays_a_manual_trigger(self):
+        # With ENABLE_QUEUES=true the Worker's cron queues trip checks
+        # (server/trip-queue.ts); the job then runs only when dispatched with check_trips.
+        notify = self.jobs['notify']
+        self.assertIn("if: vars.ENABLE_QUEUES != 'true' || inputs.check_trips", notify)
+        header = self.text.split('\njobs:\n', 1)[0]
+        self.assertRegex(header, r'workflow_dispatch:\n    inputs:\n      check_trips:\n(?:        .*\n)*?        type: boolean\n        default: false')
+
     def test_only_next_can_dispatch_and_it_holds_no_secrets(self):
         chain = self.jobs['next']
         self.assertIn('actions: write', chain)

@@ -22,13 +22,19 @@ async function github(env: WatchdogEnv, path: string, init: RequestInit & {heade
       'User-Agent': 'SkipperCast-watchdog', 'Content-Type': 'application/json', ...init.headers}});
 }
 
-export async function watchdog(env: WatchdogEnv, now = Date.now()): Promise<{age_minutes: number | null; action: string}> {
+/** The published live feed (conditions/latest.json): R2 first, then the branch; null when unreadable. */
+export async function liveFeed(): Promise<ExternalJSON> {
   const url = RAW + 'conditions/latest.json';
   let feed: ExternalJSON = await readBucketJSON(url).catch(() => undefined);
   if (feed === undefined) {
     const response = await fetch(url, {signal: AbortSignal.timeout(15000), cf: {cacheTtl: 60}}).catch(() => null);
     feed = response?.ok ? await response.json().catch(() => null) : null;
   }
+  return feed;
+}
+
+export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string}> {
+  const feed = await feedRead;
   const age = feedAgeMinutes(feed, now);
   const result = {age_minutes: Number.isFinite(age) ? Math.round(age) : null, action: 'none'};
   if (age <= STALE_MINUTES) return result;

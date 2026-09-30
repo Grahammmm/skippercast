@@ -50,3 +50,9 @@ export const challenges=sqliteTable('auth_challenges',{
   id:text('id').primaryKey(),challenge:text('challenge').notNull(),kind:text('kind').notNull(),
   userId:text('user_id'),expiresAt:integer('expires_at').notNull(),
 },t=>[uniqueIndex('challenge_value').on(t.challenge),index('challenge_expires').on(t.expiresAt)]);
+
+// Small key/value state for the Worker's own background jobs (P3-04): e.g. the
+// last live-conditions publication whose trip checks were queued. No user data.
+export const jobState=sqliteTable('job_state',{
+  key:text('key').primaryKey(),value:text('value').notNull(),updatedAt:text('updated_at').notNull(),
+});

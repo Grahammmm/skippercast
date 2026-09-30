@@ -1,4 +1,8 @@
-"""Invoke private trip checks with GitHub's short-lived workflow identity."""
+"""Invoke private trip checks with GitHub's short-lived workflow identity.
+
+The default path, and the manual trigger and fallback once the Worker queues
+trip checks itself (ENABLE_QUEUES=true; docs/cloudflare.md#trip-check-queue).
+"""
 import json
 import os
 from pathlib import Path

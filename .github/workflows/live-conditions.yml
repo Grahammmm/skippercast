@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "7,37 * * * *"
   workflow_dispatch:
+    inputs:
+      check_trips:
+        description: "Also run the saved-trip check job (always on unless the ENABLE_QUEUES variable is true)"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -89,7 +94,11 @@ jobs:
         run: python scripts/live_loop.py --skip-trips ${{ github.event_name == 'push' && '--once' || '--budget-minutes 330' }}
 
   # Private saved-trip checks after each publication, beside the refresh job.
+  # With the ENABLE_QUEUES repository variable set to "true", the Worker's cron
+  # queues these checks itself (server/trip-queue.ts), so this job runs only when
+  # dispatched by hand with check_trips; it remains the fallback path.
   notify:
+    if: vars.ENABLE_QUEUES != 'true' || inputs.check_trips
     runs-on: ubuntu-latest
     timeout-minutes: 360
     permissions:
