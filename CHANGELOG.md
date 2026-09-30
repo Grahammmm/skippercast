@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Operations: `/api/daily` counts only edge-cache misses against its per-IP limit, so several people behind one address (carrier NAT, a marina's Wi-Fi) are no longer refused the cached regulation and closure checks.
 - Seafloor: process the remaining two qualified Monterey native intersections; add 27.72 km² of measured coverage and 62 ranked habitat candidates, held privately until spatial screening.
 
 - Seafloor: qualify the original Monterey 2 m producer product and paired substrate; add three measured physical reaches with 672 ranked habitat candidates, held privately until Monterey spatial screening.

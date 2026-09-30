@@ -2,11 +2,10 @@
 import {Hono} from 'hono';
 import type {Context} from 'hono';
 import {readFeed} from '../feeds.ts';
-import {cached, cacheKey} from '../edge-cache.ts';
+import {cached, cacheKey, clientIP, overLimit, tooManyRequests} from '../edge-cache.ts';
 import {regionById, build, PUBLIC_TTL} from '../config.ts';
 import {json} from '../http.ts';
 import {waitUntil} from './util.ts';
-import {rateLimit} from '../middleware/rate-limit.ts';
 import type {AppEnv} from '../env.ts';
 import type {ExternalJSON} from '../types.ts';
 
@@ -27,8 +26,11 @@ publicApi.get('/api/habitat', async c => {
 });
 
 publicApi.get('/api/intelligence', c => regionalFeed(c));
-// Per-IP limited like /api/om (60/min on PUBLIC_LIMITER, its own key prefix).
-publicApi.get('/api/daily', rateLimit('PUBLIC_LIMITER', 'daily'), c => dailyPart(c));
+// Edge-cache hits are free; only a miss, which reads and parses the ~1.4 MB
+// feed, counts against a per-IP limit (60/min on PUBLIC_LIMITER, prefix
+// "daily"). One map load asks for two or three parts, so limiting hits would
+// refuse shared addresses (carrier NAT, a boat club's Wi-Fi) for no saving.
+publicApi.get('/api/daily', c => dailyPart(c));
 
 // Parts of the daily feed the map reads at startup (P4-05). The whole feed is
 // ~1.4 MB; the regulations badge needs its rule checks (~45 KB), and the MPA
@@ -64,7 +66,7 @@ async function dailyPart(c: Context<AppEnv>): Promise<Response> {
     if (!validDailyFeed(feed, region.id)) throw Error('daily feed failed validation');
     const respond = (p: DailyPart) => { const r = json(dailyPartOf(feed, p)); r.headers.set('Cache-Control', PUBLIC_TTL); return r; };
     return {response: respond(part), extra: DAILY_PARTS.filter(p => p !== part).map(p => [key(p), respond(p)] as [Request, Response])};
-  });
+  }, async () => (await overLimit(c.env?.PUBLIC_LIMITER, 'daily:' + clientIP(c.req.raw)) ? tooManyRequests() : null));
 }
 publicApi.get('/api/forecast', c => regionalFeed(c));
 
