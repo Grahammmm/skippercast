@@ -1,4 +1,5 @@
 // First-run preference only. Port match positions are approximate and never exported.
+import {navigate} from '../web/state.ts';
 export const HOME_PORT_KEY = 'skippercast-home-port-v1';
 // Must equal FIRST_RUN_KEY in first-run.js (not imported: that module needs the region loaded).
 export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
@@ -17,6 +18,16 @@ export function portURL(href, port) {
   url.searchParams.set('view', port.view.map((n, i) => i < 2 ? Number(n).toFixed(5) : n).join(','));
   url.hash = 'map';
   return url.href;
+}
+
+/**
+ * The address for choosing `port` from `href`. A port in the region already
+ * shown keeps the chosen target, so the forecast and species stay as they were.
+ */
+export function portChoiceURL(href, port) {
+  const next = new URL(portURL(href, port)), target = new URL(href).searchParams.get('target');
+  if (target && new URL(href).searchParams.get('region') === port.region) next.searchParams.set('target', target);
+  return next.href;
 }
 
 export function closestPort(ports, latitude, longitude, maxNm = 75) {
@@ -43,7 +54,9 @@ async function loadPorts() {
 function savedPortId() { try { return localStorage.getItem(HOME_PORT_KEY); } catch { return null; } }
 function savePort(id) { try { localStorage.setItem(HOME_PORT_KEY, id); } catch { /* Session still navigates. */ } }
 
-function chooser(ports, firstRun) {
+// Choosing navigates in place while the app has not loaded a region, or when
+// the port is in the region already shown; otherwise the page loads the region.
+function chooser(ports, firstRun, onChosen = () => {}) {
   const previous = document.activeElement;
   const scrim = document.createElement('div');
   scrim.className = 'home-port-scrim';
@@ -81,7 +94,7 @@ function chooser(ports, firstRun) {
       const name = document.createElement('strong'); name.textContent = port.name;
       const detail = document.createElement('span'); detail.textContent = `${port.status === 'active' ? 'Mapped area' : 'Regional preview'} · ${port.forecast_name}`;
       button.append(name, detail);
-      button.addEventListener('click', () => { savePort(port.id); if (firstRun) { try { localStorage.setItem(FIRST_RUN_KEY, 'boat'); } catch { /* flow is optional */ } } location.assign(portURL(location.href, port)); });
+      button.addEventListener('click', () => { savePort(port.id); if (firstRun) { try { localStorage.setItem(FIRST_RUN_KEY, 'boat'); } catch { /* flow is optional */ } } if (navigate(portChoiceURL(location.href, port)) === 'in-place') { close(); onChosen(); } });
       results.append(button);
     }
     if (!query && !showAll && !specific) {
@@ -93,7 +106,8 @@ function chooser(ports, firstRun) {
   };
   input.addEventListener('input', () => { feedback.textContent = ''; render(); });
   scrim.querySelector('#home-port-explore').addEventListener('click', () => {
-    const url = new URL(location.href); url.search = '?coast=central'; url.hash = 'map'; location.assign(url.href);
+    const url = new URL(location.href); url.search = '?coast=central'; url.hash = 'map';
+    if (navigate(url) === 'in-place') { close(); onChosen(); }
   });
   scrim.querySelector('#home-port-near').addEventListener('click', () => {
     feedback.textContent = 'Finding a nearby port…';
@@ -126,17 +140,17 @@ export async function initHomePort() {
   button.setAttribute('aria-label', saved ? 'Change home port' : 'Choose home port');
   button.addEventListener('click', async () => {
     try { chooser(await loadPorts(), false); }
-    catch { location.assign('/?coast=central#map'); }
+    catch { navigate('/?coast=central#map'); }
   });
   if (hasAreaLink(location.href)) return true; // Shared links always win; never overwrite preference.
   try {
     const ports = await loadPorts();
     const port = ports.find(item => item.id === saved);
-    if (port) { location.replace(portURL(location.href, port)); return false; }
-    chooser(ports, true);
+    // Nothing region-bound has loaded yet, so both paths continue in place.
+    if (port) return navigate(portURL(location.href, port), {replace: true}) === 'in-place';
+    return await new Promise(resolve => chooser(ports, true, () => resolve(true)));
   } catch {
     // Keep the atlas reachable even if the optional port directory fails.
     return true;
   }
-  return false;
 }

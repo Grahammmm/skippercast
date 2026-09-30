@@ -1,6 +1,8 @@
 import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js';
 import { positions } from './geo-screen.js';
 import {coastAt,coastURL} from './coasts.js';
+import {effect} from '@preact/signals';
+import {navigate,setParams,view} from '../web/state.ts';
 
 // Discovery extents select a reviewed package. They are not legal boundaries.
 export const contains = (b, p) => !!b && Number.isFinite(p?.longitude) && Number.isFinite(p?.latitude) && p.longitude >= b[0] && p.longitude <= b[2] && p.latitude >= b[1] && p.latitude <= b[3];
@@ -41,11 +43,14 @@ export function targetsForLocation(region, context) {
   return region.target_options.filter(t=>!hidden.has(t.id) && (context.coverage!=='discovery'||t.kind==='offshore'));
 }
 export function viewFromURL(url) {
-  const value=new URL(url).searchParams.get('view');
+  return parseView(new URL(url).searchParams.get('view'));
+}
+export function parseView(value) {
   if(!value || !/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,\d+(?:\.\d+)?$/.test(value))return null;
   const [latitude,longitude,zoom]=value.split(',').map(Number);
   return Math.abs(latitude)<=85 && Math.abs(longitude)<=180 && zoom>=7 && zoom<=18 ? {latitude,longitude,zoom}:null;
 }
+export const viewParam=(p,zoom)=>`${p.latitude.toFixed(5)},${p.longitude.toFixed(5)},${zoom}`;
 export function locationURL(url,regionId,point,zoom,target) {
   const next=new URL(url);next.searchParams.set('region',regionId);
   next.searchParams.delete('coast');
@@ -69,14 +74,14 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
     const coastal=coastAt(point);
     if(!selected && next.coverage==='outside' && coastal && !navigating) {
       navigating=true;caption.textContent=`Opening ${coastal.name} coastal guide…`;
-      location.replace(coastURL(location.href,coastal,{point,zoom:map.getZoom(),target:desired,overview:true}));return;
+      navigate(coastURL(location.href,coastal,{point,zoom:map.getZoom(),target:desired,overview:true}),{replace:true});return;
     }
     if(next.regionId!==region.id && ['covered','discovery'].includes(next.coverage)) {
       if(navigating)return; navigating=true;
       next.coverage='loading';context=next;
       document.dispatchEvent(new CustomEvent('skippercast:location',{detail:next}));
       caption.textContent=`Loading ${next.name}…`;
-      location.replace(locationURL(location.href,next.regionId,point,map.getZoom(),desired));return;
+      navigate(locationURL(location.href,next.regionId,point,map.getZoom(),desired),{replace:true});return;
     }
     const choices=targetsForLocation(region,next), old=select.value;
     const chosen=choices.some(t=>t.id===desired)?desired:choices.some(t=>t.id===old)?old:choices[0]?.id;
@@ -97,12 +102,15 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
   }
   function move() {
     if(selected && !same(center(),selectionCenter) && !same(center(),selected))selected=null;
-    const url=new URL(location.href),p=center();url.searchParams.set('view',`${p.latitude.toFixed(5)},${p.longitude.toFixed(5)},${map.getZoom()}`);url.searchParams.delete('focus');history.replaceState(history.state,'',url);
+    const url=new URL(location.href),p=center();url.searchParams.set('view',viewParam(p,map.getZoom()));url.searchParams.delete('focus');navigate(url,{replace:true});
     clearTimeout(timer);timer=setTimeout(update,250);
   }
   map.on('moveend',move);
+  // A view set by navigation (a port in this region, Back/Forward) moves the map in place.
+  // After the frame in which navigation.js shows the map, so Leaflet measures it first.
+  effect(()=>{const next=parseView(view.value);if(next&&viewParam(center(),map.getZoom())!==viewParam(next,next.zoom))requestAnimationFrame(()=>{map.invalidateSize(false);map.setView([next.latitude,next.longitude],next.zoom);});});
   document.addEventListener('skippercast:boundaries',()=>{clearTimeout(timer);timer=setTimeout(update,50);});
-  select.addEventListener('change',event=>{if(!event.detail?.location){desired=select.value;selected=null;const url=new URL(location.href);url.searchParams.set('target',desired);history.replaceState(history.state,'',url);update();}});
+  select.addEventListener('change',event=>{if(!event.detail?.location){desired=select.value;selected=null;setParams({target:desired});update();}});
   const result={
     get:()=>context,
     resolve(value){return value?{...value,...enrichLocation(resolveLocation(value.point,directory,region.id),region,protectedAreas)}:value;},

@@ -2,7 +2,8 @@
 // and trip-alert push share the stable '/sw.js'), shows an offline banner when
 // saved data is on screen, offers installation, and mounts the offline trip
 // pack card in the Guide.
-import {bannerText, installHint} from './offline-core.js';
+import {installHint} from './offline-core.js';
+import {offlineStatus} from '../web/views.ts';
 import {initOfflinePack} from './offline-pack.js';
 
 const sessionStart = Date.now();
@@ -16,27 +17,18 @@ function writeDismissed(kind) {
   try { localStorage.setItem(DISMISS, JSON.stringify({...readDismissed(), [kind]: new Date().toISOString()})); } catch {}
 }
 
+// The freshness banner's host; web/components/FreshnessBanner.tsx renders its
+// text, link and reload button from offlineStatus.
 const banner = document.createElement('div');
+banner.id = 'offline-banner';
 banner.className = 'offline-banner';
 banner.setAttribute('role', 'status');
 banner.setAttribute('aria-live', 'polite');
 banner.hidden = true;
-banner.innerHTML = '<span></span><a href="#guide" data-offline-guide>Saved regions</a><button type="button" data-offline-reload hidden>Reload</button>';
-banner.querySelector('[data-offline-reload]').addEventListener('click', () => location.reload());
-banner.querySelector('[data-offline-guide]').addEventListener('click', () => {
-  // The link opens the Guide; open the offline card inside it.
-  const card = document.getElementById('offline-pack-topic');
-  if (card) { card.open = true; requestAnimationFrame(() => card.scrollIntoView({block: 'start'})); }
-});
 
 function renderBanner() {
   const online = navigator.onLine;
-  const text = bannerText({online, savedAt});
-  // Back online while saved data is still on screen: say so until a reload.
-  const stale = online && savedAt && text;
-  banner.querySelector('span').textContent = text || '';
-  banner.querySelector('[data-offline-reload]').hidden = !stale;
-  banner.hidden = !text;
+  offlineStatus.value = {online, savedAt, now: Date.now()};
   document.body.classList.toggle('is-offline', !online);
 }
 

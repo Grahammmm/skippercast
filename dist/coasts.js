@@ -1,4 +1,5 @@
 import {withFeeds} from './feeds.js';
+import {navigate} from '../web/state.ts';
 // The five coastal browse regions are separate from survey-qualified packages.
 // Keep this module independent of regional modules: boot uses it before a package is selected.
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,7 +53,8 @@ export function initCoastSelector(catalog,coast) {
   select.replaceChildren(...catalog.regions.map(r=>new Option(r.name,r.id)));select.value=coast.id;select.disabled=false;
   select.addEventListener('change',()=>{
     const next=catalog.regions.find(r=>r.id===select.value);
-    location.assign(coastURL(location.href,next,{target:document.getElementById('species-select').value}));
+    // Another coast: a full load until the app follows region changes (web/state.ts).
+    navigate(coastURL(location.href,next,{target:document.getElementById('species-select').value}));
   });
 }
 export async function loadCoastalStatus(catalog) {

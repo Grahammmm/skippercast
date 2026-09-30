@@ -1,12 +1,16 @@
 # Web app
 
-The app is a mobile-first map workspace with four views in the bottom navigation: **Map, Conditions, Export and Guide**. Its source lives in `dist/` as plain, tracked files with no framework. To view it locally, no build or package installation is needed; serve that directory with any static HTTP server:
+The app is a mobile-first map workspace with four views in the bottom navigation: **Map, Conditions, Export and Guide**. Its pages, modules and stylesheets live in `dist/` as plain, tracked files; newer pieces are typed TypeScript and Preact in `web/` (the URL/state store `web/state.ts`, view models `web/views.ts`, and components in `web/components/` rendered into slots of the page by `web/islands.tsx`). Because `dist/` modules import `web/*.ts`, the page needs a build to run in a browser:
 
 ```bash
-python3 -m http.server 8485 --directory dist
+pnpm install --frozen-lockfile && pnpm build
+node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.local.jsonc
+npx --yes wrangler@4.142.0 dev --config wrangler.local.jsonc
 ```
 
-Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site. Deployment does need a build: `pnpm install --frozen-lockfile && pnpm build` (`scripts/build-worker.mjs`) builds `dist/` with Vite into `dist/client` (hashed scripts and styles in `assets/`, one stylesheet per page, pages renamed with the build id, static data copied unchanged) and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). A plain static server cannot answer the Worker's `/feeds/` and `/api/` routes, so published feeds and forecasts fail there; to run the whole app locally, build and then start `npx --yes wrangler@4.142.0 dev`.
+Open `http://localhost:8787/`. `pnpm build` (`scripts/build-worker.mjs`) builds `dist/` with Vite into `dist/client` (hashed scripts and styles in `assets/`, one stylesheet per page, pages renamed with the build id, static data copied unchanged) and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). `wrangler dev` serves both, including the Worker's `/feeds/` and `/api/` routes. On an iPad, use the deployed HTTPS site.
+
+**State and the URL.** `region`, `coast`, `view`, `target` and `hour` in the address are the source of truth (`web/state.ts`). Choosing a port in the region already shown, moving the map, changing the target or picking a forecast hour updates the address without reloading; a shared `?hour=` link opens that forecast hour. The app's modules still read the region once at start, so after boot has loaded a region, a change of region or coast (region menu, coast menu, a port elsewhere, panning into another region, the export region) is a full page load; `navigate()` in `web/state.ts` is the one place that decides.
 
 ## What works
 

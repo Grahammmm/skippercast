@@ -84,6 +84,8 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     publicDir: false,
     logLevel: 'warn',
     plugins: [staticRefs(), pageStyles(root), bootPreload({root})],
+    // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
+    oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
       outDir,
       emptyOutDir: true,
