@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "reconciles_open_prs": [
+    91,
+    94
+  ],
+  "reaches": [
+    {
+      "reach": "morro-bay-r05",
+      "tier1_km2": 20.304375,
+      "selected_valid_km2": 19.861929278,
+      "source_ids": [
+        "bathymetry-offshoremorrobay-zip-fad659557e"
+      ],
+      "physical_candidate_count": 145,
+      "ranked_count": 144,
+      "incomplete_count": 1,
+      "lingcod_fit": {
+        "2": 142,
+        "1": 2
+      },
+      "rockfish_reef_fit": {
+        "2": 130,
+        "1": 14
+      },
+      "physical_input_hash": "dee69939cd7156fbc63834792929cb96b6fb28c105291b4674caecf7a9e6ca2f",
+      "survey_run_hash": "0ef56dec97eaf45c2136f5b987b8d86af0d7e3d51a7b5408c924ca99e4205447",
+      "public_candidate_count": 0
+    },
+    {
+      "reach": "morro-bay-r06",
+      "tier1_km2": 61.748125,
+      "selected_valid_km2": 60.023595153,
+      "source_ids": [
+        "bathymetry-offshoremorrobay-zip-fad659557e",
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c"
+      ],
+      "physical_candidate_count": 412,
+      "ranked_count": 399,
+      "incomplete_count": 13,
+      "lingcod_fit": {
+        "2": 345,
+        "3": 53,
+        "1": 1
+      },
+      "rockfish_reef_fit": {
+        "2": 340,
+        "3": 49,
+        "1": 10
+      },
+      "physical_input_hash": "adeaa8cb204e1596cff28f7f50875b690d71e043f494a6258c41df3c8f4831ff",
+      "survey_run_hash": "6f181a21c51dfb5f6b22aadb2ffe7a3445f6374eb97291b53e193d53c069c803",
+      "public_candidate_count": 0
+    },
+    {
+      "reach": "cambria-san-simeon-r02",
+      "tier1_km2": 7.625,
+      "selected_valid_km2": 7.09135527,
+      "source_ids": [
+        "bathymetry-offshorepointestero-zip-7e3be5eb12"
+      ],
+      "physical_candidate_count": 61,
+      "ranked_count": 58,
+      "incomplete_count": 3,
+      "lingcod_fit": {
+        "2": 35,
+        "3": 23
+      },
+      "rockfish_reef_fit": {
+        "2": 38,
+        "3": 18,
+        "1": 2
+      },
+      "physical_input_hash": "8e78d3b10670d36bc9dd2d7c44351689dabead568254a530d585a86963dd7b3c",
+      "survey_run_hash": "fa8d5be308f6fefbc4501bc61f2f4266488f7865506c0c210515513ee7980583",
+      "public_candidate_count": 0
+    }
+  ],
+  "delta": {
+    "tier1_km2": 89.6775,
+    "selected_valid_km2": 86.97688,
+    "candidates": 618,
+    "ranked": 601,
+    "public": 0
+  },
+  "sources": "Previously qualified original USGS Morro Bay/Point Estero/Point Buchon depth and character; catalog scientific identities and raw checksums unchanged. Point Buchon >80m display-resampled pixels excluded from fine habitat.",
+  "validation": "Repeated on fresh main after #124: all unchanged. Native tiled processing, depth <=300ft, private and non-exportable; unranked metrics retained as explicit holds."
+}

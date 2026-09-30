@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: process southern Morro and eastern Cambria native intersections; add 89.68 km² measured coverage and 601 supported ranks in three private reaches.
+
 - Seafloor: qualify three native NOAA Point Conception depth bands; add 76.32 km² measured coverage and 979 supported habitat ranks in three private reaches, preserving 2/4/8 m spacing.
 
 - Seafloor: verify reviewed scientific raster content across lossless GeoTIFF encodings while retaining original/cache checksums; retain exact worker failure reasons during batch aggregation.
