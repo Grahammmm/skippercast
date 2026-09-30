@@ -24,7 +24,7 @@ def main():
     add.add_argument('--url', required=True)
     add.add_argument('--id')
     add.add_argument('--bounds', type=float, nargs=4, required=True, metavar=('W', 'S', 'E', 'N'))
-    add.add_argument('--format', choices=('bag', 'usgs-geotiff'))
+    add.add_argument('--format', choices=('bag', 'usgs-geotiff', 'arcgrid'))
     add.add_argument('--member', default='unknown')
     add.add_argument('--local', type=Path)
     add.add_argument('--fetch', action='store_true')

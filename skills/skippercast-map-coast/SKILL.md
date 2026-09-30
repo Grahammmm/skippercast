@@ -267,3 +267,27 @@ retains coverage, and a missing current-batch receipt never becomes success.
 Keep source qualification PRs separate from app UI changes. The installed skill
 is a copy of this file; update it after changing the repo version so two plans
 do not drift.
+
+## Original ArcInfo GRID shelf products
+
+Some original USGS shelf grids are `.tgz` archives containing an ArcInfo GRID
+**directory**, rather than a GeoTIFF or E00 file. Use the existing `arcgrid`
+adapter and specify `--format arcgrid` with the exact reviewed
+`--member` directory (for example `sgf5gd/sgf5g`). Never select a rendered
+hillshade, infer the folder name, or treat a directory listing as a downloadable
+survey. The fetcher accepts this container only on the original USGS host.
+
+Inspect the native AIG grid's CRS, spacing, mask and actual valid shallow pixels;
+then normalize through the usual ingestion command. The archive and extracted
+members have separate checksums, extraction is bounded, and links/traversal are
+rejected. Original TGZ files are private recovery objects; extracted members
+are reproducible scratch. The existing bounded processing, source qualification,
+lineage, physical ranking and final spatial screen remain required.
+
+1998 Monterey/Carmel/Point Sur EM300 grids have 5 m spacing, but that is not
+sounding accuracy. Retain unknown vertical datum and interpolation masks when
+not documented. Shared survey lineage cannot become independent evidence.
+An adapter receipt proves faithful ingestion, not deduplicated geographic
+expansion or published habitat. Adding an adapter changes normalization cache
+keys; unchanged scientific raster identities can still verify prior source
+reviews across lossless encodings.

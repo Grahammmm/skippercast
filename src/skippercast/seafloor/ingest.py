@@ -11,7 +11,7 @@ from rasterio.shutil import copy as raster_copy
 from rasterio.windows import Window
 
 from skippercast.platform.contracts import REPO, atomic_json, bbox, read_json
-from .adapters import bag, usgs_geotiff
+from .adapters import arcgrid, bag, usgs_geotiff
 from .fetch import fetch_source
 from .io import sha256
 from .raster import bounds_window, chunks, read_native
@@ -22,7 +22,7 @@ VERSION = 'original-native-adapters-v1'
 
 def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
     bbox(list(bounds))
-    if row['kind'] != 'bathymetry' or row['format'] not in {'usgs-geotiff', 'bag'}:
+    if row['kind'] != 'bathymetry' or row['format'] not in {'usgs-geotiff', 'bag', 'arcgrid'}:
         raise ValueError('No original bathymetry adapter for this format')
     cache = Path(root) / 'var/seafloor/cache'
     source, downloaded = fetch_source(row, cache, fetch=fetch, local=local)
@@ -34,6 +34,8 @@ def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
                 'metadata_parser': sha256(Path(__file__).parents[1] / 'platform/bottom_targets.py'),
                 'implementation': {name: sha256(Path(__file__).parent / name) for name in
                                    ('ingest.py', 'raster.py', 'adapters/bag.py', 'adapters/usgs_geotiff.py')}}
+    if row['format'] == 'arcgrid':
+        key_data['implementation']['adapters/arcgrid.py'] = sha256(Path(__file__).parent / 'adapters/arcgrid.py')
     key = hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
     output = source.parent / (key + '.tif')
     receipt_path = output.with_suffix('.json')
@@ -53,6 +55,8 @@ def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
             raise ValueError('BAG datum conflicts with manifest; review source metadata')
         row['vertical_datum'] = metadata['vertical_datum']
         adapter = bag
+    elif row['format'] == 'arcgrid':
+        adapter = arcgrid
     else:
         adapter = usgs_geotiff
     temporary = output.with_suffix('.working.tif')
