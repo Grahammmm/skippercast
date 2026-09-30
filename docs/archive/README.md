@@ -89,3 +89,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 - [Point Conception native batch, September 30](seafloor-conception-native-batch-2026-09-30.md): three original NOAA depth bands and three private measured reaches.
 
 - [Morro/Cambria reach batch, September 30](seafloor-morro-cambria-reaches-2026-09-30.md): three native private reach assessments and coastal-goal handoff.
+
+- [Regional spatial screen, September 30](seafloor-regional-screen-2026-09-30.md): original legal review, conservative geometries and 2,894 locally screened polygons.

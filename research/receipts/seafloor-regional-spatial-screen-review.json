@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "reconciles_pr": 110,
+  "reviewed_reaches": [
+    "morro-bay-r01",
+    "morro-bay-r02",
+    "morro-bay-r03",
+    "morro-bay-r04",
+    "morro-bay-r05",
+    "morro-bay-r06",
+    "morro-bay-r07",
+    "morro-bay-r08",
+    "point-arguello-conception-r06"
+  ],
+  "sources": [
+    {
+      "section": "165.1155",
+      "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+      "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+      "bytes": 1409,
+      "retrieval": "HTTP200 2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    },
+    {
+      "section": "165.1196",
+      "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+      "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+      "bytes": 13589,
+      "retrieval": "HTTP200 2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    },
+    {
+      "section": "334.1130",
+      "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+      "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+      "bytes": 11126,
+      "retrieval": "HTTP200 2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    }
+  ],
+  "scope": "Morro r01-r08 and Point Arguello-Conception r06 permanent planning screen; no trip-time seasonal, harbor or launch clearance.",
+  "part_inventory_review": [
+    {
+      "part": "334",
+      "sha256": "4b7d8e089cd85bb7aa9b50a3a850dfe3f588a4df06f9ac3cfb3d9c331be38367",
+      "bytes": 620303,
+      "finding": "Vandenberg starts at Point Sal34°54′08″, south of Morro survey area. Monterey334.1150 and SanMiguel334.1140 require separate future region review."
+    },
+    {
+      "part": "165",
+      "sha256": "34e4440edf340f14e2bb22fb2deef3f4c61b0fa4937787ca9badf7b2883b16e3",
+      "bytes": 1798710,
+      "finding": "Diablo165.1155 fixed zone; Morro entrance165.1196 conditional bar RNA;165.1125 fireworks and escorted-vessel/mobile zones remain trip-time checks."
+    }
+  ],
+  "conservative_geometry": {
+    "diablo": "NAD83 geodesic2000yd circle with1m outward margin",
+    "vandenberg4": "Unknown regulatory datum; published seaward DMS vertices closed inland and expanded250m; can overhold water, not exact boundary",
+    "morro_entrance": "Published closed NAD83 polygon expanded25m; excluded from stopping/fishing recommendations even while transit is permitted"
+  },
+  "cdfw": {
+    "status": "ok",
+    "checked_at": "2026-09-30T17:23:40.361964+00:00",
+    "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+    "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+    "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+    "feature_count": 155
+  },
+  "noaa": {
+    "status": "ok",
+    "checked_at": "2026-09-30T17:23:40.361978+00:00",
+    "file": "noaa-federal-5d0683008b9bebfce2dac3a2d560fbb2debafe3782b46f7362b19f72b0388333.json",
+    "sha256": "5c4001414f6424d1a8f25fcb544602c6970fae30cfb67c46ec6da75f27347a12",
+    "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+    "feature_count": 29
+  },
+  "fresh_snapshot_checked_at": "2026-09-30T17:24:06.616647+00:00",
+  "physical_reprocessing": "Not required for unchanged physical cache; legal screen is a separate release stage.",
+  "screened_reaches": [
+    {
+      "reach": "morro-bay-r01",
+      "screened_count": 399,
+      "tier2_km2": 4.671423982,
+      "physical_reused": false,
+      "physical_input_hash": "8f23d3c871f1a2bd3776258a19be6a0edf0e7d8f7ec782242606601b21351d2f",
+      "habitat_sha256": "e6dfa792e901e70013756b47179ab0ad93b69ef0b6798e3b7c81f729ac77088d",
+      "held_count": 79
+    },
+    {
+      "reach": "morro-bay-r02",
+      "screened_count": 753,
+      "tier2_km2": 10.502448106,
+      "physical_reused": false,
+      "physical_input_hash": "e404225a6827eaf29e2f60c86d4a3b0e96a68f41077bb7d3ff98cb7998f6d211",
+      "habitat_sha256": "1cada04afd4a1a87b82f8d1e4f7a4ac395c8bf77cb8fa5e21869b30577aed359",
+      "held_count": 36
+    },
+    {
+      "reach": "morro-bay-r03",
+      "screened_count": 205,
+      "tier2_km2": 4.273267629,
+      "physical_reused": false,
+      "physical_input_hash": "e29e5ad0918641a6aa0c43facd48c13e92bae4c7ba4553cea1dfb098f5ff4c96",
+      "habitat_sha256": "b94416961b2a7e487b3fc5b0041878f82770c2dfbe3da7e3dd8a83bb18dd51ed",
+      "held_count": 3
+    },
+    {
+      "reach": "morro-bay-r04",
+      "screened_count": 56,
+      "tier2_km2": 0.802623771,
+      "physical_reused": false,
+      "physical_input_hash": "0245ec96cef4846cc4b2deac68ff70f1f4388f518a5118db66bb5baf00415684",
+      "habitat_sha256": "c87c0374b13961a255e87af697b482a8cd334ea1f48126c8f425d18a549a88e8",
+      "held_count": 1
+    },
+    {
+      "reach": "morro-bay-r05",
+      "screened_count": 144,
+      "tier2_km2": 0.960830634,
+      "physical_reused": true,
+      "physical_input_hash": "dee69939cd7156fbc63834792929cb96b6fb28c105291b4674caecf7a9e6ca2f",
+      "habitat_sha256": "caab5195a50363ef18ff5c673d12ca471975b0ba74054a9ab0db4c436bb23a9c",
+      "held_count": 1
+    },
+    {
+      "reach": "morro-bay-r06",
+      "screened_count": 379,
+      "tier2_km2": 9.015918433,
+      "physical_reused": true,
+      "physical_input_hash": "adeaa8cb204e1596cff28f7f50875b690d71e043f494a6258c41df3c8f4831ff",
+      "habitat_sha256": "7a6b62fcbd760c0968b511f2f9cc6bfef6d4f5e682bc23103e210bc62b575c8a",
+      "held_count": 33
+    },
+    {
+      "reach": "morro-bay-r07",
+      "screened_count": 417,
+      "tier2_km2": 6.222786909,
+      "physical_reused": false,
+      "physical_input_hash": "b6aaf9dcb87ffff693df21ac69e58991e6671864d83f2a3ff0a7714155162d27",
+      "habitat_sha256": "8be728eab6ca13b6380c3131c50705e988544f3fb5821e9f9d759b9fad50d085",
+      "held_count": 272
+    },
+    {
+      "reach": "morro-bay-r08",
+      "screened_count": 468,
+      "tier2_km2": 3.873308455,
+      "physical_reused": false,
+      "physical_input_hash": "6d85de7302f32f81aa9850798be2dc5064c29fcc9afc2ef4694856f6075e1fd2",
+      "habitat_sha256": "415520a9955461c5cac8572bac1b5a1895b60bd8b3b869c682391d35e55c27d7",
+      "held_count": 9
+    },
+    {
+      "reach": "point-arguello-conception-r06",
+      "screened_count": 73,
+      "tier2_km2": 0.820714848,
+      "physical_reused": true,
+      "physical_input_hash": "1fb91d68cba28cc0e423c4c5c58238a3189c2445306f972c4bac3629c8e987ff",
+      "habitat_sha256": "e65b8db5836433dfca27e08167b45afecdc19cd6f8423679d385e4d6f0f516e7",
+      "held_count": 286
+    }
+  ],
+  "independent_post_screen_check": "Every passed polygon separately checked against whole current source-layer unions; zero touching/overlapping MPA, federal or security exclusion. Three physical caches reused; six were recomputed under current inputs."
+}
