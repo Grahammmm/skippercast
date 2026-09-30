@@ -24,7 +24,8 @@ class NativeRaster:
 
 def bounds_window(dataset, bounds, *, bounds_crs='EPSG:4326', margin_m=100):
     horizontal = CRS.from_user_input(dataset.crs).to_2d()
-    if not horizontal.is_projected or any(a.unit_name != 'metre' for a in horizontal.axis_info):
+    if not horizontal.is_projected or any(a.unit_name.lower() not in {'metre', 'meter', 'metres', 'meters'}
+                                          or a.unit_conversion_factor != 1 for a in horizontal.axis_info):
         raise ValueError('Adapter requires a projected raster in meters')
     if dataset.transform.b or dataset.transform.d or dataset.transform.a <= 0 or dataset.transform.e >= 0:
         raise ValueError('Adapter requires a north-up raster')

@@ -24,8 +24,9 @@ from tests._support import ROOT
 PINNED = {
     # seafloor/ingest.py: metadata_parser and implementation
     'src/skippercast/platform/bottom_targets.py': 'feece80a42529aeab5850bc4b775835ffdcafdbb779ac38d6e3cc7c33c7d192f',
-    'src/skippercast/seafloor/ingest.py': '07d4d14a7564fd3d2e23865970831a1143d80fd31953fcd1ccbb4d5837fd6e14',
-    'src/skippercast/seafloor/raster.py': '30885cdbaed6be8089f4b3661a4d6715a33d6900274486793fceb53079729ca5',
+    'src/skippercast/seafloor/ingest.py': 'b3427fc82f962a41d0e36a9962eee13354c06f40e0aac21255f6eb7738aec358',
+    'src/skippercast/seafloor/raster.py': 'efa6606e5205670186ec16f0625bd2077bc7b0ff574266f07d6f01ec91902da8',
+    'src/skippercast/seafloor/adapters/arcgrid.py': 'd8fb42a1f0fd6065a9421479e0b9cf8723934a08d23e88d3ffb9871b49548345',
     'src/skippercast/seafloor/adapters/bag.py': 'f89211791ecc448f3d8d4b32589ee4c7cc016604e7788db46b17405c9858853c',
     'src/skippercast/seafloor/adapters/usgs_geotiff.py': '51dee0633a7733c9937856b3c09704b8f5197bf9c96e3dc5f3d2aa8b65f4a24a',
 }
@@ -40,7 +41,7 @@ class SeafloorKeyFileTests(unittest.TestCase):
 
     def test_pinned_list_covers_every_file_the_keys_hash(self):
         ingest = (ROOT / 'src/skippercast/seafloor/ingest.py').read_text()
-        for name in ('ingest.py', 'raster.py', 'adapters/bag.py', 'adapters/usgs_geotiff.py'):
+        for name in ('ingest.py', 'raster.py', 'adapters/bag.py', 'adapters/usgs_geotiff.py', 'adapters/arcgrid.py'):
             self.assertIn(f"'{name}'", ingest)
             self.assertIn(f'src/skippercast/seafloor/{name}', PINNED)
         self.assertIn("'platform/bottom_targets.py'", ingest)

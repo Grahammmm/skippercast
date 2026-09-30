@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Seafloor: include full H11953 depth-band footprints and native 1 m nearshore detail; +13.08 km² valid coverage. Existing relative extraction changes screened outlines, with limitations documented.
+- Seafloor: read original USGS ArcInfo GRID archives at native spacing with bounded extraction and checked recovery; unlock older shelf surveys without claiming new published coverage.
 
 - Seafloor: rescreen cached Cambria and southern Conception habitat; 1,112 additional candidates pass the expanded permanent planning scope, subject to production and trip-time checks.
 

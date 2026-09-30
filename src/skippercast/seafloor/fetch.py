@@ -20,7 +20,8 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
     if not re.fullmatch(r'[a-f0-9]{64}|unknown', expected):
         raise ValueError('Invalid source checksum')
     extension = Path(urlsplit(url).path).suffix.lower()
-    if extension not in {'.zip', '.bag', '.tif', '.tiff'}:
+    if extension not in {'.zip', '.bag', '.tif', '.tiff'} and not (
+            extension == '.tgz' and row.get('format') == 'arcgrid' and url.startswith('https://pubs.usgs.gov/')):
         raise ValueError('Unsupported source container')
     cache = Path(cache)
     destination = cache / expected / ('source' + extension)
