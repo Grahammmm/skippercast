@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import tempfile
+import shutil
 import unittest
 from unittest.mock import patch
 
@@ -194,6 +195,54 @@ class ReachRunTests(unittest.TestCase):
             self.assertEqual(excluded['ledger_summary']['tier1_km2'], 0)
             self.assertEqual(excluded['inputs']['sources'], [])
             self.assertEqual(third['ledger_summary']['selected_valid_km2'],0)
+            # Rights-only promotion reuses checked private numerical outputs,
+            # while the transitional cache still cannot publish anything.
+            from skippercast.seafloor.adopt import adopt_private
+            with self.assertRaisesRegex(ValueError, 'source set'):
+                adopt_private('fixture-r01', root=root)
+            promoted=dict(row,status='usable')
+            manifest['surveys'] = [promoted]
+            (root/'catalog/surveys.json').write_text(json.dumps(manifest))
+            private_folder=root/'var/seafloor/private-reaches/fixture-r01'
+            original_candidates=(private_folder/'candidates.geojson').read_bytes()
+            saved_cells=(private_folder/'cells.json').read_bytes()
+            (private_folder/'cells.json').write_text('corrupt')
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                adopt_private('fixture-r01', root=root)
+            (private_folder/'cells.json').write_bytes(saved_cells)
+            manifest['surveys'][0]=dict(promoted,year=2020)
+            (root/'catalog/surveys.json').write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, 'Scientific source metadata'):
+                adopt_private('fixture-r01', root=root)
+            manifest['surveys']=[promoted]
+            (root/'catalog/surveys.json').write_text(json.dumps(manifest))
+            rules_path=root/'catalog/habitat-rules.json'
+            rules_bytes=rules_path.read_bytes()
+            rules_path.write_text(json.dumps(dict(rules,rule_version='changed-again')))
+            with self.assertRaisesRegex(ValueError, 'Scientific inputs or implementation'):
+                adopt_private('fixture-r01', root=root)
+            rules_path.write_bytes(rules_bytes)
+            with self.assertRaisesRegex(ValueError, 'already exists'):
+                adopt_private('fixture-r01', root=root)
+            shutil.rmtree(root/'var/seafloor/reaches/fixture-r01')
+            ledger_before=(root/'dist/data/seafloor-ledger.json').read_bytes()
+            adoption=adopt_private('fixture-r01', root=root)
+            self.assertTrue(adoption['requires_current_screen'])
+            transferred=root/'var/seafloor/reaches/fixture-r01'
+            self.assertEqual((transferred/'candidates.geojson').read_bytes(), original_candidates)
+            self.assertEqual((root/'dist/data/seafloor-ledger.json').read_bytes(), ledger_before)
+            transitional=json.loads((transferred/'run.json').read_text())
+            self.assertTrue(transitional['publication_prohibited'])
+            self.assertEqual(transitional['inputs']['sources'][0]['status'], 'physical-only')
+            with patch('skippercast.seafloor.run.footprint') as reading, \
+                 patch('skippercast.seafloor.run.terrain_cells') as terrain_reading, \
+                 patch('skippercast.seafloor.run.build_candidates') as extracting:
+                released,_=run('fixture-r01', root=root)
+                self.assertTrue(released['physical_reused'])
+                self.assertFalse(released['publication_prohibited'])
+                self.assertEqual(released['physical_input_hash'], adoption['physical_input_hash'])
+                self.assertEqual(released['ledger_summary']['selected_valid_km2'],.0625)
+                reading.assert_not_called();terrain_reading.assert_not_called();extracting.assert_not_called()
 
 
 if __name__=='__main__':
