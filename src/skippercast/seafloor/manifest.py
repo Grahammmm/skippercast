@@ -28,7 +28,7 @@ def validate_manifest(document, root=REPO):
         if profile and (row['format'] != 'usgs-geotiff' or row['resolution_m'] == 'unknown'
                         or profile['coarse_resolution_m'] <= row['resolution_m']):
             raise ValueError('Mixed-resolution profile requires a finer USGS GeoTIFF display grid')
-        if row['status'] == 'usable':
+        if row['status'] in {'usable', 'physical-only'}:
             from skippercast.platform.contracts import bbox
             receipt = row['adapter_review']
             bbox(receipt['requested_bounds_wgs84'])
@@ -45,11 +45,17 @@ def validate_manifest(document, root=REPO):
     return document
 
 
-def qualify_row(row, receipt, *, rights_url):
+def physical_source(row, *, physical_only=False):
+    """Private-reviewed sources cannot enter the default/public processing path."""
+    return row['kind'] == 'bathymetry' and (row['status'] == 'usable' or
+        physical_only and row['status'] == 'physical-only')
+
+
+def qualify_row(row, receipt, *, rights_url, physical_only=False):
     """Promote only after explicit rights review and a successful native adapter run."""
     from skippercast.platform.contracts import public_url
     public_url(rights_url)
-    if row['license'] != 'public-domain-us-gov':
+    if not physical_only and row['license'] != 'public-domain-us-gov':
         raise ValueError('Source rights must be reviewed before usable status')
     if (receipt['source_id'] != row['id'] or receipt['source_sha256'] != row['sha256']
             or receipt['adapter_version'] != 'original-native-adapters-v1'
@@ -57,7 +63,7 @@ def qualify_row(row, receipt, *, rights_url):
                    <= receipt['valid_pixels_in_requested_bounds']):
         raise ValueError('A matching native adapter receipt with shallow-water pixels is required')
     result = deepcopy(row)
-    result.update(status='usable', hold_reason='unknown', bytes=receipt['source_bytes'],
+    result.update(status='physical-only' if physical_only else 'usable', hold_reason='unknown', bytes=receipt['source_bytes'],
                   horizontal_crs=receipt['horizontal_crs'], vertical_datum=receipt['vertical_datum'],
                   resolution_m=max(receipt['native_resolution_m']))
     result['adapter_review'] = {key: receipt[key] for key in (
@@ -70,10 +76,12 @@ def qualify_row(row, receipt, *, rights_url):
     result['notes'] = ('Opened through original-native-adapters-v1; native-resolution COG cached by source hash. '
                        'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
                        'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')
+    if physical_only:
+        result['notes'] += ' Private physical processing only; rights are not granted and publication/export remain prohibited.'
     return result
 
 
-def promote_draft(path, *, rights_url, root=REPO):
+def promote_draft(path, *, rights_url, root=REPO, physical_only=False):
     """Explicit reviewed promotion, never called by the scheduled discovery job.
 
     The operator reviews metadata and sets the draft row's license/date/datum
@@ -87,7 +95,7 @@ def promote_draft(path, *, rights_url, root=REPO):
     current, _, _ = ingest(row, previous['requested_bounds_wgs84'], root=root)
     if current['source_sha256'] != previous['source_sha256'] or current['cog_sha256'] != previous['cog_sha256']:
         raise ValueError('Native draft changed; inspect and review it again')
-    qualified = qualify_row(row, current, rights_url=rights_url)
+    qualified = qualify_row(row, current, rights_url=rights_url, physical_only=physical_only)
     document = read_json(root/'catalog/surveys.json')
     replaced = [r for r in document['surveys'] if r['id'] != row['id']]
     document['surveys'] = replaced + [qualified]

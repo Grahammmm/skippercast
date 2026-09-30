@@ -21,7 +21,7 @@ from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry, classify_cells, footprint
 from .ingest import ingest
 from .io import sha256
-from .manifest import load_manifest
+from .manifest import load_manifest, physical_source
 from .terrain import derivatives, summarize
 from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
@@ -117,7 +117,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     sources = []
     manifest = load_manifest(root)
     for row in manifest['surveys']:
-        if row['status'] != 'usable' or row['kind'] != 'bathymetry':
+        if not physical_source(row, physical_only=physical_only):
             continue
         bounds = row['adapter_review']['requested_bounds_wgs84']
         if not transform(project, box(*bounds)).intersects(scope):
@@ -156,7 +156,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
-    folder = root / 'var/seafloor/reaches' / reach_id
+    private_sources = any(s['row']['status'] == 'physical-only' for s in sources)
+    folder = root / 'var/seafloor' / ('private-reaches' if private_sources else 'reaches') / reach_id
     receipt_path = folder / 'run.json'
     outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json',
                                         'held.geojson', 'candidates.geojson', 'physical.json')]
@@ -165,7 +166,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         if previous['input_hash'] == digest and all(p.exists() for p in outputs):
             if previous['outputs'] != {p.name: sha256(p) for p in outputs}:
                 raise ValueError('Reach outputs failed hash verification')
-            apply_ledger(root, reach_id, previous['ledger_summary'])
+            if not private_sources:
+                apply_ledger(root, reach_id, previous['ledger_summary'])
             return previous, True
     # Physical outputs are immutable relative to survey/rule inputs. A changed
     # legal snapshot only reclassifies these candidates; it never rereads terrain.
@@ -251,11 +253,13 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     atomic_json(folder / 'habitat.geojson', habitat)
     atomic_json(folder / 'held.geojson', held)
     receipt = {'input_hash': digest, 'inputs': inputs, 'ledger_summary': summary,
+               'publication_prohibited': private_sources,
                'physical_reused': reuse_physical, 'physical_input_hash': physical_hash,
                'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds, 'habitat': habitat_seconds,
                                    'screen': screen_seconds, 'total': monotonic() - started},
                'outputs': {p.name: sha256(p) for p in outputs},
                'source_receipts': [s['receipt'] for s in sources]}
     atomic_json(receipt_path, receipt, indent=2)
-    apply_ledger(root, reach_id, summary)
+    if not private_sources:
+        apply_ledger(root, reach_id, summary)
     return receipt, False

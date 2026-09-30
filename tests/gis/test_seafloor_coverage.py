@@ -178,6 +178,21 @@ class ReachRunTests(unittest.TestCase):
             third,unchanged=run('fixture-r01',root=root)
             self.assertFalse(unchanged)
             self.assertEqual(third['ledger_summary']['tier1_km2'],0)
+            # Native review can unlock private measurement without granting rights.
+            private = qualify_row(dict(row, license='unknown'), receipt,
+                                  rights_url='https://pubs.usgs.gov/fixture', physical_only=True)
+            manifest['surveys'] = [private]
+            (root/'catalog/surveys.json').write_text(json.dumps(manifest))
+            measured, _ = run('fixture-r01', root=root, physical_only=True)
+            self.assertEqual(measured['ledger_summary']['tier1_km2'], .05)
+            self.assertEqual(measured['ledger_summary']['tier2_km2'], 0)
+            self.assertEqual(measured['inputs']['sources'][0]['status'], 'physical-only')
+            self.assertTrue(measured['publication_prohibited'])
+            self.assertTrue((root/'var/seafloor/private-reaches/fixture-r01/candidates.geojson').exists())
+            self.assertEqual(json.loads((root/'var/seafloor/reaches/fixture-r01/run.json').read_text())['ledger_summary']['tier1_km2'], 0)
+            excluded, _ = run('fixture-r01', root=root)
+            self.assertEqual(excluded['ledger_summary']['tier1_km2'], 0)
+            self.assertEqual(excluded['inputs']['sources'], [])
             self.assertEqual(third['ledger_summary']['selected_valid_km2'],0)
 
 

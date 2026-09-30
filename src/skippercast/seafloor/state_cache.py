@@ -11,7 +11,7 @@ import re
 from .fetch import restore_private, upload_private
 from .io import sha256
 
-SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|reaches/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
+SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|(?:reaches|private-reaches)/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
 
 
 def missing(error):
@@ -25,7 +25,7 @@ def scope_name(name):
 
 
 def allowed(name, path):
-    prefixes = ('reference/', 'screen/') if name == 'shared' else ('cache/', f'reaches/{name}/')
+    prefixes = ('reference/', 'screen/') if name == 'shared' else ('cache/', f'reaches/{name}/', f'private-reaches/{name}/')
     return bool(SAFE.fullmatch(path)) and path.startswith(prefixes)
 
 
@@ -88,19 +88,20 @@ def reach_paths(root, reach):
     scope_name(reach)
     # Do not attach every downloaded survey to every reach: that made each
     # matrix worker restore unrelated coastal archives as the catalog grew.
-    folder = base/'reaches'/reach
+    folders = [base/'reaches'/reach, base/'private-reaches'/reach]
     hashes = set()
-    checkpoint = folder/'coverage-checkpoint.json'
-    if checkpoint.exists():
-        hashes.update(json.loads(checkpoint.read_text()).get('source_hashes', []))
-    receipt = folder/'run.json'
-    if receipt.exists():
-        inputs = json.loads(receipt.read_text()).get('inputs', {})
-        hashes.update(r['sha256'] for r in inputs.get('sources', []))
-        hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
+    for folder in folders:
+        checkpoint = folder/'coverage-checkpoint.json'
+        if checkpoint.exists():
+            hashes.update(json.loads(checkpoint.read_text()).get('source_hashes', []))
+        receipt = folder/'run.json'
+        if receipt.exists():
+            inputs = json.loads(receipt.read_text()).get('inputs', {})
+            hashes.update(r['sha256'] for r in inputs.get('sources', []))
+            hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
-    directories = [folder] + [base/'cache'/h for h in sorted(hashes)]
+    directories = folders + [base/'cache'/h for h in sorted(hashes)]
     return [p for directory in directories for p in directory.rglob('*')
             if p.is_file() and SAFE.fullmatch(p.relative_to(base).as_posix())]
 

@@ -13,10 +13,35 @@ from shapely.ops import transform, unary_union
 from skippercast.platform.contracts import REPO, read_json
 from .coverage import cell_geometry
 from .io import sha256
-from .manifest import load_manifest
+from .manifest import load_manifest, physical_source
 
 
-def plan(root=REPO, region=None, max_new=3, *, progress=None):
+def private_progress(root, ledger, manifest):
+    """Schedule beyond completed private batches without crediting public area."""
+    root = Path(root)
+    current = {r['id']: r for r in manifest['surveys']}
+    result = {}
+    for path in (root/'var/seafloor/private-reaches').glob('*/run.json'):
+        receipt = read_json(path)
+        inputs = receipt.get('inputs', {})
+        if (receipt.get('publication_prohibited') is not True
+                or inputs.get('reference_cells_sha256') != ledger['reference_cells_sha256']
+                or not inputs.get('sources')
+                or any(current.get(r['id']) != r for r in inputs['sources'])):
+            continue
+        outputs = receipt.get('outputs', {})
+        if not outputs:
+            continue
+        for name, expected in outputs.items():
+            if (Path(name).name != name or not (path.parent/name).is_file()
+                    or sha256(path.parent/name) != expected):
+                raise ValueError('Private progress output checksum mismatch')
+        if receipt['ledger_summary'].get('processing_incomplete') is False:
+            result[path.parent.name] = receipt['ledger_summary']
+    return result
+
+
+def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=False):
     root = Path(root)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     if not 0 <= max_new <= len(ledger['reaches']):
@@ -25,12 +50,14 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None):
     if region and region not in regions and region != ledger['scope']:
         raise ValueError('Unknown seafloor region')
     manifest = load_manifest(root)
+    if physical_only and progress is None:
+        progress = private_progress(root, ledger, manifest)
     reference = root/'var/seafloor/reference/cells.json'
     if not reference.exists() or sha256(reference) != ledger['reference_cells_sha256']:
         raise ValueError('Restore the verified reference first: python -m skippercast.seafloor restore-reference --fetch')
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
     sources = [(r['id'], transform(project, box(*r['adapter_review']['requested_bounds_wgs84'])))
-               for r in manifest['surveys'] if r['status'] == 'usable' and r['kind'] == 'bathymetry']
+               for r in manifest['surveys'] if physical_source(r, physical_only=physical_only)]
     cells = {}
     for c in read_json(reference)['cells']:
         cells.setdefault(c['reach'], []).append(c)
@@ -57,7 +84,7 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None):
     new = sorted([r for r in rows if r['action'] == 'compute'],
                  key=lambda r: (-r['reviewed_window_band_estimate_km2'], r['reach']))[:max_new]
     selected = [r for r in rows if r['processed']] + new
-    return {'version': 1, 'scope': region or ledger['scope'],
+    return {'version': 1, 'scope': region or ledger['scope'], 'physical_only': physical_only,
         'survey_status_counts': dict(Counter(r['status'] for r in manifest['surveys'])),
         'totals': ledger['totals'], 'reaches': rows,
         'selected': [{'reach': r['reach'], 'region': r['region']} for r in selected],

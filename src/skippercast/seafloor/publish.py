@@ -63,6 +63,8 @@ def region_layers(root, region, *, rerun=True, now=None):
             run(ident, root=root)  # validates current manifests, actual source bytes, rules and implementation
         folder = root/'var/seafloor/reaches'/ident
         receipt = read_json(folder/'run.json')
+        if any(source.get('status') == 'physical-only' for source in receipt['inputs'].get('sources', [])):
+            raise ValueError('Private physical source cannot enter publication')
         for name, expected in receipt['outputs'].items():
             if Path(name).name != name or sha256(folder/name) != expected:
                 raise ValueError('Reach output checksum mismatch')

@@ -31,9 +31,9 @@ def resolve(reference):
 class InventoryTests(unittest.TestCase):
     def test_inventory_statuses_have_no_null_measurements(self):
         self.assertTrue(ROWS)
-        self.assertLessEqual({r['status'] for r in ROWS}, {'candidate', 'usable', 'hold', 'withdrawn'})
+        self.assertLessEqual({r['status'] for r in ROWS}, {'candidate', 'usable', 'physical-only', 'hold', 'withdrawn'})
         for row in ROWS:
-            if row['status'] == 'usable':
+            if row['status'] in {'usable', 'physical-only'}:
                 self.assertEqual(row['adapter_review']['source_sha256'], row['sha256'])
                 self.assertGreater(row['adapter_review']['nominal_0_300ft_pixels_in_requested_bounds'], 0)
         def visit(value):
@@ -152,6 +152,26 @@ class SchemaTests(unittest.TestCase):
             with self.subTest(id=row['id']):
                 errors = list(validator.iter_errors(row))
                 self.assertEqual(errors, [], '\n'.join(str(e) for e in errors))
+
+    def test_private_native_review_does_not_grant_public_source_rights(self):
+        from skippercast.seafloor.manifest import qualify_row, physical_source, validate_manifest
+        row = deepcopy(next(r for r in ROWS if r['status'] == 'usable'))
+        receipt = dict(row['adapter_review'], source_id=row['id'], source_bytes=row['bytes'],
+                       horizontal_crs=row['horizontal_crs'])
+        private = qualify_row(dict(row, license='unknown'), receipt,
+                              rights_url=receipt['rights_source_url'], physical_only=True)
+        self.assertEqual(private['status'], 'physical-only')
+        self.assertEqual(private['license'], 'unknown')
+        self.assertFalse(physical_source(private))
+        self.assertTrue(physical_source(private, physical_only=True))
+        validate_manifest({'surveys': [private]}, ROOT)
+        with self.assertRaisesRegex(ValueError, 'receipt'):
+            qualify_row(row, dict(receipt, nominal_0_300ft_pixels_in_requested_bounds=0),
+                        rights_url=receipt['rights_source_url'], physical_only=True)
+        document = {'surveys': [deepcopy(private)]}
+        document['surveys'][0]['resolution_m'] = 999
+        with self.assertRaisesRegex(ValueError, 'conflicts'):
+            validate_manifest(document, ROOT)
 
     def test_rejects_invalid_types_hashes_and_unexplained_holds(self):
         validator = Draft202012Validator(SCHEMA)

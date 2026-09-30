@@ -13,6 +13,7 @@ def main():
     planning.add_argument('--region')
     planning.add_argument('--max-new', type=int, default=3)
     planning.add_argument('--json', action='store_true')
+    planning.add_argument('--physical-only', action='store_true', help='Include reviewed private sources; never grants publication')
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
     publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
     publication.add_argument('--region', required=True)
@@ -20,6 +21,7 @@ def main():
     promotion = commands.add_parser('promote-survey', help='Promote a metadata/rights-reviewed native draft; changes the catalog')
     promotion.add_argument('--draft', type=Path, required=True)
     promotion.add_argument('--rights-url', required=True)
+    promotion.add_argument('--physical-only', action='store_true', help='Qualify native evidence for private processing only; no rights or publication granted')
     add = commands.add_parser('add-survey', help='Inspect an original URL and write a private candidate draft')
     add.add_argument('--url', required=True)
     add.add_argument('--id')
@@ -46,7 +48,7 @@ def main():
     try:
         if args.command == 'plan':
             from .rollout import plan, report
-            result = plan(region=args.region, max_new=args.max_new)
+            result = plan(region=args.region, max_new=args.max_new, physical_only=args.physical_only)
             print(json.dumps(result, indent=2) if args.json else report(result))
             return
         if args.command == 'publish':
@@ -73,7 +75,7 @@ def main():
             return
         if args.command == 'promote-survey':
             from .manifest import promote_draft
-            print('Qualified original survey: '+promote_draft(args.draft, rights_url=args.rights_url))
+            print('Qualified original survey: '+promote_draft(args.draft, rights_url=args.rights_url, physical_only=args.physical_only))
             return
         if args.command == 'add-survey':
             from .draft import add_survey
