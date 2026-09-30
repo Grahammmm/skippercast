@@ -93,3 +93,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 - [Regional spatial screen, September 30](seafloor-regional-screen-2026-09-30.md): original legal review, conservative geometries and 2,894 locally screened polygons.
 
 - [H11953 deeper-water batch and remaining gaps](seafloor-h11953-deeper-batch-2026-09-30.md)
+
+- [Adjacent Cambria/Conception release review](seafloor-adjacent-release-2026-09-30.md)
