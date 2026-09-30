@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {gzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
 import {test,expect,openMap,checkA11y} from './fixtures.ts';
@@ -23,12 +24,12 @@ test('best reefs download complete outlines and confidence titles, and changed d
   });
   let bytes=JSON.stringify({type:'FeatureCollection',region:'morro-bay',expires_at,features});
   const manifest=()=>({region:'morro-bay',status:'ready',archive_sha256:'a'.repeat(64),expires_at,
-    export_file:'habitat-export.geojson',export_sha256:createHash('sha256').update(bytes).digest('hex'),export_bytes:Buffer.byteLength(bytes)});
+    export_file:'habitat-export.geojson.gz',export_sha256:createHash('sha256').update(gzipSync(bytes)).digest('hex'),export_bytes:gzipSync(bytes).length,export_decoded_bytes:Buffer.byteLength(bytes)});
   await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json',r=>r.fulfill({json:manifest()}));
   let hold=false,release=()=>{},started=()=>{};
-  await page.route('**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson',async r=>{
+  await page.route('**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz',async r=>{
     if(hold){hold=false;started();await new Promise<void>(resolve=>{release=resolve;});}
-    return r.fulfill({contentType:'application/geo+json',body:bytes});
+    return r.fulfill({contentType:'application/gzip',body:gzipSync(bytes)});
   });
   await openMap(page);
   await page.locator('[data-nav="export"]').click();

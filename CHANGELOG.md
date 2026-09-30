@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Export: compress full canonical reef boundaries for mobile transfer, preserving every coordinate and hash/current-screen checks. Bound both compressed and decoded sizes so large Morro Bay surveys can load without weakening the limits.
 - Fixed: trip-alert push notifications were never deliverable on Cloudflare because the deploy did not upload the VAPID key pair. The deploy now requires `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (GitHub secrets) and uploads them, the smoke test checks that `/api/session` serves the public key, and a Worker without keys leaves alerts pending without claiming receipts, so the first check after the keys arrive sends them (an earlier version marked them held, which is never retried). The key check runs before any Wrangler command, so a missing key stops the job without a deploy and a rollback.
 - Operations: every scheduled data workflow and CI reads its runner from a repository variable (`DATA_RUNNER`, `CI_RUNNER`; default `ubuntu-latest`), and `scripts/runner/setup.sh` turns one Ubuntu box into four self-hosted runners, so the jobs cost no billed minutes once the repository is private. Costs and steps in [docs/operations/runners.md](docs/operations/runners.md).
 - Seafloor: screen southern Monterey/Carmel/PointSur whole habitat outlines;904 candidates pass locally, with MPAs excluded and changed Monterey rules holding publication for review.

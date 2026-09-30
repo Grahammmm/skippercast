@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {bestSpots,evidenceConfidence,waypointTitle} from '../dist/spot-ranking.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {buildExport,readDraft} from '../dist/trip-export.js';
+import {gzipSync} from 'node:zlib';
 const ring=(x)=>[[x,35],[x+.002,35],[x+.002,35.002],[x,35.002],[x,35]];
 const props=id=>({id,region:'morro-bay',tier:2,status:'habitat',exportable:true,screen:{status:'pass'},
   waypoint:{longitude:-120.999,latitude:35.001},source_ids:['survey'],source_year:2008,resolution_m:2,
@@ -24,6 +25,22 @@ test('evidence index does not reward terrain grade or same-survey duplicates',()
  assert.equal(evidenceConfidence(p).percent,90);
  p.independent_evidence=[];p.substrate.independent_confirmation=true;assert.equal(evidenceConfidence(p).percent,90);
  p.metric_support_fraction=null;assert.equal(evidenceConfidence(p),null);
+});
+test('compressed canonical boundaries retain every coordinate and reject corruption or excessive decoding',async()=>{
+ const f=await fixture();f.data.features[0].properties.transport_test_padding='x'.repeat(33*1024*1024);
+ const raw=Buffer.from(JSON.stringify(f.data));let compressed=gzipSync(raw);
+ const m={...f.manifest,export_file:'habitat-export.geojson.gz',export_bytes:compressed.length,
+  export_decoded_bytes:raw.length,export_sha256:Buffer.from(await crypto.subtle.digest('SHA-256',compressed)).toString('hex')};
+ const fetchImpl=async url=>String(url).includes('manifest-')?new Response(JSON.stringify(m)):new Response(compressed);
+ const atlas=await loadReefTrip('morro-bay',{fetchImpl});
+ assert.deepEqual(atlas.areas[0].geometry,f.data.features[0].geometry);
+ m.export_decoded_bytes=raw.length-1;await assert.rejects(loadReefTrip('morro-bay',{fetchImpl}),/exceeds/);
+ m.export_decoded_bytes=raw.length+1;await assert.rejects(loadReefTrip('morro-bay',{fetchImpl}),/revision changed/);
+ m.export_decoded_bytes=129*1024*1024;await assert.rejects(loadReefTrip('morro-bay',{fetchImpl}),/too large/);
+ m.export_decoded_bytes=raw.length;m.export_sha256='d'.repeat(64);await assert.rejects(loadReefTrip('morro-bay',{fetchImpl}),/checksum/);
+ compressed=compressed.subarray(0,compressed.length-8);m.export_bytes=compressed.length;
+ m.export_sha256=Buffer.from(await crypto.subtle.digest('SHA-256',compressed)).toString('hex');
+ await assert.rejects(loadReefTrip('morro-bay',{fetchImpl}));
 });
 test('canonical outlines and interior points load by verified hash; all are re-screened at export',async()=>{
  const f=await fixture(),atlas=await loadReefTrip('morro-bay',f);

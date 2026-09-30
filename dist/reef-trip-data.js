@@ -3,25 +3,36 @@ import {loadManifest,FEED_ROOT,manifestState} from './seafloor-data.js';
 import {evidenceConfidence} from './spot-ranking.js';
 import {pointInGeometry} from './geo-screen.js';
 import {geometryTrack} from './gpx.js';
+const MAX_TRANSFER=32*1024*1024,MAX_DECODED=128*1024*1024;
+async function boundedBytes(stream,limit,expected){
+  const reader=stream.getReader(),chunks=[];let length=0;
+  try{
+    for(;;){const {value,done}=await reader.read();if(done)break;length+=value.length;
+      if(length>limit)throw Error('Reef export exceeds its published size.');chunks.push(value);}
+  }catch(e){await reader.cancel().catch(()=>{});throw e;}finally{reader.releaseLock();}
+  if(length!==expected)throw Error('Reef export revision changed. Reload the plan.');
+  const bytes=new Uint8Array(length);let offset=0;
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
+}
 export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.now()}={}) {
   const gate=await loadManifest(region,fetchImpl,now);
   if(gate.state!=='ready')throw Error(gate.reason);
   const m=gate.manifest;
-  if(m.export_file!=='habitat-export.geojson'||!/^[a-f0-9]{64}$/.test(m.export_sha256||''))throw Error('Ranked reef export is awaiting the next seafloor publication.');
-  if(!Number.isInteger(m.export_bytes)||m.export_bytes<=0||m.export_bytes>32*1024*1024)throw Error('Reef export size is unavailable or too large.');
-  const response=await fetchImpl(`${FEED_ROOT}regions/${region}/habitat-export.geojson`,{cache:'no-store',signal:AbortSignal.timeout(18000)});
+  if(!['habitat-export.geojson','habitat-export.geojson.gz'].includes(m.export_file)||!/^[a-f0-9]{64}$/.test(m.export_sha256||''))throw Error('Ranked reef export is awaiting the next seafloor publication.');
+  const compressed=m.export_file.endsWith('.gz');
+  if(!Number.isInteger(m.export_bytes)||m.export_bytes<=0||m.export_bytes>MAX_TRANSFER
+      ||(compressed&&(!Number.isInteger(m.export_decoded_bytes)||m.export_decoded_bytes<=0||m.export_decoded_bytes>MAX_DECODED)))throw Error('Reef export size is unavailable or too large.');
+  const response=await fetchImpl(`${FEED_ROOT}regions/${region}/${m.export_file}`,{cache:'no-store',signal:AbortSignal.timeout(60000)});
   if(!response.ok)throw Error('Ranked reef boundaries could not load. Try again.');
   if(!response.body)throw Error('Reef export body is unavailable.');
-  const reader=response.body.getReader(),chunks=[];let length=0;
-  try{
-    for(;;){const {value,done}=await reader.read();if(done)break;length+=value.length;
-      if(length>m.export_bytes)throw Error('Reef export exceeds its published size.');chunks.push(value);}
-  }catch(e){await reader.cancel().catch(()=>{});throw e;}finally{reader.releaseLock();}
-  const bytes=new Uint8Array(length);let offset=0;
-  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-  if(bytes.byteLength!==m.export_bytes)throw Error('Reef export revision changed. Reload the plan.');
+  let bytes=await boundedBytes(response.body,m.export_bytes,m.export_bytes);
   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
   if(hash!==m.export_sha256)throw Error('Reef export checksum changed. Reload the plan.');
+  if(compressed){
+    if(typeof DecompressionStream!=='function')throw Error('Update your browser to load compressed reef boundaries.');
+    const decoded=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    bytes=await boundedBytes(decoded,m.export_decoded_bytes,m.export_decoded_bytes);
+  }
   const latest=await loadManifest(region,fetchImpl);
   if(latest.state!=='ready'||latest.manifest.export_sha256!==m.export_sha256)throw Error('Reef publication changed while loading. Select Best available again.');
   const data=JSON.parse(new TextDecoder().decode(bytes));

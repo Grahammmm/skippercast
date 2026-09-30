@@ -55,7 +55,7 @@ class RunnerSwitchTests(unittest.TestCase):
     def test_scheduled_and_ci_jobs_run_on_the_switchable_runner(self):
         wrong = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
-            expected = "${{ vars.CI_RUNNER || 'ubuntu-latest' }}" if path.name == 'ci.yml' else "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"
+            expected = "${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}" if path.name == 'ci.yml' else "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
                 if path.name in self.HOSTED_ONLY:
                     if line != 'ubuntu-latest':
