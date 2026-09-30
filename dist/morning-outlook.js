@@ -16,46 +16,13 @@ const MODELS = [
   "ncep_gfswave016",
   "ecmwf_wam",
 ];
-const clamp = (n) => Math.round(Math.max(0, Math.min(10, n)) * 10) / 10;
-// Wind and wave burdens overlap in how a small boat moves. Charge the larger
-// burden in full, then 45% of the smaller one to retain a combined-sea penalty.
-const combinedBurden = (wind, wave) => Math.max(wind, wave) + 0.45 * Math.min(wind, wave);
+import {THRESHOLDS, hourScores as scoreHour, limitedScores, controlModeFor} from "../web/score.ts";
+export {THRESHOLDS} from "../web/score.ts";
+const controlMode = (species) => controlModeFor(species, getRegion().target_options?.find(t=>t.id===species)?.control_mode);
 // `boat` scales the tuned thresholds (see boat-handling.js); no saved boat = the tuned values.
+// The arithmetic lives in web/score.ts so the trip planner and the Tomorrow card share it.
 export function hourScores(c, other, species, checkedGust = Math.max(c.gust, other.gust), boat = activeBoatFactors()) {
-  const S = boat.sea, W = boat.wind;
-  const wind = Math.max(c.wind, other.wind),
-    gust = checkedGust,
-    sea = Math.max(c.sea.height, other.sea.height);
-  const crossing =
-    c.secondary.height >= 1 * S &&
-    angleBetween(c.swell.from, c.secondary.from) >= 60
-      ? 0.7
-      : 0;
-  const short = c.chop.height >= 0.5 * S && c.chop.period <= boat.chopPeriod ? 0.8 : 0;
-  // Combined significant seas already contain wind-wave energy. Penalizing
-  // both heights in full made ordinary rough days collapse to 0/10.
-  const wavePenalty = Math.max(
-    Math.max(0, sea - 1.5 * S) * 0.7 / S,
-    Math.max(0, c.chop.height - 0.4 * S) * 0.9 / S,
-  );
-  const comfortWind = Math.max(0, wind - 4 * W) * 0.22 / W + Math.max(0, gust - 7 * W) * 0.1 / W;
-  const comfortScore = clamp(10 - combinedBurden(comfortWind, wavePenalty) - crossing - short);
-  const mode=getRegion().target_options?.find(t=>t.id===species)?.control_mode || (["reef","lingcod","rockfish","halibut","dungeness"].includes(species)?'bottom':'water-column');
-  const bottom=mode==='bottom';
-  const controlWavePenalty = Math.max(
-    Math.max(0, sea - 2 * S) * 0.45 / S,
-    Math.max(0, c.chop.height - 0.4 * S) * (bottom ? 1.1 : 0.8) / S,
-  );
-  const controlWind = Math.max(0, wind - 4 * W) * (bottom ? 0.32 : 0.22) / W + Math.max(0, gust - 8 * W) * 0.08 / W;
-  const controlScore = clamp(10 - combinedBurden(controlWind, controlWavePenalty) - crossing - short);
-  return {
-    comfort: comfortScore,
-    control: mode==='boat-comfort'?null:controlScore,
-    conditions: mode==='boat-comfort'?comfortScore:Math.min(comfortScore, controlScore),
-    score_scope: mode==='boat-comfort'?'boat-comfort':'comfort-and-control',
-    bite: null,
-    overall: null,
-  };
+  return scoreHour(c, other, controlMode(species), checkedGust, boat);
 }
 // A conditions estimate is distinct from confidence or permission to make a trip.
 // Invalid gusts remain flagged, and are never silently raised to sustained wind.
@@ -94,24 +61,18 @@ export function rateHour(bundle, point, species, time, now=Date.now()) {
   }else{
     // A limited outlook uses only observed forecast fields. Missing chop, swell or
     // gust is never substituted with zero; the score cannot clear the 8+ banner.
-    const mode=getRegion().target_options?.find(t=>t.id===species)?.control_mode || (["reef","lingcod","rockfish","halibut","dungeness"].includes(species)?'bottom':'water-column');
-    const bottom=mode==='bottom', gust=gusts.length?Math.max(...gusts):null, {sea:S,wind:W}=activeBoatFactors();
-    const comfortWind=Math.max(0,wind-4*W)*0.22/W+(gust===null?0:Math.max(0,gust-7*W)*0.1/W);
-    const controlWind=Math.max(0,wind-4*W)*(bottom?0.32:0.22)/W+(gust===null?0:Math.max(0,gust-8*W)*0.08/W);
-    const comfortScore=clamp(10-combinedBurden(comfortWind,Math.max(0,sea-1.5*S)*0.7/S));
-    const controlScore=clamp(10-combinedBurden(controlWind,Math.max(0,sea-2*S)*0.45/S));
-    result={comfort:comfortScore,control:mode==='boat-comfort'?null:controlScore,conditions:Math.min(6.9,mode==='boat-comfort'?comfortScore:Math.min(comfortScore,controlScore)),score_scope:mode==='boat-comfort'?'boat-comfort':'comfort-and-control',bite:null,overall:null};
+    result=limitedScores(wind,sea,gusts.length?Math.max(...gusts):null,controlMode(species),activeBoatFactors());
     reasons.push("Limited estimate from available wind and seas; missing comparison or wave detail");
     if(!gusts.length) reasons.push("Gust forecast unavailable or inconsistent; no gust assumed");
   }
   if(gusts.length===1) reasons.push("Inconsistent gust omitted; one valid gust forecast remains");
   if(MODELS.some(id=>bundle.models[id]?.refreshError)) reasons.push("A source refresh failed; using its recent saved forecast");
   if(state.level==="hazard"){
-    result.conditions=Math.min(1.9,result.conditions);
+    result.conditions=Math.min(THRESHOLDS.capHazard,result.conditions);
     reasons.push("Marine advisory or visibility hazard; rating capped below a fishable day");
   }
   const uncertain=!complete||reasons.length>0;
-  if(uncertain) result.conditions=Math.min(7.9,result.conditions);
+  if(uncertain) result.conditions=Math.min(THRESHOLDS.capUncertain,result.conditions);
   return {...result,confidence:uncertain?"Low":"Moderate",reasons:[...new Set(reasons)],wind,sea,limited:!complete||active===null,hazard:state.level==="hazard"};
 }
 function summarizeHours(bundle,point,species,times,now) {
@@ -125,7 +86,7 @@ function summarizeHours(bundle,point,species,times,now) {
   result.wind=Math.max(...rated.map(r=>r.wind)); result.sea=Math.max(...rated.map(r=>r.sea));
   result.limited=rated.length<rows.length||rated.some(r=>r.limited);
   result.hazard=rated.some(r=>r.hazard);
-  if(result.limited){result.conditions=Math.min(result.conditions,6.9);result.reasons.push(`Only ${rated.length} of ${rows.length} hours have usable wind and seas or full detail`);}
+  if(result.limited){result.conditions=Math.min(result.conditions,THRESHOLDS.capLimited);result.reasons.push(`Only ${rated.length} of ${rows.length} hours have usable wind and seas or full detail`);}
   result.confidence=rows.some(r=>r.confidence==="Low")?"Low":"Moderate";
   return result;
 }

@@ -8,11 +8,12 @@ import { readConditions, angleBetween, POINTS } from "./marine-data.js";
 import { futureDates, pacificEpoch } from "./forecast.js";
 import { activeBoatFactors } from "./boat-handling.js";
 import { esc, local } from "./marine-charts.js";
+import { THRESHOLDS, verdictFor as verdict, worseVerdict, VERDICT_RANK as RANK } from "../web/score.ts";
 
 export const FIRST_HOUR = 5;   // first window starts 5 a.m. Pacific
 export const WINDOWS = 7;      // 5–7 a.m. … 5–7 p.m.
-export const GO = 7;           // conditions score at or above this is "go"
-export const NO_GO = 4;        // below this is "no-go"
+export const GO = THRESHOLDS.go;       // conditions score at or above this is "go"
+export const NO_GO = THRESHOLDS.noGo;  // below this is "no-go"
 const HOUR = 3600;
 const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => Number.isFinite(deg) ? COMPASS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16] : "";
@@ -24,13 +25,8 @@ export function clock(t) {
   return local(t, { hour: "numeric" }).replace(" AM", " a.m.").replace(" PM", " p.m.");
 }
 
-export function verdictFor(rating) {
-  if (!rating || !Number.isFinite(rating.conditions)) return "unknown";
-  if (rating.hazard || rating.conditions < NO_GO) return "no-go";
-  return rating.conditions >= GO ? "go" : "marginal";
-}
-const RANK = { go: 0, marginal: 1, unknown: 2, "no-go": 3 };
-const worse = (a, b) => (RANK[a] >= RANK[b] ? a : b);
+export const verdictFor = verdict;
+const worse = worseVerdict;
 
 /**
  * The single largest penalty in the hour, in the same units morning-outlook.js
