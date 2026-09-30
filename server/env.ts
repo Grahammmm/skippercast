@@ -12,8 +12,8 @@ export interface Env {
   FEEDS?: R2Bucket;                  // r2_buckets: published feeds and tiles
   PUBLIC_LIMITER?: RateLimit;        // ratelimits: /api/om, 60 a minute per IP
   FEED_LIMITER?: RateLimit;          // ratelimits: /feeds/, 300 a minute per IP
-  ANALYTICS?: AnalyticsEngineDataset; // optional Workers Analytics Engine dataset (boat lookup usage)
-  // Added to the deploy config only with ENABLE_QUEUES=true (scripts/wrangler_config.mjs):
+  // Added to the deploy config only with ENABLE_ANALYTICS / ENABLE_QUEUES=true (scripts/wrangler_config.mjs):
+  ANALYTICS?: AnalyticsEngineDataset; // analytics_engine_datasets: skippercast_events (server/analytics.ts)
   TRIP_QUEUE?: Queue<TripCheckMessage>; // queues.producers: skippercast-trip-checks (server/trip-queue.ts)
   // Variables (wrangler.jsonc "vars", or the dashboard)
   IDENTITY_PROVIDER?: string;        // "skippercast" (passkeys) or none

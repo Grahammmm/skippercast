@@ -1,13 +1,14 @@
 // The SkipperCast Worker as a Hono app. Order matters: middleware runs in the
 // order registered, and the first route that answers ends the request.
 //
-//   request-id -> security headers (+ renewed session cookie) -> context
+//   metrics -> request-id -> security headers (+ renewed session cookie) -> context
 //   -> www redirect -> /feeds/ -> public /api/ -> /api/auth/ -> /api/session
 //   -> private gate (signed in, Origin, budget) -> private /api/ -> /api/ 404
 //   -> static assets and page shells
 //
 // Errors thrown under /api/ are mapped once (middleware/error.ts).
 import {Hono} from 'hono';
+import {metrics} from './analytics.ts';
 import {requestId} from './middleware/request-id.ts';
 import {securityHeaders} from './middleware/security-headers.ts';
 import {context} from './middleware/context.ts';
@@ -32,7 +33,7 @@ import type {AppEnv} from './env.ts';
 // so a route sees the same path the feed-key and origin checks see.
 export const app = new Hono<AppEnv>({getPath: request => new URL(request.url).pathname});
 
-app.use('*', requestId, securityHeaders, context, canonical);
+app.use('*', metrics, requestId, securityHeaders, context, canonical);
 // '/feeds' and '/api' without a trailing slash are ordinary site paths.
 app.all('/feeds', serveAsset);
 app.all('/api', serveAsset);

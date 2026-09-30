@@ -7,7 +7,8 @@
 // "skippercast.com,www.skippercast.com"); empty means workers.dev only.
 // Optional features, switched on by environment variables (repository variables
 // in the deploy workflow), add their bindings only when set to "true":
-//   ENABLE_QUEUES   the trip-check queue and its dead-letter queue (server/trip-queue.ts)
+//   ENABLE_QUEUES     the trip-check queue and its dead-letter queue (server/trip-queue.ts)
+//   ENABLE_ANALYTICS  the Workers Analytics Engine dataset skippercast_events (server/analytics.ts)
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -51,12 +52,16 @@ export const TRIP_QUEUES = {
   ],
 };
 
-/** {queues} from environment variables; only the exact string "true" turns a feature on. */
+// Workers Analytics Engine: the dataset is created by Cloudflare on first write.
+export const ANALYTICS_DATASETS = [{binding: 'ANALYTICS', dataset: 'skippercast_events'}];
+
+/** {queues, analytics} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
-  return {queues: String(environ.ENABLE_QUEUES ?? '').trim().toLowerCase() === 'true'};
+  const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
+  return {queues: on('ENABLE_QUEUES'), analytics: on('ENABLE_ANALYTICS')};
 }
 
-export function deployConfig(text, databaseId, bucket, domains = '', {queues = false} = {}) {
+export function deployConfig(text, databaseId, bucket, domains = '', {queues = false, analytics = false} = {}) {
   if (!/^[0-9a-f-]{36}$/.test(databaseId)) throw Error(`not a D1 database id: ${databaseId}`);
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw Error(`not an R2 bucket name: ${bucket}`);
   const config = JSON.parse(stripJsonComments(text));
@@ -68,6 +73,7 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
   const hosts = customDomains(domains);
   if (hosts.length) config.routes = hosts.map(pattern => ({pattern, custom_domain: true}));
   if (queues) config.queues = structuredClone(TRIP_QUEUES);
+  if (analytics) config.analytics_engine_datasets = structuredClone(ANALYTICS_DATASETS);
   return config;
 }
 

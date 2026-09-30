@@ -1,0 +1,33 @@
+name: Operations report
+
+# Daily summary of the Worker's Analytics Engine data (scripts/ops_report.py):
+# requests by route and status with p95 latency, LLM usage, trip-check queue
+# batches and cron runs, written to this run's summary. Skips cleanly until the
+# owner adds the CF_ANALYTICS_TOKEN secret (Account Analytics: Read) and sets
+# ENABLE_ANALYTICS=true; see docs/cloudflare.md#observability.
+on:
+  schedule:
+    - cron: "23 15 * * *"   # 08:23 Pacific daylight time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-report
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Summarise the last 24 hours
+        run: python scripts/ops_report.py

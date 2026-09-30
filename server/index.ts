@@ -5,6 +5,7 @@ import {watchdog, liveFeed} from './watchdog.ts';
 import {scheduleTripChecks, consumeTripChecks, consumeDeadLetters, TRIP_DLQ} from './trip-queue.ts';
 import type {TripCheckMessage} from './trip-queue.ts';
 import {scheduledPrune} from './trips.ts';
+import {recordCron, recordQueueBatch} from './analytics.ts';
 import type {Env} from './env.ts';
 
 export {ClientError, RateLimited} from './errors.ts';
@@ -15,18 +16,31 @@ export {app};
 
 // Cron (every 15 minutes): restart a stalled live refresh, apply retention and,
 // when the trip queue is bound, queue trip checks for a new live publication.
-async function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+// One `cron` analytics point per run records what each part did.
+async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
   useBucket(env);
-  const feed = liveFeed();
-  ctx.waitUntil(Promise.all([watchdog(env, Date.now(), feed), scheduledPrune(env),
-    scheduleTripChecks(env, Date.now(), feed).then(result => { if (result.action !== 'no-queue') console.log(JSON.stringify({event: 'trip_check_schedule', ...result})); })]));
+  const started = Date.now(), feed = liveFeed();
+  const failed = (part: string) => (error: unknown) => { console.error(`Cron ${part} failed`, {reason: String((error as Error)?.message).slice(0, 200)}); return null; };
+  const run = Promise.all([
+    watchdog(env, started, feed).catch(failed('watchdog')),
+    scheduledPrune(env),
+    scheduleTripChecks(env, started, feed).then(result => { if (result.action !== 'no-queue') console.log(JSON.stringify({event: 'trip_check_schedule', ...result})); return result; }).catch(failed('trip checks')),
+  ]).then(([dog, prune, trips]) => {
+    recordCron(env, {cron: controller?.cron || '', watchdog: dog?.action ?? 'error', trips: trips?.action ?? 'error', prune, ms: Date.now() - started,
+      owners: trips?.owners, feed_age_minutes: dog?.age_minutes});
+    if (!dog || !trips) throw Error('cron run failed');
+  });
+  ctx.waitUntil(run.catch(() => {}));
+  await run;   // a failed part fails the invocation, so Cloudflare's cron-failure alerts see it
 }
 
 // Queue consumer (only when ENABLE_QUEUES added the bindings): trip checks and their dead letters.
 async function queue(batch: MessageBatch<TripCheckMessage>, env: Env): Promise<void> {
   useBucket(env);
-  if (batch.queue === TRIP_DLQ) consumeDeadLetters(batch);
-  else await consumeTripChecks(batch, env);
+  const started = Date.now();
+  if (batch.queue === TRIP_DLQ) { consumeDeadLetters(batch); recordQueueBatch(env, batch.queue, 'dead', {messages: batch.messages.length}, Date.now() - started); return; }
+  const result = await consumeTripChecks(batch, env);
+  recordQueueBatch(env, batch.queue, result.retried ? 'retried' : 'ok', {messages: batch.messages.length, ...result}, Date.now() - started);
 }
 
 export default {fetch: app.fetch, scheduled, queue} satisfies ExportedHandler<Env, TripCheckMessage>;

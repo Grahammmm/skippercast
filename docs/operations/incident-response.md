@@ -31,6 +31,8 @@ When unsure, pick the higher level; downgrade later in the timeline. Fail-closed
 
 Background: [production operations](../production-operations.md) and [Cloudflare](../cloudflare.md).
 
+Where to look first: **Workers & Pages → skippercast → Logs** (every invocation, searchable by `request_id`), the latest **Actions → Operations report** run (requests and 5xx by route, p95 latency, LLM calls, queue batches and cron outcomes for the last 24 hours; needs `ENABLE_ANALYTICS`), and **Workers & Pages → Queues** when trip checks run on the queue. See [Observability](../cloudflare.md#observability).
+
 ## During an incident
 
 1. **Open the record.** One GitHub issue per incident, title `Incident: <what users see>`, label `incident` plus the severity (`sev1`…`sev4`; create the labels on first use). The automatic `feed-stale` issue counts as the record for a stale feed.

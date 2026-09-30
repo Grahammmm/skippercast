@@ -180,7 +180,10 @@ test('boat lookup kill switch and global daily cap stop spend before the model i
     assert.equal(lines.length,2);
     assert.deepEqual(lines[0],{event:'boat_lookup',outcome:'ok',model:'claude-test-model',turns:1,input_tokens:1300,output_tokens:300,web_search_requests:2});
     assert.ok(!logged.some(l=>String(l).includes('Parker')),'usage logs never carry the query');
-    assert.equal(points.length,2);assert.deepEqual(points[0].doubles,[1300,300,2,1]);assert.deepEqual(points[0].blobs,['boat_lookup','ok','claude-test-model']);
+    const llm=points.filter(p=>p.indexes[0]==='llm');
+    assert.equal(llm.length,2);assert.deepEqual(llm[0].doubles,[1300,300,2,1]);assert.deepEqual(llm[0].blobs,['llm','boat_lookup','ok','claude-test-model']);
+    assert.deepEqual(points.filter(p=>p.indexes[0]==='request').map(p=>[p.blobs[1],p.doubles[0]]),[['/api/boat/lookup',200],['/api/boat/lookup',200],['/api/boat/lookup',429]],'one request point per call, by route pattern');
+    assert.ok(!JSON.stringify(points).match(/alice|bob|carol|Parker/),'analytics never carry the owner or the query');
     // A failed model call is still logged with its billed turns.
     globalThis.fetch=async()=>new Response('overloaded',{status:529});
     assert.equal((await lookup('dave',{BOAT_LOOKUP_GLOBAL_DAILY_LIMIT:'10'})).status,502);

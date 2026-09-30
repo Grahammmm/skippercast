@@ -16,6 +16,7 @@
 - Actions → **Deploy to Cloudflare**: the run summary shows "failed its smoke test and was rolled back", or the deploy step failed.
 - `bash scripts/smoke_test.sh "$CLOUDFLARE_SITE_URL" ""` from a checkout of `main`.
 - `curl -s "$CLOUDFLARE_SITE_URL/api/health"` shows the build id being served.
+- **Workers & Pages → skippercast → Logs** for exceptions since the deploy, and, with `ENABLE_ANALYTICS=true`, the 5xx rate by route in the latest **Operations report** run ([Observability](../../cloudflare.md#observability)).
 
 ## Fix: roll back the Worker code
 

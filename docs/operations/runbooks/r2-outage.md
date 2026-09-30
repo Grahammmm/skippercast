@@ -16,6 +16,8 @@
 
 ## Detect
 
+With `ENABLE_ANALYTICS=true`, the latest **Operations report** run shows `/feeds/*` requests by status class and p95 latency ([Observability](../../cloudflare.md#observability)). Then check what the site serves:
+
 ```bash
 export SITE=https://skippercast.example.workers.dev   # the CLOUDFLARE_SITE_URL repository variable
 export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast

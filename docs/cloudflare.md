@@ -15,6 +15,7 @@ SkipperCast runs only on a Cloudflare account the owner controls: the Worker, th
   - `scripts/check_feed_freshness.py` (hourly, `feed-freshness.yml`) checks the public route first — `FEEDS_PUBLIC_BASE`, defaulting to the workers.dev host (set it to `https://skippercast.com` once the custom domain is attached) — and reports the GitHub branch age second. A stale public route opens the `feed-stale` issue.
 - **Watchdog (`server/watchdog.ts`)**: every 15 minutes, if the live feed is more than 45 minutes old and no refresh is running, it dispatches the live-conditions workflow. This replaces reliance on GitHub's throttled schedules. It needs `WATCHDOG_GITHUB_TOKEN`. The same cron prunes expired trips, alert events, feedback and rate-limit rows in D1 (see [production operations](production-operations.md)).
 - **Trip-check queue (optional, `server/trip-queue.ts`)**: with the repository variable `ENABLE_QUEUES=true`, the same cron queues saved-trip checks itself after each new live publication, and the GitHub `notify` job stands aside. Off by default; see [Trip-check queue](#trip-check-queue).
+- **Observability (`server/analytics.ts`)**: Workers Logs are on for every invocation. With the repository variable `ENABLE_ANALYTICS=true`, the Worker also writes one Analytics Engine data point per request, LLM call, queue batch and cron run, and a daily workflow summarises them. See [Observability](#observability).
 - **Edge cache and rate limits (`server/edge-cache.ts`)**:
   - `/api/om/*`, `/api/forecast`, `/api/intelligence`, `/api/habitat` and R2-served `/feeds/*` use the Workers Cache API (`caches.default`). Responses carry `X-SC-Cache: hit|miss`.
   - API keys are the path plus sorted query parameters (region only, for the region endpoints) plus the build id.
@@ -119,6 +120,36 @@ Saved-trip checks can run inside Cloudflare instead of from GitHub Actions. This
 **Local check.** `ENABLE_QUEUES=true node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.dev.jsonc`, then `npx --yes wrangler@4.142.0 dev -c wrangler.dev.jsonc --test-scheduled` and `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`. Wrangler runs the queues locally.
 
 See also the [trip-check runbook](operations/runbooks/trip-checks.md).
+
+## Observability
+
+**Workers Logs** (`"observability"` in `wrangler.jsonc`) keep each invocation's console output and outcome: 3 days and 200,000 log events a day on the Free plan, 7 days and 20 million a month on Paid. `head_sampling_rate` is the share of invocations logged, from 0 to 1; it is set to 1 (all). Lower it, for example to 0.1, if daily log volume approaches the allowance: map tiles make many `/feeds/` requests per visit. Every JSON error carries `request_id`, and every response has `X-Request-Id`, so a report can be matched to its log line.
+
+**Analytics Engine** (dataset `skippercast_events`, binding `ANALYTICS`). Cloudflare creates the dataset on the first write. Workers Free includes 100,000 data points written and 10,000 read queries a day; check current pricing. `scripts/wrangler_config.mjs` binds it only when `ENABLE_ANALYTICS=true`; without the binding nothing is written. One data point is written per:
+
+| Kind (`index1`, `blob1`) | Text columns | Number columns |
+| --- | --- | --- |
+| `request` | `blob2` route pattern (e.g. `/api/trips`, `/feeds/*`, `/*`), `blob3` method, `blob4` cache `hit`/`miss`/`none`, `blob5` Cloudflare colo, `blob6` first 16 hex of sha256(request id) | `double1` status, `double2` ms, `double3` weight |
+| `llm` | `blob2` feature (`boat_lookup`), `blob3` outcome, `blob4` model | `double1` input tokens, `double2` output tokens, `double3` web searches, `double4` turns |
+| `queue_batch` | `blob2` queue, `blob3` `ok`/`retried`/`dead` | `double1` messages, `double2` owners, `double3` retried, `double4` invalid, `double5` trips checked, `double6` new events, `double7` delivered, `double8` held, `double9` in-app, `double10` ms |
+| `cron` | `blob2` schedule, `blob3` watchdog action, `blob4` trip-check action, `blob5` prune outcome | `double1` ms, `double2` owners queued, `double3` live feed age in minutes (-1 unknown) |
+
+Successful `/feeds/` requests are written 1 in 10 with `double3` = 10; every other request, and every failed feed request, is written with `double3` = 1. Count requests as `SUM(_sample_interval * double3)`. Nothing personal is written: no owner or user ids, IP addresses, emails, raw paths, query strings, boat names or lookup queries. Private routes that refuse an anonymous request are recorded under `/api/*`. LLM cost is tokens and searches times the provider's current price; the points hold the counts, not a price.
+
+**Daily report.** `.github/workflows/ops-report.yml` runs `scripts/ops_report.py` every morning. It queries the [Analytics Engine SQL API](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/) for the last 24 hours and writes Markdown tables to the run summary: requests by route and status class with p95 latency and the overall 5xx rate, LLM calls and tokens, queue batches and cron outcomes. Without the token it prints "skipped" and passes. To run it by hand: `CF_ANALYTICS_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… python3 scripts/ops_report.py`.
+
+**Turn it on (owner).**
+1. Set the repository variable `ENABLE_ANALYTICS` to `true` and run **Deploy to Cloudflare**.
+2. Create an API token with **Account · Account Analytics · Read** only, limited to the SkipperCast account, and save it as the repository secret `CF_ANALYTICS_TOKEN`. The report uses the existing `CLOUDFLARE_ACCOUNT_ID` secret.
+3. Run **Actions → Operations report → Run workflow** the next day and read the summary.
+
+**Logpush (owner option, not enabled).** Workers Trace Events Logpush sends every invocation's logs to storage you control, for example a private R2 bucket with a 30-day lifecycle rule. It needs the **Workers Paid** plan and a token with **Logs · Edit**. To turn it on: create the job under **Analytics & Logs → Logpush** (dataset *Workers trace events*, destination R2), then add `"logpush": true` to `wrangler.jsonc` in a reviewed PR. Workers Logs above are enough until the site has real traffic.
+
+**Alerts (owner steps, not automated).** Set these up in the dashboard once the site takes traffic:
+- **Error rate.** Cloudflare's account alerting lists a *Workers Observability* alert type. Where the dashboard offers alerts for Workers Observability queries, create one on the `skippercast` Worker for invocations with outcome other than `ok` above 1 % of requests over 15 minutes, delivered by email.
+- **Cron failures.** A cron run whose watchdog or trip-check step throws now fails the invocation (outcome `exception`, and a `cron` point with `error`). Alert on scheduled invocations with a non-`ok` outcome, at least one in an hour.
+- If those alert types are not available on the account's plan, use the daily operations report (its first line gives the 5xx rate) and the existing `feed-stale` issue, which opens when the live feed stops refreshing.
+- In **Notifications**, add an email destination and subscribe to **Cloudflare Status** incidents for Workers, D1, R2 and Queues.
 
 ## Custom domain
 

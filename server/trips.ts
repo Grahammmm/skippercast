@@ -72,9 +72,9 @@ export async function prune(env:Env,now=Date.now()):Promise<void>{
     db(env).prepare('DELETE FROM sessions WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM auth_challenges WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
     db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE created_at<?)').bind(cutoff),db(env).prepare('DELETE FROM alert_events WHERE created_at<?').bind(cutoff),db(env).prepare('DELETE FROM trips WHERE date<?').bind(cutoff.slice(0,10))]);
 }
-export async function scheduledPrune(env:Env):Promise<void>{
-  if(!env?.DB)return;
-  try{await prune(env);}catch(error){console.error('Retention prune failed',{reason:String((error as Error).message).slice(0,200)});}
+export async function scheduledPrune(env:Env):Promise<'ok'|'failed'|'no-db'>{
+  if(!env?.DB)return 'no-db';
+  try{await prune(env);return 'ok';}catch(error){console.error('Retention prune failed',{reason:String((error as Error).message).slice(0,200)});return 'failed';}
 }
 export interface CheckResult {checked:number;changes:number;delivered:number;held:number;in_app:number;next_cursor:string|null}
 export type TripOutcome = 'unchanged'|'skipped'|'delivered'|'held'|'in_app';

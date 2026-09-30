@@ -57,6 +57,7 @@ fi
 # CUSTOM_DOMAINS (repository variable, e.g. "skippercast.com,www.skippercast.com")
 # attaches those hosts as Worker custom domains; unset means workers.dev only.
 # The zone must already be active on this Cloudflare account (docs/cloudflare.md).
+# ENABLE_QUEUES / ENABLE_ANALYTICS ("true") add the optional bindings; the script reads them from the environment.
 node scripts/wrangler_config.mjs "$id" "$BUCKET" "$CONFIG" "${CUSTOM_DOMAINS:-}"
 
 # Before touching the schema, keep a way back. D1 Time Travel can restore to any

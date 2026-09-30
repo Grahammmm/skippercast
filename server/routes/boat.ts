@@ -4,15 +4,16 @@ import {Hono} from 'hono';
 import {lookupBoat, lookupSettings, validQuery} from '../boat-lookup.ts';
 import type {LookupResult, LookupUsage} from '../boat-lookup.ts';
 import {json, body, db, hash} from '../http.ts';
+import {recordLlm} from '../analytics.ts';
 import {ClientError} from '../errors.ts';
 import type {AppEnv, Env} from '../env.ts';
 
 // One structured line per boat lookup (billed tokens and searches, never the
-// query or owner), mirrored to Workers Analytics Engine when ANALYTICS is bound.
+// query or owner), mirrored to Workers Analytics Engine as an `llm` data point.
 function recordLookupUsage(env: Env, usage: LookupUsage, outcome: string): void {
   const line = {event: 'boat_lookup', outcome, model: usage.model || null, turns: usage.turns || 0, input_tokens: usage.input_tokens || 0, output_tokens: usage.output_tokens || 0, web_search_requests: usage.web_search_requests || 0};
   console.log(JSON.stringify(line));
-  try { env.ANALYTICS?.writeDataPoint({indexes: ['boat_lookup'], blobs: [line.event, line.outcome, line.model || ''], doubles: [line.input_tokens, line.output_tokens, line.web_search_requests, line.turns]}); } catch {}
+  recordLlm(env, 'boat_lookup', outcome, usage);
 }
 
 export const boat = new Hono<AppEnv>();
