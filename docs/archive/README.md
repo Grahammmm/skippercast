@@ -101,3 +101,5 @@ Files keep their original names so old links are easy to follow. Do not update t
 - [Original ArcInfo reader verification](seafloor-arcgrid-reader-2026-09-30.md) — native source ingestion and unchanged existing-source science.
 
 - [Carmel and Point Sur original batch](seafloor-carmel-sur-batch-2026-09-30.md) — three new physical reaches, measured footprint and held rankings.
+
+- [Southern Monterey spatial release](seafloor-monterey-release-2026-09-30.md) — whole-polygon exclusion and recurring notice checks.

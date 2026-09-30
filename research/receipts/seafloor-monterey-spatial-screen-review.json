@@ -1,0 +1,802 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-30",
+  "whole_reference_scope_proof": {
+    "short_and_long_extrema_wgs84": [
+      -121.90646309306311,
+      36.62972222222222,
+      -121.80833333333334,
+      36.73881980897253
+    ],
+    "conservative_south_bound_500m": 36.62517676767676,
+    "points_per_boundary": 1001,
+    "nominal_source_datum": "unknown, GRS80 geodesic used only for conservative out-of-scope comparison",
+    "sources": {
+      "334.1150": "var/seafloor/ecfr-334.1150-monterey-review.xml",
+      "165.1183": "var/seafloor/ecfr-165.1183-monterey-review.xml"
+    },
+    "reaches": [
+      {
+        "reach": "monterey-point-sur-r01",
+        "whole_reference_bounds": [
+          -122.0121486175258,
+          36.54221066323765,
+          -121.92964709692471,
+          36.61614147178323
+        ],
+        "whole_cells": 416
+      },
+      {
+        "reach": "monterey-point-sur-r02",
+        "whole_reference_bounds": [
+          -121.98439227251338,
+          36.47717731481617,
+          -121.92343144476928,
+          36.54984194566176
+        ],
+        "whole_cells": 343
+      },
+      {
+        "reach": "monterey-point-sur-r03",
+        "whole_reference_bounds": [
+          -121.97536947709611,
+          36.38065292700137,
+          -121.90340693480994,
+          36.48452816605464
+        ],
+        "whole_cells": 637
+      },
+      {
+        "reach": "monterey-point-sur-r04",
+        "whole_reference_bounds": [
+          -122.01797774138964,
+          36.23909095066031,
+          -121.89079925373227,
+          36.39286161954205
+        ],
+        "whole_cells": 1979
+      }
+    ]
+  },
+  "notice_sections": [
+    {
+      "section": "334.1150",
+      "classification": "outside-reviewed-scope",
+      "review_basis": "Whole reviewed reach envelopes lie south of FortOrd minimum latitude36.629722, with500m conservative south allowance to36.625177. Scope maximum36.62. Navy mining starts36.968333; even13.5nautical miles entirely south stays above36.74; return bearing50 north. Unknown regulatory datum retained; this is an out-of-scope check, not an exact mapped boundary.",
+      "reviewed_xml_sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+      "reviewed_at": "2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    },
+    {
+      "section": "165.1183",
+      "classification": "trip-time-vessel-restriction",
+      "review_basis": "Monterey moving tanker/cruise/HVA500yd underway and100yd anchored/moored security buffers need trip-time vessel avoidance. No stationary seafloor polygon can represent them.",
+      "reviewed_xml_sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+      "reviewed_at": "2026-09-30",
+      "source_up_to_date_as_of": "2026-09-28"
+    }
+  ],
+  "full_parts_review": "Same Sept30 publisher full parts165/334 as regional receipt; specific Monterey clauses334.1150 and165.1183 re-reviewed. FortOrd/Mine area remain applicable north of reviewed reach envelope, not declared inactive. No new permanent local zone found for this southern Monterey/Carmel/PointSur scope.",
+  "publication_scope": "Permanent whole-polygon planning screen only. All MPAs excluded. Current vessel security, harbor, notice, season, depth and gear decisions remain separate trip-time checks.",
+  "screened_results": [
+    {
+      "reach": "monterey-point-sur-r01",
+      "passing": 258,
+      "tier2_km2": 3.440726954,
+      "physical_reused": false,
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "ff128bee0667d75e0b1822e1920553205df83cdbd8d5278da16609a5b5012f3d",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.45,
+                34.4
+              ],
+              [
+                -120.45,
+                36.62
+              ],
+              [
+                -122.1,
+                36.62
+              ],
+              [
+                -122.1,
+                34.4
+              ],
+              [
+                -120.45,
+                34.4
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-30T19:39:14.406090+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145361+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145375+00:00",
+            "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+            "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:39:14.406090+00:00",
+            "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+            "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 3,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                  "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                  "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+                  "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "outside-reviewed-scope"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+                  "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "trip-time-vessel-restriction"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "source_urls": [
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+            ],
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "habitat_by_grade": {
+        "A": 59,
+        "B": 160,
+        "C": 39
+      },
+      "hold_reasons": null
+    },
+    {
+      "reach": "monterey-point-sur-r02",
+      "passing": 14,
+      "tier2_km2": 0.15359102,
+      "physical_reused": false,
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "ff128bee0667d75e0b1822e1920553205df83cdbd8d5278da16609a5b5012f3d",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.45,
+                34.4
+              ],
+              [
+                -120.45,
+                36.62
+              ],
+              [
+                -122.1,
+                36.62
+              ],
+              [
+                -122.1,
+                34.4
+              ],
+              [
+                -120.45,
+                34.4
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-30T19:39:14.406090+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145361+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145375+00:00",
+            "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+            "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:39:14.406090+00:00",
+            "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+            "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 3,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                  "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                  "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+                  "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "outside-reviewed-scope"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+                  "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "trip-time-vessel-restriction"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "source_urls": [
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+            ],
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "habitat_by_grade": {
+        "A": 2,
+        "B": 11,
+        "C": 1
+      },
+      "hold_reasons": null
+    },
+    {
+      "reach": "monterey-point-sur-r03",
+      "passing": 91,
+      "tier2_km2": 2.069371195,
+      "physical_reused": true,
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "ff128bee0667d75e0b1822e1920553205df83cdbd8d5278da16609a5b5012f3d",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.45,
+                34.4
+              ],
+              [
+                -120.45,
+                36.62
+              ],
+              [
+                -122.1,
+                36.62
+              ],
+              [
+                -122.1,
+                34.4
+              ],
+              [
+                -120.45,
+                34.4
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-30T19:39:14.406090+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145361+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145375+00:00",
+            "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+            "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:39:14.406090+00:00",
+            "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+            "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 3,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                  "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                  "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+                  "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "outside-reviewed-scope"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+                  "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "trip-time-vessel-restriction"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "source_urls": [
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+            ],
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "habitat_by_grade": {
+        "A": 2,
+        "B": 9,
+        "C": 80
+      },
+      "hold_reasons": null
+    },
+    {
+      "reach": "monterey-point-sur-r04",
+      "passing": 541,
+      "tier2_km2": 3.906197847,
+      "physical_reused": true,
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "ff128bee0667d75e0b1822e1920553205df83cdbd8d5278da16609a5b5012f3d",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.45,
+                34.4
+              ],
+              [
+                -120.45,
+                36.62
+              ],
+              [
+                -122.1,
+                36.62
+              ],
+              [
+                -122.1,
+                34.4
+              ],
+              [
+                -120.45,
+                34.4
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-30T19:39:14.406090+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145361+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145375+00:00",
+            "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+            "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:39:14.406090+00:00",
+            "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+            "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 3,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                  "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                  "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+                  "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "outside-reviewed-scope"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+                  "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "trip-time-vessel-restriction"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "source_urls": [
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+            ],
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "habitat_by_grade": {
+        "A": 6,
+        "B": 35,
+        "C": 500
+      },
+      "hold_reasons": null
+    },
+    {
+      "reach": "big-sur-coast-r01",
+      "passing": 0,
+      "tier2_km2": 0.0,
+      "physical_reused": true,
+      "screen": {
+        "version": "whole-polygon-screen-v1",
+        "status": "ready",
+        "reasons": [],
+        "snapshot_sha256": "ff128bee0667d75e0b1822e1920553205df83cdbd8d5278da16609a5b5012f3d",
+        "scope": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -120.45,
+                34.4
+              ],
+              [
+                -120.45,
+                36.62
+              ],
+              [
+                -122.1,
+                36.62
+              ],
+              [
+                -122.1,
+                34.4
+              ],
+              [
+                -120.45,
+                34.4
+              ]
+            ]
+          ]
+        },
+        "snapshot": "2026-09-30T19:39:14.406090+00:00",
+        "layers": [
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145361+00:00",
+            "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+            "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+            "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+            "feature_count": 155,
+            "id": "cdfw-mpa",
+            "nested_or_overlapping_components_unioned": 3
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:38:39.145375+00:00",
+            "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+            "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+            "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+            "feature_count": 29,
+            "id": "noaa-federal",
+            "nested_or_overlapping_components_unioned": 0
+          },
+          {
+            "status": "ok",
+            "checked_at": "2026-09-30T19:39:14.406090+00:00",
+            "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+            "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+            "feature_count": 3,
+            "evidence": {
+              "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+              "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+              "sections": [
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+                  "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+                  "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+                  "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+                  "up_to_date_as_of": "2026-09-28"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+                  "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "outside-reviewed-scope"
+                },
+                {
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+                  "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+                  "up_to_date_as_of": "2026-09-28",
+                  "classification": "trip-time-vessel-restriction"
+                }
+              ],
+              "up_to_date_as_of": "2026-09-28"
+            },
+            "source_urls": [
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+            ],
+            "id": "security",
+            "nested_or_overlapping_components_unioned": 0
+          }
+        ]
+      },
+      "habitat_by_grade": {},
+      "hold_reasons": null
+    }
+  ],
+  "snapshot": {
+    "version": "whole-polygon-screen-v1",
+    "checked_at": "2026-09-30T19:39:14.406090+00:00",
+    "reviewed_reaches": [
+      "big-sur-coast-r01",
+      "cambria-san-simeon-r02",
+      "monterey-point-sur-r01",
+      "monterey-point-sur-r02",
+      "monterey-point-sur-r03",
+      "monterey-point-sur-r04",
+      "morro-bay-r01",
+      "morro-bay-r02",
+      "morro-bay-r03",
+      "morro-bay-r04",
+      "morro-bay-r05",
+      "morro-bay-r06",
+      "morro-bay-r07",
+      "morro-bay-r08",
+      "point-arguello-conception-r06",
+      "point-arguello-conception-r07",
+      "point-arguello-conception-r08"
+    ],
+    "scope": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -120.45,
+            34.4
+          ],
+          [
+            -120.45,
+            36.62
+          ],
+          [
+            -122.1,
+            36.62
+          ],
+          [
+            -122.1,
+            34.4
+          ],
+          [
+            -120.45,
+            34.4
+          ]
+        ]
+      ]
+    },
+    "layers": {
+      "cdfw-mpa": {
+        "status": "ok",
+        "checked_at": "2026-09-30T19:38:39.145361+00:00",
+        "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
+        "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+        "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+        "feature_count": 155
+      },
+      "noaa-federal": {
+        "status": "ok",
+        "checked_at": "2026-09-30T19:38:39.145375+00:00",
+        "file": "noaa-federal-07ccfb5dbb80aaf85c818982a6ccb6fbab3fde00e33212ec0b7f15fe392300f7.json",
+        "sha256": "f77b66bb36f4d0d973a1e4b118dbd74899e75fa3ff64d264161bd9a57c419441",
+        "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+        "feature_count": 29
+      },
+      "security": {
+        "status": "ok",
+        "checked_at": "2026-09-30T19:39:14.406090+00:00",
+        "file": "security-2835b5b6ceba56647f0bfdcf880240111548115473c34817b8ba21fc9466f1e5.json",
+        "sha256": "700866dcf3ceb5d47d27dbd9e2e5e1bc9f6e7688db66ce57c51c193ab1688e07",
+        "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+        "feature_count": 3,
+        "evidence": {
+          "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+          "titles_sha256": "acd51a9d975c8015b8dd1a13ad1836cd2f1609e6c41b80816d11aa56718c2e2d",
+          "sections": [
+            {
+              "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+              "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+              "up_to_date_as_of": "2026-09-28"
+            },
+            {
+              "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+              "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+              "up_to_date_as_of": "2026-09-28"
+            },
+            {
+              "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+              "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+              "up_to_date_as_of": "2026-09-28"
+            },
+            {
+              "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+              "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+              "up_to_date_as_of": "2026-09-28",
+              "classification": "outside-reviewed-scope"
+            },
+            {
+              "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183",
+              "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+              "up_to_date_as_of": "2026-09-28",
+              "classification": "trip-time-vessel-restriction"
+            }
+          ],
+          "up_to_date_as_of": "2026-09-28"
+        },
+        "source_urls": [
+          "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1155",
+          "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1130",
+          "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1196",
+          "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=334.1150",
+          "https://www.ecfr.gov/api/versioner/v1/full/2026-09-28/title-33.xml?section=165.1183"
+        ]
+      }
+    },
+    "policy_sha256": "b519304d2c45b5acd90d576a1909f1a2771a24c0ede92a671074027d9eb53aa6"
+  },
+  "independent_check": {
+    "passing_polygons": 904,
+    "intersections_with_any_original_exclusion_component": 0,
+    "held_reason_counts": {
+      "overlap-cdfw-mpa": 370,
+      "habitat-contract-incomplete": 87,
+      "metric-support-incomplete": 87
+    },
+    "method": "Direct STRtree intersection against every original restriction Polygon component, not candidate centroids or renderer tiles."
+  }
+}

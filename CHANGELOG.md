@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: screen southern Monterey/Carmel/PointSur whole habitat outlines;904 candidates pass locally, with MPAs excluded and changed Monterey rules holding publication for review.
+
 - Seafloor: process original Carmel/Point Sur5m surveys in three new reaches; add85.27km² selected measured footprint and836 supported habitat ranks, held privately for spatial screening.
 
 - Seafloor: include full H11953 depth-band footprints and native 1 m nearshore detail; +13.08 km² valid coverage. Existing relative extraction changes screened outlines, with limitations documented.
