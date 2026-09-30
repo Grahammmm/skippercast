@@ -22,6 +22,7 @@ fi
 # key and existing subscriptions stay valid. Rotation: docs/operations/runbooks/secrets-rotation.md.
 # The check runs before any deploy step, so a malformed key stops the job without a rollback.
 mkdir -p var
+trap 'rm -f var/vapid.json' EXIT
 if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
   rm -f var/vapid.json
   if $WRANGLER r2 object get "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote >/dev/null 2>&1 && [ -s var/vapid.json ]; then
@@ -34,8 +35,8 @@ if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
     $WRANGLER r2 object put "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote >/dev/null
     echo "Web Push keys generated and saved to r2://$BACKUP_BUCKET/secrets/vapid.json."
   fi
-  VAPID_PUBLIC_KEY=$(python3 -c "import json;print(json.load(open('var/vapid.json'))['VAPID_PUBLIC_KEY'])")
-  VAPID_PRIVATE_KEY=$(python3 -c "import json;print(json.load(open('var/vapid.json'))['VAPID_PRIVATE_KEY'])")
+  VAPID_PUBLIC_KEY=$(node -p "JSON.parse(require('fs').readFileSync('var/vapid.json','utf8')).VAPID_PUBLIC_KEY")
+  VAPID_PRIVATE_KEY=$(node -p "JSON.parse(require('fs').readFileSync('var/vapid.json','utf8')).VAPID_PRIVATE_KEY")
   export VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY
   rm -f var/vapid.json
 fi

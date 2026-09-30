@@ -106,9 +106,10 @@ test('the deploy script takes the VAPID pair from the backup bucket, generating 
     writeFileSync(join(dir, 'npx'), '#!/bin/sh\nexec "' + fileURLToPath(new URL('./fixtures/fake-wrangler.sh', import.meta.url)) + '" "$@"\n', {mode: 0o755});
     const script = fileURLToPath(new URL('../scripts/cloudflare_deploy.sh', import.meta.url));
     const run = keys => spawnSync('bash', [script], {cwd: dir, encoding: 'utf8',
-      env: {PATH: `${dir}:${process.env.PATH}`, CLOUDFLARE_API_TOKEN: 't', CLOUDFLARE_ACCOUNT_ID: 'a', FAKE_LOG: log, FAKE_STORE: join(dir, 'stored.json'), ...keys}});
+      env: {PATH: `${dir}:${process.env.PATH}`, HOME: dir, CLOUDFLARE_API_TOKEN: 't', CLOUDFLARE_ACCOUNT_ID: 'a', FAKE_LOG: log, FAKE_STORE: join(dir, 'stored.json'), ...keys}});
     const first = run({});
-    assert.match(first.stdout, /generated and saved to r2:\/\/skippercast-backups\/secrets\/vapid\.json/);
+    assert.match(first.stdout, /generated and saved to r2:\/\/skippercast-backups\/secrets\/vapid\.json/, first.stderr);
+    assert.ok(readFileSync(join(dir, 'npx.log'), 'utf8').includes('d1 list'), 'the key step completed and the deploy went on: ' + first.stderr);
     const stored = JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8'));
     assert.equal(stored.VAPID_PUBLIC_KEY.length, 87); assert.equal(stored.VAPID_PRIVATE_KEY.length, 43);
     assert.throws(() => readFileSync(join(dir, 'var', 'vapid.json')), /ENOENT/, 'the pair never stays on disk');
