@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bestSpots,evidenceConfidence,waypointTitle} from '../dist/spot-ranking.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
-import {buildExport,readDraft} from '../dist/trip-export.js';
+import {buildExport,readDraft,offlineNotes} from '../dist/trip-export.js';
 import {gzipSync} from 'node:zlib';
 const ring=(x)=>[[x,35],[x+.002,35],[x+.002,35.002],[x,35.002],[x,35]];
 const props=id=>({id,region:'morro-bay',tier:2,status:'habitat',exportable:true,screen:{status:'pass'},
@@ -53,6 +53,29 @@ test('canonical outlines and interior points load by verified hash; all are re-s
  assert.deepEqual(r.features.areas[0].geometry,f.data.features[0].geometry);
  assert.throws(()=>buildExport({atlas,screen:{...screen,geometryAllowed:()=>false},ids:['reef-a'],region:{mpa:{bounds:[]}}}),/whole-boundary/);
  atlas.publication.expires_at='2000-01-01';assert.throws(()=>buildExport({atlas,screen,ids:['reef-a'],region:{mpa:{bounds:[]}}}),/expired/);
+});
+test('producer credits and use restrictions survive canonical loading, GPX and offline notes',async()=>{
+ const rights=[{source_id:'survey',attribution:'Original producer <credit>',notice:'Public noncommercial use only; for-profit permission required. Not for navigation.',policy_url:'https://example.org/terms'}];
+ const f=await fixture(d=>d.features[0].properties.source_rights=rights);
+ f.manifest.source_use_notice='Retain producer terms';
+ const atlas=await loadReefTrip('morro-bay',f),region={id:'morro-bay',mpa:{bounds:[-122,34,-120,36]}};
+ const r=buildExport({atlas,screen,ids:['reef-a'],layers:{waypoints:true,outlines:true,alignments:false,exclusions:false},region});
+ assert.equal(atlas.targets[0].source_rights[0].id,'survey');
+ for(const document of [r.gpx,offlineNotes(r,region,{name:'Test day',date:'2026-09-30'})]){
+  assert.match(document,/Original producer &lt;credit&gt;/);
+  assert.match(document,/for-profit permission required/);
+  assert.match(document,/https:\/\/example.org\/terms/);
+  assert.doesNotMatch(document,/<credit>/);
+ }
+ assert.match(atlas.areas[0].extent_note,/for-profit permission required/);
+});
+test('new credited publication rejects absent or partially malformed contributor notices',async()=>{
+ for(const value of [undefined,[],[{source_id:'survey',attribution:'Producer'}],
+  [{source_id:'survey',attribution:'Producer',notice:'Terms'},{source_id:'other',notice:'Terms'}]]){
+  const f=await fixture(d=>d.features[0].properties.source_rights=value);
+  f.manifest.source_use_notice='Retain producer terms';
+  await assert.rejects(loadReefTrip('morro-bay',f),/credits or use terms/);
+ }
 });
 test('saved canonical selections remain pending for fresh publication restoration',()=>{
  const plan={sha256:'a'.repeat(64),species:'reef',priorities:[{id:'reef-a',rank:1}]};
