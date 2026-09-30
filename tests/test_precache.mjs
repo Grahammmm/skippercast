@@ -1,23 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
-import {execFile} from 'node:child_process';
-import {promisify} from 'node:util';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {fingerprint} from '../scripts/fingerprint.mjs';
 import {precacheManifest, writePrecache, BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
 
-const run = promisify(execFile);
-const CHECK = new URL('../scripts/check_client.mjs', import.meta.url).pathname;
+// check_client's precache and worker checks run against a real Vite build in
+// tests/test_client_build.mjs; this file covers scripts/precache.mjs itself.
+const BUILD = 'abc1234567';
 
 async function site() {
   const dir = await mkdtemp(join(tmpdir(), 'precache-'));
   await mkdir(join(dir, 'vendor/images'), {recursive: true});
-  await writeFile(join(dir, 'index.html'), '<link rel="stylesheet" href="styles.css"><script type="module" src="boot.js"></script>');
-  await writeFile(join(dir, 'boot.js'), "import './app.js';");
-  await writeFile(join(dir, 'app.js'), "navigator.serviceWorker.register('/sw.js');");
-  await writeFile(join(dir, 'styles.css'), 'body{}');
+  await mkdir(join(dir, 'assets'), {recursive: true});
+  await writeFile(join(dir, `index.${BUILD}.html`), '<script type="module" src="./assets/index.0123456789.js"></script>');
+  await writeFile(join(dir, 'assets/index.0123456789.js'), "import './app.abcdef0123.js';");
+  await writeFile(join(dir, 'assets/app.abcdef0123.js'), "navigator.serviceWorker.register('/sw.js');");
+  await writeFile(join(dir, 'assets/styles.fedcba9876.css'), 'body{}');
+  await writeFile(join(dir, 'assets/notes.txt'), 'not a script or style');
   await writeFile(join(dir, 'sw.js'), `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=>{});`);
   await writeFile(join(dir, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'app-icon-192.png'), 'png');
@@ -28,33 +28,19 @@ async function site() {
   return dir;
 }
 
-test('precache.json lists the shell, every fingerprinted asset of the build and the static shell files', async () => {
+test('precache.json lists the shell, every hashed asset of the build and the static shell files', async () => {
   const dir = await site();
-  const {buildId} = await fingerprint(dir);
-  const manifest = await writePrecache(dir, buildId);
+  const manifest = await writePrecache(dir, BUILD);
   assert.deepEqual(JSON.parse(await readFile(join(dir, 'precache.json'), 'utf8')), manifest);
-  assert.equal(manifest.build, buildId);
+  assert.equal(manifest.build, BUILD);
   assert.deepEqual(manifest.shells, ['/']);
-  assert.deepEqual(manifest.assets, [`/app.${buildId}.js`, `/boot.${buildId}.js`, `/styles.${buildId}.css`]);
+  assert.deepEqual(manifest.assets, ['/assets/app.abcdef0123.js', '/assets/index.0123456789.js', '/assets/styles.fedcba9876.css']);
   assert.deepEqual(manifest.static, ['/app-icon-192.png', '/manifest.webmanifest', '/vendor/leaflet.js', '/vendor/leaflet.css', '/vendor/images/marker-icon.png']);
   assert.ok(!manifest.assets.some(a => a.endsWith('.html')), 'pages are served only from their stable paths');
   assert.ok(!JSON.stringify(manifest).includes('regulations.json'), 'data is never precached; it is network-first');
   // The worker carries the build id, so a deploy changes its bytes and reinstalls it.
   const sw = await readFile(join(dir, 'sw.js'), 'utf8');
-  assert.ok(sw.startsWith(`const BUILD = '${buildId}';`));
-  const {stdout} = await run(process.execPath, [CHECK, dir]);
-  assert.match(stdout, new RegExp(`precached for build ${buildId}`));
-});
-
-test('check_client fails on a stale precache list or a worker without the build id', async () => {
-  const dir = await site();
-  const {buildId} = await fingerprint(dir);
-  const manifest = await writePrecache(dir, buildId);
-  await writeFile(join(dir, 'precache.json'), JSON.stringify({...manifest, assets: manifest.assets.slice(1)}));
-  await assert.rejects(run(process.execPath, [CHECK, dir]), /precache\.json assets differ/);
-  await writeFile(join(dir, 'precache.json'), JSON.stringify(manifest));
-  await writeFile(join(dir, 'sw.js'), `const BUILD = 'old1234567';`);
-  await assert.rejects(run(process.execPath, [CHECK, dir]), /sw\.js does not carry the precache build id/);
+  assert.ok(sw.startsWith(`const BUILD = '${BUILD}';`));
 });
 
 test('the build refuses a worker without the build placeholder, and a missing vendor file', async () => {

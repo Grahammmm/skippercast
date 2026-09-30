@@ -49,7 +49,7 @@ Feed contents are described in [data contracts](../data-contracts.md), [live con
 
 ### `GET /`, `GET /<page>.html`, other assets
 
-Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, `/sources.html`, …; the `SHELLS` map built by `scripts/fingerprint.mjs`) are served from their content-hashed copy with `Cache-Control: no-store`. Every other path goes to the static assets binding unchanged (hashed scripts and styles, `vendor/`, `data/`, `regions/`). No authentication.
+Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, `/sources.html`, …; the `SHELLS` map built by `scripts/client-build.mjs`) are served from their build-id copy with `Cache-Control: no-store`. Every other path goes to the static assets binding unchanged (hashed scripts and styles, `vendor/`, `data/`, `regions/`). No authentication.
 
 **Pending changes:** PR #25 ([P0-02]) keeps `sw.js` unhashed and serves `GET /sw.js` with `Cache-Control: no-cache`. PR #36 ([P0-09]) adds `/terms.html`, `/privacy.html` and `/licenses.html` pages. PR #38/#43 ([P0-06]) add HSTS, CSP, `frame-ancestors 'none'`, `Permissions-Policy` and related headers to pages and (via a generated `_headers` file) to static assets.
 

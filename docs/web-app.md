@@ -6,7 +6,7 @@ The app is a mobile-first map workspace with four views in the bottom navigation
 python3 -m http.server 8485 --directory dist
 ```
 
-Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site. Deployment does need a build: `pnpm install --frozen-lockfile && pnpm build` (`scripts/build-worker.mjs`) copies `dist/` to `dist/client`, renames every script, style and page with a content hash, and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). A plain static server cannot answer the Worker's `/feeds/` and `/api/` routes, so published feeds and forecasts fail there; to run the whole app locally, build and then start `npx --yes wrangler@4.142.0 dev`.
+Open `http://localhost:8485/`. A file-system `file:` URL cannot fetch the atlas module/data reliably, so use the HTTP server. On an iPad, use the deployed HTTPS site. Deployment does need a build: `pnpm install --frozen-lockfile && pnpm build` (`scripts/build-worker.mjs`) builds `dist/` with Vite into `dist/client` (hashed scripts and styles in `assets/`, one stylesheet per page, pages renamed with the build id, static data copied unchanged) and bundles the Worker into `dist/server`; see [Cloudflare](cloudflare.md). A plain static server cannot answer the Worker's `/feeds/` and `/api/` routes, so published feeds and forecasts fail there; to run the whole app locally, build and then start `npx --yes wrangler@4.142.0 dev`.
 
 ## What works
 
