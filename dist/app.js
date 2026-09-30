@@ -8,6 +8,7 @@ import {initIntelligence} from './intelligence.js';
 import {initHabitatDynamics} from './habitat-map.js';
 import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js';
 import {batchedNotice} from './map-response.js';
+import {mapReady} from './startup.js';
 let tripExport;
 import { getRegion, assetURL } from "./region.js";
 import { mountBottom } from "./bottom-view.js";
@@ -69,8 +70,14 @@ const layers = {},
 const navigation = initNavigation({
   onMapVisible: () => {
     if (!map) return;
+    // Read the opening view before resizing: a map first drawn while hidden
+    // (0 × 0) moves its centre when it gets a size, and that move is written
+    // to ?view= before the first fit could read the address.
+    const opening = initialViewShown ? undefined : viewFromURL(location.href);
     map.invalidateSize({ pan: false });
-    if (initialFitPending) fitTargets();
+    // The map now exists before the atlas arrives (P4-05); the first fit still
+    // waits for it, so the opening view is chosen exactly as before.
+    if (initialFitPending && atlas) fitTargets(opening);
   },
 });
 
@@ -456,14 +463,16 @@ function registerTools() {
     }
 }
 
-function fitTargets() {
+function fitTargets(opening) {
   if ($("map-panel").hidden || !map?.getSize().y) {
     initialFitPending = true;
     return;
   }
   if (!initialViewShown) {
-    const view=viewFromURL(location.href);
-    map.setView(view?[view.latitude,view.longitude]:getRegion().map.center, view?.zoom||getRegion().map.zoom);
+    const view=opening===undefined?viewFromURL(location.href):opening;
+    // No pan animation: after a hidden (0 × 0) start Leaflet would animate from a
+    // stale centre and stop short of the opening view.
+    map.setView(view?[view.latitude,view.longitude]:getRegion().map.center, view?.zoom||getRegion().map.zoom, {animate:false});
     initialViewShown = true;
     initialFitPending = false;
     return;
@@ -558,26 +567,36 @@ const rulesUI=initRegulations($("species-regulations"), $("species-select"),{res
 updateExports();
 
 try {
-  const response = await fetch(assetURL("atlas"),{signal:AbortSignal.timeout(15000)});
-  if (!response.ok)
-    throw new Error(`Atlas request failed (${response.status})`);
-  atlas = await response.json();
+  // The basemap, the atlas and the protected-area screen do not depend on each
+  // other: draw the map now and fetch both datasets at once (P4-05).
+  initMap();
+  const atlasRequest = fetch(assetURL("atlas"),{signal:AbortSignal.timeout(15000)}).then(response=>{
+    if (!response.ok)
+      throw new Error(`Atlas request failed (${response.status})`);
+    return response.json();
+  });
+  const boundaryRequest = initProtectedAreas(map, () => { if (atlas) filterTargets(); });
+  // Settle both before reading either, so a failure never leaves the other unobserved.
+  const [atlasResult, boundaryResult] = await Promise.allSettled([atlasRequest, boundaryRequest]);
+  if (atlasResult.status === "rejected") throw atlasResult.reason;
+  if (boundaryResult.status === "rejected") throw boundaryResult.reason;
+  atlas = atlasResult.value;
   if(getRegion().id==='morro-bay'){
     const note=$('region-note');
     note.hidden=false;
     note.textContent=`${atlas.targets.length} historical reef terrain candidates near Morro Bay only. Their source depth datum is unverified, so none is chart-depth qualified. Elsewhere on this coast, fishing marks await survey qualification. Numbered circles group nearby spots; zoom in for individual 1–3 habitat ranks.`;
   }
-  initMap();
   void initCentralCoverage(map).catch(() => {
     const note=$('central-coverage-status');
     if(note)note.textContent='Source coverage map unavailable. Do not infer a surveyed reef from a regional outline.';
   });
   boatPosition=initBoatPosition(map,{onMapRequested:()=>navigation.showView('map')});
-  protectedAreas = await initProtectedAreas(map, () => filterTargets());
+  protectedAreas = boundaryResult.value;
   tripExport=initExport({atlas,screen:protectedAreas,map,getVisible:()=>visible,navigation});
   filterTargets();
   void protectedAreas.refresh().finally(()=>{boundaryRefreshDone=true;updateReefCoverage();});
   fitTargets();
+  mapReady();
   driftGuides=initDriftGuides(map,{targets:()=>visible,selected:()=>selected,protectedAreas,selectTarget});
   weather=initWeather(map,layers.forecast,()=>navigation.showView("forecast"),driftGuides.update);
   locationUI=initLocationContext(map,{
@@ -599,7 +618,9 @@ try {
   void optional("Seafloor habitat",()=>initSeafloor(map,(html,area)=>showAreaDetails(html,area,"seafloor-weather")));
   void optional("Historical reef areas",()=>initRegionalContext(map, protectedAreas, (html, area) => showAreaDetails(html, area, "regional-weather")));
   void optional("Geological context",()=>initGeology(map, protectedAreas, (html, area) => showAreaDetails(html, area, "geology-weather")));
-  speciesUI = await optional("Species habitat",()=>initSpecies(map, layers, {
+  // Species habitat, charter grounds and commercial AIS load in parallel; the
+  // filterTargets() that follows redraws every layer in its usual order.
+  const speciesStart = optional("Species habitat",()=>initSpecies(map, layers, {
     protectedAreas,
     onChange: () => {
       filterTargets();
@@ -614,7 +635,7 @@ try {
       showAreaDetails(html, area, "area-weather");
     },
   }));
-  charterUI = await optional("Charter context",()=>initCharterGrounds(map, layers.charters, {
+  const charterStart = optional("Charter context",()=>initCharterGrounds(map, layers.charters, {
     protectedAreas,
     onSelect: (html, area) => showAreaDetails(html, area, "charter-weather"),
     onTarget: (id) => {
@@ -631,8 +652,9 @@ try {
     showMap: () => navigation.showView("map"),
     toast,
   }));
+  const commercialStart=optional("Commercial AIS",()=>initCommercialAIS(map,{protectedAreas,onSelect:(html,area)=>showAreaDetails(html,area,"commercial-weather"),showMap:()=>navigation.showView("map")}));
+  [speciesUI, charterUI, commercialUI] = await Promise.all([speciesStart, charterStart, commercialStart]);
   filterTargets();
-  commercialUI=await optional("Commercial AIS",()=>initCommercialAIS(map,{protectedAreas,onSelect:(html,area)=>showAreaDetails(html,area,"commercial-weather"),showMap:()=>navigation.showView("map")}));
   map.on("zoomend", () => {
     if (atlas) {
       drawHabitat();
@@ -644,6 +666,7 @@ try {
   if (selected) weather.selectLocation(selected);
 } catch (error) {
   if(!tripExport)$("export-content").textContent='Regional export data could not load. Refresh this page to retry.';
+  mapReady();
   $("map-empty").hidden = false;
   $("map-empty").innerHTML =
     '<strong>Atlas unavailable</strong><p>Refresh to reload the atlas and protected-area screen.</p>';

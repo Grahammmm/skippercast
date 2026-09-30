@@ -4,13 +4,18 @@ import {navigate} from '../web/state.ts';
 // Keep this module independent of regional modules: boot uses it before a package is selected.
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let directory;
+let coastsRequest=null;
 export async function loadCoasts() {
   if(directory)return directory;
-  const r=await fetch('data/coasts.json',{signal:AbortSignal.timeout(10000)});
-  if(!r.ok)throw Error('Coastal directory unavailable');
-  const data=await r.json();
-  if(data.schema_version!==1 || data.regions?.length!==5)throw Error('Invalid coastal directory');
-  directory=withFeeds(data);return directory;
+  // Callers at startup ask at the same time (boot.js, region.js): share one request.
+  coastsRequest??=(async()=>{
+    const r=await fetch('data/coasts.json',{signal:AbortSignal.timeout(10000)});
+    if(!r.ok)throw Error('Coastal directory unavailable');
+    const data=await r.json();
+    if(data.schema_version!==1 || data.regions?.length!==5)throw Error('Invalid coastal directory');
+    directory=withFeeds(data);return directory;
+  })().catch(error=>{coastsRequest=null;throw error;});
+  return coastsRequest;
 }
 export function coastAt(point,catalog=directory) {
   if(!Number.isFinite(point?.latitude)||!Number.isFinite(point?.longitude))return null;

@@ -3,6 +3,7 @@
 // and before meteogram-ui.js, which draws into the card this renders.
 import {render, type ComponentChild} from 'preact';
 import {FreshnessBanner} from './components/FreshnessBanner.tsx';
+import {MapLegend} from './components/MapLegend.tsx';
 import {MeteogramCard} from './components/MeteogramCard.tsx';
 import {OutlookBadge} from './components/OutlookBadge.tsx';
 import {followForecastHour} from './hour.ts';
@@ -22,4 +23,5 @@ mount(badge, <OutlookBadge host={badge} />);
 mount(document.getElementById('meteogram-card'), <MeteogramCard />);
 const banner = document.getElementById('offline-banner');
 mount(banner, <FreshnessBanner host={banner} />);
+mount(document.getElementById('map-legend'), <MapLegend />);
 followForecastHour();

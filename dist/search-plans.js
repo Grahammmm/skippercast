@@ -10,8 +10,16 @@ export async function initSearchPlans(map,screen,onSelect){
  document.addEventListener('skippercast:forecast',e=>{state=e.detail;if(data)queue();});
  document.addEventListener('skippercast:ocean-cells',e=>{ocean=e.detail;if(data)queue();});
  const url=assetURL('search_plans')||`regions/${region.id}/search-plans.json`;
+ // app.js starts this after the first markers are drawn, so the plans (0.5 MB
+ // here, 5 MB in Southern California) never hold up the map (P4-05). The card's
+ // summary and the top search-area outlines show as soon as they arrive.
+ const started=load();
+ async function load(){
  try{const r=await fetch(url,{signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error();data=await r.json();if(data.region_id!==region.id||data.method!=='species-search-v1')throw Error();}catch{data=null;panel.innerHTML='<summary>Search areas unavailable</summary><p>Refresh to retry the regional habitat package.</p>';return;}
+ panel.dataset.loaded='true';
  void loadPrimaryStrategies(region.id).then(packet=>{strategies=packet;queue();}).catch(()=>{strategies=null;});
+ render();
+ }
  function species(){return document.getElementById('species-select').value;}
  function select(entry){
   const {feature:f,rating,near}=entry,p=f.properties,profile=data.profiles[species()];
@@ -38,6 +46,6 @@ export async function initSearchPlans(map,screen,onSelect){
   shown.forEach((entry,i)=>{const p=entry.feature.properties,r=entry.rating,color=r.conditions===null?'#6b7185':r.conditions<4?'#b06b25':'#007c78';L.geoJSON(entry.feature,{style:{color,weight:3,fillOpacity:.12,dashArray:r.conditions===null?'6 5':undefined}}).bindTooltip(`${i+1}. ${p.name} · investigate`).on('click',()=>select(entry)).addTo(layer);});
  }
  panel.addEventListener('click',e=>{const b=e.target.closest('[data-search]');if(b){const entry=shown[Number(b.dataset.search)];if(entry)select(entry);}});
- function queue(){clearTimeout(timer);timer=setTimeout(render,120);}
- document.addEventListener('skippercast:species',()=>{ocean=null;queue();});document.getElementById('layer-areas').addEventListener('change',queue);map.on('moveend',queue);setInterval(queue,60000);render();return {refresh:queue};
+ function queue(){if(!data)return;clearTimeout(timer);timer=setTimeout(render,120);}
+ document.addEventListener('skippercast:species',()=>{ocean=null;queue();});document.getElementById('layer-areas').addEventListener('change',queue);map.on('moveend',queue);setInterval(queue,60000);return {refresh:queue,ready:started};
 }

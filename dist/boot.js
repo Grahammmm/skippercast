@@ -1,4 +1,5 @@
 import {lockRegion,startURLSync} from '../web/state.ts';
+import {mapReady} from './startup.js';
 import {initTelemetry} from '../web/telemetry.ts';
 // Cookie-less funnel and error reporting; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();
@@ -17,16 +18,21 @@ try {
   } else {
   // Region-bound modules load from here; a region change after this reloads.
   lockRegion();
-  const {initRegion}=await import('./region.js');
-  const {loadCoasts,coastForPackage,initCoastSelector,initCoastalContext}=await import('./coasts.js');
-  const {initRecentDiscussions}=await import('./recent-discussions.js');
-  const catalog=await loadCoasts(),url=new URL(location.href),requested=url.searchParams.get('coast');
+  // These modules and the two directories they read do not depend on each
+  // other: load them in parallel rather than one await at a time (P4-05).
+  const [{initRegion},{loadCoasts,coastForPackage,initCoastSelector,initCoastalContext},{initRecentDiscussions}]=await Promise.all([
+    import('./region.js'),import('./coasts.js'),import('./recent-discussions.js')]);
+  const url=new URL(location.href),requested=url.searchParams.get('coast');
+  const regionReady=requested?null:initRegion();
+  regionReady?.catch(()=>{});   // awaited below; this only keeps an early failure from being reported twice
+  const catalog=await loadCoasts();
   if(requested) {
     const coast=catalog.regions.find(r=>r.id===requested);if(!coast)throw Error('Unknown coastal region');
     const {initCoastalDiscovery}=await import('./coastal-discovery.js');
     await initCoastalDiscovery(catalog,coast);
+    mapReady();
   } else {
-    await initRegion();
+    await regionReady;
     const coast=coastForPackage(url.searchParams.get('region')||'morro-bay',catalog);
     initCoastSelector(catalog,coast);
     void initCoastalContext(catalog,coast);
@@ -38,6 +44,7 @@ try {
 } catch(error) {
   // Log the detail for debugging; show people a plain message and a way forward.
   console.error('SkipperCast failed to start',error);
+  mapReady();
   const panel=document.getElementById("map-empty");panel.hidden=false;
   panel.replaceChildren();const title=document.createElement("strong");title.textContent="SkipperCast couldn't load this area";
   const reason=document.createElement("p");reason.textContent="Check your connection and try again.";

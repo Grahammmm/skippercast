@@ -662,3 +662,201 @@
   right: 12px;
   left: 12px;
 }
+
+/* Map loading skeleton (P4-05): covers the map until its markers are drawn. */
+.map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 499; /* above Leaflet's tile and overlay panes, below the species bar (500) */
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: linear-gradient(100deg, var(--surface) 35%, var(--card) 50%, var(--surface) 65%);
+  background-size: 300% 100%;
+  animation: map-loading-sweep 1.4s ease-in-out infinite;
+}
+.map-loading[hidden] {
+  display: none;
+}
+.map-loading span {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--elev-1);
+  font-size: var(--text-14);
+}
+@keyframes map-loading-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-loading { animation: none; background: var(--surface); }
+}
+
+/* On-map legend (P4-05): bottom-left chip, above the "Where to focus" card
+   (live-conditions.css: bottom 132-135px), which covers it while open; the
+   sheet is a native <dialog> (web/components/MapLegend.tsx). */
+.map-legend {
+  position: absolute;
+  z-index: 500;
+  left: 16px;
+  bottom: calc(190px + env(safe-area-inset-bottom, 0px));
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--elev-2);
+  font: inherit;
+  font-size: var(--text-14);
+  font-weight: 700;
+  cursor: pointer;
+}
+.legend-chip:focus-visible,
+.legend-sheet button:focus-visible,
+.legend-sheet a:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+.legend-sheet {
+  box-sizing: border-box;
+  width: min(100%, 420px);
+  max-width: 100%;
+  max-height: 75vh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--elev-3);
+}
+.legend-sheet[open] {
+  animation: legend-sheet-in var(--motion-sheet);
+}
+.legend-sheet::backdrop {
+  background: rgb(8 46 59 / 0.35);
+}
+@keyframes legend-sheet-in {
+  from { transform: translateY(24px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .legend-sheet[open] { animation: none; }
+}
+.legend-body {
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+.legend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.legend-head h2 {
+  margin: 0;
+  font-size: var(--text-18);
+}
+.legend-close {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.legend-list {
+  margin: var(--space-2) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+.legend-list li {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+.legend-list strong {
+  font-size: var(--text-16);
+}
+.legend-list p {
+  margin: 2px 0 0;
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}
+.legend-list a {
+  color: var(--brand);
+}
+.legend-swatch {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  min-height: 28px;
+}
+.legend-pin,
+.legend-cluster {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--teal);
+}
+.legend-pin.B { background: var(--blue); }
+.legend-pin.C { background: var(--amber); }
+.legend-cluster {
+  width: 26px;
+  height: 26px;
+  background: #125e62; /* .reef-cluster span */
+}
+.legend-mark {
+  display: block;
+  width: 44px;
+  height: 22px;
+  border-radius: 4px;
+}
+/* Each mark copies the map's own drawing (the layer modules name the colours). */
+.legend-mpa { border: 2.5px solid #bd3869; background: rgb(189 56 105 / 0.13); }
+.legend-habitat { border: 1.5px solid #007f73; background: rgb(25 188 169 / 0.18); }
+.legend-search { border: 3px solid #007c78; background: rgb(0 124 120 / 0.12); }
+.legend-drift { height: 0; border-top: 3px dashed #a66310; border-radius: 0; margin-top: 10px; }
+.legend-charter { border: 2px dashed #7540a0; background: rgb(117 64 160 / 0.12); }
+.legend-commercial { border: 2.5px solid #ad7715; background: rgb(229 187 69 / 0.23); }
+/* Weather and seafloor colours vary with the chosen layer; a neutral mark stands in. */
+.legend-weather { border: 2px solid var(--map-wind); background: rgb(49 95 152 / 0.15); }
+.legend-coverage { border: 2px solid #117d73; background: rgb(17 125 115 / 0.1); }
+.legend-seafloor { border: 2px solid var(--unknown); background: rgb(100 116 125 / 0.15); }
+.legend-layers {
+  width: 100%;
+  min-height: var(--touch-min);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+@media (min-width: 700px) {
+  .legend-sheet {
+    margin: auto auto 24px 16px;
+    border-radius: var(--radius-sheet);
+  }
+}

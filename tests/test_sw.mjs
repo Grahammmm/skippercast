@@ -97,7 +97,7 @@ test('routing: shell, fingerprinted assets, public data and tiles; private and O
   assert.equal(route(nav('/')), 'shell');
   assert.equal(route(get('/app.0123456789.js')), 'immutable');
   assert.equal(route(get('/vendor/leaflet.js')), 'static');
-  for (const path of ['/api/forecast?region=morro-bay', '/api/intelligence?region=x', '/api/om/v1/marine?a=1', '/feeds/conditions/x.json', '/regions/index.json', '/data/regulations.json'])
+  for (const path of ['/api/forecast?region=morro-bay', '/api/intelligence?region=x', '/api/daily?region=morro-bay&part=regulations', '/api/om/v1/marine?a=1', '/feeds/conditions/x.json', '/regions/index.json', '/data/regulations.json'])
     assert.equal(route(get(path)), 'data', path);
   for (const path of ['/api/session', '/api/trips', '/api/subscription', '/api/boat/lookup', '/sw.js', '/precache.json',
     '/feeds/tiles/seafloor/manifest-morro-bay.json', '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles'])
@@ -137,6 +137,17 @@ test('data is network-first: stored with its saved time online, served marked of
   assert.equal((await saved.json()).region_id, 'morro-bay');
   assert.deepEqual(JSON.parse(JSON.stringify(worker.messages.at(-1))), {type: 'skippercast-offline', savedAt, url: ORIGIN + '/api/forecast?region=morro-bay'});
   await assert.rejects(dispatch(worker, get('/api/forecast?region=other')), /Failed to fetch/, 'nothing saved: the failure is not hidden');
+});
+
+test('a daily-feed part is saved online and answers offline, so the rules badge keeps its last check', async () => {
+  let online = true;
+  const path = '/api/daily?region=morro-bay&part=regulations';
+  const worker = loadWorker({network: () => { if (!online) throw new TypeError('Failed to fetch'); return Response.json({part: 'regulations', region_id: 'morro-bay'}); }});
+  await dispatch(worker, get(path));
+  online = false;
+  const saved = await dispatch(worker, get(path));
+  assert.ok(saved.headers.get('X-SC-Offline'));
+  assert.equal((await saved.json()).part, 'regulations');
 });
 
 test('private and error responses are never stored', async () => {
