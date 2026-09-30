@@ -34,6 +34,34 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -v
+  e2e:
+    # Browser tests (P4-09a): Playwright + axe against the built site under
+    # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 10
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Worker and public assets
+        run: pnpm build
+      - name: Install Playwright's Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Browser flows and accessibility (serious and critical axe violations fail)
+        run: pnpm e2e
+      - name: Keep traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-results
+          path: test-results/
+          retention-days: 7
   check:
     runs-on: ubuntu-latest
     strategy:

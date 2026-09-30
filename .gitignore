@@ -44,3 +44,7 @@ wrangler.deploy.jsonc
 .wrangler/
 wrangler.rollback.jsonc
 .ruff_cache/
+
+# Browser tests (Playwright): results and traces (their wrangler state is under .wrangler/)
+test-results/
+playwright-report/

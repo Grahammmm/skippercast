@@ -10,7 +10,8 @@
     "build": "node scripts/build-worker.mjs",
     "test": "node --test tests/test_*.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json",
-    "db:generate": "drizzle-kit generate --dialect sqlite --schema db/schema.ts --out drizzle"
+    "db:generate": "drizzle-kit generate --dialect sqlite --schema db/schema.ts --out drizzle",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "2.0.0",
@@ -21,7 +22,9 @@
     "preact": "10.29.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@cloudflare/workers-types": "5.20260929.1",
+    "@playwright/test": "1.63.0",
     "drizzle-kit": "0.31.11",
     "esbuild": "0.28.2",
     "preact-render-to-string": "6.7.0",
