@@ -5,6 +5,7 @@ import {spotConfidence} from '../web/views.ts';
 import {initCentralCoverage} from './central-coverage.js';
 import {initSearchPlans} from './search-plans.js';
 import {initTripAlerts} from './trip-alerts.js';
+import {initTripRanking} from './trip-ranking-layer.js';
 import {initExport} from './export-ui.js';
 import {mountSpotEvidence} from './spot-evidence.js';
 import {initIntelligence} from './intelligence.js';
@@ -125,7 +126,7 @@ function updateReefCoverage() {
 function pin(target) {
   const fish=$('species-select').value;
   const fit=selectedSpeciesFit(target,fish);
-  const label=fit?String(fit.rank):target.habitat_grade;
+  const label=fit?'H'+fit.rank:target.habitat_grade;
   return L.divIcon({
     className: "target-pin",
     html: `<span aria-hidden="true" class="pin-content ${target.habitat_grade} ${selected?.id === target.id ? "selected" : ""}">${label}</span><span class="sr-only">${escapeHTML(target.id)}: ${escapeHTML(target.label)}, ${escapeHTML(fit?.description||'habitat fit unknown')}, ${target.center_depth_ft} feet</span>`,
@@ -137,12 +138,12 @@ function pin(target) {
 function selectedSpeciesFit(target, fish) {
   if (fish==='lingcod' || fish==='rockfish') {
     const fit=speciesFit(target,fish);
-    return fit && {rank:fit.rank,description:`${fish} mapped fit ${fit.rank} of 3`};
+    return fit && {rank:4-fit.rank,description:`${fish} habitat fit ${4-fit.rank} of 3 (3 strongest)`};
   }
   const lingcod=speciesFit(target,'lingcod'),rockfish=speciesFit(target,'rockfish');
   if (!lingcod || !rockfish) return null;
-  return {rank:Math.min(lingcod.rank,rockfish.rank),
-    description:`best of lingcod ${lingcod.rank} of 3 and rockfish ${rockfish.rank} of 3`};
+  return {rank:4-Math.max(lingcod.rank,rockfish.rank),
+    description:`combined lingcod and rockfish habitat fit ${4-Math.max(lingcod.rank,rockfish.rank)} of 3 (3 strongest)`};
 }
 
 function filterTargets() {
@@ -165,7 +166,7 @@ function filterTargets() {
     )
     .sort((a, b) => {
       const fish=$('species-select').value;
-      return (selectedSpeciesFit(a,fish)?.rank??4)-(selectedSpeciesFit(b,fish)?.rank??4)
+      return (selectedSpeciesFit(b,fish)?.rank??0)-(selectedSpeciesFit(a,fish)?.rank??0)
         || b.habitat_score-a.habitat_score || a.id.localeCompare(b.id);
     });
   if (selected && !visible.some((t) => t.id === selected.id)) {
@@ -600,7 +601,21 @@ try {
   });
   boatPosition=initBoatPosition(map,{onMapRequested:()=>navigation.showView('map')});
   protectedAreas = boundaryResult.value;
-  tripExport=initExport({atlas,screen:protectedAreas,map,getVisible:()=>visible,navigation});
+  tripExport=initExport({atlas,screen:protectedAreas,map,getVisible:()=>visible,navigation,onConditions:({date,target,species})=>{
+    weather?.setSpecies(species);
+    if(target)weather?.selectLocation({...target,label:'Ranked reef #'+target.trip_rank});
+    navigation.showView('forecast');
+    if(!weather?.selectDate(date))toast('Forecast for this trip date is unavailable. Refresh conditions and check its coverage.');
+  }});
+  document.addEventListener('skippercast:trip-ranked',event=>{
+    if(event.detail.targets.length){layers.targets.remove();layers.areas.remove();}
+    else {if($('layer-targets').checked)layers.targets.addTo(map);if($('layer-areas').checked)layers.areas.addTo(map);}
+  });
+  initTripRanking(map,protectedAreas,t=>{
+    showAreaDetails(`<h2>#${t.trip_rank} · ${escapeHTML(t.name)}</h2><p><strong>Habitat ${t.trip_fit}/3 · ${t.evidence_confidence.percent}% evidence confidence</strong></p><p>${escapeHTML(t.terrain_interpretation)}</p><p>${escapeHTML(t.special_note)}</p><button id="ranked-reef-export" class="primary">Review & export</button><button id="ranked-reef-weather">Conditions near this reef</button>`,t,'ranked-reef-weather');
+    $('ranked-reef-export').onclick=()=>tripExport.review(t.id);
+    $('ranked-reef-weather').onclick=()=>tripExport.conditions(t);
+  });
   filterTargets();
   void protectedAreas.refresh().finally(()=>{boundaryRefreshDone=true;updateReefCoverage();});
   fitTargets();

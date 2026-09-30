@@ -7,6 +7,7 @@
 - Seafloor: retain native H11953 4 m/8 m depth bands; add 65.71 km² valid survey footprint near Arguello and 475 spatially screened habitat candidates, pending production verification.
 
 - Seafloor: extend Morro and Arguello permanent planning screens; exclude the Morro entrance channel and Vandenberg Zone 4, releasing 1,880 additional habitat candidates locally pending publication.
+- Export: select up to 20 distinct best available lingcod/rockfish reefs within 300 ft, display trip priorities and a documented habitat evidence percentage, and put both in chartplotter waypoint and outline names. Export full screened survey geometry with fresh revision and whole-reef checks; restore saved selections only against that same current publication. [Ranking and export process](docs/product/ranked-reef-export.md).
 
 - Seafloor: process southern Morro and eastern Cambria native intersections; add 89.68 km² measured coverage and 601 supported ranks in three private reaches.
 

@@ -58,15 +58,48 @@ def bundle(root):
     archive = folder/'seafloor-morro-bay.pmtiles'
     archive.write_bytes(b'PMTiles\x03fixture')
     atomic_json(folder/'ledger.json', {'region': 'morro-bay'})
+    atomic_json(folder/'habitat-export.geojson', {'region':'morro-bay', 'features':[]})
     manifest = {'region': 'morro-bay', 'status': 'ready',
         'expires_at': (NOW+timedelta(days=1)).isoformat(),
         'archive': archive.name, 'archive_sha256': sha256(archive),
-        'archive_bytes': archive.stat().st_size, 'ledger_sha256': sha256(folder/'ledger.json')}
+        'archive_bytes': archive.stat().st_size, 'ledger_sha256': sha256(folder/'ledger.json'),
+        'export_file':'habitat-export.geojson', 'export_sha256':sha256(folder/'habitat-export.geojson')}
     atomic_json(folder/'manifest.json', manifest)
     return folder, manifest
 
 
 class PublicationTests(unittest.TestCase):
+    def test_build_preserves_canonical_geometry_and_adds_an_interior_reference(self):
+        from shapely.geometry import shape
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            geometry = {'type':'Polygon', 'coordinates':[
+                [[-121,35],[-120.99,35],[-120.99,35.01],[-121,35.01],[-121,35]],
+                [[-120.999,35.001],[-120.991,35.001],[-120.991,35.009],[-120.999,35.009],[-120.999,35.001]]]}
+            properties = {'id':'test-reef', 'terrain':{'grade':'A','score':90}, 'fit':{'lingcod':3},
+                          'source_ids':['native'], 'screen':{'status':'pass'}, 'depth_min_ft':90, 'depth_max_ft':120}
+            layers = {'cells':[], 'habitat':[{'type':'Feature','geometry':geometry,
+                       'properties':publish.flat_properties(properties)}]}
+            atomic_json(root/'dist/data/seafloor-ledger.json', {'reference':{}, 'reaches':[]})
+            atomic_json(root/'catalog/surveys.json', {'surveys':[{'id':'native','url':'https://example.test/original'}]})
+            def archive(tool, layers, path, **kwargs):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b'PMTiles\x03fixture')
+            with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
+                 patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
+                folder, manifest = publish.build('morro-bay', root=root, tool='fixture', now=NOW)
+            data = read_json(folder/'habitat-export.geojson')
+            f = data['features'][0]
+            self.assertEqual(f['geometry'], geometry)
+            self.assertEqual(f['properties']['terrain'], properties['terrain'])
+            self.assertEqual(f['properties']['source_urls'], ['https://example.test/original'])
+            w = f['properties']['waypoint']
+            from shapely.geometry import Point
+            self.assertTrue(shape(geometry).contains(Point(w['longitude'],w['latitude'])))
+            self.assertNotIn('depth',w)
+            self.assertEqual(manifest['export_sha256'], sha256(folder/'habitat-export.geojson'))
+            self.assertEqual(manifest['export_bytes'], (folder/'habitat-export.geojson').stat().st_size)
+
     def test_publication_is_scoped_readback_precedes_ready_and_metadata_matches(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder, manifest = bundle(tmp)
@@ -93,12 +126,13 @@ class PublicationTests(unittest.TestCase):
             self.assertEqual(json.loads(s3.objects['tiles/seafloor/manifest-morro-bay.json'])['status'], 'updating')
 
     def test_bad_bundle_and_expired_screen_never_upload(self):
-        for case in ('extra', 'archive', 'ledger', 'expired', 'expires-now', 'path'):
+        for case in ('extra', 'archive', 'ledger', 'export', 'expired', 'expires-now', 'path'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 folder, manifest = bundle(tmp)
                 if case == 'extra': (folder/'source.bag').write_bytes(b'private')
                 if case == 'archive': (folder/manifest['archive']).write_bytes(b'corrupt')
                 if case == 'ledger': (folder/'ledger.json').write_text('{}')
+                if case == 'export': (folder/'habitat-export.geojson').write_text('{}')
                 if case == 'expired': manifest['expires_at'] = '2000-01-01T00:00:00+00:00'
                 if case == 'expires-now': manifest['expires_at'] = NOW.isoformat()
                 if case == 'path': manifest['archive'] = '../seafloor-morro-bay.pmtiles'

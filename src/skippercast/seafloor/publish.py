@@ -8,7 +8,7 @@ import shutil
 import subprocess
 
 from pyproj import Transformer
-from shapely.geometry import mapping
+from shapely.geometry import mapping, shape
 from shapely.ops import transform
 
 from skippercast.platform.contracts import REPO, atomic_json, read_json
@@ -107,6 +107,24 @@ def build(region, *, root=REPO, tool=None, now=None):
         attribution='Original USGS / NOAA surveys; CDFW / NOAA / eCFR spatial restrictions; SkipperCast',
         description=NOTICE+' Habitat candidate, unverified. Nominal depth; verify on your sounder.', precise=True)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
+    # Canonical screened boundaries, not quantized/clipped MVT fragments.
+    # Only public habitat properties and producer URLs accompany them.
+    sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
+    exports = []
+    for f in layers['habitat']:
+        p = dict(f['properties'])
+        for key in ('terrain', 'fit', 'substrate', 'screen', 'source_ids', 'independent_evidence'):
+            if isinstance(p.get(key), str):
+                try: p[key] = json.loads(p[key])
+                except json.JSONDecodeError: pass
+        point = shape(f['geometry']).representative_point()
+        p['waypoint'] = {'longitude': point.x, 'latitude': point.y,
+                         'basis': 'Interior reference point; spot depth not separately sampled'}
+        p['source_urls'] = [sources[s]['url'] for s in p.get('source_ids', []) if s in sources]
+        exports.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': p})
+    atomic_json(folder/'habitat-export.geojson', {'type': 'FeatureCollection', 'schema_version': 1,
+                'region': region, 'expires_at': expires.isoformat(), 'features': exports,
+                'geometry_basis': 'Canonical screened habitat boundaries; not a navigation route'})
     selected = [r for r in ledger['reaches'] if r['region'] == region]
     atomic_json(folder/'ledger.json', {'region': region, 'reaches': selected, 'reference': ledger['reference']})
     manifest = {'schema_version': 1, 'region': region, 'status': 'ready' if layers['habitat'] else 'held',
@@ -114,6 +132,9 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'archive': archive.name, 'archive_sha256': sha256(archive), 'archive_bytes': archive.stat().st_size,
                 'layers': {name: len(features) for name, features in layers.items()},
                 'ledger_sha256': sha256(folder/'ledger.json'),
+                'export_file': 'habitat-export.geojson',
+                'export_sha256': sha256(folder/'habitat-export.geojson'),
+                'export_bytes': (folder/'habitat-export.geojson').stat().st_size,
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
                 'planning_notice': NOTICE, 'depth_basis': 'nominal',
                 'tile_geometry': 'Display geometry quantized to MVT grid; not a navigable or export boundary.'}
@@ -151,7 +172,10 @@ def publish_bundle(s3, bucket, folder, *, now=None):
         raise ValueError('Publication archive changed')
     if sha256(folder/'ledger.json') != manifest['ledger_sha256']:
         raise ValueError('Publication ledger changed')
-    allowed = {archive.name, 'ledger.json', 'manifest.json'}
+    export = folder/'habitat-export.geojson'
+    if manifest.get('export_file') != export.name or sha256(export) != manifest.get('export_sha256'):
+        raise ValueError('Publication export changed')
+    allowed = {archive.name, 'ledger.json', 'manifest.json', export.name}
     if {p.name for p in folder.iterdir()} != allowed:
         raise ValueError('Unexpected file in public bundle')
     sync(s3, bucket, folder, f'tiles/seafloor/regions/{region}')
@@ -160,6 +184,14 @@ def publish_bundle(s3, bucket, folder, *, now=None):
     control = f'tiles/seafloor/manifest-{region}.json'
     s3.put_object(Bucket=bucket, Key=control, Body=json.dumps({'status': 'updating'}).encode(),
                   ContentType='application/json', CacheControl='no-store')
+    export_key = f'tiles/seafloor/regions/{region}/{export.name}'
+    s3.put_object(Bucket=bucket, Key=export_key, Body=export.read_bytes(),
+                  ContentType='application/geo+json', CacheControl='no-store',
+                  Metadata={'sha256': manifest['export_sha256']})
+    with s3.get_object(Bucket=bucket, Key=export_key)['Body'] as stream:
+        import hashlib
+        if hashlib.sha256(stream.read()).hexdigest() != manifest['export_sha256']:
+            raise ValueError('R2 export read-back failed; alias remains held')
     key = f'tiles/seafloor/{archive.name}'
     with archive.open('rb') as stream:
         s3.put_object(Bucket=bucket, Key=key, Body=stream, ContentType='application/octet-stream',
