@@ -62,11 +62,16 @@ export function tileURL({z, x, y}, layers, size = ENC_TILE_SIZE) {
   return `${ENC_WMS}?${q}&bbox=${[minX, maxY - span, minX + span, maxY].join(',')}`;
 }
 
+/** Parts of the daily feed the map reads through the Worker (/api/daily; dist/daily-feed.js). */
+export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures'];
+/** The /api/daily URL for one part: the same string the page requests, so a saved copy matches. */
+export const dailyPartPath = (regionId, part) => `/api/daily?region=${encodeURIComponent(regionId)}&part=${encodeURIComponent(part)}`;
+
 /**
  * Everything a region's pages load, as absolute URLs: the region directory,
  * config, manifest, coverage, every asset the config names (atlas, habitats,
  * regulations, protected areas, ...), its feeds, the shared forecast and
- * intelligence bundles, and the forecast/tide/alert requests the Conditions
+ * intelligence bundles, the daily-feed parts, and the forecast/tide/alert requests the Conditions
  * view makes. Order is stable and duplicates are dropped.
  */
 export function packRequests({origin, region, config, shared = [], extra = []}) {
@@ -79,6 +84,7 @@ export function packRequests({origin, region, config, shared = [], extra = []}) 
     ...shared,
     ...['daily_feed', 'conditions_feed', 'intelligence_feed', 'habitat_feed'].map(k => region[k]).filter(v => typeof v === 'string' && v),
     `/api/forecast?region=${encodeURIComponent(id)}`, `/api/intelligence?region=${encodeURIComponent(id)}`,
+    ...DAILY_PARTS.map(part => dailyPartPath(id, part)),
   ].map(same);
   const out = [];
   for (const url of [...files, ...extra]) {

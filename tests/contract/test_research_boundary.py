@@ -17,7 +17,8 @@ RESEARCH_PREFIXES = ('audit_', 'screen_', 'triage_', 'review_', 'discover_', 'in
                      'queue_', 'compile_', 'reconcile_', 'measure_', 'qualify_', 'merge_', 'split_',
                      'assess_', 'fetch_', 'import_', 'inventory_')
 # Run by daily-data.yml; their outputs (survey-discovery.json, survey-products.json) are loaded by the app.
-PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py'}
+# measure_startup.mjs measures the app itself; the startup budget browser test (e2e/startup.spec.ts) runs it.
+PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py', 'measure_startup.mjs'}
 JS_RESEARCH_IMPORT = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*)['"][^'"]*\bresearch/""")
 
 

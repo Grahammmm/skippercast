@@ -1,6 +1,7 @@
 import { getRegion, assetURL } from "./region.js";
 import { esc } from "./marine-charts.js";
 import { loadDailyEvidence } from "./bite-evidence.js";
+import { loadDailyPart } from "./daily-feed.js";
 import { positions } from "./geo-screen.js";
 
 const HOUR = 3600000;
@@ -292,7 +293,8 @@ export function initRegulations(card, select, {resolveLocation=(v)=>v}={}) {
   async function refresh() {
     lastRefresh = Date.now();
     try {
-      const result = await loadDailyEvidence();
+      // Only the regulation checks are needed here; the full daily feed is the fallback.
+      const result = await loadDailyPart("regulations").then((data) => ({ data, fallback: false }), () => loadDailyEvidence());
       const candidate = result.data.regulations;
       if (candidate?.jurisdiction_id === getRegion().jurisdiction_id && validRegulations(candidate) && (!registry || Date.parse(candidate.reviewed_at) >= Date.parse(registry.reviewed_at))) {
         registry = candidate;

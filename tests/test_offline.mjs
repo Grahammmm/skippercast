@@ -54,7 +54,8 @@ test('a pack lists the region config, its assets, rules, protected areas, feeds 
   const has = u => assert.ok(urls.includes(new URL(u, origin + '/').href), u);
   for (const u of ['regions/index.json', 'regions/morro-bay/region.json', 'regions/morro-bay/manifest.json', 'regions/morro-bay/coverage.json',
     morro.assets.regulations, morro.assets.protected_areas, morro.assets.atlas, morro.assets.search_plans, 'data/coasts.json',
-    '/api/forecast?region=morro-bay', '/api/intelligence?region=morro-bay', 'https://api.weather.gov/alerts/active?zone=PZZ670', '/api/om/v1/marine?x=1'])
+    '/api/forecast?region=morro-bay', '/api/intelligence?region=morro-bay', 'https://api.weather.gov/alerts/active?zone=PZZ670', '/api/om/v1/marine?x=1',
+    '/api/daily?region=morro-bay&part=regulations', '/api/daily?region=morro-bay&part=mpa-boundaries', '/api/daily?region=morro-bay&part=additional-closures'])
     has(u);
   // Every asset the region's published manifest names is saved.
   const manifest = JSON.parse(read('../dist/regions/morro-bay/manifest.json'));

@@ -1,6 +1,7 @@
 import {getRegion,localContext} from './region.js';
 import {esc,num,from,local} from './marine-charts.js';
 import {readConditions,angleBetween,distanceNm} from './marine-data.js';
+import {whenView} from './startup.js';
 
 export function freshSource(source,now=Date.now()) {
   if(!source?.data || source.status!=='ok')return false;
@@ -106,6 +107,9 @@ export function initIntelligence(map) {
   }
   document.addEventListener('skippercast:forecast',event=>{state=event.detail;render();});
   document.getElementById('load-forecast').addEventListener('click',load);
-  setInterval(()=>{if(!document.hidden)load();},30*60000);load();
+  // The feed is ~2 MB and only the Forecast screen shows it (the current
+  // vectors are chosen there too): load it when that screen first opens.
+  let started=false;whenView('forecast',()=>{started=true;load();});
+  setInterval(()=>{if(started&&!document.hidden)load();},30*60000);
   return {getState:()=>state,getData:()=>data};
 }

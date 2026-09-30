@@ -2,6 +2,7 @@ import { getRegion, assetURL, acceptsFeed } from "./region.js";
 import { esc } from "./marine-charts.js";
 import { distanceNm } from "./marine-data.js";
 import { matchesTargetSpecies } from "./target-groups.js";
+import { whenView } from "./startup.js";
 
 export const FEED_URL =
   getRegion().daily_feed;
@@ -307,12 +308,18 @@ export function initBiteEvidence(host) {
     host.querySelector("button").addEventListener("click", () => load(true));
   }
   render(true);
-  load();
+  // The daily feed is ~1.4 MB and this card is on the Forecast screen: fetch
+  // it when that screen first opens (P4-05).
+  let started = false;
+  whenView("forecast", () => {
+    started = true;
+    load();
+  });
   setInterval(() => {
-    if (document.visibilityState === "visible") load();
+    if (started && document.visibilityState === "visible") load();
   }, HOUR);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") load();
+    if (started && document.visibilityState === "visible") load();
   });
   return {
     select(id, location) {
@@ -320,6 +327,9 @@ export function initBiteEvidence(host) {
       point = location;
       render();
     },
-    refresh: () => load(true),
+    refresh: () => {
+      started = true;
+      return load(true);
+    },
   };
 }

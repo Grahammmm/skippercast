@@ -33,7 +33,7 @@ const ENC_PATH = '/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/Mari
 const MERCATOR_HALF = 20037508.342789244;
 // Public data, identical for everyone. Private routes (session, trips,
 // subscriptions, boat lookup) are never cached.
-const PUBLIC_API = /^\/api\/(?:forecast|intelligence|habitat|om\/)/;
+const PUBLIC_API = /^\/api\/(?:forecast|intelligence|habitat|daily|om\/)/;
 const DATA_PATH = /^\/(?:feeds|regions|data)\//;
 // Public government data the page fetches directly (tides, NWS alerts).
 const DATA_HOSTS = new Set(['api.tidesandcurrents.noaa.gov', 'api.weather.gov']);

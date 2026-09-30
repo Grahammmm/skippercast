@@ -96,6 +96,33 @@ test('/api/habitat is cached per region', () => withEdge(async () => {
   assert.equal(reads, 1);
 }));
 
+test('/api/daily returns one validated part of the daily feed and caches its siblings', () => withEdge(async () => {
+  let reads = 0;
+  const feed = {schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', health: {ok: 1}, reports: [{big: true}],
+    catch_probability: null, bite_score: null, regulations: {reviewed_at: 'r'},
+    sources: {'mpa-boundaries': {status: 'ok', data: {geojson: {}}}, 'model-x': {raw: 'large'}}};
+  globalThis.fetch = async url => { reads++; assert.match(url, /\/data\/regions\/morro-bay\/latest\.json$/); return Response.json(feed); };
+  const c = ctx();
+  const rules = await worker.fetch(get('/api/daily?region=morro-bay&part=regulations&x=1'), {}, c);await c.settle();
+  assert.equal(rules.status, 200);assert.equal(rules.headers.get('X-SC-Cache'), 'miss');
+  assert.deepEqual(await rules.json(), {schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z',
+    catch_probability: null, bite_score: null, part: 'regulations', regulations: {reviewed_at: 'r'}});
+  const mpas = await worker.fetch(get('/api/daily?part=mpa-boundaries&region=morro-bay'), {}, ctx());
+  assert.equal(mpas.headers.get('X-SC-Cache'), 'hit');assert.equal(reads, 1, 'one feed read answers every part');
+  assert.deepEqual((await mpas.json()).sources, {'mpa-boundaries': feed.sources['mpa-boundaries']});
+  assert.deepEqual((await (await worker.fetch(get('/api/daily?region=morro-bay&part=additional-closures'), {}, ctx())).json()).sources, {});
+  assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=reports'), {}, ctx())).status, 400);
+  assert.equal((await worker.fetch(get('/api/daily?region=nowhere&part=regulations'), {}, ctx())).status, 404);
+}));
+
+test('/api/daily refuses a daily feed the app would reject, and does not cache the failure', () => withEdge(async cache => {
+  let reads = 0;
+  globalThis.fetch = async () => { reads++; return Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z',
+    health: {}, reports: [], sources: {}, catch_probability: 0.4, bite_score: null, regulations: {}}); };
+  for (let i = 0; i < 2; i++) assert.notEqual((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), {}, ctx())).status, 200);
+  assert.equal(reads, 2);assert.equal(cache.puts, 0);
+}));
+
 test('without caches.default the endpoints still answer', async () => {
   const originalCaches = globalThis.caches, originalFetch = globalThis.fetch;
   globalThis.caches = {get default() { throw Error('default cache forbidden'); }, async open() { throw Error('no'); }};
@@ -177,6 +204,17 @@ test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry
   const feed = await worker.fetch(get('/feeds/data/x.json'), env, ctx());
   assert.equal(feed.status, 429);assert.equal(feed.headers.get('Retry-After'), '60');
   assert.equal((await worker.fetch(get('/api/forecast?region=nowhere'), env, ctx())).status, 404, 'other routes are not limited');
+}));
+
+test('/api/daily is limited per IP on PUBLIC_LIMITER (429 with Retry-After), separately from /api/om', () => withEdge(async () => {
+  globalThis.fetch = async () => Response.json({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', health: {ok: 1},
+    reports: [], sources: {}, catch_probability: null, bite_score: null, regulations: {}});
+  const env = {PUBLIC_LIMITER: fakeLimiter(60)};
+  for (let i = 0; i < 60; i++) assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), env, ctx())).status, 200);
+  const limited = await worker.fetch(get('/api/daily?region=morro-bay&part=regulations'), env, ctx());
+  assert.equal(limited.status, 429);assert.equal(limited.headers.get('Retry-After'), '60');
+  assert.equal((await worker.fetch(get('/api/daily?region=morro-bay&part=regulations', {'cf-connecting-ip': '198.51.100.1'}), env, ctx())).status, 200, 'another IP is unaffected');
+  assert.deepEqual([...env.PUBLIC_LIMITER.counts.keys()], ['daily:203.0.113.9', 'daily:198.51.100.1']);
 }));
 
 test('rate limiting is a no-op without the binding and fails open if the binding errors', async () => {

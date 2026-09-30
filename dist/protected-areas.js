@@ -3,6 +3,9 @@ import { fetchJSON } from "./forecast.js";
 import { pointInGeometry, geometryIntersects } from "./geo-screen.js";
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
+import {loadDailyPart} from './daily-feed.js';
+// One record of the daily feed: the Worker's projection, else the whole feed.
+const dailySection=part=>loadDailyPart(part).catch(()=>fetchJSON(getRegion().daily_feed));
 export const MPA_SERVICE = "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query";
 export const MPA_QUERY = MPA_SERVICE+"?"+new URLSearchParams({where:"1=1",geometry:getRegion().mpa.bounds.join(","),geometryType:"esriGeometryEnvelope",inSR:"4326",spatialRel:"esriSpatialRelIntersects",outFields:"NAME,FULLNAME,Type,CCR",returnGeometry:"true",outSR:"4326",f:"geojson"});
 export function validMPAs(data) {
@@ -57,7 +60,7 @@ export async function initProtectedAreas(map, onChange) {
     async refresh() {
       if(assetURL('closures')) {
         try {
-          const feed=await fetchJSON(getRegion().daily_feed), record=feed.sources?.['additional-closures'];
+          const feed=await dailySection('additional-closures'), record=feed.sources?.['additional-closures'];
           if(acceptsFeed(feed)&&record?.status==='ok'&&record.data?.sha256!==extra?.source_sha256)extraChecked=null;
           if(!acceptsFeed(feed)||record?.status!=='ok'||record.data?.sha256!==extra?.source_sha256)throw Error('Additional closure check missing or changed');
           extraChecked=record.data_retrieved_at;
@@ -70,7 +73,7 @@ export async function initProtectedAreas(map, onChange) {
         draw(); onChange();
       } catch {
         try {
-          const feed=await fetchJSON(getRegion().daily_feed);
+          const feed=await dailySection('mpa-boundaries');
           const record=feed.sources?.["mpa-boundaries"];
           if(!acceptsFeed(feed) || record?.status!=="ok" || !validMPAs(record.data?.geojson)) throw Error();
           data=record.data.geojson;checked=record.data_retrieved_at;live=false;

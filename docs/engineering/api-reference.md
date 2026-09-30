@@ -116,6 +116,15 @@ The region's intelligence feed without `forecast`: `{schema_version, region_id, 
 
 The region's dynamic-habitat feed (`region.habitat_feed`): `{schema_version, method, region_id, bounds, generated_at, completed_at, layers, sources, species_methods, interpretation, health}`. Requires `schema_version: 1` and a matching `region_id` (else `503`). `Cache-Control: public,max-age=300`. A region without a habitat feed → `404`.
 
+### `GET /api/daily?region=<id>&part=<part>`
+
+One part of the region's daily feed (`region.daily_feed`, read R2-first), for the map's startup (P4-05): the whole feed is ~1.4 MB. The feed must pass the checks the app applies to it (matching `region_id`, `schema_version: 1`, a valid `generated_at`, `sources` object, `reports` array, `health`, `catch_probability` and `bite_score` null), else `503`. Every part carries `{schema_version, region_id, generated_at, catch_probability: null, bite_score: null, part}` plus:
+
+- `part=regulations` → `regulations` (the rule checks the regulations badge reads);
+- `part=mpa-boundaries` or `part=additional-closures` → `sources: {<part>: record}` (`{}` when the feed has no such record).
+
+Edge-cached per region and part (`X-SC-Cache`); one feed read fills all three parts. `Cache-Control: public, max-age=300, s-maxage=300`. Limited to 60 requests per minute per IP (`PUBLIC_LIMITER`, key prefix `daily`; `429` + `Retry-After: 60`). Unknown part → `400`; unknown region → `404`. The service worker saves it like the other public data APIs, and offline packs include all three parts. The client (`dist/daily-feed.js`) falls back to the full feed when this fails.
+
 **Pending changes (region endpoints):** PR #43 caches all three keyed on `region` only (other parameters ignored), decodes the intelligence feed once for both `/api/forecast` and `/api/intelligence`, and sets `/api/intelligence` to `public, max-age=60, s-maxage=60`. PR #45 looks regions up with `Object.hasOwn`, so `?region=__proto__` and similar are a plain `404`.
 
 ### `POST /api/telemetry`

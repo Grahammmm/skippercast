@@ -1,0 +1,9 @@
+{
+  "comment": "Startup JSON budget (P4-05): decoded bytes of the committed static JSON/GeoJSON files Morro Bay's map fetches with no interaction until the network is quiet, with live feeds stubbed (scripts/measure_startup.mjs --stub). Live feeds (/api/*, /feeds/*, the ArcGIS MPA query) move with upstream data and are reported, not budgeted. max_bytes is the measured value + 10%. The guide's target (all startup JSON) is 400 KB; lower this as later slices cut more.",
+  "morro-bay": {
+    "static_bytes": 2541391,
+    "measured_on": "2026-09-29",
+    "max_bytes": 2795531,
+    "target_bytes": 409600
+  }
+}
