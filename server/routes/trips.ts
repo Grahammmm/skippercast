@@ -1,6 +1,6 @@
 // Saved trips and their alert events (owner-scoped).
 import {Hono} from 'hono';
-import {validateTrip, validateTripPlan} from '../trips.ts';
+import {validateTrip, validateTripPlan, PLAN_LIMITS} from '../trips.ts';
 import {dateInZone} from '../alert-policy.ts';
 import {regions, regionById} from '../config.ts';
 import {json, body, db} from '../http.ts';
@@ -18,7 +18,7 @@ trips.get('/api/trips', async c => {
 });
 trips.post('/api/trips', async c => {
   const owner = c.var.owner, env = c.env;
-  const t = validateTrip(await body(c.req.raw)); const count = (await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner, dateInZone(Date.now(), regions[t.region]!.timezone)).first<CountRow>())!; if (count.n >= 20) return json({error: 'Limit of 20 active trips'}, 409);
+  const t = validateTrip(await body(c.req.raw, PLAN_LIMITS.body)); const count = (await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner, dateInZone(Date.now(), regions[t.region]!.timezone)).first<CountRow>())!; if (count.n >= 20) return json({error: 'Limit of 20 active trips'}, 409);
   const id = crypto.randomUUID(), at = new Date().toISOString();
   await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period,launch_point,targets,plan,status,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?)').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, at, t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null, t.launch_point, JSON.stringify(t.targets), t.plan ? JSON.stringify(t.plan) : null, t.status, at).run(); return json({id}, 201);
 });
@@ -26,7 +26,7 @@ trips.post('/api/trips', async c => {
 // exports, status). The alert fields are fixed at save time: change them by saving
 // a new trip, so a running alert never silently judges a different window.
 trips.patch('/api/trips', async c => {
-  const owner = c.var.owner, d = db(c.env), input = await body(c.req.raw);
+  const owner = c.var.owner, d = db(c.env), input = await body(c.req.raw, PLAN_LIMITS.body);
   const {id} = input; if (typeof id !== 'string' || !id || id.length > 64) throw new ClientError('trip id required');
   const row = await d.prepare('SELECT * FROM trips WHERE id=? AND owner=?').bind(id, owner).first<TripRow>();
   if (!row) return json({error: 'Not found'}, 404);

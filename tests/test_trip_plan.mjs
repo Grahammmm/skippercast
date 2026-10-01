@@ -28,6 +28,7 @@ const alert={region:'morro-bay',point:'north',species:'reef',date,start_hour:7,e
 const spot=(id,order)=>({id,name:'Spot '+id,lat:35.4,lon:-121.0,order,notes:'',depth_ft:120});
 const plan={spots:[spot('a',0),spot('b',1)],legs:[{from:'Morro Bay',to:'a',nm:6.2,minutes:25},{from:'a',to:'b',nm:2,minutes:9}],window:{depart:'06:30',return_by:'13:00',hours:[7,8,9,10,11,12]},exports:[{format:'gpx',sha256:'a'.repeat(64),exported_at:'2026-09-30T14:00:00Z'}]};
 
+const maximalBody=()=>({targets:['reef','halibut','salmon'],plan:{spots:Array.from({length:PLAN_LIMITS.spots},(_,i)=>({...spot('s'+i,i),name:'n'.repeat(80),notes:'m'.repeat(280)})),legs:Array.from({length:PLAN_LIMITS.legs},()=>({from:'f'.repeat(80),to:'t'.repeat(80),nm:123.45678,minutes:1234})),window:{depart:'06:00',return_by:'15:00',hours:Array.from({length:24},(_,i)=>i)},exports:Array.from({length:PLAN_LIMITS.exports},()=>({format:'navionics',sha256:'f'.repeat(64),exported_at:'2026-09-30T14:00:00Z'}))}});
 test('validateTripPlan: defaults, the primary target first, limits and rejections',()=>{
   assert.deepEqual(validateTripPlan({},region,'reef'),{launch_point:null,targets:['reef'],plan:null,status:'planned'});
   const full=validateTripPlan({launch_point:'morro-bay-launch-ramp',targets:['halibut','reef'],plan,status:'draft'},region,'reef');
@@ -36,6 +37,8 @@ test('validateTripPlan: defaults, the primary target first, limits and rejection
   for(const bad of [
     {launch_point:'Morro Bay'},{launch_point:'x'.repeat(65)},
     {targets:[]},{targets:['reef','halibut','salmon','albacore']},{targets:['marlin']},{targets:'reef'},
+    {targets:['halibut','halibut']},{targets:['halibut','salmon','albacore']},
+    {plan:{spots:[{...spot('a',0),order:-1}]}},{plan:{spots:[{...spot('a',0),order:1.5}]}},
     {status:'wishful'},
     {plan:{spots:Array.from({length:PLAN_LIMITS.spots+1},(_,i)=>spot('s'+i,i))}},
     {plan:{spots:[{...spot('a',0),lat:91}]}},{plan:{spots:[{...spot('a',0),id:'A B'}]}},
@@ -45,6 +48,11 @@ test('validateTripPlan: defaults, the primary target first, limits and rejection
     {plan:{exports:[{format:'gpx',sha256:'nope',exported_at:'2026-09-30T14:00:00Z'}]}},
     {plan:[]},
   ])assert.throws(()=>validateTripPlan(bad,region,'reef'),new RegExp('.'),JSON.stringify(bad).slice(0,80));
+  assert.deepEqual(validateTripPlan({targets:['halibut','salmon']},region,'reef').targets,['reef','halibut','salmon'],'two others plus the alert species fit');
+  // The joint maxima fit under the body cap, so the documented limits are reachable.
+  const maximal={launch_point:'x',...maximalBody()};
+  assert.ok(JSON.stringify({...alert,...maximal}).length<PLAN_LIMITS.body,'a maximal plan fits the request cap');
+  assert.ok(JSON.stringify(validateTripPlan(maximal,region,'reef').plan).length<=PLAN_LIMITS.bytes);
   const long=validateTripPlan({plan:{spots:[{...spot('a',0),notes:'n'.repeat(400),name:'m'.repeat(400)}]}},region,'reef');
   assert.equal(long.plan.spots[0].notes.length,280);assert.equal(long.plan.spots[0].name.length,80);
 });
@@ -68,6 +76,8 @@ test('POST saves the plan, PATCH changes it without touching the alert, GET retu
     assert.equal(out.status,'done');assert.equal(out.plan.spots.length,1);assert.deepEqual(out.targets,['reef','halibut'],'targets kept');assert.equal(out.launch_point,'morro-bay-launch-ramp');
     const after=sql.prepare('SELECT wind_limit,start_hour,status FROM trips WHERE id=?').get(id);assert.deepEqual([after.wind_limit,after.start_hour,after.status],[8,7,'done']);
     assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,targets:['marlin']}}),env)).status,400);
+    const big=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,...maximalBody()}}),env);assert.equal(big.status,200,'the documented maxima are accepted over the wire: '+JSON.stringify(await big.clone().json()).slice(0,100));
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:{spots:[{...spot('a',0),notes:'n'.repeat(40000)}]}}}),env)).status,400,'an oversized body is refused');
     assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id:'missing'}}),env)).status,404);
     assert.equal((await worker.fetch(request('trips',{owner:'bob',method:'PATCH',body:{id,status:'cancelled'}}),env)).status,404,'another owner cannot touch it');
     assert.equal(sql.prepare('SELECT status FROM trips WHERE id=?').get(id).status,'done');

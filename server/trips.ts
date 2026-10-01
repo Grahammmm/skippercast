@@ -49,7 +49,7 @@ export interface TripWindow {depart:string|null;return_by:string|null;hours:numb
 export interface TripExport {format:typeof EXPORT_FORMATS[number];sha256:string;exported_at:string}
 export interface TripPlanBody {spots:TripSpot[];legs:TripLeg[];window:TripWindow;exports:TripExport[]}
 export interface TripPlan {launch_point:string|null;targets:string[];plan:TripPlanBody|null;status:TripStatus}
-export const PLAN_LIMITS=Object.freeze({targets:3,spots:12,legs:13,exports:20,bytes:16384});
+export const PLAN_LIMITS=Object.freeze({targets:3,spots:12,legs:13,exports:20,bytes:16384,/** Request body cap for POST/PATCH /api/trips: the plan plus the alert fields. */body:24576});
 const SLUG=/^[a-z0-9][a-z0-9-]{0,63}$/,CLOCK=/^([01]\d|2[0-3]):[0-5]\d$/,SHA=/^[0-9a-f]{64}$/;
 const cleanText=(v:unknown,max:number):string=>typeof v==='string'?v.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,max):'';
 const num=(v:unknown,min:number,max:number,what:string):number=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw new ClientError('invalid '+what);return Math.round(v*1e5)/1e5;};
@@ -59,7 +59,7 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
   const list=(v:unknown,max:number,what:string):ExternalJSON[]=>{if(v===undefined||v===null)return[];if(!Array.isArray(v)||v.length>max)throw new ClientError(`too many ${what} (limit ${max})`);return v;};
   const spots=list(plan.spots,PLAN_LIMITS.spots,'spots').map((s,i):TripSpot=>{
     if(!s||typeof s!=='object'||!SLUG.test(s.id))throw new ClientError('invalid spot id');
-    return {id:s.id,name:cleanText(s.name,80),lat:num(s.lat,-90,90,'spot latitude'),lon:num(s.lon,-180,180,'spot longitude'),order:Number.isInteger(s.order)?s.order:i,notes:cleanText(s.notes,280),depth_ft:s.depth_ft===undefined||s.depth_ft===null?null:num(s.depth_ft,0,3000,'spot depth')};
+    return {id:s.id,name:cleanText(s.name,80),lat:num(s.lat,-90,90,'spot latitude'),lon:num(s.lon,-180,180,'spot longitude'),order:s.order===undefined||s.order===null?i:(Number.isInteger(s.order)&&s.order>=0&&s.order<PLAN_LIMITS.spots?s.order:(()=>{throw new ClientError('invalid spot order');})()),notes:cleanText(s.notes,280),depth_ft:s.depth_ft===undefined||s.depth_ft===null?null:num(s.depth_ft,0,3000,'spot depth')};
   });
   const legs=list(plan.legs,PLAN_LIMITS.legs,'legs').map((l):TripLeg=>{
     if(!l||typeof l!=='object')throw new ClientError('invalid leg');
@@ -81,7 +81,10 @@ export function validateTripPlan(input:ExternalJSON,region:Region,species:string
   const launch=input.launch_point;if(launch!==undefined&&launch!==null&&(typeof launch!=='string'||!SLUG.test(launch)))throw new ClientError('invalid launch point');
   const raw=input.targets===undefined||input.targets===null?[species]:input.targets;
   if(!Array.isArray(raw)||raw.length<1||raw.length>PLAN_LIMITS.targets||raw.some(t=>typeof t!=='string'||!region.species.includes(t)))throw new ClientError(`targets must be one to ${PLAN_LIMITS.targets} species of the region`);
-  const targets=[species,...raw.filter(t=>t!==species)].slice(0,PLAN_LIMITS.targets);
+  if(new Set(raw).size!==raw.length)throw new ClientError('targets repeat a species');
+  // The alert species is always a target and always first; it is never dropped to make room.
+  const targets=[species,...raw.filter(t=>t!==species)];
+  if(targets.length>PLAN_LIMITS.targets)throw new ClientError(`targets must include ${species} or leave room for it (limit ${PLAN_LIMITS.targets})`);
   const status=input.status===undefined||input.status===null?'planned':input.status;
   if(!TRIP_STATUSES.includes(status))throw new ClientError('invalid status');
   return {launch_point:launch??null,targets,plan:validatePlanBody(input.plan),status};
