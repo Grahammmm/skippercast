@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: publish regions independently with retained batch identities for failed-job retries. Reconcile the ledger separately without downloading original surveys; retain scientific checks, report failed regions and log publication stages rather than timing out the entire coast in one job.
+
 - Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
 
 - Map and export: show original survey producer credits in reef details and retain their use restrictions in waypoint, outline and offline notes. New credited publications reject incomplete notices before export; existing government-only publications remain compatible.

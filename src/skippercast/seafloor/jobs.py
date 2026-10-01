@@ -4,6 +4,7 @@ import json
 import os
 import re
 import traceback
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -135,13 +136,20 @@ def process(root, reach, batch):
     return result
 
 
-def finish(root, matrix, batch):
+def finish(root, matrix, batch, *, region=None, ledger_only=False):
+    if region is not None:
+        state_cache.scope_name(region)
+        selected = [row for row in matrix['include'] if row['region'] == region]
+        if not selected:
+            raise ValueError('Publication region absent from this batch')
+        matrix = {'include': selected}
     s3, bucket = credentials()
     state_cache.restore(s3, bucket, root, 'shared')
     before = read_json(Path(root)/'dist/data/seafloor-ledger.json')
     failures, results, blocked_regions = [], [], set()
     for row in matrix['include']:
         ident = row['reach']
+        print(f'finish: restore checked batch result {ident}', file=sys.stderr, flush=True)
         try:
             with s3.get_object(Bucket=bucket, Key=batch_key(batch, ident))['Body'] as stream:
                 status = json.loads(stream.read(5_000_000))
@@ -152,7 +160,7 @@ def finish(root, matrix, batch):
                                  'error_type': status.get('error_type', 'unknown')})
                 blocked_regions.add(row['region'])
                 continue
-            if not state_cache.restore(s3, bucket, root, ident):
+            if not state_cache.restore(s3, bucket, root, ident, include_cache=not ledger_only):
                 raise ValueError('Missing reach state')
             if status['status'] == 'complete':
                 receipt = read_json(Path(root)/'var/seafloor/reaches'/ident/'run.json')
@@ -169,9 +177,11 @@ def finish(root, matrix, batch):
         except Exception as error:
             failures.append({'reach': ident, 'reason': type(error).__name__+': no current completed result'})
             blocked_regions.add(row['region'])
-    for region in sorted({r['region'] for r in matrix['include']} - blocked_regions):
+    for region in ([] if ledger_only else sorted({r['region'] for r in matrix['include']} - blocked_regions)):
         try:
+            print(f'finish: build and verify region {region}', file=sys.stderr, flush=True)
             results.append(upload(region, root=root))
+            print(f'finish: retained publication receipt {region}', file=sys.stderr, flush=True)
         except Exception as error:
             failures.append({'region': region, 'reason': type(error).__name__+': publication failed'})
     if (Path(root)/'var/seafloor/screen/refresh-failure.json').exists():
@@ -205,15 +215,17 @@ def main():
     parser.add_argument('--region')
     parser.add_argument('--reach')
     parser.add_argument('--matrix', type=Path)
+    parser.add_argument('--ledger-only', action='store_true', help='Reconcile checked batch reach results without scientific rebuild or publication')
     parser.add_argument('--max-new', type=int, default=3)
-    parser.add_argument('--batch', default=os.environ.get('GITHUB_RUN_ID', '')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT', ''))
+    parser.add_argument('--batch', default=os.environ.get('SEAFLOOR_BATCH') or os.environ.get('GITHUB_RUN_ID', '')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT', ''))
     args = parser.parse_args()
     if args.stage == 'prepare':
         result = prepare(REPO, args.region, args.reach, args.max_new)
     elif args.stage == 'run':
         result = process(REPO, args.reach, args.batch)
     else:
-        result = finish(REPO, read_json(args.matrix), args.batch)
+        result = finish(REPO, read_json(args.matrix), args.batch,
+                        region=args.region, ledger_only=args.ledger_only)
     print(json.dumps(result))
 
 
