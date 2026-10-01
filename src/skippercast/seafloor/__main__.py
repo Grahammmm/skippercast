@@ -17,6 +17,10 @@ def main():
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
     adoption = commands.add_parser('adopt-private-physics', help='Transfer checked private physics after rights-only promotion; screen still required')
     adoption.add_argument('--reach', required=True)
+    migration = commands.add_parser('migrate-numeric-cache', help='Verify old numeric-only caches; apply explicitly, retain recovery and require rescreening')
+    migration.add_argument('--reach', required=True)
+    migration.add_argument('--private', action='store_true')
+    migration.add_argument('--apply', action='store_true')
     publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
     publication.add_argument('--region', required=True)
     publication.add_argument('--upload', action='store_true')
@@ -60,6 +64,10 @@ def main():
             else:
                 folder, manifest = build(args.region)
                 print(json.dumps({'directory': str(folder), **manifest}, indent=2))
+            return
+        if args.command == 'migrate-numeric-cache':
+            from .migrate_cache import migrate_numeric_cache
+            print(json.dumps(migrate_numeric_cache(args.reach, private=args.private, apply=args.apply), indent=2))
             return
         if args.command == 'adopt-private-physics':
             from .adopt import adopt_private

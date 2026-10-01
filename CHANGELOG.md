@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Seafloor: explicitly migrate verified legacy numeric-only cache identities without recalculating terrain or changing habitat geometry/ranks; retain complete private recovery and require fresh screening before release.
 - Seafloor: declare the current noncommercial deployment profile and block incompatible paid deployments before writes; retain original producer credits and permission requirements.
 
 - Trips: a launch-point catalog (`catalog/launch-points.json`, from the California DBW Boating Facilities records) builds `dist/regions/<id>/launch-points.json` for every published region; Morro Bay's public ramp, the Port San Luis ramp and Olde Port Beach are the first entries.
