@@ -11,3 +11,7 @@ The planner’s saved local ledger now has no wholly unprocessed Monterey–Poin
 A reproducible cache inefficiency remains: Python-equal input dictionaries serialize native spacing as `[5.0, 5.0]` versus `[5, 5]`, producing different input hashes and unnecessary repeated terrain computation. The committed diagnostic preserves the first difference and both hashes. Next: a separate tested canonical scientific-input identity fix that treats equivalent number representations consistently without rounding genuinely different values, followed by current-main reconciliation and release review.
 
 Validation: full GIS suite 1,050 passed, 14 allowlisted skips, 4,167 subtests; strict skip report, platform regeneration, repository/web/diff checks passed. No app/science threshold changes. Independent review, fresh-main reconciliation, exact-head CI and production/live verification remain required. All spatial exclusions and current restriction checks remain before publication/export. The complete coastal goal stays active.
+
+## Integration release decision
+
+The consolidated main integration retains all seventeen BSS rows as `physical-only` pending resolution of the independent review’s noncommercial-use policy concern. The earlier usable-source runs in the dated evidence are historical local tests, not permission to publish. Native qualification and measured outputs remain retained; default/public planning excludes these sources, and private mapping may continue. No producer permission is implied by NOAA hosting.
