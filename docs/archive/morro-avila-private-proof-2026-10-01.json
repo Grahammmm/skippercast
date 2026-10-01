@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "scope": "SCC25 and PGE Avila BlockI/BlockJ original native 2m",
+  "before_after": {
+    "selected_valid_km2": {
+      "before": 126.726100387,
+      "after": 230.934744728,
+      "delta": 104.208644341
+    },
+    "tier1_km2": {
+      "before": 131.163125,
+      "after": 240.476875,
+      "delta": 109.31375
+    },
+    "physical_candidate_count": {
+      "before": 1441,
+      "after": 3446,
+      "delta": 2005
+    }
+  },
+  "reaches": [
+    {
+      "reach": "point-arguello-conception-r05",
+      "before": {
+        "selected_valid_km2": 2.143088202,
+        "tier1_km2": 2.4375,
+        "physical_candidate_count": 14
+      },
+      "after": {
+        "selected_valid_km2": 28.12201953,
+        "tier1_km2": 29.5625,
+        "physical_candidate_count": 767
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 743,
+          "unknown": 20,
+          "1": 4
+        },
+        "rockfish-reef": {
+          "1": 28,
+          "2": 719,
+          "unknown": 20
+        }
+      },
+      "selected_source_km2": {
+        "csumb-scc-block24-2m-native": 2.1373040915829997,
+        "unknown": 0.0,
+        "csumb-scc-block25-2m-native": 25.984715437944
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "d61b47917fb5de1add507ac0f1ee26fe479eeec98fc822aeaa5b86fa39249743"
+    },
+    {
+      "reach": "point-arguello-conception-r04",
+      "before": {
+        "selected_valid_km2": 66.881587854,
+        "tier1_km2": 69.21125,
+        "physical_candidate_count": 104
+      },
+      "after": {
+        "selected_valid_km2": 69.353977618,
+        "tier1_km2": 71.89875,
+        "physical_candidate_count": 100
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 94,
+          "unknown": 3,
+          "3": 2,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "2": 86,
+          "1": 10,
+          "unknown": 3,
+          "3": 1
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block22-2m-native": 17.414453003415,
+        "csumb-scc-block23-2m-native": 19.95409262517899,
+        "csumb-scc-block24-2m-native": 29.437088095046004,
+        "csumb-scc-block25-2m-native": 2.548343894325
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "baa9e914e6d2a000e335e93a4604fbd6d7ece9437d45d1abc3e0908fe1ca2361"
+    },
+    {
+      "reach": "morro-bay-r08",
+      "before": {
+        "selected_valid_km2": 19.712854542,
+        "tier1_km2": 19.960625,
+        "physical_candidate_count": 477
+      },
+      "after": {
+        "selected_valid_km2": 27.123196804,
+        "tier1_km2": 27.8125,
+        "physical_candidate_count": 426
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 344,
+          "3": 70,
+          "unknown": 12
+        },
+        "rockfish-reef": {
+          "1": 100,
+          "2": 288,
+          "3": 26,
+          "unknown": 12
+        }
+      },
+      "selected_source_km2": {
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c": 19.712854542191003,
+        "unknown": 0.0,
+        "csumb-pge-avila-blocki-2m-native": 7.410342262016999
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "02853ac274f6c17bb2b7f78450d7a5aff98cda570d67f975efc6a7672aaa2291"
+    },
+    {
+      "reach": "morro-bay-r09",
+      "before": {
+        "selected_valid_km2": 0,
+        "tier1_km2": 0,
+        "physical_candidate_count": 0
+      },
+      "after": {
+        "selected_valid_km2": 31.704285477,
+        "tier1_km2": 32.610625,
+        "physical_candidate_count": 196
+      },
+      "rank_counts": {
+        "lingcod": {
+          "1": 6,
+          "2": 180,
+          "unknown": 2,
+          "3": 8
+        },
+        "rockfish-reef": {
+          "1": 135,
+          "unknown": 2,
+          "2": 57,
+          "3": 2
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-pge-avila-blocki-2m-native": 29.619600544492997,
+        "csumb-pge-avila-blockj-2m-native": 2.084684932078
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "55c5c4b07be15cab37a730c4aca4a3f8e958c20c17e1a8bb25bce17c321e5abe"
+    },
+    {
+      "reach": "point-arguello-conception-r01",
+      "before": {
+        "selected_valid_km2": 37.988569789,
+        "tier1_km2": 39.55375,
+        "physical_candidate_count": 846
+      },
+      "after": {
+        "selected_valid_km2": 39.202649616,
+        "tier1_km2": 41.11625,
+        "physical_candidate_count": 915
+      },
+      "rank_counts": {
+        "lingcod": {
+          "unknown": 66,
+          "2": 849
+        },
+        "rockfish-reef": {
+          "unknown": 66,
+          "2": 649,
+          "1": 200
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-pge-avila-blockj-2m-native": 1.2140798271889996,
+        "csumb-scc-block16-2m-native": 30.756340407667007,
+        "csumb-scc-block17-2m-native": 7.232229381154
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "3a3a842aa2b4163c309affeaed2d1c884e65cac66a71e919c114a4a4fb517cf8"
+    },
+    {
+      "reach": "morro-bay-r10",
+      "before": {
+        "selected_valid_km2": 0,
+        "tier1_km2": 0,
+        "physical_candidate_count": 0
+      },
+      "after": {
+        "selected_valid_km2": 35.428615683,
+        "tier1_km2": 37.47625,
+        "physical_candidate_count": 1042
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 964,
+          "unknown": 77,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "1": 289,
+          "2": 676,
+          "unknown": 77
+        }
+      },
+      "selected_source_km2": {
+        "csumb-pge-avila-blocki-2m-native": 5.968578996091002,
+        "unknown": 0.0,
+        "csumb-pge-avila-blockj-2m-native": 29.460036686568994
+      },
+      "processing_incomplete": false,
+      "publication_prohibited": true,
+      "input_hash": "e715205aff8b3c764746e408a6b144c5a7b719d7f438f150d687f5d8f83771cd"
+    }
+  ],
+  "new_public_count": 0,
+  "note": "Physical-only results. Cell ownership avoids overlapping-source sums. Fits 1\u20133 are suitability, 3 strongest. Unknown substrate/datum remain unknown. No private geometry or original survey content included."
+}

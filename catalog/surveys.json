@@ -15230,6 +15230,180 @@
           "sha256": "1110390dadf90bd3e959161b5a4bb745000509c2a10bdbc47e28d154a3e6f737"
         }
       }
+    },
+    {
+      "id": "csumb-scc-block25-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block25_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568",
+      "bytes": 173430719,
+      "hold_reason": "unknown",
+      "title": "SCC_Block25 original 2m bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block25/multibeam/data/version2/products/SCC_Block25_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk25_2m_bathygrids.zip/ArcViewGrids/scc25_2mbathy",
+      "evidence": [
+        "catalog/csumb-morro-avila-native-sources.json#/sources/0"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-morro-avila-native-sources.json#/sources/0/acquisition_dates",
+        "vertical_datum": "catalog/csumb-morro-avila-native-sources.json#/sources/0/native_vertical_datum",
+        "resolution_m": "catalog/csumb-morro-avila-native-sources.json#/sources/0/resolution_m",
+        "bytes": "catalog/csumb-morro-avila-native-sources.json#/sources/0/bytes",
+        "sha256": "catalog/csumb-morro-avila-native-sources.json#/sources/0/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568",
+        "cog_sha256": "8b41463aeaa79a5fed439307356b62cfba8b78a340f5f3448e668762f584fd5d",
+        "requested_bounds_wgs84": [
+          -120.68364893923275,
+          34.663620888229715,
+          -120.60524821753131,
+          34.71408987892236
+        ],
+        "valid_pixels_in_requested_bounds": 7627062,
+        "nominal_0_300ft_pixels_in_requested_bounds": 7627062,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "c10ef2b302f13b5c0481497fb0ea465a15e580073d284590e22cdd44b5f25575"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-avila-blocki-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "year": 2009,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "hold_reason": "unknown",
+      "title": "PGE Avila Bay BlockI original 2m bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
+      "evidence": [
+        "catalog/csumb-morro-avila-native-sources.json#/sources/1"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-morro-avila-native-sources.json#/sources/1/acquisition_dates",
+        "vertical_datum": "catalog/csumb-morro-avila-native-sources.json#/sources/1/native_vertical_datum",
+        "resolution_m": "catalog/csumb-morro-avila-native-sources.json#/sources/1/resolution_m",
+        "bytes": "catalog/csumb-morro-avila-native-sources.json#/sources/1/bytes",
+        "sha256": "catalog/csumb-morro-avila-native-sources.json#/sources/1/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256": "f965e1c61ab335f2d3496d770337dfcb4f7d65f8f7ace632ca0828cacecaa4c1",
+        "requested_bounds_wgs84": [
+          -120.75813732342881,
+          35.11362014015158,
+          -120.63522076085815,
+          35.17798480123601
+        ],
+        "valid_pixels_in_requested_bounds": 10770774,
+        "nominal_0_300ft_pixels_in_requested_bounds": 10770754,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "0170f70f5c611f85a963c7aebce2dd09e052b0003a622d7e2fea6aae95dc25d4"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-avila-blockj-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "year": "unknown",
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "license": "unknown",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "hold_reason": "unknown",
+      "title": "PGE Avila Bay BlockJ original 2m bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
+      "evidence": [
+        "catalog/csumb-morro-avila-native-sources.json#/sources/2"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-morro-avila-native-sources.json#/sources/2/acquisition_dates",
+        "vertical_datum": "catalog/csumb-morro-avila-native-sources.json#/sources/2/native_vertical_datum",
+        "resolution_m": "catalog/csumb-morro-avila-native-sources.json#/sources/2/resolution_m",
+        "bytes": "catalog/csumb-morro-avila-native-sources.json#/sources/2/bytes",
+        "sha256": "catalog/csumb-morro-avila-native-sources.json#/sources/2/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256": "c97cc58c8ff155f267b2b8ff245ceffcef76fff040bb85af115a1b75de658700",
+        "requested_bounds_wgs84": [
+          -120.7196235650724,
+          35.03881695672584,
+          -120.63204718984571,
+          35.11788498899416
+        ],
+        "valid_pixels_in_requested_bounds": 8819441,
+        "nominal_0_300ft_pixels_in_requested_bounds": 8819441,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1273fa0a6fa391fbbdf0135eafa1046ce8013292beb87b0f609c539e52ac9cb3"
+        }
+      }
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",

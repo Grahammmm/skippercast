@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Inspect native Avila–Pismo and southern Arguello grids: add 104.209 km² of private measured coverage and 2,005 net habitat candidates, retaining missing/conflicting metadata and release holds.
+
 - Seafloor: inspect SCC06/14/24 native grids; add 56.29 km² selected coverage and 363 net private candidates, including first measured habitat in Arguello r05. Identify original Morro–Avila survey leads for the remaining southern gap.
 - Seafloor: inspect native SCC05/15/23 and the deeper 5 m SCC05 companion; add 44.70 km² selected coverage and 81 net private habitat candidates, preserving source ownership and publication holds.
 - Inspect native SCC04/16/22 grids and add private ranked Cambria/Arguello shelf coverage, preserving datum, mixed survey dates and publication holds.
