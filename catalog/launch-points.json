@@ -6,7 +6,7 @@
       "name": "California State Parks, Division of Boating and Waterways: Boating Facilities database",
       "url": "https://dbw.parks.ca.gov/BoatingFacilities/",
       "retrieved": "2026-09-30",
-      "note": "State facility records (name, address, listed position, operator, trailer parking, floats, services). Confirm hours, fees and conditions with the operator before a trip."
+      "note": "State facility records (name, address, listed position, operator, trailer parking, floats, services as far as the schema names them). Confirm hours, fees and conditions with the operator before a trip."
     }
   },
   "launch_points": [
@@ -16,17 +16,17 @@
       "name": "Morro Bay Public Launch Facility",
       "kind": "ramp",
       "operator": "City of Morro Bay",
-      "address": "Embarcadero at Tidelands Park, Morro Bay, CA 93442",
+      "address": "Embarcadero, Morro Bay, CA 93442",
       "latitude": 35.357693,
       "longitude": -120.850164,
-      "departure": {"latitude": 35.3667, "longitude": -120.868, "note": "Outside the Morro Bay entrance; recheck the actual entrance and bar at departure and return."},
+      "departure": {"latitude": 35.356, "longitude": -120.88, "note": "Approximate open water south-west of the Morro Bay breakwater heads; recheck the actual entrance and bar at departure and return."},
       "forecast_point": "central",
       "trailer_parking": 42,
       "boarding_floats": 2,
       "services": ["washdown"],
       "phone": "(805) 772-6254",
       "url": "https://www.morrobayca.gov/144/Harbor",
-      "note": null,
+      "note": "At Tidelands Park, south end of the Embarcadero. The URL is the harbor department's current page; the state record links an older address.",
       "source": "dbw",
       "source_id": "1465"
     },
@@ -43,7 +43,7 @@
       "forecast_point": "avila",
       "trailer_parking": 35,
       "boarding_floats": 2,
-      "services": ["washdown", "fuel", "fish-cleaning", "valet-launch", "haul-out"],
+      "services": ["washdown", "fuel", "fish-cleaning", "valet-launch", "haul-out", "ice", "restrooms"],
       "phone": "(805) 595-5400",
       "url": "https://www.portsanluis.com",
       "note": "The harbor district also hoist-launches from Harford Pier; ask it for weight and size limits.",
@@ -56,7 +56,7 @@
       "name": "Olde Port Beach",
       "kind": "beach",
       "operator": null,
-      "address": "6520 Avila Beach Dr, Avila Beach, CA 93424",
+      "address": "6520 Avila Beach Dr, Avila Beach, CA 93405",
       "latitude": 35.178455,
       "longitude": -120.748499,
       "departure": {"latitude": 35.16, "longitude": -120.745, "note": "Open water south-east of the Port San Luis breakwater."},
@@ -66,7 +66,7 @@
       "services": [],
       "phone": null,
       "url": null,
-      "note": "Beach launch for small trailered boats; conditions and access change, so check with the harbor district first.",
+      "note": "Beach launch for small trailered boats; conditions and access change, so check with the harbor district first. Address and ZIP as listed by the state record.",
       "source": "dbw",
       "source_id": "49"
     }

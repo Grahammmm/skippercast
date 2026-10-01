@@ -71,6 +71,15 @@ class LaunchPointCatalog(TestCase):
             self.assertEqual(set(out), {"morro-bay"})
             self.assertEqual(read_json(root / "dist/regions/morro-bay/launch-points.json")["launch_points"][0]["id"], point["id"])
 
+    def test_the_schema_refuses_a_non_https_url(self):
+        from skippercast import validate
+        built = read_json(REPO / "dist/regions/morro-bay/launch-points.json")
+        validate.check("launch-points", built)
+        bad = deepcopy(built)
+        bad["launch_points"][0]["url"] = "not a url"
+        with self.assertRaises(validate.ContractError):
+            validate.check("launch-points", bad)
+
     def test_distance_is_in_nautical_miles(self):
         # One degree of latitude is 60 nm.
         self.assertAlmostEqual(distance_nm(35.0, -121.0, 36.0, -121.0), 60.0, delta=0.1)
