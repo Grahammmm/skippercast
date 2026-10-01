@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: privately qualify native SCC02/18/20 original grids and process their actual shallow intersections. Add 72.54 km² net measured coverage and 978 physical habitat candidates in the San Simeon approach and Arguello/Conception area; retain publication and ranking holds.
+
 - Seafloor: privately qualify nine native Big Creek, Slate Rock and SCC grids. Four local reaches gain 69.54 km² of measured depth coverage and 824 physical habitat candidates; producer release qualification and spatial screening remain required before map/export publication.
 
 - Seafloor: open explicitly selected native ArcInfo grids inside original NOAA ZIP-in-tar survey bundles, with bounded extraction and checked private recovery. Preserve native pixels and reject unsafe containers; source qualification and public screening remain separate.
