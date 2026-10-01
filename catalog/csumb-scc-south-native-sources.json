@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "notice": "Exact native inspections, physical-only. Spacing is not sounding accuracy; survey mask/interpolation/uncertainty unknown. No rights, restrictions or fish presence clearance.",
+  "sources": [
+    {
+      "name": "SCC_Block26",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block26_mb.html",
+      "http": 200,
+      "publisher_identified": true,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version2/products/SCC_Block26_additional_products.tar.gz"
+      ],
+      "source": "var/seafloor/cache/79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8/source.tar.gz",
+      "sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+      "bytes": 132219786,
+      "downloaded": true,
+      "archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
+      "id": "csumb-scc-block26-2m-native",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100908",
+        "20100924",
+        "20100925",
+        "20100929"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 3587,
+      "height": 1988,
+      "bounds_wgs84": [
+        -120.6967696506804,
+        34.63266160492491,
+        -120.61753968977561,
+        34.66999064085413
+      ],
+      "valid_pixels": 5397061,
+      "nominal_0_300ft_pixels": 5397061,
+      "depth_min_m": 4.940000057220459,
+      "depth_max_m": 52.61000061035156,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "metadata_date_assessment": "Structured calendar dates agree with native abstract; original survey year2010."
+    },
+    {
+      "name": "SCC_Block27",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block27_mb.html",
+      "http": 200,
+      "publisher_identified": true,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block27/multibeam/data/version2/products/SCC_Block27_additional_products.tar.gz"
+      ],
+      "source": "var/seafloor/cache/412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8/source.tar.gz",
+      "sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+      "bytes": 99165563,
+      "downloaded": true,
+      "archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
+      "id": "csumb-scc-block27-2m-native",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100912",
+        "20100914",
+        "20100924"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 1846,
+      "height": 2896,
+      "bounds_wgs84": [
+        -120.67077098222825,
+        34.585637081284055,
+        -120.62906303760742,
+        34.63860085449485
+      ],
+      "valid_pixels": 3668506,
+      "nominal_0_300ft_pixels": 3668486,
+      "depth_min_m": -1.0800000429153442,
+      "depth_max_m": 38.41999816894531,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "metadata_date_assessment": "Structured calendar dates agree with native abstract; original survey year2010."
+    },
+    {
+      "name": "SCC_Block28",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block28_mb.html",
+      "http": 200,
+      "publisher_identified": true,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block28/multibeam/data/version2/products/SCC_Block28_additional_products.tar.gz"
+      ],
+      "source": "var/seafloor/cache/1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492/source.tar.gz",
+      "sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+      "bytes": 54389235,
+      "downloaded": true,
+      "archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
+      "id": "csumb-scc-block28-2m-native",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100907",
+        "20100911",
+        "20100912"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 1809,
+      "height": 1970,
+      "bounds_wgs84": [
+        -120.66980717187812,
+        34.55301691637625,
+        -120.62939696625409,
+        34.58927741958899
+      ],
+      "valid_pixels": 2040268,
+      "nominal_0_300ft_pixels": 2040249,
+      "depth_min_m": -1.0199999809265137,
+      "depth_max_m": 32.75,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "metadata_date_assessment": "Structured calendar dates agree with native abstract; original survey year2010."
+    }
+  ],
+  "pge_outer_companions": [
+    {
+      "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_25mbath",
+      "resolution_m": [
+        25.0,
+        25.0
+      ],
+      "width": 442,
+      "height": 276,
+      "bounds_wgs84": [
+        -120.75821996535247,
+        35.11352308116709,
+        -120.63525658353426,
+        35.1779966369595
+      ],
+      "status": "unqualified-companion",
+      "note": "Resolution/bounds inspection only. No shallow-pixel qualification or uniform effective-resolution claim."
+    },
+    {
+      "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_5mallbt",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "width": 2209,
+      "height": 1378,
+      "bounds_wgs84": [
+        -120.7581212451732,
+        35.11360651885376,
+        -120.6352151439088,
+        35.177989001300446
+      ],
+      "status": "unqualified-companion",
+      "note": "Resolution/bounds inspection only. No shallow-pixel qualification or uniform effective-resolution claim."
+    },
+    {
+      "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_25mbth",
+      "resolution_m": [
+        25.0,
+        25.0
+      ],
+      "width": 311,
+      "height": 344,
+      "bounds_wgs84": [
+        -120.71951811112301,
+        35.03886768528942,
+        -120.6321044970949,
+        35.11798664232254
+      ],
+      "status": "unqualified-companion",
+      "note": "Resolution/bounds inspection only. No shallow-pixel qualification or uniform effective-resolution claim."
+    },
+    {
+      "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_5mallbt",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "width": 1558,
+      "height": 1719,
+      "bounds_wgs84": [
+        -120.71962891753039,
+        35.03882156841453,
+        -120.6320522810331,
+        35.11789860742674
+      ],
+      "status": "unqualified-companion",
+      "note": "Resolution/bounds inspection only. No shallow-pixel qualification or uniform effective-resolution claim."
+    }
+  ]
+}
