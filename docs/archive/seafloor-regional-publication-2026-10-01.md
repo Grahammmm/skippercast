@@ -37,3 +37,5 @@ Merge requires independent review and exact-head CI. After merge, use the normal
 main workflow to republish the two held regions; inspect the regional jobs,
 canonical export hashes, HTTP ranges and actual map behavior. Do not report this
 tested orchestration change as production recovery before those checks pass.
+
+Independent review reporting correction: each publisher saves a batch/region-bound private result. Ledger-only reconciliation reads these receipts and names ready, held, failed or missing regions rather than claiming PMTiles/R2 verification for all completed reaches. Tests cover failed, stale and missing publication receipts despite complete worker physics.

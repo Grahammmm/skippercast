@@ -193,7 +193,36 @@ class RolloutTests(unittest.TestCase):
                 result = jobs.finish(root, matrix, 'batch-1', region='south', ledger_only=True)
                 restore.assert_any_call(s3, 'b', root, 'r02', include_cache=False)
                 upload.assert_not_called()
+                self.assertEqual(result['ready_regions'], ['south'])
+
+    def test_ledger_only_reports_failed_or_missing_current_publication(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); s3 = Bucket()
+            atomic_json(root/'dist/data/seafloor-ledger.json', {'reaches': [], 'totals': {'tier2_km2': 0}})
+            (root/'var/seafloor').mkdir(parents=True)
+            receipt = {'input_hash': 'current', 'ledger_summary': {'tier1_km2': 1, 'tier2_km2': .1}}
+            atomic_json(root/'var/seafloor/reaches/r01/run.json', receipt)
+            s3.objects[jobs.batch_key('batch-1', 'r01')] = json.dumps({'batch': 'batch-1', 'reach': 'r01', 'status': 'complete', 'input_hash': 'current', 'summary': receipt['ledger_summary']}).encode()
+            matrix = {'include': [{'reach': 'r01', 'region': 'south'}]}
+            failed = {'version': 1, 'batch': 'batch-1', 'region': 'south',
+                      'published': [], 'ready_regions': [], 'held_regions': [],
+                      'failures': [{'region': 'south', 'reason': 'publication failed'}]}
+            key = jobs.publication_key('batch-1', 'south')
+            for document in (failed, dict(failed, batch='old'), None):
+                if document is None: s3.objects.pop(key, None)
+                else: s3.objects[key] = json.dumps(document).encode()
+                with patch.object(jobs, 'credentials', return_value=(s3, 'b')), \
+                     patch.object(state_cache, 'restore', return_value=True), \
+                     patch.object(jobs, 'apply_ledger'), \
+                     patch.object(jobs, 'upload') as upload:
+                    result = jobs.finish(root, matrix, 'batch-1', ledger_only=True)
+                self.assertTrue(any(f.get('region') == 'south' for f in result['failures']))
                 self.assertEqual(result['ready_regions'], [])
+                upload.assert_not_called()
+                body = (root/'var/seafloor/ledger-pr.md').read_text()
+                self.assertIn('south', body)
+                self.assertIn('not proof of live publication', body)
+                self.assertNotIn('Validation: current source hashes, full-polygon', body)
 
     def test_shared_restore_clears_previous_failure_only_after_inventory_is_loaded(self):
         with tempfile.TemporaryDirectory() as tmp:

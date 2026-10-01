@@ -395,3 +395,5 @@ after parity proof. See the dated BigCreek nested-adapter proof.
 Use the CI Node major (22) for client validation. On macOS, temporary Vite build
 checks need a canonical TMPDIR path rather than the `/var` symlink alias; retain
 the real checks and do not weaken modulepreload assertions to mask this.
+
+Regional publishers retain a batch-bound result under the private publication receipt prefix. The ledger job names ready, held and failed regions from those receipts; missing receipts are incomplete, and measured ledger totals never prove live publication. A failed-jobs-only retry reuses the prepared batch; rerunning all jobs creates a new batch and may repeat processing.
