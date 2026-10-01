@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Trips: a saved trip now carries its plan (launch point, up to three target species, spots, legs, window, exports taken and a status) through migration 0005 and `PATCH /api/trips`; the one-tap alert save is unchanged.
+
 - Operations: the deploy no longer needs `VAPID_*` GitHub secrets; when they are unset it keeps the Web Push pair in the private backup bucket (`secrets/vapid.json`), generated once on the first deploy and reused after that, so alerts work on a fresh account with no manual key step.
 - Seafloor: allow reviewed CSUMB originals from NOAA's Ventresca archive under the existing hash-bound noncommercial producer contract. Retain attribution and for-profit/navigation restrictions; unreviewed sources and cruises remain blocked. No catalog source or map is released by this change alone.
 - Seafloor: privately qualify nine native Big Creek, Slate Rock and SCC grids. Four local reaches gain 69.54 km² of measured depth coverage and 824 physical habitat candidates; producer release qualification and spatial screening remain required before map/export publication.

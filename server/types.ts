@@ -24,6 +24,7 @@ export interface TripRow {
   start_hour: number; end_hour: number; wind_limit: number; gust_limit: number; sea_limit: number;
   enabled: number; created_at: string; last_assessment: string | null; final_delivered_at: string | null;
   boat_name: string | null; boat_sea: number | null; boat_wind: number | null; boat_chop_period: number | null;
+  launch_point: string | null; targets: string | null; plan: string | null; status: string; updated_at: string | null;
 }
 export interface AlertEventRow {id: string; trip_id: string; owner: string; kind: string; message: string; status: string; created_at: string; delivered_at: string | null}
 export interface SubscriptionRow {id: string; owner: string; endpoint: string; p256dh: string; auth: string; created_at: string}

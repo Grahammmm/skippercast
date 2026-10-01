@@ -19,14 +19,14 @@ export function validateSubscription(s:ExternalJSON):PushSubscriptionInput{
   if(!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw new ClientError('push keys invalid');return s;
 }
 export interface TripBoat {sea:number;wind:number;chop_period:number;name:string}
-export interface TripInput {region:string;point:string;species:string;date:string;start_hour:number;end_hour:number;wind_limit:number;gust_limit:number;sea_limit:number;boat:TripBoat|null}
+export interface TripInput extends TripPlan {region:string;point:string;species:string;date:string;start_hour:number;end_hour:number;wind_limit:number;gust_limit:number;sea_limit:number;boat:TripBoat|null}
 export function validateTrip(input:ExternalJSON,now=Date.now()):TripInput{
   const r=regionById(input.region);if(!r||!r.forecast_points.some(p=>p.id===input.point)||!r.species.includes(input.species))throw new ClientError('unknown area or species');
   const today=dateInZone(now,r.timezone),last=dateInZone(now+7*86400000,r.timezone);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||input.date<today||input.date>last)throw new ClientError('date must be within the next seven days');
   for(const [key,min,max] of [['start_hour',0,22],['end_hour',1,23],['wind_limit',1,30],['gust_limit',1,40],['sea_limit',.5,10]] as const)if(typeof input[key]!=='number'||!Number.isFinite(input[key])||input[key]<min||input[key]>max)throw new ClientError('invalid '+key);
   if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw new ClientError('invalid window or thresholds');
-  return {...input,boat:validateTripBoat(input.boat)};
+  return {region:input.region,point:input.point,species:input.species,date:input.date,start_hour:input.start_hour,end_hour:input.end_hour,wind_limit:input.wind_limit,gust_limit:input.gust_limit,sea_limit:input.sea_limit,boat:validateTripBoat(input.boat),...validateTripPlan(input,r,input.species)};
 }
 // The saved boat travels with the trip (profiles live in the browser). Ranges match
 // boatFactors() in dist/boat-handling.js; null means the reference boat.
@@ -37,6 +37,57 @@ export function validateTripBoat(boat:ExternalJSON):TripBoat|null{
   for(const [key,min,max] of [['sea',.45,2.6],['wind',.6,1.8],['chop_period',2,15]] as const)if(typeof boat[key]!=='number'||!Number.isFinite(boat[key])||boat[key]<min||boat[key]>max)throw new ClientError('invalid boat '+key);else out[key]=Math.round(boat[key]*1000)/1000;
   out.name=typeof boat.name==='string'?boat.name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,80):'';
   return out;
+}
+// The planned trip. Everything beyond the alert fields is optional so trips saved
+// before the planner, and the Tomorrow card's one-tap save, still validate.
+export type TripStatus='draft'|'planned'|'done'|'cancelled';
+export const TRIP_STATUSES:readonly TripStatus[]=['draft','planned','done','cancelled'];
+export const EXPORT_FORMATS=['gpx','text','garmin','lowrance','simrad','raymarine','inavx','navionics'] as const;
+export interface TripSpot {id:string;name:string;lat:number;lon:number;order:number;notes:string;depth_ft:number|null}
+export interface TripLeg {from:string;to:string;nm:number;minutes:number}
+export interface TripWindow {depart:string|null;return_by:string|null;hours:number[]}
+export interface TripExport {format:typeof EXPORT_FORMATS[number];sha256:string;exported_at:string}
+export interface TripPlanBody {spots:TripSpot[];legs:TripLeg[];window:TripWindow;exports:TripExport[]}
+export interface TripPlan {launch_point:string|null;targets:string[];plan:TripPlanBody|null;status:TripStatus}
+export const PLAN_LIMITS=Object.freeze({targets:3,spots:12,legs:13,exports:20,bytes:16384,/** Request body cap for POST/PATCH /api/trips: the plan plus the alert fields. */body:24576});
+const SLUG=/^[a-z0-9][a-z0-9-]{0,63}$/,CLOCK=/^([01]\d|2[0-3]):[0-5]\d$/,SHA=/^[0-9a-f]{64}$/;
+const cleanText=(v:unknown,max:number):string=>typeof v==='string'?v.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,max):'';
+const num=(v:unknown,min:number,max:number,what:string):number=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw new ClientError('invalid '+what);return Math.round(v*1e5)/1e5;};
+function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
+  if(plan===undefined||plan===null)return null;
+  if(typeof plan!=='object'||Array.isArray(plan))throw new ClientError('invalid plan');
+  const list=(v:unknown,max:number,what:string):ExternalJSON[]=>{if(v===undefined||v===null)return[];if(!Array.isArray(v)||v.length>max)throw new ClientError(`too many ${what} (limit ${max})`);return v;};
+  const spots=list(plan.spots,PLAN_LIMITS.spots,'spots').map((s,i):TripSpot=>{
+    if(!s||typeof s!=='object'||!SLUG.test(s.id))throw new ClientError('invalid spot id');
+    return {id:s.id,name:cleanText(s.name,80),lat:num(s.lat,-90,90,'spot latitude'),lon:num(s.lon,-180,180,'spot longitude'),order:s.order===undefined||s.order===null?i:(Number.isInteger(s.order)&&s.order>=0&&s.order<PLAN_LIMITS.spots?s.order:(()=>{throw new ClientError('invalid spot order');})()),notes:cleanText(s.notes,280),depth_ft:s.depth_ft===undefined||s.depth_ft===null?null:num(s.depth_ft,0,3000,'spot depth')};
+  });
+  const legs=list(plan.legs,PLAN_LIMITS.legs,'legs').map((l):TripLeg=>{
+    if(!l||typeof l!=='object')throw new ClientError('invalid leg');
+    return {from:cleanText(l.from,80),to:cleanText(l.to,80),nm:num(l.nm,0,300,'leg distance'),minutes:num(l.minutes,0,1440,'leg minutes')};
+  });
+  const w=plan.window??{};if(typeof w!=='object'||Array.isArray(w))throw new ClientError('invalid window');
+  const clock=(v:unknown,what:string):string|null=>{if(v===undefined||v===null||v==='')return null;if(typeof v!=='string'||!CLOCK.test(v))throw new ClientError('invalid '+what);return v;};
+  const hours=list(w.hours,24,'window hours').map(h=>{if(!Number.isInteger(h)||h<0||h>23)throw new ClientError('invalid window hours');return h as number;});
+  const exports=list(plan.exports,PLAN_LIMITS.exports,'exports').map((e):TripExport=>{
+    if(!e||typeof e!=='object'||!(EXPORT_FORMATS as readonly string[]).includes(e.format)||!SHA.test(e.sha256)||typeof e.exported_at!=='string'||!Number.isFinite(Date.parse(e.exported_at)))throw new ClientError('invalid export');
+    return {format:e.format,sha256:e.sha256,exported_at:new Date(e.exported_at).toISOString()};
+  });
+  const body:TripPlanBody={spots,legs,window:{depart:clock(w.depart,'departure'),return_by:clock(w.return_by,'return time'),hours},exports};
+  if(JSON.stringify(body).length>PLAN_LIMITS.bytes)throw new ClientError('plan too large');
+  return body;
+}
+/** The planner fields of a trip; `species` (the primary target) must already be validated for the region. */
+export function validateTripPlan(input:ExternalJSON,region:Region,species:string):TripPlan{
+  const launch=input.launch_point;if(launch!==undefined&&launch!==null&&(typeof launch!=='string'||!SLUG.test(launch)))throw new ClientError('invalid launch point');
+  const raw=input.targets===undefined||input.targets===null?[species]:input.targets;
+  if(!Array.isArray(raw)||raw.length<1||raw.length>PLAN_LIMITS.targets||raw.some(t=>typeof t!=='string'||!region.species.includes(t)))throw new ClientError(`targets must be one to ${PLAN_LIMITS.targets} species of the region`);
+  if(new Set(raw).size!==raw.length)throw new ClientError('targets repeat a species');
+  // The alert species is always a target and always first; it is never dropped to make room.
+  const targets=[species,...raw.filter(t=>t!==species)];
+  if(targets.length>PLAN_LIMITS.targets)throw new ClientError(`targets must include ${species} or leave room for it (limit ${PLAN_LIMITS.targets})`);
+  const status=input.status===undefined||input.status===null?'planned':input.status;
+  if(!TRIP_STATUSES.includes(status))throw new ClientError('invalid status');
+  return {launch_point:launch??null,targets,plan:validatePlanBody(input.plan),status};
 }
 export function pushConfigured(env:Env):boolean{return Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY);}
 async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{

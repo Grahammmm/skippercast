@@ -9,7 +9,7 @@ import {recordCron, recordQueueBatch} from './analytics.ts';
 import type {Env} from './env.ts';
 
 export {ClientError, RateLimited} from './errors.ts';
-export {validateSubscription, validateTrip, validateTripBoat, prune, checkTrips, checkOwnerTrips} from './trips.ts';
+export {validateSubscription, validateTrip, validateTripBoat, validateTripPlan, PLAN_LIMITS, prune, checkTrips, checkOwnerTrips} from './trips.ts';
 export {scheduleTripChecks, consumeTripChecks, consumeDeadLetters} from './trip-queue.ts';
 export {canonicalRedirect} from './middleware/canonical.ts';
 export {app};

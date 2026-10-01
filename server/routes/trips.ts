@@ -1,22 +1,39 @@
 // Saved trips and their alert events (owner-scoped).
 import {Hono} from 'hono';
-import {validateTrip} from '../trips.ts';
+import {validateTrip, validateTripPlan, PLAN_LIMITS} from '../trips.ts';
 import {dateInZone} from '../alert-policy.ts';
-import {regions} from '../config.ts';
+import {regions, regionById} from '../config.ts';
 import {json, body, db} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import type {AppEnv} from '../env.ts';
-import type {AlertEventRow, CountRow} from '../types.ts';
+import type {AlertEventRow, CountRow, TripRow} from '../types.ts';
 
 export const trips = new Hono<AppEnv>();
+// Rows store the planner fields as JSON text; clients get them parsed.
+const parse = (text: string | null): unknown => { if (!text) return null; try { return JSON.parse(text); } catch { return null; } };
+export const publicTrip = (row: TripRow) => ({...row, targets: parse(row.targets) ?? [row.species], plan: parse(row.plan)});
 trips.get('/api/trips', async c => {
   const owner = c.var.owner, d = db(c.env);
-  return json({trips: (await d.prepare('SELECT * FROM trips WHERE owner=? ORDER BY date DESC LIMIT 50').bind(owner).all()).results, events: (await d.prepare('SELECT id,trip_id,kind,message,status,created_at FROM alert_events WHERE owner=? ORDER BY created_at DESC LIMIT 30').bind(owner).all()).results});
+  return json({trips: (await d.prepare('SELECT * FROM trips WHERE owner=? ORDER BY date DESC LIMIT 50').bind(owner).all<TripRow>()).results.map(publicTrip), events: (await d.prepare('SELECT id,trip_id,kind,message,status,created_at FROM alert_events WHERE owner=? ORDER BY created_at DESC LIMIT 30').bind(owner).all()).results});
 });
 trips.post('/api/trips', async c => {
   const owner = c.var.owner, env = c.env;
-  const t = validateTrip(await body(c.req.raw)); const count = (await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner, dateInZone(Date.now(), regions[t.region]!.timezone)).first<CountRow>())!; if (count.n >= 20) return json({error: 'Limit of 20 active trips'}, 409);
-  const id = crypto.randomUUID(); await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?)').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, new Date().toISOString(), t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null).run(); return json({id}, 201);
+  const t = validateTrip(await body(c.req.raw, PLAN_LIMITS.body)); const count = (await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner, dateInZone(Date.now(), regions[t.region]!.timezone)).first<CountRow>())!; if (count.n >= 20) return json({error: 'Limit of 20 active trips'}, 409);
+  const id = crypto.randomUUID(), at = new Date().toISOString();
+  await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period,launch_point,targets,plan,status,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?)').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, at, t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null, t.launch_point, JSON.stringify(t.targets), t.plan ? JSON.stringify(t.plan) : null, t.status, at).run(); return json({id}, 201);
+});
+// PATCH changes the plan of a saved trip (launch point, targets, spots, legs, window,
+// exports, status). The alert fields are fixed at save time: change them by saving
+// a new trip, so a running alert never silently judges a different window.
+trips.patch('/api/trips', async c => {
+  const owner = c.var.owner, d = db(c.env), input = await body(c.req.raw, PLAN_LIMITS.body);
+  const {id} = input; if (typeof id !== 'string' || !id || id.length > 64) throw new ClientError('trip id required');
+  const row = await d.prepare('SELECT * FROM trips WHERE id=? AND owner=?').bind(id, owner).first<TripRow>();
+  if (!row) return json({error: 'Not found'}, 404);
+  const current = publicTrip(row), region = regionById(row.region)!;
+  const next = validateTripPlan({launch_point: 'launch_point' in input ? input.launch_point : current.launch_point, targets: 'targets' in input ? input.targets : current.targets, plan: 'plan' in input ? input.plan : current.plan, status: 'status' in input ? input.status : row.status}, region, row.species);
+  await d.prepare('UPDATE trips SET launch_point=?,targets=?,plan=?,status=?,updated_at=? WHERE id=? AND owner=?').bind(next.launch_point, JSON.stringify(next.targets), next.plan ? JSON.stringify(next.plan) : null, next.status, new Date().toISOString(), id, owner).run();
+  return json({id, ...next});
 });
 trips.delete('/api/trips', async c => {
   const owner = c.var.owner, d = db(c.env);

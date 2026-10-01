@@ -9,6 +9,11 @@ export const trips=sqliteTable('trips',{
   lastAssessment:text('last_assessment'),finalDeliveredAt:text('final_delivered_at'),
   // Saved boat when the trip was saved (dist/boat-handling.js factors); null = reference boat.
   boatName:text('boat_name'),boatSea:real('boat_sea'),boatWind:real('boat_wind'),boatChopPeriod:real('boat_chop_period'),
+  // The planned trip (server/trips.ts validateTripPlan): where it launches, the
+  // target species beyond the primary one, and the JSON plan of spots, legs, the
+  // window and the exports taken. Null on trips saved before the planner.
+  launchPoint:text('launch_point'),targets:text('targets'),plan:text('plan'),
+  status:text('status').notNull().default('planned'),updatedAt:text('updated_at'),
 },t=>[index('trip_owner').on(t.owner),index('trip_due').on(t.enabled,t.date)]);
 export const subscriptions=sqliteTable('subscriptions',{
   id:text('id').primaryKey(),owner:text('owner').notNull(),endpoint:text('endpoint').notNull(),
