@@ -15578,6 +15578,122 @@
           "sha256": "f7369cc41465a3a6db0f712c935b599976dab70f318eff5274f67f3433b33352"
         }
       }
+    },
+    {
+      "id": "csumb-scc-block03-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block03_mb.html",
+      "year": 2010,
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "ff77601a8c38dabf17fb985adc164e52bef824c888f78f00bc77a62fefb30583",
+      "bytes": 237767666,
+      "hold_reason": "unknown",
+      "title": "scc-block03 original 5m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block03/multibeam/data/version2/products/SCC_Block03_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk03_2m.5m_bathygrids.zip/ArcViewGrids/scc03_5mbathy",
+      "evidence": [
+        "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0/resolution_m",
+        "bytes": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0/bytes",
+        "sha256": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/0/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "ff77601a8c38dabf17fb985adc164e52bef824c888f78f00bc77a62fefb30583",
+        "cog_sha256": "323985123b9dbac12727f5120850c4a0c3ca0fbd1f271cac8625faa35c3a3a4e",
+        "requested_bounds_wgs84": [
+          -121.35674515193463,
+          35.63068764062407,
+          -121.19734659292395,
+          35.66697978057737
+        ],
+        "valid_pixels_in_requested_bounds": 299546,
+        "nominal_0_300ft_pixels_in_requested_bounds": 118147,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "7a9a72acfd4dc6fd598d0efaf175bdb237239ab020776c348fc5e7ea87def1c0"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block04-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "year": 2010,
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+      "bytes": 282859139,
+      "hold_reason": "unknown",
+      "title": "scc-block04 original 5m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk04_2m.5m_bathygrids.zip/ArcViewGrids/scc04_5mbathy",
+      "evidence": [
+        "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1/resolution_m",
+        "bytes": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1/bytes",
+        "sha256": "catalog/csumb-scc-outer-shelf-native-sources.json#/sources/1/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+        "cog_sha256": "c848344500c40473c8e61ef6550db819e1c880c264baf6abe09442fe627e8b64",
+        "requested_bounds_wgs84": [
+          -121.34619125911138,
+          35.60520190566989,
+          -121.25120942461213,
+          35.64033037320245
+        ],
+        "valid_pixels_in_requested_bounds": 578808,
+        "nominal_0_300ft_pixels_in_requested_bounds": 122648,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "28c5505847f0cb1a80cd315fe3e499d9a2198cc8e36770879009cff69d723dbd"
+        }
+      }
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",
