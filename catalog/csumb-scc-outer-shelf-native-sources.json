@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "notice": "Native5m outer-depth source qualification, physical-only; nominal<=91.44m validpixels only. Spacing is not sounding accuracy. Shared2m acquisition lineage is not independent evidence. Unknown uncertainty/interpolation retained.",
+  "sources": [
+    {
+      "base_id": "csumb-scc-block03-2m-native",
+      "source": "var/seafloor/cache/ff77601a8c38dabf17fb985adc164e52bef824c888f78f00bc77a62fefb30583/source.tar.gz",
+      "sha256": "ff77601a8c38dabf17fb985adc164e52bef824c888f78f00bc77a62fefb30583",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block03/multibeam/data/version2/products/SCC_Block03_additional_products.tar.gz",
+      "archive_member": "SCC_Blk03_2m.5m_bathygrids.zip/ArcViewGrids/scc03_5mbathy",
+      "acquisition_dates": [
+        "20100319",
+        "20100320",
+        "20100425",
+        "20100528",
+        "20100708",
+        "20100709"
+      ],
+      "id": "csumb-scc-block03-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block03_mb.html",
+      "bytes": 237767666,
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 2874,
+      "height": 755,
+      "bounds_wgs84": [
+        -121.35674515193463,
+        35.63068764062407,
+        -121.19734659292395,
+        35.66697978057737
+      ],
+      "valid_pixels": 299546,
+      "nominal_0_300ft_pixels": 118147,
+      "nominal_200_300ft_pixels": 118147,
+      "depth_min_m": 80.0,
+      "depth_max_m": 139.41000366210938,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "lineage_note": "Same original survey archive as native2m companion; not independent evidence. Original5m depth-band product, not5m-all composite.",
+      "metadata_depth_band_m": [
+        80,
+        250
+      ]
+    },
+    {
+      "base_id": "csumb-scc-block04-2m-native",
+      "source": "var/seafloor/cache/b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a/source.tar.gz",
+      "sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "archive_member": "SCC_Blk04_2m.5m_bathygrids.zip/ArcViewGrids/scc04_5mbathy",
+      "acquisition_dates": [
+        "20100320",
+        "20100417",
+        "20100525",
+        "20100526",
+        "20100807",
+        "20100808",
+        "20100809",
+        "20100810",
+        "20100812"
+      ],
+      "id": "csumb-scc-block04-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "bytes": 282859139,
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 1708,
+      "height": 750,
+      "bounds_wgs84": [
+        -121.34619125911138,
+        35.60520190566989,
+        -121.25120942461213,
+        35.64033037320245
+      ],
+      "valid_pixels": 578808,
+      "nominal_0_300ft_pixels": 122648,
+      "nominal_200_300ft_pixels": 122648,
+      "depth_min_m": 80.0,
+      "depth_max_m": 144.66000366210938,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "lineage_note": "Same original survey archive as native2m companion; not independent evidence. Original5m depth-band product, not5m-all composite.",
+      "metadata_depth_band_m": [
+        80,
+        250
+      ]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "scope": "Original SCC03/04 native5m outer-depth products, finalscreen deferred",
+  "before_after": {
+    "selected_valid_km2": {
+      "before": 117.499603707,
+      "after": 119.690162831,
+      "delta": 2.190559124
+    },
+    "tier1_km2": {
+      "before": 123.3675,
+      "after": 126.168125,
+      "delta": 2.800625
+    },
+    "physical_candidate_count": {
+      "before": 861,
+      "after": 849,
+      "delta": -12
+    }
+  },
+  "reaches": [
+    {
+      "reach": "cambria-san-simeon-r01",
+      "before": {
+        "selected_valid_km2": 49.22289402,
+        "tier1_km2": 51.884375,
+        "physical_candidate_count": 361
+      },
+      "after": {
+        "selected_valid_km2": 49.586900426,
+        "tier1_km2": 52.315625,
+        "physical_candidate_count": 361
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 317,
+          "unknown": 19,
+          "1": 1,
+          "3": 24
+        },
+        "rockfish-reef": {
+          "1": 44,
+          "unknown": 19,
+          "2": 285,
+          "3": 13
+        }
+      },
+      "selected_source_km2": {
+        "csumb-scc-block03-2m-native": 11.058559564744003,
+        "unknown": 0.0,
+        "csumb-scc-block04-2m-native": 25.228392272862994,
+        "csumb-scc-block04-5m-native": 0.47157301783399996,
+        "csumb-scc-block05-2m-native": 11.239528338005,
+        "csumb-scc-block05-5m-native": 1.5888472324649998
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "3d74ed6296237725c8e48aa0a22cb43d00e9603ad91afc3bba293b299e402a35"
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r03",
+      "before": {
+        "selected_valid_km2": 68.276709687,
+        "tier1_km2": 71.483125,
+        "physical_candidate_count": 500
+      },
+      "after": {
+        "selected_valid_km2": 70.103262405,
+        "tier1_km2": 73.8525,
+        "physical_candidate_count": 488
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 418,
+          "3": 42,
+          "unknown": 26,
+          "1": 2
+        },
+        "rockfish-reef": {
+          "1": 56,
+          "2": 374,
+          "unknown": 26,
+          "3": 32
+        }
+      },
+      "selected_source_km2": {
+        "bss-block01-additional-products-tar-gz-fbfc03dfd0": 4.754414481807998,
+        "unknown": 0.0,
+        "csumb-scc-block01-2m-native": 26.085600265716987,
+        "csumb-scc-block02-2m-native": 21.37548660920299,
+        "csumb-scc-block03-2m-native": 14.955867913838,
+        "csumb-scc-block03-5m-native": 1.2612803386899998,
+        "csumb-scc-block04-5m-native": 0.6464148606619999,
+        "csumb-scc-block04-2m-native": 1.0241979353950001
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "f3e894176a667cbbe6739d198276c5d23a99ccfeb96ab7791e0fd2ac1f4b5026"
+    }
+  ],
+  "new_public_count": 0,
+  "note": "Actual valid depth<=91.44m and private physical suitability, 3 strongest on existing1\u20133 rubric. Finer/native ownership removes duplicate overlap; no acquisition independence claim. No original archive/private geometry committed."
+}

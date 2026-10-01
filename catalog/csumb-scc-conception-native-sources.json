@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "notice": "Original native depth inspection; grid spacing is not sounding accuracy. Physical-only, no publication permission. Archive habitat/accuracy/footprint members are unprocessed leads from the same survey.",
+  "sources": [
+    {
+      "name": "SCC_Block04",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block04_mb.html",
+      "http": 200,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz"
+      ],
+      "publisher_identified": true,
+      "observed_link": "http://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block04/multibeam/data/version2/products/SCC_Block04_additional_products.tar.gz",
+      "source": "var/seafloor/cache/b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a/source.tar.gz",
+      "sha256": "b7bd52f6ba39ec328c8d45763d7589d0d329fb0d597d8537492868f9a74f8b9a",
+      "bytes": 282859139,
+      "downloaded": true,
+      "id": "csumb-scc-block04-2m-native",
+      "archive_member": "SCC_Blk04_2m.5m_bathygrids.zip/ArcViewGrids/scc04_2mbathy",
+      "vertical_datum": "NAVD88",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.30600066632175,
+        35.60598281518067,
+        -121.15389727946102,
+        35.64324622972741
+      ],
+      "width": 6855,
+      "height": 1944,
+      "acquisition_dates": [
+        "20100320",
+        "20100417",
+        "20100525",
+        "20100526",
+        "20100807",
+        "20100808",
+        "20100809",
+        "20100810",
+        "20100812"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 7699899,
+      "nominal_0_300ft_pixels": 7699899,
+      "supplemental_members": [
+        "SCC_Blk04_2m.5m_habitat.zip",
+        "SCC_Blk04_accuracy.zip",
+        "SCC_Blk04_surveyfootprint.zip"
+      ]
+    },
+    {
+      "name": "SCC_Block16",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block16_mb.html",
+      "http": 200,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block16/multibeam/data/version2/products/SCC_Block16_additional_products.tar.gz"
+      ],
+      "publisher_identified": true,
+      "observed_link": "http://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block16/multibeam/data/version2/products/SCC_Block16_additional_products.tar.gz",
+      "source": "var/seafloor/cache/2cb88a94697cf1c1f21b01c9cbae156d16596772fa09acadb810279388917b05/source.tar.gz",
+      "sha256": "2cb88a94697cf1c1f21b01c9cbae156d16596772fa09acadb810279388917b05",
+      "bytes": 166763795,
+      "downloaded": true,
+      "id": "csumb-scc-block16-2m-native",
+      "archive_member": "SCC_Blk16_2m_bathygrids.zip/ArcViewGrids/scc16_2mbathy",
+      "vertical_datum": "NAVD88",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -120.712014680261,
+        34.97605284082862,
+        -120.63964033406812,
+        35.03289276531024
+      ],
+      "width": 3233,
+      "height": 3079,
+      "acquisition_dates": [
+        "20100910",
+        "20100915",
+        "20100916",
+        "20100917",
+        "20110719",
+        "20110721"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 7710047,
+      "nominal_0_300ft_pixels": 7710047,
+      "supplemental_members": [
+        "SCC_Blk16_2m_habitat.zip",
+        "SCC_Blk16_accuracy.zip",
+        "SCC_Blk16_surveyfootprint.zip"
+      ]
+    },
+    {
+      "name": "SCC_Block22",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block22_mb.html",
+      "http": 200,
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block22/multibeam/data/version2/products/SCC_Block22_additional_products.tar.gz"
+      ],
+      "publisher_identified": true,
+      "observed_link": "http://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block22/multibeam/data/version2/products/SCC_Block22_additional_products.tar.gz",
+      "source": "var/seafloor/cache/969013b219d82777318dcc5e36aeb94674af97a6c11e628c8abcdab8eecb906c/source.tar.gz",
+      "sha256": "969013b219d82777318dcc5e36aeb94674af97a6c11e628c8abcdab8eecb906c",
+      "bytes": 177562944,
+      "downloaded": true,
+      "id": "csumb-scc-block22-2m-native",
+      "archive_member": "SCC_Blk22_2m_bathygrids.zip/ArcViewGrids/scc22_2mbathy",
+      "vertical_datum": "NAVD88",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -120.69409321248115,
+        34.78349199686585,
+        -120.61958396988848,
+        34.82690987230433
+      ],
+      "width": 3356,
+      "height": 2331,
+      "acquisition_dates": [
+        "20101028",
+        "20101029",
+        "20101031",
+        "20101101"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 6305269,
+      "nominal_0_300ft_pixels": 6305269,
+      "supplemental_members": [
+        "SCC_Blk22_2m_habitat.zip",
+        "SCC_Blk22_accuracy.zip",
+        "SCC_Blk22_surveyfootprint.zip"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "notice": "Physical-only native source evidence. Grid spacing is not sounding accuracy. Metadata date conflict retained. No public rights or spatial clearance.",
+  "sources": [
+    {
+      "name": "SCC_Block25",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block25_mb.html",
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block25/multibeam/data/version2/products/SCC_Block25_additional_products.tar.gz"
+      ],
+      "http": 200,
+      "publisher_identified": true,
+      "source": "var/seafloor/cache/8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568/source.tar.gz",
+      "sha256": "8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568",
+      "bytes": 173430719,
+      "downloaded": true,
+      "archive_member": "SCC_Blk25_2m_bathygrids.zip/ArcViewGrids/scc25_2mbathy",
+      "bounds_wgs84": [
+        -120.68364893923275,
+        34.663620888229715,
+        -120.60524821753131,
+        34.71408987892236
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 3530,
+      "height": 2718,
+      "valid_pixels": 7627062,
+      "nominal_0_300ft_pixels": 7627062,
+      "depth_min_m": 3.319999933242798,
+      "depth_max_m": 43.31999969482422,
+      "id": "csumb-scc-block25-2m-native",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100930",
+        "20101001",
+        "20101002",
+        "20101003",
+        "20101013",
+        "20101014"
+      ],
+      "date_basis": "Original grid abstract names Block25 dates; structured dates repeat adjacent Block24 dates and conflict. Preserve both, no day-level chronology claim.",
+      "structured_acquisition_dates": [
+        "20100918",
+        "20101006",
+        "20101012",
+        "20101014",
+        "20101015",
+        "20101017"
+      ],
+      "uncertainty": "Producer reports \u00b120cm but varies with depth; no per-cell uncertainty raster",
+      "interpolation_mask": "unknown"
+    },
+    {
+      "name": "PGE_AvilaBay",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz"
+      ],
+      "publisher_identified": true,
+      "observed_trail": [
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/",
+          "http": 200
+        }
+      ],
+      "source": "var/seafloor/cache/6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab/source.tar.gz",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "downloaded": true,
+      "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
+      "bounds_wgs84": [
+        -120.75813732342881,
+        35.11362014015158,
+        -120.63522076085815,
+        35.17798480123601
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 5523,
+      "height": 3444,
+      "valid_pixels": 10770774,
+      "nominal_0_300ft_pixels": 10770754,
+      "depth_min_m": -0.5799999833106995,
+      "depth_max_m": 34.34000015258789,
+      "id": "csumb-pge-avila-blocki-2m-native",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid03",
+      "acquisition_dates": [
+        "20090502",
+        "20090503",
+        "20090504",
+        "20090505",
+        "20090531",
+        "20090601",
+        "20090602",
+        "20090603",
+        "20090604",
+        "20090605",
+        "20090606",
+        "20090607",
+        "20090608",
+        "20090609"
+      ],
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "date_basis": "Native FGDC metadata",
+      "companion_metadata": null,
+      "publisher_identity_basis": "Official NOAA survey page identifies CSUMB; BlockI native FGDC and BlockJ companion FGDC identify original producer."
+    },
+    {
+      "name": "PGE_AvilaBay",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "products": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz"
+      ],
+      "publisher_identified": true,
+      "observed_trail": [
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/",
+          "http": 200
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/",
+          "http": 200
+        }
+      ],
+      "source": "var/seafloor/cache/6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab/source.tar.gz",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "downloaded": true,
+      "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
+      "bounds_wgs84": [
+        -120.7196235650724,
+        35.03881695672584,
+        -120.63204718984571,
+        35.11788498899416
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 3895,
+      "height": 4297,
+      "valid_pixels": 8819441,
+      "nominal_0_300ft_pixels": 8819441,
+      "depth_min_m": 2.8299999237060547,
+      "depth_max_m": 34.310001373291016,
+      "id": "csumb-pge-avila-blockj-2m-native",
+      "vertical_datum": "unknown",
+      "native_vertical_datum": "unknown",
+      "acquisition_dates": [],
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "date_basis": "Native 2m XML lacks survey dates/datum; companion BlockJ 5m-all metadata states May2\u20135,31/June1\u20139 2009 and NAVD88Geoid03. Retain unknown native datum/date instead of silently inheriting.",
+      "companion_metadata": {
+        "member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_5mallbt/metadata.xml",
+        "declared_datum": "NAVD88 Geoid03",
+        "year": 2009
+      },
+      "publisher_identity_basis": "Official NOAA survey page identifies CSUMB; BlockI native FGDC and BlockJ companion FGDC identify original producer."
+    }
+  ],
+  "excluded_leads": [
+    {
+      "name": "CC_BlockA02",
+      "reason": "Actual native grid at Pacifica, outside Monterey\u2013PointConception; not the similarly named MorroAvila CC_BlkA2.",
+      "bounds_wgs84": [
+        -122.56457718890965,
+        37.6314499616314,
+        -122.49556094833272,
+        37.70180907461398
+      ]
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "stage": "source-stack-reconciliation",
+  "original_prs": [
+    156,
+    157
+  ],
+  "original_head": "c059377e1e1e5cf295b6464c8501e0396c1e8ab6",
+  "existing_rows_retained": 433,
+  "recovered_native_rows": 17,
+  "catalog_total": 450,
+  "native_verification": [
+    {
+      "id": "csumb-bss-block07-2m-native",
+      "source_sha256": "9e651a06dbd3fba236142c5169b27b0012e1185ac591a616a2ca6bb1d2f53bd7",
+      "normalized_sha256": "1f2564cb68d84f6933e19c207e1974644bdb4c77a9855e7a31222ecb55c121ee",
+      "cached": true,
+      "native_pixels_within_300ft": 2675258
+    },
+    {
+      "id": "csumb-bss-block07-5m-native",
+      "source_sha256": "9e651a06dbd3fba236142c5169b27b0012e1185ac591a616a2ca6bb1d2f53bd7",
+      "normalized_sha256": "c45632ca77dedb44804f0e015996f3b229252eca7b276b28f2d6aaa6107df395",
+      "cached": true,
+      "native_pixels_within_300ft": 39908
+    },
+    {
+      "id": "csumb-bss-block10-2m-native",
+      "source_sha256": "0e943418c65502d1d22542427de5ecb2c96ea0d66d7662ce3fe6e2791c04f970",
+      "normalized_sha256": "558c625c6231854c9bd4995c69e34fe8afa73ea606881364d66456f3f6829fb9",
+      "cached": true,
+      "native_pixels_within_300ft": 2748607
+    },
+    {
+      "id": "csumb-bss-block10-5m-native",
+      "source_sha256": "0e943418c65502d1d22542427de5ecb2c96ea0d66d7662ce3fe6e2791c04f970",
+      "normalized_sha256": "989ff4980aaa954307b7b73dce647f384c8820f364de2b3f09e65b744da3d48f",
+      "cached": true,
+      "native_pixels_within_300ft": 73320
+    },
+    {
+      "id": "csumb-bss-block05-2m-native",
+      "source_sha256": "2b4911ca81d248be3a74788fe243b0231d2772b06ea8aeab6332d6a898da7069",
+      "normalized_sha256": "889dd66e8d532ccad7b6513e23cde606e96c2993b9f6b2c754f0bd0a325a5d02",
+      "cached": true,
+      "native_pixels_within_300ft": 2341080
+    },
+    {
+      "id": "csumb-bss-block05-5m-native",
+      "source_sha256": "2b4911ca81d248be3a74788fe243b0231d2772b06ea8aeab6332d6a898da7069",
+      "normalized_sha256": "bb74d171ca8fcef06865021354a2c7064b1f8d4a6a4eb30b3beebc8dc2995635",
+      "cached": true,
+      "native_pixels_within_300ft": 77221
+    },
+    {
+      "id": "csumb-bss-block04-2m-native",
+      "source_sha256": "832de651405216c4e1527bf8824d989f9c6aa75fdaf17e9e2830318d73f9c50f",
+      "normalized_sha256": "c1da162fd3267a8bd8d153a2159c43dfdfc5dae181bbcca447b53f595c75852b",
+      "cached": true,
+      "native_pixels_within_300ft": 3817786
+    },
+    {
+      "id": "csumb-bss-block04-5m-native",
+      "source_sha256": "832de651405216c4e1527bf8824d989f9c6aa75fdaf17e9e2830318d73f9c50f",
+      "normalized_sha256": "1851045973431d150c7955af5aef2de925ea3d58aa3354fd1c278c19ec85bc5c",
+      "cached": true,
+      "native_pixels_within_300ft": 222479
+    },
+    {
+      "id": "csumb-bss-block09-2m-native",
+      "source_sha256": "85d7ded58c5ad496c905d4843f1dec92be7370e0eacea0c08f4709a96b49115e",
+      "normalized_sha256": "49104bd479c4db47665b7c5f31a6519916e0ae14522cf0b4fa376f2b60c1b982",
+      "cached": true,
+      "native_pixels_within_300ft": 1314976
+    },
+    {
+      "id": "csumb-bss-block09-5m-native",
+      "source_sha256": "85d7ded58c5ad496c905d4843f1dec92be7370e0eacea0c08f4709a96b49115e",
+      "normalized_sha256": "4a3f5362fd5277964a54803eab1feb8849ee53cfc80af67889c90c9804274da8",
+      "cached": true,
+      "native_pixels_within_300ft": 27168
+    },
+    {
+      "id": "csumb-bss-block06-2m-native",
+      "source_sha256": "1b0b5467244633737e8ea4f6edb34432c30677da994c227cd8e68f3782cbd6b6",
+      "normalized_sha256": "51417836eee2fd3762f97506141d5acea938d5cf4003af121459be1e1d744afb",
+      "cached": true,
+      "native_pixels_within_300ft": 2868986
+    },
+    {
+      "id": "csumb-bss-block06-5m-native",
+      "source_sha256": "1b0b5467244633737e8ea4f6edb34432c30677da994c227cd8e68f3782cbd6b6",
+      "normalized_sha256": "bd2cd7ebcf9b56ea8fcf5e18e865682e282847dc5809fb43941f3279f4abd28c",
+      "cached": true,
+      "native_pixels_within_300ft": 65594
+    },
+    {
+      "id": "csumb-bss-block11-2m-native",
+      "source_sha256": "8e4e5a5d6928f71a23dbf9cbceb1224418a29875aa01f339f5b042a2d8ad49b0",
+      "normalized_sha256": "6b1344bd0d331c79f7fbaa9ca3ae1a58dc339fef7e223e3b4d857ee53c0d7c2e",
+      "cached": true,
+      "native_pixels_within_300ft": 2984386
+    },
+    {
+      "id": "csumb-bss-block11-5m-native",
+      "source_sha256": "8e4e5a5d6928f71a23dbf9cbceb1224418a29875aa01f339f5b042a2d8ad49b0",
+      "normalized_sha256": "6052adca4025a7245ffe51ea65241b34a173d55290b7eb14d24a87325e1f9843",
+      "cached": true,
+      "native_pixels_within_300ft": 48637
+    },
+    {
+      "id": "csumb-bss-block03-5m-native",
+      "source_sha256": "0414c642e74e52773ebe4c36d01220cfef5bf7f5f71d8cb2627a399863e64e83",
+      "normalized_sha256": "69c1d4c86db21d99ddf940d83bda1830b32574d909263441b8f3f85ec01167e7",
+      "cached": true,
+      "native_pixels_within_300ft": 272096
+    },
+    {
+      "id": "csumb-bss-block08-5m-native",
+      "source_sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
+      "normalized_sha256": "060c544f87609b4f6179f93fd4524c990a5a7e27115f489df17388fdc24b8725",
+      "cached": true,
+      "native_pixels_within_300ft": 45462
+    },
+    {
+      "id": "csumb-bss-block12-5m-native",
+      "source_sha256": "3162a535ac84d1aa115f315bf4b6e65874151147c7250a20d1f47b1aa8ddbeb7",
+      "normalized_sha256": "e96e560fc4b62d8b501e6722ad4b7170f86897b56e438f89a567f2ad9ea1d157",
+      "cached": true,
+      "native_pixels_within_300ft": 12700
+    }
+  ],
+  "ordinary_runs": [
+    {
+      "reach": "south-big-sur-san-simeon-r02",
+      "physical_reused": false,
+      "publication_prohibited": false,
+      "status": "habitat-screened",
+      "before_selected_valid_km2": 55.452019066,
+      "after_selected_valid_km2": 55.452019066,
+      "before_physical_candidates": 608,
+      "after_physical_candidates": 608,
+      "screened_candidates": 556,
+      "screen_status": "ready",
+      "processing_incomplete": false,
+      "inputs_changed": [],
+      "output_hashes_equal": {
+        "cells.json": false,
+        "terrain.json": false,
+        "habitat.geojson": false,
+        "atlas-comparison.json": true,
+        "held.geojson": false,
+        "candidates.geojson": false,
+        "physical.json": false
+      },
+      "ordinary_run_reused": false
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r01",
+      "physical_reused": false,
+      "publication_prohibited": false,
+      "status": "habitat-screened",
+      "before_selected_valid_km2": 35.920569123,
+      "after_selected_valid_km2": 35.920569123,
+      "before_physical_candidates": 353,
+      "after_physical_candidates": 353,
+      "screened_candidates": 314,
+      "screen_status": "ready",
+      "processing_incomplete": false,
+      "inputs_changed": [],
+      "output_hashes_equal": {
+        "cells.json": false,
+        "terrain.json": false,
+        "habitat.geojson": false,
+        "atlas-comparison.json": true,
+        "held.geojson": true,
+        "candidates.geojson": false,
+        "physical.json": false
+      },
+      "ordinary_run_reused": false
+    },
+    {
+      "reach": "big-sur-coast-r06",
+      "physical_reused": false,
+      "publication_prohibited": false,
+      "status": "habitat-screened",
+      "before_selected_valid_km2": 22.66896488,
+      "after_selected_valid_km2": 22.66896488,
+      "before_physical_candidates": 262,
+      "after_physical_candidates": 262,
+      "screened_candidates": 239,
+      "screen_status": "ready",
+      "processing_incomplete": false,
+      "inputs_changed": [],
+      "output_hashes_equal": {
+        "cells.json": false,
+        "terrain.json": false,
+        "habitat.geojson": false,
+        "atlas-comparison.json": true,
+        "held.geojson": true,
+        "candidates.geojson": false,
+        "physical.json": false
+      },
+      "ordinary_run_reused": false
+    },
+    {
+      "reach": "big-sur-coast-r05",
+      "physical_reused": false,
+      "publication_prohibited": false,
+      "status": "habitat-screened",
+      "before_selected_valid_km2": 23.761611175,
+      "after_selected_valid_km2": 23.761611175,
+      "before_physical_candidates": 203,
+      "after_physical_candidates": 203,
+      "screened_candidates": 164,
+      "screen_status": "ready",
+      "processing_incomplete": false,
+      "inputs_changed": [],
+      "output_hashes_equal": {
+        "cells.json": false,
+        "terrain.json": false,
+        "habitat.geojson": false,
+        "atlas-comparison.json": true,
+        "held.geojson": true,
+        "candidates.geojson": false,
+        "physical.json": false
+      },
+      "ordinary_run_reused": false
+    }
+  ],
+  "new_measured_area_km2": 0,
+  "new_physical_candidates": 0,
+  "new_live_locations": 0,
+  "numeric_cache_diagnostic": {
+    "reach": "south-big-sur-san-simeon-r02",
+    "python_equal": true,
+    "serialized_equal": false,
+    "first_difference_old": "ec01167e7\", \"interpolation_mask\": \"unknown\", \"native_resolution_m\": [5.0, 5.0], \"nominal_0_300ft_pixels_in_requested_bounds\": 272096, \"raster_identity\": {\"sha256\": \"68d7b",
+    "first_difference_new": "ec01167e7\", \"interpolation_mask\": \"unknown\", \"native_resolution_m\": [5, 5], \"nominal_0_300ft_pixels_in_requested_bounds\": 272096, \"raster_identity\": {\"sha256\": \"68d7b824d",
+    "old_recomputed_digest": "8051c9bc7de5be4bb51986910dbde1732bfe8a2deca6f4e1695c0a42d4347b00",
+    "old_saved_digest": "8051c9bc7de5be4bb51986910dbde1732bfe8a2deca6f4e1695c0a42d4347b00",
+    "new_digest": "5d9235020c7aa24492d41ab5ffa0fe626051d92a130963bd83b447aafda3b0fc"
+  },
+  "notice": "Restores original PR records without overwriting newer source rows. Local screened results are not new production publication. Equivalent numeric serialization can change cache hash; implementation fix remains."
+}

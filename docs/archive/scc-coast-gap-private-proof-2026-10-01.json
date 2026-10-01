@@ -1,0 +1,357 @@
+{
+  "version": 1,
+  "notice": "Private physical results; no public/exportable expansion. Survey overlap is not independent.",
+  "summary": {
+    "selected_valid_km2": {
+      "before": 199.020321452,
+      "after": 255.308280212,
+      "delta": 56.28795876
+    },
+    "tier1_km2": {
+      "before": 207.336875,
+      "after": 266.69625,
+      "delta": 59.359375
+    },
+    "physical_candidate_count": {
+      "before": 1182,
+      "after": 1545,
+      "delta": 363
+    }
+  },
+  "reaches": [
+    {
+      "reach": "morro-bay-r04",
+      "before": {
+        "selected_valid_km2": 12.000923066,
+        "tier1_km2": 12.174375,
+        "physical_candidate_count": 57
+      },
+      "after": {
+        "selected_valid_km2": 11.812958505,
+        "tier1_km2": 12.174375,
+        "physical_candidate_count": 76
+      },
+      "source_ids": [
+        "bathymetry-offshoremorrobay-zip-fad659557e",
+        "csumb-scc-block14-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 71,
+          "3": 2,
+          "unknown": 3
+        },
+        "rockfish-reef": {
+          "2": 65,
+          "1": 7,
+          "3": 1,
+          "unknown": 3
+        }
+      },
+      "native_source_ownership": {
+        "bathymetry-offshoremorrobay-zip-fad659557e": {
+          "selected_valid_km2": 10.891095150250997,
+          "cells": 182
+        },
+        "csumb-scc-block14-2m-native": {
+          "selected_valid_km2": 0.921863354742,
+          "cells": 19
+        }
+      },
+      "run_hash": "ff54b8235460463cbea33017982441f09aa672bc578735f52b76824c2d73677c",
+      "held": 76,
+      "publication": "private-only"
+    },
+    {
+      "reach": "morro-bay-r05",
+      "before": {
+        "selected_valid_km2": 19.791558395,
+        "tier1_km2": 20.304375,
+        "physical_candidate_count": 148
+      },
+      "after": {
+        "selected_valid_km2": 19.298671139,
+        "tier1_km2": 20.304375,
+        "physical_candidate_count": 338
+      },
+      "source_ids": [
+        "bathymetry-offshoremorrobay-zip-fad659557e",
+        "csumb-scc-block14-2m-native",
+        "csumb-scc-block15-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 327,
+          "1": 2,
+          "unknown": 9
+        },
+        "rockfish-reef": {
+          "2": 288,
+          "1": 41,
+          "unknown": 9
+        }
+      },
+      "native_source_ownership": {
+        "csumb-scc-block14-2m-native": {
+          "selected_valid_km2": 17.286426734763,
+          "cells": 297
+        },
+        "bathymetry-offshoremorrobay-zip-fad659557e": {
+          "selected_valid_km2": 1.8992939439099998,
+          "cells": 36
+        },
+        "csumb-scc-block15-2m-native": {
+          "selected_valid_km2": 0.112950460718,
+          "cells": 4
+        }
+      },
+      "run_hash": "2b7d00b8eba1c5d2df3e16fda533204aff4ad735a990d688b11f94f7bf061ea6",
+      "held": 338,
+      "publication": "private-only"
+    },
+    {
+      "reach": "morro-bay-r06",
+      "before": {
+        "selected_valid_km2": 59.724631222,
+        "tier1_km2": 61.748125,
+        "physical_candidate_count": 415
+      },
+      "after": {
+        "selected_valid_km2": 59.525159317,
+        "tier1_km2": 61.748125,
+        "physical_candidate_count": 415
+      },
+      "source_ids": [
+        "bathymetry-offshoremorrobay-zip-fad659557e",
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "csumb-scc-block14-2m-native",
+        "csumb-scc-block15-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 349,
+          "3": 52,
+          "unknown": 13,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "2": 342,
+          "3": 48,
+          "unknown": 13,
+          "1": 12
+        }
+      },
+      "native_source_ownership": {
+        "bathymetry-offshoremorrobay-zip-fad659557e": {
+          "selected_valid_km2": 24.680575443109,
+          "cells": 419
+        },
+        "csumb-scc-block14-2m-native": {
+          "selected_valid_km2": 0.6130280949989999,
+          "cells": 13
+        },
+        "csumb-scc-block15-2m-native": {
+          "selected_valid_km2": 1.5773465961270003,
+          "cells": 41
+        },
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c": {
+          "selected_valid_km2": 32.65420918258001,
+          "cells": 563
+        }
+      },
+      "run_hash": "30361b34c0f2c636eb4f8b74f66cc91c26a99a9a80872e794c8fae2e189c50fe",
+      "held": 415,
+      "publication": "private-only"
+    },
+    {
+      "reach": "cambria-san-simeon-r02",
+      "before": {
+        "selected_valid_km2": 20.89179061,
+        "tier1_km2": 22.3125,
+        "physical_candidate_count": 108
+      },
+      "after": {
+        "selected_valid_km2": 46.423921175,
+        "tier1_km2": 48.93625,
+        "physical_candidate_count": 237
+      },
+      "source_ids": [
+        "bathymetry-offshorepointestero-zip-7e3be5eb12",
+        "csumb-scc-block04-2m-native",
+        "csumb-scc-block05-2m-native",
+        "csumb-scc-block06-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "unknown": 28,
+          "2": 192,
+          "3": 16,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "unknown": 28,
+          "2": 174,
+          "3": 11,
+          "1": 24
+        }
+      },
+      "native_source_ownership": {
+        "csumb-scc-block04-2m-native": {
+          "selected_valid_km2": 1.484406953444,
+          "cells": 32
+        },
+        "csumb-scc-block05-2m-native": {
+          "selected_valid_km2": 12.196293328530997,
+          "cells": 214
+        },
+        "csumb-scc-block06-2m-native": {
+          "selected_valid_km2": 25.65186562348801,
+          "cells": 455
+        },
+        "bathymetry-offshorepointestero-zip-7e3be5eb12": {
+          "selected_valid_km2": 7.09135526964,
+          "cells": 128
+        }
+      },
+      "run_hash": "f94464f725f55ae7e609abe6b45b249d8102f70f9ada3b3ee29fcb56fde70753",
+      "held": 237,
+      "publication": "private-only"
+    },
+    {
+      "reach": "cambria-san-simeon-r01",
+      "before": {
+        "selected_valid_km2": 49.22289402,
+        "tier1_km2": 51.884375,
+        "physical_candidate_count": 361
+      },
+      "after": {
+        "selected_valid_km2": 49.22289402,
+        "tier1_km2": 51.884375,
+        "physical_candidate_count": 361
+      },
+      "source_ids": [
+        "csumb-scc-block03-2m-native",
+        "csumb-scc-block04-2m-native",
+        "csumb-scc-block05-2m-native",
+        "csumb-scc-block05-5m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 317,
+          "unknown": 19,
+          "1": 1,
+          "3": 24
+        },
+        "rockfish-reef": {
+          "1": 44,
+          "unknown": 19,
+          "2": 285,
+          "3": 13
+        }
+      },
+      "native_source_ownership": {
+        "csumb-scc-block03-2m-native": {
+          "selected_valid_km2": 11.058559564744003,
+          "cells": 208
+        },
+        "csumb-scc-block04-2m-native": {
+          "selected_valid_km2": 25.23626878945299,
+          "cells": 431
+        },
+        "csumb-scc-block05-5m-native": {
+          "selected_valid_km2": 1.6885373273629998,
+          "cells": 44
+        },
+        "csumb-scc-block05-2m-native": {
+          "selected_valid_km2": 11.239528338005,
+          "cells": 189
+        }
+      },
+      "run_hash": "1efbc67b9efcb4cc182e25c9cabef54848cd7a2705d889b6477111798d50443a",
+      "held": 361,
+      "publication": "private-only"
+    },
+    {
+      "reach": "point-arguello-conception-r04",
+      "before": {
+        "selected_valid_km2": 37.388524139,
+        "tier1_km2": 38.913125,
+        "physical_candidate_count": 93
+      },
+      "after": {
+        "selected_valid_km2": 66.881587854,
+        "tier1_km2": 69.21125,
+        "physical_candidate_count": 104
+      },
+      "source_ids": [
+        "csumb-scc-block22-2m-native",
+        "csumb-scc-block23-2m-native",
+        "csumb-scc-block24-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 96,
+          "3": 3,
+          "unknown": 3,
+          "1": 2
+        },
+        "rockfish-reef": {
+          "2": 90,
+          "1": 9,
+          "3": 2,
+          "unknown": 3
+        }
+      },
+      "native_source_ownership": {
+        "csumb-scc-block22-2m-native": {
+          "selected_valid_km2": 17.414453003415,
+          "cells": 300
+        },
+        "csumb-scc-block23-2m-native": {
+          "selected_valid_km2": 19.95409262517899,
+          "cells": 345
+        },
+        "csumb-scc-block24-2m-native": {
+          "selected_valid_km2": 29.513042225095003,
+          "cells": 507
+        }
+      },
+      "run_hash": "02a2f45486e2eec996d44612be855acab4560b07b3f47f61ae0d5862ed706f21",
+      "held": 104,
+      "publication": "private-only"
+    },
+    {
+      "reach": "point-arguello-conception-r05",
+      "before": {
+        "selected_valid_km2": 0.0,
+        "tier1_km2": 0.0,
+        "physical_candidate_count": 0
+      },
+      "after": {
+        "selected_valid_km2": 2.143088202,
+        "tier1_km2": 2.4375,
+        "physical_candidate_count": 14
+      },
+      "source_ids": [
+        "csumb-scc-block24-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 14
+        },
+        "rockfish-reef": {
+          "1": 14
+        }
+      },
+      "native_source_ownership": {
+        "csumb-scc-block24-2m-native": {
+          "selected_valid_km2": 2.1430882023939994,
+          "cells": 44
+        }
+      },
+      "run_hash": "2bb49591ded4299090db6161acbb213096efdf82bc795ec982e50bb5f61318a7",
+      "held": 14,
+      "publication": "private-only"
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "scope": "Original SCC07\u201309 native2m/5m depth-band products, finalscreen deferred",
+  "before_after": {
+    "selected_valid_km2": {
+      "before": 146.169472507,
+      "after": 161.002401918,
+      "delta": 14.832929411
+    },
+    "tier1_km2": {
+      "before": 151.07375,
+      "after": 168.235,
+      "delta": 17.16125
+    },
+    "physical_candidate_count": {
+      "before": 1504,
+      "after": 1550,
+      "delta": 46
+    }
+  },
+  "reaches": [
+    {
+      "reach": "morro-bay-r01",
+      "before": {
+        "selected_valid_km2": 44.467912113,
+        "tier1_km2": 45.25,
+        "physical_candidate_count": 478
+      },
+      "after": {
+        "selected_valid_km2": 43.155481939,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 462
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 383,
+          "unknown": 11,
+          "3": 63,
+          "1": 5
+        },
+        "rockfish-reef": {
+          "2": 376,
+          "1": 28,
+          "unknown": 11,
+          "3": 47
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block07-2m-native": 1.9305421511620002,
+        "csumb-scc-block08-2m-native": 21.852293012328996,
+        "csumb-scc-block08-5m-native": 1.2026359736480001,
+        "csumb-scc-block09-5m-native": 2.360489566071,
+        "csumb-scc-block09-2m-native": 15.059242505867998,
+        "bathymetry-offshorepointestero-zip-7e3be5eb12": 0.7502787297669999
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "6e8f31cd74c777c0a0e2eff0baba8f586d7886871563550c1c32b23cbd20f096"
+    },
+    {
+      "reach": "morro-bay-r02",
+      "before": {
+        "selected_valid_km2": 55.277639219,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 789
+      },
+      "after": {
+        "selected_valid_km2": 55.062084485,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 792
+      },
+      "rank_counts": {
+        "lingcod": {
+          "unknown": 40,
+          "2": 531,
+          "3": 221
+        },
+        "rockfish-reef": {
+          "unknown": 40,
+          "1": 165,
+          "2": 407,
+          "3": 180
+        }
+      },
+      "selected_source_km2": {
+        "csumb-scc-block09-2m-native": 1.6890996201219997,
+        "unknown": 0.0,
+        "bathymetry-offshorepointestero-zip-7e3be5eb12": 30.07683548672002,
+        "bathymetry-offshoremorrobay-zip-fad659557e": 23.296149377957004
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "1a5e12568b51e6d5e310aecc0b48fc8441f1218a730dedd64794b1293d9fad3f"
+    },
+    {
+      "reach": "cambria-san-simeon-r02",
+      "before": {
+        "selected_valid_km2": 46.423921175,
+        "tier1_km2": 48.93625,
+        "physical_candidate_count": 237
+      },
+      "after": {
+        "selected_valid_km2": 62.784835494,
+        "tier1_km2": 65.8475,
+        "physical_candidate_count": 296
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 256,
+          "3": 16,
+          "unknown": 23,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "1": 24,
+          "2": 237,
+          "3": 12,
+          "unknown": 23
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block04-2m-native": 1.484406953444,
+        "csumb-scc-block05-2m-native": 12.196293328530997,
+        "csumb-scc-block06-2m-native": 25.592450869880015,
+        "csumb-scc-block07-2m-native": 19.847099365657005,
+        "csumb-scc-block07-5m-native": 2.300420580995,
+        "csumb-scc-block08-2m-native": 0.867160301372,
+        "csumb-scc-block08-5m-native": 0.49700409378000004
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "f449998c7afded67a74f489c74dab9ce02fddf4550e494bd68d70e8d68333258"
+    }
+  ],
+  "new_public_count": 0,
+  "note": "Actual valid depth<=91.44m and private physical suitability, 3 strongest on existing1\u20133 rubric. Finer/native ownership removes duplicate overlap; no acquisition independence claim. No original archive/private geometry committed."
+}
