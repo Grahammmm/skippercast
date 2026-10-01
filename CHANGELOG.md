@@ -2,14 +2,37 @@
 
 ## Unreleased
 
+- Seafloor: explicitly migrate verified legacy numeric-only cache identities without recalculating terrain or changing habitat geometry/ranks; retain complete private recovery and require fresh screening before release.
+- Seafloor: declare the current noncommercial deployment profile and block incompatible paid deployments before writes; retain original producer credits and permission requirements.
+
 - Trips: a launch-point catalog (`catalog/launch-points.json`, from the California DBW Boating Facilities records) builds `dist/regions/<id>/launch-points.json` for every published region; Morro Bay's public ramp, the Port San Luis ramp and Olde Port Beach are the first entries.
 - Trips: a saved trip now carries its plan (launch point, up to three target species, spots, legs, window, exports taken and a status) through migration 0005 and `PATCH /api/trips`; the one-tap alert save is unchanged.
 
 - Operations: the deploy no longer needs `VAPID_*` GitHub secrets; when they are unset it keeps the Web Push pair in the private backup bucket (`secrets/vapid.json`), generated once on the first deploy and reused after that, so alerts work on a fresh account with no manual key step.
 - Seafloor: allow reviewed CSUMB originals from NOAA's Ventresca archive under the existing hash-bound noncommercial producer contract. Retain attribution and for-profit/navigation restrictions; unreviewed sources and cruises remain blocked. No catalog source or map is released by this change alone.
+- Reconcile seventeen existing BSS native survey records with the newer coastal source stack while preserving prior sources and screened-cache evidence; use their reviewed noncommercial contract during the owner-authorized personal-use phase.
+
+- Qualify six original SCC10–13 native depth grids; refine five private Morro Bay reaches with 347 net habitat candidates, retaining the measured coverage decrease and release holds.
+
+- Qualify original SCC07–09 native 2 m/5 m bands: add 14.833 km² of private measured Point Estero/northern Morro coverage and 46 net habitat candidates, retaining native depth limits and release holds.
+
+- Qualify cached native 5 m SCC03/04 shelf bands: add 2.191 km² of private measured coverage near the 300 ft limit; retain the 12-candidate net reduction and unchanged suitability rubric.
+
+- Qualify original SCC26–28 native grids: add 36.624 km² of private measured Arguello coverage and 608 net habitat candidates; preserve source ownership, 1–3 rankings and release holds.
+
+- Inspect native Avila–Pismo and southern Arguello grids: add 104.209 km² of private measured coverage and 2,005 net habitat candidates, retaining missing/conflicting metadata and release holds.
+
+- Seafloor: inspect SCC06/14/24 native grids; add 56.29 km² selected coverage and 363 net private candidates, including first measured habitat in Arguello r05. Identify original Morro–Avila survey leads for the remaining southern gap.
+- Seafloor: inspect native SCC05/15/23 and the deeper 5 m SCC05 companion; add 44.70 km² selected coverage and 81 net private habitat candidates, preserving source ownership and publication holds.
+- Inspect native SCC04/16/22 grids and add private ranked Cambria/Arguello shelf coverage, preserving datum, mixed survey dates and publication holds.
+- Seafloor: privately qualify native SCC03/17/21 and fill two previously empty Cambria/Conception reaches, updating three neighbors. Add 63.53 km² net measured coverage and 946 physical candidates; publication and incomplete-rank holds remain.
+
+- Seafloor: privately qualify native SCC02/18/20 original grids and process their actual shallow intersections. Add 72.54 km² net measured coverage and 978 physical habitat candidates in the San Simeon approach and Arguello/Conception area; retain publication and ranking holds.
+
 - Seafloor: privately qualify nine native Big Creek, Slate Rock and SCC grids. Four local reaches gain 69.54 km² of measured depth coverage and 824 physical habitat candidates; producer release qualification and spatial screening remain required before map/export publication.
 
 - Seafloor: open explicitly selected native ArcInfo grids inside original NOAA ZIP-in-tar survey bundles, with bounded extraction and checked private recovery. Preserve native pixels and reject unsafe containers; source qualification and public screening remain separate.
+- Seafloor: publish regions independently with retained batch identities for failed-job retries. Reconcile the ledger separately without downloading original surveys; retain scientific checks, report failed regions and log publication stages rather than timing out the entire coast in one job.
 
 - Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
 

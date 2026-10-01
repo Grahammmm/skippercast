@@ -11,5 +11,7 @@
     "ref": "refs/heads/main",
     "workflow": ".github/workflows/live-conditions.yml"
   },
-  "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts"
+  "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts",
+  "source_use": "noncommercial",
+  "monetization": "none"
 }

@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "processed_on": "2026-10-01",
+  "summary": {
+    "selected_valid_km2": {
+      "before": 132.340033047,
+      "after": 195.865359483,
+      "delta": 63.525326436
+    },
+    "tier1_km2": {
+      "before": 137.9175,
+      "after": 204.774375,
+      "delta": 66.856875
+    },
+    "physical_candidate_count": {
+      "before": 1722,
+      "after": 2668,
+      "delta": 946
+    }
+  },
+  "reaches": [
+    {
+      "reach": "cambria-san-simeon-r01",
+      "before": {
+        "selected_valid_km2": 0,
+        "tier1_km2": 0,
+        "physical_candidate_count": 0
+      },
+      "after": {
+        "selected_valid_km2": 11.159949852,
+        "tier1_km2": 12.095,
+        "physical_candidate_count": 156
+      },
+      "source_ids": [
+        "csumb-scc-block03-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "unknown": 22,
+          "2": 121,
+          "3": 12,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "unknown": 22,
+          "1": 86,
+          "2": 48
+        }
+      },
+      "run_hash": "971fffbdb638d7fb4677a00587c0e12e873828032c0c6d59f43b697c0aca937b",
+      "held": 156,
+      "publication": "private-only"
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r03",
+      "before": {
+        "selected_valid_km2": 52.286365712,
+        "tier1_km2": 54.72,
+        "physical_candidate_count": 622
+      },
+      "after": {
+        "selected_valid_km2": 67.245017685,
+        "tier1_km2": 70.29625,
+        "physical_candidate_count": 503
+      },
+      "source_ids": [
+        "bss-block01-additional-products-tar-gz-fbfc03dfd0",
+        "csumb-scc-block01-2m-native",
+        "csumb-scc-block02-2m-native",
+        "csumb-scc-block03-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 429,
+          "3": 45,
+          "unknown": 27,
+          "1": 2
+        },
+        "rockfish-reef": {
+          "1": 56,
+          "2": 385,
+          "unknown": 27,
+          "3": 35
+        }
+      },
+      "run_hash": "0ccede105d180f2c028aaced75ce01a712c309ce391a3940772419bb0a64cefc",
+      "held": 503,
+      "publication": "private-only"
+    },
+    {
+      "reach": "point-arguello-conception-r01",
+      "before": {
+        "selected_valid_km2": 0,
+        "tier1_km2": 0,
+        "physical_candidate_count": 0
+      },
+      "after": {
+        "selected_valid_km2": 9.007899531,
+        "tier1_km2": 9.5,
+        "physical_candidate_count": 325
+      },
+      "source_ids": [
+        "csumb-scc-block17-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 301,
+          "unknown": 24
+        },
+        "rockfish-reef": {
+          "2": 220,
+          "unknown": 24,
+          "1": 81
+        }
+      },
+      "run_hash": "d2ed249fe01fce5479a823b1cfe37764975c4d13546f2927d52fe6e1db14cd17",
+      "held": 325,
+      "publication": "private-only"
+    },
+    {
+      "reach": "point-arguello-conception-r02",
+      "before": {
+        "selected_valid_km2": 55.841687327,
+        "tier1_km2": 58.14375,
+        "physical_candidate_count": 542
+      },
+      "after": {
+        "selected_valid_km2": 72.671626676,
+        "tier1_km2": 75.516875,
+        "physical_candidate_count": 964
+      },
+      "source_ids": [
+        "csumb-scc-block17-2m-native",
+        "csumb-scc-block18-2m-native",
+        "csumb-scc-block19-2m-native",
+        "csumb-scc-block20-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "unknown": 83,
+          "2": 878,
+          "1": 3
+        },
+        "rockfish-reef": {
+          "unknown": 83,
+          "2": 855,
+          "1": 26
+        }
+      },
+      "run_hash": "d14185f7ad142124727be08184fc8398bbc4f27cc64913bb035e1ddc19b14040",
+      "held": 964,
+      "publication": "private-only"
+    },
+    {
+      "reach": "point-arguello-conception-r03",
+      "before": {
+        "selected_valid_km2": 24.211980008,
+        "tier1_km2": 25.05375,
+        "physical_candidate_count": 558
+      },
+      "after": {
+        "selected_valid_km2": 35.780865739,
+        "tier1_km2": 37.36625,
+        "physical_candidate_count": 720
+      },
+      "source_ids": [
+        "csumb-scc-block19-2m-native",
+        "csumb-scc-block20-2m-native",
+        "csumb-scc-block21-2m-native"
+      ],
+      "ranks": {
+        "lingcod": {
+          "2": 683,
+          "unknown": 36,
+          "1": 1
+        },
+        "rockfish-reef": {
+          "1": 150,
+          "2": 534,
+          "unknown": 36
+        }
+      },
+      "run_hash": "3c7465cc1c8556d2a57402f0d56f3bff4877df3bf4a8ca397984675635f0d1a2",
+      "held": 720,
+      "publication": "private-only"
+    }
+  ],
+  "after_ranks": {
+    "supported": 2476,
+    "unknown": 192
+  },
+  "new_public_locations": 0
+}

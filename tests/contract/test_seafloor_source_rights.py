@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import date, timedelta
 import unittest
+from unittest.mock import patch
 from skippercast.seafloor.rights import CSUMB_LICENSE, CSUMB_POLICY, CSUMB_CREDIT, source_rights, feature_rights
 from skippercast.seafloor.manifest import qualify_row, validate_manifest
 from tests.contract.test_seafloor_manifest import ROWS
@@ -40,6 +41,31 @@ class SourceRightsTests(unittest.TestCase):
             bad['rights_review'].update(change)
             with self.subTest(change=change), self.assertRaises(ValueError):
                 source_rights(bad, today=NOW.date())
+
+    def test_paid_deployment_cannot_enable_noncommercial_sources_or_weaken_policy(self):
+        import tempfile
+        from pathlib import Path
+        from skippercast.platform.contracts import atomic_json
+        from skippercast.seafloor.rights import check_deployment, deployment_use
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            row = dict(csumb_row(), status='usable')
+            atomic_json(root/'catalog/surveys.json', {'surveys': [row]})
+            profile = root/'deployments/production.json'
+            atomic_json(profile, {'source_use': 'noncommercial', 'monetization': 'none'})
+            self.assertEqual(check_deployment(root)['source_use'], 'noncommercial')
+            atomic_json(profile, {'source_use': 'noncommercial', 'monetization': 'paid'})
+            with self.assertRaisesRegex(ValueError, 'Paid deployment'):
+                check_deployment(root)
+            atomic_json(profile, {'source_use': 'for-profit', 'monetization': 'paid'})
+            with self.assertRaisesRegex(ValueError, 'For-profit publication'):
+                check_deployment(root)
+            with patch.dict('os.environ', {'SKIPPERCAST_SOURCE_USE': 'noncommercial'}):
+                with self.assertRaisesRegex(ValueError, 'cannot weaken'):
+                    deployment_use(root)
+            profile.unlink()
+            with self.assertRaisesRegex(ValueError, 'For-profit publication'):
+                check_deployment(root)
 
     def test_unreviewed_or_lookalike_cruise_archives_remain_rejected(self):
         row = csumb_row()

@@ -137,3 +137,12 @@ test('a passkey account can be created, used and signed out of', async ({page, p
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(false);
   expect(pageErrors).toEqual([]);
 });
+
+// The same UI must handle unavailable data honestly, not render calm values.
+test('a model outage leaves the forecast explicitly unavailable', async ({page, pageErrors}) => {
+  await page.route('**/api/om/**', route => route.fulfill({status: 503, json: {error: 'Simulated model outage'}}));
+  await openMap(page, '/?region=morro-bay#forecast');
+  await expect(page.locator('#meteogram')).toContainText('Forecast graph unavailable', {timeout: 30_000});
+  await expect(page.locator('#meteogram .meteogram-plot svg')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});

@@ -52,3 +52,47 @@ def feature_rights(source_ids, sources, *, use="noncommercial"):
     if not source_ids or any(ident not in sources for ident in source_ids):
         raise ValueError('Feature source attribution is incomplete')
     return [source_rights(sources[ident], use=use) for ident in sorted(set(source_ids))]
+
+
+def deployment_use(root):
+    """An explicit deployment profile overrides no producer restrictions."""
+    import json
+    import os
+    from pathlib import Path
+    path = Path(root)/'deployments/production.json'
+    if not path.exists():
+        # Missing deployment policy is never permission to release restricted data.
+        return 'for-profit'
+    policy = json.loads(path.read_text())
+    use = policy.get('source_use')
+    monetization = policy.get('monetization')
+    if use not in {'noncommercial', 'for-profit'} or monetization not in {'none', 'paid'}:
+        raise ValueError('Deployment requires explicit source_use and monetization')
+    if monetization == 'paid' and use != 'for-profit':
+        raise ValueError('Paid deployment cannot use the noncommercial source profile')
+    configured = os.environ.get('SKIPPERCAST_SOURCE_USE')
+    if configured is not None:
+        if configured not in {'noncommercial', 'for-profit'}:
+            raise ValueError('Unknown deployment source-use override')
+        if use == 'for-profit' and configured == 'noncommercial':
+            raise ValueError('Environment cannot weaken deployment source-use policy')
+        use = configured
+    return use
+
+
+def check_deployment(root):
+    """Fail before deployment/publication if enabled sources conflict with use."""
+    import json
+    from pathlib import Path
+    use = deployment_use(root)
+    rows = json.loads((Path(root)/'catalog/surveys.json').read_text())['surveys']
+    for row in rows:
+        if row['status'] == 'usable':
+            source_rights(row, use=use)
+    return {'source_use': use, 'usable_sources': sum(r['status'] == 'usable' for r in rows)}
+
+
+if __name__ == '__main__':
+    import json
+    from pathlib import Path
+    print(json.dumps(check_deployment(Path(__file__).resolve().parents[3])))
