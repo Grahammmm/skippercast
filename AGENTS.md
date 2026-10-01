@@ -81,9 +81,13 @@ Approve, or request changes with specific lines.
 
 ## Agent merge authority
 
-The owner authorizes Codex and Claude to merge reviewed PRs within the scope of
-an assigned task, without asking for another confirmation for each merge.
-The agent completing the task owns the merge and deployment verification.
+The owner authorizes Codex and Claude to implement updates, reconcile branches,
+obtain independent review, merge reviewed PRs and verify deployment within the
+scope of an assigned task without asking for approval at each step. Either agent
+may delegate one independent reviewer without further owner confirmation.
+The agent completing the task owns the merge and deployment verification;
+keep the owner informed of meaningful progress,
+failures and any genuinely new decision requiring authorization.
 
 Before merging:
 
