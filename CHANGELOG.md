@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Qualify original SCC07–09 native 2 m/5 m bands: add 14.833 km² of private measured Point Estero/northern Morro coverage and 46 net habitat candidates, retaining native depth limits and release holds.
+
 - Qualify cached native 5 m SCC03/04 shelf bands: add 2.191 km² of private measured coverage near the 300 ft limit; retain the 12-candidate net reduction and unchanged suitability rubric.
 
 - Qualify original SCC26–28 native grids: add 36.624 km² of private measured Arguello coverage and 608 net habitat candidates; preserve source ownership, 1–3 rankings and release holds.

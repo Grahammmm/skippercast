@@ -15694,6 +15694,354 @@
           "sha256": "28c5505847f0cb1a80cd315fe3e499d9a2198cc8e36770879009cff69d723dbd"
         }
       }
+    },
+    {
+      "id": "csumb-scc-block07-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block07_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "bedf83608407a400f9eb0b43dae7eb2a7d6414d62b389a62669cba8cdb869e90",
+      "bytes": 204340503,
+      "hold_reason": "unknown",
+      "title": "SCC_Block07 original 2m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block07/multibeam/data/version2/products/SCC_Block07_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk07_2m.5m_bathygrids.zip/ArcViewGrids/scc07_2mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/0"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/0/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/0/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/0/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/0/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/0/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "bedf83608407a400f9eb0b43dae7eb2a7d6414d62b389a62669cba8cdb869e90",
+        "cog_sha256": "25f252254018f8e57c01c029ca55e3534034fec385bd21d2dad23583c7ffbe88",
+        "requested_bounds_wgs84": [
+          -121.17524209750208,
+          35.513685989761804,
+          -121.07858613572982,
+          35.55823052641674
+        ],
+        "valid_pixels_in_requested_bounds": 6042112,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6042112,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "d35c6614a73a077575b0356c54de2e3f1e6575db907e899c1f002e6ee9dd11d4"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block07-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block07_mb.html",
+      "year": 2010,
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "bedf83608407a400f9eb0b43dae7eb2a7d6414d62b389a62669cba8cdb869e90",
+      "bytes": 204340503,
+      "hold_reason": "unknown",
+      "title": "SCC_Block07 original 5m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block07/multibeam/data/version2/products/SCC_Block07_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk07_2m.5m_bathygrids.zip/ArcViewGrids/scc07_5mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/1"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/1/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/1/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/1/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/1/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/1/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "bedf83608407a400f9eb0b43dae7eb2a7d6414d62b389a62669cba8cdb869e90",
+        "cog_sha256": "5d5b44dc2e5d511ad76159b5c581cd3e8bb83a9aa39bbe4af7686ec422d514a5",
+        "requested_bounds_wgs84": [
+          -121.18493627216476,
+          35.51148730966493,
+          -121.12477296279987,
+          35.55664124079989
+        ],
+        "valid_pixels_in_requested_bounds": 351832,
+        "nominal_0_300ft_pixels_in_requested_bounds": 227551,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "4d2c663f2b13934beb9e3bdfc79857fd264589d08b9c0d7a74bbb15f05ed7395"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block08-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block08_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "12bab026743a846d9836c2d87f5b567499febe18559939df64ad201c258e0e10",
+      "bytes": 219864123,
+      "hold_reason": "unknown",
+      "title": "SCC_Block08 original 2m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block08/multibeam/data/version2/products/SCC_Block08_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk08_2m.5m_bathygrids.zip/ArcViewGrids/scc08_2mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/2"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/2/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/2/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/2/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/2/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/2/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "12bab026743a846d9836c2d87f5b567499febe18559939df64ad201c258e0e10",
+        "cog_sha256": "cb2e96590bf32c9fa7964508d6296fb937ddb234e81fa8afdec64f80e44837d2",
+        "requested_bounds_wgs84": [
+          -121.1352145509055,
+          35.47828092995383,
+          -121.02852946556597,
+          35.52664017618473
+        ],
+        "valid_pixels_in_requested_bounds": 6213819,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6213819,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "2ca32b8a46b513f906b7c5bec27b75e74192487fc81d602a5ae89a8b367e442e"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block08-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block08_mb.html",
+      "year": 2010,
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "12bab026743a846d9836c2d87f5b567499febe18559939df64ad201c258e0e10",
+      "bytes": 219864123,
+      "hold_reason": "unknown",
+      "title": "SCC_Block08 original 5m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block08/multibeam/data/version2/products/SCC_Block08_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk08_2m.5m_bathygrids.zip/ArcViewGrids/scc08_5mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/3"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/3/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/3/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/3/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/3/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/3/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "12bab026743a846d9836c2d87f5b567499febe18559939df64ad201c258e0e10",
+        "cog_sha256": "b2727ede93288db08b9192a70e2dbbf45471abdf96d1efe7127a6b2d9c30e305",
+        "requested_bounds_wgs84": [
+          -121.15226532494434,
+          35.476840476535564,
+          -121.09133852142295,
+          35.51976915912937
+        ],
+        "valid_pixels_in_requested_bounds": 397418,
+        "nominal_0_300ft_pixels_in_requested_bounds": 169125,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "3705c558e08192b64852bdcf90a2686eb9c7d48226a6eab8e63a3637df76beff"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block09-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block09_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "4a0a318918190b1127aa90af62f547442d90d6cbeb5f86d97c8e1e7bd840b449",
+      "bytes": 192865307,
+      "hold_reason": "unknown",
+      "title": "SCC_Block09 original 2m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk09_2m.5m_bathygrids.zip/ArcViewGrids/scc09_2mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/4"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/4/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/4/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/4/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/4/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/4/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "4a0a318918190b1127aa90af62f547442d90d6cbeb5f86d97c8e1e7bd840b449",
+        "cog_sha256": "f4179313789cd8c6cdd46b3037691d960640e8faefec779bb98629367d0117cf",
+        "requested_bounds_wgs84": [
+          -121.10046970629051,
+          35.45145341587606,
+          -121.00364095979445,
+          35.48775157296773
+        ],
+        "valid_pixels_in_requested_bounds": 4687342,
+        "nominal_0_300ft_pixels_in_requested_bounds": 4687342,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "6d46179b876d0b0928b6a9d47647514b6ca06b9295810069d13339a400c76567"
+        }
+      }
+    },
+    {
+      "id": "csumb-scc-block09-5m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block09_mb.html",
+      "year": 2010,
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "4a0a318918190b1127aa90af62f547442d90d6cbeb5f86d97c8e1e7bd840b449",
+      "bytes": 192865307,
+      "hold_reason": "unknown",
+      "title": "SCC_Block09 original 5m depth-band bathymetry",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk09_2m.5m_bathygrids.zip/ArcViewGrids/scc09_5mbathy",
+      "evidence": [
+        "catalog/csumb-scc-estero-native-sources.json#/sources/5"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-scc-estero-native-sources.json#/sources/5/acquisition_dates",
+        "vertical_datum": "catalog/csumb-scc-estero-native-sources.json#/sources/5/native_vertical_datum",
+        "resolution_m": "catalog/csumb-scc-estero-native-sources.json#/sources/5/resolution_m",
+        "bytes": "catalog/csumb-scc-estero-native-sources.json#/sources/5/bytes",
+        "sha256": "catalog/csumb-scc-estero-native-sources.json#/sources/5/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "4a0a318918190b1127aa90af62f547442d90d6cbeb5f86d97c8e1e7bd840b449",
+        "cog_sha256": "9146a9e3a46db026347352bcd7d1133a3d57054fa1e2af304e4e473877fd3d4d",
+        "requested_bounds_wgs84": [
+          -121.11996927361376,
+          35.441250898346006,
+          -121.04455634118744,
+          35.48938261793674
+        ],
+        "valid_pixels_in_requested_bounds": 475079,
+        "nominal_0_300ft_pixels_in_requested_bounds": 203261,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "bdfe0f5e7b29828c9a4752c77b486c626cb33fe43dcc0cae78c5a7fd45b5e09f"
+        }
+      }
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",
