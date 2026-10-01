@@ -51,6 +51,7 @@ KINDS = {
     "published-regions": "published-regions.schema.json",
     "region-manifest": "region-manifest.schema.json",
     "coverage": "coverage.schema.json",
+    "launch-points": "launch-points.schema.json",
     "forecast-index": "forecast-index.schema.json",
     "forecast-manifest": "forecast-manifest.schema.json",
     "forecast-tile": "forecast-tile.schema.json",
