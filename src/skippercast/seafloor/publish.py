@@ -16,7 +16,7 @@ from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry
 from .io import sha256
 from .run import run
-from .rights import feature_rights
+from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 
 TO_GEO = Transformer.from_crs(3310, 4326, always_xy=True).transform
@@ -87,7 +87,7 @@ def region_layers(root, region, *, rerun=True, now=None):
             if isinstance(substrate, dict) and substrate.get('source_id') not in (None, 'unknown'):
                 contributors.append(substrate['source_id'])
             public_properties = dict(p, source_rights=feature_rights(contributors, sources,
-                use=os.environ.get('SKIPPERCAST_SOURCE_USE', 'noncommercial')))
+                use=deployment_use(root)))
             habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})
         cells.update({c['id']: c for c in read_json(folder/'cells.json')['cells']})
         receipts[ident] = {'input_hash': receipt['input_hash'], 'run_sha256': sha256(folder/'run.json'),

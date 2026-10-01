@@ -61,6 +61,8 @@ jobs:
           version: 10
       - name: Install locked web dependencies
         run: pnpm install --frozen-lockfile
+      - name: Check deployment source-use policy before any deployment writes
+        run: PYTHONPATH=src python3 -m skippercast.seafloor.rights
       - name: Build Worker and fingerprinted site
         run: |
           pnpm build

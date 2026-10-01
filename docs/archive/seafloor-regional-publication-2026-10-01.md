@@ -39,3 +39,5 @@ canonical export hashes, HTTP ranges and actual map behavior. Do not report this
 tested orchestration change as production recovery before those checks pass.
 
 Independent review reporting correction: each publisher saves a batch/region-bound private result. Ledger-only reconciliation reads these receipts and names ready, held, failed or missing regions rather than claiming PMTiles/R2 verification for all completed reaches. Tests cover failed, stale and missing publication receipts despite complete worker physics.
+
+The owner authorized reviewed CSUMB sources for the noncommercial phase on October 1. The deployment profile explicitly declares `source_use=noncommercial` and `monetization=none`. Deployment and seafloor jobs check producer terms before writes; paid profiles require for-profit use and existing noncommercial source rows block that release. Environment overrides cannot weaken a for-profit policy. Express for-profit permission remains required and has not been obtained.

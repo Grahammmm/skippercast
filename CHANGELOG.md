@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: declare the current noncommercial deployment profile and block incompatible paid deployments before writes; retain original producer credits and permission requirements.
+
 - Trips: a launch-point catalog (`catalog/launch-points.json`, from the California DBW Boating Facilities records) builds `dist/regions/<id>/launch-points.json` for every published region; Morro Bay's public ramp, the Port San Luis ramp and Olde Port Beach are the first entries.
 - Trips: a saved trip now carries its plan (launch point, up to three target species, spots, legs, window, exports taken and a status) through migration 0005 and `PATCH /api/trips`; the one-tap alert save is unchanged.
 
