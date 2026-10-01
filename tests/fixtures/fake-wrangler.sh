@@ -7,7 +7,11 @@ file=""
 prev=""
 for arg in "$@"; do [ "$prev" = "--file" ] && file="$arg"; prev="$arg"; done
 case "$*" in
-  *"r2 object get"*) [ -f "$FAKE_STORE" ] || exit 1; cp "$FAKE_STORE" "$file";;
+  *"r2 object get"*)
+    # FAKE_R2_FAIL simulates a failure other than a missing object (auth, outage).
+    [ -n "$FAKE_R2_FAIL" ] && { echo "$FAKE_R2_FAIL" >&2; exit 1; }
+    [ -f "$FAKE_STORE" ] || { echo "The specified key does not exist. [code: 10007]" >&2; exit 1; }
+    cp "$FAKE_STORE" "$file";;
   *"r2 object put"*) cp "$file" "$FAKE_STORE";;
   *"d1 list"*) echo '[]';;
 esac

@@ -12,7 +12,7 @@
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions secret | same | Not a credential; an identifier |
 | `ANTHROPIC_API_KEY` | GitHub Actions secret → Worker secret (uploaded by `cloudflare_deploy.sh`) | `server/boat-lookup.ts` via `/api/boat/lookup` | Spends Anthropic credit |
 | `WATCHDOG_GITHUB_TOKEN` | GitHub Actions secret → Worker secret `GITHUB_TOKEN` | `server/watchdog.ts` | Fine-grained token: Actions read and write on this repository only |
-| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | GitHub Actions secrets → Worker secrets (uploaded by `cloudflare_deploy.sh`, which refuses to deploy without them) | `server/trips.ts` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
+| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | `secrets/vapid.json` in the private backup bucket (`cloudflare_deploy.sh` generates it on the first deploy and reads it back on every later one), or GitHub Actions secrets of the same names, which take precedence → Worker secrets | `server/trips.ts` `deliver()`; `/api/session` returns the public key | Signs Web Push messages to subscribed devices |
 | `EXTRA_ORIGINS` | GitHub Actions variable → Worker secret | `server/http.ts` `requireOrigin` (origins from `server/middleware/context.ts`) | Not a credential; adds allowed origins |
 
 No secret exists for: the scheduler (GitHub OIDC; the policy is the public `deployments/production.json`, see `server/job-auth.ts`), the Actions `github.token` (issued per run), D1 and R2 bindings (granted by the Worker's configuration). Repository variables `CLOUDFLARE_SITE_URL` and, after PR #30, `FEEDS_PUBLIC_BASE` are not secrets.
@@ -66,14 +66,16 @@ Until step 3, R2 publication fails; on `main` that is a warning and GitHub branc
 
 ## VAPID key pair
 
+Where the pair lives: the deploy script keeps it at `r2://skippercast-backups/secrets/vapid.json` (generated once by the first deploy that found none, read back by every deploy since) unless both `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` are set as GitHub Actions secrets, which win. A read that fails for any reason other than a missing object stops the deploy rather than generating a new pair over the stored one.
+
 Rotate only if the private key leaked: every existing push subscription is bound to the old public key, so each person must turn notifications on again.
 
-1. Generate a pair (Node 22; prints JSON with both values):
+1. Either delete the stored object so the next deploy generates a fresh pair (`$W r2 object delete skippercast-backups/secrets/vapid.json --remote`, then run the deploy workflow and skip to step 3), or generate a pair yourself (Node 22; prints JSON with both values):
    ```bash
    node --input-type=module -e "const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);const b=u=>Buffer.from(u).toString('base64url');console.log(JSON.stringify({VAPID_PUBLIC_KEY:b(await crypto.subtle.exportKey('raw',k.publicKey)),VAPID_PRIVATE_KEY:(await crypto.subtle.exportKey('jwk',k.privateKey)).d}))"
    ```
    The public key is 87 characters and the private key 43, the formats `@block65/webcrypto-web-push` expects.
-2. Set both as GitHub Actions secrets (`gh secret set VAPID_PUBLIC_KEY` and `gh secret set VAPID_PRIVATE_KEY`) and run the deploy workflow; the deploy uploads them to the Worker and the smoke test checks that `/api/session` serves the public key.
+2. If you generated the pair yourself, set both as GitHub Actions secrets (`gh secret set VAPID_PUBLIC_KEY` and `gh secret set VAPID_PRIVATE_KEY`) and run the deploy workflow; the deploy uploads them to the Worker and the smoke test checks that `/api/session` serves the public key.
 3. Old subscriptions now fail; deliveries are recorded as `failed` and alerts as `held`, which makes `scripts/check_saved_trips.py` fail the live job. Remove them in the database that holds them (`DELETE FROM subscriptions`; see [D1 restore](d1-restore.md) for running SQL) and tell users to re-enable notifications from the app. In-app assessments keep working without push.
 4. Verify: `curl -fsS https://skippercast.com/api/session` returns the new `publicKey`; enabling notifications on a test device and saving a trip produces a delivered alert on the next check.
 

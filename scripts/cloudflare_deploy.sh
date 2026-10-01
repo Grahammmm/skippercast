@@ -25,9 +25,15 @@ mkdir -p var
 trap 'rm -f var/vapid.json' EXIT
 if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
   rm -f var/vapid.json
-  if $WRANGLER r2 object get "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote >/dev/null 2>&1 && [ -s var/vapid.json ]; then
+  # Only a missing object may generate a new pair: any other failure (auth, outage,
+  # rate limit) stops the deploy, because overwriting the stored pair would silently
+  # invalidate every push subscription.
+  if get_out=$($WRANGLER r2 object get "$BACKUP_BUCKET/secrets/vapid.json" --file var/vapid.json --remote 2>&1) && [ -s var/vapid.json ]; then
     echo "Web Push keys read from r2://$BACKUP_BUCKET/secrets/vapid.json."
   else
+    if [ -s var/vapid.json ] || ! echo "$get_out" | grep -qiE "does not exist|not found|no such (key|bucket)|10007"; then
+      echo "$get_out"; echo "::error::Could not read r2://$BACKUP_BUCKET/secrets/vapid.json (not a missing object); refusing to generate a new pair over it"; exit 1
+    fi
     if ! out=$($WRANGLER r2 bucket create "$BACKUP_BUCKET" 2>&1); then
       echo "$out" | grep -qi "already exist" || { echo "$out"; echo "::error::Could not create R2 bucket $BACKUP_BUCKET"; exit 1; }
     fi
@@ -39,6 +45,9 @@ if [ -z "${VAPID_PUBLIC_KEY:-}" ] || [ -z "${VAPID_PRIVATE_KEY:-}" ]; then
   VAPID_PRIVATE_KEY=$(node -p "JSON.parse(require('fs').readFileSync('var/vapid.json','utf8')).VAPID_PRIVATE_KEY")
   export VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY
   rm -f var/vapid.json
+  # Not GitHub secrets, so Actions would not mask them in logs on its own (the
+  # runner consumes these lines; they are emitted only under Actions).
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then echo "::add-mask::$VAPID_PRIVATE_KEY"; echo "::add-mask::$VAPID_PUBLIC_KEY"; fi
 fi
 case "${#VAPID_PUBLIC_KEY}:${#VAPID_PRIVATE_KEY}" in 87:43) ;; *) echo "VAPID keys have the wrong length (expected 87 and 43 base64url characters)" >&2; exit 1;; esac
 

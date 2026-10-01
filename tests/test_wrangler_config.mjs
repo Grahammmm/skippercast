@@ -117,6 +117,15 @@ test('the deploy script takes the VAPID pair from the backup bucket, generating 
     assert.match(second.stdout, /read from r2:/);
     assert.equal(JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8')).VAPID_PUBLIC_KEY, stored.VAPID_PUBLIC_KEY, 'the same pair is reused');
     assert.equal((readFileSync(log, 'utf8').match(/r2 object put/g) || []).length, 1, 'generated exactly once');
+    // A read that fails for any reason other than a missing object must never generate a new pair over the stored one.
+    const outage = run({FAKE_R2_FAIL: 'Authentication error [code: 10000]'});
+    assert.equal(outage.status, 1, outage.stdout + outage.stderr);
+    assert.match(outage.stdout, /refusing to generate a new pair/);
+    assert.equal((readFileSync(log, 'utf8').match(/r2 object put/g) || []).length, 1, 'no second put after a failed read');
+    assert.equal(JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8')).VAPID_PUBLIC_KEY, stored.VAPID_PUBLIC_KEY, 'the stored pair is untouched');
+    assert.doesNotMatch(first.stdout + second.stdout, new RegExp(stored.VAPID_PRIVATE_KEY.slice(0, 12)), 'the private key is never printed');
+    const actions = run({GITHUB_ACTIONS: 'true'});
+    assert.equal((actions.stdout.match(/::add-mask::/g) || []).length, 2, 'under Actions the pair is masked: ' + actions.stdout);
     const short = run({VAPID_PUBLIC_KEY: 'B'.repeat(86), VAPID_PRIVATE_KEY: 'k'.repeat(43)});
     assert.equal(short.status, 1);
     assert.match(short.stderr, /wrong length/);
