@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "stage": "private-physical-only",
+  "sources_added": 6,
+  "reaches": [
+    {
+      "reach": "morro-bay-r02",
+      "before": {
+        "selected_valid_km2": 55.062084485,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 792
+      },
+      "after": {
+        "selected_valid_km2": 54.170951596,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 803,
+        "supported": 756,
+        "unknown": 47
+      },
+      "ranks": {
+        "lingcod": {
+          "2": 710,
+          "unknown": 47,
+          "3": 46
+        },
+        "rockfish-reef": {
+          "1": 170,
+          "2": 547,
+          "unknown": 47,
+          "3": 39
+        },
+        "gopher-rockfish": {
+          "2": 422,
+          "unknown": 47,
+          "3": 10,
+          "1": 324
+        },
+        "cabezon-shallow-reef": {
+          "3": 52,
+          "2": 704,
+          "unknown": 47
+        }
+      },
+      "source_ownership_km2": {
+        "csumb-scc-block09-2m-native": 1.6890996201219997,
+        "unknown": 0.0,
+        "csumb-scc-block10-2m-native": 16.370953642579998,
+        "csumb-scc-block11-2m-native": 24.884092006613,
+        "csumb-scc-block10-5m-native": 1.5801555228029995,
+        "csumb-scc-block12-2m-native": 8.637004628906,
+        "csumb-scc-block11-5m-native": 1.009646175239
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false
+    },
+    {
+      "reach": "morro-bay-r03",
+      "before": {
+        "selected_valid_km2": 30.873397558,
+        "tier1_km2": 31.65125,
+        "physical_candidate_count": 208
+      },
+      "after": {
+        "selected_valid_km2": 30.351221842,
+        "tier1_km2": 31.65125,
+        "physical_candidate_count": 333,
+        "supported": 305,
+        "unknown": 28
+      },
+      "ranks": {
+        "lingcod": {
+          "unknown": 28,
+          "2": 297,
+          "3": 5,
+          "1": 3
+        },
+        "rockfish-reef": {
+          "unknown": 28,
+          "1": 117,
+          "2": 187,
+          "3": 1
+        },
+        "gopher-rockfish": {
+          "unknown": 28,
+          "2": 172,
+          "1": 130,
+          "3": 3
+        },
+        "cabezon-shallow-reef": {
+          "unknown": 28,
+          "3": 8,
+          "2": 297
+        }
+      },
+      "source_ownership_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block11-2m-native": 0.185256910244,
+        "bathymetry-offshoremorrobay-zip-fad659557e": 0.017742674899000003,
+        "csumb-scc-block12-2m-native": 20.219882314567997,
+        "csumb-scc-block13-2m-native": 9.928339942628
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false
+    },
+    {
+      "reach": "morro-bay-r04",
+      "before": {
+        "selected_valid_km2": 11.812958505,
+        "tier1_km2": 12.174375,
+        "physical_candidate_count": 76
+      },
+      "after": {
+        "selected_valid_km2": 11.854559458,
+        "tier1_km2": 12.174375,
+        "physical_candidate_count": 287,
+        "supported": 278,
+        "unknown": 9
+      },
+      "ranks": {
+        "lingcod": {
+          "2": 272,
+          "3": 3,
+          "1": 3,
+          "unknown": 9
+        },
+        "rockfish-reef": {
+          "1": 14,
+          "2": 262,
+          "3": 2,
+          "unknown": 9
+        },
+        "gopher-rockfish": {
+          "2": 23,
+          "3": 1,
+          "1": 254,
+          "unknown": 9
+        },
+        "cabezon-shallow-reef": {
+          "2": 275,
+          "3": 3,
+          "unknown": 9
+        }
+      },
+      "source_ownership_km2": {
+        "csumb-scc-block13-2m-native": 11.486649987030997,
+        "unknown": 0.0,
+        "csumb-scc-block14-2m-native": 0.367909470638
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false
+    }
+  ],
+  "totals": {
+    "selected_valid_km2": {
+      "before": 97.748440548,
+      "after": 96.37673289600001,
+      "delta": -1.3717076519999978
+    },
+    "tier1_km2": {
+      "before": 100.713125,
+      "after": 100.713125,
+      "delta": 0.0
+    },
+    "physical_candidate_count": {
+      "before": 1076,
+      "after": 1423,
+      "delta": 347
+    }
+  },
+  "new_live_locations": 0,
+  "depth_assertion": "Every candidate positive nominal depth <=300ft plus existing float32 tolerance0.00004ft",
+  "notice": "Suitability ranking is not proof of fish presence. Unknown substrate and data quality remain explicit."
+}
