@@ -71,12 +71,19 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 10
+          # Per-job install dir: concurrent runner instances on one host share
+          # $HOME, and the default ~/setup-pnpm races.
+          dest: ${{ runner.temp }}/setup-pnpm
       - name: Install locked web dependencies
         run: pnpm install --frozen-lockfile
       - name: Build Worker and public assets
         run: pnpm build
-      - name: Install Playwright's Chromium
+      - name: Install Playwright's Chromium (with system libraries on GitHub-hosted runners)
+        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright's Chromium (self-hosted; the host already has its libraries)
+        if: runner.environment != 'github-hosted'
+        run: pnpm exec playwright install chromium
       - name: Browser flows and accessibility (serious and critical axe violations fail)
         run: pnpm e2e
       - name: Keep traces of failed tests
@@ -148,6 +155,9 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: 10
+          # Per-job install dir: concurrent runner instances on one host share
+          # $HOME, and the default ~/setup-pnpm races.
+          dest: ${{ runner.temp }}/setup-pnpm
       - name: Install locked web dependencies
         run: pnpm install --frozen-lockfile
       - name: Type-check the Worker (tsc --noEmit, strict)

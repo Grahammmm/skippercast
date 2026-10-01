@@ -92,6 +92,14 @@ Steps:
 
 ## CI readiness gate
 
+`ci.yml` is written for a shared box: `pnpm/action-setup` installs into
+`${{ runner.temp }}` (several instances share one `$HOME`, and the default
+`~/setup-pnpm` races), and the Playwright step runs `--with-deps` (which calls
+`sudo apt-get`) only on GitHub-hosted runners. On the box, Chromium's shared
+libraries must already be present (Ubuntu 24.04 desktop has them; the setup
+script installs them otherwise).
+
+
 CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
 `CI_RUNNER`. Setting a runner label alone does not move CI. Before enabling the
 gate, verify browser system dependencies install without an interactive password,
