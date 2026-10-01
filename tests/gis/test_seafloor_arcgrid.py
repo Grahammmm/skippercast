@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import stat
 import unittest
 from unittest.mock import patch
+import zipfile
 
 import numpy as np
 import rasterio
@@ -94,6 +96,72 @@ class ArcGridTests(unittest.TestCase):
         self.assertFalse(allowed('shared', f'cache/{row["sha256"]}/source.tar.gz'))
         self.assertTrue(allowed('big-sur-coast-r02', 'private-reaches/big-sur-coast-r02/physical.json'))
         self.assertFalse(allowed('big-sur-coast-r01', 'private-reaches/big-sur-coast-r02/physical.json'))
+
+    def nested_archive(self, extra=()):
+        payload = BytesIO()
+        with zipfile.ZipFile(payload, 'w', zipfile.ZIP_DEFLATED) as zipped:
+            for name, data in self.members:
+                zipped.writestr(name, data)
+            for name, data in extra:
+                zipped.writestr(name, data)
+        self.archive([('products/bathy.zip', payload.getvalue())])
+        return dict(self.row, archive_member='products/bathy.zip/package/grid',
+                    sha256=sha256(self.original), bytes=self.original.stat().st_size)
+
+    def test_nested_original_zip_preserves_native_values_mask_and_depth_counts(self):
+        with arcgrid.open_source(self.original, self.row) as native:
+            values, spacing, transform = native.read(1, masked=True), native.res, native.transform
+            bounds = transform_bounds(native.crs, 4326, *native.bounds)
+        direct, _, _ = ingest(self.row, bounds, root=self.root, local=self.original)
+        row = self.nested_archive()
+        with arcgrid.open_source(self.original, row) as nested:
+            self.assertEqual(nested.res, spacing)
+            self.assertEqual(nested.transform, transform)
+            np.testing.assert_array_equal(nested.read(1, masked=True), values)
+        receipt, _, _ = ingest(row, bounds, root=self.root, local=self.original)
+        self.assertEqual(receipt['raster_identity'], direct['raster_identity'])
+        self.assertEqual(receipt['nominal_0_300ft_pixels_in_requested_bounds'],
+                         direct['nominal_0_300ft_pixels_in_requested_bounds'])
+        # Only the exact reviewed grid is extracted; the ZIP remains private scratch.
+        grid = arcgrid.source_path(self.original, row)
+        self.assertFalse(list(grid.rglob('*.zip')))
+        (grid/'unexpected').write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            arcgrid.source_path(self.original, row)
+
+    def test_nested_traversal_duplicate_links_and_expansion_fail_before_extract(self):
+        link = zipfile.ZipInfo('package/grid/link')
+        link.create_system = 3
+        link.external_attr = (stat.S_IFLNK | 0o777) << 16
+        for extra in [[('../escape', b'x')], [('/escape', b'x')],
+                      [('package/grid/hdr.adf', b'x')], [(link, b'../escape')]]:
+            with self.subTest(extra=extra):
+                row = self.nested_archive(extra)
+                with self.assertRaises(ValueError):
+                    arcgrid.source_path(self.original, row)
+                self.assertFalse(list(self.root.glob('grid-*')))
+        row = self.nested_archive([('unselected', b'x'*20_000)])
+        with patch.object(arcgrid, 'MAX_EXTRACTED_BYTES', self.original.stat().st_size+100), \
+                self.assertRaisesRegex(ValueError, 'byte bound'):
+            arcgrid.source_path(self.original, row)
+        self.assertFalse(list(self.root.glob('grid-*')))
+
+    def test_nested_member_bound_and_missing_grid_are_not_guessed(self):
+        row = self.nested_archive()
+        with patch.object(arcgrid, 'MAX_MEMBERS', 2), self.assertRaisesRegex(ValueError, 'member bound'):
+            arcgrid.source_path(self.original, row)
+        for member in ['wrong.zip/package/grid', 'products/bathy.zip/package/other',
+                       'products/bathy.zip/other.zip/grid', 'products/bathy.zip']:
+            with self.subTest(member=member), self.assertRaises(ValueError):
+                arcgrid.source_path(self.original, dict(row, archive_member=member))
+        self.assertFalse(list(self.root.glob('grid-*')))
+
+    def test_reviewed_ventresca_archive_is_allowed_only_for_arcgrid(self):
+        row = dict(self.row, url='https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/original.tar.gz')
+        cached, _ = fetch_source(row, self.root/'cache', local=self.original)
+        self.assertEqual(cached.name, 'source.tar.gz')
+        with self.assertRaisesRegex(ValueError, 'container'):
+            fetch_source(dict(row, format='bag'), self.root/'cache', local=self.original)
 
     def test_tar_gz_does_not_grant_other_hosts_paths_or_formats(self):
         for url, format_name in [

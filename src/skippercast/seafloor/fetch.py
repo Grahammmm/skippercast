@@ -10,7 +10,8 @@ from .io import sha256
 
 PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
             'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/',
-            'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/')
+            'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
+            'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/')
 HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
 
 
@@ -27,7 +28,8 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
             row.get('format') == 'arcgrid' and (
                 extension == '.tgz' and url.startswith('https://pubs.usgs.gov/') or
                 extension == '.tar.gz' and url.startswith(
-                    'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/'))):
+                    ('https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
+                     'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/')))):
         raise ValueError('Unsupported source container')
     cache = Path(cache)
     destination = cache / expected / ('source' + extension)

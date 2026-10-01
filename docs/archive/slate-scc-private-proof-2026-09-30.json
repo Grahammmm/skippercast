@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "processed_on": "2026-09-30",
+  "publication": "private-only; source release contract and current whole-polygon screening pending",
+  "measurements": {
+    "selected_valid_km2": {
+      "before": 6.817239611,
+      "after": 76.356429976,
+      "delta": 69.539190365
+    },
+    "tier1_km2": {
+      "before": 7.4818750000000005,
+      "after": 80.129375,
+      "delta": 72.6475
+    },
+    "physical_candidate_count": {
+      "before": 88,
+      "after": 912,
+      "delta": 824
+    }
+  },
+  "supported_ranks_after": 856,
+  "unknown_ranks_after": 56,
+  "reaches": [
+    {
+      "id": "point-arguello-conception-r02",
+      "selected_valid_km2": 28.859342991,
+      "physical_candidate_count": 577,
+      "source_ids": [
+        "csumb-scc-block19-2m-native"
+      ],
+      "run_hash": "7dfd862fc15b2efebeda9b0330ffd2f30acd672b307010e59f2e9f61184e8764"
+    },
+    {
+      "id": "south-big-sur-san-simeon-r03",
+      "selected_valid_km2": 30.940823612,
+      "physical_candidate_count": 167,
+      "source_ids": [
+        "bss-block01-additional-products-tar-gz-fbfc03dfd0",
+        "csumb-scc-block01-2m-native"
+      ],
+      "run_hash": "b5c631586ee5e63f10e9e474e337021cda98afe1c9b025fe9844123bc3b98ec3"
+    },
+    {
+      "id": "big-sur-coast-r02",
+      "selected_valid_km2": 0.857867685,
+      "physical_candidate_count": 8,
+      "source_ids": [
+        "csumb-slaterock-2m-native"
+      ],
+      "run_hash": "80a6dec034f74475a29e24f0a076d073d81bc036ed03be10f91133e7f61ffb47"
+    },
+    {
+      "id": "big-sur-coast-r03",
+      "selected_valid_km2": 15.698395688,
+      "physical_candidate_count": 160,
+      "source_ids": [
+        "csumb-bigcreek-bc-n-2m-native",
+        "csumb-slaterock-2m-native"
+      ],
+      "run_hash": "975efee4d54581224005e722c3f6c67fea125f5f24c92d6d171d313412327ac9"
+    }
+  ]
+}

@@ -8,7 +8,11 @@ reproducible scratch with their own checksum receipt.
 from pathlib import Path, PurePosixPath
 import hashlib
 import shutil
+import stat
+from contextlib import ExitStack
+from tempfile import SpooledTemporaryFile
 from tarfile import open as open_tar
+from zipfile import ZipFile
 
 import rasterio
 
@@ -52,8 +56,18 @@ def source_path(path, row):
     if temporary.exists():
         shutil.rmtree(temporary)
     try:
-        with open_tar(path, 'r:gz') as archive:
+        with ExitStack() as contexts:
+            archive = contexts.enter_context(open_tar(path, 'r:gz'))
             selected, names, total = [], set(), 0
+            # An explicit virtual path selects one original ZIP inside the tar.
+            # Never search unrelated containers or guess the grid directory.
+            parts = PurePosixPath(member).parts
+            zip_parts = [i for i, part in enumerate(parts) if part.lower().endswith('.zip')]
+            if len(zip_parts) > 1:
+                raise ValueError('Only one nested ArcInfo ZIP is supported')
+            nested_name = '/'.join(parts[:zip_parts[0]+1]) if zip_parts else None
+            grid_member = '/'.join(parts[zip_parts[0]+1:]) if zip_parts else member
+            nested = None
             for index, entry in enumerate(archive):
                 if index >= MAX_MEMBERS:
                     raise ValueError('ArcInfo archive exceeds member bound')
@@ -67,18 +81,47 @@ def source_path(path, row):
                     total += entry.size
                     if total > MAX_EXTRACTED_BYTES:
                         raise ValueError('ArcInfo extraction exceeds byte bound')
-                    if name.startswith(member+'/'):
-                        selected.append((entry, name[len(member)+1:]))
-            if not {'hdr.adf', 'prj.adf'} <= {name for _, name in selected}:
+                    if nested_name and name == nested_name:
+                        nested = entry
+                    elif not nested_name and name.startswith(member+'/'):
+                        selected.append((entry, name[len(member)+1:], entry.size))
+            reader = archive.extractfile
+            if nested_name:
+                if nested is None or not grid_member:
+                    raise ValueError('Reviewed nested ArcInfo ZIP missing')
+                spool = contexts.enter_context(SpooledTemporaryFile(max_size=8_000_000))
+                with archive.extractfile(nested) as stream:
+                    shutil.copyfileobj(stream, spool, length=1024*1024)
+                if spool.tell() != nested.size:
+                    raise ValueError('Incomplete nested ArcInfo ZIP')
+                spool.seek(0)
+                zipped = contexts.enter_context(ZipFile(spool))
+                nested_names = set()
+                for entry in zipped.infolist():
+                    if len(names) + len(nested_names) >= MAX_MEMBERS:
+                        raise ValueError('ArcInfo archive exceeds member bound')
+                    name = safe_name(entry.filename)
+                    kind = stat.S_IFMT(entry.external_attr >> 16)
+                    if (name in nested_names or kind not in {0, stat.S_IFREG, stat.S_IFDIR}
+                            or entry.flag_bits & 1):
+                        raise ValueError('Unsafe or duplicate nested ArcInfo entry')
+                    nested_names.add(name)
+                    total += entry.file_size
+                    if total > MAX_EXTRACTED_BYTES:
+                        raise ValueError('ArcInfo extraction exceeds byte bound')
+                    if not entry.is_dir() and name.startswith(grid_member+'/'):
+                        selected.append((entry, name[len(grid_member)+1:], entry.file_size))
+                reader = zipped.open
+            if not {'hdr.adf', 'prj.adf'} <= {name for _, name, _ in selected}:
                 raise ValueError('Reviewed ArcInfo grid headers missing')
             temporary.mkdir(parents=True)
             files = {}
-            for entry, name in selected:
+            for entry, name, size in selected:
                 output = temporary/name
                 output.parent.mkdir(parents=True, exist_ok=True)
-                with archive.extractfile(entry) as stream, output.open('wb') as target:
+                with reader(entry) as stream, output.open('wb') as target:
                     shutil.copyfileobj(stream, target, length=1024*1024)
-                if output.stat().st_size != entry.size:
+                if output.stat().st_size != size:
                     raise ValueError('Incomplete ArcInfo extraction')
                 files[name] = sha256(output)
         if destination.exists():

@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "inspected_on": "2026-09-30",
+  "sources": [
+    {
+      "id": "csumb-scc-block01-2m-native",
+      "block": "SCC_Block01",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version2/products/SCC_Block01_additional_products.tar.gz",
+      "sha256": "dedaf688958c8d3d8f0cd0edcd2198d8d1732a5260c01c5aea09d1a251843276",
+      "archive_bytes": 215407215,
+      "archive_member": "SCC_Blk01_2m_bathygrids.zip/ArcViewGrids/scc01_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.38331732085015,
+        35.689528763469056,
+        -121.30294272943411,
+        35.73505497243695
+      ],
+      "width": 3595,
+      "height": 2465,
+      "acquisition_dates": [
+        "20100418",
+        "20100426",
+        "20100525",
+        "20100705",
+        "20100706"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 6977342,
+      "nominal_0_300ft_pixels": 6977328,
+      "producer": "CSUMB SFML",
+      "coverage_note": "Native source pixels only; no deduplicated measured area or independent corroboration."
+    },
+    {
+      "id": "csumb-scc-block19-2m-native",
+      "block": "SCC_Block19",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block19/multibeam/data/version2/products/SCC_Block19_additional_products.tar.gz",
+      "sha256": "fb9d9f2c8178ea4f8000b1a2b7637bcfa7991f3c1e9331edfa99484fa8f072b3",
+      "archive_bytes": 181933974,
+      "archive_member": "SCC_Blk19_2m_bathygrids.zip/ArcViewGrids/scc19_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -120.74004418220156,
+        34.85695749268795,
+        -120.6404055819752,
+        34.905211622458346
+      ],
+      "width": 4497,
+      "height": 2574,
+      "acquisition_dates": [
+        "20101009",
+        "20101019",
+        "20110722",
+        "20110723",
+        "20110724"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 7784817,
+      "nominal_0_300ft_pixels": 7782827,
+      "producer": "CSUMB SFML",
+      "coverage_note": "Native source pixels only; no deduplicated measured area or independent corroboration."
+    },
+    {
+      "id": "csumb-slaterock-2m-native",
+      "block": "SlateRock",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+      "sha256": "3489ad1233200250ed6eeb8bede7847a1407fd5a9a09171a446ad10fa08ffbbe",
+      "archive_bytes": 533397873,
+      "archive_member": "SlateRock/SlateRock_2mbathy_hill_slope.zip/ArcViewGrids/sr_2mbathy",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.7430419245705,
+        36.11460731300004,
+        -121.64959638020345,
+        36.198532785713326
+      ],
+      "width": 4142,
+      "height": 4600,
+      "acquisition_dates": [
+        "20060912",
+        "20060925",
+        "20060926"
+      ],
+      "native_vertical_datum": "NAVD88",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "valid_pixels": 6312629,
+      "nominal_0_300ft_pixels": 3742419,
+      "producer": "CSUMB SFML",
+      "coverage_note": "Native source pixels only; no deduplicated measured area or independent corroboration."
+    }
+  ]
+}
