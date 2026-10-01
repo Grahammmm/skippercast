@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "real_input_pairs": [
+    {
+      "reach": "south-big-sur-san-simeon-r02",
+      "legacy_float_hash": "8051c9bc7de5be4bb51986910dbde1732bfe8a2deca6f4e1695c0a42d4347b00",
+      "legacy_integer_hash": "5d9235020c7aa24492d41ab5ffa0fe626051d92a130963bd83b447aafda3b0fc",
+      "normalized_float_hash": "d200bcd52df305eb6e5cc712159be4061b4b02ed1ea10804ef6f181d896554ef",
+      "normalized_integer_hash": "d200bcd52df305eb6e5cc712159be4061b4b02ed1ea10804ef6f181d896554ef",
+      "equivalent_encodings_stable": true,
+      "legacy_receipt_migration_needed": true
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r01",
+      "legacy_float_hash": "fdf6214668fa38d65ed7f9b2da9aa64c87495db73d6a2b2ef114f6fcd7953b6c",
+      "legacy_integer_hash": "b99be54e741af196d1d1747f059836fdd2ceabbbef913b06b55c33f7e7aedacc",
+      "normalized_float_hash": "671b012976718920297df443b0680226027fe4a50f89ffad3178826df5460054",
+      "normalized_integer_hash": "671b012976718920297df443b0680226027fe4a50f89ffad3178826df5460054",
+      "equivalent_encodings_stable": true,
+      "legacy_receipt_migration_needed": true
+    },
+    {
+      "reach": "big-sur-coast-r06",
+      "legacy_float_hash": "6532aec0ffc8413e62c82734b210596feb5db4f6b06688c1d8d57d289569b62a",
+      "legacy_integer_hash": "240ee481cb78a27a065fbf1eab127655bb753291d65137a8c8af746e12bb3db3",
+      "normalized_float_hash": "825b7c30a8c54f236bdbf53c39da3633f3204b4cf179bec53b38b71e81e6ac8e",
+      "normalized_integer_hash": "825b7c30a8c54f236bdbf53c39da3633f3204b4cf179bec53b38b71e81e6ac8e",
+      "equivalent_encodings_stable": true,
+      "legacy_receipt_migration_needed": true
+    },
+    {
+      "reach": "big-sur-coast-r05",
+      "legacy_float_hash": "6084be110d7978996c22fb611891cf1e305f2f22c5ee5a16212a4eaf33cf1e18",
+      "legacy_integer_hash": "5905da4ce0fc473014068f9010d48eea25c81013323d475376e80e3abdec59af",
+      "normalized_float_hash": "a28d15c43018ad2a17cbf2ee218ba2f457309aca5bad9d5d927b14cdf730bbec",
+      "normalized_integer_hash": "a28d15c43018ad2a17cbf2ee218ba2f457309aca5bad9d5d927b14cdf730bbec",
+      "equivalent_encodings_stable": true,
+      "legacy_receipt_migration_needed": true
+    }
+  ],
+  "negative_control": "Normalization disabled: expected measured-coverage cache miss reproduced.",
+  "fixture_result": "Integer/decimal catalog encodings reuse identical verified reach receipt; no terrain/extraction calls.",
+  "legacy_migration": "Required explicitly; no automatic receipt rewrite or scientific-hash alias."
+}
