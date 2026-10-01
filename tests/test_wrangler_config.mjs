@@ -97,20 +97,38 @@ test('the deploy script creates the queues only when enabled, before the config 
   assert.match(workflow, /ENABLE_QUEUES: \$\{\{ vars\.ENABLE_QUEUES \}\}/);
 });
 
-test('the deploy script refuses a missing or malformed VAPID pair before it runs any Wrangler command', () => {
+test('the deploy script takes the VAPID pair from the backup bucket, generating it once, and refuses a malformed pair', () => {
   const dir = mkdtempSync(join(tmpdir(), 'deploy-'));
   try {
     const log = join(dir, 'npx.log');
-    writeFileSync(join(dir, 'npx'), `#!/bin/sh\necho "$@" >> '${log}'\nexit 0\n`, {mode: 0o755});
+    // tests/fixtures/fake-wrangler.sh stands in for npx: it logs every call, keeps one stored
+    // object for `r2 object get/put`, and returns no D1 databases so the run stops after the key check.
+    writeFileSync(join(dir, 'npx'), '#!/bin/sh\nexec "' + fileURLToPath(new URL('./fixtures/fake-wrangler.sh', import.meta.url)) + '" "$@"\n', {mode: 0o755});
     const script = fileURLToPath(new URL('../scripts/cloudflare_deploy.sh', import.meta.url));
     const run = keys => spawnSync('bash', [script], {cwd: dir, encoding: 'utf8',
-      env: {PATH: `${dir}:${process.env.PATH}`, CLOUDFLARE_API_TOKEN: 't', CLOUDFLARE_ACCOUNT_ID: 'a', ...keys}});
-    const missing = run({});
-    assert.equal(missing.status, 1);
-    assert.match(missing.stderr, /VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set/);
+      env: {PATH: `${dir}:${process.env.PATH}`, HOME: dir, CLOUDFLARE_API_TOKEN: 't', CLOUDFLARE_ACCOUNT_ID: 'a', FAKE_LOG: log, FAKE_STORE: join(dir, 'stored.json'), ...keys}});
+    const first = run({});
+    assert.match(first.stdout, /generated and saved to r2:\/\/skippercast-backups\/secrets\/vapid\.json/, first.stderr);
+    assert.ok(readFileSync(join(dir, 'npx.log'), 'utf8').includes('d1 list'), 'the key step completed and the deploy went on: ' + first.stderr);
+    const stored = JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8'));
+    assert.equal(stored.VAPID_PUBLIC_KEY.length, 87); assert.equal(stored.VAPID_PRIVATE_KEY.length, 43);
+    assert.throws(() => readFileSync(join(dir, 'var', 'vapid.json')), /ENOENT/, 'the pair never stays on disk');
+    const second = run({});
+    assert.match(second.stdout, /read from r2:/);
+    assert.equal(JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8')).VAPID_PUBLIC_KEY, stored.VAPID_PUBLIC_KEY, 'the same pair is reused');
+    assert.equal((readFileSync(log, 'utf8').match(/r2 object put/g) || []).length, 1, 'generated exactly once');
+    // A read that fails for any reason other than a missing object must never generate a new pair over the stored one.
+    const outage = run({FAKE_R2_FAIL: 'Authentication error [code: 10000]'});
+    assert.equal(outage.status, 1, outage.stdout + outage.stderr);
+    assert.match(outage.stdout, /refusing to generate a new pair/);
+    assert.equal((readFileSync(log, 'utf8').match(/r2 object put/g) || []).length, 1, 'no second put after a failed read');
+    assert.equal(JSON.parse(readFileSync(join(dir, 'stored.json'), 'utf8')).VAPID_PUBLIC_KEY, stored.VAPID_PUBLIC_KEY, 'the stored pair is untouched');
+    assert.doesNotMatch(first.stdout + second.stdout, new RegExp(stored.VAPID_PRIVATE_KEY.slice(0, 12)), 'the private key is never printed');
+    const actions = run({GITHUB_ACTIONS: 'true'});
+    assert.equal((actions.stdout.match(/::add-mask::/g) || []).length, 2, 'under Actions the pair is masked: ' + actions.stdout);
     const short = run({VAPID_PUBLIC_KEY: 'B'.repeat(86), VAPID_PRIVATE_KEY: 'k'.repeat(43)});
     assert.equal(short.status, 1);
     assert.match(short.stderr, /wrong length/);
-    assert.throws(() => readFileSync(log, 'utf8'), /ENOENT/, 'no Wrangler command (deploy, migrations, D1 backup) ran');
+    assert.doesNotMatch(readFileSync(log, 'utf8'), /d1 export|migrations apply|deploy --config/, 'nothing deployed on a bad pair');
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
