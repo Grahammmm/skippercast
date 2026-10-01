@@ -236,6 +236,23 @@ region while it rebuilds. Replacing this with immutable archive versions plus an
 atomic manifest switch is a later availability improvement. Do not remove the
 expiry/current-screen checks to hide an operational failure.
 
+Publication is bounded by region: independent matrix jobs restore and validate
+only their region's current-batch receipts, then build, screen and verify the
+complete regional archive. `fail-fast: false` lets neighboring regions finish.
+A separate ledger job restores hash-checked result files without source archives;
+it never builds or publishes. It reports unsuccessful regional jobs explicitly.
+The prepare output pins `SEAFLOOR_BATCH` for workers, publishers and ledger so
+retrying failed jobs keeps the successful workers' original receipt identity.
+Retrying the whole workflow runs prepare again and creates a new batch.
+
+For diagnosis on the approved main runner, a region can resume from retained
+current-batch receipts using `jobs finish --matrix MATRIX --region REGION
+--batch ORIGINAL_BATCH`. Publication still revalidates native source bytes,
+implementation and current whole-polygon screens; bookkeeping-only
+`--ledger-only` cannot publish. Never confuse a restored ledger or completed
+regional job with verification of every region. stderr stage messages show
+restore and regional build/read-back progress while stdout stays machine JSON.
+
 ## Execute the remaining backlog in this order
 
 1. **Reconcile existing work.** #91 adds southern Morro; #92 fixes deep Point
@@ -378,3 +395,5 @@ after parity proof. See the dated BigCreek nested-adapter proof.
 Use the CI Node major (22) for client validation. On macOS, temporary Vite build
 checks need a canonical TMPDIR path rather than the `/var` symlink alias; retain
 the real checks and do not weaken modulepreload assertions to mask this.
+
+Regional publishers retain a batch-bound result under the private publication receipt prefix. The ledger job names ready, held and failed regions from those receipts; missing receipts are incomplete, and measured ledger totals never prove live publication. A failed-jobs-only retry reuses the prepared batch; rerunning all jobs creates a new batch and may repeat processing.
