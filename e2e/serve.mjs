@@ -4,9 +4,9 @@
 // (accounts need it) and http://localhost:<port> allowed as an account origin.
 // Run `pnpm build` first. Playwright starts this (playwright.config.ts).
 //
-// Public data (/feeds/, /api/om) goes through the Worker to its upstream, the
-// repository's raw GitHub branches, as in production; the tests block every
-// other origin, so they never depend on NWS, NOAA or map tile servers.
+// Public /feeds/ requests still use the Worker's upstream. Browser fixtures
+// intercept forecast feeds and /api/om before the Worker receives them;
+// blocking other browser origins alone does not block Worker-side requests.
 import {spawn, spawnSync} from 'node:child_process';
 import {existsSync, rmSync} from 'node:fs';
 import {resolve} from 'node:path';

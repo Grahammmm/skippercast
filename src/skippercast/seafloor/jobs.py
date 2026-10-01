@@ -4,6 +4,7 @@ import json
 import os
 import re
 import traceback
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -135,13 +136,47 @@ def process(root, reach, batch):
     return result
 
 
-def finish(root, matrix, batch):
+def publication_key(batch, region):
+    # Reuse the checked batch-name boundary; region is a private scope name.
+    batch_key(batch, state_cache.scope_name(region))
+    return f'seafloor-review/batches/{batch}/publish-{region}.json'
+
+
+def read_publication(s3, bucket, batch, region):
+    with s3.get_object(Bucket=bucket, Key=publication_key(batch, region))['Body'] as stream:
+        raw = stream.read(5_000_001)
+    if len(raw) > 5_000_000:
+        raise ValueError('Oversized publication receipt')
+    value = json.loads(raw)
+    if (value.get('version') != 1 or value.get('batch') != batch
+            or value.get('region') != region):
+        raise ValueError('Publication receipt identity mismatch')
+    for field in ('published', 'ready_regions', 'held_regions', 'failures'):
+        if not isinstance(value.get(field), list):
+            raise ValueError('Invalid publication receipt inventory')
+    if (set(value['ready_regions']) | set(value['held_regions'])) - {region}:
+        raise ValueError('Publication receipt region mismatch')
+    if set(value['ready_regions']) & set(value['held_regions']):
+        raise ValueError('Conflicting publication state')
+    if not value['failures'] and not (value['ready_regions'] or value['held_regions']):
+        raise ValueError('Missing publication state')
+    return value
+
+
+def finish(root, matrix, batch, *, region=None, ledger_only=False):
+    if region is not None:
+        state_cache.scope_name(region)
+        selected = [row for row in matrix['include'] if row['region'] == region]
+        if not selected:
+            raise ValueError('Publication region absent from this batch')
+        matrix = {'include': selected}
     s3, bucket = credentials()
     state_cache.restore(s3, bucket, root, 'shared')
     before = read_json(Path(root)/'dist/data/seafloor-ledger.json')
     failures, results, blocked_regions = [], [], set()
     for row in matrix['include']:
         ident = row['reach']
+        print(f'finish: restore checked batch result {ident}', file=sys.stderr, flush=True)
         try:
             with s3.get_object(Bucket=bucket, Key=batch_key(batch, ident))['Body'] as stream:
                 status = json.loads(stream.read(5_000_000))
@@ -152,7 +187,7 @@ def finish(root, matrix, batch):
                                  'error_type': status.get('error_type', 'unknown')})
                 blocked_regions.add(row['region'])
                 continue
-            if not state_cache.restore(s3, bucket, root, ident):
+            if not state_cache.restore(s3, bucket, root, ident, include_cache=not ledger_only):
                 raise ValueError('Missing reach state')
             if status['status'] == 'complete':
                 receipt = read_json(Path(root)/'var/seafloor/reaches'/ident/'run.json')
@@ -169,13 +204,36 @@ def finish(root, matrix, batch):
         except Exception as error:
             failures.append({'reach': ident, 'reason': type(error).__name__+': no current completed result'})
             blocked_regions.add(row['region'])
-    for region in sorted({r['region'] for r in matrix['include']} - blocked_regions):
+    for target_region in ([] if ledger_only else sorted({r['region'] for r in matrix['include']} - blocked_regions)):
         try:
-            results.append(upload(region, root=root))
+            print(f'finish: build and verify region {target_region}', file=sys.stderr, flush=True)
+            results.append(upload(target_region, root=root))
+            print(f'finish: retained publication receipt {target_region}', file=sys.stderr, flush=True)
         except Exception as error:
-            failures.append({'region': region, 'reason': type(error).__name__+': publication failed'})
+            failures.append({'region': target_region, 'reason': type(error).__name__+': publication failed'})
     if (Path(root)/'var/seafloor/screen/refresh-failure.json').exists():
         failures.append({'reason': 'screen-refresh-failed; physical work retained, habitat held'})
+    published = [r['key'] for r in results]
+    ready = [r['manifest']['region'] for r in results if r['manifest']['status'] == 'ready']
+    held = [r['manifest']['region'] for r in results if r['manifest']['status'] != 'ready']
+    if ledger_only:
+        for target_region in sorted({r['region'] for r in matrix['include']}):
+            try:
+                publication = read_publication(s3, bucket, batch, target_region)
+                published.extend(publication['published'])
+                ready.extend(publication['ready_regions'])
+                held.extend(publication['held_regions'])
+                failures.extend(publication['failures'])
+            except Exception as error:
+                failures.append({'region': target_region,
+                                 'reason': type(error).__name__+': no verified current publication receipt'})
+    elif region is not None:
+        receipt = {'version': 1, 'batch': batch, 'region': region,
+                   'published': published, 'ready_regions': ready,
+                   'held_regions': held, 'failures': failures}
+        s3.put_object(Bucket=bucket, Key=publication_key(batch, region),
+                      Body=json.dumps(receipt, sort_keys=True).encode(),
+                      ContentType='application/json')
     after = read_json(Path(root)/'dist/data/seafloor-ledger.json')
     old = {r['id']: r for r in before['reaches']}
     lines = ['Automated screened seafloor update. No fish-presence claim.', '',
@@ -187,15 +245,17 @@ def finish(root, matrix, batch):
             lines.append(f"| {row['id']} | {prior['tier1_km2']:.6f} → {row['tier1_km2']:.6f} | "
                          f"{prior['tier2_km2']:.6f} → {row['tier2_km2']:.6f} |")
     lines += ['', 'Failures / incomplete stages: '+json.dumps(failures),
-              'Published bundles: '+str(len(results))]
+              'Published bundles: '+str(len(published)),
+              'Ready regions: '+json.dumps(sorted(set(ready))),
+              'Held regions: '+json.dumps(sorted(set(held)))]
     lines += ['', 'Zero area delta means refreshed screening/provenance only. Source grids and review receipts remain private.',
-              'Validation: current source hashes, full-polygon spatial screening, PMTiles build and R2 byte read-back.']
+              ('Validation: checked worker receipts. Regional PMTiles/R2 results are reported from current-batch publication receipts; ready regions: '+json.dumps(sorted(set(ready)))+'. Coverage totals are not proof of live publication.' if ledger_only else
+               'Validation: current source hashes and full-polygon spatial screening; PMTiles build and R2 byte read-back apply only to successful ready regions: '+json.dumps(sorted(set(ready)))+'.')]
     destination = Path(root)/'var/seafloor/ledger-pr.md'
     destination.write_text('\n'.join(lines)+'\n')
     delta = after['totals']['tier2_km2']-before['totals']['tier2_km2']
-    return {'published': [r['key'] for r in results], 'failures': failures,
-            'ready_regions': [r['manifest']['region'] for r in results if r['manifest']['status'] == 'ready'],
-            'held_regions': [r['manifest']['region'] for r in results if r['manifest']['status'] != 'ready'],
+    return {'published': published, 'failures': failures,
+            'ready_regions': sorted(set(ready)), 'held_regions': sorted(set(held)),
             'title': f'Refresh seafloor ledger ({delta:+.3f} km² tier 2)'}
 
 
@@ -205,15 +265,17 @@ def main():
     parser.add_argument('--region')
     parser.add_argument('--reach')
     parser.add_argument('--matrix', type=Path)
+    parser.add_argument('--ledger-only', action='store_true', help='Reconcile checked batch reach results without scientific rebuild or publication')
     parser.add_argument('--max-new', type=int, default=3)
-    parser.add_argument('--batch', default=os.environ.get('GITHUB_RUN_ID', '')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT', ''))
+    parser.add_argument('--batch', default=os.environ.get('SEAFLOOR_BATCH') or os.environ.get('GITHUB_RUN_ID', '')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT', ''))
     args = parser.parse_args()
     if args.stage == 'prepare':
         result = prepare(REPO, args.region, args.reach, args.max_new)
     elif args.stage == 'run':
         result = process(REPO, args.reach, args.batch)
     else:
-        result = finish(REPO, read_json(args.matrix), args.batch)
+        result = finish(REPO, read_json(args.matrix), args.batch,
+                        region=args.region, ledger_only=args.ledger_only)
     print(json.dumps(result))
 
 

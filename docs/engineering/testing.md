@@ -57,7 +57,7 @@ Layers are directories. `tests/conftest.py` and `research/tests/conftest.py` add
 | Repository checks | Local Markdown links resolve; no private paths, credentials or private keys; binary files match `scripts/web-vendor-sha256.json` | `scripts/check_repository.py` | `python3 scripts/check_repository.py` | `check` job |
 | Web checks | Page entry points, asset references, vendor hashes, GPX validity, canonical data copies | `scripts/check_web.py` | `python3 scripts/check_web.py` | `check` job |
 | Build | Worker bundle and Vite-built site; the Vite manifest, page references, boot-chain preloads, `sw.js` and `precache.json` agree (`tests/test_client_build.mjs` builds fixtures and the real site) | `scripts/build-worker.mjs`, `scripts/check_client.mjs` | `pnpm install --frozen-lockfile && pnpm build && node scripts/check_client.mjs` | `check` job |
-| Browser (E2E) | The built site under `wrangler dev` (real Worker, local D1) at 390×844 and 1280×800: map, species, forecast and meteogram with `?hour=`, regulations summary, GPX export, same-region port change without reload, offline save and reopen (service worker), passkey account (virtual authenticator), the on-map legend, deferred data loading when its screen opens, and the Morro Bay startup JSON budget (committed static files only, with live feeds stubbed so upstream data cannot move it; `scripts/startup-budget.json`: measured bytes + 10%; `node scripts/measure_startup.mjs [--stub | --stub-mpa]` prints the per-file table with live feeds reported separately); axe on each screen fails on serious or critical violations and prints the rest. Other origins are blocked; public data comes through the Worker from the repository's raw GitHub branches | `e2e/`, `playwright.config.ts`, `e2e/serve.mjs` | `pnpm build && pnpm e2e` (needs `npx playwright install chromium`, or `PW_CHROMIUM=/path/to/chrome`) | `e2e` job |
+| Browser (E2E) | The built site under `wrangler dev` (real Worker, local D1) at 390×844 and 1280×800: map, species, forecast and meteogram with `?hour=`, regulations summary, GPX export, same-region port change without reload, offline save and reopen (service worker), passkey account (virtual authenticator), the on-map legend, deferred data loading when its screen opens, and the Morro Bay startup JSON budget (committed static files only, with live feeds stubbed so upstream data cannot move it; `scripts/startup-budget.json`: measured bytes + 10%; `node scripts/measure_startup.mjs [--stub | --stub-mpa]` prints the per-file table with live feeds reported separately); axe on each screen fails on serious or critical violations and prints the rest. Other origins are blocked; forecast responses are synthetic and intercepted before the Worker, including a separate outage test. Other public feeds still come through the Worker from the repository's raw GitHub branches | `e2e/`, `playwright.config.ts`, `e2e/serve.mjs` | `pnpm build && pnpm e2e` (needs `npx playwright install chromium`, or `PW_CHROMIUM=/path/to/chrome`) | `e2e` job |
 
 Before a PR, run the full list in [AGENTS.md → Before opening a PR](../../AGENTS.md#before-opening-a-pr).
 
@@ -107,3 +107,16 @@ The Python layers above follow the guide's plan inside today's tree; when the mo
 | Visual | Storybook screenshots | every PR | < 0.5 % diff |
 
 Still planned for Python: coverage in the CI summary, and a clock parameter for the research scripts whose freshness checks read the real clock (their tests pair it with real-clock inputs today: `test_usgs_context_pipeline`, `test_habitat_shortlist_closures`, `test_regular_bag_hard`).
+
+### Offline browser forecast
+
+`e2e/forecast-fixture.ts` creates explicitly synthetic, unit-checked wind and wave
+responses at the coordinates requested by the client, with a finite nine-day
+hourly axis relative to test start. It is test-only and never publishes a feed.
+The browser fixtures return 503 for the shared forecast endpoint and intercept
+the model endpoints, so worker-side upstream requests cannot rate-limit the
+meteogram assertions. Unknown fields remain null. The outage test overrides
+these responses with 503 and requires the graph to say it is unavailable.
+
+Use a free `E2E_PORT` for local checks: Playwright can reuse a server already
+running on its default port, which may belong to a different project.
