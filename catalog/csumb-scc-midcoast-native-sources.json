@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "notice": "Private physical-only qualification; native terrain suitability is not fish presence or release clearance.",
+  "sources": [
+    {
+      "name": "SCC_Block10",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block10_mb.html",
+      "source": "var/seafloor/cache/bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c/source.tar.gz",
+      "sha256": "bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c",
+      "bytes": 189695876,
+      "archive_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_2mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100327",
+        "20100414",
+        "20100417",
+        "20100419",
+        "20100704",
+        "20100809",
+        "20100821"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 4262,
+      "height": 1973,
+      "bounds_wgs84": [
+        -121.05474908119015,
+        35.42477976980375,
+        -120.96000796686933,
+        35.46188813528493
+      ],
+      "valid_pixels": 4537986,
+      "nominal_0_300ft_pixels": 4537986,
+      "nominal_200_300ft_pixels": 1163853,
+      "depth_min_m": 2.819999933242798,
+      "depth_max_m": 85.0,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block10-2m-native",
+      "declared_depth_band_m": [
+        0,
+        85
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    },
+    {
+      "name": "SCC_Block10",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block10_mb.html",
+      "source": "var/seafloor/cache/bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c/source.tar.gz",
+      "sha256": "bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c",
+      "bytes": 189695876,
+      "archive_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_5mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100327",
+        "20100414",
+        "20100417",
+        "20100419",
+        "20100704",
+        "20100809",
+        "20100821"
+      ],
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 1252,
+      "height": 848,
+      "bounds_wgs84": [
+        -121.08096105012382,
+        35.41622567574641,
+        -121.01110855054479,
+        35.45555042157071
+      ],
+      "valid_pixels": 519961,
+      "nominal_0_300ft_pixels": 162392,
+      "nominal_200_300ft_pixels": 162392,
+      "depth_min_m": 80.0,
+      "depth_max_m": 125.30000305175781,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block10-5m-native",
+      "declared_depth_band_m": [
+        80,
+        250
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    },
+    {
+      "name": "SCC_Block11",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block11_mb.html",
+      "source": "var/seafloor/cache/41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d/source.tar.gz",
+      "sha256": "41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d",
+      "bytes": 257854961,
+      "archive_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_2mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100318",
+        "20100419",
+        "20100527",
+        "20100815",
+        "20100816",
+        "20100819",
+        "20100821",
+        "20100822"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 4867,
+      "height": 2891,
+      "bounds_wgs84": [
+        -121.01922550174038,
+        35.39542252863218,
+        -120.91075648491069,
+        35.44933116468416
+      ],
+      "valid_pixels": 6744160,
+      "nominal_0_300ft_pixels": 6744160,
+      "nominal_200_300ft_pixels": 1738753,
+      "depth_min_m": 1.3300000429153442,
+      "depth_max_m": 85.0,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block11-2m-native",
+      "declared_depth_band_m": [
+        0,
+        85
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    },
+    {
+      "name": "SCC_Block11",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block11_mb.html",
+      "source": "var/seafloor/cache/41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d/source.tar.gz",
+      "sha256": "41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d",
+      "bytes": 257854961,
+      "archive_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_5mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100318",
+        "20100419",
+        "20100527",
+        "20100815",
+        "20100816",
+        "20100819",
+        "20100821",
+        "20100822"
+      ],
+      "resolution_m": [
+        5.0,
+        5.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 1093,
+      "height": 584,
+      "bounds_wgs84": [
+        -121.04401836418599,
+        35.40246127117005,
+        -120.9832129352284,
+        35.429764340351646
+      ],
+      "valid_pixels": 283527,
+      "nominal_0_300ft_pixels": 59727,
+      "nominal_200_300ft_pixels": 59727,
+      "depth_min_m": 85.0,
+      "depth_max_m": 115.29000091552734,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block11-5m-native",
+      "declared_depth_band_m": [
+        80,
+        250
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    },
+    {
+      "name": "SCC_Block13",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block13_mb.html",
+      "source": "var/seafloor/cache/ee72aa92a3ffad81a0630fa35519383aa7a33159a44094ad3ca7fd3052a06cdd/source.tar.gz",
+      "sha256": "ee72aa92a3ffad81a0630fa35519383aa7a33159a44094ad3ca7fd3052a06cdd",
+      "bytes": 150142162,
+      "archive_member": "SCC_Blk13_2m_bathygrids.zip/ArcViewGrids/scc13_2mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100823",
+        "20100824",
+        "20100825"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 3168,
+      "height": 3615,
+      "bounds_wgs84": [
+        -120.93949304342894,
+        35.34142438110931,
+        -120.8681006260706,
+        35.4077824448319
+      ],
+      "valid_pixels": 6481676,
+      "nominal_0_300ft_pixels": 6481676,
+      "nominal_200_300ft_pixels": 1624291,
+      "depth_min_m": 3.559999942779541,
+      "depth_max_m": 74.58999633789062,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block13-2m-native",
+      "declared_depth_band_m": [
+        0,
+        85
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    },
+    {
+      "name": "SCC_Block12",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block12_mb.html",
+      "source": "var/seafloor/cache/e2e3b2d0db017ab3160a5c2184b2b87e2aba25eb35b7807809188cea51bd211b/source.tar.gz",
+      "sha256": "e2e3b2d0db017ab3160a5c2184b2b87e2aba25eb35b7807809188cea51bd211b",
+      "bytes": 330668756,
+      "archive_member": "SCC_Blk12_2m_bathygrid.zip/ArcViewGrids/scc12_2mbathy",
+      "vertical_datum": "NAVD88",
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "acquisition_dates": [
+        "20100325",
+        "20100326",
+        "20100426",
+        "20100428",
+        "20100527",
+        "20100814",
+        "20100817",
+        "20100820",
+        "20100822",
+        "20100823"
+      ],
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "width": 4184,
+      "height": 3696,
+      "bounds_wgs84": [
+        -120.96813330025434,
+        35.378333001936035,
+        -120.87431551803326,
+        35.44652729664034
+      ],
+      "valid_pixels": 7915642,
+      "nominal_0_300ft_pixels": 7915642,
+      "nominal_200_300ft_pixels": 711797,
+      "depth_min_m": 2.25,
+      "depth_max_m": 76.0199966430664,
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "id": "csumb-scc-block12-2m-native",
+      "declared_depth_band_m": [
+        0,
+        85
+      ],
+      "lineage_note": "Native depth-band companions share acquisition; not independent evidence."
+    }
+  ]
+}

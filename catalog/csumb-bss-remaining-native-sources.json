@@ -1,0 +1,496 @@
+{
+  "schema_version": 1,
+  "inspected_on": "2026-09-30",
+  "sources": [
+    {
+      "block": "BSS_Block07",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block07/multibeam/data/version2/products/BSS_Block07_additional_products.tar.gz",
+      "sha256": "9e651a06dbd3fba236142c5169b27b0012e1185ac591a616a2ca6bb1d2f53bd7",
+      "archive_member": "BSS_Block07/Bathymetry/ArcViewGrids/bss07_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.51907381561857,
+        35.89970903563869,
+        -121.47838729119204,
+        35.94235251356325
+      ],
+      "width": 1800,
+      "height": 2338,
+      "valid_pixels": 2675258,
+      "nominal_0_300ft_pixels": 2675258,
+      "acquisition_dates": [
+        "20110903",
+        "20110904",
+        "20110918",
+        "20110919",
+        "20110903",
+        "20110904"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block07/Bathymetry/ArcViewGrids/bss07_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 126251128
+    },
+    {
+      "block": "BSS_Block07",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block07/multibeam/data/version2/products/BSS_Block07_additional_products.tar.gz",
+      "sha256": "9e651a06dbd3fba236142c5169b27b0012e1185ac591a616a2ca6bb1d2f53bd7",
+      "archive_member": "BSS_Block07/Bathymetry/ArcViewGrids/bss07_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.52766228096709,
+        35.889362607067056,
+        -121.50190743617824,
+        35.93387996375883
+      ],
+      "width": 450,
+      "height": 981,
+      "valid_pixels": 218155,
+      "nominal_0_300ft_pixels": 39908,
+      "acquisition_dates": [
+        "20110903",
+        "20110904",
+        "20110918",
+        "20110919",
+        "20110903",
+        "20110904"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block07/Bathymetry/ArcViewGrids/bss07_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 126251128
+    },
+    {
+      "block": "BSS_Block10",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block10/multibeam/data/version2/products/BSS_Block10_additional_products.tar.gz",
+      "sha256": "0e943418c65502d1d22542427de5ecb2c96ea0d66d7662ce3fe6e2791c04f970",
+      "archive_member": "BSS_Block10/Bathymetry/ArcViewGrids/bss10_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.55995301765235,
+        35.97685385628669,
+        -121.49958023585673,
+        36.01073608097081
+      ],
+      "width": 2694,
+      "height": 1839,
+      "valid_pixels": 2748607,
+      "nominal_0_300ft_pixels": 2748607,
+      "acquisition_dates": [
+        "20110902",
+        "20110911",
+        "20110912",
+        "20110913",
+        "20110902",
+        "20110911"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block10/Bathymetry/ArcViewGrids/bss10_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 102350920
+    },
+    {
+      "block": "BSS_Block10",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block10/multibeam/data/version2/products/BSS_Block10_additional_products.tar.gz",
+      "sha256": "0e943418c65502d1d22542427de5ecb2c96ea0d66d7662ce3fe6e2791c04f970",
+      "archive_member": "BSS_Block10/Bathymetry/ArcViewGrids/bss10_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.57004309752246,
+        35.962641022865405,
+        -121.51570940271303,
+        35.98452196409318
+      ],
+      "width": 973,
+      "height": 471,
+      "valid_pixels": 233560,
+      "nominal_0_300ft_pixels": 73320,
+      "acquisition_dates": [
+        "20110902",
+        "20110911",
+        "20110912",
+        "20110913",
+        "20110902",
+        "20110911"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block10/Bathymetry/ArcViewGrids/bss10_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 102350920
+    },
+    {
+      "block": "BSS_Block05",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block05/multibeam/data/version2/products/BSS_Block05_additional_products.tar.gz",
+      "sha256": "2b4911ca81d248be3a74788fe243b0231d2772b06ea8aeab6332d6a898da7069",
+      "archive_member": "BSS_Block05/Bathymetry/ArcViewGrids/bss05_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.47564731024906,
+        35.832014493051986,
+        -121.42040195812379,
+        35.872609029286565
+      ],
+      "width": 2460,
+      "height": 2213,
+      "valid_pixels": 2341080,
+      "nominal_0_300ft_pixels": 2341080,
+      "acquisition_dates": [
+        "20110905",
+        "20110921",
+        "20111003",
+        "20110905",
+        "20110921",
+        "20111003"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block05/Bathymetry/ArcViewGrids/bss05_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 134599452
+    },
+    {
+      "block": "BSS_Block05",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block05/multibeam/data/version2/products/BSS_Block05_additional_products.tar.gz",
+      "sha256": "2b4911ca81d248be3a74788fe243b0231d2772b06ea8aeab6332d6a898da7069",
+      "archive_member": "BSS_Block05/Bathymetry/ArcViewGrids/bss05_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.49562711332305,
+        35.81369301485028,
+        -121.43904795711678,
+        35.86136069685567
+      ],
+      "width": 1006,
+      "height": 1042,
+      "valid_pixels": 663823,
+      "nominal_0_300ft_pixels": 77221,
+      "acquisition_dates": [
+        "20110905",
+        "20110921",
+        "20111003",
+        "20110905",
+        "20110921",
+        "20111003"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block05/Bathymetry/ArcViewGrids/bss05_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 134599452
+    },
+    {
+      "block": "BSS_Block04",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block04/multibeam/data/version2/products/BSS_Block04_additional_products.tar.gz",
+      "sha256": "832de651405216c4e1527bf8824d989f9c6aa75fdaf17e9e2830318d73f9c50f",
+      "archive_member": "BSS_Block04/Bathymetry/ArcViewGrids/bss04_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.4440745035394,
+        35.800206485040256,
+        -121.38995289832825,
+        35.85676587346069
+      ],
+      "width": 2395,
+      "height": 3099,
+      "valid_pixels": 3817786,
+      "nominal_0_300ft_pixels": 3817786,
+      "acquisition_dates": [
+        "20111030",
+        "20111101",
+        "20111102",
+        "20111112",
+        "20111030",
+        "20111101"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block04/Bathymetry/ArcViewGrids/bss04_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 156616065
+    },
+    {
+      "block": "BSS_Block04",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block04/multibeam/data/version2/products/BSS_Block04_additional_products.tar.gz",
+      "sha256": "832de651405216c4e1527bf8824d989f9c6aa75fdaf17e9e2830318d73f9c50f",
+      "archive_member": "BSS_Block04/Bathymetry/ArcViewGrids/bss04_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.4628551578135,
+        35.79141322901017,
+        -121.42083004625599,
+        35.83885822807418
+      ],
+      "width": 743,
+      "height": 1041,
+      "valid_pixels": 408321,
+      "nominal_0_300ft_pixels": 222479,
+      "acquisition_dates": [
+        "20111030",
+        "20111101",
+        "20111102",
+        "20111112",
+        "20111030",
+        "20111101"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block04/Bathymetry/ArcViewGrids/bss04_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 156616065
+    },
+    {
+      "block": "BSS_Block09",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block09/multibeam/data/version2/products/BSS_Block09_additional_products.tar.gz",
+      "sha256": "85d7ded58c5ad496c905d4843f1dec92be7370e0eacea0c08f4709a96b49115e",
+      "archive_member": "BSS_Block09/Bathymetry/ArcViewGrids/bss09_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.51921737022641,
+        35.95515775178441,
+        -121.49048688946709,
+        35.987972673430235
+      ],
+      "width": 1268,
+      "height": 1801,
+      "valid_pixels": 1314976,
+      "nominal_0_300ft_pixels": 1314976,
+      "acquisition_dates": [
+        "20110902",
+        "20110903",
+        "20110912",
+        "20110913",
+        "20110914",
+        "20110902"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block09/Bathymetry/ArcViewGrids/bss09_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 81622937
+    },
+    {
+      "block": "BSS_Block09",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block09/multibeam/data/version2/products/BSS_Block09_additional_products.tar.gz",
+      "sha256": "85d7ded58c5ad496c905d4843f1dec92be7370e0eacea0c08f4709a96b49115e",
+      "archive_member": "BSS_Block09/Bathymetry/ArcViewGrids/bss09_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.55457833736946,
+        35.94116411403642,
+        -121.50639750824429,
+        35.9812223065609
+      ],
+      "width": 856,
+      "height": 876,
+      "valid_pixels": 324651,
+      "nominal_0_300ft_pixels": 27168,
+      "acquisition_dates": [
+        "20110902",
+        "20110903",
+        "20110912",
+        "20110913",
+        "20110914",
+        "20110902"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block09/Bathymetry/ArcViewGrids/bss09_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 81622937
+    },
+    {
+      "block": "BSS_Block06",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block06/multibeam/data/version2/products/BSS_Block06_additional_products.tar.gz",
+      "sha256": "1b0b5467244633737e8ea4f6edb34432c30677da994c227cd8e68f3782cbd6b6",
+      "archive_member": "BSS_Block06/Bathymetry/ArcViewGrids/bss06_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.50561681530607,
+        35.85976149125094,
+        -121.45337983908982,
+        35.91050464623656
+      ],
+      "width": 2315,
+      "height": 2779,
+      "valid_pixels": 2868986,
+      "nominal_0_300ft_pixels": 2868986,
+      "acquisition_dates": [
+        "20110904",
+        "20110920",
+        "20110924",
+        "20110904",
+        "20110920",
+        "20110924"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block06/Bathymetry/ArcViewGrids/bss06_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 157533567
+    },
+    {
+      "block": "BSS_Block06",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block06/multibeam/data/version2/products/BSS_Block06_additional_products.tar.gz",
+      "sha256": "1b0b5467244633737e8ea4f6edb34432c30677da994c227cd8e68f3782cbd6b6",
+      "archive_member": "BSS_Block06/Bathymetry/ArcViewGrids/bss06_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.52128873293537,
+        35.84752510925176,
+        -121.47248320316594,
+        35.90215620432184
+      ],
+      "width": 863,
+      "height": 1199,
+      "valid_pixels": 462247,
+      "nominal_0_300ft_pixels": 65594,
+      "acquisition_dates": [
+        "20110904",
+        "20110920",
+        "20110924",
+        "20110904",
+        "20110920",
+        "20110924"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block06/Bathymetry/ArcViewGrids/bss06_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 157533567
+    },
+    {
+      "block": "BSS_Block11",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block11/multibeam/data/version2/products/BSS_Block11_additional_products.tar.gz",
+      "sha256": "8e4e5a5d6928f71a23dbf9cbceb1224418a29875aa01f339f5b042a2d8ad49b0",
+      "archive_member": "BSS_Block11/Bathymetry/ArcViewGrids/bss11_2mbathy",
+      "resolution": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -121.5924578776651,
+        35.9789032809263,
+        -121.52966824157413,
+        36.014511641110616
+      ],
+      "width": 2802,
+      "height": 1934,
+      "valid_pixels": 2984386,
+      "nominal_0_300ft_pixels": 2984386,
+      "acquisition_dates": [
+        "20110901",
+        "20110902",
+        "20110910",
+        "20110911",
+        "20110901",
+        "20110902"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block11/Bathymetry/ArcViewGrids/bss11_2mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 124626274
+    },
+    {
+      "block": "BSS_Block11",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block11/multibeam/data/version2/products/BSS_Block11_additional_products.tar.gz",
+      "sha256": "8e4e5a5d6928f71a23dbf9cbceb1224418a29875aa01f339f5b042a2d8ad49b0",
+      "archive_member": "BSS_Block11/Bathymetry/ArcViewGrids/bss11_5mbathy",
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.5998747288823,
+        35.972043915666134,
+        -121.55093411178709,
+        36.005245853182295
+      ],
+      "width": 872,
+      "height": 724,
+      "valid_pixels": 140560,
+      "nominal_0_300ft_pixels": 48637,
+      "acquisition_dates": [
+        "20110901",
+        "20110902",
+        "20110910",
+        "20110911",
+        "20110901",
+        "20110902"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "metadata_member": "BSS_Block11/Bathymetry/ArcViewGrids/bss11_5mbathy/metadata.xml",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Native source pixels, not deduplicated reach coverage or habitat.",
+      "archive_bytes": 124626274
+    }
+  ]
+}

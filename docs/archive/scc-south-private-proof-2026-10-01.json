@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "scope": "Original SCC26\u201328 native2m, finalscreen deferred",
+  "before_after": {
+    "selected_valid_km2": {
+      "before": 85.022928413,
+      "after": 121.64684646,
+      "delta": 36.623918047
+    },
+    "tier1_km2": {
+      "before": 89.400625,
+      "after": 127.86625,
+      "delta": 38.465625
+    },
+    "physical_candidate_count": {
+      "before": 1714,
+      "after": 2322,
+      "delta": 608
+    }
+  },
+  "reaches": [
+    {
+      "reach": "point-arguello-conception-r05",
+      "before": {
+        "selected_valid_km2": 28.12201953,
+        "tier1_km2": 29.5625,
+        "physical_candidate_count": 767
+      },
+      "after": {
+        "selected_valid_km2": 38.99181167,
+        "tier1_km2": 40.674375,
+        "physical_candidate_count": 1119
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 1089,
+          "unknown": 26,
+          "1": 4
+        },
+        "rockfish-reef": {
+          "1": 49,
+          "2": 1044,
+          "unknown": 26
+        }
+      },
+      "selected_source_km2": {
+        "csumb-scc-block24-2m-native": 2.1373040915829997,
+        "unknown": 0.0,
+        "csumb-scc-block25-2m-native": 25.971702403873,
+        "csumb-scc-block26-2m-native": 10.882805174205
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "6093e76ff837dd4cd5d030921946fcbb5acf728a780349999563b8699f683a50"
+    },
+    {
+      "reach": "point-arguello-conception-r06",
+      "before": {
+        "selected_valid_km2": 56.900908883,
+        "tier1_km2": 59.838125,
+        "physical_candidate_count": 947
+      },
+      "after": {
+        "selected_valid_km2": 82.65503479,
+        "tier1_km2": 87.191875,
+        "physical_candidate_count": 1203
+      },
+      "rank_counts": {
+        "lingcod": {
+          "2": 1108,
+          "unknown": 94,
+          "3": 1
+        },
+        "rockfish-reef": {
+          "2": 1071,
+          "unknown": 94,
+          "1": 38
+        }
+      },
+      "selected_source_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block26-2m-native": 8.779809709310998,
+        "h11953-mb-4m-mllw-3of4-bag-f90a1710f1": 37.682780204090996,
+        "csumb-scc-block27-2m-native": 13.269435658822998,
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f": 10.822507943660998,
+        "csumb-scc-block28-2m-native": 7.020276499613003,
+        "h11953-mb-8m-mllw-4of4-bag-e70772d2bb": 4.249301058043,
+        "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f": 0.8309237164259999
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false,
+      "input_hash": "bf6735196fa2f624283e27ff4dd46d9968cce60133aee4b1155f98e13eb6da96"
+    }
+  ],
+  "new_public_count": 0,
+  "note": "Physical candidate suitability only, 3 strongest on existing 1\u20133 rubric. No original archive or private geometry committed."
+}

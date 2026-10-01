@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "inspected_on": "2026-09-30",
+  "sources": [
+    {
+      "id": "csumb-bss-block03-5m-native",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block03/multibeam/data/version2/products/BSS_Block03_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block03_mb.html",
+      "archive_member": "BSS_Block03/Bathymetry/ArcViewGrids/bss03_5mbathy",
+      "metadata_member": "BSS_Block03/Bathymetry/ArcViewGrids/bss03_5mbathy/metadata.xml",
+      "sha256": "0414c642e74e52773ebe4c36d01220cfef5bf7f5f71d8cb2627a399863e64e83",
+      "archive_bytes": 179158386,
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.44391518927831,
+        35.76409389450182,
+        -121.41039339077064,
+        35.806927025568555
+      ],
+      "valid_pixels": 290859,
+      "nominal_0_300ft_pixels": 272096,
+      "acquisition_dates": [
+        "20111103",
+        "20111104",
+        "20111114",
+        "20111115",
+        "20111208",
+        "20111103",
+        "20111104",
+        "20111114",
+        "20111115",
+        "20111208"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Source pixels only; same survey as the corresponding 2 m grid. No independent corroboration or deduplicated area inferred."
+    },
+    {
+      "id": "csumb-bss-block08-5m-native",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version2/products/BSS_Block08_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block08_mb.html",
+      "archive_member": "BSS_Block08/Bathymetry/ArcViewGrids/bss08_5mbathy",
+      "metadata_member": "BSS_Block08/Bathymetry/ArcViewGrids/bss08_5mbathy/metadata.xml",
+      "sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
+      "archive_bytes": 81146262,
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.53092926818776,
+        35.92240885033167,
+        -121.50615086143381,
+        35.95871340120431
+      ],
+      "valid_pixels": 190143,
+      "nominal_0_300ft_pixels": 45462,
+      "acquisition_dates": [
+        "20110903",
+        "20110914",
+        "20110919",
+        "20110903",
+        "20110914",
+        "20110919"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Source pixels only; same survey as the corresponding 2 m grid. No independent corroboration or deduplicated area inferred."
+    },
+    {
+      "id": "csumb-bss-block12-5m-native",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block12/multibeam/data/version2/products/BSS_Block12_additional_products.tar.gz",
+      "documentation_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block12_mb.html",
+      "archive_member": "BSS_Block12/Bathymetry/ArcViewGrids/bss12_5mbathy",
+      "metadata_member": "BSS_Block12/Bathymetry/ArcViewGrids/bss12_5mbathy/metadata.xml",
+      "sha256": "3162a535ac84d1aa115f315bf4b6e65874151147c7250a20d1f47b1aa8ddbeb7",
+      "archive_bytes": 49032573,
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bounds_wgs84": [
+        -121.61502264074569,
+        35.99395769951362,
+        -121.58562364266152,
+        36.02264159485182
+      ],
+      "valid_pixels": 70334,
+      "nominal_0_300ft_pixels": 12700,
+      "acquisition_dates": [
+        "20110901",
+        "20110910",
+        "20110901",
+        "20110910"
+      ],
+      "native_vertical_datum": "NAVD88 Geoid09",
+      "producer": "CSUMB SFML",
+      "uncertainty": "unknown",
+      "interpolation_mask": "unknown",
+      "coverage_note": "Source pixels only; same survey as the corresponding 2 m grid. No independent corroboration or deduplicated area inferred."
+    }
+  ]
+}
