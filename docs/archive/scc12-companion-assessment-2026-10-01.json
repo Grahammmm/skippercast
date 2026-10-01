@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "publisher_url": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block12_mb.html",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block12/multibeam/data/version2/products/SCC_Block12_additional_products.tar.gz",
+  "source_sha256": "e2e3b2d0db017ab3160a5c2184b2b87e2aba25eb35b7807809188cea51bd211b",
+  "native_products": [
+    {
+      "member": "SCC_Blk12_2m_habitat.zip/ArcViewGrids/scc12_2msub",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -120.96813330025434,
+        35.378333001936035,
+        -120.87431551803326,
+        35.44652729664034
+      ],
+      "native_codes": {
+        "0.0": 7434450,
+        "1.0": 457500
+      }
+    },
+    {
+      "member": "SCC_Blk12_2m_habitat.zip/ArcViewGrids/scc12_2mhab",
+      "resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bounds_wgs84": [
+        -120.96813330025434,
+        35.378333001936035,
+        -120.87431551803326,
+        35.44652729664034
+      ],
+      "native_codes": {
+        "-1.0": 370646,
+        "0.0": 3486441,
+        "-31.0": 86854,
+        "-30.0": 3948009
+      }
+    }
+  ],
+  "native_metadata_hashes": {
+    "scc12-companion-ArcViewGrids__scc12_2mhab__metadata.xml": "3aa95f4c65ebf3bd222cd4d9a407b073549b78417d5d14d9a9f137ae4785553f",
+    "scc12-companion-SCC_Block12_accuracy_assessment.shp.xml": "de79ca632ec9278ab6faba1ec241627ac8f245169d09ecfe6d5f2b70f0ad3ef3",
+    "scc12-companion-ArcViewGrids__scc12_2mvrm__metadata.xml": "720df91e51d8f2ddf407f490edf943d1066ea5ff6b529a1314b7705bf5b37c8a",
+    "scc12-companion-ArcViewGrids__scc12_2msub__metadata.xml": "92e32d3ecd6661ca33f9c5f7db4327f66f41acbf5604cc2f49b4129b04b31ed4"
+  },
+  "interpretation": "Rough/smooth DEM-derived classification, not independently verified substrate. Site-specific VRM threshold0.0006 plus hand-drawn artifact mask. Accuracy99% is visual hillshade agreement at100 random locations, not depth uncertainty or field/video/sediment ground truth.",
+  "decision": "Retain as same-acquisition terrain cross-check; do not bind to soft/hard substrate or raise independent evidence confidence.",
+  "next_step": "Seek original backscatter classes, video or samples for actual substrate corroboration. Existing substrate adapter only supports reviewed public-domain USGS GeoTIFF; no scientific-equivalence shortcut."
+}

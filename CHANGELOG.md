@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Qualify six original SCC10–13 native depth grids; refine three private Morro Bay reaches with 347 net habitat candidates, retaining the measured coverage decrease and release holds.
+- Qualify six original SCC10–13 native depth grids; refine five private Morro Bay reaches with 347 net habitat candidates, retaining the measured coverage decrease and release holds.
 
 - Qualify original SCC07–09 native 2 m/5 m bands: add 14.833 km² of private measured Point Estero/northern Morro coverage and 46 net habitat candidates, retaining native depth limits and release holds.
 

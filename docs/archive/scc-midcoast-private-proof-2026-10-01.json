@@ -148,22 +148,120 @@
       },
       "publication_prohibited": true,
       "processing_incomplete": false
+    },
+    {
+      "reach": "morro-bay-r01",
+      "before": {
+        "selected_valid_km2": 43.155481939,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 462
+      },
+      "after": {
+        "selected_valid_km2": 43.135426739,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 461,
+        "supported": 450,
+        "unknown": 11
+      },
+      "ranks": {
+        "lingcod": {
+          "2": 385,
+          "unknown": 11,
+          "3": 60,
+          "1": 5
+        },
+        "rockfish-reef": {
+          "2": 378,
+          "1": 26,
+          "unknown": 11,
+          "3": 46
+        },
+        "gopher-rockfish": {
+          "2": 174,
+          "unknown": 11,
+          "3": 19,
+          "1": 257
+        },
+        "cabezon-shallow-reef": {
+          "3": 65,
+          "2": 385,
+          "unknown": 11
+        }
+      },
+      "source_ownership_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block07-2m-native": 1.9305421511620002,
+        "csumb-scc-block08-2m-native": 21.852293012328996,
+        "csumb-scc-block08-5m-native": 1.2026359736480001,
+        "csumb-scc-block09-5m-native": 2.360489566071,
+        "csumb-scc-block09-2m-native": 15.059242505867998,
+        "csumb-scc-block10-5m-native": 0.499778100687,
+        "csumb-scc-block10-2m-native": 0.23044542919
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false
+    },
+    {
+      "reach": "morro-bay-r05",
+      "before": {
+        "selected_valid_km2": 19.298671139,
+        "tier1_km2": 20.304375,
+        "physical_candidate_count": 338
+      },
+      "after": {
+        "selected_valid_km2": 19.302560467,
+        "tier1_km2": 20.304375,
+        "physical_candidate_count": 339,
+        "supported": 330,
+        "unknown": 9
+      },
+      "ranks": {
+        "lingcod": {
+          "2": 327,
+          "1": 3,
+          "unknown": 9
+        },
+        "rockfish-reef": {
+          "1": 43,
+          "2": 287,
+          "unknown": 9
+        },
+        "gopher-rockfish": {
+          "2": 145,
+          "1": 185,
+          "unknown": 9
+        },
+        "cabezon-shallow-reef": {
+          "2": 329,
+          "3": 1,
+          "unknown": 9
+        }
+      },
+      "source_ownership_km2": {
+        "unknown": 0.0,
+        "csumb-scc-block14-2m-native": 16.394839855857,
+        "csumb-scc-block13-2m-native": 2.682522235859,
+        "bathymetry-offshoremorrobay-zip-fad659557e": 0.112247914276,
+        "csumb-scc-block15-2m-native": 0.112950460718
+      },
+      "publication_prohibited": true,
+      "processing_incomplete": false
     }
   ],
   "totals": {
     "selected_valid_km2": {
-      "before": 97.748440548,
-      "after": 96.37673289600001,
-      "delta": -1.3717076519999978
+      "before": 160.202593626,
+      "after": 158.814720102,
+      "delta": -1.387873524000014
     },
     "tier1_km2": {
-      "before": 100.713125,
-      "after": 100.713125,
+      "before": 166.5175,
+      "after": 166.5175,
       "delta": 0.0
     },
     "physical_candidate_count": {
-      "before": 1076,
-      "after": 1423,
+      "before": 1876,
+      "after": 2223,
       "delta": 347
     }
   },
