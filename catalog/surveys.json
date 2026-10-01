@@ -13780,6 +13780,528 @@
           "sha256": "7b578659dbd15e190c5012b182b077799dfabb2e3d025c8c0cbc34e4e4461e69"
         }
       }
+    },
+    {
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-bc-n-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "8c3c1e3eb09f8e6e3ed24cc942992137a0007dc69fb19435ad0ffb69180abae7",
+        "requested_bounds_wgs84": [
+          -121.6685923555379,
+          36.08051845818481,
+          -121.61881780623428,
+          36.127220855549595
+        ],
+        "valid_pixels_in_requested_bounds": 2081700,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2081700,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "d57c01e1a9d7151f236eca5129462d5e8769b327b82b8cb6d43d026925569042"
+        }
+      }
+    },
+    {
+      "publisher": "unknown",
+      "landing_page": "unknown",
+      "year": "unknown",
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-bc-n-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_5mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "3a266c484b37081505df6a457dbd1c1f5d09c5bb7f09e52c0f908510a14a4ff5",
+        "requested_bounds_wgs84": [
+          -121.67993857104081,
+          36.08246882704793,
+          -121.63452549942052,
+          36.12456630362192
+        ],
+        "valid_pixels_in_requested_bounds": 148238,
+        "nominal_0_300ft_pixels_in_requested_bounds": 12608,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "f317f59d1b5838a8705e3510e4894e894c6939e526f20faee5d9e0e8b59862ee"
+        }
+      }
+    },
+    {
+      "publisher": "unknown",
+      "landing_page": "unknown",
+      "year": "unknown",
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-bc-s-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_2mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "c2d248d386201804a2f4a648e26935a55705be254eed66f741dcb8dd8fba0441",
+        "requested_bounds_wgs84": [
+          -121.63990485795757,
+          36.042488278683464,
+          -121.58742416396665,
+          36.089521912170035
+        ],
+        "valid_pixels_in_requested_bounds": 2008929,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2008929,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "97cfaf75c83fcdd237950303b57a434a27dda1c0949cedf78f80301befc44c01"
+        }
+      }
+    },
+    {
+      "publisher": "unknown",
+      "landing_page": "unknown",
+      "year": "unknown",
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-bc-s-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_5mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "7d7d85c8bd31b11ade6cf148885a58d41faa281dc6f3e6dc86e9431b7622dfc5",
+        "requested_bounds_wgs84": [
+          -121.65247727840007,
+          36.04179079774861,
+          -121.60130559628361,
+          36.093066491266505
+        ],
+        "valid_pixels_in_requested_bounds": 208162,
+        "nominal_0_300ft_pixels_in_requested_bounds": 27969,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "363ad2fbec9fe2ba456f2da79254fcf8380ae010142464191e93d5e8c661c310"
+        }
+      }
+    },
+    {
+      "publisher": "unknown",
+      "landing_page": "unknown",
+      "year": "unknown",
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-lp-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_2mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "014c36f8be5ab6cb632297c39445f0a2c6608c2547e01533bcd3d76b7a8b19da",
+        "requested_bounds_wgs84": [
+          -121.60923461972219,
+          36.00995611563809,
+          -121.53144544098275,
+          36.051650094890924
+        ],
+        "valid_pixels_in_requested_bounds": 2658222,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2658222,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1d3c7b6dde41a7e958dc89715b17be889be5e58f0c05ae438cfeef535afde3ab"
+        }
+      }
+    },
+    {
+      "publisher": "unknown",
+      "landing_page": "unknown",
+      "year": "unknown",
+      "resolution_m": 5,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "hold_reason": "unknown",
+      "id": "csumb-bigcreek-lp-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_5mbathy",
+      "evidence": [
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5"
+      ],
+      "field_evidence": {
+        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/acquisition_dates",
+        "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/vertical_datum",
+        "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/resolution_m",
+        "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/archive_bytes",
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/source_sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "769af61a51ea4ef60f2da0fe36305d573fc9a44debf06d47c034541cf2fb2bfd",
+        "requested_bounds_wgs84": [
+          -121.62045127998474,
+          36.010405408716075,
+          -121.60043217653353,
+          36.04798970144782
+        ],
+        "valid_pixels_in_requested_bounds": 128696,
+        "nominal_0_300ft_pixels_in_requested_bounds": 16659,
+        "native_resolution_m": [
+          5,
+          5
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "9a012b53938ded62574f3d11ebe72931b013284ad7bd3cdb7007c1ce84b8fa33"
+        }
+      }
+    },
+    {
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block01_mb.html",
+      "year": 2010,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "dedaf688958c8d3d8f0cd0edcd2198d8d1732a5260c01c5aea09d1a251843276",
+      "bytes": 215407215,
+      "hold_reason": "unknown",
+      "id": "csumb-scc-block01-2m-native",
+      "title": "SCC_Block01_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block01/multibeam/data/version2/products/SCC_Block01_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk01_2m_bathygrids.zip/ArcViewGrids/scc01_2mbathy",
+      "evidence": [
+        "catalog/csumb-slate-scc-native-sources.json#/sources/0"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-slate-scc-native-sources.json#/sources/0/acquisition_dates",
+        "vertical_datum": "catalog/csumb-slate-scc-native-sources.json#/sources/0/native_vertical_datum",
+        "resolution_m": "catalog/csumb-slate-scc-native-sources.json#/sources/0/resolution_m",
+        "bytes": "catalog/csumb-slate-scc-native-sources.json#/sources/0/archive_bytes",
+        "sha256": "catalog/csumb-slate-scc-native-sources.json#/sources/0/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "dedaf688958c8d3d8f0cd0edcd2198d8d1732a5260c01c5aea09d1a251843276",
+        "cog_sha256": "4c169bab058fdb65ac762004e53a73f74690384a55f0a30e99eb673eaa170518",
+        "requested_bounds_wgs84": [
+          -121.38331732085015,
+          35.689528763469056,
+          -121.30294272943411,
+          35.73505497243695
+        ],
+        "valid_pixels_in_requested_bounds": 6977342,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6977328,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "34a264fc64eda9e2eb3a2353dd13565635412c54421d4b3d3885cb592cf0014e"
+        }
+      }
+    },
+    {
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block19_mb.html",
+      "year": "unknown",
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "fb9d9f2c8178ea4f8000b1a2b7637bcfa7991f3c1e9331edfa99484fa8f072b3",
+      "bytes": 181933974,
+      "hold_reason": "unknown",
+      "id": "csumb-scc-block19-2m-native",
+      "title": "SCC_Block19_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block19/multibeam/data/version2/products/SCC_Block19_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SCC_Blk19_2m_bathygrids.zip/ArcViewGrids/scc19_2mbathy",
+      "evidence": [
+        "catalog/csumb-slate-scc-native-sources.json#/sources/1"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-slate-scc-native-sources.json#/sources/1/acquisition_dates",
+        "vertical_datum": "catalog/csumb-slate-scc-native-sources.json#/sources/1/native_vertical_datum",
+        "resolution_m": "catalog/csumb-slate-scc-native-sources.json#/sources/1/resolution_m",
+        "bytes": "catalog/csumb-slate-scc-native-sources.json#/sources/1/archive_bytes",
+        "sha256": "catalog/csumb-slate-scc-native-sources.json#/sources/1/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "fb9d9f2c8178ea4f8000b1a2b7637bcfa7991f3c1e9331edfa99484fa8f072b3",
+        "cog_sha256": "f81843de35c05354caa57c6890b77d1052823311cd6c8f73132e9bf6f85e2a52",
+        "requested_bounds_wgs84": [
+          -120.74004418220156,
+          34.85695749268795,
+          -120.6404055819752,
+          34.905211622458346
+        ],
+        "valid_pixels_in_requested_bounds": 7784817,
+        "nominal_0_300ft_pixels_in_requested_bounds": 7782827,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "6eec578df8e3db948557190fc2e599f108cd25d332d15a36f5e117a6c9dd9b05"
+        }
+      }
+    },
+    {
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SlateRock_mb.html",
+      "year": 2006,
+      "resolution_m": 2,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "unknown",
+      "sha256": "3489ad1233200250ed6eeb8bede7847a1407fd5a9a09171a446ad10fa08ffbbe",
+      "bytes": 533397873,
+      "hold_reason": "unknown",
+      "id": "csumb-slaterock-2m-native",
+      "title": "SlateRock_additional_products.tar.gz",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "derived_from": [],
+      "status": "physical-only",
+      "archive_member": "SlateRock/SlateRock_2mbathy_hill_slope.zip/ArcViewGrids/sr_2mbathy",
+      "evidence": [
+        "catalog/csumb-slate-scc-native-sources.json#/sources/2"
+      ],
+      "field_evidence": {
+        "year": "catalog/csumb-slate-scc-native-sources.json#/sources/2/acquisition_dates",
+        "vertical_datum": "catalog/csumb-slate-scc-native-sources.json#/sources/2/native_vertical_datum",
+        "resolution_m": "catalog/csumb-slate-scc-native-sources.json#/sources/2/resolution_m",
+        "bytes": "catalog/csumb-slate-scc-native-sources.json#/sources/2/archive_bytes",
+        "sha256": "catalog/csumb-slate-scc-native-sources.json#/sources/2/sha256"
+      },
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3489ad1233200250ed6eeb8bede7847a1407fd5a9a09171a446ad10fa08ffbbe",
+        "cog_sha256": "7a92bb6407e6642b14a2000006c1572321c64889395e8b7c89e81e029bff594c",
+        "requested_bounds_wgs84": [
+          -121.7430419245705,
+          36.11460731300004,
+          -121.64959638020345,
+          36.198532785713326
+        ],
+        "valid_pixels_in_requested_bounds": 6312629,
+        "nominal_0_300ft_pixels_in_requested_bounds": 3742419,
+        "native_resolution_m": [
+          2,
+          2
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "0de7a556d790f25cec7c6c18d5fc363234d3e9316266a0d709bb6e422252a718"
+        }
+      }
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",
