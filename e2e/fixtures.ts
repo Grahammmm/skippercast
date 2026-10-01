@@ -3,6 +3,7 @@
 // result), uncaught page errors fail the test, and axe checks are recorded.
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {forecastFixture} from './forecast-fixture.ts';
 import AxeBuilder from '@axe-core/playwright';
 import {test as base, expect, type Page} from '@playwright/test';
 
@@ -13,6 +14,12 @@ export const test = base.extend<{pageErrors: string[]}>({
   context: async ({context, baseURL}, use) => {
     const origin = new URL(baseURL!).origin;
     await context.route(url => url.origin !== origin && url.protocol !== 'data:' && url.protocol !== 'blob:', route => route.abort('blockedbyclient'));
+    // Block the shared live feed too: browser-origin blocking cannot stop the
+    // local Worker from fetching remote models. Exercise the direct fallback
+    // with synthetic, unit-checked hourly responses instead of live services.
+    await context.route('**/api/forecast?*', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
+    const fixtureNow = Date.now();
+    await context.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)}));
     // A returning visitor who finished the first-run steps; tests open area links.
     await context.addInitScript(() => { try { localStorage.setItem('skippercast-first-run-v1', 'done'); } catch { /* storage blocked */ } });
     await use(context);

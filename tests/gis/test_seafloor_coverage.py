@@ -163,6 +163,90 @@ class ReachRunTests(unittest.TestCase):
                     self.assertTrue(unchanged)
                     self.assertEqual(same, first)
                     reading.assert_not_called(); extracting.assert_not_called()
+            # Simulate a genuinely older checked receipt, not just an alternate
+            # spelling in today's catalog. Migration must retain every feature.
+            from skippercast.seafloor.migrate_cache import migrate_numeric_cache
+            from skippercast.seafloor.adopt import digest, OUTPUTS, PHYSICAL
+            from skippercast.platform.contracts import atomic_json, read_json
+            folder = root/'var/seafloor/reaches/fixture-r01'
+            legacy = deepcopy(first)
+            legacy['inputs']['sources'][0]['resolution_m'] = int(row['resolution_m'])
+            legacy['inputs']['sources'][0]['adapter_review']['native_resolution_m'] = [2, 2]
+            physical_inputs = deepcopy(legacy['inputs'])
+            physical_inputs.pop('screen'); physical_inputs.pop('screen_implementation_sha256')
+            legacy_hash = digest(physical_inputs)
+            self.assertNotEqual(legacy_hash, first['physical_input_hash'])
+            for name in ('cells.json', 'terrain.json'):
+                data = read_json(folder/name); data['input_hash'] = legacy_hash
+                atomic_json(folder/name, data)
+            atomic_json(folder/'physical.json', {'input_hash': legacy_hash,
+                        'outputs': {name: sha256(folder/name) for name in PHYSICAL}}, indent=2)
+            polygon = {'type': 'Polygon', 'coordinates': [[list(t.transform(x, y))
+                       for x, y in ((0, 0), (100, 0), (100, 50), (0, 50), (0, 0))]]}
+            candidate = {'type': 'Feature', 'id': 'legacy-rock-edge', 'geometry': polygon,
+                         'properties': {'id': 'legacy-rock-edge', 'source_ids': ['fixture'],
+                            'resolution_m': 2, 'depth_min_ft': 160, 'depth_max_ft': 170,
+                            'terrain': {'grade': 'A'}, 'fit': {'lingcod': 1, 'rockfish': 2},
+                            'hold_reasons': ['legal-screen-pending']}}
+            original_candidates = read_json(folder/'candidates.geojson')
+            original_candidates['features'] = [candidate]
+            atomic_json(folder/'candidates.geojson', original_candidates)
+            atomic_json(folder/'held.geojson', {'type': 'FeatureCollection', 'features': [candidate]})
+            legacy['ledger_summary']['physical_candidate_count'] = 1
+            atomic_json(folder/'physical.json', {'input_hash': legacy_hash,
+                        'outputs': {name: sha256(folder/name) for name in PHYSICAL}}, indent=2)
+            legacy['input_hash'] = digest(legacy['inputs'])
+            legacy['physical_input_hash'] = legacy_hash
+            legacy['outputs'] = {name: sha256(folder/name) for name in OUTPUTS}
+            atomic_json(folder/'run.json', legacy, indent=2)
+            saved = {name: (folder/name).read_bytes() for name in (*OUTPUTS, 'run.json')}
+            preview = migrate_numeric_cache('fixture-r01', root=root)
+            self.assertTrue(preview['changed']); self.assertFalse(preview['applied'])
+            self.assertEqual(saved, {name: (folder/name).read_bytes() for name in saved})
+            # Corrupt outputs and changed science/rights cannot be adopted.
+            (folder/'cells.json').write_text('corrupt')
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                migrate_numeric_cache('fixture-r01', root=root, apply=True)
+            (folder/'cells.json').write_bytes(saved['cells.json'])
+            catalog_bytes = (root/'catalog/surveys.json').read_bytes()
+            for field, value in (('year', 2020), ('status', 'withdrawn')):
+                altered = json.loads(catalog_bytes); altered['surveys'][0][field] = value
+                (root/'catalog/surveys.json').write_text(json.dumps(altered))
+                with self.assertRaisesRegex(ValueError, 'Scientific sources'):
+                    migrate_numeric_cache('fixture-r01', root=root, apply=True)
+            (root/'catalog/surveys.json').write_bytes(catalog_bytes)
+            rules_path = root/'catalog/habitat-rules.json'; rules_bytes = rules_path.read_bytes()
+            altered_rules = json.loads(rules_bytes); altered_rules['rule_version'] = 'changed'
+            rules_path.write_text(json.dumps(altered_rules))
+            with self.assertRaisesRegex(ValueError, 'Scientific inputs'):
+                migrate_numeric_cache('fixture-r01', root=root, apply=True)
+            rules_path.write_bytes(rules_bytes)
+            ledger_bytes = (root/'dist/data/seafloor-ledger.json').read_bytes()
+            # An interrupted final rename rolls back without losing the original.
+            rename = Path.rename
+            def interrupted(path, destination):
+                if path.name.startswith('.numeric-'):
+                    raise OSError('simulated interruption')
+                return rename(path, destination)
+            with patch.object(Path, 'rename', interrupted), self.assertRaisesRegex(OSError, 'simulated'):
+                migrate_numeric_cache('fixture-r01', root=root, apply=True)
+            self.assertEqual(saved, {name: (folder/name).read_bytes() for name in saved})
+            migration = migrate_numeric_cache('fixture-r01', root=root, apply=True)
+            self.assertTrue(migration['applied'])
+            for name in ('candidates.geojson', 'habitat.geojson', 'held.geojson', 'atlas-comparison.json'):
+                self.assertEqual((folder/name).read_bytes(), saved[name])
+            backup = root/'var/seafloor/numeric-migrations/fixture-r01'/legacy['input_hash']
+            self.assertEqual(saved, {name: (backup/name).read_bytes() for name in saved})
+            self.assertEqual((root/'dist/data/seafloor-ledger.json').read_bytes(), ledger_bytes)
+            transitional = read_json(folder/'run.json')
+            self.assertTrue(transitional['publication_prohibited'])
+            self.assertIn('requires-current-screen', transitional['inputs']['screen']['reasons'][0])
+            with patch('skippercast.seafloor.run.footprint', side_effect=AssertionError('migration reread terrain')), \
+                 patch('skippercast.seafloor.run.build_candidates', side_effect=AssertionError('migration reextracted habitat')):
+                resumed, _ = run('fixture-r01', root=root)
+            self.assertTrue(resumed['physical_reused'])
+            self.assertEqual(resumed['physical_input_hash'], first['physical_input_hash'])
+            self.assertFalse(migrate_numeric_cache('fixture-r01', root=root, apply=True)['changed'])
             # Legal review/freshness changes must not recalculate seafloor physics.
             deferred, _ = run('fixture-r01', root=root, physical_only=True)
             self.assertEqual(deferred['ledger_summary']['tier2_km2'], 0)

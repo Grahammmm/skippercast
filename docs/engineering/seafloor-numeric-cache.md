@@ -48,3 +48,30 @@ This focused fix was rebased and revalidated on main `fdf42cd55`. Independent re
 CI remain required before merge. No new surveyed area, candidates, public ledger
 or live locations are added by a cache fix. The full coastal rollout remains
 unfinished.
+
+## Explicit legacy migration
+
+Use `python -m skippercast.seafloor migrate-numeric-cache --reach REACH` to verify
+and preview a single saved cache. Add `--private` for private physics. Only
+`--apply` replaces it. The command performs no download, terrain derivation,
+habitat extraction, source promotion, public ledger update or publication.
+
+All original outputs, source/normalized bytes, reference/rule/substrate identity,
+source ordering/rights and numerical implementation hashes must match. The only
+allowed change is the exact measurement spelling normalized by the manifest
+loader; changed dates/count types/permissions/pins require a different workflow.
+A dry run leaves every byte unchanged. Applying preserves candidate/held/habitat
+geometry, identifiers, ranks and comparison bytes. Only identity metadata in
+cells, terrain and receipts changes. It stages and validates the replacement,
+retains the complete original folder under
+`var/seafloor/numeric-migrations/REACH/OLD_RUN_HASH/`, and restores it if the final
+rename fails. An existing recovery folder is refused; reconcile an interrupted
+migration rather than overwrite it. Recovery is local/private and must be
+retained with the workstation cache before cleanup.
+
+The replacement is explicitly held with a deferred screen. Run the normal reach
+processor next to apply current source rights and whole-polygon screening using
+the checked migrated physics. Publication cannot treat the transitional receipt
+as current screening. Already canonical caches are verified no-ops. This
+migration is deliberate per reach, never a coastwide force rebuild or an
+automatic scheduled permission grant.

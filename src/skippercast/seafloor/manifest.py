@@ -11,18 +11,24 @@ def load_manifest(root=REPO):
     # JSON publishers may encode 5.0 as 5. These schema-declared continuous
     # measurements must have one representation before any consumer hashes them.
     # Leave integer counts, booleans, unknowns, evidence and source bytes alone.
-    for row in document['surveys']:
-        if row['resolution_m'] != 'unknown':
-            row['resolution_m'] = _measurement_float(row['resolution_m'])
-        profile = row.get('resolution_profile')
-        if profile:
-            for field in ('fine_to_depth_m', 'coarse_resolution_m'):
-                profile[field] = _measurement_float(profile[field])
-        review = row.get('adapter_review')
-        if review:
-            for field in ('requested_bounds_wgs84', 'native_resolution_m'):
-                review[field] = [_measurement_float(value) for value in review[field]]
+    document['surveys'] = [normalize_measurement_row(row) for row in document['surveys']]
     return document
+
+
+def normalize_measurement_row(row):
+    """Copy a reviewed row, preserving all fields except exact measurement spelling."""
+    row = deepcopy(row)
+    if row['resolution_m'] != 'unknown':
+        row['resolution_m'] = _measurement_float(row['resolution_m'])
+    profile = row.get('resolution_profile')
+    if profile:
+        for field in ('fine_to_depth_m', 'coarse_resolution_m'):
+            profile[field] = _measurement_float(profile[field])
+    review = row.get('adapter_review')
+    if review:
+        for field in ('requested_bounds_wgs84', 'native_resolution_m'):
+            review[field] = [_measurement_float(value) for value in review[field]]
+    return row
 
 
 def _measurement_float(value):

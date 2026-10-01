@@ -52,7 +52,7 @@ def save(s3, bucket, root, name, paths):
     return document
 
 
-def restore(s3, bucket, root, name):
+def restore(s3, bucket, root, name, *, include_cache=True):
     name = scope_name(name)
     try:
         with s3.get_object(Bucket=bucket, Key=f'seafloor-cache/state/{name}.json')['Body'] as stream:
@@ -72,6 +72,10 @@ def restore(s3, bucket, root, name):
     for entry in data['files']:
         if not allowed(name, entry['path']) or not re.fullmatch('[a-f0-9]{64}', entry['sha256']):
             raise ValueError('Unreviewed private restore path')
+        # Bookkeeping uses checked reach receipts, not original survey bytes.
+        # Scientific processing/publication retain the default full restore.
+        if not include_cache and entry['path'].startswith('cache/'):
+            continue
         path = base/entry['path']
         if not path.resolve().is_relative_to(base.resolve()) or path.is_symlink():
             raise ValueError('Private restore escapes its root')
