@@ -69,6 +69,17 @@ class RunnerSwitchTests(unittest.TestCase):
                     wrong.append(f'{path.name}: {line}')
         self.assertEqual(wrong, [])
 
+    def test_ci_survives_shared_hosts_and_passwordless_sudo(self):
+        """Several runner instances share one $HOME on a self-hosted box, and sudo asks for a password there."""
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        setups = re.findall(r'uses: pnpm/action-setup@[^\n]*\n((?:\s+[^\n]*\n)+?)(?=\s+- )', ci)
+        self.assertEqual(len(setups), 2)
+        for block in setups:
+            self.assertIn('dest: ${{ runner.temp }}/setup-pnpm', block, 'pnpm/action-setup needs a per-job install dir')
+        with_deps = re.findall(r'(?:if: ([^\n]+)\n\s+)?run: pnpm exec playwright install --with-deps', ci)
+        self.assertEqual(with_deps, ["runner.environment == 'github-hosted'"], '--with-deps runs sudo apt-get; only GitHub-hosted runners allow that')
+        self.assertIn("if: runner.environment != 'github-hosted'\n        run: pnpm exec playwright install chromium", ci)
+
     def test_runner_setup_script_pins_the_runner_release(self):
         script = (ROOT / 'scripts/runner/setup.sh').read_text()
         self.assertRegex(script, r'RUNNER_VERSION=\$\{RUNNER_VERSION:-\d+\.\d+\.\d+\}')
