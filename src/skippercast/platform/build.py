@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+from .launch_points import compile_launch_points
 from .contracts import DEFAULT_REGION, REPO, atomic_json, ecology_profile_id, load_catalogs, load_region, read_json, requirement_report, within
 from ..pipeline.regulations import validate_bindings, validate_region_binding, regulatory_snapshot
 from datetime import datetime, timezone
@@ -37,6 +38,7 @@ def build(root=REPO, now=None):
     root = Path(root)
     needs, sources = load_catalogs(root)
     entries = []
+    published = []
     targets = read_json(root / 'catalog/targets.json')['targets']
     for path in sorted((root / "regions").glob("*/region.json")):
         region = load_region(path.parent.name, root)
@@ -105,8 +107,10 @@ def build(root=REPO, now=None):
         report["published_bottom_views"] = sum(v["status"] == "surveyed" for v in read_json(within(root / "dist", region["assets"]["bottom_index"]))["views"].values())
         atomic_json(output / "coverage.json", report, kind="coverage")
         atomic_json(output / "region.json", region, kind="region")
+        published.append(region)
         receipt = atomic_json(output / "manifest.json", {"schema_version": 1, "region_id": region["id"], "assets": assets}, kind="region-manifest")
         entries.append({"id": region["id"], "name": region["name"], "status": region["status"], "fishing_bounds": region['fishing_bounds'], "discovery_bounds": region.get('map',{}).get('discovery_bounds',region['fishing_bounds']), "config": f"regions/{region['id']}/region.json", "manifest": receipt["sha256"]})
+    compile_launch_points(root, published)
     atomic_json(root / "dist/regions/index.json", {"schema_version": 1, "default_region": DEFAULT_REGION, "regions": entries}, kind="published-regions")
     default = load_region(DEFAULT_REGION, root)
     validate_regional_rules(default, root, now)

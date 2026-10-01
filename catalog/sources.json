@@ -2015,6 +2015,38 @@
         "marine-api.open-meteo.com",
         "ensemble-api.open-meteo.com"
       ]
+    },
+    {
+      "id": "ca-dbw-boating-facilities",
+      "name": "California DBW Boating Facilities database",
+      "provider": "California State Parks, Division of Boating and Waterways",
+      "needs": [
+        "harbor-access"
+      ],
+      "documentation_url": "https://dbw.parks.ca.gov/BoatingFacilities/",
+      "adapter": "manual",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-30",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "California State Parks, Division of Boating and Waterways",
+        "terms_url": "https://dbw.parks.ca.gov/BoatingFacilities/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "Public facility facts (name, address, listed position, operator, parking, floats, services) transcribed by hand into catalog/launch-points.json with the facility id; facts are not copyrightable in the US. Credit DBW as good practice."
+      },
+      "authenticity": {
+        "basis": "Primary publisher or official dataset documentation",
+        "transport": "HTTPS; exact provider hosts only"
+      },
+      "coverage_note": "Listed facility positions choose a launch and estimate run distance; they are never navigation waypoints.",
+      "limitations": [
+        "Hours, fees and ramp condition change; confirm with the operator before a trip.",
+        "Beach launches depend on surf and tide and are not always usable."
+      ],
+      "allowed_hosts": [
+        "dbw.parks.ca.gov"
+      ]
     }
   ]
 }
