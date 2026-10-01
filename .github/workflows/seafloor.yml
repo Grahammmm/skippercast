@@ -49,6 +49,8 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}
+      regions: ${{ steps.plan.outputs.regions }}
+      batch: ${{ steps.plan.outputs.batch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -77,6 +79,8 @@ jobs:
           matrix = json.load(open('var/seafloor/matrix.json'))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('has_work='+str(bool(matrix['include'])).lower()+'\n')
+              f.write('regions='+json.dumps(sorted({r['region'] for r in matrix['include']}))+'\n')
+              f.write('batch='+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']+'\n')
           PYCODE
           cat var/seafloor/rollout-plan.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -102,6 +106,7 @@ jobs:
       - name: Validate native source bytes, compute changed reach, save privately
         env:
           REACH: ${{ matrix.reach }}
+          SEAFLOOR_BATCH: ${{ needs.prepare.outputs.batch }}
         run: python -m skippercast.seafloor.jobs run --reach "$REACH" >> "$GITHUB_STEP_SUMMARY"
 
   publish:
@@ -109,10 +114,13 @@ jobs:
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        region: ${{ fromJSON(needs.prepare.outputs.regions) }}
     permissions:
-      actions: write
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -137,11 +145,13 @@ jobs:
         id: publication
         env:
           MATRIX: ${{ needs.prepare.outputs.matrix }}
+          REGION: ${{ matrix.region }}
+          SEAFLOOR_BATCH: ${{ needs.prepare.outputs.batch }}
           TIPPECANOE: var/tools/tippecanoe/tippecanoe
         run: |
           mkdir -p var/seafloor
           printf '%s\n' "$MATRIX" > var/seafloor/matrix.json
-          python -m skippercast.seafloor.jobs finish --matrix var/seafloor/matrix.json > var/seafloor/published.json
+          python -m skippercast.seafloor.jobs finish --matrix var/seafloor/matrix.json --region "$REGION" > var/seafloor/published.json
           python - <<'PY'
           import json, os
           from pathlib import Path
@@ -155,13 +165,61 @@ jobs:
         env:
           SEAFLOOR_PUBLIC_BASE: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}
         run: python -m skippercast.seafloor.verify --results var/seafloor/published.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Surface incomplete regional stages
+        if: always() && steps.publication.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json
+          if json.load(open('var/seafloor/published.json'))['failures']:
+              raise SystemExit('Regional publication incomplete; checked reach state retained.')
+          PY
+
+  ledger:
+    needs: [prepare, publish]
+    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'true'
+    runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-seafloor.txt
+      - name: Validate manifest and required runtime before any data writes
+        run: python -c "from skippercast.seafloor.manifest import load_manifest; load_manifest()"
+      - name: Reconcile checked reach receipts without survey downloads or publication
+        id: reconcile
+        env:
+          MATRIX: ${{ needs.prepare.outputs.matrix }}
+          SEAFLOOR_BATCH: ${{ needs.prepare.outputs.batch }}
+          PUBLICATION_RESULT: ${{ needs.publish.result }}
+        run: |
+          mkdir -p var/seafloor
+          printf '%s\n' "$MATRIX" > var/seafloor/matrix.json
+          python -m skippercast.seafloor.jobs finish --matrix var/seafloor/matrix.json --ledger-only > var/seafloor/published.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          d = json.loads(Path('var/seafloor/published.json').read_text())
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f: f.write('title='+d['title']+'\n')
+          with Path('var/seafloor/ledger-pr.md').open('a') as f:
+              f.write('\nRegional publication job result: '+os.environ['PUBLICATION_RESULT']+'; see independent regional jobs.\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write(Path('var/seafloor/ledger-pr.md').read_text())
+          PY
       - name: Propose the small ledger change (never push main)
         id: ledger-pr
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           branch: codex/seafloor-ledger-refresh
           add-paths: dist/data/seafloor-ledger.json
-          title: ${{ steps.publication.outputs.title }}
+          title: ${{ steps.reconcile.outputs.title }}
           body-path: var/seafloor/ledger-pr.md
           commit-message: Refresh screened seafloor ledger
       # GitHub starts no pull_request workflows for pushes made with GITHUB_TOKEN,
@@ -175,11 +233,13 @@ jobs:
         run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref codex/seafloor-ledger-refresh
 
       - name: Surface incomplete reaches after preserving successful work
-        if: always() && steps.publication.outcome == 'success'
+        if: always() && steps.reconcile.outcome == 'success'
+        env:
+          PUBLICATION_RESULT: ${{ needs.publish.result }}
         run: |
           python - <<'PY'
-          import json
+          import json, os
           result = json.load(open('var/seafloor/published.json'))
-          if result['failures']:
+          if result['failures'] or os.environ['PUBLICATION_RESULT'] != 'success':
               raise SystemExit('Some stages failed; completed reaches and coverage checkpoints were retained. See the run summary.')
           PY

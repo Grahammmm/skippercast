@@ -10,6 +10,7 @@
 - Seafloor: privately qualify nine native Big Creek, Slate Rock and SCC grids. Four local reaches gain 69.54 km² of measured depth coverage and 824 physical habitat candidates; producer release qualification and spatial screening remain required before map/export publication.
 
 - Seafloor: open explicitly selected native ArcInfo grids inside original NOAA ZIP-in-tar survey bundles, with bounded extraction and checked private recovery. Preserve native pixels and reject unsafe containers; source qualification and public screening remain separate.
+- Seafloor: publish regions independently with retained batch identities for failed-job retries. Reconcile the ledger separately without downloading original surveys; retain scientific checks, report failed regions and log publication stages rather than timing out the entire coast in one job.
 
 - Seafloor: transfer checked private physical results after rights-only source promotion without recalculating terrain. Preserve candidate geometry and rankings, reject scientific changes/corruption and keep publication held until the normal runner applies a fresh screen.
 

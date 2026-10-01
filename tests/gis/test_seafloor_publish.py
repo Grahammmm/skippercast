@@ -320,6 +320,24 @@ class PrivateRecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'checksum'): state_cache.restore(s3, 'b', tmp, 'r01')
             self.assertFalse((Path(tmp)/'var/seafloor/reaches/r01/cells.json').exists())
 
+    def test_receipt_only_restore_skips_large_sources_but_keeps_hash_checks(self):
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            root = Path(first)
+            source = root/'var/seafloor/cache'/('a'*64)/'source.bag'
+            receipt = root/'var/seafloor/reaches/r01/run.json'
+            source.parent.mkdir(parents=True); source.write_bytes(b'large native source')
+            receipt.parent.mkdir(parents=True); receipt.write_bytes(b'{"checked":true}')
+            s3 = Bucket(); state_cache.save(s3, 'b', root, 'r01', [source, receipt])
+            s3.gets.clear()
+            state_cache.restore(s3, 'b', second, 'r01', include_cache=False)
+            self.assertFalse((Path(second)/source.relative_to(root)).exists())
+            self.assertEqual((Path(second)/receipt.relative_to(root)).read_bytes(), receipt.read_bytes())
+            self.assertNotIn(f'seafloor-cache/{sha256(source)}/source.bag', s3.gets)
+            s3.objects[f'seafloor-cache/{sha256(receipt)}/run.json'] = b'corrupt'
+            (Path(second)/receipt.relative_to(root)).unlink()
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                state_cache.restore(s3, 'b', second, 'r01', include_cache=False)
+
 
 if __name__ == '__main__':
     unittest.main()
