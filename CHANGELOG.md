@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Inspect native SCC04/16/22 grids and add private ranked Cambria/Arguello shelf coverage, preserving datum, mixed survey dates and publication holds.
 - Seafloor: privately qualify native SCC03/17/21 and fill two previously empty Cambria/Conception reaches, updating three neighbors. Add 63.53 km² net measured coverage and 946 physical candidates; publication and incomplete-rank holds remain.
 
 - Seafloor: privately qualify native SCC02/18/20 original grids and process their actual shallow intersections. Add 72.54 km² net measured coverage and 978 physical habitat candidates in the San Simeon approach and Arguello/Conception area; retain publication and ranking holds.
