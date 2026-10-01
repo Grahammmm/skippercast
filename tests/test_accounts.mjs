@@ -59,7 +59,7 @@ const count = (sql, table) => sql.prepare(`SELECT COUNT(*) AS n FROM ${table}`).
 
 test('register → session → private trip → sign out → 401 → sign in again', async () => {
   const {sql, adapter} = database(), c = client(adapter), auth = new SoftwareAuthenticator();
-  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null});
+  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null, emailSignIn: false});
   assert.equal((await c.call('/api/trips')).status, 401);
 
   const {options, result} = await register(c, auth, 'Graham');
@@ -245,7 +245,7 @@ test('passkeys: add a second, list, remove; the last one cannot be removed', asy
   assert.deepEqual(Object.keys(only).sort(), ['created_at', 'id', 'last_used_at', 'transports']);
   const last = await c.call('/api/auth/passkeys', {method: 'DELETE', body: {id: only.id}});
   assert.equal(last.status, 409);
-  assert.match(last.data.error, /only passkey/);
+  assert.match(last.data.error, /only way to sign in/);
 
   const options = await c.call('/api/auth/passkeys/options', {method: 'POST', body: {}});
   assert.equal(options.status, 200);

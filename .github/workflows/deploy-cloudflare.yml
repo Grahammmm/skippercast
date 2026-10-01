@@ -74,6 +74,9 @@ jobs:
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          # Email sign-in links (server/email-auth.ts). Optional: without both, email sign-in stays off.
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
           EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
           CUSTOM_DOMAINS: ${{ vars.CUSTOM_DOMAINS }}
           # "true" adds the trip-check queues (creates them if missing); docs/cloudflare.md.

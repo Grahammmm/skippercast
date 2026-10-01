@@ -8,7 +8,7 @@
 // repository's raw GitHub branches, as in production; the tests block every
 // other origin, so they never depend on NWS, NOAA or map tile servers.
 import {spawn, spawnSync} from 'node:child_process';
-import {existsSync, rmSync} from 'node:fs';
+import {existsSync, rmSync, mkdirSync, createWriteStream} from 'node:fs';
 import {resolve} from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -22,8 +22,14 @@ const run = (cmd, args) => { const r = spawnSync(cmd, args, {cwd: root, stdio: '
 run(process.execPath, ['scripts/wrangler_config.mjs', '00000000-0000-0000-0000-000000000000', 'skippercast-feeds', config]);
 rmSync(state, {recursive: true, force: true});   // every run starts with empty D1, R2 and caches
 run('npx', [...WRANGLER, 'd1', 'migrations', 'apply', 'DB', '--local', '--config', config, '--persist-to', state]);
+// Email sign-in links go to the Worker log (MAIL_TRANSPORT=log, localhost only),
+// which is also written to test-results/worker.log for the email sign-in test to read.
+mkdirSync(resolve(root, 'test-results'), {recursive: true});
+const log = createWriteStream(resolve(root, 'test-results/worker.log'));
 const server = spawn('npx', [...WRANGLER, 'dev', '--config', config, '--persist-to', state, '--ip', '127.0.0.1', '--port', port,
-  '--var', `EXTRA_ORIGINS:http://localhost:${port}`, '--show-interactive-dev-session=false', '--log-level', 'warn'],
-{cwd: root, stdio: 'inherit', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}});
+  '--var', `EXTRA_ORIGINS:http://localhost:${port}`, '--var', 'MAIL_TRANSPORT:log', '--show-interactive-dev-session=false', '--log-level', 'warn'],
+{cwd: root, stdio: ['inherit', 'pipe', 'pipe'], env: {...process.env, WRANGLER_SEND_METRICS: 'false'}});
+server.stdout.on('data', chunk => { process.stdout.write(chunk); log.write(chunk); });
+server.stderr.on('data', chunk => { process.stderr.write(chunk); log.write(chunk); });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));
 server.on('exit', code => process.exit(code ?? 0));

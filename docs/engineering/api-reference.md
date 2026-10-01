@@ -137,13 +137,27 @@ Cookie-less funnel events and client error reports from `web/telemetry.ts` (`nav
 
 ### `GET /api/session`
 
-Whether the caller is signed in, the push public key and the sign-in link.
+Whether the caller is signed in, the push public key, the sign-in link and whether email sign-in links can be sent here.
 
 ```json
-{"signedIn":false,"publicKey":null,"signIn":"/signin-with-chatgpt?return_to=%2F%23forecast"}
+{"signedIn":false,"publicKey":null,"signIn":"/#account","user":null,"emailSignIn":true}
 ```
 
-On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signIn` is `null`.
+`emailSignIn` is `true` only when accounts are on and a mail provider is configured (`RESEND_API_KEY` and a valid `MAIL_FROM`). Without accounts (`IDENTITY_PROVIDER` unset or unknown) `signedIn` is always `false` and `signIn` is `null`.
+
+### Email sign-in links: `/api/auth/email*`
+
+`server/email-auth.ts`. Like every `/api/auth/*` route: 20 requests a minute per IP, and non-GET requests need an allowed `Origin`. A link is `<origin>/#email-sign-in=<43-character token>`; the token sits in the fragment so mail scanners never send it, the page posts it, and the server keeps only its SHA-256. Links work once and expire after 15 minutes.
+
+| Method and path | Body | Success | Errors |
+| --- | --- | --- | --- |
+| `POST /api/auth/email/start` | `{"email": "you@example.com"}` | `200` `{"sent": true, "expires_in": 900}`, whether or not the address has an account | `400` `enter a valid email address`; `429` after five links to one address in an hour; `503` when no mail provider is configured or the provider fails (the link is discarded) |
+| `POST /api/auth/email/verify` | `{"token": "<token>"}` | Sets the session cookie. `201` `{"signedIn": true, "created": true, "user": {…}, "email": "…"}` for a new account, `200` with `"created": false` for an existing one or a confirmed added address | `400` `this link has expired or was already used; ask for a new one`, `that email address belongs to another SkipperCast account` |
+| `GET /api/auth/email` (signed in) | | `200` `{"email": "…" or null, "verified_at": "…" or null, "available": true}` | `401` |
+| `POST /api/auth/email` (signed in) | `{"email": "…"}` | `200` `{"sent": true, …}`; the address is added when its link is opened, replacing any earlier one | as for `start` |
+| `DELETE /api/auth/email` (signed in) | `{}` | `200` `{"removed": true}` | `409` when the address is the account's only way to sign in (no passkey); `404` when there is none |
+
+With a confirmed address an account may remove its last passkey; without one it may not (`DELETE /api/auth/passkeys` answers `409`).
 
 ## Scheduler
 

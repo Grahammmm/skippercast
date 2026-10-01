@@ -1,7 +1,8 @@
 // SkipperCast accounts: passkeys (WebAuthn) and a first-party session cookie.
-// No passwords, email or third-party sign-in. The server stores each passkey's
-// public key and signature counter, sha256 of each session token (never the
-// token), and single-use challenges that expire after five minutes.
+// No passwords or third-party sign-in; email sign-in links live in
+// server/email-auth.ts. The server stores each passkey's public key and
+// signature counter, sha256 of each session token (never the token), and
+// single-use challenges that expire after five minutes.
 import {generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse} from '@simplewebauthn/server';
 import type {AuthenticatorTransport,RegistrationResponseJSON,AuthenticationResponseJSON} from '@simplewebauthn/server';
 
@@ -25,9 +26,9 @@ export class AuthError extends Error {}     // answered 400 with its fixed messa
 
 const now=()=>Math.floor(Date.now()/1000);
 const iso=()=>new Date().toISOString();
-const b64url=(bytes:Uint8Array):string=>{let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');};
+export const b64url=(bytes:Uint8Array):string=>{let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');};
 const fromB64url=(text:string):Uint8Array<ArrayBuffer>=>Uint8Array.from(atob(text.replaceAll('-','+').replaceAll('_','/')+'='.repeat((4-text.length%4)%4)),c=>c.charCodeAt(0));
-const sha256=async(text:string):Promise<string>=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
+export const sha256=async(text:string):Promise<string>=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
 const TRANSPORTS=new Set<string>(['ble','cable','hybrid','internal','nfc','smart-card','usb']);
 const cleanTransports=(list:unknown):AuthenticatorTransport[]=>Array.isArray(list)?list.filter(t=>TRANSPORTS.has(t)):[];
 
@@ -76,7 +77,7 @@ export async function sessionUser(request:Request,database:D1Database|(()=>D1Dat
   return {id:row.user_id,display_name:row.display_name,sessionId:id,renewed};
 }
 
-async function startSession(db:D1Database,userId:string,request:Request):Promise<string>{
+export async function startSession(db:D1Database,userId:string,request:Request):Promise<string>{
   const token=b64url(crypto.getRandomValues(new Uint8Array(32)));
   const ua=(request.headers.get('User-Agent')||'').replace(/[^\x20-\x7e]/g,'').slice(0,80)||null;
   await db.prepare('INSERT INTO sessions(id,user_id,created_at,expires_at,user_agent) VALUES(?,?,?,?,?)').bind(await sha256(token),userId,iso(),now()+SESSION_SECONDS,ua).run();
@@ -195,10 +196,10 @@ export async function authRoute(request:Request,{path,db,rp,body,json,current}:A
   if(path==='/api/auth/passkeys'&&method==='DELETE'){
     const {id}=await body(request);if(typeof id!=='string'||!id||id.length>1400)throw new AuthError('passkey id required');
     const existing=await mine();if(!existing.some(p=>p.id===id))return json({error:'Not found'},404);
-    const onlyOne=json({error:'This is your only passkey. Add another before removing it, or delete the account.'},409);
-    if(existing.length<2)return onlyOne;
-    // The count is re-checked in the same statement, so two parallel removals cannot delete the last passkey.
-    const removed=await db.prepare('DELETE FROM passkeys WHERE id=? AND user_id=? AND (SELECT COUNT(*) FROM passkeys WHERE user_id=?)>1').bind(id,current.id,current.id).run();
+    const onlyOne=json({error:'This is your only way to sign in. Add another passkey or an email address before removing it, or delete the account.'},409);
+    // The last passkey can go only when a confirmed email address can still sign in.
+    // Re-checked in the same statement, so parallel removals cannot lock the account out.
+    const removed=await db.prepare('DELETE FROM passkeys WHERE id=? AND user_id=? AND ((SELECT COUNT(*) FROM passkeys WHERE user_id=?)>1 OR EXISTS(SELECT 1 FROM user_emails WHERE user_id=?))').bind(id,current.id,current.id,current.id).run();
     if(!removed?.meta?.changes)return onlyOne;
     return json({removed:true});
   }
@@ -209,6 +210,11 @@ export async function authRoute(request:Request,{path,db,rp,body,json,current}:A
 export async function exportAccount(db:D1Database,userId:string){
   return {user:await db.prepare('SELECT id,created_at,display_name FROM users WHERE id=?').bind(userId).first(),
     passkeys:(await db.prepare('SELECT id,transports,created_at,last_used_at FROM passkeys WHERE user_id=?').bind(userId).all()).results,
-    sessions:(await db.prepare('SELECT created_at,expires_at,user_agent FROM sessions WHERE user_id=?').bind(userId).all()).results};
+    sessions:(await db.prepare('SELECT created_at,expires_at,user_agent FROM sessions WHERE user_id=?').bind(userId).all()).results,
+    email:await db.prepare('SELECT email,verified_at FROM user_emails WHERE user_id=?').bind(userId).first()};
 }
-export const deleteAccountStatements=(db:D1Database,userId:string):D1PreparedStatement[]=>['passkeys','sessions','auth_challenges'].map(t=>db.prepare(`DELETE FROM ${t} WHERE user_id=?`).bind(userId)).concat(db.prepare('DELETE FROM users WHERE id=?').bind(userId));
+// Pending links to the account's address go first, while user_emails still names it.
+export const deleteAccountStatements=(db:D1Database,userId:string):D1PreparedStatement[]=>[
+  db.prepare('DELETE FROM email_links WHERE user_id=? OR email IN (SELECT email FROM user_emails WHERE user_id=?)').bind(userId,userId),
+  ...['passkeys','sessions','auth_challenges','user_emails'].map(t=>db.prepare(`DELETE FROM ${t} WHERE user_id=?`).bind(userId)),
+  db.prepare('DELETE FROM users WHERE id=?').bind(userId)];

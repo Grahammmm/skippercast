@@ -24,3 +24,9 @@
 .account-confirm .home-port-actions{display:flex;flex-wrap:wrap;gap:8px}
 .account-confirm button{min-height:44px;padding:0 14px;border:1px solid var(--line,#dbe4e7);border-radius:10px;background:var(--white,#fff);color:var(--ink,#102f3b);font:700 .85rem system-ui,sans-serif;cursor:pointer}
 .account-confirm .account-destructive{background:#8a2a1c;border-color:#8a2a1c;color:#fff}
+/* Email sign-in link form: the address and its button share one row when there is room. */
+.account-email-form{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin:0 0 6px}
+.account-email-form label{grid-column:1/-1}
+.account-email-form input{min-width:0}
+.account-email-form button{min-height:44px;padding:0 14px;border:1px solid var(--line,#dbe4e7);border-radius:10px;background:var(--white,#fff);color:var(--navy,#082e3b);font:700 .85rem system-ui,sans-serif;cursor:pointer}
+@media (max-width:420px){.account-email-form{grid-template-columns:1fr}}

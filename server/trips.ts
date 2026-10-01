@@ -128,7 +128,7 @@ async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
 export async function prune(env:Env,now=Date.now()):Promise<void>{
   const cutoff=new Date(now-90*86400000).toISOString();
   await db(env).batch([db(env).prepare('DELETE FROM request_limits WHERE expires_at<?').bind(Math.floor(now/1000)),
-    db(env).prepare('DELETE FROM sessions WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM auth_challenges WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
+    db(env).prepare('DELETE FROM sessions WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM auth_challenges WHERE expires_at<?').bind(Math.floor(now/1000)),db(env).prepare('DELETE FROM email_links WHERE expires_at<?').bind(Math.floor(now/1000)-3600),db(env).prepare('DELETE FROM comfort_feedback WHERE observed_at<?').bind(new Date(now-365*86400000).toISOString()),
     db(env).prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE created_at<?)').bind(cutoff),db(env).prepare('DELETE FROM alert_events WHERE created_at<?').bind(cutoff),db(env).prepare('DELETE FROM trips WHERE date<?').bind(cutoff.slice(0,10))]);
 }
 export async function scheduledPrune(env:Env):Promise<'ok'|'failed'|'no-db'>{

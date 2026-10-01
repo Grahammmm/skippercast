@@ -43,6 +43,13 @@
       "when": 1790820358538,
       "tag": "0005_trip_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790867342886,
+      "tag": "0006_email_sign_in",
+      "breakpoints": true
     }
   ]
 }

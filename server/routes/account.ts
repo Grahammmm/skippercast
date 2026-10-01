@@ -4,12 +4,14 @@ import {Hono} from 'hono';
 import {exportAccount, deleteAccountStatements, clearCookie} from '../auth.ts';
 import {json, db} from '../http.ts';
 import {signInPath} from '../middleware/context.ts';
+import {mailer} from '../email-auth.ts';
 import type {AppEnv} from '../env.ts';
 
 export const session = new Hono<AppEnv>();
 session.get('/api/session', async c => {
   const who = await c.var.identify(), owner = who?.id || null, signIn = signInPath(c.var.identityProvider);
-  return json({signedIn: !!owner, publicKey: c.env.VAPID_PUBLIC_KEY || null, signIn, user: owner ? {id: owner, display_name: who!.display_name ?? null} : null});
+  return json({signedIn: !!owner, publicKey: c.env.VAPID_PUBLIC_KEY || null, signIn, user: owner ? {id: owner, display_name: who!.display_name ?? null} : null,
+    emailSignIn: !!signIn && !!mailer(c.env ?? {}, new URL(c.req.url))});
 });
 
 export const privacy = new Hono<AppEnv>();

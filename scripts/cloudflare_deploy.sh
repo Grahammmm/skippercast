@@ -125,6 +125,8 @@ secrets = {name: os.environ[source] for name, source in [
     ('ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'),       # AI boat lookup
     ('GITHUB_TOKEN', 'WATCHDOG_GITHUB_TOKEN'),        # cron watchdog restarts the live refresh
     ('EXTRA_ORIGINS', 'EXTRA_ORIGINS'),               # e.g. https://skippercast.<you>.workers.dev
+    ('RESEND_API_KEY', 'RESEND_API_KEY'),             # email sign-in links (server/email-auth.ts)
+    ('MAIL_FROM', 'MAIL_FROM'),                       # their sender, e.g. SkipperCast <sign-in@skippercast.com>
 ] if os.environ.get(source)}
 print(json.dumps(secrets))
 PY

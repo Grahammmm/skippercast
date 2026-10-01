@@ -21,10 +21,13 @@ export interface Env {
   BOAT_LOOKUP_GLOBAL_DAILY_LIMIT?: string;
   BOAT_AI_MODEL?: string;
   EXTRA_ORIGINS?: string;            // comma-separated extra allowed origins (staging, wrangler dev)
+  MAIL_FROM?: string;                // email sign-in sender, e.g. "SkipperCast <sign-in@skippercast.com>"
+  MAIL_TRANSPORT?: string;           // "log": print sign-in links to the log, on localhost only (wrangler dev)
   // Secrets (wrangler secret put)
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   ANTHROPIC_API_KEY?: string;
+  RESEND_API_KEY?: string;           // email sign-in links (server/email-auth.ts); unset = feature off
   GITHUB_TOKEN?: string;             // cron watchdog: Actions read and write
 }
 

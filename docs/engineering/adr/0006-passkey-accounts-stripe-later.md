@@ -18,6 +18,8 @@
 - Identity resolves only when `IDENTITY_PROVIDER=skippercast`; any other value fails closed.
 - Users can add and remove passkeys (never the last), export their data and delete the account.
 
+**Email links (added 2026-10-01):** a single-use sign-in link emailed to an address, as an alternative to a passkey and as a way back in for a passkey account that adds an address. Only the link's SHA-256 is stored; the token travels in the URL fragment. Delivered through Resend when its key and sender are configured, otherwise hidden. This answers the "no recovery" drawback below and is the identity a Stripe customer email can link to.
+
 **Billing (proposed):** Stripe Checkout and Customer Portal, a verified idempotent webhook, and a plan check on premium routes, keyed to `users.id`. Deferred until the entity, licence and data-rights blockers are resolved; nothing is built.
 
 ## Consequences

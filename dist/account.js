@@ -1,8 +1,11 @@
-// Account sheet: create a SkipperCast account or sign in with a passkey, add or
-// remove passkeys, sign out, delete the account. Opens from the Guide entry or
-// any #account link. Passkey ceremonies use the vendored @simplewebauthn/browser
+// Account sheet: create a SkipperCast account or sign in with a passkey or an
+// emailed link, add or remove passkeys and the sign-in email, sign out, delete
+// the account. Opens from the Guide entry or any #account link. An emailed link
+// opens /#email-sign-in=<token>; initAccount posts the token and drops it from the
+// address bar first. Passkey ceremonies use the vendored @simplewebauthn/browser
 // (window.SimpleWebAuthnBrowser, loaded with SRI in index.html).
 const RETURN_KEY = 'skippercast-account-return';
+const LINK_HASH = '#email-sign-in=';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
 
@@ -69,23 +72,46 @@ function finish() {
   location.reload();
 }
 
-function signedOutHTML() {
+/** The token in an emailed sign-in link's hash, or null. */
+export function linkToken(hash) {
+  if (typeof hash !== 'string' || !hash.startsWith(LINK_HASH)) return null;
+  const token = hash.slice(LINK_HASH.length);
+  return /^[\w-]{43}$/.test(token) ? token : null;
+}
+
+const emailFormHTML = (label, button) => `<form id="account-email-form" class="account-email-form" novalidate>
+    <label for="account-email">${label}</label>
+    <input id="account-email" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="you@example.com" required />
+    <button type="submit" id="account-email-send">${button}</button></form>`;
+
+function signedOutHTML(emailSignIn) {
   return `<h1 id="account-title">Save trips and alerts with an account</h1>
     <p class="home-port-intro">SkipperCast accounts use passkeys: Face ID, Touch ID or your device PIN. There is no password. The map and forecasts stay free without an account.</p>
     <label for="account-name">Name <span class="account-hint">(optional, shown only to you)</span></label>
     <input id="account-name" type="text" maxlength="60" autocomplete="username webauthn" placeholder="e.g. Graham" />
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-create" class="account-primary">Create account</button><button type="button" id="account-signin">Sign in with a passkey</button></div>
+    ${emailSignIn ? `<h2 class="account-subhead">Or use an email link</h2>${emailFormHTML('Email address', 'Email me a sign-in link')}<p class="home-port-fine">We send a link that works once for 15 minutes. Opening it signs you in, or creates an account for that address. The address is used only for sign-in links.</p>` : ''}
     <p class="home-port-fine">Your passkey stays on your device or in your password manager; SkipperCast stores only its public key. Saved trips, alerts and boat comfort feedback belong to your account, and you can delete the account at any time.</p>`;
 }
 
-function signedInHTML(session, passkeys) {
-  const name = session.user?.display_name;
+function emailHTML(email) {
+  if (email.email) return `<h2 class="account-subhead">Sign-in email</h2>
+    <ul class="account-passkeys"><li><span>${esc(email.email)}</span><button type="button" id="account-email-remove">Remove</button></li></ul>`;
+  if (!email.available) return '';
+  return `<h2 class="account-subhead">Sign-in email</h2>
+    <p class="home-port-fine">Add an address so you can get back in with an emailed link if you lose your passkeys.</p>
+    ${emailFormHTML('Email address', 'Send a confirmation link')}`;
+}
+
+function signedInHTML(session, passkeys, email = {email: null, available: false}) {
+  const name = session.user?.display_name, lastWay = passkeys.length < 2 && !email.email;
   return `<h1 id="account-title">${name ? `Signed in as ${esc(name)}` : 'You are signed in'}</h1>
     <p class="home-port-intro">Your saved trips, alerts and comfort feedback are private to this account.</p>
     <h2 class="account-subhead">Passkeys</h2>
     <ul class="account-passkeys">${passkeys.map(p => `<li><span>Added ${esc(day(p.created_at))}${p.last_used_at ? ` · last used ${esc(day(p.last_used_at))}` : ''}</span>
-      <button type="button" data-remove-passkey="${esc(p.id)}"${passkeys.length < 2 ? ' disabled title="Add another passkey before removing this one"' : ''}>Remove</button></li>`).join('')}</ul>
+      <button type="button" data-remove-passkey="${esc(p.id)}"${lastWay ? ' disabled title="Add another passkey or an email address before removing this one"' : ''}>Remove</button></li>`).join('')}</ul>${passkeys.length ? '' : '<p class="home-port-fine">No passkeys yet. Add one to sign in with Face ID, Touch ID or your device PIN.</p>'}
+    ${emailHTML(email)}
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-add">Add a passkey on this device</button><button type="button" id="account-signout">Sign out</button></div>
     <details class="account-danger"><summary>Delete account</summary>
@@ -93,8 +119,22 @@ function signedInHTML(session, passkeys) {
       <button type="button" id="account-delete">Delete my account and records</button></details>`;
 }
 
+// Wires the email form: posts the address to `path` and reports the result.
+function emailForm(scrim, status, path, sentMessage) {
+  const form = scrim.querySelector('#account-email-form');
+  form?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const input = form.querySelector('#account-email'), button = form.querySelector('#account-email-send'), email = input.value.trim();
+    if (!email || !input.checkValidity()) { status('Enter your email address.'); input.focus(); return; }
+    button.disabled = true; status('Sending…');
+    try { await api(path, {method: 'POST', body: {email}}); status(sentMessage(email)); }
+    catch (error) { status(passkeyMessage(error)); }
+    finally { button.disabled = false; }
+  });
+}
+
 let open = null;
-export async function openAccount() {
+export async function openAccount(notice = '') {
   if (open) return;
   const previous = document.activeElement;
   const scrim = document.createElement('div');
@@ -128,10 +168,12 @@ export async function openAccount() {
   if (!session.signIn) { body.innerHTML = '<h1 id="account-title">Account</h1><p class="home-port-intro">Accounts are not available on this site.</p>'; return; }
 
   if (!session.signedIn) {
-    body.innerHTML = signedOutHTML();
+    body.innerHTML = signedOutHTML(session.emailSignIn);
+    emailForm(scrim, status, 'auth/email/start', email => `Check ${email} for a sign-in link. It works once, for 15 minutes.`);
+    if (notice) status(notice);
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
-    if (!supported()) { busy(true); status('This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.'); return; }
+    if (!supported()) { busy(true); status(notice || (session.emailSignIn ? 'This browser does not support passkeys. You can still sign in with an email link.' : 'This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.')); return; }
     const signIn = async (autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
       const response = await webauthn().startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
@@ -163,9 +205,17 @@ export async function openAccount() {
   }
 
   const render = async () => {
-    let passkeys = [];
-    try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
-    body.innerHTML = signedInHTML(session, passkeys);
+    let passkeys = [], email = {email: null, available: false}, problem = '';
+    try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { problem = passkeyMessage(error); }
+    try { email = await api('auth/email'); } catch { /* shown without the email section */ }
+    body.innerHTML = signedInHTML(session, passkeys, email);
+    if (problem) status(problem);
+    emailForm(scrim, status, 'auth/email', address => `Check ${address} and open the link to confirm it.`);
+    $('#account-email-remove')?.addEventListener('click', async event => {
+      if (!await confirmInPage(event.currentTarget, 'Remove this email address? Sign-in links will no longer work for this account.', 'Remove email')) return;
+      try { await api('auth/email', {method: 'DELETE', body: {}}); await render(); status('Email address removed.'); }
+      catch (error) { status(passkeyMessage(error)); }
+    });
     $('#account-add').addEventListener('click', async () => {
       if (!supported()) { status('This browser does not support passkeys.'); return; }
       status('Follow your device to add a passkey…');
@@ -190,19 +240,37 @@ export async function openAccount() {
     });
   };
   await render();
+  if (notice) status(notice);
+}
+
+// Opens an emailed sign-in link: the token leaves the address bar before the
+// request, so it is not kept in history or shared by a copied URL.
+async function useEmailLink(token) {
+  history.replaceState(null, '', location.pathname + location.search + '#account');
+  try {
+    await api('auth/email/verify', {method: 'POST', body: {token}});
+    try { sessionStorage.setItem(RETURN_KEY, '#guide'); } catch { /* storage blocked */ }
+    finish();
+  } catch (error) {
+    openAccount(error.status === 503 ? 'Email sign-in is not available right now. Try again later.' : passkeyMessage(error));
+  }
 }
 
 export async function initAccount() {
   const entry = document.getElementById('account-entry');
   const remember = back => { try { sessionStorage.setItem(RETURN_KEY, back && back !== '#account' ? back : '#guide'); } catch { /* storage blocked */ } };
   const fromHash = event => {
+    const token = linkToken(location.hash);
+    if (token) { useEmailLink(token); return; }
     if (location.hash !== '#account') { open?.close(); return; }
     if (event?.oldURL) remember(new URL(event.oldURL).hash);
     openAccount();
   };
   window.addEventListener('hashchange', fromHash);
   entry?.addEventListener('click', () => { remember(location.hash || '#guide'); location.hash = 'account'; });
-  if (location.hash === '#account') openAccount();
+  const token = linkToken(location.hash);
+  if (token) useEmailLink(token);
+  else if (location.hash === '#account') openAccount();
   try {
     const session = await api('session');
     if (entry) {

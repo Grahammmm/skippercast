@@ -55,9 +55,19 @@
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Account identifier supplied by the sign-in provider</th>
-            <td>Links your saved records to you. Your email address is not stored.</td>
-            <td>Kept with your records; removed when you delete them.</td>
+            <th scope="row">Account: a random account identifier, the name you chose (optional), your passkeys’ public keys, and sign-in sessions</th>
+            <td>Links your saved records to you and signs you in.</td>
+            <td>Kept until you delete the account; sessions end after 30 days without use.</td>
+          </tr>
+          <tr>
+            <th scope="row">Email address, only if you sign in with an email link or add one to your account</th>
+            <td>Send single-use sign-in links. It is not used for anything else.</td>
+            <td>Kept until you remove it or delete the account.</td>
+          </tr>
+          <tr>
+            <th scope="row">Sign-in links: a one-way hash of each link, the address it went to, and when</th>
+            <td>Make each link work once, for 15 minutes, and limit links to five an hour per address.</td>
+            <td>Removed when used, or about an hour after they expire.</td>
           </tr>
           <tr>
             <th scope="row">Trips: area, forecast point, target species, date, hours, wind/gust/sea limits, latest assessment</th>
@@ -131,8 +141,14 @@
         <li>
           <strong>Hosting.</strong> SkipperCast runs on Cloudflare and on OpenAI’s
           ChatGPT Sites. They process your IP address and request details to
-          deliver and secure the service. Sign-in, where available, is provided
-          by ChatGPT.
+          deliver and secure the service. Accounts are SkipperCast’s own
+          (passkeys or email links); no other company signs you in.
+        </li>
+        <li>
+          <strong>Email delivery.</strong> When you ask for a sign-in link, its
+          message (your address and the link) is sent through our email
+          provider, Resend, which delivers it and keeps delivery logs under its
+          own privacy policy.
         </li>
         <li>
           <strong>Push notifications</strong> are delivered through your

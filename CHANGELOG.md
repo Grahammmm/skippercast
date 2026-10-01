@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Accounts: sign in with a single-use link sent by email, or add an email address to a passkey account so you can get back in after losing your passkeys. Links work once for 15 minutes and are limited to five an hour per address; only a hash of each link is stored. The option appears once a Resend key and sender address are configured (migration 0006).
 - Trips: a launch-point catalog (`catalog/launch-points.json`, from the California DBW Boating Facilities records) builds `dist/regions/<id>/launch-points.json` for every published region; Morro Bay's public ramp, the Port San Luis ramp and Olde Port Beach are the first entries.
 - Trips: a saved trip now carries its plan (launch point, up to three target species, spots, legs, window, exports taken and a status) through migration 0005 and `PATCH /api/trips`; the one-tap alert save is unchanged.
 

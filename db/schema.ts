@@ -36,9 +36,10 @@ export const limits=sqliteTable('request_limits',{
   id:text('id').primaryKey(),count:integer('count').notNull(),expiresAt:integer('expires_at').notNull(),
 },t=>[index('limit_expires').on(t.expiresAt)]);
 
-// SkipperCast accounts (passkeys only; no passwords or email). `owner` in the
-// tables above holds users.id. Sessions and challenges store only what the
-// server issued: sessions.id is sha256(token), never the cookie value.
+// SkipperCast accounts: passkeys, or a sign-in link sent by email. No passwords.
+// `owner` in the tables above holds users.id. Sessions, challenges and email
+// links store only what the server issued: sessions.id and email_links.id are
+// sha256(token), never the cookie or link value.
 export const users=sqliteTable('users',{
   id:text('id').primaryKey(),createdAt:text('created_at').notNull(),displayName:text('display_name'),
 });
@@ -55,6 +56,18 @@ export const challenges=sqliteTable('auth_challenges',{
   id:text('id').primaryKey(),challenge:text('challenge').notNull(),kind:text('kind').notNull(),
   userId:text('user_id'),expiresAt:integer('expires_at').notNull(),
 },t=>[uniqueIndex('challenge_value').on(t.challenge),index('challenge_expires').on(t.expiresAt)]);
+// The one email address an account signs in with (lower-cased), set only after
+// a link sent to it was opened. Email sign-in (server/email-auth.ts).
+export const userEmails=sqliteTable('user_emails',{
+  email:text('email').primaryKey(),userId:text('user_id').notNull(),
+  verifiedAt:text('verified_at').notNull(),
+},t=>[uniqueIndex('user_email_user').on(t.userId)]);
+// Single-use sign-in links: sha256 of the token, the address it was sent to, and
+// the signed-in account it adds that address to (null for a sign-in link).
+export const emailLinks=sqliteTable('email_links',{
+  id:text('id').primaryKey(),email:text('email').notNull(),userId:text('user_id'),
+  createdAt:integer('created_at').notNull(),expiresAt:integer('expires_at').notNull(),
+},t=>[index('email_link_email').on(t.email,t.createdAt),index('email_link_expires').on(t.expiresAt)]);
 
 // Small key/value state for the Worker's own background jobs (P3-04): e.g. the
 // last live-conditions publication whose trip checks were queued. No user data.

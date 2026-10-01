@@ -1,7 +1,9 @@
 // /api/auth/*: passkey registration, sign-in, sign-out and passkey management
-// (server/auth.ts). A per-IP budget on every call; mutations need an allowed Origin.
+// (server/auth.ts), and email sign-in links (server/email-auth.ts). A per-IP
+// budget on every call; mutations need an allowed Origin.
 import {Hono} from 'hono';
 import {authRoute, relyingParty} from '../auth.ts';
+import {emailRoute, mailer} from '../email-auth.ts';
 import {origins} from '../config.ts';
 import {json, body, budget, db, requireOrigin} from '../http.ts';
 import {clientIP} from '../edge-cache.ts';
@@ -17,6 +19,7 @@ auth.all('/api/auth/*', async (c, next) => {
   if (request.method !== 'GET') requireOrigin(request, c.var.extraOrigins);
   const current = await c.var.identify();
   const rp = relyingParty(new URL(request.url), new Set([...origins, ...c.var.extraOrigins]));
-  const answered = await authRoute(request, {path, db: db(c.env), rp, body, json, current});
+  const answered = await emailRoute(request, {path, db: db(c.env), rp, body, json, current, mail: mailer(c.env, new URL(request.url))})
+    ?? await authRoute(request, {path, db: db(c.env), rp, body, json, current});
   return answered ?? json({error: 'Not found'}, 404);
 });
