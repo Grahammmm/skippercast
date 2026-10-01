@@ -1,12 +1,36 @@
 """Validate reviewed inventory, without promoting candidates on metadata alone."""
 from pathlib import Path
 from copy import deepcopy
+import math
 
 from skippercast.platform.contracts import REPO, read_json, atomic_json
 
 
 def load_manifest(root=REPO):
-    return validate_manifest(read_json(Path(root)/'catalog/surveys.json'), root)
+    document = deepcopy(validate_manifest(read_json(Path(root)/'catalog/surveys.json'), root))
+    # JSON publishers may encode 5.0 as 5. These schema-declared continuous
+    # measurements must have one representation before any consumer hashes them.
+    # Leave integer counts, booleans, unknowns, evidence and source bytes alone.
+    for row in document['surveys']:
+        if row['resolution_m'] != 'unknown':
+            row['resolution_m'] = _measurement_float(row['resolution_m'])
+        profile = row.get('resolution_profile')
+        if profile:
+            for field in ('fine_to_depth_m', 'coarse_resolution_m'):
+                profile[field] = _measurement_float(profile[field])
+        review = row.get('adapter_review')
+        if review:
+            for field in ('requested_bounds_wgs84', 'native_resolution_m'):
+                review[field] = [_measurement_float(value) for value in review[field]]
+    return document
+
+
+def _measurement_float(value):
+    """Represent a validated continuous measurement without losing precision."""
+    result = float(value)
+    if not math.isfinite(result) or result != value:
+        raise ValueError('Scientific measurement is not exactly representable as a finite float')
+    return 0.0 if result == 0 else result
 
 
 def validate_manifest(document, root=REPO):

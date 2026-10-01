@@ -1,6 +1,7 @@
 """Offline M0 inventory acceptance; no survey downloads or local-cache dependency."""
 from copy import deepcopy
 import json
+import math
 import unittest
 from research.lib.receipts import RECEIPTS, locate
 from tests._support import ROOT
@@ -105,6 +106,39 @@ class InventoryTests(unittest.TestCase):
 
 @unittest.skipUnless(Draft202012Validator, 'Install requirements-test.txt; required in survey-science CI')
 class SchemaTests(unittest.TestCase):
+    def test_measurement_encoding_is_stable_without_changing_catalog(self):
+        from skippercast.seafloor.manifest import load_manifest
+        from unittest.mock import patch
+        left = deepcopy(MANIFEST)
+        row = next(r for r in left['surveys'] if r['status'] == 'usable')
+        row['resolution_m'] = 5.0
+        row['adapter_review']['native_resolution_m'] = [5.0, 5.0]
+        right = deepcopy(left)
+        other = next(r for r in right['surveys'] if r['id'] == row['id'])
+        other['resolution_m'] = 5
+        other['adapter_review']['native_resolution_m'] = [5, 5]
+        original = json.dumps(right)
+        with patch('skippercast.seafloor.manifest.read_json', side_effect=[left, SCHEMA]):
+            a = load_manifest(ROOT)
+        with patch('skippercast.seafloor.manifest.read_json', side_effect=[right, SCHEMA]):
+            b = load_manifest(ROOT)
+        self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))
+        self.assertEqual(json.dumps(right), original)
+        target = next(r for r in b['surveys'] if r['id'] == row['id'])
+        self.assertIs(type(target['bytes']), int)
+        self.assertIs(type(target['adapter_review']['valid_pixels_in_requested_bounds']), int)
+        self.assertEqual(target['sha256'], row['sha256'])
+
+    def test_measurements_are_exact_not_rounded_or_guessed(self):
+        from skippercast.seafloor.manifest import _measurement_float
+        self.assertEqual(_measurement_float(5), 5.0)
+        adjacent = math.nextafter(5.0, math.inf)
+        self.assertEqual(_measurement_float(adjacent), adjacent)
+        self.assertNotEqual(_measurement_float(adjacent), 5.0)
+        for invalid in (2**53 + 1, float('nan'), float('inf')):
+            with self.subTest(value=invalid), self.assertRaisesRegex(ValueError, 'finite float'):
+                _measurement_float(invalid)
+
     def test_mixed_resolution_profile_is_tied_to_fine_original_grid(self):
         from unittest.mock import patch
         from skippercast.seafloor.manifest import load_manifest

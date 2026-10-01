@@ -146,6 +146,23 @@ class ReachRunTests(unittest.TestCase):
             with patch('skippercast.seafloor.run.footprint') as reading:
                 second,unchanged=run('fixture-r01',root=root)
                 self.assertTrue(unchanged); self.assertEqual(first,second); reading.assert_not_called()
+            # A JSON round-trip through a publisher can turn 2.0 into 2.
+            # Neither spelling may invalidate verified physics or output bytes.
+            encoded = json.loads((root/'catalog/surveys.json').read_text())
+            for numeric_type in (int, float, int):
+                entry = encoded['surveys'][0]
+                entry['resolution_m'] = numeric_type(entry['resolution_m'])
+                entry['adapter_review']['native_resolution_m'] = [
+                    numeric_type(value) for value in entry['adapter_review']['native_resolution_m']]
+                (root/'catalog/surveys.json').write_text(json.dumps(encoded))
+                with patch('skippercast.seafloor.run.footprint', side_effect=AssertionError(
+                        'Numeric spelling unexpectedly invalidated measured coverage')) as reading, \
+                     patch('skippercast.seafloor.run.build_candidates', side_effect=AssertionError(
+                        'Numeric spelling unexpectedly invalidated habitat extraction')) as extracting:
+                    same, unchanged = run('fixture-r01', root=root)
+                    self.assertTrue(unchanged)
+                    self.assertEqual(same, first)
+                    reading.assert_not_called(); extracting.assert_not_called()
             # Legal review/freshness changes must not recalculate seafloor physics.
             deferred, _ = run('fixture-r01', root=root, physical_only=True)
             self.assertEqual(deferred['ledger_summary']['tier2_km2'], 0)
