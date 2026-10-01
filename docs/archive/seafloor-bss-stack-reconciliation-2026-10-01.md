@@ -15,3 +15,7 @@ Validation: full GIS suite 1,050 passed, 14 allowlisted skips, 4,167 subtests; s
 ## Integration release decision
 
 The consolidated main integration retains all seventeen BSS rows as `physical-only` pending resolution of the independent review’s noncommercial-use policy concern. The earlier usable-source runs in the dated evidence are historical local tests, not permission to publish. Native qualification and measured outputs remain retained; default/public planning excludes these sources, and private mapping may continue. No producer permission is implied by NOAA hosting.
+
+### Owner decision, October 1
+
+The owner subsequently authorized use during the current noncommercial phase and plans to discuss permission with CSUMB in person. Restore the seventeen already-reviewed BSS rows to usable under their existing hash-bound noncommercial contract; no express for-profit permission is claimed. The publication-code PR now declares noncommercial/no-monetization policy and blocks incompatible paid deployment. Forty-five other native rows remain privately qualified until their own producer review is completed; the five with unknown producer are not covered by this decision.

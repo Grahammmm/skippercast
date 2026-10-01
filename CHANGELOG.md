@@ -7,7 +7,7 @@
 
 - Operations: the deploy no longer needs `VAPID_*` GitHub secrets; when they are unset it keeps the Web Push pair in the private backup bucket (`secrets/vapid.json`), generated once on the first deploy and reused after that, so alerts work on a fresh account with no manual key step.
 - Seafloor: allow reviewed CSUMB originals from NOAA's Ventresca archive under the existing hash-bound noncommercial producer contract. Retain attribution and for-profit/navigation restrictions; unreviewed sources and cruises remain blocked. No catalog source or map is released by this change alone.
-- Reconcile seventeen existing BSS native survey records with the newer coastal source stack while preserving prior sources and screened-cache evidence; retain them as physical-only pending publication-policy resolution.
+- Reconcile seventeen existing BSS native survey records with the newer coastal source stack while preserving prior sources and screened-cache evidence; use their reviewed noncommercial contract during the owner-authorized personal-use phase.
 
 - Qualify six original SCC10–13 native depth grids; refine five private Morro Bay reaches with 347 net habitat candidates, retaining the measured coverage decrease and release holds.
 
