@@ -59,12 +59,16 @@
       "source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
       "source_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
       "depth_source_ids": [
-        "bathymetry-offshoremorrobay-zip-fad659557e"
+        "bathymetry-offshoremorrobay-zip-fad659557e",
+        "csumb-scc-block12-2m-native",
+        "csumb-scc-block13-2m-native",
+        "csumb-scc-block14-2m-native",
+        "csumb-scc-block15-2m-native"
       ],
       "review_status": "reviewed",
       "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/99111880d0194352899672cd4d7690ac/SeafloorCharacter_OffshoreMorroBay_metadata.xml",
       "metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3",
-      "review_basis": "Original FGDC enumerations reviewed 2026-09-25; archive contains no VAT. Cached original bytes reverified 2026-09-28.",
+      "review_basis": "Original FGDC enumerations reviewed 2026-09-25; archive contains no VAT. Cached original bytes reverified 2026-09-28. Original cached XML and native entire-raster classes reverified 2026-10-02; SCC extension uses exact valid-class overlap from research/receipts/seafloor-scc-character-bindings-review.json. Actual delivered2m spacing is not a2m accuracy claim; original processing and scalar-spacing conflicts retained. Largest supported single class source chosen per depth row; uncovered cells stay unknown.",
       "classes": {
         "1": {
           "normalized_code": 1,
@@ -80,18 +84,27 @@
         }
       },
       "same_survey_as_depth": true,
-      "lineage_note": "Paired USGS map-block bathymetry and sonar-derived character; not independent corroboration."
+      "lineage_note": "Paired USGS map-block bathymetry and sonar-derived character; not independent corroboration. SCC depth cross-binding is conservatively treated as non-independent interpretation. Exact2008/2010/2011 survey-line equivalence unresolved;2012 video supervision is not fish presence or independent per-pixel validation."
     },
     {
       "source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
       "source_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
       "depth_source_ids": [
-        "bathymetry-offshorepointestero-zip-7e3be5eb12"
+        "bathymetry-offshorepointestero-zip-7e3be5eb12",
+        "csumb-scc-block07-2m-native",
+        "csumb-scc-block08-2m-native",
+        "csumb-scc-block08-5m-native",
+        "csumb-scc-block09-2m-native",
+        "csumb-scc-block09-5m-native",
+        "csumb-scc-block10-2m-native",
+        "csumb-scc-block10-5m-native",
+        "csumb-scc-block11-2m-native",
+        "csumb-scc-block11-5m-native"
       ],
       "review_status": "reviewed",
       "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/0f75d175cc2046f38c45b6ac26a9be92/SeafloorCharacter_OffshorePointEstero_metadata.xml",
       "metadata_sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708",
-      "review_basis": "Original FGDC enumerations reviewed 2026-09-25; archive contains no VAT. Cached original bytes reverified 2026-09-28.",
+      "review_basis": "Original FGDC enumerations reviewed 2026-09-25; archive contains no VAT. Cached original bytes reverified 2026-09-28. Original cached XML and native entire-raster classes reverified 2026-10-02; SCC extension uses exact valid-class overlap from research/receipts/seafloor-scc-character-bindings-review.json. Actual delivered2m spacing is not a2m accuracy claim; original processing and scalar-spacing conflicts retained. Largest supported single class source chosen per depth row; uncovered cells stay unknown.",
       "classes": {
         "1": {
           "normalized_code": 1,
@@ -107,7 +120,7 @@
         }
       },
       "same_survey_as_depth": true,
-      "lineage_note": "Paired USGS map-block bathymetry and sonar-derived character; not independent corroboration."
+      "lineage_note": "Paired USGS map-block bathymetry and sonar-derived character; not independent corroboration. SCC depth cross-binding is conservatively treated as non-independent interpretation. Exact2008/2010/2011 survey-line equivalence unresolved;2012 video supervision is not fish presence or independent per-pixel validation."
     },
     {
       "source_id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",

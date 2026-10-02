@@ -1,0 +1,673 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T07:05:45.209777+00:00",
+  "scope": "Source-only USGS character bindings for existing SCC native0–300ft nominal depth; no new bathymetry or legal clearance.",
+  "sources": [
+    {
+      "source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/22adeb1ae71b4e28a5d38acdf66daec0/SeafloorCharacter_OffshorePointEstero.zip",
+      "source_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+      "bytes": 1791397,
+      "license": "public-domain-us-gov",
+      "metadata_access": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/0f75d175cc2046f38c45b6ac26a9be92/SeafloorCharacter_OffshorePointEstero_metadata.xml",
+        "status": "checksum-pinned-local-original",
+        "verified_at": "2026-10-02T06:35:41.389916+00:00",
+        "bytes": 24527,
+        "fresh_remote_read": false,
+        "sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708",
+        "matches_existing_binding": true
+      },
+      "metadata_use_constraints": [
+        "USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey, the California State University Monterey Bay Seafloor Mapping Lab, and the University of California Center for Integrated Spatial Research as the originators of the dataset and in products derived from these data. This information is not intended for navigation purposes."
+      ],
+      "native_raster": {
+        "source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "source_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+        "source_bytes": 1791397,
+        "downloaded": false,
+        "raster_sha256": "56e5dbe99546c2950020cdb1d383770375ed69044893e3efc4441533c0da05e8",
+        "raster_bytes": 2616876,
+        "crs": "EPSG:32610",
+        "resolution_m": [
+          2.0,
+          2.0
+        ],
+        "dimensions": [
+          9201,
+          9176
+        ],
+        "bounds_native": [
+          669881.3618728658,
+          3916796.868035049,
+          688283.3618728658,
+          3935148.868035049
+        ],
+        "bounds_wgs84": [
+          -121.12974134861365,
+          35.3767512203184,
+          -120.92301443967376,
+          35.54544302460096
+        ],
+        "valid_pixel_envelope_wgs84": [
+          -121.12592703605596,
+          35.379974855615515,
+          -120.92717661804079,
+          35.542158467299274
+        ],
+        "valid_pixels": 31135096,
+        "nodata": 255.0,
+        "original_code_counts": {
+          "1": 15975237,
+          "2": 4253354,
+          "3": 10906505
+        },
+        "normalized_code_counts": {
+          "1": 15975237,
+          "2": 4253354,
+          "3": 10906505
+        },
+        "all_actual_codes_reviewed_by_existing_binding": true,
+        "depth_interpretation": "Categorical codes are not depth measurements; valid class coverage alone does not establish water depth."
+      },
+      "quality_review": {
+        "checked_at": "2026-10-02T06:36:39.231382+00:00",
+        "source": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "original_metadata_sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708",
+        "observed_spacing_m": 2,
+        "metadata_scalar_spacing_m": 10,
+        "processing_narrative": "Original 2m and5m character grids were mosaiced into delivered2m GeoTIFF. Parent bathymetry2m below80m,5m above80m. Scalar10m conflicts with native headers and explicit output/narrative; do not call raster2m an error bound.",
+        "categorical_precision": "Interpretation scale depends on source zone; new SCC1/2m bathymetry does not improve source classification precision. No per-cell classification confidence supplied.",
+        "same_survey_as_depth": true,
+        "validation_observations": 299,
+        "validation_support_radius_m": 10,
+        "validation_reuses_training_observations": true,
+        "presence_accuracy_percent": {
+          "soft_flat": 90.83,
+          "hard_flat": 86.46,
+          "hard_rugose": 92.55
+        },
+        "majority_accuracy_percent": {
+          "soft_flat": 66.06,
+          "hard_flat": 65.62,
+          "hard_rugose": 84.04
+        },
+        "validation_limit": "Site-level class validation over10m buffers; not independent holdout validation, positional uncertainty, fish-presence probability or a confidence percent for each pixel.",
+        "lineage": "Metadata Fugro2008 MBES, USGS2012 video. Report2010 sonar and date2011 field retained as conflicts; no per-cell acquisition identity established.",
+        "classes": "Retain explicit1 sediment,2 coarse/flat rock mixed,3 rugose boulder/bedrock. Do not promote coarse sediment to naturalrugose.",
+        "review_basis": "Manually read original checksum-pinned PointEstero metadata; its own processing narrative confirms 2m/5m characterization mosaic. No inference from companion product."
+      },
+      "new_depth_binding_ids": [
+        "csumb-scc-block07-2m-native",
+        "csumb-scc-block08-2m-native",
+        "csumb-scc-block08-5m-native",
+        "csumb-scc-block09-2m-native",
+        "csumb-scc-block09-5m-native",
+        "csumb-scc-block10-2m-native",
+        "csumb-scc-block10-5m-native",
+        "csumb-scc-block11-2m-native",
+        "csumb-scc-block11-5m-native"
+      ],
+      "existing_classes_unchanged": true,
+      "new_source_grid_generated": false,
+      "metadata-access-failures": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/0f75d175cc2046f38c45b6ac26a9be92/SeafloorCharacter_OffshorePointEstero_metadata.xml",
+        "checked_at": "2026-10-02T06:28:54.996296+00:00",
+        "direct_attempts": 2,
+        "result": "HTTP522 from original metadata endpoint in both native attempts; web reader also returned cache miss. No fresh content read.",
+        "fallback": "Use checksum-pinned archived originals and seek another original-publisher metadata endpoint; do not label this a fresh metadata check."
+      },
+      "source-link-check": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/22adeb1ae71b4e28a5d38acdf66daec0/SeafloorCharacter_OffshorePointEstero.zip",
+        "method": "HEAD",
+        "checked_at": "2026-10-02T06:47:46.505866+00:00",
+        "status": "failed",
+        "error_type": "HTTPError",
+        "error": "HTTP Error 403: Forbidden"
+      }
+    },
+    {
+      "source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/0abf6339a0ce4077b5e58852345151a3/SeafloorCharacter_OffshoreMorroBay.zip",
+      "source_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+      "bytes": 1188216,
+      "license": "public-domain-us-gov",
+      "metadata_access": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/99111880d0194352899672cd4d7690ac/SeafloorCharacter_OffshoreMorroBay_metadata.xml",
+        "status": "checksum-pinned-local-original",
+        "verified_at": "2026-10-02T06:50:57.666520+00:00",
+        "bytes": 24604,
+        "fresh_remote_read": false,
+        "sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3",
+        "matches_existing_binding": true
+      },
+      "metadata_use_constraints": [
+        "USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey, the California State University Monterey Bay Seafloor Mapping Lab, and the University of California Center for Integrated Spatial Research as the originators of the dataset and in products derived from these data. This information is not intended for navigation purposes."
+      ],
+      "native_raster": {
+        "source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "source_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+        "source_bytes": 1188216,
+        "downloaded": false,
+        "raster_sha256": "7fafe1e3f1214b9dd29d1d72047ffe438f6a40beaa907b491b04ab53ac04eb35",
+        "raster_bytes": 2097427,
+        "crs": "EPSG:32610",
+        "resolution_m": [
+          2.0,
+          2.0
+        ],
+        "dimensions": [
+          9226,
+          9202
+        ],
+        "bounds_native": [
+          684075.3618728658,
+          3906840.868035049,
+          702527.3618728658,
+          3925244.868035049
+        ],
+        "bounds_wgs84": [
+          -120.97579958798336,
+          35.284255602658746,
+          -120.76845961023527,
+          35.453663154971686
+        ],
+        "valid_pixel_envelope_wgs84": [
+          -120.97172396107314,
+          35.28897627848051,
+          -120.86366771628506,
+          35.45015347452173
+        ],
+        "valid_pixels": 28226241,
+        "nodata": 0.0,
+        "original_code_counts": {
+          "1": 18974379,
+          "2": 3568661,
+          "3": 5683201
+        },
+        "normalized_code_counts": {
+          "1": 18974379,
+          "2": 3568661,
+          "3": 5683201
+        },
+        "all_actual_codes_reviewed_by_existing_binding": true,
+        "depth_interpretation": "Categorical codes are not depth measurements; valid class coverage alone does not establish water depth."
+      },
+      "quality_review": {
+        "checked_at": "2026-10-02T06:50:58.466607+00:00",
+        "source": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "original_metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3",
+        "observed_spacing_m": 2,
+        "metadata_scalar_spacing_m": 10,
+        "processing_narrative": "Original processing describes2m backscatter export and Maximum Likelihood Classification into a GeoTIFF; no separate2m/5m class mosaic is stated in this Morro metadata. Scalar10m conflicts with delivered2m header/abstract; effective class precision is not inferred from native bathymetry.",
+        "categorical_precision": "Source interpretation is contextual habitat evidence, not an error bound at2m or newly acquired fine-scale observations.",
+        "validation_observations_reported": 299,
+        "validation_support_radius_m": 10,
+        "validation_reuses_training_observations": true,
+        "presence_accuracy_percent_reported": {
+          "soft_flat": 90.83,
+          "hard_flat": 86.46,
+          "hard_rugose": 92.55
+        },
+        "majority_accuracy_percent_reported": {
+          "soft_flat": 66.06,
+          "hard_flat": 65.62,
+          "hard_rugose": 84.04
+        },
+        "validation_limit": "Training observations were included in evaluation. These percentages are not independent holdout, per-cell confidence, horizontal precision or catch probability.",
+        "lineage": "Metadata describes Fugro2008 sonar and USGS2012 video; regional2023report describes2010 sonar. Exact mapping to SCC2010 survey lines unresolved; conservatively do not count independent evidence.",
+        "classes": "Explicit1 sediment,2 coarse/flat rock mixed,3 rugose boulder/bedrock; no-data unknown.",
+        "validation_scope_unresolved": "This entire reported accuracy table and observation count duplicate PointEstero metadata. Preserve as reported but do not calibrate Morro per-pixel or per-spot confidence from it; independence/copying unresolved.",
+        "shared_product_check": "All5,014,138native pixels valid in bothMorro/PointEstero original rasters have identical class codes on the same2m native grid; shared classification, not independent validation."
+      },
+      "new_depth_binding_ids": [
+        "csumb-scc-block12-2m-native",
+        "csumb-scc-block13-2m-native",
+        "csumb-scc-block14-2m-native",
+        "csumb-scc-block15-2m-native"
+      ],
+      "existing_classes_unchanged": true,
+      "new_source_grid_generated": false
+    },
+    {
+      "source_id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+      "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3963d3925b9841ecb9b6a743b92326d7/SeafloorCharacter_OffshorePointBuchon.zip",
+      "source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "bytes": 1872472,
+      "license": "public-domain-us-gov",
+      "metadata_access": {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ac4288bd38594e1fa6e89e139995ab73/SeafloorCharacter_OffshorePointBuchon_metadata.xml",
+        "status": "checksum-pinned-local-original",
+        "verified_at": "2026-10-02T06:30:33.858773+00:00",
+        "bytes": 24363,
+        "fresh_remote_read": false,
+        "sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+        "matches_existing_binding": true
+      },
+      "metadata_use_constraints": [
+        "USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey, the California State University Monterey Bay Seafloor Mapping Lab, and the University of California Center for Integrated Spatial Research as the originators of the dataset and in products derived from these data. This information is not intended for navigation purposes."
+      ],
+      "native_raster": {
+        "source_id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+        "source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+        "source_bytes": 1872472,
+        "downloaded": false,
+        "raster_sha256": "fabccc6de3c58cd7899f6a0fce8fb59a39b089051d423f30f4fc4708d1683a81",
+        "raster_bytes": 2685583,
+        "crs": "EPSG:32610",
+        "resolution_m": [
+          2.0,
+          2.0
+        ],
+        "dimensions": [
+          9222,
+          9199
+        ],
+        "bounds_native": [
+          683691.3618728658,
+          3889430.868035049,
+          702135.3618728658,
+          3907828.868035049
+        ],
+        "bounds_wgs84": [
+          -120.98390355656721,
+          35.1274647852931,
+          -120.7770850218736,
+          35.29679423712272
+        ],
+        "valid_pixel_envelope_wgs84": [
+          -120.97125262292718,
+          35.130769196497916,
+          -120.78154945307443,
+          35.29085190439636
+        ],
+        "valid_pixels": 30917366,
+        "nodata": 0.0,
+        "original_code_counts": {
+          "1": 15242097,
+          "2": 5781665,
+          "3": 9893604
+        },
+        "normalized_code_counts": {
+          "1": 15242097,
+          "2": 5781665,
+          "3": 9893604
+        },
+        "all_actual_codes_reviewed_by_existing_binding": true,
+        "depth_interpretation": "Categorical codes are not depth measurements; valid class coverage alone does not establish water depth."
+      },
+      "quality_review": {
+        "checked_at": "2026-10-02T06:31:42.518939+00:00",
+        "source": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+        "original_metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
+        "observed_spacing_m": 2,
+        "metadata_scalar_spacing_m": 10,
+        "processing_narrative": "Original 2m and5m character grids were mosaiced into delivered2m GeoTIFF. Parent bathymetry2m below80m,5m above80m. Scalar10m conflicts with native headers and explicit output/narrative; do not call raster2m an error bound.",
+        "categorical_precision": "Interpretation scale depends on source zone; new SCC1/2m bathymetry does not improve source classification precision. No per-cell classification confidence supplied.",
+        "same_survey_as_depth": true,
+        "validation_observations": 304,
+        "validation_support_radius_m": 10,
+        "validation_reuses_training_observations": true,
+        "presence_accuracy_percent": {
+          "soft_flat": 93.96,
+          "hard_flat": 86.67,
+          "hard_rugose": 93.75
+        },
+        "majority_accuracy_percent": {
+          "soft_flat": 83.89,
+          "hard_flat": 45.33,
+          "hard_rugose": 78.75
+        },
+        "validation_limit": "Site-level class validation over10m buffers; not independent holdout validation, positional uncertainty, fish-presence probability or a confidence percent for each pixel.",
+        "lineage": "Metadata Fugro2008 MBES, USGS2012 video. Report2010 sonar and date2011 field retained as conflicts; no per-cell acquisition identity established.",
+        "classes": "Retain explicit1 sediment,2 coarse/flat rock mixed,3 rugose boulder/bedrock. Do not promote coarse sediment to naturalrugose."
+      },
+      "new_depth_binding_ids": [],
+      "existing_classes_unchanged": true,
+      "new_source_grid_generated": false
+    }
+  ],
+  "selection": {
+    "created_at": "2026-10-02T07:02:35.024873+00:00",
+    "depth_product_count": 14,
+    "decisions": [
+      {
+        "depth_source_id": "csumb-scc-block07-2m-native",
+        "native_shallow_km2": 24.170580913483988,
+        "class_overlap_by_source_km2": {
+          "estero": 8.456323917029541,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 8.456323917029541,
+        "all_available_class_support_km2": 8.456323917029541,
+        "available_class_support_outside_proposed_binding_km2": 0.0,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block07-5m-native",
+        "native_shallow_km2": 5.68939880465387,
+        "class_overlap_by_source_km2": {
+          "estero": 0.0,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": null,
+        "proposed_character_key": null,
+        "proposed_class_support_km2": 0.0,
+        "all_available_class_support_km2": 0.0,
+        "available_class_support_outside_proposed_binding_km2": 0.0,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block08-2m-native",
+        "native_shallow_km2": 24.856657904251957,
+        "class_overlap_by_source_km2": {
+          "estero": 24.047628543401775,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 24.047628543401775,
+        "all_available_class_support_km2": 24.047628543462558,
+        "available_class_support_outside_proposed_binding_km2": 6.078432656305017e-11,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block08-5m-native",
+        "native_shallow_km2": 4.228472152585125,
+        "class_overlap_by_source_km2": {
+          "estero": 2.5875769770129318,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 2.5875769770129318,
+        "all_available_class_support_km2": 2.5875769770129318,
+        "available_class_support_outside_proposed_binding_km2": 0.0,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block09-2m-native",
+        "native_shallow_km2": 18.749882941817408,
+        "class_overlap_by_source_km2": {
+          "estero": 18.710188407433847,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 18.710188407433847,
+        "all_available_class_support_km2": 18.710188401271143,
+        "available_class_support_outside_proposed_binding_km2": 0.0,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block09-5m-native",
+        "native_shallow_km2": 5.081769356570591,
+        "class_overlap_by_source_km2": {
+          "estero": 5.0817693561976105,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 5.0817693561976105,
+        "all_available_class_support_km2": 5.081769356199431,
+        "available_class_support_outside_proposed_binding_km2": 1.8203861502641415e-12,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block10-2m-native",
+        "native_shallow_km2": 18.151811374039788,
+        "class_overlap_by_source_km2": {
+          "estero": 18.099753675379077,
+          "morro": 0.4044308197443992,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 18.099753675379077,
+        "all_available_class_support_km2": 18.09975367527181,
+        "available_class_support_outside_proposed_binding_km2": 1.5154874664219386e-16,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block10-5m-native",
+        "native_shallow_km2": 4.059870621909269,
+        "class_overlap_by_source_km2": {
+          "estero": 4.059870621023304,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 4.059870621023304,
+        "all_available_class_support_km2": 4.059870621047921,
+        "available_class_support_outside_proposed_binding_km2": 2.461598486486194e-11,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block11-2m-native",
+        "native_shallow_km2": 26.97556352621536,
+        "class_overlap_by_source_km2": {
+          "estero": 25.46458619488602,
+          "morro": 14.120338494312447,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 25.46458619488602,
+        "all_available_class_support_km2": 26.912403504588546,
+        "available_class_support_outside_proposed_binding_km2": 1.447817309702535,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block11-5m-native",
+        "native_shallow_km2": 1.4931613564262203,
+        "class_overlap_by_source_km2": {
+          "estero": 1.4816247825967923,
+          "morro": 0.0,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "proposed_character_key": "estero",
+        "proposed_class_support_km2": 1.4816247825967923,
+        "all_available_class_support_km2": 1.4816247825967923,
+        "available_class_support_outside_proposed_binding_km2": 0.0,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block12-2m-native",
+        "native_shallow_km2": 31.660006214807982,
+        "class_overlap_by_source_km2": {
+          "estero": 8.629105807671063,
+          "morro": 31.580467556778217,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "proposed_character_key": "morro",
+        "proposed_class_support_km2": 31.580467556778217,
+        "all_available_class_support_km2": 31.580467559266697,
+        "available_class_support_outside_proposed_binding_km2": 2.4884750065511196e-09,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block13-2m-native",
+        "native_shallow_km2": 25.92424535614532,
+        "class_overlap_by_source_km2": {
+          "estero": 0.08201623748739496,
+          "morro": 25.880867048028474,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "proposed_character_key": "morro",
+        "proposed_class_support_km2": 25.880867048028474,
+        "all_available_class_support_km2": 25.88086704808566,
+        "available_class_support_outside_proposed_binding_km2": 5.799081312629322e-11,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block14-2m-native",
+        "native_shallow_km2": 18.961080903447353,
+        "class_overlap_by_source_km2": {
+          "estero": 0.0,
+          "morro": 18.92899089492064,
+          "buchon": 0.0
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "proposed_character_key": "morro",
+        "proposed_class_support_km2": 18.92899089492064,
+        "all_available_class_support_km2": 18.92899089492289,
+        "available_class_support_outside_proposed_binding_km2": 2.267160666757917e-12,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      },
+      {
+        "depth_source_id": "csumb-scc-block15-2m-native",
+        "native_shallow_km2": 1.767399743893069,
+        "class_overlap_by_source_km2": {
+          "estero": 0.0,
+          "morro": 1.398120230883839,
+          "buchon": 0.15417122199760305
+        },
+        "proposed_character_source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "proposed_character_key": "morro",
+        "proposed_class_support_km2": 1.398120230883839,
+        "all_available_class_support_km2": 1.552291452869393,
+        "available_class_support_outside_proposed_binding_km2": 0.1541712220545959,
+        "basis": "Choose greatest exact original valid-class overlap under existing one-character-source-per-depth contract; identical shared Estero/Morro pixels verified. Omitted coverage remains unknown/terrain-only, never sediment."
+      }
+    ],
+    "native_depth_union_km2": 191.95356804892225,
+    "available_classified_support_union_km2": 171.4125193921575,
+    "proposed_binding_support_union_km2": 170.4330562394797,
+    "available_but_outside_proposed_bindings_union_km2": 0.979463151652249,
+    "source_priority_applied": false,
+    "publication_or_new_depth_credit_km2": 0,
+    "limits": [
+      "Evidence coverage before actual regional depth-source selection and legal screening.",
+      "One class source per depth row; sources were not mosaicked or silently substituted.",
+      "Nominal0–91.44m in original depth datum, not charted300ft."
+    ]
+  },
+  "shared_source_grid_review": {
+    "checked_at": "2026-10-02T06:52:42.695245+00:00",
+    "sources": {
+      "estero": {
+        "source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "source_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+        "raster_sha256": "56e5dbe99546c2950020cdb1d383770375ed69044893e3efc4441533c0da05e8"
+      },
+      "morro": {
+        "source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "source_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+        "raster_sha256": "7fafe1e3f1214b9dd29d1d72047ffe438f6a40beaa907b491b04ab53ac04eb35"
+      },
+      "buchon": {
+        "source_id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+        "source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+        "raster_sha256": "fabccc6de3c58cd7899f6a0fce8fb59a39b089051d423f30f4fc4708d1683a81"
+      }
+    },
+    "pairs": [
+      {
+        "pair": [
+          "estero",
+          "morro"
+        ],
+        "native_grid_alignment": "exact same2m grid, integer row/column offsets; no resampling",
+        "joint_valid_pixels": 5014138,
+        "same_class_pixels": 5014138,
+        "conflicting_pixels": 0,
+        "matrix_row_class1_2_3_column_class1_2_3": [
+          [
+            2365355,
+            0,
+            0
+          ],
+          [
+            0,
+            543072,
+            0
+          ],
+          [
+            0,
+            0,
+            2105711
+          ]
+        ],
+        "only_first_valid": 575477,
+        "only_second_valid": 717361,
+        "scope": "Whole original product overlap; not clipped to SCCdepth or300ft. Category codes are not measured depth."
+      },
+      {
+        "pair": [
+          "estero",
+          "buchon"
+        ],
+        "joint_valid_pixels": 0,
+        "reason": "native envelopes disjoint"
+      },
+      {
+        "pair": [
+          "morro",
+          "buchon"
+        ],
+        "native_grid_alignment": "exact same2m grid, integer row/column offsets; no resampling",
+        "joint_valid_pixels": 0,
+        "same_class_pixels": 0,
+        "conflicting_pixels": 0,
+        "matrix_row_class1_2_3_column_class1_2_3": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "only_first_valid": 1025032,
+        "only_second_valid": 543954,
+        "scope": "Whole original product overlap; not clipped to SCCdepth or300ft. Category codes are not measured depth."
+      }
+    ],
+    "independent_evidence_count_change": 0
+  },
+  "validation": {
+    "checked_at": "2026-10-02T07:05:45.208862+00:00",
+    "current_main_reference_commit": "4e0b0e03e52c118f809058ce90873e2667aeafef",
+    "production_resolve_bindings_passed": true,
+    "new_depth_binding_count": 13,
+    "ambiguous_depth_bindings": 0,
+    "all_original_raster_codes_checked": true,
+    "category_codes_changed": false,
+    "depth_resolution_profiles_changed": false,
+    "source_catalog_rows_changed": false,
+    "private_recovery_files": 6,
+    "private_recovery_bytes": 4852829,
+    "catalog_before_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "catalog_after_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "rules_before_sha256": "08d7f5bb11c6c431ee09e5f0acdad3734758f861f7d9871cd9b5900b1c413cb2",
+    "rules_after_sha256": "08d7f5bb11c6c431ee09e5f0acdad3734758f861f7d9871cd9b5900b1c413cb2",
+    "public_mapped_credit_km2": 0
+  },
+  "limits": [
+    "Do not treat class-validation percentages as pixel confidence, catch likelihood or an independent validation set.",
+    "USGS public-domain classified products do not change noncommercial restrictions on original CSUMB depth sources.",
+    "Existing one-character-source-per-depth contract leaves0.979463km2 of available classification outside proposed binding union before regional source selection. It remains unknown/terrain-only, not sediment.",
+    "PointEstero metadata endpoint failedHTTP522 twice and archiveHEAD failed403. Original local bytes/metadata were hash-verified; fresh remote availability is not claimed.",
+    "Re-run ordinary source selection, habitat extraction and full current restriction screening; source overlap is not final selected map coverage."
+  ]
+}
