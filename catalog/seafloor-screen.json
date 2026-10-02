@@ -19,6 +19,9 @@
     "morro-bay-r06",
     "morro-bay-r07",
     "morro-bay-r08",
+    "point-arguello-conception-r02",
+    "point-arguello-conception-r03",
+    "point-arguello-conception-r04",
     "point-arguello-conception-r06",
     "point-arguello-conception-r07",
     "point-arguello-conception-r08",
@@ -32,7 +35,7 @@
     -120.45,
     36.62
   ],
-  "scope_note": "Morro Bay r01–r08, Cambria–San Simeon r02 and Point Arguello–Conception r06–r08 permanent spatial-restriction planning screen. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons excluded. Diablo Canyon and Vandenberg Zone 4 conservatively excluded. Other Vandenberg zones permit fishing except announced launch closures; these require current Notice to Mariners and radio/harbor checks. Morro entrance RNA excluded from fishing recommendations even when transit permitted. Mobile vessel security, fireworks and season/depth/gear rules require trip-time checks. No fishing permission or current closure clearance is implied. Southern Monterey/Carmel/PointSur r01–r04 and northern BigSur r01 reviewed. Whole reference-cell envelopes lie south of the FortOrd334.1150 boundary including500m conservative south allowance; Navy mining operations lie farther north. These rules remain hash-checked during every refresh.165.1183 moving-vessel buffers require trip-time avoidance and are not stationary bottom exclusions. BSS reviewed BigSur r02/r03/r05/r06 and south-BigSur r01/r02/r03 whole reference envelopes extend from 35.61359 to 36.23674 N; north of Diablo Canyon and Vandenberg, south of Fort Ord (including the existing conservative allowance). Existing complete statewide CDFW MPA and regional NOAA conservation layers still exclude whole candidate polygons. No new exclusion coordinates or trip-time clearance are inferred.",
+  "scope_note": "Morro Bay r01\u2013r08, Cambria\u2013San Simeon r02 and Point Arguello\u2013Conception r06\u2013r08 permanent spatial-restriction planning screen. All CDFW MPAs and NOAA GEA/CCA/YRCA polygons excluded. Diablo Canyon and Vandenberg Zone 4 conservatively excluded. Other Vandenberg zones permit fishing except announced launch closures; these require current Notice to Mariners and radio/harbor checks. Morro entrance RNA excluded from fishing recommendations even when transit permitted. Mobile vessel security, fireworks and season/depth/gear rules require trip-time checks. No fishing permission or current closure clearance is implied. Southern Monterey/Carmel/PointSur r01\u2013r04 and northern BigSur r01 reviewed. Whole reference-cell envelopes lie south of the FortOrd334.1150 boundary including500m conservative south allowance; Navy mining operations lie farther north. These rules remain hash-checked during every refresh.165.1183 moving-vessel buffers require trip-time avoidance and are not stationary bottom exclusions. BSS reviewed BigSur r02/r03/r05/r06 and south-BigSur r01/r02/r03 whole reference envelopes extend from 35.61359 to 36.23674 N; north of Diablo Canyon and Vandenberg, south of Fort Ord (including the existing conservative allowance). Existing complete statewide CDFW MPA and regional NOAA conservation layers still exclude whole candidate polygons. No new exclusion coordinates or trip-time clearance are inferred. Point Arguello\u2013Conception r02/r03/r04 whole reference envelopes reviewed October 1, 2026: 34.68589\u201334.99224 N. Vandenberg Zones 1\u20133 have intermittent announced launch closures under 334.1130; Zone 4 remains conservatively excluded where its boundary overlaps r04. Current notices and vessel-security checks are required. No launch-day opening or fishing permission is inferred.",
   "security_zones": [
     {
       "id": "diablo-canyon",
