@@ -187,7 +187,12 @@
     "dist/data/seafloor-pge-south-h-2m-review.json",
     "dist/data/seafloor-pge-south-g-5m-review.json",
     "dist/data/seafloor-pge-south-ancillary-review.json",
-    "dist/data/seafloor-pge-south-habitat-quality-review.json"
+    "dist/data/seafloor-pge-south-habitat-quality-review.json",
+    "dist/data/seafloor-scc24-25-native-terrain-review.json",
+    "dist/data/seafloor-scc26-terrain-review.json",
+    "dist/data/seafloor-scc27-terrain-review.json",
+    "dist/data/seafloor-scc28-terrain-review.json",
+    "dist/data/seafloor-scc24-28-terrain-binding-review.json"
   ],
   "surveys": [
     {
@@ -15506,7 +15511,8 @@
       "status": "usable",
       "archive_member": "SCC_Blk24_2m_bathygrids.zip/ArcViewGrids/scc24_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-coast-gap-native-sources.json#/sources/2"
+        "catalog/csumb-scc-coast-gap-native-sources.json#/sources/2",
+        "research/receipts/seafloor-scc24-25-native-terrain-review.json#/sources/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-coast-gap-native-sources.json#/sources/2/acquisition_dates",
@@ -15517,7 +15523,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "69a6e4e94cba0fc341b02dd17a55b9cfdffa13a6bc51156203c3295793cea2db",
@@ -15552,6 +15558,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block24-2m-native",
+        "source_sha256": "69a6e4e94cba0fc341b02dd17a55b9cfdffa13a6bc51156203c3295793cea2db",
+        "depth_archive_member": "SCC_Blk24_2m_bathygrids.zip/ArcViewGrids/scc24_2mbathy",
+        "depth_cog_sha256": "166c49bb4cc7fb919cf7711b18ee22297b9a14a0821d89a926c5310f3aa959fa",
+        "archive_member": "SCC_Blk24_2m_habitat.zip/ArcViewGrids/scc24_2mhab",
+        "metadata_sha256": "e5c150af330809a915ce8127d55aba3878cd24b5ee19020f8ea1c81d4abc171e",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc24-25-native-terrain-review.json#/sources/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15574,7 +15606,8 @@
       "status": "usable",
       "archive_member": "SCC_Blk25_2m_bathygrids.zip/ArcViewGrids/scc25_2mbathy",
       "evidence": [
-        "catalog/csumb-morro-avila-native-sources.json#/sources/0"
+        "catalog/csumb-morro-avila-native-sources.json#/sources/0",
+        "research/receipts/seafloor-scc24-25-native-terrain-review.json#/sources/1"
       ],
       "field_evidence": {
         "year": "catalog/csumb-morro-avila-native-sources.json#/sources/0/acquisition_dates",
@@ -15585,7 +15618,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence. Original habitat abstract and NOAA survey span indicate September 30–October 14, 2010; structured habitat XML repeats SCC24 dates. That metadata conflict remains unresolved and does not alter the original depth acquisition record.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568",
@@ -15620,6 +15653,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block25-2m-native",
+        "source_sha256": "8e824cb05eb9de43d717d1381a1e8970a0046d30a818b080d7e7ee096937f568",
+        "depth_archive_member": "SCC_Blk25_2m_bathygrids.zip/ArcViewGrids/scc25_2mbathy",
+        "depth_cog_sha256": "8b41463aeaa79a5fed439307356b62cfba8b78a340f5f3448e668762f584fd5d",
+        "archive_member": "SCC_Blk25_2m_habitat.zip/ArcViewGrids/scc25_2mhab",
+        "metadata_sha256": "860c628653f15a1e2d80748f2474ad2c8b16df0c0111a904e668fc9adec884b3",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc24-25-native-terrain-review.json#/sources/1"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15789,7 +15848,8 @@
       "status": "physical-only",
       "archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-south-native-sources.json#/sources/0"
+        "catalog/csumb-scc-south-native-sources.json#/sources/0",
+        "research/receipts/seafloor-scc26-terrain-review.json#/products/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/0/acquisition_dates",
@@ -15800,7 +15860,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
@@ -15825,6 +15885,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "588eed5d0124441685b2b970a4c6c45179b9e70adb90105f9c9cb5c26eb08e65"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block26-2m-native",
+        "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "depth_archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
+        "depth_cog_sha256": "97759f53f377e86a2ba8f72fde4934c05b3c6145e5fdc9c5a64464c252bfd158",
+        "archive_member": "SCC_Blk26_2m_habitat.zip/ArcViewGrids/scc26_2mhab",
+        "metadata_sha256": "38f087cb9a3a5923f508863492f0afaf6a40428d7194b1a83d6e4ed0644663f2",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc26-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15847,7 +15933,8 @@
       "status": "physical-only",
       "archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-south-native-sources.json#/sources/1"
+        "catalog/csumb-scc-south-native-sources.json#/sources/1",
+        "research/receipts/seafloor-scc27-terrain-review.json#/products/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/1/acquisition_dates",
@@ -15858,7 +15945,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
@@ -15883,6 +15970,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "f6d5f520784500fa6e39ace0b535052900c9d56064c70bb0eeb16683819287cd"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block27-2m-native",
+        "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+        "depth_archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
+        "depth_cog_sha256": "0f8137f416ebab20fc3fdbd3fc29cb462411f0552b35de28d106e0a9e9ced764",
+        "archive_member": "SCC_Blk27_2m_habitat.zip/ArcViewGrids/scc27_2mhab",
+        "metadata_sha256": "3d186b802faae94dc836f0f6a022d2f80f83405120d9e39e293e613aef8f1d14",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc27-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15905,7 +16018,8 @@
       "status": "physical-only",
       "archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-south-native-sources.json#/sources/2"
+        "catalog/csumb-scc-south-native-sources.json#/sources/2",
+        "research/receipts/seafloor-scc28-terrain-review.json#/products/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/2/acquisition_dates",
@@ -15916,7 +16030,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
@@ -15941,6 +16055,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "f7369cc41465a3a6db0f712c935b599976dab70f318eff5274f67f3433b33352"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block28-2m-native",
+        "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+        "depth_archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
+        "depth_cog_sha256": "2eec7d236d1fdc5c8114a3e33ed149038e910af2a20c08d7af22c6961c6ad259",
+        "archive_member": "SCC_Blk28_2m_habitat.zip/ArcViewGrids/scc28_2mhab",
+        "metadata_sha256": "b559d9a114f03ddb4c9635a5fd6ec3c9464f42f29060d6abe7c6fac57032c247",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc28-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {

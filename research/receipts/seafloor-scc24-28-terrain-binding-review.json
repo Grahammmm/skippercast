@@ -1,0 +1,130 @@
+{
+  "reviewed_at": "2026-10-02T10:37:47.466141+00:00",
+  "scope": "Original native terrain support for SCC24\u201328; no new depth acquisition or source-rights/status promotion.",
+  "native_review": {
+    "candidate_count": 39,
+    "pages_opened": 13,
+    "audit_sha256": "f01ea2fb253375efe692d0972e32a6d21cad1a6b9a6c9f72b994563af7e5acaf",
+    "native_center_rough_fraction_min": 0.9922027290448343,
+    "native_center_nodata_count": 0,
+    "native_depth_min_m": 6.710000038146973,
+    "native_depth_max_m": 22.40999984741211,
+    "assessment": "The 39 restricted SCC26\u201328 patches correspond to localized ridges, edges, isolated terrain and nearshore outcrops in original numeric depth and same-survey class grids. These panels do not establish rock type, sounding accuracy, fish presence or artifact-free terrain. Native center comparisons differ slightly from projected polygon edges; no resampling or hand-edited geometry was used.",
+    "scope_note": "The 39-panel audit preceded adjacent SCC24/25 support. Final shared calibration retains four SCC26 patches (previously five), while SCC27/28 remain 24/10. The earlier inspected surfaces remain original evidence, not a claim of identical final candidate geometries."
+  },
+  "release_decision": {
+    "scc24_25": "Retain existing source status and rights, restrict both calibration and extraction with reviewed positive support, recompute all affected public reaches.",
+    "scc26_28": "Retain physical-only status. The existing 39-patch proof has no currently release-eligible patches: 5 are in unreviewed screen scope; 34 intersect MPAs, including 27 also intersecting security areas. Separate source/rights and spatial review remain necessary.",
+    "new_public_locations_from_private_proof": 0
+  },
+  "method": "Unchanged seafloor-habitat-v1 formula and constants; production threshold values are recomputed from supported cells. No missing class is treated as smooth depth, and same-survey interpretation is not independent habitat confirmation.",
+  "before_after": {
+    "status": "completed",
+    "new_acquisition_km2": 0,
+    "public_reaches": [
+      {
+        "reach": "point-arguello-conception-r04",
+        "measured_cells_identical": true,
+        "before": {
+          "selected_valid_km2": 69.353977618,
+          "physical_candidate_count": 100,
+          "habitat_count": 72,
+          "tier2_km2": 11.224146973
+        },
+        "after": {
+          "selected_valid_km2": 69.353977618,
+          "physical_candidate_count": 225,
+          "habitat_count": 161,
+          "tier2_km2": 8.166707806
+        },
+        "run_input_hash": "0c9e9d74b764203e1723a88cd88bfce27d5e2af4accafc310f0bc1714e1735ee",
+        "run_sha256": "0db3f1d885dfce92692a103fb49ae2d61c0799a66a4e4356f9f02ed0bce15e52",
+        "physical_cache_reused": false
+      },
+      {
+        "reach": "point-arguello-conception-r05",
+        "measured_cells_identical": true,
+        "before": {
+          "selected_valid_km2": 28.12201953,
+          "physical_candidate_count": 767,
+          "habitat_count": 0,
+          "tier2_km2": 0.0
+        },
+        "after": {
+          "selected_valid_km2": 28.12201953,
+          "physical_candidate_count": 29,
+          "habitat_count": 0,
+          "tier2_km2": 0.0
+        },
+        "run_input_hash": "d66d3f4372a7fb2e0460d842d5e9aa590f3b75018eae937816acdc8dbc3cd73d",
+        "run_sha256": "ead393e2676d585cf05c6ad3f74d8e81c41d59a68466ad73e611bf56e646c9c5",
+        "physical_cache_reused": false
+      },
+      {
+        "reach": "point-arguello-conception-r06",
+        "measured_cells_identical": true,
+        "before": {
+          "selected_valid_km2": 56.900908883,
+          "physical_candidate_count": 947,
+          "habitat_count": 452,
+          "tier2_km2": 2.838981687
+        },
+        "after": {
+          "selected_valid_km2": 56.900908883,
+          "physical_candidate_count": 947,
+          "habitat_count": 452,
+          "tier2_km2": 2.838981687
+        },
+        "run_input_hash": "492ffcd7ee2ec2de89675f9029d6262e10bdb0e5109b757d1990e1cb2fcdf054",
+        "run_sha256": "254f0b7c5292b9d9ac2acfb2e0945fd5685f6860abb19b18971f1364c1f5f092",
+        "physical_cache_reused": true
+      }
+    ],
+    "public_candidate_count_delta": 89,
+    "public_habitat_km2_delta": -3.057439167,
+    "note": "Tighter support changes connected components and shared cutoffs; increased count does not mean new surveyed territory."
+  },
+  "private_after_all_five_bindings": [
+    {
+      "reach": "point-arguello-conception-r05",
+      "selected_valid_km2": 38.99181167,
+      "physical_count": 32,
+      "source_counts": {
+        "csumb-scc-block24-2m-native": 28,
+        "csumb-scc-block26-2m-native": 4
+      },
+      "run_sha256": "112779c56a57d2c9fdce82bae3284eaf5ee4aaba831b2ac5c9a7d6d5cad88e6c",
+      "input_hash": "43d3d0b7af966d49a9820b9f390979ff0479d96eb823c04a09638ebc6c7e04a0",
+      "all_private": true
+    },
+    {
+      "reach": "point-arguello-conception-r06",
+      "selected_valid_km2": 82.65503479,
+      "physical_count": 840,
+      "source_counts": {
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f": 312,
+        "h11953-mb-4m-mllw-3of4-bag-f90a1710f1": 442,
+        "h11953-mb-8m-mllw-4of4-bag-e70772d2bb": 37,
+        "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f": 15,
+        "csumb-scc-block27-2m-native": 24,
+        "csumb-scc-block28-2m-native": 10
+      },
+      "run_sha256": "91ce0b02d7bdf685a7a19ef39c09b7a424c8c62cd13b29f6eb0e76666882ffe1",
+      "input_hash": "a061cb8005dd25959d280308e5287d3749e5847ef915038cbc70f2ab82c6e58a",
+      "all_private": true
+    }
+  ],
+  "scc24_25_native_review": {
+    "audit_sha256": "ecefc4e8ebabe47bb5aba2b9cc46e400fda99cfa1429af7f918a41e140a4724c",
+    "audited_script_sha256": "163ee0cc2055b4ae2b30814f533b1aee76427c2c48e878ea7001ee1ce6f47798",
+    "numeric_candidate_count": 109,
+    "visually_sampled_count": 18,
+    "pages_opened": 6,
+    "sample_method": "All, or uniformly spaced indices sorted by source ID and descending area; numeric diagnostics cover every feature.",
+    "native_center_rough_fraction_min": 0.9844961240310077,
+    "native_center_nodata_count": 0,
+    "depth_min_m": 7.360000133514404,
+    "depth_max_m": 39.689998626708984,
+    "assessment": "All 109 SCC24 physical candidates were checked numerically, with 18 deterministically sampled panels visually inspected. Original depth and class grids show connected nearshore ridges/outcrops and localized edges. SCC25 has no remaining extracted candidates. Sampling is not an exhaustive artifact or substrate validation. Private diagnostic images and held geometry are not published."
+  }
+}

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bind five original SCC rough-terrain grids to their native depth sources. Preserve measured coverage, tighten eligible habitat boundaries and retain all private source/spatial holds; local screening gains 89 connected outlines while habitat area decreases by 3.057 km².
+
 - Add source-bound native rough-terrain support for habitat calibration and extraction, preserving measured depth, existing quality holds and current publication checks.
 
 - Preserve four original PGE South native grids as private physical sources: 111.052 km² of additional selected support and ranked candidates remain available for artifact review, with no new public fishing targets.

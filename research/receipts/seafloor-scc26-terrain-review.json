@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-02T09:06:29.376587+00:00",
+  "family": "scc26",
+  "original_source": {
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version2/products/SCC_Block26_additional_products.tar.gz",
+    "sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+    "bytes": 132219786,
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block26_mb.html"
+  },
+  "warning": "Producer rough/smooth interpretation reports vessel-heave artifacts, subjective thresholds and manual exclusions. These classes are derived from the same bathymetry, not independent rock/sand observations. Zero is a valid smooth class. Smooth must not be treated as an invalid-depth mask. Specific invalid depth locations are not established by the narrative.",
+  "products": [
+    {
+      "depth_source_id": "csumb-scc-block26-2m-native",
+      "archive_member": "SCC_Blk26_2m_habitat.zip/ArcViewGrids/scc26_2mhab",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        3587,
+        1988
+      ],
+      "nodata": -32768.0,
+      "depth_cog_sha256": "97759f53f377e86a2ba8f72fde4934c05b3c6145e5fdc9c5a64464c252bfd158",
+      "all_valid_class_counts": {
+        "-30": 3160557,
+        "0": 2183634,
+        "-1": 37315
+      },
+      "shallow_class_counts": {
+        "-30": 3160557,
+        "0": 2183634,
+        "-1": 37315
+      },
+      "native_shallow_depth_cells": 5397061,
+      "missing_class_at_shallow_cells": 15555,
+      "rough_shallow_cells": 37315,
+      "rough_shallow_native_cell_area_proxy_km2": 0.14926,
+      "original_metadata_sha256": "38f087cb9a3a5923f508863492f0afaf6a40428d7194b1a83d6e4ed0644663f2",
+      "original_metadata_member": "SCC_Blk26_2m_habitat.zip/ArcViewGrids/scc26_2mhab/metadata.xml",
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0
+    }
+  ],
+  "unmatched_native_classifications": [],
+  "artifact_mask_search": {
+    "checked_at": "2026-10-02T09:06:29.376587+00:00",
+    "archive_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+    "zip_count": 10,
+    "member_name_count": 386,
+    "metadata_document_count": 25,
+    "explicit_mask_filename_matches": [],
+    "vector_files": [
+      {
+        "zip": "SCC_Blk26_accuracy.zip",
+        "member": "SCC_Block26_accuracy_assessment.shp"
+      },
+      {
+        "zip": "SCC_Blk26_surveyfootprint.zip",
+        "member": "Footprint/scc26_2mbathy_surveyfootprint.shp"
+      },
+      {
+        "zip": "SCC_Blk26_tracklines.zip",
+        "member": "Tracklines/SCC_Block26_tracklines_all.shp"
+      },
+      {
+        "zip": "SCC_Blk26_tracklines.zip",
+        "member": "Tracklines/SCC_Block26_tracklines_bathy.shp"
+      }
+    ],
+    "separately_identified_georeferenced_artifact_mask": false,
+    "limits": [
+      "Inventory and metadata review do not decode proprietary Fledermaus scene internals.",
+      "Smooth class includes ordinary smooth bottom plus manually assigned exclusions; it cannot reconstruct an artifact mask."
+    ]
+  },
+  "class_legend": {
+    "0": "smooth 0–30 m",
+    "-1": "rough 0–30 m",
+    "-30": "smooth 30–100 m",
+    "-31": "rough 30–100 m",
+    "-100": "smooth 100–200 m",
+    "-101": "rough 100–200 m",
+    "-200": "smooth at least 200 m",
+    "-201": "rough at least 200 m"
+  },
+  "unknown_value_action": "Retain unresolved, no reinterpretation or normalization.",
+  "native_alignment_verified": true,
+  "resampling_performed": false,
+  "class_area_warning": "Per-grid native cell-area proxies overlap; do not sum as distinct surveyed or habitat area.",
+  "new_independent_evidence_count": 0,
+  "public_coverage_credit_km2": 0,
+  "binding_decision": "Leave unbound as substrate; use only for source-quality review.",
+  "source_method_review": {
+    "acquisition_dates_original": [
+      "20100908",
+      "20100924",
+      "20100925",
+      "20100929"
+    ],
+    "original_depth_metadata_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy/metadata.xml",
+    "original_depth_metadata_sha256": "11f6f5c8da2d4f1f9bb2a7c228cab2e97575acc69a99d17001b95ef2dd37e597",
+    "depth_datum": "NAVD88/GEOID09",
+    "horizontal_datum": "NAD83 UTM zone10N",
+    "native_depth_grid_m": 2,
+    "reported_horizontal_accuracy": "Approximately ±2 m, varies with depth; producer statement, not per-cell uncertainty.",
+    "reported_vertical_accuracy": "Approximately ±0.20 m, varies with depth; producer statement, not per-cell uncertainty.",
+    "depth_processing": "Cleaned multibeam, SBET heave/tide correction, CUBE surface, decimated xyz and AverageGridder. Final per-cell sounding density and interpolation mask unverified.",
+    "rough_method": "Vector ruggedness measure of the same DEM",
+    "subjective_vrm_threshold": 0.0001,
+    "original_substrate_metadata_member": "SCC_Blk26_2m_habitat.zip/ArcViewGrids/scc26_2msub/metadata.xml",
+    "original_substrate_metadata_sha256": "569f30e6b97faa18537fdb7d58222a264b5b1de36cae68af8ff6ebd663d8c3bb",
+    "validation": {
+      "reported_agreement_percent": 100,
+      "point_count": 100,
+      "reference": "Visual interpretation of shaded relief from the same DEM.",
+      "independent_video_or_sample_ground_truth": false,
+      "fish_or_catch_probability": null,
+      "metadata_member": "SCC_Blk26_accuracy.zip/SCC_Block26_accuracy_assessment.shp.xml",
+      "metadata_sha256": "9d545bc5c408502d987e3bfec9b53ed54430c7baa5659bbb81baa62f341ed526"
+    },
+    "lineage": "This block replaces earlier Vandenberg MPA-only coverage. Producer habitat, substrate, VRM, slope and TPI layers share the same bathymetry; do not count them as independent surveys.",
+    "artifact_mask": "Narrative describes manually smoothing likely artifacts. No separately named georeferenced artifact mask identified in inspected archive inventory; proprietary Fledermaus scene internals were not decoded.",
+    "ground_truth_scope": "No independent seabed video/sample product identified in inspected archive inventory. This does not establish that none exists elsewhere."
+  },
+  "acoustic_texture_review": {
+    "reviewed_at": "2026-10-02T09:04:54.513302+00:00",
+    "products": [
+      {
+        "source_archive_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "zip_member": "SCC_Blk26_1m_sss.zip",
+        "tif_member": "Sidescan/SCC_Block26_7125_1m_SSS.tif",
+        "tif_sha256": "20b5d267887a7f47808ee1408b855cae28235551f4cb6f12ff2a4c4adbd09a53",
+        "tif_bytes": 29228047,
+        "metadata_sha256": "cd00ec0c5811c7f377ca26673f16d012a14a03d796bcd39e3720a12297d9767f",
+        "original_metadata_member": "Sidescan/SCC_Block26_7125_1m_SSS.tif.xml",
+        "native_dimensions": [
+          7172,
+          4067
+        ],
+        "native_resolution_m": [
+          0.9999721138,
+          0.9999188589
+        ],
+        "native_crs": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "nodata": null,
+        "mask_flags": [
+          [
+            "all_valid"
+          ]
+        ],
+        "raster_unmasked_pixel_count": 29168524,
+        "raster_masked_pixel_count": 0,
+        "unmasked_zero_value_count": 39612,
+        "observed_intensity_range": [
+          0,
+          255
+        ],
+        "absolute_db_calibration_verified": false,
+        "valid_acoustic_footprint_verified": false,
+        "resampling_performed": false,
+        "use": "Same-campaign processed acoustic texture, not direct substrate labels or independent ground truth. Rectangular unmasked extent and zero intensities cannot establish acoustic coverage."
+      },
+      {
+        "source_archive_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "zip_member": "SCC_Blk26_1m_sss.zip",
+        "tif_member": "Sidescan/SCC_Block26_SWATH_1m_SSS.tif",
+        "tif_sha256": "8e844769b63caac0a8af1abd12f99238609e9087a94c4e87f8d38ca49a5455ff",
+        "tif_bytes": 13665551,
+        "metadata_sha256": "89417b2f1c034d6e6959fd3bcca959ffb7b5bbd9d075d2797877937fafa9272a",
+        "original_metadata_member": "Sidescan/SCC_Block26_SWATH_1m_SSS.tif.xml",
+        "native_dimensions": [
+          2954,
+          4610
+        ],
+        "native_resolution_m": [
+          1.0,
+          1.0
+        ],
+        "native_crs": "PROJCS[\"NAD83 / UTM zone 10N\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"26910\"]]",
+        "nodata": null,
+        "mask_flags": [
+          [
+            "all_valid"
+          ]
+        ],
+        "raster_unmasked_pixel_count": 13617940,
+        "raster_masked_pixel_count": 0,
+        "unmasked_zero_value_count": 1819,
+        "observed_intensity_range": [
+          0,
+          255
+        ],
+        "absolute_db_calibration_verified": false,
+        "valid_acoustic_footprint_verified": false,
+        "resampling_performed": false,
+        "use": "Same-campaign processed acoustic texture, not direct substrate labels or independent ground truth. Rectangular unmasked extent and zero intensities cannot establish acoustic coverage."
+      }
+    ],
+    "publication_credit_km2": 0
+  },
+  "acoustic_texture_limits": [
+    "Reson imagery was angle/gain-corrected and anti-aliased; SWATH imagery was amplitude-equalized, nadir-gap-filled and converted through GeoJPEG.",
+    "All six inspected TIFFs expose no NoData or valid-data mask. Zero-valued backgrounds and rectangle bounds cannot be used as measured acoustic coverage.",
+    "No calibrated dB interpretation, rock/sand classification or new independent acquisition is established."
+  ],
+  "rights_review_proposal": {
+    "source_id": "csumb-scc-block26-2m-native",
+    "proposed_license": "csumb-public-use-noncommercial",
+    "proposed_rights_review": {
+      "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+      "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+      "producer": "CSUMB SFML",
+      "reviewed_on": "2026-10-02",
+      "allowed_use": "noncommercial",
+      "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+      "navigation_use": false,
+      "for_profit_permission": "required-not-obtained"
+    },
+    "terms_checked_in_memory": {
+      "source_id": "csumb-scc-block26-2m-native",
+      "license": "csumb-public-use-noncommercial",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version2/products/SCC_Block26_additional_products.tar.gz",
+      "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+      "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+      "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+      "commercial_use": "permission-required",
+      "navigation_use": false,
+      "reviewed_on": "2026-10-02"
+    },
+    "policy_html_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_source": "Original producer page previously retrieved during this run; cached bytes hash rechecked.",
+    "original_archive_constraints": "Legacy metadata defers access/use terms to California Coastal Conservancy and CSUMB; retained alongside current producer public-use policy.",
+    "catalog_changed": false
+  }
+}
