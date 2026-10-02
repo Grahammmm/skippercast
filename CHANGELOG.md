@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify existing SCC13–15 native 2 m grids; local processing adds 445 screened areas and 4.721851 km² of habitat across three bounded reaches and their shared northern boundary.
+
 - Seafloor: qualify seven existing SCC09–12 native grids, adding 59 screened areas and 1.002481 km² of habitat across three Morro reaches in local validation; public release remains subject to the production pipeline.
 
 - Permit the reviewed NOAA Point Lobos original archive through the native seafloor importer while retaining checksum, format and producer-use checks.
