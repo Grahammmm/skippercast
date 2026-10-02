@@ -86,16 +86,20 @@ def region_layers(root, region, *, rerun=True, now=None):
             if sources is None:
                 sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
             if not calibration_checked:
-                input_ids = {s['id'] for s in receipt['inputs'].get('sources', [])}
+                input_rows = {s['id']: s for s in receipt['inputs'].get('sources', [])}
+                input_ids = set(input_rows)
                 held_inputs = {ident for ident in input_ids if sources.get(ident, {}).get('habitat_quality_hold')}
-                if held_inputs:
+                support_inputs = {ident for ident in input_ids if
+                    sources.get(ident, {}).get('terrain_support') or input_rows[ident].get('terrain_support')}
+                if held_inputs or support_inputs:
                     # Intersecting sources may lose every coverage cell. Only actual
                     # grid contributors calibrated thresholds, including contributors
                     # that produced no candidates of their own. This inventory is
                     # covered by the candidate output hash checked above.
                     if 'candidates.geojson' not in receipt['outputs']:
                         raise ValueError('Missing verified habitat calibration inventory; rerun required')
-                    calibration_ids = read_json(folder/'candidates.geojson').get('calibration_source_ids')
+                    candidates = read_json(folder/'candidates.geojson')
+                    calibration_ids = candidates.get('calibration_source_ids')
                     if (not isinstance(calibration_ids, list) or not calibration_ids
                             or any(not isinstance(ident, str) for ident in calibration_ids)
                             or len(set(calibration_ids)) != len(calibration_ids)
@@ -103,8 +107,23 @@ def region_layers(root, region, *, rerun=True, now=None):
                         raise ValueError('Invalid habitat calibration inventory; rerun required')
                     if held_inputs.intersection(calibration_ids):
                         raise ValueError('Shared habitat threshold quality review is unresolved; rerun required')
+                    if support_inputs:
+                        from .terrain_support import binding_digest
+                        if any(sources.get(ident, {}).get('terrain_support') != input_rows[ident].get('terrain_support')
+                               for ident in calibration_ids):
+                            raise ValueError('Habitat calibration terrain support changed; rerun required')
+                        expected_support = {ident: binding_digest(sources[ident]) for ident in calibration_ids
+                                            if sources.get(ident, {}).get('terrain_support')}
+                        if candidates.get('calibration_terrain_support', {}) != expected_support:
+                            raise ValueError('Missing current habitat calibration terrain support evidence; rerun required')
                 calibration_checked = True
             contributors = list(p['source_ids'])
+            from .terrain_support import feature_evidence
+            terrain_evidence = [feature_evidence(sources.get(ident, {})) for ident in contributors]
+            terrain_evidence = [evidence for evidence in terrain_evidence if evidence is not None]
+            if (len(terrain_evidence) > 1 or p.get('terrain_support') !=
+                    (terrain_evidence[0] if terrain_evidence else None)):
+                raise ValueError('Feature terrain support evidence is stale; rerun required')
             substrate = p.get('substrate', {})
             if isinstance(substrate, dict) and substrate.get('source_id') not in (None, 'unknown'):
                 contributors.append(substrate['source_id'])

@@ -30,6 +30,30 @@ def resolve(reference):
 
 
 class InventoryTests(unittest.TestCase):
+    def test_native_terrain_support_requires_exact_depth_lineage_and_review(self):
+        from jsonschema import ValidationError
+        from skippercast.seafloor.manifest import validate_manifest
+        document = deepcopy(MANIFEST)
+        row = next(r for r in document['surveys'] if r['kind'] == 'bathymetry'
+                   and r['format'] == 'arcgrid' and r['status'] in {'usable', 'physical-only'})
+        binding = {'profile': 'csumb-native-rough-v1', 'depth_source_id': row['id'],
+            'source_sha256': row['sha256'], 'depth_archive_member': row['archive_member'],
+            'depth_cog_sha256': row['adapter_review']['cog_sha256'],
+            'archive_member': 'reviewed-habitat.zip/ArcViewGrids/classes', 'metadata_sha256': 'a'*64,
+            'rough_codes': [-1, -31, -101, -201], 'smooth_codes': [0, -30, -100, -200],
+            'reviewed_on': '2026-01-01', 'evidence': [row['evidence'][0]], 'notes': 'Same-depth positive support.'}
+        row['terrain_support'] = binding
+        self.assertEqual(validate_manifest(document), document)
+        for field, value in [('depth_source_id', 'other'), ('source_sha256', 'f'*64),
+                ('depth_archive_member', 'other/grid'), ('depth_cog_sha256', 'e'*64),
+                ('rough_codes', [-1, 0]), ('metadata_sha256', 'unknown'),
+                ('reviewed_on', '2099-01-01'), ('archive_member', '../escape'), ('evidence', [])]:
+            with self.subTest(field=field):
+                original = binding[field]; binding[field] = value
+                with self.assertRaises((ValueError, ValidationError)):
+                    validate_manifest(document)
+                binding[field] = original
+
     def test_inventory_statuses_have_no_null_measurements(self):
         self.assertTrue(ROWS)
         self.assertLessEqual({r['status'] for r in ROWS}, {'candidate', 'usable', 'physical-only', 'hold', 'withdrawn'})

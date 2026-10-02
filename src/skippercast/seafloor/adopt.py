@@ -25,7 +25,7 @@ PHYSICAL = ('cells.json', 'terrain.json', 'candidates.geojson', 'atlas-compariso
 OUTPUTS = (*PHYSICAL, 'physical.json', 'habitat.geojson', 'held.geojson')
 RELEASE_FIELDS = {'status', 'license', 'rights_review', 'hold_reason', 'notes'}
 IMPLEMENTATION = ('coverage.py', 'terrain.py', 'run.py', 'habitat.py',
-                  'habitat_tiles.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')
+                  'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py')
 
 
 def digest(value):

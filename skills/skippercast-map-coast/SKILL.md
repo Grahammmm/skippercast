@@ -210,6 +210,17 @@ remain excluded, consistent with the owner's earlier request.
 
 ## Daily execution and publication
 
+For reviewed native depth with unresolved acquisition artifacts, consult
+[native terrain support](../../docs/engineering/native-terrain-support.md).
+The optional source-bound original rough/smooth interpretation restricts both
+shared threshold calibration and habitat extraction while retaining measured
+depth. It is not independent substrate evidence or a license/quality override.
+Keep source and quality holds until separate review; compare all affected
+calibration contributors, not only polygons bearing the newly bound source ID.
+Use the existing physical-only runner and a focused source PR after the method
+and original binding are verified. Do not guess masks or tune thresholds to
+increase counts.
+
 `.github/workflows/seafloor.yml` runs daily at 10:23 UTC, on relevant main changes,
 and by manual dispatch. Inputs are region (blank = catalog scope), optional
 reach and `max_new` (default 3). It uses existing GitHub/R2 credentials; no new
