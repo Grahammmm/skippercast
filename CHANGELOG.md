@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Apply reviewed USGS seafloor classes to thirteen SCC depth grids; preserve measured coverage and remove sediment-backed terrain candidates without claiming independent fish evidence.
+
 - Add original 2 m Point Lobos survey support: 4.019 km² of additional selected measured coverage, ranked habitat and whole-polygon MPA screening; retain unknown datum and credited noncommercial terms.
 
 Release reviewed Avila and SCC16 native source rows and complete the spatial-screen scope for three Avila/Pismo/northern Arguello reaches, preserving physical-first processing and whole-polygon exclusions.

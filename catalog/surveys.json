@@ -178,7 +178,8 @@
     "dist/data/seafloor-pge-mid-e-5m-review.json",
     "dist/data/seafloor-pge-avila-native-rights-review.json",
     "dist/data/seafloor-scc16-native-rights-review.json",
-    "dist/data/seafloor-point-lobos-native-review.json"
+    "dist/data/seafloor-point-lobos-native-review.json",
+    "dist/data/seafloor-scc-character-bindings-review.json"
   ],
   "surveys": [
     {
