@@ -1,0 +1,474 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T06:22:32.194894+00:00",
+  "source": {
+    "id": "csumb-pge-mid-blocke-5m-native",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+    "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+    "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+    "bytes": 1469944696,
+    "resolution_m": 5,
+    "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+    "vertical_datum": "NAVD88",
+    "year": 2009,
+    "archive_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_5mbthy",
+    "native_grid_dimensions": [
+      1884,
+      1739
+    ],
+    "native_raster_bounds_wgs84": [
+      -120.89456979023826,
+      35.05792051287002,
+      -120.78922330264693,
+      35.13810925409809
+    ],
+    "cog_sha256": "187d27919bb5aae7e5218de75036239b07631b7ccf85abba5671836b414969eb",
+    "cog_bytes": 2238774,
+    "depth_basis": "nominal"
+  },
+  "metadata": {
+    "original_native_metadata_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_5mbthy/metadata.xml",
+    "original_native_metadata_sha256": "aab94ba32c85f1e3271c39c0263bfa801a5c6388b2a8fca76b3bc0b214db8f7c",
+    "acquisition_dates": [
+      "20090410",
+      "20090418",
+      "20090419",
+      "20090420",
+      "20090421",
+      "20090422",
+      "20090423",
+      "20090424",
+      "20090501",
+      "20090521",
+      "20090522",
+      "20090523",
+      "20090524",
+      "20090527",
+      "20090530",
+      "20090531",
+      "20090601",
+      "20090602",
+      "20090610"
+    ],
+    "acquisition_year_interpretation": "Latest acquisition year; no per-pixel date attribution.",
+    "vertical_datum": "NAVD88 Geoid03",
+    "horizontal_frame": "NAD83/UTM10N; native grid CRS verified during import.",
+    "processing": [
+      "Bathymetric data were post-processed using CARIS HIPS hydrographic data cleaning system software. Applanix POSPAC software (v 4.31) was used to process the logged POS M/V files and create a Smoothed Best Estimated Trajectory (SBET) composed of an integrated inertial/GPS solution for use in horizontal and vertical positioning of sounding data. Correction for vertical oscillation due to heave and tide was accomplished using these SBET files. Final x,y,z soundings, surface models, and derived products are relative to the NAVD88 Geoid03 vertical  datum. Erroneous soundings were removed in CARIS HIPS via basic filtering and detailed swath and subset cleaning; the remaining high-confidence soundings were used in surface model creation and final product generation. Soundings (x,y,z) were exported from a Swath Angle Bathymetry Associated with Statistical Error (BASE) Surface as an ASCII file with 2m {5m,10m) spacing. The 2m (5m,10m) decimated x,y,z ASCII text file was imported into Fledermaus AverageGridder to create digital elevation model (DEM) grid(s). The 2m (5m,10m) Fledermaus grid was exported as an ArcInfo ASCII raster file (.asc), which was imported into ArcGIS Spatial Analyst to generate a 2m (5m,10m)  bathymetry ArcInfo grid.  Post-survey data cleaning, BASE surface creation, and final products derived from post-processed multibeam bathymetry data were applied by the Seafloor Mapping Lab at CSUMB."
+    ],
+    "accuracy": "No full numeric raster horizontal/vertical uncertainty or confidence limit verified in selected metadata. Navigation-system specifications alone are not a map-accuracy bound.",
+    "interpolation_mask": "unknown",
+    "lineage": "Original BlockE grid family; companion resolutions and reused survey data do not provide independent corroboration. Preserve finer qualified depth where overlap exists.",
+    "update_frequency": "Static historical archive; no published repeat schedule verified.",
+    "scope": "Actual native valid0<depth<=91.44m source-datum cells only; independent comparison includes all qualified pending sources, not just main catalog.",
+    "resolution_design": "Published spacing5m verified from native headers. General depth-dependent grid descriptions do not establish actual footprint or depth range."
+  },
+  "rights": {
+    "source_id": "csumb-pge-mid-blocke-5m-native",
+    "license": "csumb-public-use-noncommercial",
+    "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+    "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "reviewed_on": "2026-10-01",
+    "policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_retrieved_at": "2026-10-02T04:05:08.930255+00:00",
+    "review_date_timezone": "America/Los_Angeles"
+  },
+  "access": {
+    "report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "status": 200,
+      "retrieved_at": "2026-10-02T05:54:35.955452+00:00",
+      "sha256": "3b3f6f7edcde7feba7cc6ad0362cf14e13d536a72c8cf273ba1d1021a20a8721",
+      "bytes": 1054141,
+      "observed_product_links": [
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+        "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version1/metadata/CC[PG&amp;E]_Metadata.txt"
+      ],
+      "cruise_envelope_only": {
+        "Northern Extent": [
+          "35.262367"
+        ],
+        "Southern Extent": [
+          "35.04598"
+        ],
+        "Western Extent": [
+          "-120.92068"
+        ],
+        "Eastern Extent": [
+          "-120.743065"
+        ],
+        "Maximum Depth": [
+          "133.795"
+        ]
+      }
+    },
+    "archive_head": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "status": 200,
+      "retrieved_at": "2026-10-02T05:55:20.770910+00:00",
+      "headers": {
+        "last-modified": "Wed, 03 Jul 2019 18:18:36 GMT",
+        "accept-ranges": "bytes",
+        "content-length": "1469944696",
+        "content-type": "application/x-gzip"
+      }
+    },
+    "archive_full_download": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "started_at": "2026-10-02T05:57:15.292406+00:00",
+      "completed_at": "2026-10-02T06:02:37.894431+00:00",
+      "downloaded": true
+    },
+    "original_project_metadata": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version1/metadata/CC[PG&E]_Metadata.txt",
+      "status": 200,
+      "retrieved_at": "2026-10-02T05:57:50.795779+00:00",
+      "bytes": 4195,
+      "sha256": "7153a0b9be16b1294e496c4383fddbb235c7746c106971f2f686901391ca44d8"
+    }
+  },
+  "native_statistics": {
+    "valid_pixels": 1510135,
+    "nominal_shallow_pixels": 378179,
+    "min_depth_m": 76.0,
+    "max_depth_m": 133.6699981689453,
+    "shallow_min_depth_m": 76.0,
+    "shallow_max_depth_m": 91.44000244140625,
+    "vertical_datum": "NAVD88",
+    "uncertainty": "unknown",
+    "interpolation_mask": "unknown"
+  },
+  "valid_depth_diagnostic": {
+    "checked_at": "2026-10-02T06:22:30.558262+00:00",
+    "source_id": "csumb-pge-mid-blocke-5m-native",
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+        "draft_sha256": "5825c00353a5db9840f189b6101208194c3859be2f7591d6002d636fee08a649",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "draft_sha256": "3395d064c14626d1f17ff0d8eda938071f52766013b66d9f38af6e43eca5cb8a",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "draft_sha256": "9316833acc747d0c7e829e7a830a62ec775689fa9f250042d78b6d2f7dbc3213",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-1m-native",
+        "draft_sha256": "2ebd7b20962742332b741ef1f83bb48586615e930de8c80243cdc8f7369fa30a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "draft_sha256": "ef07e148e0714ed52cc3e0b9d9ecd010f8d23ae14be9f3aeed02e6056fff1926",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "draft_sha256": "0dae698ba33c6c18335f157752d56cf8ec994ccfa9d91f94aeea29802eee24e4",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "draft_sha256": "4afd21a28291727dd427f3952ad594db5baa459e9254558f290c93af38251e7a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "draft_sha256": "7118c0c6b0684a21b10ed55ef022e81c5105a89df83c391c5283bed7dcd512e8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "draft_sha256": "7184de31018d84e480fd7d0aea0dab2a0009141aa3d2774c0e05886b3c264bd8",
+        "prior_catalog_status": null
+      }
+    ],
+    "counts": {
+      "target_shallow_cell_centers": 378179,
+      "prior_valid_shallow_at_center": 327396,
+      "prior_valid_but_not_shallow_at_center": 2,
+      "prior_nodata_or_outside_review_at_center": 50781,
+      "prior_finer_or_equal_valid_at_center": 327398
+    },
+    "comparison_sources": [
+      {
+        "source_id": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+        "cog_sha256": "216b8bdb5bf8683ffbef6e940cd5289decf777b7112f42dab41fc836a69389ea",
+        "resolution_m": 2,
+        "year": 2008,
+        "resolution_profile": {
+          "fine_to_depth_m": 80,
+          "coarse_resolution_m": 5,
+          "source_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+        },
+        "valid_at_target_centers": 22185,
+        "shallow_at_target_centers": 22185
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "ef3401eee0dfb1c094b7dbaf541aaa1f739704cac24b6a5852004cac9295d372",
+        "resolution_m": 2,
+        "year": 2011,
+        "resolution_profile": null,
+        "valid_at_target_centers": 10899,
+        "shallow_at_target_centers": 10899
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "636d9d8ebde0e3dc19c1199b806c0e4445f08d320633e774002c5c337757dfe6",
+        "resolution_m": 5,
+        "year": 2011,
+        "resolution_profile": null,
+        "valid_at_target_centers": 14982,
+        "shallow_at_target_centers": 14980
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "e95dda4d7485ab7aa7e05b575f0e6650bdae869a8fc21a3d4b0bf78f21a6e230",
+        "resolution_m": 1,
+        "year": 2011,
+        "resolution_profile": null,
+        "valid_at_target_centers": 0,
+        "shallow_at_target_centers": 0
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "fbd60d36c2c7eabdc8e021debe0a8a6a31b96a15cb641bf28d635a1fb30171f1",
+        "resolution_m": 2,
+        "year": 2011,
+        "resolution_profile": null,
+        "valid_at_target_centers": 0,
+        "shallow_at_target_centers": 0
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "0e01df2099fe48ece7aa75ab6cb0391dae5d002ab675234b5110661d04b3869b",
+        "resolution_m": 2,
+        "year": 2009,
+        "resolution_profile": null,
+        "valid_at_target_centers": 323301,
+        "shallow_at_target_centers": 323301
+      }
+    ],
+    "comparisons_complete": true,
+    "gap_pixel_area_proxy_km2": 1.269525,
+    "method": "Nearest-neighbor sample of all reviewed overlapping rasters at native candidate cell centers, clipped to reviewed bounds. Any positive valid prior depth counts as existing support. Finer/equal comparison honors existing producer resolution_profile using production fine_detail_valid; delivered raster spacing alone does not establish effective detail. Counts and native-cell area proxy are not exact polygon areas or independent sonar returns.",
+    "public_coverage_credit_km2": 0
+  },
+  "coverage_summary": {
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+        "draft_sha256": "5825c00353a5db9840f189b6101208194c3859be2f7591d6002d636fee08a649",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "draft_sha256": "3395d064c14626d1f17ff0d8eda938071f52766013b66d9f38af6e43eca5cb8a",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "draft_sha256": "9316833acc747d0c7e829e7a830a62ec775689fa9f250042d78b6d2f7dbc3213",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-1m-native",
+        "draft_sha256": "2ebd7b20962742332b741ef1f83bb48586615e930de8c80243cdc8f7369fa30a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "draft_sha256": "ef07e148e0714ed52cc3e0b9d9ecd010f8d23ae14be9f3aeed02e6056fff1926",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "draft_sha256": "0dae698ba33c6c18335f157752d56cf8ec994ccfa9d91f94aeea29802eee24e4",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "draft_sha256": "4afd21a28291727dd427f3952ad594db5baa459e9254558f290c93af38251e7a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "draft_sha256": "7118c0c6b0684a21b10ed55ef022e81c5105a89df83c391c5283bed7dcd512e8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "draft_sha256": "7184de31018d84e480fd7d0aea0dab2a0009141aa3d2774c0e05886b3c264bd8",
+        "prior_catalog_status": null
+      }
+    ],
+    "native_shallow_footprint_km2": 9.452836853287026,
+    "incremental_shallow_footprint_km2": 1.269399084442299,
+    "comparisons_complete": true,
+    "comparisons": [
+      {
+        "source_id": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "resolution_m": 2,
+        "vertical_datum": "unknown",
+        "source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+        "cog_sha256": "216b8bdb5bf8683ffbef6e940cd5289decf777b7112f42dab41fc836a69389ea",
+        "status": "checked",
+        "cache_receipt": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "reviewed_shallow_area_in_target_envelope_km2": 3.84428440032109,
+        "target_overlap_km2": 0.5535291610241874
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "resolution_m": 2,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "ef3401eee0dfb1c094b7dbaf541aaa1f739704cac24b6a5852004cac9295d372",
+        "status": "checked",
+        "cache_receipt": "csumb-pge-mid-blockc-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.2524604663124277,
+        "target_overlap_km2": 0.2710875387596104
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "resolution_m": 5,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "636d9d8ebde0e3dc19c1199b806c0e4445f08d320633e774002c5c337757dfe6",
+        "status": "checked",
+        "cache_receipt": "csumb-pge-mid-blockc-5m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 0.3879269396293227,
+        "target_overlap_km2": 0.3732693569836889
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "resolution_m": 1,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "e95dda4d7485ab7aa7e05b575f0e6650bdae869a8fc21a3d4b0bf78f21a6e230",
+        "status": "checked",
+        "cache_receipt": "csumb-pge-mid-blockd-1m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 0.0,
+        "target_overlap_km2": 0.0
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "resolution_m": 2,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "fbd60d36c2c7eabdc8e021debe0a8a6a31b96a15cb641bf28d635a1fb30171f1",
+        "status": "checked",
+        "cache_receipt": "csumb-pge-mid-blockd-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 5.736121622267343,
+        "target_overlap_km2": 0.0
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "resolution_m": 2,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "0e01df2099fe48ece7aa75ab6cb0391dae5d002ab675234b5110661d04b3869b",
+        "status": "checked",
+        "cache_receipt": "csumb-pge-mid-blocke-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 20.774427748418233,
+        "target_overlap_km2": 8.079600367946577
+      }
+    ],
+    "by_reach": {
+      "morro-bay-r07": {
+        "native_km2": 1.0975041603852067,
+        "incremental_km2": 0.07937088852222433
+      },
+      "morro-bay-r08": {
+        "native_km2": 8.355332692901817,
+        "incremental_km2": 1.1900281959200991
+      }
+    }
+  },
+  "limits": [
+    "Producer-gridded sonar depth, not individually verified soundings.",
+    "Nominal depth only; no chart-depth validation, fish presence or legal clearance.",
+    "Unknown interpolation masks stay unknown. No independent acquisition count added.",
+    "Only coordinator processing and publication can establish a public coverage delta."
+  ]
+}
