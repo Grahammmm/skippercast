@@ -166,7 +166,9 @@
         "normalized_receipt_supplied_and_verified": true,
         "physical_only_status_preserved": true,
         "archive_and_metadata_reverified": true,
-        "class_counts_reused_from_pinned_prior_audit": true
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "1ae9c9da4e0900b219bef75ff461d5a7cde8db484aa2623b72f75a73638e5ada"
       }
     },
     {
@@ -293,7 +295,9 @@
         "normalized_receipt_supplied_and_verified": true,
         "physical_only_status_preserved": true,
         "archive_and_metadata_reverified": true,
-        "class_counts_reused_from_pinned_prior_audit": true
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "99f55a599a5e7a44527722208226c08e97a0ecbc45ee81c565afd803b02a75a2"
       },
       "support_limit": "One native 2m rough cell is not a fishable reef; current area, connectivity and quality screens remain required."
     },
@@ -421,7 +425,9 @@
         "normalized_receipt_supplied_and_verified": true,
         "physical_only_status_preserved": true,
         "archive_and_metadata_reverified": true,
-        "class_counts_reused_from_pinned_prior_audit": true
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "36493d5c596e23bf269ee9aceef184153052191967f1b28dc62e837a132c639d"
       }
     },
     {
@@ -548,9 +554,11 @@
         "normalized_receipt_supplied_and_verified": true,
         "physical_only_status_preserved": true,
         "archive_and_metadata_reverified": true,
-        "class_counts_reused_from_pinned_prior_audit": true
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "ac02a7c91794ad547cd399b09884800e6d8b51540b593780766a3b6a24a174e1"
       },
-      "depth_gate_note": "The 47 whole-grid rough cells are in the 100–200m class; zero fall within the checked 0–300ft native depth screen. Preserve the existing depth limit."
+      "depth_gate_note": "The 47 whole-grid rough cells are in the 100\u2013200m class; zero fall within the checked 0\u2013300ft native depth screen. Preserve the existing depth limit."
     }
   ],
   "artifact_mask": {
