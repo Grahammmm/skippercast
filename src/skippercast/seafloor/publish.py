@@ -80,7 +80,7 @@ def region_layers(root, region, *, rerun=True, now=None):
             p = f['properties']
             if (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']
                     or p['screen']['status'] != 'pass' or p.get('hold_reasons')
-                    or p.get('habitat_quality_hold')):
+                    or p.get('habitat_quality_hold') or p.get('habitat_quality_dependencies')):
                 raise ValueError('Unqualified feature in publication input')
             if sources is None:
                 sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
@@ -90,6 +90,9 @@ def region_layers(root, region, *, rerun=True, now=None):
                 contributors.append(substrate['source_id'])
             if any(sources.get(ident, {}).get('habitat_quality_hold') for ident in contributors):
                 raise ValueError('Source habitat quality review is unresolved; rerun required')
+            calibration_sources = receipt['inputs'].get('sources', [])
+            if any(sources.get(s['id'], {}).get('habitat_quality_hold') for s in calibration_sources):
+                raise ValueError('Shared habitat threshold quality review is unresolved; rerun required')
             public_properties = dict(p, source_rights=feature_rights(contributors, sources,
                 use=deployment_use(root)))
             habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})

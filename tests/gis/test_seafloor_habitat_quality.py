@@ -45,7 +45,7 @@ class HabitatQualityTests(unittest.TestCase):
             tiled = habitat_tiles.extract_grid(grid, limits, RULES, reach, disk, 73)
         self.assertEqual(tiled, actual)
 
-    def test_current_legal_pass_does_not_clear_quality_hold_or_block_other_sources(self):
+    def test_current_legal_pass_keeps_quality_hold_without_blocking_unrelated_candidates(self):
         grid = fixture(); limits = habitat.thresholds([grid], RULES)
         reach = {'id': 'fixture', 'region': 'fixture'}
         clear = habitat.extract_grid(grid, limits, RULES, reach)
@@ -63,8 +63,35 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertEqual(again['features'], [])
         self.assertEqual(retained, held)
 
+    def test_shared_threshold_group_retains_indirect_source_quality_dependency(self):
+        grids = [fixture(), fixture()]
+        grids[1]['source']['row']['id'] = 'second'
+        sources = [g['source'] for g in grids]
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(habitat, 'source_grid', side_effect=grids):
+            before = habitat.build_candidates(sources, [], {}, RULES, {'id': 'fixture'}, root=tmp)
+        grids[1]['source']['row']['habitat_quality_hold'] = deepcopy(HOLD)
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(habitat, 'source_grid', side_effect=grids):
+            after = habitat.build_candidates(sources, [], {}, RULES, {'id': 'fixture'}, root=tmp)
+        self.assertEqual(before['thresholds'], after['thresholds'])
+        self.assertEqual(len(before['features']), len(after['features']))
+        self.assertTrue(any(f['properties']['source_ids'] == ['original'] for f in after['features']))
+        for original, reviewed in zip(before['features'], after['features']):
+            self.assertEqual(original['geometry'], reviewed['geometry'])
+            p = deepcopy(reviewed['properties'])
+            self.assertEqual(p.pop('habitat_quality_dependencies'), {'second': HOLD})
+            p['hold_reasons'].remove('habitat-threshold-quality-review')
+            if p['source_ids'] == ['second']:
+                p.pop('habitat_quality_hold')
+                p['hold_reasons'].remove('source-habitat-quality-review')
+            self.assertEqual(p, original['properties'])
+        passed, held, _ = screen_candidates(after, state(geo(1500, 1500)))
+        self.assertFalse(passed['features'])
+        self.assertEqual(len(held['features']), len(after['features']))
+
     def test_publication_rejects_quality_hold_even_if_old_output_claims_pass(self):
-        for case in ('source', 'feature', 'reason'):
+        for case in ('source', 'feature', 'reason', 'dependency', 'source-dependency'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp); ref = root/'var/seafloor/reference/cells.json'
                 atomic_json(ref, {'cells': []})
@@ -73,14 +100,19 @@ class HabitatQualityTests(unittest.TestCase):
                     'reaches': [{'id': 'r01', 'region': 'morro-bay', 'status': 'partial'}]})
                 row = {'id': 'native'}
                 if case == 'source': row['habitat_quality_hold'] = HOLD
-                atomic_json(root/'catalog/surveys.json', {'surveys': [row]})
+                source_rows = [row]
+                if case == 'source-dependency':
+                    source_rows.append({'id': 'calibration-source', 'habitat_quality_hold': HOLD})
+                atomic_json(root/'catalog/surveys.json', {'surveys': source_rows})
                 props = {'tier': 2, 'status': 'habitat', 'exportable': True,
                          'screen': {'status': 'pass'}, 'source_ids': ['native'], 'hold_reasons': []}
                 if case == 'feature': props['habitat_quality_hold'] = HOLD
                 if case == 'reason': props['hold_reasons'] = ['source-habitat-quality-review']
+                if case == 'dependency': props['habitat_quality_dependencies'] = {'calibration-source': HOLD}
                 out = root/'var/seafloor/reaches/r01'
                 atomic_json(out/'habitat.geojson', {'features': [{'properties': props}]})
-                atomic_json(out/'run.json', {'inputs': {'screen': 'now'},
+                atomic_json(out/'run.json', {'inputs': {'screen': 'now', 'sources': [
+                    {'id': 'native'}, {'id': 'calibration-source'}]},
                     'outputs': {'habitat.geojson': sha256(out/'habitat.geojson')}})
                 with patch.object(publish, 'load_snapshot', return_value={'status': 'ready'}), \
                      patch.object(publish, 'input_identity', return_value='now'):

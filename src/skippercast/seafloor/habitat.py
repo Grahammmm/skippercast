@@ -256,6 +256,16 @@ def build_candidates(sources, cells, bindings, rules, reach, *, root):
         for grid in grids:
             features.extend(habitat_tiles.extract_grid(grid, limits, rules, reach, disk)
                             if grid.get('tiled') else extract_grid(grid, limits, rules, reach))
+        quality_dependencies = {
+            g['source']['row']['id']: g['source']['row']['habitat_quality_hold']
+            for g in grids if g['source']['row'].get('habitat_quality_hold')}
+        if quality_dependencies:
+            # Thresholds are calibrated across this entire grid group. A held
+            # source can therefore affect candidates from other source IDs too.
+            for feature in features:
+                p = feature['properties']
+                p['hold_reasons'].append('habitat-threshold-quality-review')
+                p['habitat_quality_dependencies'] = deepcopy(quality_dependencies)
         selected = [(g['source']['row']['id'], g['support']) for g in grids]
         seams = [{'source_ids': [a, b], 'shared_selected_boundary_m': ga.boundary.intersection(gb.boundary).length,
                   'distance_m': ga.distance(gb)} for i, (a, ga) in enumerate(selected) for b, gb in selected[i+1:]]

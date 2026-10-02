@@ -25,11 +25,16 @@ screen is not a resolution.
 The source remains eligible for native depth selection. Terrain extraction still
 computes the same polygons, identifiers, measurements and species fit. Its
 candidates acquire `source-habitat-quality-review`, which the existing final
-screen retains. Other sources can pass normally. Both monolithic and tiled
-extraction use the same feature constructor.
+screen retains. Because roughness thresholds are calibrated across the reach's
+selected grid group, every candidate in that group also receives
+`habitat-threshold-quality-review` with the contributing quality-hold evidence.
+A different source ID alone does not establish independence from a questionable
+threshold contributor. Independently processed groups remain unaffected. Both
+monolithic and tiled extraction use the same feature constructor.
 
 Publication rejects a quality hold found in the feature, its hold reasons, or
-the current source catalog, even if a stale feature claims it passed screening.
+the current source catalog, including shared calibration contributors, even if
+a stale feature claims it passed screening.
 Held candidate geometry does not enter public map tiles or fishing exports.
 Current source-use, MPA and other spatial checks remain in force. The source
 catalog is part of the cached input identity, so changing a review cannot reuse
@@ -43,11 +48,18 @@ qualification and its retained before/after receipts are a separate batch.
 
 Offline synthetic tests check that adding a hold leaves native depth, masks,
 thresholds, geometry, IDs, metrics and species fit identical; tiled and ordinary
-processing agree. A current and repeated legal pass keeps the quality hold while
-another source remains eligible. Publication rejects each stale-pass variant,
+processing agree. A two-source fixture proves that a quality hold propagates to
+indirectly affected candidates without changing their measurements. A current
+and repeated legal pass keeps the quality hold; unrelated groups can still pass.
+Publication rejects each stale-pass variant,
 and manifest validation rejects mismatched or unsupported review metadata.
 
 The independent review and exact-head CI are required before merge. Production
 must rebuild with the current implementation before any new source batch is
-claimed live. A quality correction and a measured-coverage increase are reported
+claimed live. Until the PGE shared-threshold dependency has been separately
+resolved, its new rows must remain `physical-only`, preserving private depth
+work without changing the existing production source selection. The generic
+control does not itself approve a PGE habitat release.
+
+A quality correction and a measured-coverage increase are reported
 separately from changes in published habitat counts.
