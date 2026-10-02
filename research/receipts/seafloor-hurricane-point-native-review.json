@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T04:24:40.714910+00:00",
+  "source": {
+    "id": "csumb-hurricane-point-2m-native",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/HurricanePoint_mb.html",
+    "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+    "sha256": "dc1342bfe85de46b3588be2c1846e44564602120a775404b8deac9fea0d3adad",
+    "bytes": 452249474,
+    "resolution_m": 2.0,
+    "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+    "vertical_datum": "MLLW",
+    "year": 2005,
+    "archive_member": "HurricanePt/HurricanePt_2mbathy_hill_slope.zip/ArcViewGrids/hp_2mbathy",
+    "native_grid_dimensions": [
+      1185,
+      3626
+    ],
+    "native_raster_bounds_wgs84": [
+      -121.92722526398568,
+      36.29399514572653,
+      -121.89991706729415,
+      36.359603399218706
+    ],
+    "cog_sha256": "05591ccb12abcda385f16a6881365a0b2b1011efa2ae5ed24bcffbb0b875714e",
+    "cog_bytes": 5429583,
+    "depth_basis": "nominal"
+  },
+  "metadata": {
+    "original_metadata": [
+      {
+        "file": "original-HurricanePt_2m_gs-hurricanepoint_2m_gs.tif.xml",
+        "sha256": "d6f4c57ea5247eae263637bea06e8327a71c3780fd4990071ef23c3022e16eee"
+      },
+      {
+        "file": "original-HurricanePt_2mbathy_hill_slope-ArcViewGrids_hp_2mbathy_metadata.xml",
+        "sha256": "52e1e80df9d0ee3e312e32e96d85bc7868872b36f54f832242628380e62612e2"
+      },
+      {
+        "file": "original-HurricanePt_2mbathy_hill_slope-ArcViewGrids_hp_2mhill_metadata.xml",
+        "sha256": "58a14f16029504344571e36b23ce75c9b5131065925fba4e379fbc69182f073d"
+      },
+      {
+        "file": "original-HurricanePt_2mbathy_hill_slope-ArcViewGrids_hp_2mslope_metadata.xml",
+        "sha256": "44a078bd9dc88625440a5623ab01c9e5619ad391d9d50d576344206cf3c8c398"
+      }
+    ],
+    "acquisition": "Native metadata: 2004-05-26/27 and 2005-02-12; NOAA report starts 2004-05-27 and ends 2005-02-12. One-day start discrepancy retained.",
+    "year_basis": "2005 is latest acquisition year, not uniform survey year.",
+    "metadata_date": "2006-12-14 for bathymetry; companion metadata 2006-12-12/13.",
+    "native_grid_crs": "WGS84 / UTM zone 10N",
+    "vertical_datum": "MLLW documented consistently by native bathymetry/hill/slope and companion grayscale processes using predicted local tides. This is a producer datum assertion, not independent chart-depth validation.",
+    "processing": "CARIS cleaned soundings; shoal-biased 1 m decimation; Fledermaus AverageGridder interpolation to 2 m ArcInfo bathymetry. Grayscale TIFF is imagery, not a depth grid.",
+    "measured_vs_interpolated": "Sonar-derived producer-interpolated raster; no per-cell measured-versus-filled mask.",
+    "horizontal_accuracy": "Producer states approximately ±2 m, varies with depth; confidence level/independent validation unspecified.",
+    "vertical_accuracy": "Producer states approximately ±0.20 m, varies with depth; prediction/local tide reduction contribution to total error unverified.",
+    "interpolation_mask": "unknown",
+    "uncertainty_type": "unknown",
+    "lineage": "Hurricane Point bathymetry, hillshade, slope and grayscale share one 2004–2005 acquisition family. No independent acquisition credit from counting these products.",
+    "update_frequency": "Static historical survey; no scheduled reacquisition verified.",
+    "source_name_note": "Actual NOAA archive is HurricanePt_additional_products.tar.gz; cached local filename spells HurricanePoint. Checked SHA/bytes and live prefix match."
+  },
+  "rights": {
+    "source_id": "csumb-hurricane-point-2m-native",
+    "license": "csumb-public-use-noncommercial",
+    "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+    "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "reviewed_on": "2026-10-01",
+    "policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_retrieved_at": "2026-10-02T04:05:08.930255+00:00",
+    "review_date_timezone": "America/Los_Angeles"
+  },
+  "access": {
+    "survey_report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/HurricanePoint_mb.html",
+      "status": 200,
+      "final_url": "https://www.ngdc.noaa.gov/ships/ventresca/HurricanePoint_mb.html",
+      "bytes_read": 91806,
+      "sha256": "f20f776640e0c5d98132988957390516982a2e55f1a8ea09b454e529ada366af",
+      "retrieved_at": "2026-10-02T04:20:24.311577+00:00",
+      "headers": {
+        "date": "Fri, 02 Oct 2026 04:20:24 GMT",
+        "last-modified": "Fri, 24 Apr 2026 17:10:57 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive_range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz",
+      "status": 206,
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz",
+      "bytes_read": 65536,
+      "prefix_sha256": "096b965af593c378b50beb47395dd58cfe14007a8c4b8522fe177ade91d56a94",
+      "retrieved_at": "2026-10-02T04:21:56.710638+00:00",
+      "content_range": "bytes 0-65535/452249474",
+      "last_modified": "Sat, 17 Aug 2019 15:56:39 GMT",
+      "cached_prefix_matches": true
+    },
+    "cache_filename_note": "Local cache uses HurricanePoint; original publisher archive is named HurricanePt. URL taken from the current original NOAA report."
+  },
+  "native_statistics": {
+    "valid_pixels": 3801518,
+    "nominal_shallow_pixels": 3801518,
+    "min_depth_m": 1.2599999904632568,
+    "max_depth_m": 55.7599983215332,
+    "shallow_min_depth_m": 1.2599999904632568,
+    "shallow_max_depth_m": 55.7599983215332,
+    "vertical_datum": "MLLW",
+    "uncertainty": "unknown",
+    "interpolation_mask": "unknown"
+  },
+  "valid_depth_diagnostic": {
+    "checked_at": "2026-10-02T04:24:00.891106+00:00",
+    "source_id": "csumb-hurricane-point-2m-native",
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901"
+      }
+    ],
+    "counts": {
+      "target_shallow_cell_centers": 3801518,
+      "prior_valid_shallow_at_center": 402039,
+      "prior_valid_but_not_shallow_at_center": 0,
+      "prior_nodata_or_outside_review_at_center": 3399479,
+      "prior_finer_or_equal_valid_at_center": 158560
+    },
+    "comparison_sources": [
+      {
+        "source_id": "usgs-1998-sur5g-native",
+        "source_sha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+        "cog_sha256": "12d57148cf308e0a7349e9479ba53780935a2f4962787bf4e1bfcfd1a038686c",
+        "resolution_m": 5,
+        "year": 1998,
+        "valid_at_target_centers": 248074,
+        "shallow_at_target_centers": 248074
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "source_sha256": "18eb310f4675f96ffbe6bfa3306a60ac7e3e32f75d1e17fcd81b3c169ab95b00",
+        "cog_sha256": "1a0d836c67e5903451c6aef4e4b0215471d158cb5a6fbe009edb3f3eecda7b79",
+        "resolution_m": 2.0,
+        "year": 2006,
+        "valid_at_target_centers": 158560,
+        "shallow_at_target_centers": 158560
+      }
+    ],
+    "comparisons_complete": true,
+    "gap_pixel_area_proxy_km2": 13.597916,
+    "method": "Nearest-neighbor sample of all reviewed overlapping rasters at native candidate cell centers, clipped to reviewed bounds. Any positive valid prior depth counts as existing support. Counts and native-cell area proxy are not exact polygon areas or independent sonar returns.",
+    "public_coverage_credit_km2": 0
+  },
+  "coverage_summary": {
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901"
+      }
+    ],
+    "native_shallow_footprint_km2": 15.214680450761975,
+    "incremental_shallow_footprint_km2": 13.606303520154379,
+    "comparisons_complete": true,
+    "comparisons": [
+      {
+        "source_id": "usgs-1998-sur5g-native",
+        "resolution_m": 5,
+        "vertical_datum": "unknown",
+        "source_sha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+        "cog_sha256": "12d57148cf308e0a7349e9479ba53780935a2f4962787bf4e1bfcfd1a038686c",
+        "status": "checked",
+        "cache_receipt": "usgs-1998-sur5g-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.7550323332260165,
+        "target_overlap_km2": 0.9922249528372159
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "resolution_m": 2.0,
+        "vertical_datum": "unknown",
+        "source_sha256": "18eb310f4675f96ffbe6bfa3306a60ac7e3e32f75d1e17fcd81b3c169ab95b00",
+        "cog_sha256": "1a0d836c67e5903451c6aef4e4b0215471d158cb5a6fbe009edb3f3eecda7b79",
+        "status": "checked",
+        "cache_receipt": "csumb-point-sur-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.1837723582678603,
+        "target_overlap_km2": 0.6343957969111912
+      }
+    ],
+    "by_reach": {
+      "monterey-point-sur-r04": {
+        "native_km2": 15.214680450761948,
+        "incremental_km2": 13.606303520154366
+      }
+    }
+  },
+  "limits": [
+    "Producer-gridded sonar depth, not individually verified soundings.",
+    "Nominal depth only; no chart-depth validation, fish presence or legal clearance.",
+    "Unknown interpolation masks stay unknown. No independent acquisition count added.",
+    "Only coordinator processing and publication can establish a public coverage delta."
+  ]
+}
