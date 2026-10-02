@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-02T08:28:49.173806+00:00",
+  "family": "pge-avila",
+  "original_source": {
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+    "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+    "bytes": 938065756,
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html"
+  },
+  "warning": "Producer rough/smooth interpretation reports vessel-heave artifacts, subjective thresholds and manual exclusions. These classes are derived from the same bathymetry, not independent rock/sand observations. Zero is a valid smooth class. Smooth must not be treated as an invalid-depth mask. Specific invalid depth locations are not established by the narrative.",
+  "products": [
+    {
+      "depth_source_id": "csumb-pge-avila-blocki-2m-native",
+      "archive_member": "CC_BlkI_2m_habitat.zip/ArcViewGrids/cc_bi_2mhab",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        5523,
+        3444
+      ],
+      "nodata": -32768.0,
+      "depth_cog_sha256": "f965e1c61ab335f2d3496d770337dfcb4f7d65f8f7ace632ca0828cacecaa4c1",
+      "all_valid_class_counts": {
+        "-1": 702577,
+        "0": 9370551,
+        "-30": 644361,
+        "-31": 271
+      },
+      "shallow_class_counts": {
+        "-1": 702577,
+        "0": 9370547,
+        "-30": 644361,
+        "-31": 271
+      },
+      "native_shallow_depth_cells": 10770754,
+      "missing_class_at_shallow_cells": 52998,
+      "rough_shallow_cells": 702848,
+      "rough_shallow_native_cell_area_proxy_km2": 2.811392,
+      "original_metadata_sha256": "9104a6b6739a02bbc4463d85185464fec381691654dfa6808c1c71afabc94447",
+      "original_metadata_member": "CC_BlkI_2m_habitat.zip/ArcViewGrids/cc_bi_2mhab/metadata.xml",
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0
+    },
+    {
+      "depth_source_id": "csumb-pge-avila-blockj-2m-native",
+      "archive_member": "CC_BlkJ_2m_habitat.zip/ArcViewGrids/cc_bj_2mhab",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        3895,
+        4297
+      ],
+      "nodata": -32768.0,
+      "depth_cog_sha256": "c97cc58c8ff155f267b2b8ff245ceffcef76fff040bb85af115a1b75de658700",
+      "all_valid_class_counts": {
+        "-30": 6238570,
+        "0": 2580003,
+        "-1": 258
+      },
+      "shallow_class_counts": {
+        "-30": 6238570,
+        "0": 2580003,
+        "-1": 258
+      },
+      "native_shallow_depth_cells": 8819441,
+      "missing_class_at_shallow_cells": 610,
+      "rough_shallow_cells": 258,
+      "rough_shallow_native_cell_area_proxy_km2": 0.001032,
+      "original_metadata_sha256": "8cab75ce08df5e528a60564a828a00dbbc179e17aad9b3ae6c56511c165d559b",
+      "original_metadata_member": "CC_BlkJ_2m_habitat.zip/ArcViewGrids/cc_bj_2mhab/metadata.xml",
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0
+    }
+  ],
+  "unmatched_native_classifications": [
+    {
+      "source_id": "csumb-pge-avila-blocki-5m-native",
+      "reason": "Archive delivers native 2m habitat only; no matching 5m habitat grid found. Coarser bathymetry is a fallback, not a separate survey."
+    },
+    {
+      "source_id": "csumb-pge-avila-blockj-5m-native",
+      "reason": "Archive delivers native 2m habitat only; no matching 5m habitat grid found. Coarser bathymetry is a fallback, not a separate survey."
+    }
+  ],
+  "artifact_mask_search": {
+    "checked_at": "2026-10-02T08:28:49.173806+00:00",
+    "archive_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+    "zip_count": 18,
+    "member_name_count": 847,
+    "metadata_document_count": 55,
+    "explicit_mask_filename_matches": [],
+    "vector_files": [
+      {
+        "zip": "CC_BlkI_tracklines.zip",
+        "member": "Tracklines/CC_BlockI_tracklines_all.shp"
+      },
+      {
+        "zip": "CC_BlkI_tracklines.zip",
+        "member": "Tracklines/CC_BlockI_tracklines_bathy.shp"
+      },
+      {
+        "zip": "CC_BlkI_vectordata.zip",
+        "member": "ContourLines/CC_BlockI_25mbth_10mcontour.shp"
+      },
+      {
+        "zip": "CC_BlkI_vectordata.zip",
+        "member": "Footprint/cc_blocki_5mallbt_surveyfootprint.shp"
+      },
+      {
+        "zip": "CC_BlkJ_tracklines.zip",
+        "member": "Tracklines/CC_BlockJ_tracklines_all.shp"
+      },
+      {
+        "zip": "CC_BlkJ_tracklines.zip",
+        "member": "Tracklines/CC_BlockJ_tracklines_bathy.shp"
+      },
+      {
+        "zip": "CC_BlkJ_vectordata.zip",
+        "member": "ContourLines/CC_BlockJ_25mbth_10mcontour.shp"
+      },
+      {
+        "zip": "CC_BlkJ_vectordata.zip",
+        "member": "Footprint/cc_blockj_5mallbt_surveyfootprint.shp"
+      }
+    ],
+    "separately_identified_georeferenced_artifact_mask": false,
+    "limits": [
+      "Inventory and metadata review do not decode proprietary Fledermaus scene internals.",
+      "Smooth class includes ordinary smooth bottom plus manually assigned exclusions; it cannot reconstruct an artifact mask."
+    ]
+  },
+  "class_legend": {
+    "0": "smooth 0–30 m",
+    "-1": "rough 0–30 m",
+    "-30": "smooth 30–100 m",
+    "-31": "rough 30–100 m",
+    "-100": "smooth 100–200 m",
+    "-101": "rough 100–200 m",
+    "-200": "smooth at least 200 m",
+    "-201": "rough at least 200 m"
+  },
+  "unknown_value_action": "Retain unresolved, no reinterpretation or normalization.",
+  "native_alignment_verified": true,
+  "resampling_performed": false,
+  "class_area_warning": "Per-grid native cell-area proxies overlap; do not sum as distinct surveyed or habitat area.",
+  "new_independent_evidence_count": 0,
+  "public_coverage_credit_km2": 0,
+  "binding_decision": "Leave unbound as substrate; use only for source-quality review."
+}

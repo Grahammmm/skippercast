@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-02T08:59:28.713639+00:00",
+  "source_id": "csumb-pge-avila-blockj-2m-native",
+  "source_archive_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+  "producer_evidence": "research/receipts/seafloor-pge-avila-terrain-review.json#/products/1",
+  "decision": {
+    "status": "physical-only",
+    "public_habitat_approved": false,
+    "reason": "Unresolved terrain artifact concern supported by native comparisons, documented heave handling and native banded-terrain examples. Preserve original depth privately and exclude J from default public source selection.",
+    "smooth_is_invalid_depth": false,
+    "independent_substrate_evidence": false,
+    "block_i": "No status change; a separate unresolved follow-up. This review does not validate I."
+  },
+  "native_comparison": {
+    "physical_candidates": 908,
+    "physical_zero_rough_overlap": 907,
+    "passing_before_quality_review": 833,
+    "passing_zero_rough_overlap": 832,
+    "passing_majority_rough_overlap": 0,
+    "qualifier": "Same-depth interpretation and artifact diagnostic, not a ground-truth substrate map or proof of fish presence."
+  },
+  "shared_calibration": {
+    "recompute_reaches": [
+      "morro-bay-r09",
+      "morro-bay-r10",
+      "point-arguello-conception-r01"
+    ],
+    "morro_bay_r09_selected_J_cells": 35,
+    "r09_passing_J_candidates": 0,
+    "reason": "A selected source contributes group thresholds even when no own polygon passes."
+  },
+  "release_requirement": "Resolve quality by a separately reviewed source-specific artifact or positive-support method with native alignment, tiled parity, calibration-dependency and before/after tests. Refreshing legal data alone is insufficient.",
+  "validation": {
+    "reaches": [
+      {
+        "reach": "morro-bay-r09",
+        "before": {
+          "selected_valid_km2": 31.704285477,
+          "physical_candidate_count": 196,
+          "habitat_count": 194,
+          "tier2_km2": 5.73943826
+        },
+        "public_after": {
+          "selected_valid_km2": 29.619600544,
+          "physical_candidate_count": 200,
+          "habitat_count": 198,
+          "tier2_km2": 5.363059544
+        },
+        "delta": {
+          "selected_valid_km2": -2.0846849329999984,
+          "physical_candidate_count": 4,
+          "habitat_count": 4,
+          "tier2_km2": -0.3763787159999996
+        },
+        "private_candidates_preserved": 196,
+        "private_geometry_metrics_fit_and_depth_identical": true,
+        "private_thresholds_identical": true,
+        "public_held_source_absent": true,
+        "private_public_outputs_untouched": true,
+        "private_input_hash": "9b3e9dfe5722579564a0d93817e52c20d6d6992fb1d382093a929c23f2edc8d2",
+        "private_run_sha256": "6932ab364a93dfc938b7bd5442b1e417cd369ce459e6d15f37828659675584fc"
+      },
+      {
+        "reach": "morro-bay-r10",
+        "before": {
+          "selected_valid_km2": 35.428615683,
+          "physical_candidate_count": 1042,
+          "habitat_count": 965,
+          "tier2_km2": 8.955658831
+        },
+        "public_after": {
+          "selected_valid_km2": 6.040838581,
+          "physical_candidate_count": 160,
+          "habitat_count": 154,
+          "tier2_km2": 1.472534556
+        },
+        "delta": {
+          "selected_valid_km2": -29.387777101999998,
+          "physical_candidate_count": -882,
+          "habitat_count": -811,
+          "tier2_km2": -7.483124274999999
+        },
+        "private_candidates_preserved": 1042,
+        "private_geometry_metrics_fit_and_depth_identical": true,
+        "private_thresholds_identical": true,
+        "public_held_source_absent": true,
+        "private_public_outputs_untouched": true,
+        "private_input_hash": "6e73bedff6d8eb6e59f62dd5f9fe8353ea35289b8c894dbaec8a31094c2a14d2",
+        "private_run_sha256": "3e36e77259559de6847189f7cc118c8b9f7ef7b7a858841bbf8e5d8dea5c0b28"
+      },
+      {
+        "reach": "point-arguello-conception-r01",
+        "before": {
+          "selected_valid_km2": 39.202649616,
+          "physical_candidate_count": 915,
+          "habitat_count": 849,
+          "tier2_km2": 10.373022072
+        },
+        "public_after": {
+          "selected_valid_km2": 37.988569789,
+          "physical_candidate_count": 846,
+          "habitat_count": 786,
+          "tier2_km2": 10.25604128
+        },
+        "delta": {
+          "selected_valid_km2": -1.214079826999999,
+          "physical_candidate_count": -69,
+          "habitat_count": -63,
+          "tier2_km2": -0.11698079199999967
+        },
+        "private_candidates_preserved": 915,
+        "private_geometry_metrics_fit_and_depth_identical": true,
+        "private_thresholds_identical": true,
+        "public_held_source_absent": true,
+        "private_public_outputs_untouched": true,
+        "private_input_hash": "cb3ccecbcecddf511fd2802f54e66355f56212fa99386ebd60686ea81f4fa07b",
+        "private_run_sha256": "ddfd4d94f49e9a0c79582ab28a85c7e679f186b3e2dd22450d0b290fd8677d54"
+      }
+    ],
+    "public_remaining_candidates": 1138,
+    "public_held_candidates": 68,
+    "restriction_touches": {
+      "cdfw-mpa": 0,
+      "noaa-federal": 0,
+      "security": 0
+    },
+    "private_original_candidate_count": 2153,
+    "public_eligibility_deltas": {
+      "selected_valid_km2": -32.686541862,
+      "physical_candidate_count": -947,
+      "habitat_count": -870,
+      "tier2_km2": -7.976483782999998
+    },
+    "new_measured_coverage_km2": 0,
+    "live_status": "Not yet merged or deployed; local validated correction only."
+  }
+}
