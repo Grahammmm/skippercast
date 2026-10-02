@@ -6,6 +6,8 @@ CSUMB_POLICY = 'https://csumb.edu/undersea/sfml-data-library/'
 CSUMB_CREDIT = ('Data used in this study were acquired, processed, archived, and distributed '
                 'by the Seafloor Mapping Lab of California State University Monterey Bay.')
 CSUMB_NOTICE = 'Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.'
+POINT_LOBOS_ARCHIVE = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
+                     'PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz')
 CSUMB_ARCHIVES = (
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/',
@@ -32,7 +34,8 @@ def source_rights(row, *, use="noncommercial", today=None):
             or review.get('attribution') != CSUMB_CREDIT
             or review.get('navigation_use') is not False
             or review.get('for_profit_permission') != 'required-not-obtained'
-            or not row.get('url', '').startswith(CSUMB_ARCHIVES)
+            or not (row.get('url', '').startswith(CSUMB_ARCHIVES)
+                    or row.get('url') == POINT_LOBOS_ARCHIVE)
             or not ('CSUMB' in row.get('publisher', '') or 'CSU Monterey Bay' in row.get('publisher', ''))):
         raise ValueError('Source publication rights are unqualified or conflict with producer review')
     try:

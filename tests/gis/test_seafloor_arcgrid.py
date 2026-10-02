@@ -163,6 +163,32 @@ class ArcGridTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'container'):
             fetch_source(dict(row, format='bag'), self.root/'cache', local=self.original)
 
+    def test_reviewed_point_lobos_original_is_allowed_with_native_guards(self):
+        url = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
+               'PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz')
+        row = dict(self.row, url=url)
+        cached, downloaded = fetch_source(row, self.root/'cache', local=self.original)
+        self.assertEqual(cached.read_bytes(), self.original.read_bytes())
+        self.assertFalse(downloaded)
+        with self.assertRaisesRegex(ValueError, 'container'):
+            fetch_source(dict(row, format='bag'), self.root/'cache', local=self.original)
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            fetch_source(dict(row, sha256='0'*64), self.root/'cache', local=self.original)
+        with self.assertRaisesRegex(ValueError, 'byte count'):
+            fetch_source(dict(row, bytes=row['bytes']+1), self.root/'cache', local=self.original)
+        for bad in (url.replace('/PointLobos/', '/OtherSurvey/'),
+                    url.replace('/PointLobos/', '/PointLobos/../OtherSurvey/'),
+                    url.replace('/PointLobos/', '/PointLobos/%2e%2e/OtherSurvey/'),
+                    url.replace('/PointLobos/', '/PointLobos/%252e%252e/OtherSurvey/'),
+                    url + '/../OtherSurvey/original.tar.gz',
+                    url + '?redirect=OtherSurvey',
+                    url.replace('PointLobos_additional_products.tar.gz', 'another.tar.gz'),
+                    url.replace('/PointLobos/', '/PointLobos-other/'),
+                    url.replace('data.ngdc.noaa.gov/', 'data.ngdc.noaa.gov.evil.test/'),
+                    url.replace('https:', 'http:')):
+            with self.subTest(url=bad), self.assertRaisesRegex(ValueError, 'Unreviewed'):
+                fetch_source(dict(row, url=bad), self.root/'cache', local=self.original)
+
     def test_tar_gz_does_not_grant_other_hosts_paths_or_formats(self):
         for url, format_name in [
             ('https://pubs.usgs.gov/original.tar.gz', 'arcgrid'),
