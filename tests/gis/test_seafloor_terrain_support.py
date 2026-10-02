@@ -61,6 +61,47 @@ def native_fixture(root, *, offset=0, codes=None, metadata_hash=None, depth_valu
 
 
 class NativeTerrainSupportTests(unittest.TestCase):
+    def test_lossless_depth_encoding_uses_reviewed_content_and_checked_receipt(self):
+        from rasterio.shutil import copy as raster_copy
+        from skippercast.seafloor.normalized import raster_identity
+        for case in ('lossless', 'depth-change', 'mask-change', 'datum-change',
+                     'receipt-bytes', 'missing-receipt', 'legacy-reencoded', 'legacy-original'):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                with native_fixture(root) as (source, grid, codes):
+                    original = source['path']; encoded = root/'reencoded.tif'
+                    raster_copy(original, encoded, driver='GTiff', compress='DEFLATE',
+                                tiled=True, blockxsize=32, blockysize=32)
+                    self.assertNotEqual(sha256(original), sha256(encoded))
+                    self.assertEqual(raster_identity(original), raster_identity(encoded))
+                    review = source['row']['adapter_review']
+                    review.update(source_sha256=source['row']['sha256'],
+                        requested_bounds_wgs84=[-121, 35, -120, 36], native_resolution_m=[2, 2],
+                        vertical_datum='unknown', valid_pixels_in_requested_bounds=160000,
+                        nominal_0_300ft_pixels_in_requested_bounds=160000,
+                        raster_identity=raster_identity(original))
+                    source['path'] = original if case == 'legacy-original' else encoded
+                    if case == 'depth-change':
+                        with rasterio.open(encoded, 'r+') as dst:
+                            values = dst.read(1); values[200, 200] += 1; dst.write(values, 1)
+                    if case == 'mask-change':
+                        with rasterio.open(encoded, 'r+') as dst:
+                            valid = dst.dataset_mask(); valid[200, 200] = 0; dst.write_mask(valid)
+                    if case == 'datum-change':
+                        with rasterio.open(encoded, 'r+') as dst:
+                            dst.update_tags(vertical_datum='MLLW')
+                    if case.startswith('legacy-'):
+                        review.pop('raster_identity')
+                    source['receipt'] = dict(review, cog_sha256=sha256(source['path']))
+                    if case == 'receipt-bytes': source['receipt']['cog_sha256'] = 'b'*64
+                    if case == 'missing-receipt': source.pop('receipt')
+                    if case in ('lossless', 'legacy-original'):
+                        actual = support.read_support(source, grid['depth'].shape, grid['affine'], root=root)
+                        np.testing.assert_array_equal(actual, codes == -1)
+                    else:
+                        with self.assertRaises(ValueError):
+                            support.read_support(source, grid['depth'].shape, grid['affine'], root=root)
+
     def test_unsupported_survey_stripes_cannot_become_habitat(self):
         from pyproj import Transformer
         from shapely.ops import transform

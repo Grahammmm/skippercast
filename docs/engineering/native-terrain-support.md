@@ -28,6 +28,12 @@ It uses the existing bounded archive adapter and nearest projection onto the
 same analysis grid used for depth. It does not create an independent survey or
 grant publication rights.
 
+The original binding retains the reviewed normalized file hash. A checked
+ingestion receipt and the existing reviewed scientific-content identity also
+permit a lossless re-encoding of those same depths, mask, grid and datum. The
+actual stored bytes must still match their receipt. Legacy reviews without a
+scientific-content identity require the originally reviewed file bytes.
+
 ## Run the existing pipeline
 
 1. Keep unresolved sources `physical-only`; preserve existing quality holds.
@@ -68,6 +74,8 @@ failures, explicit zero/NoData handling, empty support, synthetic acquisition
 stripes, depth edges, holes and morphology, tile equivalence, shared calibration,
 unchanged unbound groups, persistent quality holds and stale publication.
 Manifest contract tests enforce the exact source binding and legend.
+Lossless-encoding tests distinguish valid re-encoding from changed depth, masks,
+datum, mismatched file receipts and legacy reviews.
 
 The October 2 private SCC26–28 proof used two retained Arguello reaches. Their
 selected measured support remained 38.991811670 and 82.655034790 km², with

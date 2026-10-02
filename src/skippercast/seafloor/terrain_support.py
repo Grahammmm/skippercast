@@ -74,11 +74,21 @@ def native_reader(source, *, root):
     from .adapters.arcgrid import source_path
     from .fetch import fetch_source
     from .io import sha256
+    from .normalized import verify_review
     row = source['row']
     validate_binding(row)
     binding = row['terrain_support']
-    if sha256(source['path']) != binding['depth_cog_sha256']:
-        raise ValueError('Terrain support normalized depth checksum mismatch')
+    actual_sha = sha256(source['path'])
+    receipt = source.get('receipt')
+    if receipt is not None:
+        if actual_sha != receipt['cog_sha256']:
+            raise ValueError('Terrain support normalized depth receipt checksum mismatch')
+        # A reviewed scientific identity permits lossless encodings while the
+        # receipt still pins the bytes actually used. Legacy reviews retain
+        # their exact-byte requirement through the shared verifier.
+        verify_review(receipt, row['adapter_review'], source['path'])
+    elif actual_sha != binding['depth_cog_sha256'] or row['adapter_review'].get('raster_identity'):
+        raise ValueError('Terrain support normalized depth receipt required')
     archive, _ = fetch_source(row, Path(root)/'var/seafloor/cache')
     categorical = source_path(archive, {'archive_member': binding['archive_member']})
     if sha256(categorical/'metadata.xml') != binding['metadata_sha256']:
