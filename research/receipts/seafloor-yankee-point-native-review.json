@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T04:57:48.894086+00:00",
+  "source": {
+    "id": "csumb-yankee-point-2m-native",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/YankeePoint/multibeam/data/version2/products/YankeePt_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/YankeePoint_mb.html",
+    "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+    "sha256": "4f7c4fb174923152d4894327de6ef25b2e1b31d4243ce83fff25879353d10bd6",
+    "bytes": 356108560,
+    "resolution_m": 2.0,
+    "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+    "vertical_datum": "unknown",
+    "year": 2004,
+    "archive_member": "YankeePt/YankeePt_2mbathy_hill_slope.zip/ArcViewGrids/yp_2mbathy",
+    "native_grid_dimensions": [
+      2091,
+      3283
+    ],
+    "native_raster_bounds_wgs84": [
+      -121.97478741691774,
+      36.4459727895957,
+      -121.92731470792157,
+      36.50556711135195
+    ],
+    "cog_sha256": "c695fcfc1ba6a2f5900b30d4c49fd1ee9528e6811448c930f3b72d6c91af894e",
+    "cog_bytes": 6607840,
+    "depth_basis": "nominal"
+  },
+  "metadata": {
+    "original_metadata": [
+      {
+        "file": "original-YankeePt_2mbathy_hill_slope-ArcViewGrids_yp_25mbathy_metadata.xml",
+        "sha256": "8b8de8c997e1bb10c6a96013ca7d5d59b5f4b05d5a36750cd1d3f6fffae27383"
+      },
+      {
+        "file": "original-YankeePt_2mbathy_hill_slope-ArcViewGrids_yp_2mbathy_metadata.xml",
+        "sha256": "5614e9382864bf441dc48afdac6cf23652e8f396f0c265147ba2d29998e974d8"
+      },
+      {
+        "file": "original-YankeePt_2mbathy_hill_slope-ArcViewGrids_yp_2mhill_metadata.xml",
+        "sha256": "27a61ec52ad87b5e59c705bb8eb1fe516b9c1303271488f0fd93a2667a3eacb1"
+      },
+      {
+        "file": "original-YankeePt_2mbathy_hill_slope-ArcViewGrids_yp_2mslope_metadata.xml",
+        "sha256": "be27b7da9abd69545272cacc66799db592294927c82c5caa462de1f90d9b68c5"
+      },
+      {
+        "file": "original-YankeePt_2mbathy_surveyfootprint-yp_2mbathy_surveyfootprint.shp.xml",
+        "sha256": "6b5b6ec1d4df7bb0e80e0540fbd96ea4f5a6f14324158089f9f41cb94842da46"
+      },
+      {
+        "file": "original-YankeePt_2mbathy_surveyfootprint-yp_2mbathy_suveyfootprint.shp.xml",
+        "sha256": "6fdb3181614fd2c2e6609c0354a3c269c26ed11c6401838a2426515218cbff6a"
+      },
+      {
+        "file": "original-YankeePt_2m_gs-yankeepoint_2m_gs.tif.xml",
+        "sha256": "e019b1a2e7ad7c107d1a192d23327ad4ecdf4978dbbe4fdd121bee6bf45ef928"
+      }
+    ],
+    "acquisition_dates": [
+      "2004-04-15",
+      "2004-04-20",
+      "2004-04-24"
+    ],
+    "year_basis": "2004 acquisition, not 2006 metadata/update date.",
+    "metadata_date": "2006-12-15 metadata; update/publication 2006-12-31.",
+    "native_grid": "Selected yp_2mbathy at 2 m, not co-packaged 25 m grid or imagery. WGS84 / UTM zone 10N.",
+    "vertical_datum": "unknown",
+    "datum_conflict": {
+      "native_grid_process": "Adjusted to MLLW using predicted local tides.",
+      "companion_grayscale_process": "Adjusted to MLLW, then says final soundings/surfaces/derived products NAVD88.",
+      "resolution": "Unresolved; retained unknown. No datum conversion or chart-depth qualification."
+    },
+    "processing": "Reson 8101 multibeam, CARIS HIPS motion/sound-velocity correction and cleaning; shoal-biased 1 m decimated xyz to Fledermaus AverageGridder interpolation and 2 m ArcInfo grid.",
+    "measured_vs_interpolated": "Original sonar-derived producer-interpolated grid. No per-cell measured-versus-filled mask.",
+    "horizontal_accuracy": "Instrument/vessel positioning quoted ±2 m, pitch/roll/heading ±0.02 degrees; total seafloor horizontal uncertainty and confidence level not given. Do not substitute instrument specifications for map accuracy.",
+    "vertical_accuracy": "Heave sensor quoted ±5% or 5 cm; total seafloor vertical uncertainty not given. No resolved vertical datum.",
+    "interpolation_mask": "unknown",
+    "uncertainty_type": "unknown",
+    "lineage": "Yankee Point bathymetry, grayscale, slope, backscatter and habitat products share one acquisition family. No independent count from derivatives.",
+    "update_frequency": "Static historical survey; no scheduled reacquisition verified.",
+    "access_name": "Original NOAA archive YankeePt; cached filename YankeePoint. Live original report, prefix and full cached SHA/bytes checked."
+  },
+  "rights": {
+    "source_id": "csumb-yankee-point-2m-native",
+    "license": "csumb-public-use-noncommercial",
+    "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/YankeePoint/multibeam/data/version2/products/YankeePt_additional_products.tar.gz",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+    "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "reviewed_on": "2026-10-01",
+    "policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_retrieved_at": "2026-10-02T04:05:08.930255+00:00",
+    "review_date_timezone": "America/Los_Angeles"
+  },
+  "access": {
+    "noaa-report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/YankeePoint_mb.html",
+      "final_url": "https://www.ngdc.noaa.gov/ships/ventresca/YankeePoint_mb.html",
+      "status": 200,
+      "bytes": 142074,
+      "sha256": "5720c77a47635ef3b6d4f58fcad4f9a1017cb0dcb16962429b549a4875ad472d",
+      "retrieved_at": "2026-10-02T04:55:53.679518+00:00",
+      "headers": {
+        "last-modified": "Fri, 24 Apr 2026 17:10:57 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive-range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/YankeePoint/multibeam/data/version2/products/YankeePt_additional_products.tar.gz",
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/YankeePoint/multibeam/data/version2/products/YankeePt_additional_products.tar.gz",
+      "status": 206,
+      "bytes_read": 65536,
+      "prefix_sha256": "b33b773971c149a6e46bd6fc9ff82e960bb061977d3f75c3f37e812ad6281e9e",
+      "retrieved_at": "2026-10-02T04:55:54.382419+00:00",
+      "headers": {
+        "last-modified": "Mon, 19 Aug 2019 14:27:18 GMT",
+        "content-length": "65536",
+        "content-range": "bytes 0-65535/356108560",
+        "content-type": "application/x-gzip"
+      },
+      "local_prefix_matches": true,
+      "cached_full_sha256": "4f7c4fb174923152d4894327de6ef25b2e1b31d4243ce83fff25879353d10bd6",
+      "cached_bytes": 356108560
+    }
+  },
+  "native_statistics": {
+    "valid_pixels": 3710655,
+    "nominal_shallow_pixels": 3224965,
+    "min_depth_m": 3.2300000190734863,
+    "max_depth_m": 158.41000366210938,
+    "shallow_min_depth_m": 3.2300000190734863,
+    "shallow_max_depth_m": 91.44000244140625,
+    "vertical_datum": "unknown",
+    "uncertainty": "unknown",
+    "interpolation_mask": "unknown"
+  },
+  "valid_depth_diagnostic": {
+    "checked_at": "2026-10-02T04:57:20.157190+00:00",
+    "source_id": "csumb-yankee-point-2m-native",
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0"
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8"
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02"
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd"
+      }
+    ],
+    "counts": {
+      "target_shallow_cell_centers": 3224965,
+      "prior_valid_shallow_at_center": 1241349,
+      "prior_valid_but_not_shallow_at_center": 12028,
+      "prior_nodata_or_outside_review_at_center": 1971588,
+      "prior_finer_or_equal_valid_at_center": 320760
+    },
+    "comparison_sources": [
+      {
+        "source_id": "usgs-1998-sgf5g-native",
+        "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+        "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+        "resolution_m": 5,
+        "year": 1998,
+        "valid_at_target_centers": 1065083,
+        "shallow_at_target_centers": 1053055
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "source_sha256": "7da8e8905ca9c1e3929c423dee9e39f8c15024b5eff7719517fcc48841fccd51",
+        "cog_sha256": "cc24ff7dc44a192342c9da2ed96813c8354105b2438485b5b15d9af7937f9feb",
+        "resolution_m": 2.0,
+        "year": 2004,
+        "valid_at_target_centers": 320760,
+        "shallow_at_target_centers": 320760
+      }
+    ],
+    "comparisons_complete": true,
+    "gap_pixel_area_proxy_km2": 7.886352,
+    "method": "Nearest-neighbor sample of all reviewed overlapping rasters at native candidate cell centers, clipped to reviewed bounds. Any positive valid prior depth counts as existing support. Counts and native-cell area proxy are not exact polygon areas or independent sonar returns.",
+    "public_coverage_credit_km2": 0
+  },
+  "coverage_summary": {
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0"
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8"
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02"
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd"
+      }
+    ],
+    "native_shallow_footprint_km2": 12.907373206362562,
+    "incremental_shallow_footprint_km2": 7.93991161587907,
+    "comparisons_complete": true,
+    "comparisons": [
+      {
+        "source_id": "usgs-1998-sgf5g-native",
+        "resolution_m": 5,
+        "vertical_datum": "unknown",
+        "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+        "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+        "status": "checked",
+        "cache_receipt": "usgs-1998-sgf5g-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 4.692932789724625,
+        "target_overlap_km2": 4.215207964741376
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "resolution_m": 2.0,
+        "vertical_datum": "unknown",
+        "source_sha256": "7da8e8905ca9c1e3929c423dee9e39f8c15024b5eff7719517fcc48841fccd51",
+        "cog_sha256": "cc24ff7dc44a192342c9da2ed96813c8354105b2438485b5b15d9af7937f9feb",
+        "status": "checked",
+        "cache_receipt": "csumb-soberanes-point-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.9273745786976353,
+        "target_overlap_km2": 1.2813729235869802
+      }
+    ],
+    "by_reach": {
+      "monterey-point-sur-r02": {
+        "native_km2": 3.92520503561948,
+        "incremental_km2": 2.732047972598856
+      },
+      "monterey-point-sur-r03": {
+        "native_km2": 8.982168170743087,
+        "incremental_km2": 5.207863643280206
+      }
+    }
+  },
+  "limits": [
+    "Producer-gridded sonar depth, not individually verified soundings.",
+    "Nominal depth only; no chart-depth validation, fish presence or legal clearance.",
+    "Unknown interpolation masks stay unknown. No independent acquisition count added.",
+    "Only coordinator processing and publication can establish a public coverage delta."
+  ]
+}
