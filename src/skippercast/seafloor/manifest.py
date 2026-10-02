@@ -1,6 +1,7 @@
 """Validate reviewed inventory, without promoting candidates on metadata alone."""
 from pathlib import Path
 from copy import deepcopy
+from datetime import date
 import math
 
 from skippercast.platform.contracts import REPO, read_json, atomic_json
@@ -54,6 +55,14 @@ def validate_manifest(document, root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        hold = row.get('habitat_quality_hold')
+        if hold:
+            if row['kind'] != 'bathymetry' or hold['source_sha256'] != row['sha256']:
+                raise ValueError('Habitat quality hold must match the original depth source')
+            if date.fromisoformat(hold['reviewed_on']) > date.today():
+                raise ValueError('Habitat quality review cannot be dated in the future')
+            if not set(hold['evidence']) <= set(row['evidence']):
+                raise ValueError('Habitat quality hold requires inventoried source evidence')
         profile = row.get('resolution_profile')
         if profile and (row['format'] != 'usgs-geotiff' or row['resolution_m'] == 'unknown'
                         or profile['coarse_resolution_m'] <= row['resolution_m']):

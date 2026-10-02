@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retain valid measured depth while keeping habitat from sources with unresolved artifact or interpretation reviews out of public maps and fishing exports.
+
 - Apply reviewed USGS seafloor classes to thirteen SCC depth grids; preserve measured coverage and remove sediment-backed terrain candidates without claiming independent fish evidence.
 
 - Add original 2 m Point Lobos survey support: 4.019 km² of additional selected measured coverage, ranked habitat and whole-polygon MPA screening; retain unknown datum and credited noncommercial terms.
