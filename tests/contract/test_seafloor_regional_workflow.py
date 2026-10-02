@@ -25,3 +25,16 @@ class RegionalWorkflowTests(unittest.TestCase):
         for name in ('reaches', 'publish', 'ledger'):
             self.assertIn('SEAFLOOR_BATCH: ${{ needs.prepare.outputs.batch }}', self.jobs[name])
             self.assertNotIn('GITHUB_RUN_ATTEMPT', self.jobs[name])
+
+    def test_worker_grouping_keeps_original_publication_matrix(self):
+        self.assertIn('worker_groups(matrix)', self.jobs['prepare'])
+        self.assertIn('worker_matrix: ${{ steps.plan.outputs.worker_matrix }}', self.jobs['prepare'])
+        worker = self.jobs['reaches']
+        self.assertIn('matrix: ${{ fromJSON(needs.prepare.outputs.worker_matrix) }}', worker)
+        self.assertIn('max-parallel: 3', worker)
+        self.assertIn('fail-fast: false', worker)
+        self.assertIn('timeout-minutes: 195', worker)
+        self.assertIn('REACHES: ${{ toJSON(matrix.reaches) }}', worker)
+        self.assertIn('run-group --region "$REGION" --reaches "$REACHES"', worker)
+        for name in ('publish', 'ledger'):
+            self.assertIn('MATRIX: ${{ needs.prepare.outputs.matrix }}', self.jobs[name])

@@ -2,9 +2,16 @@ name: Offline checks
 
 on:
   push:
+    branches: [main]
   pull_request:
   # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
   workflow_dispatch:
+
+# PRs get one full check suite; obsolete PR revisions should not fill the queue.
+# Main and manually dispatched bot-PR checks are never interrupted here.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

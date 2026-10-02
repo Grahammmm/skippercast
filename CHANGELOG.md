@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- CI: run the complete check suite once per PR revision, preserve main and bot-dispatch checks, and cancel obsolete PR revisions so mapping work does not compete with duplicate checks.
+
+- Seafloor: group up to three regional reaches per worker to reduce runner startup and queue overhead. Preserve exact reach assignments, sequential native validation, independent recovery receipts and complete-region publication checks; a failed reach does not stop its neighbors.
+
 - Seafloor: use the original USGS Point Conception seafloor-character grid with seven NOAA depth products. Preserve shared survey lineage, unknown classifier accuracy and anthropogenic classes; exclude interpreted sediment from reef extraction. Local results refine 843 screened areas to 788 without adding measured bathymetric coverage.
 
 - Seafloor: qualify original NOAA H11952 1 m shallow bathymetry near Point Conception. Local processing adds 4.353 km² of selected survey support while replacing coarser habitat classifications; candidate counts and published area may decrease with finer evidence.

@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: 60
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      worker_matrix: ${{ steps.plan.outputs.worker_matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}
       regions: ${{ steps.plan.outputs.regions }}
       batch: ${{ steps.plan.outputs.batch }}
@@ -78,8 +79,10 @@ jobs:
           echo "matrix=$(cat var/seafloor/matrix.json)" >> "$GITHUB_OUTPUT"
           python - <<'PYCODE'
           import json, os
+          from skippercast.seafloor.jobs import worker_groups
           matrix = json.load(open('var/seafloor/matrix.json'))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('worker_matrix='+json.dumps(worker_groups(matrix))+'\n')
               f.write('has_work='+str(bool(matrix['include'])).lower()+'\n')
               f.write('regions='+json.dumps(sorted({r['region'] for r in matrix['include']}))+'\n')
               f.write('batch='+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']+'\n')
@@ -90,11 +93,12 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.has_work == 'true'
     runs-on: ${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 60
+    # Three independently timed 60-minute reaches plus job setup/cleanup.
+    timeout-minutes: 195
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.worker_matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -109,9 +113,10 @@ jobs:
           python -m skippercast.seafloor.rights
       - name: Validate native source bytes, compute changed reach, save privately
         env:
-          REACH: ${{ matrix.reach }}
+          REGION: ${{ matrix.region }}
+          REACHES: ${{ toJSON(matrix.reaches) }}
           SEAFLOOR_BATCH: ${{ needs.prepare.outputs.batch }}
-        run: python -m skippercast.seafloor.jobs run --reach "$REACH" >> "$GITHUB_STEP_SUMMARY"
+        run: python -m skippercast.seafloor.jobs run-group --region "$REGION" --reaches "$REACHES" >> "$GITHUB_STEP_SUMMARY"
 
   publish:
     needs: [prepare, reaches]
