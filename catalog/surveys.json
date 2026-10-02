@@ -128,10 +128,13 @@
     "dist/data/san-miguel-original-habitat-depth-review.json",
     "dist/data/san-miguel-original-habitat-vr-review.json",
     "dist/data/seafloor-adjacent-spatial-screen-review.json",
+    "dist/data/seafloor-carmel-sur-native-review.json",
+    "dist/data/seafloor-conception-substrate-review.json",
     "dist/data/seafloor-h11952-native-batch-review.json",
     "dist/data/seafloor-h11953-deeper-native-review.json",
     "dist/data/seafloor-h11953-full-native-review.json",
     "dist/data/seafloor-monterey-native-review.json",
+    "dist/data/seafloor-monterey-spatial-screen-review.json",
     "dist/data/seafloor-normalized-content-review.json",
     "dist/data/seafloor-point-buchon-native-review.json",
     "dist/data/seafloor-regional-spatial-screen-review.json",
@@ -149,9 +152,7 @@
     "dist/data/usgs-sur-arguello-sediment-review.json",
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
-    "dist/data/w00614-usgs-video-observation-gap.json",
-    "dist/data/seafloor-carmel-sur-native-review.json",
-    "dist/data/seafloor-monterey-spatial-screen-review.json"
+    "dist/data/w00614-usgs-video-observation-gap.json"
   ],
   "surveys": [
     {
@@ -1559,8 +1560,8 @@
       "derived_from": [],
       "status": "candidate",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "notes": "Original USGS CC0 2 m categorical interpretation; all 19 native/VAT codes retained in binding. WGS84/UTM10N declared by actual GeoTIFF; metadata geodetic subsection inconsistently names NAD83. No physical-depth datum is assigned to categorical values. Ground-condition metadata2007–2009 conflicts with broader generic abstract; parent sonar2008/lidar2009–2010, classification2016. Camera-position accuracy statement is not raster accuracy. Same-lineage inference is conservative, not independent corroboration. Actual raster eastern extent -120.3714 differs from overly broad metadata bound -120.1852; use real mask. Classes5/15 are anthropogenic hard-flat, not natural reef.",
+      "archive_member": "SeafloorCharacter_OffshorePointConception/SeafloorCharacter_OffshorePointConception.tif",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/51/archive_url",
         "dist/data/gaviota-native-hard-review-summary.json#/surveys/0/usgs_sources/0/archive_url",
@@ -1573,14 +1574,15 @@
         "dist/data/usgs-ds781-native-character-review.json#/products/23",
         "dist/data/usgs-ds781-native-character-review.json#/products/23/archive_url",
         "dist/data/usgs-ds781-native-character-review.json#/products/23/native_crs",
-        "dist/data/usgs-ds781-native-character-review.json#/products/23/native_resolution"
+        "dist/data/usgs-ds781-native-character-review.json#/products/23/native_resolution",
+        "research/receipts/seafloor-conception-substrate-review.json#/substrate"
       ],
       "field_evidence": {
-        "sha256": "dist/data/gaviota-native-hard-review-summary.json#/surveys/0/usgs_sources/0/archive_url",
-        "horizontal_crs": "dist/data/usgs-ds781-native-character-review.json#/products/23/native_crs",
-        "bytes": "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/7/source_url",
+        "sha256": "research/receipts/seafloor-conception-substrate-review.json#/substrate/source_sha256",
+        "horizontal_crs": "research/receipts/seafloor-conception-substrate-review.json#/substrate/native_horizontal_crs",
+        "bytes": "research/receipts/seafloor-conception-substrate-review.json#/substrate/source_bytes",
         "license": "catalog/usgs-ds781-metadata-review.json#/records/51/archive_url",
-        "resolution_m": "dist/data/usgs-ds781-native-character-review.json#/products/23/native_resolution"
+        "resolution_m": "research/receipts/seafloor-conception-substrate-review.json#/substrate/native_grid_spacing_m"
       },
       "inspection_level": "native",
       "lineage_status": "unknown"

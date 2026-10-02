@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-02T03:50:38.233482+00:00",
+  "substrate": {
+    "source_id": "seafloorcharacter-offshorepointconception-zip-794d9e3e8d",
+    "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/data/SeafloorCharacter_OffshorePointConception.zip",
+    "source_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+    "source_bytes": 1232378,
+    "archive_member": "SeafloorCharacter_OffshorePointConception/SeafloorCharacter_OffshorePointConception.tif",
+    "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+    "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+    "metadata_retrieval": "HTTP200 from original USGS publisher on2026-10-02",
+    "native_horizontal_crs": "EPSG:32610",
+    "native_grid_spacing_m": 2.0,
+    "native_valid_codes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      11,
+      12,
+      13,
+      14,
+      15,
+      21,
+      22,
+      23,
+      61,
+      62,
+      63,
+      71,
+      72,
+      73
+    ],
+    "native_valid_cell_count": 32277243,
+    "native_raster_bounds_wgs84": [
+      -120.56841184895049,
+      34.38864358511793,
+      -120.37143138300486,
+      34.542707934326565
+    ],
+    "native_actual_valid_bounds_wgs84": [
+      -120.56840611319501,
+      34.38884224647468,
+      -120.37148545811044,
+      34.54168080039796
+    ],
+    "publisher_rights": "USGS current metadata declares CC0/public domain and redistribution with proper metadata/source attribution. Acknowledge USGS. Not for navigation.",
+    "metadata_conflicts": [
+      "XML map projection says WGS1984/UTM10N while geodetic subsection says NAD83; use actual GeoTIFF-declared WGS84/UTM10N and retain uncertainty.",
+      "Metadata eastern bound -120.185163 overstates actual raster east -120.371431; actual native masks control coverage.",
+      "Ground-condition range2007–2009 and generic abstract1998–2014 differ from parent sonar2008/lidar2009–2010; no single acquisition year assigned.",
+      "Abstract says4 substrate classes but actual raster/VAT includes class5 hard anthropogenic material. Native codes and original SUBSTRATE/FULL_DESC definitions take precedence over generic abstract."
+    ],
+    "horizontal_accuracy": "No verified quantitative class-grid error. Metadata camera GPS <3m is not a raster-accuracy guarantee.",
+    "classification_accuracy": "No quantitative confusion matrix or per-cell confidence provided in reviewed metadata.",
+    "lineage": {
+      "parent_metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/Bathymetry_OffshorePointConception_metadata.xml",
+      "parent_metadata_sha256": "47130b72a75866bb54cea58180f72d73bda9bc5d690fe48536e3480a0a91f7a0",
+      "parent_method": "Fugro Pelagos2008 sonar and USACE2009–2010 lidar, NOAA2013 TopoBathy compilation; character uses derivative rugosity and backscatter with video/sample-supervised training.",
+      "same_survey_as_depth_flag": "true conservatively; do not count as independent confirmation. Exact pixel-to-H11952/H11953 survey-line provenance unresolved.",
+      "observational_scope": "Supervised substrate interpretation, not ground-truth video at every pixel or proof of fish presence."
+    },
+    "class_handling": {
+      "1": "fine to medium sediment -> normalized1 excluded",
+      "2": "mixed/coarse sediment/rock -> normalized2 hard-flat/mixed; no rugose-rock assertion",
+      "3": "rugose boulder/bedrock -> normalized3",
+      "4": "coarser sediment/scour -> normalized1 excluded conservatively; original description retained",
+      "5": "anthropogenic hard-flat -> normalized2; never natural rugose class3; artificial identity retained in provenance binding",
+      "nodata0": "unknown; not sand or flat bottom"
+    },
+    "remaining_limits": [
+      "No exact per-pixel H11952/H11953 lineage. Treat as shared evidence for confidence.",
+      "Original man-made class5/15 normalized to hard-flat2 and never hard-rugose3. Existing feature output carries generic habitat-candidate semantics, not a natural-reef assertion.",
+      "The binding activates on merge despite source candidate status; coordinator review and screening required."
+    ],
+    "reviewed_depth_binding_count": 7,
+    "excluded_zero_overlap_depth_ids": [
+      "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+    ],
+    "overlap_summary": {
+      "noaa_union_shallow_in_substrate_envelope_km2": 57.400069336786075,
+      "substrate_classified_within_noaa_shallow_km2": 57.19792603461134,
+      "unknown_substrate_within_noaa_shallow_km2": 0.2021432761741624,
+      "original_classes_km2": {
+        "1": 49.64615908737311,
+        "2": 2.4382814267144277,
+        "3": 4.974089720707797,
+        "4": 0.06758207245580002,
+        "5": 0.07181373083338541
+      },
+      "meaning": "Evidence overlap, not new bathymetry, selected habitat or legally cleared area."
+    }
+  }
+}
