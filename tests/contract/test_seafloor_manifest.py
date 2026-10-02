@@ -106,6 +106,28 @@ class InventoryTests(unittest.TestCase):
 
 @unittest.skipUnless(Draft202012Validator, 'Install requirements-test.txt; required in survey-science CI')
 class SchemaTests(unittest.TestCase):
+    def test_habitat_quality_hold_is_source_bound_and_keeps_measured_depth_usable(self):
+        from jsonschema import ValidationError
+        from skippercast.seafloor.manifest import validate_manifest, physical_source
+        document = deepcopy(MANIFEST)
+        row = next(r for r in document['surveys'] if r['status'] == 'usable' and r['kind'] == 'bathymetry')
+        hold = {'source_sha256': row['sha256'], 'reviewed_on': '2026-09-01',
+                'reason': 'artifact-review-required', 'evidence': [row['evidence'][0]],
+                'notes': 'Terrain artifacts require review; measured depth remains usable.'}
+        row['habitat_quality_hold'] = hold
+        validate_manifest(document, ROOT)
+        self.assertTrue(physical_source(row))
+        for field, value in [('source_sha256', 'f'*64), ('reviewed_on', '2999-01-01'),
+                             ('reviewed_on', '2026-02-30'), ('reason', 'unknown'),
+                             ('evidence', ['research/receipts/missing.json#/source']),
+                             ('evidence', [])]:
+            with self.subTest(field=field, value=value):
+                invalid = deepcopy(document)
+                target = next(r for r in invalid['surveys'] if r['id'] == row['id'])
+                target['habitat_quality_hold'][field] = value
+                with self.assertRaises((ValueError, ValidationError)):
+                    validate_manifest(invalid, ROOT)
+
     def test_measurement_encoding_is_stable_without_changing_catalog(self):
         from skippercast.seafloor.manifest import load_manifest
         from unittest.mock import patch

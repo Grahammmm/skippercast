@@ -6,6 +6,7 @@ native-spacing tiles and disk scratch; they never silently downsample.
 """
 import hashlib
 import math
+from copy import deepcopy
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
@@ -228,6 +229,11 @@ def feature_for_patch(grid, polygon, stats, rough, rules, reach):
         'rule_version': rules['rule_version'],
         'label': f"Held: legal screen pending. Habitat candidate; nominal depth ({source['vertical_datum']}); verify on your sounder."
                  + (' Broad area, not an individual pile.' if resolution > 4 else '')}
+    if source.get('habitat_quality_hold'):
+        # A valid depth raster may still contain unresolved terrain artifacts.
+        # Preserve geometry and ranking for review; a legal pass cannot clear it.
+        properties['hold_reasons'].append('source-habitat-quality-review')
+        properties['habitat_quality_hold'] = deepcopy(source['habitat_quality_hold'])
     # Projected point-touching components can acquire rounding intersections
     # in longitude/latitude. Repair again in the output CRS without buffering.
     geographic = polygonal(shapely.make_valid(transform(to_geo, polygon)))

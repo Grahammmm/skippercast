@@ -78,7 +78,9 @@ def region_layers(root, region, *, rerun=True, now=None):
             raise ValueError('Held reach cannot publish habitat')
         for f in selected:
             p = f['properties']
-            if p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable'] or p['screen']['status'] != 'pass':
+            if (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']
+                    or p['screen']['status'] != 'pass' or p.get('hold_reasons')
+                    or p.get('habitat_quality_hold')):
                 raise ValueError('Unqualified feature in publication input')
             if sources is None:
                 sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
@@ -86,6 +88,8 @@ def region_layers(root, region, *, rerun=True, now=None):
             substrate = p.get('substrate', {})
             if isinstance(substrate, dict) and substrate.get('source_id') not in (None, 'unknown'):
                 contributors.append(substrate['source_id'])
+            if any(sources.get(ident, {}).get('habitat_quality_hold') for ident in contributors):
+                raise ValueError('Source habitat quality review is unresolved; rerun required')
             public_properties = dict(p, source_rights=feature_rights(contributors, sources,
                 use=deployment_use(root)))
             habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})
