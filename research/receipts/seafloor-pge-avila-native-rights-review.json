@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T05:42:04.816110+00:00",
+  "sources": [
+    {
+      "id": "csumb-pge-avila-blocki-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "year": 2009,
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
+      "metadata": {
+        "source_id": "csumb-pge-avila-blocki-2m-native",
+        "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
+        "original_metadata_sha256": "d3d4216545752169abd78298c56df2e8711e02c77c0976b78b8eab7066623a59",
+        "publisher": "CSUMB SFML; Block I direct metadata origin and common archive, companion Block J 5 m metadata origin reviewed.",
+        "year": 2009,
+        "acquisition_dates": [
+          "20090502",
+          "20090503",
+          "20090504",
+          "20090505",
+          "20090531",
+          "20090601",
+          "20090602",
+          "20090603",
+          "20090604",
+          "20090605",
+          "20090606",
+          "20090607",
+          "20090608",
+          "20090609"
+        ],
+        "datum": "NAVD88 Geoid03",
+        "horizontal_frame": "NAD83 / UTM zone10N from native grid",
+        "accuracy": "No total numeric horizontal or vertical accuracy/confidence verified in selected native metadata. Instrument/navigation descriptions do not establish full raster uncertainty.",
+        "interpolation": "Block I: BASE -> decimated xyz -> AverageGridder; Block J selected2m metadata contains only Esri creation fields. No per-cell interpolation mask or uncertainty.",
+        "limitations": "Companion Block J 5 m metadata establishes its own2009/NAVD88 provenance but selected2m lacks a direct narrative; its existing unknown year/datum remain unknown."
+      },
+      "rights": {
+        "source_id": "csumb-pge-avila-blocki-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256": "f965e1c61ab335f2d3496d770337dfcb4f7d65f8f7ace632ca0828cacecaa4c1",
+        "requested_bounds_wgs84": [
+          -120.75813732342881,
+          35.11362014015158,
+          -120.63522076085815,
+          35.17798480123601
+        ],
+        "valid_pixels_in_requested_bounds": 10770774,
+        "nominal_0_300ft_pixels_in_requested_bounds": 10770754,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "0170f70f5c611f85a963c7aebce2dd09e052b0003a622d7e2fea6aae95dc25d4"
+        }
+      },
+      "row_change": {
+        "source_id": "csumb-pge-avila-blocki-2m-native",
+        "catalog_index": 414,
+        "changed_fields": [
+          "license",
+          "notes",
+          "rights_review",
+          "status"
+        ],
+        "scientific_row_equal": true,
+        "source_sha256_unchanged": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256_unchanged": "f965e1c61ab335f2d3496d770337dfcb4f7d65f8f7ace632ca0828cacecaa4c1",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "0170f70f5c611f85a963c7aebce2dd09e052b0003a622d7e2fea6aae95dc25d4"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -120.75813732342881,
+          35.11362014015158,
+          -120.63522076085815,
+          35.17798480123601
+        ],
+        "normalization_reused": true,
+        "new_measured_area_km2": 0
+      },
+      "existing_shallow_footprint_km2": 43.070781387855135,
+      "existing_by_reach_km2": {
+        "morro-bay-r08": 7.410342262020675,
+        "morro-bay-r09": 29.61960054449057,
+        "morro-bay-r10": 6.040838581343923
+      }
+    },
+    {
+      "id": "csumb-pge-avila-blockj-2m-native",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "year": "unknown",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "bytes": 938065756,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
+      "metadata": {
+        "source_id": "csumb-pge-avila-blockj-2m-native",
+        "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
+        "original_metadata_sha256": "f5a62724cc965bfe8036d9b1f44d1bf3efd3f74cade08058a72a78cce4884ddb",
+        "publisher": "CSUMB SFML; Block I direct metadata origin and common archive, companion Block J 5 m metadata origin reviewed.",
+        "year": "unknown",
+        "acquisition_dates": [],
+        "datum": "unknown",
+        "horizontal_frame": "NAD83 / UTM zone10N from native grid",
+        "accuracy": "No total numeric horizontal or vertical accuracy/confidence verified in selected native metadata. Instrument/navigation descriptions do not establish full raster uncertainty.",
+        "interpolation": "Block I: BASE -> decimated xyz -> AverageGridder; Block J selected2m metadata contains only Esri creation fields. No per-cell interpolation mask or uncertainty.",
+        "limitations": "Companion Block J 5 m metadata establishes its own2009/NAVD88 provenance but selected2m lacks a direct narrative; its existing unknown year/datum remain unknown."
+      },
+      "rights": {
+        "source_id": "csumb-pge-avila-blockj-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256": "c97cc58c8ff155f267b2b8ff245ceffcef76fff040bb85af115a1b75de658700",
+        "requested_bounds_wgs84": [
+          -120.7196235650724,
+          35.03881695672584,
+          -120.63204718984571,
+          35.11788498899416
+        ],
+        "valid_pixels_in_requested_bounds": 8819441,
+        "nominal_0_300ft_pixels_in_requested_bounds": 8819441,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1273fa0a6fa391fbbdf0135eafa1046ce8013292beb87b0f609c539e52ac9cb3"
+        }
+      },
+      "row_change": {
+        "source_id": "csumb-pge-avila-blockj-2m-native",
+        "catalog_index": 415,
+        "changed_fields": [
+          "license",
+          "notes",
+          "rights_review",
+          "status"
+        ],
+        "scientific_row_equal": true,
+        "source_sha256_unchanged": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "cog_sha256_unchanged": "c97cc58c8ff155f267b2b8ff245ceffcef76fff040bb85af115a1b75de658700",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1273fa0a6fa391fbbdf0135eafa1046ce8013292beb87b0f609c539e52ac9cb3"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -120.7196235650724,
+          35.03881695672584,
+          -120.63204718984571,
+          35.11788498899416
+        ],
+        "normalization_reused": true,
+        "new_measured_area_km2": 0
+      },
+      "existing_shallow_footprint_km2": 35.26658977389599,
+      "existing_by_reach_km2": {
+        "morro-bay-r09": 3.128100501665125,
+        "morro-bay-r10": 30.924409445041622,
+        "point-arguello-conception-r01": 1.2140798271890376
+      }
+    }
+  ],
+  "metadata": {
+    "acquisition_dates": "Block I2m:May2–5/31 andJune1–9,2009. Block J2m:unknown; its Esri creation date is not acquisition. Companion Block J5m has2009 acquisition narrative.",
+    "datum": "Block I2m NAVD88 Geoid03; Block J2m unknown retained. No chart-depth conversion.",
+    "resolution_design": "Existing selected products2m; original5m_all bathymetry derivatives exist for both blocks and will be assessed separately against current valid depth.",
+    "lineage": "Same PGE Avila original survey family;2m/5m are derivatives,not independent acquisition evidence.",
+    "accuracy": "No total numeric raster accuracy verified from selected source metadata; uncertainty remains unknown.",
+    "processing": "Block I BASE-surface decimation and AverageGridder; no per-cell interpolation mask. Block J2m has minimal metadata.",
+    "update_frequency": "Static historical surveys; no verified reacquisition schedule."
+  },
+  "access": {
+    "noaa-report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "final_url": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+      "status": 200,
+      "bytes": 449432,
+      "sha256": "d59a5eb03ce33b0843736ef2ccd3d4c6cff905c44acfed28cc9044a01413600e",
+      "retrieved_at": "2026-10-02T05:39:53.002550+00:00",
+      "headers": {
+        "last-modified": "Fri, 24 Apr 2026 17:10:58 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive-range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+      "status": 206,
+      "bytes_read": 65536,
+      "prefix_sha256": "8241c49426b8cd1226368d26bbe9e5c207fd86002cf466dc789bc1eb0ff29399",
+      "retrieved_at": "2026-10-02T05:39:53.722401+00:00",
+      "headers": {
+        "last-modified": "Wed, 03 Jul 2019 18:09:06 GMT",
+        "content-length": "65536",
+        "content-range": "bytes 0-65535/938065756",
+        "content-type": "application/x-gzip"
+      },
+      "local_prefix_matches": true,
+      "cached_full_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+      "cached_bytes": 938065756
+    }
+  },
+  "producer_policy": {
+    "url": "https://csumb.edu/undersea/sfml-data-library/",
+    "status": 200,
+    "final_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "headers": {
+      "Date": "Fri, 02 Oct 2026 04:05:08 GMT",
+      "Content-Type": "text/html; charset=UTF-8"
+    },
+    "bytes": 48042,
+    "sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "retrieved_at": "2026-10-02T04:05:08.930255+00:00"
+  },
+  "coverage": {
+    "existing_deduplicated_shallow_km2": 76.20473222896278,
+    "existing_by_reach_km2": {
+      "morro-bay-r08": 7.410342262020675,
+      "morro-bay-r09": 31.832793581503406,
+      "morro-bay-r10": 35.747516558250204,
+      "point-arguello-conception-r01": 1.2140798271890376
+    },
+    "new_measured_area_km2": 0,
+    "public_mapped_credit_km2": 0,
+    "chart_depth_qualification": false,
+    "reason": "Identical original/native masks already exist in baseline private catalog."
+  },
+  "validation": {
+    "checked_at": "2026-10-02T05:42:04.816110+00:00",
+    "catalog_before_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "catalog_after_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "catalog_written": false,
+    "in_memory_manifest_valid": true,
+    "original_row_order_preserved": true,
+    "exact_native_sources_preserved": true,
+    "unchanged_science_rows": 2,
+    "metadata_correction_rows": 0,
+    "whole_reach_adoption": "not performed; coordinator must verify complete source set/order and current screen",
+    "new_measured_area_km2": 0,
+    "public_mapped_area_change_km2": 0
+  },
+  "limits": [
+    "No new measured coverage; existing native grids are preserved.",
+    "Interpretation and closure checks remain coordinator-owned.",
+    "Multiple resolutions/derivatives do not add independent survey evidence."
+  ]
+}
