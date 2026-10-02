@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refine Avila habitat with the original native terrain classes, retaining measured depth and Block J's private quality hold.
+
 - Recover missing feed worktrees after runner cleanup so recurring source discovery can load its inputs, while preserving locked and unrelated worktrees.
 
 - Bind original PGE Mid native terrain classes to reviewed depth, preserving measured support and existing source holds while refining habitat calibration and extraction.
