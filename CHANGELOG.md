@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Release reviewed Avila and SCC16 native source rows and complete the spatial-screen scope for three Avila/Pismo/northern Arguello reaches, preserving physical-first processing and whole-polygon exclusions.
+
 Qualify seven original PGE_Mid native grids, adding 33.91 km² of selected shallow survey support across two Morro reaches while preserving native resolution, producer rights and final spatial screening.
 
 - Seafloor: qualify existing SCC13–15 native 2 m grids; local processing adds 445 screened areas and 4.721851 km² of habitat across three bounded reaches and their shared northern boundary.
