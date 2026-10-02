@@ -1,0 +1,298 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T07:52:05.194574+00:00",
+  "source": {
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+    "sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+    "bytes": 1479539208,
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_South_mb.html"
+  },
+  "rights": {
+    "producer": "CSUMB SFML",
+    "license": "csumb-public-use-noncommercial",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "independent_acquisitions_added": 0
+  },
+  "terrain_interpretation": {
+    "method": "Same-bathymetry SA:PA/VRM roughness with site-specific subjective thresholds and manual exclusions for artifacts. Habitat grids add depth zones. No independent substrate ground truth or quantitative classification validation is established by these inspected files.",
+    "codes": {
+      "0": "smooth, 0–30 m",
+      "-1": "rough, 0–30 m",
+      "-30": "smooth, 30–100 m",
+      "-31": "rough, 30–100 m",
+      "-100": "smooth, 100–200 m",
+      "-101": "rough, 100–200 m",
+      "-200": "smooth, at least 200 m",
+      "-201": "rough, at least 200 m"
+    },
+    "zero_is_valid": true,
+    "products": [
+      {
+        "depth_source_id": "csumb-pge-south-blockf-2m-native",
+        "archive_member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab",
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "native_dimensions": [
+          4700,
+          4296
+        ],
+        "depth_cog_sha256": "8c8df46a12ef66be6bc9c2c32f5cab6d68d65325e3aa07492ba28d5123c04fe9",
+        "identical_native_alignment": true,
+        "resampling_performed": false,
+        "shallow_class_counts": {
+          "-1": 128150,
+          "0": 411956,
+          "-31": 73844,
+          "-30": 10138930
+        },
+        "native_shallow_depth_cells": 10775530,
+        "missing_class_at_shallow_cells": 22650,
+        "rough_shallow_cells": 201994,
+        "rough_shallow_native_cell_area_proxy_km2": 0.807976,
+        "metadata_sha256": "4d65697af11ea4044a247da06c24178503bd37232e935c486eb6d4a588c2f3f2",
+        "metadata_member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab/metadata.xml"
+      },
+      {
+        "depth_source_id": "csumb-pge-south-blockg-2m-native",
+        "archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab",
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "native_dimensions": [
+          2769,
+          3960
+        ],
+        "depth_cog_sha256": "f522537a5ecb76722ecb544b398505e04722b0280bdaeee14f024e3504a2230e",
+        "identical_native_alignment": true,
+        "resampling_performed": false,
+        "shallow_class_counts": {
+          "-30": 8515718,
+          "-31": 1
+        },
+        "native_shallow_depth_cells": 8534132,
+        "missing_class_at_shallow_cells": 18413,
+        "rough_shallow_cells": 1,
+        "rough_shallow_native_cell_area_proxy_km2": 4e-06,
+        "metadata_sha256": "f7add63e075d3eb981a4ffb8d42b122bdb688daa4ff137bf561adf5d93c19a3b",
+        "metadata_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab/metadata.xml"
+      },
+      {
+        "depth_source_id": "csumb-pge-south-blockh-2m-native",
+        "archive_member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab",
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "native_dimensions": [
+          5212,
+          3151
+        ],
+        "depth_cog_sha256": "bc8b902abab04bac3c4668a77ab0832931241e62a15af3015d4e83a829c63bc7",
+        "identical_native_alignment": true,
+        "resampling_performed": false,
+        "shallow_class_counts": {
+          "-30": 10577009,
+          "0": 2514787
+        },
+        "native_shallow_depth_cells": 13115742,
+        "missing_class_at_shallow_cells": 23946,
+        "rough_shallow_cells": 0,
+        "rough_shallow_native_cell_area_proxy_km2": 0.0,
+        "metadata_sha256": "f1430f3f6d557152826a18fcb2db6be3b75dfdc22ee80a6cdd863c0c6886dc31",
+        "metadata_member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab/metadata.xml"
+      },
+      {
+        "depth_source_id": "csumb-pge-south-blockg-5m-native",
+        "archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab",
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "native_dimensions": [
+          1363,
+          1424
+        ],
+        "depth_cog_sha256": "8ae40064152810d480b12243f01f4392d1c1897b372a176b2fc0a1d2b3ae69aa",
+        "identical_native_alignment": true,
+        "resampling_performed": false,
+        "shallow_class_counts": {
+          "-30": 639438
+        },
+        "native_shallow_depth_cells": 643293,
+        "missing_class_at_shallow_cells": 3855,
+        "rough_shallow_cells": 0,
+        "rough_shallow_native_cell_area_proxy_km2": 0.0,
+        "metadata_sha256": "de2b214c57f0669a1f51755e6d0cb381f985488020711676dd18aef611f874eb",
+        "metadata_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab/metadata.xml"
+      }
+    ]
+  },
+  "artifact_mask": {
+    "zip_containers_inventoried": 27,
+    "nested_member_names_inventoried": 1481,
+    "arcinfo_grid_directories": 69,
+    "metadata_documents": 97,
+    "standalone_georeferenced_artifact_mask_identified": false,
+    "interpretation": "The documented manual exclusions affect rough/smooth terrain classification. No distinct, identified spatial mask was found among the reviewed GIS products. The artifact locations cannot be recovered merely by treating every smooth class as invalid. Proprietary Fledermaus scene internals were not decoded; no claim is made about undocumented embedded objects.",
+    "narrative_mask_metadata": [
+      {
+        "zip": "CC_BlkF_2m_habitat.zip",
+        "member": "ArcViewGrids/cc_bf_2msub/metadata.xml",
+        "metadata_sha256": "40c10e07aaf0fdda32df279a968aa6722514141710f1254c392207ed99fd18e8"
+      },
+      {
+        "zip": "CC_BlkG_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/cc_bg_2msub/metadata.xml",
+        "metadata_sha256": "0ee029f6e06f9ec92823bf300e23a75e9cd6367440fb317b888d0c4a77d51b71"
+      },
+      {
+        "zip": "CC_BlkG_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/cc_bg_5msub/metadata.xml",
+        "metadata_sha256": "1ac1a2f02995d58e850d023572922daa3c882e9119c64f3c877d75222c66c937"
+      },
+      {
+        "zip": "CC_BlkH_2m_habitat.zip",
+        "member": "ArcViewGrids/cc_bh_2msub/metadata.xml",
+        "metadata_sha256": "3fdf21f31db31392405f5594d2cd4fb4be9f044d661a76c9850a52781ae6ff88"
+      }
+    ]
+  },
+  "backscatter": {
+    "method": "Producer radiometric and geometric correction, angle-varying gain, line mosaicking and anti-aliasing of Reson backscatter. Same-cruise acoustic intensity; native delivered spacing is approximately 0.931 m despite nominal 1 m naming. Absolute dB calibration is unverified.",
+    "products": [
+      {
+        "zip_member": "CC_BlkF_1m_sss.zip",
+        "tif_member": "Sidescan/CC_BlockF_SSS_1m_8101.tif",
+        "tif_sha256": "3e3da98213991be4fd51796cdb1bf9f1f2fead0ed2dd7985311fd2545cdd9a29",
+        "tif_bytes": 97836527,
+        "metadata_sha256": "d75e131c1c50408179e0eb06b0d4a56ecd4faddc7fe4a0470df3290470dc2e82",
+        "dimensions": [
+          10102,
+          9561
+        ],
+        "native_resolution_m": [
+          0.9307516012769822,
+          0.9307515338000314
+        ],
+        "bounds_wgs84": [
+          -120.785585897822,
+          35.07930823526566,
+          -120.68025427220901,
+          35.16141851639202
+        ],
+        "nodata": null,
+        "count": 1,
+        "dtype": "uint8",
+        "actual_acoustic_support_unknown": true
+      },
+      {
+        "zip_member": "CC_BlkG_1m_sss.zip",
+        "tif_member": "Sidescan/CC_BlockG_SSS_1m_8101.tif",
+        "tif_sha256": "c5f0385a83fd2e4057ac152004a8eec4296305e18706a11a7b764cbdea8c9f63",
+        "tif_bytes": 79656815,
+        "metadata_sha256": "9e14028fea33d0aa2bfddbce4063c66f935a4001c47f1f70be60058a2ef57683",
+        "dimensions": [
+          9186,
+          8536
+        ],
+        "native_resolution_m": [
+          0.930751601276977,
+          0.9307515338000395
+        ],
+        "bounds_wgs84": [
+          -120.84470137110853,
+          35.025018859628126,
+          -120.74908066583563,
+          35.09831017271446
+        ],
+        "nodata": null,
+        "count": 1,
+        "dtype": "uint8",
+        "actual_acoustic_support_unknown": true
+      },
+      {
+        "zip_member": "CC_BlkH_1m_sss.zip",
+        "tif_member": "Sidescan/CC_BlockH_SSS_1m_8101.tif",
+        "tif_sha256": "0914a8ddea6c4a4073da21b3f04eb411f3dbce4c8a5db8dc7b32c18d83aad013",
+        "tif_bytes": 76577327,
+        "metadata_sha256": "b66b96507b25f29562ceabbb8e22b94dfb0076bb82c474becad223b719f2183b",
+        "dimensions": [
+          11197,
+          6779
+        ],
+        "native_resolution_m": [
+          0.9307516012769764,
+          0.9307515337999495
+        ],
+        "bounds_wgs84": [
+          -120.7561998345251,
+          35.02497944019608,
+          -120.64041296210321,
+          35.08399669938674
+        ],
+        "nodata": null,
+        "count": 1,
+        "dtype": "uint8",
+        "actual_acoustic_support_unknown": true
+      }
+    ],
+    "original_sidecar_check": [
+      {
+        "tif_member": "Sidescan/CC_BlockF_SSS_1m_8101.tif",
+        "tif_sha256": "3e3da98213991be4fd51796cdb1bf9f1f2fead0ed2dd7985311fd2545cdd9a29",
+        "nodata": null,
+        "mask_flags": [
+          [
+            "all_valid"
+          ]
+        ],
+        "gdal_valid_pixels_with_sidecars": 96585222,
+        "actual_acoustic_sounding_footprint_verified": false
+      },
+      {
+        "tif_member": "Sidescan/CC_BlockG_SSS_1m_8101.tif",
+        "tif_sha256": "c5f0385a83fd2e4057ac152004a8eec4296305e18706a11a7b764cbdea8c9f63",
+        "nodata": null,
+        "mask_flags": [
+          [
+            "all_valid"
+          ]
+        ],
+        "gdal_valid_pixels_with_sidecars": 78411696,
+        "actual_acoustic_sounding_footprint_verified": false
+      },
+      {
+        "tif_member": "Sidescan/CC_BlockH_SSS_1m_8101.tif",
+        "tif_sha256": "0914a8ddea6c4a4073da21b3f04eb411f3dbce4c8a5db8dc7b32c18d83aad013",
+        "nodata": null,
+        "mask_flags": [
+          [
+            "all_valid"
+          ]
+        ],
+        "gdal_valid_pixels_with_sidecars": 75904463,
+        "actual_acoustic_sounding_footprint_verified": false
+      }
+    ],
+    "validity_limitation": "All-valid rectangular TIFF masks persist with original sidecars. Do not count the rectangular extent as measured acoustic coverage or infer a NoData mask from zero intensity."
+  },
+  "use_decision": {
+    "production_substrate_binding": "none",
+    "why": "Rough/smooth terrain is not the existing USGS rock/sand classification, and shares its underlying depth survey. Acoustic imagery lacks an established support mask and calibrated classification.",
+    "permitted_research_use": "Producer comparison and manual interpretation, retaining unknown coverage and source-quality limits.",
+    "source_note_addendum_required": true,
+    "public_coverage_change_km2": 0,
+    "habitat_rank_changes": 0
+  },
+  "next_steps": [
+    "Append the supplied artifact limitation to the four source notes without modifying original grids.",
+    "Review automatic reef candidates against source artifacts and independent substrate evidence; do not turn every producer smooth cell into a bathymetry exclusion.",
+    "For future imagery use, obtain documented acoustic support/NoData and calibration semantics before any automated classification.",
+    "Keep native habitat/backscatter derivatives unbound and avoid independent-evidence confidence uplift."
+  ]
+}
