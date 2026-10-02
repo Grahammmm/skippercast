@@ -21,6 +21,7 @@ import shapely
 
 from .resolution_profile import fine_detail_valid
 from .substrate import class_reader
+from .terrain_support import support_reader
 from .terrain import derivatives
 
 TILE_EDGE = 1024
@@ -87,7 +88,8 @@ def source_grid(vrt, window, source, support, binding, *, root, scratch, edge=TI
     halo = max(2, round(100/resolution))
     needed = support.buffer(255)
     max_read, read_count = 0, 0
-    with class_reader(binding, shape_, affine, root=root) as read_classes:
+    with class_reader(binding, shape_, affine, root=root) as read_classes, \
+            support_reader(source, shape_, affine, root=root) as read_support:
         for core, padded, local in windows(shape_, edge, halo):
             ys, xs = core
             corners = [affine*(xs.start, ys.start), affine*(xs.stop, ys.stop)]
@@ -108,6 +110,8 @@ def source_grid(vrt, window, source, support, binding, *, root, scratch, edge=TI
             depth[core], valid[core] = values[local], good[local]
             tile_affine = affine*rasterio.Affine.translation(xs.start, ys.start)
             inside[core] = geometry_mask([mapping(support)], depth[core].shape, tile_affine, invert=True) & good[local]
+            if source['row'].get('terrain_support'):
+                inside[core] &= read_support(Window(xs.start, ys.start, xs.stop-xs.start, ys.stop-ys.start))
             classes[core] = read_classes(Window(xs.start, ys.start, xs.stop-xs.start, ys.stop-ys.start))
             for key in terrain:
                 terrain[key][core] = layers[key][local].astype('float32')

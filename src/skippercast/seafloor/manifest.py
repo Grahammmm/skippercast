@@ -55,6 +55,9 @@ def validate_manifest(document, root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        if row.get('terrain_support'):
+            from .terrain_support import validate_binding
+            validate_binding(row)
         hold = row.get('habitat_quality_hold')
         if hold:
             if row['kind'] != 'bathymetry' or hold['source_sha256'] != row['sha256']:

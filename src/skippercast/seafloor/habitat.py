@@ -28,6 +28,7 @@ from skippercast.platform.contracts import public_url
 from .coverage import cell_geometry
 from .resolution_profile import fine_detail_valid
 from .substrate import read_classes
+from .terrain_support import read_support, feature_evidence, binding_digest
 from .terrain import derivatives
 
 
@@ -77,6 +78,10 @@ def source_grid(source, cells, binding, *, root, scratch=None, tile_edge=1024):
     valid = fine_detail_valid(depth, valid, source['row'])
     depth = np.where(valid, depth, np.nan)
     inside = geometry_mask([mapping(support)], depth.shape, affine, invert=True) & valid
+    # Positive terrain support restricts both threshold samples and extraction.
+    # Original depth validity/context remains intact for coverage and derivatives.
+    if source['row'].get('terrain_support'):
+        inside &= read_support(source, depth.shape, affine, root=root)
     terrain = derivatives(depth, valid, source['row']['resolution_m'])
     # Keep only the two extraction layers after computing the shared derivatives.
     terrain = {key: terrain[key].astype('float32') for key in ('vrm', 'bpi_fine_m')}
@@ -229,6 +234,8 @@ def feature_for_patch(grid, polygon, stats, rough, rules, reach):
         'rule_version': rules['rule_version'],
         'label': f"Held: legal screen pending. Habitat candidate; nominal depth ({source['vertical_datum']}); verify on your sounder."
                  + (' Broad area, not an individual pile.' if resolution > 4 else '')}
+    if source.get('terrain_support'):
+        properties['terrain_support'] = feature_evidence(source)
     if source.get('habitat_quality_hold'):
         # A valid depth raster may still contain unresolved terrain artifacts.
         # Preserve geometry and ranking for review; a legal pass cannot clear it.
@@ -272,6 +279,10 @@ def build_candidates(sources, cells, bindings, rules, reach, *, root):
         return {'type': 'FeatureCollection', 'features': features,
                 'rule_version': rules['rule_version'], 'thresholds': limits, 'survey_seams': seams,
                 'calibration_source_ids': sorted(g['source']['row']['id'] for g in grids),
+                **({'calibration_terrain_support': {
+                    g['source']['row']['id']: binding_digest(g['source']['row']) for g in grids
+                    if g['source']['row'].get('terrain_support')}}
+                   if any(g['source']['row'].get('terrain_support') for g in grids) else {}),
                 'processing': [g.get('processing', {'method': 'native-monolithic-v1',
                     'window_pixels': int(g['depth'].size)}) for g in grids],
                 'status': 'held-for-legal-screen', 'exportable': False}

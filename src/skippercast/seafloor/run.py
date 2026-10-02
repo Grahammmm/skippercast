@@ -25,6 +25,7 @@ from .manifest import load_manifest, physical_source
 from .terrain import derivatives, summarize
 from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
+from .terrain_support import verify_sources as verify_terrain_support
 from .screen import load_snapshot, input_identity, screen_candidates
 from .resolution_profile import fine_detail_valid
 from .normalized import verify_review
@@ -139,6 +140,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     source_ids = {s['row']['id'] for s in sources}
     bindings = {key: value for key, value in bindings.items() if key in source_ids}
     verify_sources(bindings, root=root, fetch=fetch)
+    verify_terrain_support(sources, root=root)
     atlas_path = root / 'dist/data/atlas.json'
     screen = ({'version': 'deferred', 'status': 'held', 'reasons': ['screen-deferred'], 'layers': []}
               if physical_only else load_snapshot(root, reach_id))
@@ -151,7 +153,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py')}}
     physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
