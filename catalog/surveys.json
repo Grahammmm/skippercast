@@ -5777,23 +5777,23 @@
     },
     {
       "id": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
-      "publisher": "NOAA NCEI",
+      "publisher": "NOAA NOS Office of Coast Survey; acquired by Fugro Pelagos under NOAA contract",
       "title": "H11952_MB_1m_MLLW_1of4.bag",
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
       "landing_page": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
       "format": "bag",
       "kind": "bathymetry",
       "year": 2008,
-      "resolution_m": 1,
-      "horizontal_crs": "unknown",
+      "resolution_m": 1.0,
+      "horizontal_crs": "BOUNDCRS[SOURCECRS[PROJCRS[\"NAD83 / UTM zone 10N\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101004,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree (supplier to define representation)\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree (supplier to define representation)\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree (supplier to define representation)\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8807]]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"metre\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"metre\",1]],ID[\"EPSG\",26910]]],TARGETCRS[GEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],CS[ellipsoidal,2],AXIS[\"latitude\",north,ORDER[1],ANGLEUNIT[\"degree\",0.0174532925199433]],AXIS[\"longitude\",east,ORDER[2],ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]]],ABRIDGEDTRANSFORMATION[\"Transformation from NAD83 to WGS84\",METHOD[\"Position Vector transformation (geog2D domain)\",ID[\"EPSG\",9606]],PARAMETER[\"X-axis translation\",0,ID[\"EPSG\",8605]],PARAMETER[\"Y-axis translation\",0,ID[\"EPSG\",8606]],PARAMETER[\"Z-axis translation\",0,ID[\"EPSG\",8607]],PARAMETER[\"X-axis rotation\",0,ID[\"EPSG\",8608]],PARAMETER[\"Y-axis rotation\",0,ID[\"EPSG\",8609]],PARAMETER[\"Z-axis rotation\",0,ID[\"EPSG\",8610]],PARAMETER[\"Scale difference\",1,ID[\"EPSG\",8611]]]]",
       "vertical_datum": "MLLW",
-      "license": "unknown",
+      "license": "public-domain-us-gov",
       "sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
-      "bytes": "unknown",
+      "bytes": 66538672,
       "derived_from": [],
-      "status": "candidate",
+      "status": "usable",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
       "archive_member": "unknown",
       "evidence": [
         "dist/data/noaa-native-sector-review.json#/sectors/13/eligible_substrate_review_bag_urls/2",
@@ -5814,7 +5814,32 @@
         "year": "dist/data/noaa-regular-native-depth-review.json#/files/82/bag_url"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+        "cog_sha256": "ee62dc7d71ce8e34252dfb864f61554a209ec74744b5e31bc48b5ab81ff9c809",
+        "requested_bounds_wgs84": [
+          -120.59,
+          34.448,
+          -120.465,
+          34.55
+        ],
+        "valid_pixels_in_requested_bounds": 6538318,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6538318,
+        "native_resolution_m": [
+          1.0,
+          1.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "productUncert",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://nauticalcharts.noaa.gov/data/data-licensing.html",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "0e99a55f0c0a1e5c786f4d3b788b6c5183e7decf16ecd56695093b690fff2eb8"
+        }
+      }
     },
     {
       "id": "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
