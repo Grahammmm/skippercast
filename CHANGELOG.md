@@ -4,6 +4,8 @@
 
 - Seafloor: qualify original NOAA H11952 1 m shallow bathymetry near Point Conception. Local processing adds 4.353 km² of selected survey support while replacing coarser habitat classifications; candidate counts and published area may decrease with finer evidence.
 
+- Seafloor: qualify 13 original SCC01–08 native grids for credited noncommercial use and screen Cambria–San Simeon r01. Reuse three verified private terrain caches, including categorical-row numeric normalization; local screening yields 611 areas across three reaches, 513 above the prior public subset. Production is verified separately.
+
 - Seafloor: qualify credited noncommercial SCC17–25 depth grids and screen three Point Sal–Purisima reaches, retaining native 2 m measurements, private holds and the paid-deployment gate. Local validation yields 1,471 eligible habitat areas; production publication is verified separately.
 
 - Seafloor: explicitly migrate verified legacy numeric-only cache identities without recalculating terrain or changing habitat geometry/ranks; retain complete private recovery and require fresh screening before release.

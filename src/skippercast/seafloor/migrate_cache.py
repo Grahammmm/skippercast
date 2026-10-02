@@ -76,10 +76,13 @@ def migrate_numeric_cache(reach_id, *, root=REPO, private=False, apply=False):
     bindings = resolve_bindings(checks['habitat_rules'], manifest)
     ids = {r['id'] for r in selected}
     bindings = {k: v for k, v in bindings.items() if k in ids}
-    if json.dumps(bindings, sort_keys=True) != json.dumps(old['substrate_bindings'], sort_keys=True):
+    normalized_bindings = deepcopy(old['substrate_bindings'])
+    for entry in normalized_bindings.values():
+        entry['row'] = normalize_measurement_row(entry['row'])
+    if json.dumps(bindings, sort_keys=True) != json.dumps(normalized_bindings, sort_keys=True):
         raise ValueError('Substrate inputs changed')
     verify_sources(bindings, root=root)
-    current = dict(old, sources=normalized)
+    current = dict(old, sources=normalized, substrate_bindings=normalized_bindings)
     new_hash = digest(current)
     evidence = {'version': 'numeric-only-cache-migration-v1', 'reach': reach_id,
                 'previous_physical_hash': physical['input_hash'], 'physical_input_hash': new_hash,
@@ -104,6 +107,7 @@ def migrate_numeric_cache(reach_id, *, root=REPO, private=False, apply=False):
                     'outputs': {name: sha256(staging/name) for name in PHYSICAL}}, indent=2)
         revised = deepcopy(receipt)
         revised['inputs']['sources'] = normalized
+        revised['inputs']['substrate_bindings'] = normalized_bindings
         revised['inputs']['screen'] = {'status': 'deferred',
                     'reasons': ['numeric-migration-requires-current-screen'], 'layers': []}
         revised['input_hash'] = digest(revised['inputs'])
