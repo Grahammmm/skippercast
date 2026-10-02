@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover missing feed worktrees after runner cleanup so recurring source discovery can load its inputs, while preserving locked and unrelated worktrees.
+
 - Bind original PGE Mid native terrain classes to reviewed depth, preserving measured support and existing source holds while refining habitat calibration and extraction.
 
 - Bind original PGE South native terrain classes to reviewed depth, preserving measured support and existing source holds while refining habitat calibration and extraction.

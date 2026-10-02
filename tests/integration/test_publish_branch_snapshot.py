@@ -119,6 +119,45 @@ class SnapshotTests(unittest.TestCase):
         self.assertIn('unchanged', out.stdout)
         self.assertEqual(self.remote_head('data'), head)
 
+    def test_missing_registered_snapshot_reloads_without_pruning_other_worktrees(self):
+        self.seed_history('data', 2)
+        pub = self.load('data', 'var/published')
+        stale = self.load('data', 'var/other-missing')
+        neighbor = self.load('data', 'var/other-active')
+        (neighbor / 'local-note.txt').write_text('preserve this work')
+        neighbor_head = self.git('rev-parse', 'HEAD', cwd=neighbor)
+        # Runner cleanup can remove directories while retaining .git/worktrees.
+        shutil.rmtree(pub)
+        shutil.rmtree(stale)
+        other = self.clone('other')
+        theirs = self.load('data', 'var/published', cwd=other)
+        (theirs / 'latest.json').write_text('{"generation":3}')
+        self.assertEqual(self.publish('data', 'var/published', cwd=other).returncode, 0)
+        remote = self.remote_head('data')
+
+        self.load('data', 'var/published')
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=pub), remote)
+        self.assertEqual((pub / 'latest.json').read_text(), '{"generation":3}')
+        self.assertEqual(self.remote_head('data'), remote)
+        listing = self.git('worktree', 'list', '--porcelain', cwd=self.checkout)
+        self.assertIn(str(stale.resolve()), listing)
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=neighbor), neighbor_head)
+        self.assertEqual((neighbor / 'local-note.txt').read_text(), 'preserve this work')
+
+    def test_missing_locked_snapshot_is_not_reclaimed(self):
+        self.seed_history('data', 1)
+        pub = self.load('data', 'var/published')
+        self.git('worktree', 'lock', '--reason', 'temporarily unavailable', str(pub), cwd=self.checkout)
+        shutil.rmtree(pub)
+        remote = self.remote_head('data')
+        out = self.run_script('--load', 'data', 'var/published')
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn('locked', out.stderr)
+        self.assertFalse(pub.exists())
+        self.assertIn('locked temporarily unavailable',
+                      self.git('worktree', 'list', '--porcelain', cwd=self.checkout))
+        self.assertEqual(self.remote_head('data'), remote)
+
     def test_lease_refuses_to_clobber_a_concurrent_publish_then_reload_recovers(self):
         self.seed_history('conditions', 2)
         ours = self.load('conditions', 'var/live-published')

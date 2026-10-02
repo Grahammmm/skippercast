@@ -50,7 +50,10 @@ load() {
   fi
   if [ -n "$remote" ]; then
     git fetch -q --depth=1 origin "refs/heads/$branch"
-    git worktree add -q --detach "$dir" FETCH_HEAD
+    # Runner cleanup may remove the directory but leave its Git registration.
+    # One --force reclaims only this missing path; locked worktrees still fail.
+    # Do not prune unrelated worktrees used by other jobs or agent chats.
+    git worktree add -q --detach --force "$dir" FETCH_HEAD
   else
     mkdir -p "$dir"
     git -C "$dir" init -q -b "$branch"
