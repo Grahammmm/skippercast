@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T04:39:11.913942+00:00",
+  "source": {
+    "id": "csumb-slaterock-2m-native",
+    "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/SlateRock_mb.html",
+    "sha256": "3489ad1233200250ed6eeb8bede7847a1407fd5a9a09171a446ad10fa08ffbbe",
+    "bytes": 533397873,
+    "year": 2006,
+    "resolution_m": 2,
+    "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+    "vertical_datum": "NAVD88",
+    "archive_member": "SlateRock/SlateRock_2mbathy_hill_slope.zip/ArcViewGrids/sr_2mbathy"
+  },
+  "metadata": {
+    "original_metadata": [
+      {
+        "file": "original-SlateRock_2m_gs-SlateRock_2m_gs.tif.xml",
+        "sha256": "121f5b0b53aafa30e0640298ffab9ec9a6ec1bc2ee5f0dd963f5343f916fbcad"
+      },
+      {
+        "file": "original-SlateRock_2mbathy_hill_slope-ArcViewGrids_sr_25mbathy_metadata.xml",
+        "sha256": "a5da2ce4cb06d1d75fa2ee56d3575dbac25567eba72978ae54578142926a89f6"
+      },
+      {
+        "file": "original-SlateRock_2mbathy_hill_slope-ArcViewGrids_sr_2mbathy_metadata.xml",
+        "sha256": "948fc05c499c04236b1f20ab0c2d5b224b32ef80232d67332650a931e5520554"
+      },
+      {
+        "file": "original-SlateRock_2mbathy_hill_slope-ArcViewGrids_sr_2mhill_metadata.xml",
+        "sha256": "41300d3e769b0045a8a5eee2e91d555f370288d2993fa3ba52c2ee73d9044f46"
+      },
+      {
+        "file": "original-SlateRock_2mbathy_hill_slope-ArcViewGrids_sr_2mslope_metadata.xml",
+        "sha256": "54cc4241fda1ea05f8446865374ba88158ae48f0024ec8bc1e7180043e3da45e"
+      }
+    ],
+    "acquisition_dates": [
+      "2006-09-12",
+      "2006-09-25",
+      "2006-09-26"
+    ],
+    "native_bathymetry_metadata_date": "2007-02-07",
+    "native_grid": "Selected original sr_2mbathy 2 m ArcInfo grid, not the co-packaged sr_25mbathy or shaded imagery.",
+    "horizontal_reference": "WGS84 / UTM zone 10N",
+    "vertical_datum": "NAVD88 documented consistently in native and companion processing, not MLLW.",
+    "processing": "CARIS cleaning and BASE-surface exports; vessel motion, sound-velocity and CNAV water-height corrections; 1 m decimated xyz fed to Fledermaus AverageGridder 2 m interpolation.",
+    "measured_vs_interpolated": "Sonar-derived producer-interpolated grid; per-cell measured-versus-filled mask unavailable.",
+    "horizontal_accuracy": "Producer describes approximately ±2 m varying with depth; confidence/independent validation unspecified.",
+    "vertical_accuracy": "Producer describes approximately ±0.20 m varying with depth; no per-cell uncertainty or chart-depth conversion.",
+    "legacy_rights_text": "Original metadata defers to CSUMB/sponsor. Current original-producer policy permits public noncommercial use with acknowledgement; for-profit permission remains absent and navigation excluded.",
+    "lineage": "All Slate Rock products in this archive share one acquisition family. This review releases an existing source; no additional survey/measurement count."
+  },
+  "rights": {
+    "source_id": "csumb-slaterock-2m-native",
+    "license": "csumb-public-use-noncommercial",
+    "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+    "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "reviewed_on": "2026-10-01",
+    "policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_retrieved_at": "2026-10-02T04:05:08.930255+00:00",
+    "review_date_timezone": "America/Los_Angeles"
+  },
+  "access": {
+    "survey_report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/SlateRock_mb.html",
+      "status": 200,
+      "final_url": "https://www.ngdc.noaa.gov/ships/ventresca/SlateRock_mb.html",
+      "bytes_read": 97474,
+      "sha256": "7d4bcb5b71daf65644170144eb19819b180a3d1404ef4d6593277102b292b9c2",
+      "retrieved_at": "2026-10-02T04:35:10.670408+00:00",
+      "headers": {
+        "date": "Fri, 02 Oct 2026 04:35:10 GMT",
+        "last-modified": "Fri, 24 Apr 2026 17:10:59 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive_range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+      "status": 206,
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+      "bytes_read": 65536,
+      "sha256": "3c0cae535e0440315d796a8f2223a89fb46671c168f62cbe8faf4941ee35eb03",
+      "retrieved_at": "2026-10-02T04:35:11.059049+00:00",
+      "headers": {
+        "date": "Fri, 02 Oct 2026 04:35:11 GMT",
+        "last-modified": "Mon, 19 Aug 2019 14:16:45 GMT",
+        "content-length": "65536",
+        "content-range": "bytes 0-65535/533397873",
+        "content-type": "application/x-gzip"
+      },
+      "cached_prefix_matches": true
+    }
+  },
+  "scientific_parity": {
+    "checked_at": "2026-10-02T04:36:31.750427+00:00",
+    "catalog_source_index": 396,
+    "source_id": "csumb-slaterock-2m-native",
+    "scientific_row_equal": true,
+    "only_release_fields_changed": [
+      "license",
+      "notes",
+      "rights_review",
+      "status"
+    ],
+    "source_sha256_unchanged": "3489ad1233200250ed6eeb8bede7847a1407fd5a9a09171a446ad10fa08ffbbe",
+    "cog_sha256_unchanged": "7a92bb6407e6642b14a2000006c1572321c64889395e8b7c89e81e029bff594c",
+    "raster_identity_unchanged": {
+      "version": "normalized-raster-content-v1",
+      "sha256": "0de7a556d790f25cec7c6c18d5fc363234d3e9316266a0d709bb6e422252a718"
+    },
+    "native_window_unchanged": [
+      -121.7430419245705,
+      36.11460731300004,
+      -121.64959638020345,
+      36.198532785713326
+    ],
+    "manifest_order_preserved_in_preview": true,
+    "native_cache_reopened": true,
+    "normalization_reused": true,
+    "in_memory_manifest_valid": true,
+    "new_measured_area_km2": 0,
+    "whole_reach_adoption": "not executed; requires identical full source set/order, scientific implementation/rules/reference/outputs and a new legal screen in coordinator checkout",
+    "important": "Replace this existing row in place. The generic promote-survey implementation removes and appends a row, which changes source ordering and can defeat adopt-private-physics."
+  },
+  "coverage": {
+    "checked_at": "2026-10-02T04:37:32.910470+00:00",
+    "source_id": "csumb-slaterock-2m-native",
+    "existing_nominal_shallow_footprint_km2": 14.976503688820237,
+    "existing_native_valid_cells": 6312629,
+    "existing_native_shallow_cells": 3742419,
+    "existing_footprint_by_reach_km2": {
+      "big-sur-coast-r02": 0.8578676850617283,
+      "big-sur-coast-r03": 14.114481395043192
+    },
+    "new_measured_area_km2": 0,
+    "public_mapped_credit_km2": 0,
+    "baseline_includes_identical_source_and_normalized_grid": true,
+    "adoption_limitations": [
+      "Source-only scientific parity is verified separately; whole reach adoption not run.",
+      "Coordinator additions such as Grimes Point can change source set/order and require normal recomputation.",
+      "Any other physical-only contributors must obtain their own producer rights; this review releases SlateRock only.",
+      "Current full-polygon closure screening still required."
+    ]
+  },
+  "rights_only": true,
+  "new_measured_area_km2": 0,
+  "public_mapped_credit_km2": 0
+}

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify native 2 m Grimes Point bathymetry and release the existing Slate Rock source under credited noncommercial terms. Two Big Sur reaches gain 416 net locally screened habitat areas. Report Grimes Point's new survey footprint separately from Slate Rock's existing private coverage; retain nominal NAVD88 depths and all publication screens.
+
 - Seafloor: qualify original Hurricane Point, Cooper Point and Point Sur 2 m grids. Three local reaches gain 62.910 km² of selected measured support, 410 physical candidates and 46 net screened areas; the two Big Sur reaches increase from 1 to 126 screened areas. Keep source datum limitations explicit and all MPA holds private; production is verified separately.
 
 - CI: run the complete check suite once per PR revision, preserve main and bot-dispatch checks, and cancel obsolete PR revisions so mapping work does not compete with duplicate checks.
