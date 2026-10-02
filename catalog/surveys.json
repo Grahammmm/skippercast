@@ -152,7 +152,10 @@
     "dist/data/usgs-sur-arguello-sediment-review.json",
     "dist/data/w00614-noaa-sh1809-observation-gap.json",
     "dist/data/w00614-original-300-pigeon-monterey-review.json",
-    "dist/data/w00614-usgs-video-observation-gap.json"
+    "dist/data/w00614-usgs-video-observation-gap.json",
+    "dist/data/seafloor-cooperpoint-native-review.json",
+    "dist/data/seafloor-hurricane-point-native-review.json",
+    "dist/data/seafloor-point-sur-native-review.json"
   ],
   "surveys": [
     {
@@ -17791,6 +17794,219 @@
         "raster_identity": {
           "version": "normalized-raster-content-v1",
           "sha256": "9c963a2ed225c386067fecf28e5baed2d7238ac032018004523bf50c4754b19e"
+        }
+      }
+    },
+    {
+      "id": "csumb-cooperpoint-2m-native",
+      "title": "Cooper Point 2005 original 2 m sonar-derived bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CooperPoint/multibeam/data/version2/products/CooperPoint_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/CooperPoint_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2005,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "14ddcdb5c70301cc291bd5a33bd8b71a37a937a73fca79151f3d93d92f78b425",
+      "bytes": 827731943,
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "archive_member": "CooperPt/cooperpt_2mbathy_slope_hill.zip/ArcViewGrids/pc05_2mbathy",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "evidence": [
+        "research/receipts/seafloor-cooperpoint-native-review.json#/source",
+        "research/receipts/seafloor-cooperpoint-native-review.json#/metadata",
+        "research/receipts/seafloor-cooperpoint-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-cooperpoint-native-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-cooperpoint-native-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-cooperpoint-native-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-cooperpoint-native-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-cooperpoint-native-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-cooperpoint-native-review.json#/source/year"
+      },
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original 2005 sonar-derived 2 m grid. NAVD88, not MLLW; Fledermaus interpolation from shoal-biased 1 m decimated soundings. No per-cell interpolation/uncertainty mask. Accuracy fields are internally swapped; quantitative accuracy remains unverified. Shared acquisition independence unresolved. Noncommercial producer terms; not for navigation.",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "14ddcdb5c70301cc291bd5a33bd8b71a37a937a73fca79151f3d93d92f78b425",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "14ddcdb5c70301cc291bd5a33bd8b71a37a937a73fca79151f3d93d92f78b425",
+        "cog_sha256": "9bbbb0fcef96a6ea623e0a5e398369f90d7add393abc0e4aba62b3138562aa9b",
+        "requested_bounds_wgs84": [
+          -121.894,
+          36.207,
+          -121.793,
+          36.275
+        ],
+        "valid_pixels_in_requested_bounds": 6586043,
+        "nominal_0_300ft_pixels_in_requested_bounds": 5779695,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "b25cf07bb9e005a028ec893ced5ace33cd3ff3ae9a510e06c19e3a597cc67f5a"
+        }
+      }
+    },
+    {
+      "id": "csumb-point-sur-2m-native",
+      "title": "Point Sur 2005–2006 original 2 m sonar-derived bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PointSur/multibeam/data/version2/products/PointSur_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PointSur_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2006,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "18eb310f4675f96ffbe6bfa3306a60ac7e3e32f75d1e17fcd81b3c169ab95b00",
+      "bytes": 719115131,
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "archive_member": "PointSur/PointSur_2mbathy_hill_slope.zip/ArcViewGrids/ps_2mbathy",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "evidence": [
+        "research/receipts/seafloor-point-sur-native-review.json#/source",
+        "research/receipts/seafloor-point-sur-native-review.json#/metadata",
+        "research/receipts/seafloor-point-sur-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-point-sur-native-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-point-sur-native-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-point-sur-native-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-point-sur-native-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-point-sur-native-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-point-sur-native-review.json#/source/year"
+      },
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original Point Sur 2005–2006 sonar-derived 2 m grid; year is latest documented acquisition. Bathymetry process says predicted-tide MLLW, companion shaded-image process also claims NAVD88; datum unresolved and stored unknown, no chart-depth qualification. Shoal-biased decimation and AverageGridder interpolation, no per-cell interpolation/uncertainty mask. Independent acquisition unresolved; retain CSUMB noncommercial and not-for-navigation terms.",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "18eb310f4675f96ffbe6bfa3306a60ac7e3e32f75d1e17fcd81b3c169ab95b00",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "18eb310f4675f96ffbe6bfa3306a60ac7e3e32f75d1e17fcd81b3c169ab95b00",
+        "cog_sha256": "1a0d836c67e5903451c6aef4e4b0215471d158cb5a6fbe009edb3f3eecda7b79",
+        "requested_bounds_wgs84": [
+          -121.935,
+          36.227,
+          -121.851,
+          36.304
+        ],
+        "valid_pixels_in_requested_bounds": 8881194,
+        "nominal_0_300ft_pixels_in_requested_bounds": 7745511,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "14a06f93e9e55f1e57c399ed5655acbddc37efb3a6abc364a42aab8d163e81d6"
+        }
+      }
+    },
+    {
+      "id": "csumb-hurricane-point-2m-native",
+      "title": "Hurricane Point 2004–2005 original 2 m sonar-derived bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/HurricanePoint_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2005,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "MLLW",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "dc1342bfe85de46b3588be2c1846e44564602120a775404b8deac9fea0d3adad",
+      "bytes": 452249474,
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "archive_member": "HurricanePt/HurricanePt_2mbathy_hill_slope.zip/ArcViewGrids/hp_2mbathy",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "evidence": [
+        "research/receipts/seafloor-hurricane-point-native-review.json#/source",
+        "research/receipts/seafloor-hurricane-point-native-review.json#/metadata",
+        "research/receipts/seafloor-hurricane-point-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-hurricane-point-native-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-hurricane-point-native-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-hurricane-point-native-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-hurricane-point-native-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-hurricane-point-native-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-hurricane-point-native-review.json#/source/year"
+      },
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original Hurricane Point 2004–2005 sonar-derived 2 m grid; year is latest documented acquisition. Native and companion metadata consistently describe predicted-tide MLLW adjustment. No independent chart-depth validation; nominal depth only. Shoal-biased decimation and AverageGridder interpolation; no per-cell interpolation/uncertainty mask. No independent acquisition credit. Retain CSUMB noncommercial and not-for-navigation terms.",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "dc1342bfe85de46b3588be2c1846e44564602120a775404b8deac9fea0d3adad",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "dc1342bfe85de46b3588be2c1846e44564602120a775404b8deac9fea0d3adad",
+        "cog_sha256": "05591ccb12abcda385f16a6881365a0b2b1011efa2ae5ed24bcffbb0b875714e",
+        "requested_bounds_wgs84": [
+          -121.928,
+          36.293,
+          -121.899,
+          36.36
+        ],
+        "valid_pixels_in_requested_bounds": 3801518,
+        "nominal_0_300ft_pixels_in_requested_bounds": 3801518,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "MLLW",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "c090d0c61f1f19e57d4dd6500f4ce672db61e7ac8c210514bf75bc8054221598"
         }
       }
     }
