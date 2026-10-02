@@ -1,0 +1,439 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T07:18:03.195820+00:00",
+  "source": {
+    "id": "csumb-point-lobos-2m-native",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/macginitie/PointLobos_mb.html",
+    "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+    "sha256": "6ecad4d5f58cb459fa2b45abd46c386e095dcbc4817d736b703305b7bf220384",
+    "bytes": 267635311,
+    "resolution_m": 2.0,
+    "horizontal_crs": "PROJCS[\"unnamed\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+    "vertical_datum": "unknown",
+    "year": 2006,
+    "archive_member": "PointLobos/PtLobos_2mbathy_hill_slope.zip/ArcViewGrids/pl_2mbathy",
+    "native_grid_dimensions": [
+      2507,
+      2341
+    ],
+    "native_raster_bounds_wgs84": [
+      -121.98244136543775,
+      36.49727905149179,
+      -121.9258815371219,
+      36.539971943744135
+    ],
+    "cog_sha256": "558878a051d62be6b3d2b9cea7f00611fe1a45d25f94f538f75a865e256717bf",
+    "cog_bytes": 7147668,
+    "depth_basis": "nominal"
+  },
+  "metadata": {
+    "original_metadata": [
+      {
+        "zip": "PointLobos/PtLobos_2m_gs.zip",
+        "member": "pointlobos_2m_gs.tif.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2m_gs-pointlobos_2m_gs.tif.xml",
+        "sha256": "9176b7bd41ece35d87f1df198679ea54de4dc4ce2895ac4d1493a55d570139db"
+      },
+      {
+        "zip": "PointLobos/PtLobos_2mbathy_hill_slope.zip",
+        "member": "ArcViewGrids/pl_25mbathy/metadata.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2mbathy_hill_slope-ArcViewGrids_pl_25mbathy_metadata.xml",
+        "sha256": "3b36c1985fb30f71d1cbc4ed2074cd0c3efa493b595bca3f6405de8f07e3e100"
+      },
+      {
+        "zip": "PointLobos/PtLobos_2mbathy_hill_slope.zip",
+        "member": "ArcViewGrids/pl_2mbathy/metadata.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2mbathy_hill_slope-ArcViewGrids_pl_2mbathy_metadata.xml",
+        "sha256": "3950950651409ad42cf292923750f975308ada405dcf98b4ca1c63bcd1245bbc"
+      },
+      {
+        "zip": "PointLobos/PtLobos_2mbathy_hill_slope.zip",
+        "member": "ArcViewGrids/pl_2mhill/metadata.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2mbathy_hill_slope-ArcViewGrids_pl_2mhill_metadata.xml",
+        "sha256": "3dfdc58c4bcf9473916f1ef88e405ef9170ca0826eac6b5138e0fe5393a463c2"
+      },
+      {
+        "zip": "PointLobos/PtLobos_2mbathy_hill_slope.zip",
+        "member": "ArcViewGrids/pl_2mslope/metadata.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2mbathy_hill_slope-ArcViewGrids_pl_2mslope_metadata.xml",
+        "sha256": "1d955a0e5a38068b8d81de9fee6357d782038b996c4ba44f33efa67a43eda4ba"
+      },
+      {
+        "zip": "PointLobos/PtLobos_2mbathy_surveyfootprint.zip",
+        "member": "pl_2mbathy_surveyfootprint.shp.xml",
+        "file": "var/research-worker/point-lobos-2m/original-PtLobos_2mbathy_surveyfootprint-pl_2mbathy_surveyfootprint.shp.xml",
+        "sha256": "64b5c472d934fcf90af5682852aab6b4e0ac2ede7f8f2f900512593947d56948"
+      }
+    ],
+    "acquisition_dates": [
+      "2000-06-22",
+      "2000-06-26",
+      "2001-03-20",
+      "2001-03-21",
+      "2001-03-22",
+      "2005-03-13",
+      "2006-08-31"
+    ],
+    "year_basis": "Latest acquisition year 2006; mixed surveys from 2000, 2001, 2005 and 2006, not every pixel from 2006.",
+    "original_grid": "pl_2mbathy, native producer 2 m ArcInfo GRID; qualification uses the reviewed exact archive registry introduced in PR191.",
+    "vertical_datum": "unknown",
+    "datum_conflict": "Native bathymetry process MLLW with predicted tides; grayscale says final NAVD88. No resolution or conversion.",
+    "horizontal_accuracy": "Native metadata states about ±2m varying with depth, unspecified confidence.",
+    "vertical_accuracy": "Native metadata states about ±0.20m varying with depth, unspecified confidence and unresolved datum.",
+    "interpolation": "Shoal-biased1m decimated xyz to Fledermaus AverageGridder2m interpolation; no per-cell mask supplied.",
+    "lineage": "One merged original survey family with multiple derivatives, no independent corroboration count.",
+    "implementation_review": {
+      "upstream_commit": "4e0b0e03e52c118f809058ce90873e2667aeafef",
+      "local_cherry_pick": "bf23e29450ec71e269c6e2c083a67fb1c8177ce0",
+      "focused_tests": "21 source-rights and native-archive tests passed; changelog-only conflict resolved to retain this entry and baseline history."
+    }
+  },
+  "rights": {
+    "source_id": "csumb-point-lobos-2m-native",
+    "license": "csumb-public-use-noncommercial",
+    "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz",
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+    "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+    "commercial_use": "permission-required",
+    "navigation_use": false,
+    "reviewed_on": "2026-10-02",
+    "policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "policy_retrieved_at": "2026-10-02T04:05:08.930255+00:00",
+    "review_date_timezone": "America/Los_Angeles"
+  },
+  "access": {
+    "failed-inferred-report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/PointLobos_mb.html",
+      "status": 404,
+      "note": "Incorrect inferred vessel path. Correct source vessel recovered from original cached provenance, not retried."
+    },
+    "noaa-report": {
+      "url": "https://www.ngdc.noaa.gov/ships/macginitie/PointLobos_mb.html",
+      "final_url": "https://www.ngdc.noaa.gov/ships/macginitie/PointLobos_mb.html",
+      "status": 200,
+      "bytes": 128220,
+      "sha256": "ed9d4ad1f354ab801a8ae41cb6b89bf2d44f4c091a367e1783795a6b889c1ba7",
+      "retrieved_at": "2026-10-02T05:09:34.302745+00:00",
+      "headers": {
+        "last-modified": "Fri, 24 Apr 2026 17:09:26 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive-range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz",
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz",
+      "status": 206,
+      "bytes_read": 65536,
+      "prefix_sha256": "5297b33439a2d0761571a4959200d2657c4515a7c89d96190d0bb04576316797",
+      "retrieved_at": "2026-10-02T05:09:34.710420+00:00",
+      "headers": {
+        "last-modified": "Mon, 19 Aug 2019 14:12:07 GMT",
+        "content-length": "65536",
+        "content-range": "bytes 0-65535/267635311",
+        "content-type": "application/x-gzip"
+      },
+      "local_prefix_matches": true,
+      "cached_full_sha256": "6ecad4d5f58cb459fa2b45abd46c386e095dcbc4817d736b703305b7bf220384",
+      "cached_bytes": 267635311
+    }
+  },
+  "native_statistics": {
+    "valid_pixels": 3216643,
+    "nominal_shallow_pixels": 2180800,
+    "min_depth_m": 1.1399999856948853,
+    "max_depth_m": 365.05999755859375,
+    "shallow_min_depth_m": 1.1399999856948853,
+    "shallow_max_depth_m": 91.44000244140625,
+    "vertical_datum": "unknown",
+    "uncertainty": "unknown",
+    "interpolation_mask": "unknown"
+  },
+  "valid_depth_diagnostic": {
+    "checked_at": "2026-10-02T07:18:02.721049+00:00",
+    "source_id": "csumb-point-lobos-2m-native",
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+        "draft_sha256": "5825c00353a5db9840f189b6101208194c3859be2f7591d6002d636fee08a649",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "draft_sha256": "3395d064c14626d1f17ff0d8eda938071f52766013b66d9f38af6e43eca5cb8a",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "draft_sha256": "9316833acc747d0c7e829e7a830a62ec775689fa9f250042d78b6d2f7dbc3213",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-1m-native",
+        "draft_sha256": "2ebd7b20962742332b741ef1f83bb48586615e930de8c80243cdc8f7369fa30a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "draft_sha256": "ef07e148e0714ed52cc3e0b9d9ecd010f8d23ae14be9f3aeed02e6056fff1926",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "draft_sha256": "0dae698ba33c6c18335f157752d56cf8ec994ccfa9d91f94aeea29802eee24e4",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "draft_sha256": "4afd21a28291727dd427f3952ad594db5baa459e9254558f290c93af38251e7a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "draft_sha256": "7118c0c6b0684a21b10ed55ef022e81c5105a89df83c391c5283bed7dcd512e8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "draft_sha256": "7184de31018d84e480fd7d0aea0dab2a0009141aa3d2774c0e05886b3c264bd8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-5m-native",
+        "draft_sha256": "3289e8a8499f33cd1a4e98dc7ed3a0605cc9e426bbf26fff383758461f50f37f",
+        "prior_catalog_status": null
+      }
+    ],
+    "counts": {
+      "target_shallow_cell_centers": 2180800,
+      "prior_valid_shallow_at_center": 1124965,
+      "prior_valid_but_not_shallow_at_center": 10913,
+      "prior_nodata_or_outside_review_at_center": 1044922,
+      "prior_finer_or_equal_valid_at_center": 472007
+    },
+    "comparison_sources": [
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "source_sha256": "1429fe797ed6668187475701903822b2c9ec9d38ea21a1a1fa9b9c1b0b4af3d6",
+        "cog_sha256": "daeacc9c53d64879346f8d7b090fdb7223e9d3617a4ce5c9853ed67a25a664d9",
+        "resolution_m": 5.0,
+        "year": "unknown",
+        "resolution_profile": null,
+        "valid_at_target_centers": 71669,
+        "shallow_at_target_centers": 69947
+      },
+      {
+        "source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+        "source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+        "cog_sha256": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+        "resolution_m": 2,
+        "year": "unknown",
+        "resolution_profile": null,
+        "valid_at_target_centers": 215759,
+        "shallow_at_target_centers": 215225
+      },
+      {
+        "source_id": "usgs-1998-sgf5g-native",
+        "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+        "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+        "resolution_m": 5,
+        "year": 1998,
+        "resolution_profile": null,
+        "valid_at_target_centers": 802263,
+        "shallow_at_target_centers": 789786
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "source_sha256": "4f7c4fb174923152d4894327de6ef25b2e1b31d4243ce83fff25879353d10bd6",
+        "cog_sha256": "c695fcfc1ba6a2f5900b30d4c49fd1ee9528e6811448c930f3b72d6c91af894e",
+        "resolution_m": 2.0,
+        "year": 2004,
+        "resolution_profile": null,
+        "valid_at_target_centers": 256248,
+        "shallow_at_target_centers": 256047
+      }
+    ],
+    "comparisons_complete": true,
+    "gap_pixel_area_proxy_km2": 4.179688,
+    "method": "Nearest-neighbor sample of all reviewed overlapping rasters at native candidate cell centers, clipped to reviewed bounds. Any positive valid prior depth counts as existing support. Finer/equal comparison honors existing producer resolution_profile using production fine_detail_valid; delivered raster spacing alone does not establish effective detail. Counts and native-cell area proxy are not exact polygon areas or independent sonar returns.",
+    "public_coverage_credit_km2": 0
+  },
+  "coverage_summary": {
+    "catalog_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "additional_private_comparison_drafts": [
+      {
+        "source_id": "csumb-cooperpoint-2m-native",
+        "draft_sha256": "118fcd47c2df497cfd08b6b3f871ca887ed8915d221b00db94460ecf4b8d8ace",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-grimes-point-2m-native",
+        "draft_sha256": "d3efa16f84a666967382766acf083846bc04a1595600c0acc65990076bea69f8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+        "draft_sha256": "5825c00353a5db9840f189b6101208194c3859be2f7591d6002d636fee08a649",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-hurricane-point-2m-native",
+        "draft_sha256": "9c1efd05cf2f9713e564fcb71a113511f2efb798eb8895ae15e8b81044906ee0",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-kasler-point-2m-native",
+        "draft_sha256": "9e4418d0358c109fd2f914a41a59a6961e948d71ffba59c86f8c697057be8b02",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "draft_sha256": "3395d064c14626d1f17ff0d8eda938071f52766013b66d9f38af6e43eca5cb8a",
+        "prior_catalog_status": "candidate"
+      },
+      {
+        "source_id": "csumb-point-sur-2m-native",
+        "draft_sha256": "cc9cd4eac65e8cc708556415588d1b52c3a0843e1abde01ae7077f4216083901",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-soberanes-point-2m-native",
+        "draft_sha256": "080077d8adaa1d770d69bd8b7bec1047b0520d6fbe9b58e2548e3cb66d7fa6dd",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "draft_sha256": "9316833acc747d0c7e829e7a830a62ec775689fa9f250042d78b6d2f7dbc3213",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-1m-native",
+        "draft_sha256": "2ebd7b20962742332b741ef1f83bb48586615e930de8c80243cdc8f7369fa30a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-2m-native",
+        "draft_sha256": "ef07e148e0714ed52cc3e0b9d9ecd010f8d23ae14be9f3aeed02e6056fff1926",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockc-5m-native",
+        "draft_sha256": "0dae698ba33c6c18335f157752d56cf8ec994ccfa9d91f94aeea29802eee24e4",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-1m-native",
+        "draft_sha256": "4afd21a28291727dd427f3952ad594db5baa459e9254558f290c93af38251e7a",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blockd-2m-native",
+        "draft_sha256": "7118c0c6b0684a21b10ed55ef022e81c5105a89df83c391c5283bed7dcd512e8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-2m-native",
+        "draft_sha256": "7184de31018d84e480fd7d0aea0dab2a0009141aa3d2774c0e05886b3c264bd8",
+        "prior_catalog_status": null
+      },
+      {
+        "source_id": "csumb-pge-mid-blocke-5m-native",
+        "draft_sha256": "3289e8a8499f33cd1a4e98dc7ed3a0605cc9e426bbf26fff383758461f50f37f",
+        "prior_catalog_status": null
+      }
+    ],
+    "native_shallow_footprint_km2": 8.728291743156312,
+    "incremental_shallow_footprint_km2": 4.225094867002035,
+    "comparisons_complete": true,
+    "comparisons": [
+      {
+        "source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "resolution_m": 5.0,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "1429fe797ed6668187475701903822b2c9ec9d38ea21a1a1fa9b9c1b0b4af3d6",
+        "cog_sha256": "daeacc9c53d64879346f8d7b090fdb7223e9d3617a4ce5c9853ed67a25a664d9",
+        "status": "checked",
+        "cache_receipt": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+        "reviewed_shallow_area_in_target_envelope_km2": 0.2910731122106002,
+        "target_overlap_km2": 0.28019297574555685
+      },
+      {
+        "source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+        "resolution_m": 2,
+        "vertical_datum": "NAVD88",
+        "source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+        "cog_sha256": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+        "status": "checked",
+        "cache_receipt": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.0106760469326277,
+        "target_overlap_km2": 0.8622848657364173
+      },
+      {
+        "source_id": "usgs-1998-sgf5g-native",
+        "resolution_m": 5,
+        "vertical_datum": "unknown",
+        "source_sha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+        "cog_sha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+        "status": "checked",
+        "cache_receipt": "usgs-1998-sgf5g-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 3.22346078901755,
+        "target_overlap_km2": 3.159930155591214
+      },
+      {
+        "source_id": "csumb-yankee-point-2m-native",
+        "resolution_m": 2.0,
+        "vertical_datum": "unknown",
+        "source_sha256": "4f7c4fb174923152d4894327de6ef25b2e1b31d4243ce83fff25879353d10bd6",
+        "cog_sha256": "c695fcfc1ba6a2f5900b30d4c49fd1ee9528e6811448c930f3b72d6c91af894e",
+        "status": "checked",
+        "cache_receipt": "csumb-yankee-point-2m-native",
+        "reviewed_shallow_area_in_target_envelope_km2": 1.0802749744198554,
+        "target_overlap_km2": 1.0264079253767278
+      }
+    ],
+    "by_reach": {
+      "monterey-point-sur-r02": {
+        "native_km2": 8.708471865214618,
+        "incremental_km2": 4.223890412019259
+      }
+    }
+  },
+  "limits": [
+    "Producer-gridded sonar depth, not individually verified soundings.",
+    "Nominal depth only; no chart-depth validation, fish presence or legal clearance.",
+    "Unknown interpolation masks stay unknown. No independent acquisition count added.",
+    "Only coordinator processing and publication can establish a public coverage delta."
+  ]
+}
