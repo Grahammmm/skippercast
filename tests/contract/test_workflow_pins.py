@@ -13,6 +13,24 @@ USES = re.compile(r'^\s*-?\s*uses:\s*(\S+)', re.M)
 
 
 class WorkflowPinTests(unittest.TestCase):
+    def test_ci_checks_each_pr_and_main_without_duplicate_branch_pushes(self):
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        header = ci.split('permissions:', 1)[0]
+        self.assertRegex(header, r'\n  push:\n    branches: \[main\]\n  pull_request:\n')
+        self.assertIn('\n  workflow_dispatch:\n', header)
+        # Required job names and full test layers remain available on every PR.
+        for name in ('survey-science', 'e2e', 'check'):
+            self.assertRegex(ci, rf'\n  {name}:\n')
+
+    def test_only_obsolete_pr_checks_are_automatically_cancelled(self):
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        header = ci.split('permissions:', 1)[0]
+        self.assertIn('group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}', header)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", header)
+        publication = (ROOT / '.github/workflows/seafloor.yml').read_text()
+        self.assertIn('group: seafloor-publication', publication)
+        self.assertIn('cancel-in-progress: false', publication)
+
     def test_actions_are_pinned_to_commit_shas(self):
         unpinned = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):

@@ -49,3 +49,19 @@ python -m skippercast.seafloor.jobs run-group --region REGION_ID \
 ```
 
 Do not manually invent a production batch or run a competing publisher.
+
+## Avoid duplicate check-suite queues
+
+The prior CI triggers started the same four full-check jobs on both a branch
+push and its pull-request update. This created eight jobs for one PR revision,
+in addition to the separate sign-off check. Restrict the push trigger to `main`;
+retain the unrestricted pull-request trigger and the manual dispatch needed for
+bot-created ledger PRs. All test jobs, permissions and required check names are
+unchanged. This removes four duplicate runner jobs per ordinary PR revision.
+
+PR-number concurrency cancels obsolete revisions of that PR only. Main and
+manual-dispatch runs are not interrupted; the seafloor production lock also
+retains `cancel-in-progress: false`. Runs queued before this policy do not gain
+retroactive cancellation. This follows GitHub's documented
+[event filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#using-filters)
+and [workflow concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
