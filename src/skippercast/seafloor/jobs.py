@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import traceback
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -16,6 +17,27 @@ from .restore import restore_reference
 from .run import run, apply_ledger
 from .screen_sources import refresh
 from .rollout import plan, report
+
+WORKER_GROUP_SIZE = 3
+REACH_TIMEOUT_SECONDS = 60 * 60
+
+
+def worker_groups(matrix):
+    """Partition exact reach assignments; never broaden or drop publication work."""
+    regions, seen = {}, set()
+    for row in matrix['include']:
+        reach, region = row['reach'], row['region']
+        state_cache.scope_name(reach)
+        state_cache.scope_name(region)
+        if reach in seen:
+            raise ValueError('Duplicate reach in worker matrix')
+        seen.add(reach)
+        regions.setdefault(region, []).append(reach)
+    return {'include': [
+        {'region': region, 'group': index // WORKER_GROUP_SIZE + 1,
+         'reaches': reaches[index:index + WORKER_GROUP_SIZE]}
+        for region, reaches in regions.items()
+        for index in range(0, len(reaches), WORKER_GROUP_SIZE)]}
 
 
 def select(root, region=None, reach=None):
@@ -134,6 +156,54 @@ def process(root, reach, batch):
         s3.put_object(Bucket=bucket, Key=f'seafloor-review/progress/{reach}.json',
                       Body=json.dumps(result).encode(), ContentType='application/json', CacheControl='private, no-store')
     return result
+
+
+def group_member(root, reach, batch):
+    """Keep each reach's process lifetime and 60-minute processing limit separate."""
+    command = [sys.executable, '-m', 'skippercast.seafloor.jobs', 'run',
+               '--reach', reach, '--batch', batch]
+    completed = subprocess.run(command, cwd=Path(root), stdout=subprocess.PIPE,
+                               text=True, check=True, timeout=REACH_TIMEOUT_SECONDS)
+    result = json.loads(completed.stdout)
+    if (result.get('reach') != reach or result.get('batch') != batch
+            or result.get('status') not in ('complete', 'coverage-only', 'failed')):
+        raise ValueError('Grouped worker returned an invalid receipt identity')
+    return result
+
+
+def process_group(root, reaches, region, batch):
+    """Run a bounded regional group sequentially, preserving per-reach receipts.
+
+    A failed restore, computation or receipt write must not prevent the remaining
+    assigned reaches from running. Missing receipts still fail final publication.
+    No successful result is synthesized here and no worker skips native checks.
+    """
+    state_cache.scope_name(region)
+    if (not isinstance(reaches, list) or not 1 <= len(reaches) <= WORKER_GROUP_SIZE
+            or any(not isinstance(reach, str) for reach in reaches)
+            or len(set(reaches)) != len(reaches)):
+        raise ValueError('Worker group must contain one to three unique reaches')
+    known = {row['id']: row['region'] for row in
+             read_json(Path(root)/'catalog/reaches.json')['reaches']}
+    for reach in reaches:
+        batch_key(batch, reach)
+        if known.get(reach) != region:
+            raise ValueError('Worker group contains an unknown or cross-region reach')
+    results = []
+    for reach in reaches:
+        print(f'worker group: process {reach}', file=sys.stderr, flush=True)
+        try:
+            result = group_member(root, reach, batch)
+        except Exception as error:
+            traceback.print_exc()
+            # This is diagnostic only. Without its checked per-reach receipt,
+            # finish() treats the reach as incomplete and blocks that region.
+            result = {'reach': reach, 'batch': batch, 'status': 'failed',
+                      'reason': 'worker interrupted before retaining its result',
+                      'error_type': type(error).__name__}
+        results.append(result)
+    return {'region': region, 'batch': batch, 'results': results,
+            'complete': all(row['status'] == 'complete' for row in results)}
 
 
 def publication_key(batch, region):
@@ -261,9 +331,11 @@ def finish(root, matrix, batch, *, region=None, ledger_only=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('stage', choices=('prepare', 'run', 'finish'))
+    parser.add_argument('stage', choices=('prepare', 'run', 'run-group', 'finish'))
     parser.add_argument('--region')
     parser.add_argument('--reach')
+    parser.add_argument('--reaches', type=json.loads,
+                        help='JSON list of one to three reaches for a regional worker')
     parser.add_argument('--matrix', type=Path)
     parser.add_argument('--ledger-only', action='store_true', help='Reconcile checked batch reach results without scientific rebuild or publication')
     parser.add_argument('--max-new', type=int, default=3)
@@ -273,10 +345,14 @@ def main():
         result = prepare(REPO, args.region, args.reach, args.max_new)
     elif args.stage == 'run':
         result = process(REPO, args.reach, args.batch)
+    elif args.stage == 'run-group':
+        result = process_group(REPO, args.reaches, args.region, args.batch)
     else:
         result = finish(REPO, read_json(args.matrix), args.batch,
                         region=args.region, ledger_only=args.ledger_only)
     print(json.dumps(result))
+    if args.stage == 'run-group' and not result['complete']:
+        raise SystemExit(1)
 
 
 if __name__ == '__main__':
