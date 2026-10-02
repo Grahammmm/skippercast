@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify credited noncommercial SCC17–25 depth grids and screen three Point Sal–Purisima reaches, retaining native 2 m measurements, private holds and the paid-deployment gate. Local validation yields 1,471 eligible habitat areas; production publication is verified separately.
+
 - Seafloor: explicitly migrate verified legacy numeric-only cache identities without recalculating terrain or changing habitat geometry/ranks; retain complete private recovery and require fresh screening before release.
 - Seafloor: declare the current noncommercial deployment profile and block incompatible paid deployments before writes; retain original producer credits and permission requirements.
 
