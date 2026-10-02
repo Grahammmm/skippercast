@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify seven existing SCC09–12 native grids, adding 59 screened areas and 1.002481 km² of habitat across three Morro reaches in local validation; public release remains subject to the production pipeline.
+
 - Permit the reviewed NOAA Point Lobos original archive through the native seafloor importer while retaining checksum, format and producer-use checks.
 
 - Seafloor: qualify six existing Big Creek/Lopez Point native grids with preserved source identities and reviewed metadata corrections. Complete the intervening Big Sur reach screen; local results contain 284 passing habitat areas with all 184 held areas private. This releases existing measured support and does not claim new sonar coverage.
