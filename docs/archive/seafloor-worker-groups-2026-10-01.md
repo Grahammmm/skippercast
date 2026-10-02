@@ -59,8 +59,10 @@ retain the unrestricted pull-request trigger and the manual dispatch needed for
 bot-created ledger PRs. All test jobs, permissions and required check names are
 unchanged. This removes four duplicate runner jobs per ordinary PR revision.
 
-PR-number concurrency cancels obsolete revisions of that PR only. Main and
-manual-dispatch runs are not interrupted; the seafloor production lock also
+PR-number concurrency cancels obsolete revisions of that PR only. Other events
+use their distinct run IDs: a manual run cannot replace a pending main push
+needed for deployment. Main and manual-dispatch runs are not interrupted or
+coalesced; the seafloor production lock also
 retains `cancel-in-progress: false`. Runs queued before this policy do not gain
 retroactive cancellation. This follows GitHub's documented
 [event filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#using-filters)

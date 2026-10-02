@@ -25,7 +25,9 @@ class WorkflowPinTests(unittest.TestCase):
     def test_only_obsolete_pr_checks_are_automatically_cancelled(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         header = ci.split('permissions:', 1)[0]
-        self.assertIn('group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}', header)
+        # A distinct run ID for non-PR events also prevents replacement of a
+        # pending main push by a manual run, which cannot trigger deployment.
+        self.assertIn('group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}', header)
         self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", header)
         publication = (ROOT / '.github/workflows/seafloor.yml').read_text()
         self.assertIn('group: seafloor-publication', publication)
