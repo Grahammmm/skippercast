@@ -271,6 +271,7 @@ def build_candidates(sources, cells, bindings, rules, reach, *, root):
                   'distance_m': ga.distance(gb)} for i, (a, ga) in enumerate(selected) for b, gb in selected[i+1:]]
         return {'type': 'FeatureCollection', 'features': features,
                 'rule_version': rules['rule_version'], 'thresholds': limits, 'survey_seams': seams,
+                'calibration_source_ids': sorted(g['source']['row']['id'] for g in grids),
                 'processing': [g.get('processing', {'method': 'native-monolithic-v1',
                     'window_pixels': int(g['depth'].size)}) for g in grids],
                 'status': 'held-for-legal-screen', 'exportable': False}

@@ -76,6 +76,7 @@ def region_layers(root, region, *, rerun=True, now=None):
         selected = read_json(folder/'habitat.geojson')['features']
         if selected and screen['status'] != 'ready':
             raise ValueError('Held reach cannot publish habitat')
+        calibration_checked = False
         for f in selected:
             p = f['properties']
             if (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']
@@ -84,15 +85,31 @@ def region_layers(root, region, *, rerun=True, now=None):
                 raise ValueError('Unqualified feature in publication input')
             if sources is None:
                 sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
+            if not calibration_checked:
+                input_ids = {s['id'] for s in receipt['inputs'].get('sources', [])}
+                held_inputs = {ident for ident in input_ids if sources.get(ident, {}).get('habitat_quality_hold')}
+                if held_inputs:
+                    # Intersecting sources may lose every coverage cell. Only actual
+                    # grid contributors calibrated thresholds, including contributors
+                    # that produced no candidates of their own. This inventory is
+                    # covered by the candidate output hash checked above.
+                    if 'candidates.geojson' not in receipt['outputs']:
+                        raise ValueError('Missing verified habitat calibration inventory; rerun required')
+                    calibration_ids = read_json(folder/'candidates.geojson').get('calibration_source_ids')
+                    if (not isinstance(calibration_ids, list) or not calibration_ids
+                            or any(not isinstance(ident, str) for ident in calibration_ids)
+                            or len(set(calibration_ids)) != len(calibration_ids)
+                            or not set(calibration_ids).issubset(input_ids)):
+                        raise ValueError('Invalid habitat calibration inventory; rerun required')
+                    if held_inputs.intersection(calibration_ids):
+                        raise ValueError('Shared habitat threshold quality review is unresolved; rerun required')
+                calibration_checked = True
             contributors = list(p['source_ids'])
             substrate = p.get('substrate', {})
             if isinstance(substrate, dict) and substrate.get('source_id') not in (None, 'unknown'):
                 contributors.append(substrate['source_id'])
             if any(sources.get(ident, {}).get('habitat_quality_hold') for ident in contributors):
                 raise ValueError('Source habitat quality review is unresolved; rerun required')
-            calibration_sources = receipt['inputs'].get('sources', [])
-            if any(sources.get(s['id'], {}).get('habitat_quality_hold') for s in calibration_sources):
-                raise ValueError('Shared habitat threshold quality review is unresolved; rerun required')
             public_properties = dict(p, source_rights=feature_rights(contributors, sources,
                 use=deployment_use(root)))
             habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})

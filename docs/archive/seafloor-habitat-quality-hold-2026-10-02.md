@@ -32,6 +32,13 @@ A different source ID alone does not establish independence from a questionable
 threshold contributor. Independently processed groups remain unaffected. Both
 monolithic and tiled extraction use the same feature constructor.
 
+The hashed candidate collection records `calibration_source_ids` from grids
+actually selected for threshold calculation, including grids that produce no
+candidates. Intersecting surveys that win no coverage cells are excluded. When
+a current source hold exists, publication checks that verified inventory;
+legacy or malformed inventories require recomputation. This avoids blocking
+clear habitat merely because an unused coarser survey overlaps the reach.
+
 Publication rejects a quality hold found in the feature, its hold reasons, or
 the current source catalog, including shared calibration contributors, even if
 a stale feature claims it passed screening.
