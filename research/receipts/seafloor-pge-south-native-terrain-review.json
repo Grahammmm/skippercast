@@ -1,0 +1,621 @@
+{
+  "checked_at": "2026-10-02T10:26:20.803116+00:00",
+  "main_commit": "ea3d0b6d096d0eb66efec4bfb40c8ed3ae690db0",
+  "existing_evidence_reused": [
+    {
+      "name": "publishable-ancillary-review.json",
+      "sha256": "f8d80eb3ae769f6dace9c3bc8b2447b11f89d2170157d38dbf8bd09f4ae1a821",
+      "bytes": 11877
+    },
+    {
+      "name": "native-terrain-class-audit.json",
+      "sha256": "33cd8d43809d485ce2eec9c59b90e0ade9b60ddfefc7a27297dcfc359b0b5414",
+      "bytes": 38049
+    },
+    {
+      "name": "native-backscatter-audit.json",
+      "sha256": "6af72afe9981b6fcff9098c788f8f3fd3044e713ff171086f32a2ef20289bd75",
+      "bytes": 21314
+    },
+    {
+      "name": "backscatter-sidecar-check.json",
+      "sha256": "57bb39321c5c8d2ac1da040b62f5aca7a400a3cccc0b0ecf1a15b8a5f5034c5f",
+      "bytes": 5963
+    },
+    {
+      "name": "artifact-mask-review.json",
+      "sha256": "7e32bcace930a75e9c12b79d14e97680721d4540c78eb6e3a5290394fa19e2cf",
+      "bytes": 2569
+    },
+    {
+      "name": "source-notes-addendum.json",
+      "sha256": "d3cc775f43cc18bf48bdbe749fc9a1f13e0fd4011dfe0336bda5bc59bb844de5",
+      "bytes": 2600
+    }
+  ],
+  "source_archive_redownloaded": false,
+  "new_full_grid_classification_run": false,
+  "native_reader_implementation_sha256": "5647eab2e6cadb3ca75dbdc43200e090ae135f68d31a7412e4cbab7d7e1d088e",
+  "native_reader_implementation_status": "Coordinator working tree at review time; no merged/deployed claim.",
+  "sources": [
+    {
+      "source_id": "csumb-pge-south-blockf-2m-native",
+      "original_source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "source_bytes": 1479539208,
+      "status_at_pinned_main": "physical-only",
+      "depth_archive_member": "CC_BlkF_2m.5m_bathygrids.zip/ArcViewGrids/cc_bf_2mbthy",
+      "class_archive_member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab",
+      "depth_cog_sha256": "8c8df46a12ef66be6bc9c2c32f5cab6d68d65325e3aa07492ba28d5123c04fe9",
+      "metadata": [
+        {
+          "role": "native_depth",
+          "member": "CC_BlkF_2m.5m_bathygrids.zip/ArcViewGrids/cc_bf_2mbthy/metadata.xml",
+          "sha256": "fee2da061736da40026e6e846c5f301349c501dbd6811856d1ffe8ae8c5bf534"
+        },
+        {
+          "role": "native_class_legend",
+          "member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab/metadata.xml",
+          "sha256": "4d65697af11ea4044a247da06c24178503bd37232e935c486eb6d4a588c2f3f2"
+        },
+        {
+          "role": "rough_smooth_method",
+          "member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2msub/metadata.xml",
+          "sha256": "40c10e07aaf0fdda32df279a968aa6722514141710f1254c392207ed99fd18e8"
+        }
+      ],
+      "native_alignment": {
+        "original_depth_class_crs_transform_shape_equal": true,
+        "normalized_depth_class_crs_transform_shape_equal": true,
+        "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_transform": [
+          2.0,
+          0.0,
+          701890.53,
+          0.0,
+          -2.0,
+          3892890.36,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_dimensions": [
+          4700,
+          4296
+        ],
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "class_nodata": -32768.0,
+        "no_resampling": true
+      },
+      "all_valid_class_counts": {
+        "-1": 128150,
+        "0": 411956,
+        "-31": 73844,
+        "-30": 10138930
+      },
+      "nominal_0_300ft_class_counts": {
+        "-1": 128150,
+        "0": 411956,
+        "-31": 73844,
+        "-30": 10138930
+      },
+      "nominal_shallow_depth_cells": 10775530,
+      "missing_class_at_shallow_cells": 22650,
+      "unknown_codes": [],
+      "unknown_code_count": 0,
+      "positive_rough_shallow_cells": 201994,
+      "positive_rough_cell_area_proxy_km2": 0.807976,
+      "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
+      "method": "Original same-DEM SA:PA and/or VRM, with an undocumented numerical threshold in the inspected product-specific text. Subjective classification and hand-drawn likely artifact exclusions assigned smooth.",
+      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "depth_datum": "NAVD88",
+      "original_acquisition": [
+        "2009-06-03",
+        "2009-06-04",
+        "2009-06-05",
+        "2009-06-06",
+        "2009-06-07",
+        "2009-06-08",
+        "2009-06-09",
+        "2009-06-10"
+      ],
+      "vertical_realization": "GEOID03; original native processing and positional narrative agree.",
+      "rights": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "conditional_binding_proposal": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-south-blockf-2m-native",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "depth_archive_member": "CC_BlkF_2m.5m_bathygrids.zip/ArcViewGrids/cc_bf_2mbthy",
+        "depth_cog_sha256": "8c8df46a12ef66be6bc9c2c32f5cab6d68d65325e3aa07492ba28d5123c04fe9",
+        "archive_member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab",
+        "metadata_sha256": "4d65697af11ea4044a247da06c24178503bd37232e935c486eb6d4a588c2f3f2",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-south-native-terrain-review.json#/sources/0"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve physical-only status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
+      },
+      "native_validation": {
+        "source_id": "csumb-pge-south-blockf-2m-native",
+        "binding_sha256": "937bb61a015227d7ec03131768082fb77ba579734125a1a6d99ab6c18fd6c135",
+        "native_reader_passed": true,
+        "normalized_receipt_supplied_and_verified": true,
+        "physical_only_status_preserved": true,
+        "archive_and_metadata_reverified": true,
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "1ae9c9da4e0900b219bef75ff461d5a7cde8db484aa2623b72f75a73638e5ada"
+      }
+    },
+    {
+      "source_id": "csumb-pge-south-blockg-2m-native",
+      "original_source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "source_bytes": 1479539208,
+      "status_at_pinned_main": "physical-only",
+      "depth_archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_2mbthy",
+      "class_archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab",
+      "depth_cog_sha256": "f522537a5ecb76722ecb544b398505e04722b0280bdaeee14f024e3504a2230e",
+      "metadata": [
+        {
+          "role": "native_depth",
+          "member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_2mbthy/metadata.xml",
+          "sha256": "46441ebe0773b7a189cdbd49b977f2cc9ea2d17769b9b61594fbfa57e24570b8"
+        },
+        {
+          "role": "native_class_legend",
+          "member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab/metadata.xml",
+          "sha256": "f7add63e075d3eb981a4ffb8d42b122bdb688daa4ff137bf561adf5d93c19a3b"
+        },
+        {
+          "role": "rough_smooth_method",
+          "member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2msub/metadata.xml",
+          "sha256": "0ee029f6e06f9ec92823bf300e23a75e9cd6367440fb317b888d0c4a77d51b71"
+        }
+      ],
+      "native_alignment": {
+        "original_depth_class_crs_transform_shape_equal": true,
+        "normalized_depth_class_crs_transform_shape_equal": true,
+        "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_transform": [
+          2.0,
+          0.0,
+          699634.53,
+          0.0,
+          -2.0,
+          3886070.36,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_dimensions": [
+          2769,
+          3960
+        ],
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "class_nodata": -32768.0,
+        "no_resampling": true
+      },
+      "all_valid_class_counts": {
+        "-30": 8515718,
+        "-31": 1
+      },
+      "nominal_0_300ft_class_counts": {
+        "-30": 8515718,
+        "-31": 1
+      },
+      "nominal_shallow_depth_cells": 8534132,
+      "missing_class_at_shallow_cells": 18413,
+      "unknown_codes": [],
+      "unknown_code_count": 0,
+      "positive_rough_shallow_cells": 1,
+      "positive_rough_cell_area_proxy_km2": 4e-06,
+      "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
+      "method": "Original same-DEM SA:PA and/or VRM, with an undocumented numerical threshold in the inspected product-specific text. Subjective classification and hand-drawn likely artifact exclusions assigned smooth.",
+      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "depth_datum": "NAVD88",
+      "original_acquisition": [
+        "2009-06-03",
+        "2009-06-04",
+        "2009-06-05",
+        "2009-06-06",
+        "2009-06-07",
+        "2009-06-08",
+        "2009-06-09",
+        "2009-06-10"
+      ],
+      "vertical_realization": "GEOID03; original native processing and positional narrative agree.",
+      "rights": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "conditional_binding_proposal": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-south-blockg-2m-native",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "depth_archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_2mbthy",
+        "depth_cog_sha256": "f522537a5ecb76722ecb544b398505e04722b0280bdaeee14f024e3504a2230e",
+        "archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab",
+        "metadata_sha256": "f7add63e075d3eb981a4ffb8d42b122bdb688daa4ff137bf561adf5d93c19a3b",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-south-native-terrain-review.json#/sources/1"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve physical-only status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
+      },
+      "native_validation": {
+        "source_id": "csumb-pge-south-blockg-2m-native",
+        "binding_sha256": "de9c6d06e18813197337f12301df7c854cda8ef5b45a509949159343007c26d4",
+        "native_reader_passed": true,
+        "normalized_receipt_supplied_and_verified": true,
+        "physical_only_status_preserved": true,
+        "archive_and_metadata_reverified": true,
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "99f55a599a5e7a44527722208226c08e97a0ecbc45ee81c565afd803b02a75a2"
+      },
+      "support_limit": "One native 2m rough cell is not a fishable reef; current area, connectivity and quality screens remain required."
+    },
+    {
+      "source_id": "csumb-pge-south-blockh-2m-native",
+      "original_source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "source_bytes": 1479539208,
+      "status_at_pinned_main": "physical-only",
+      "depth_archive_member": "CC_BlkH_2m.5m_bathygrids.zip/ArcViewGrids/cc_bh_2mbthy",
+      "class_archive_member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab",
+      "depth_cog_sha256": "bc8b902abab04bac3c4668a77ab0832931241e62a15af3015d4e83a829c63bc7",
+      "metadata": [
+        {
+          "role": "native_depth",
+          "member": "CC_BlkH_2m.5m_bathygrids.zip/ArcViewGrids/cc_bh_2mbthy/metadata.xml",
+          "sha256": "ce2bdc91d71f7cdfb08fff7d81b1bfcbfb1c34adce9259ed81878c4ca858ffd2"
+        },
+        {
+          "role": "native_class_legend",
+          "member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab/metadata.xml",
+          "sha256": "f1430f3f6d557152826a18fcb2db6be3b75dfdc22ee80a6cdd863c0c6886dc31"
+        },
+        {
+          "role": "rough_smooth_method",
+          "member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2msub/metadata.xml",
+          "sha256": "3fdf21f31db31392405f5594d2cd4fb4be9f044d661a76c9850a52781ae6ff88"
+        }
+      ],
+      "native_alignment": {
+        "original_depth_class_crs_transform_shape_equal": true,
+        "normalized_depth_class_crs_transform_shape_equal": true,
+        "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_transform": [
+          2.0,
+          0.0,
+          704700.53,
+          0.0,
+          -2.0,
+          3884660.36,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_dimensions": [
+          5212,
+          3151
+        ],
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "class_nodata": -32768.0,
+        "no_resampling": true
+      },
+      "all_valid_class_counts": {
+        "-30": 10577009,
+        "0": 2514787
+      },
+      "nominal_0_300ft_class_counts": {
+        "-30": 10577009,
+        "0": 2514787
+      },
+      "nominal_shallow_depth_cells": 13115742,
+      "missing_class_at_shallow_cells": 23946,
+      "unknown_codes": [],
+      "unknown_code_count": 0,
+      "positive_rough_shallow_cells": 0,
+      "positive_rough_cell_area_proxy_km2": 0.0,
+      "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
+      "method": "Original same-DEM SA:PA and/or VRM, with an undocumented numerical threshold in the inspected product-specific text. Subjective classification and hand-drawn likely artifact exclusions assigned smooth.",
+      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "depth_datum": "NAVD88",
+      "original_acquisition": [
+        "2009-06-03",
+        "2009-06-04",
+        "2009-06-05",
+        "2009-06-06",
+        "2009-06-07",
+        "2009-06-08",
+        "2009-06-09",
+        "2009-06-10"
+      ],
+      "vertical_realization": "GEOID03; original native processing and positional narrative agree.",
+      "rights": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "conditional_binding_proposal": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-south-blockh-2m-native",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "depth_archive_member": "CC_BlkH_2m.5m_bathygrids.zip/ArcViewGrids/cc_bh_2mbthy",
+        "depth_cog_sha256": "bc8b902abab04bac3c4668a77ab0832931241e62a15af3015d4e83a829c63bc7",
+        "archive_member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab",
+        "metadata_sha256": "f1430f3f6d557152826a18fcb2db6be3b75dfdc22ee80a6cdd863c0c6886dc31",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-south-native-terrain-review.json#/sources/2"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve physical-only status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
+      },
+      "native_validation": {
+        "source_id": "csumb-pge-south-blockh-2m-native",
+        "binding_sha256": "712025af2d759c465ae915f9d146bbc2f87246bef3480133df97e308172fd79f",
+        "native_reader_passed": true,
+        "normalized_receipt_supplied_and_verified": true,
+        "physical_only_status_preserved": true,
+        "archive_and_metadata_reverified": true,
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "36493d5c596e23bf269ee9aceef184153052191967f1b28dc62e837a132c639d"
+      }
+    },
+    {
+      "source_id": "csumb-pge-south-blockg-5m-native",
+      "original_source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "source_bytes": 1479539208,
+      "status_at_pinned_main": "physical-only",
+      "depth_archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_5mbthy",
+      "class_archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab",
+      "depth_cog_sha256": "8ae40064152810d480b12243f01f4392d1c1897b372a176b2fc0a1d2b3ae69aa",
+      "metadata": [
+        {
+          "role": "native_depth",
+          "member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_5mbthy/metadata.xml",
+          "sha256": "8f99bf0d68c7084d2cb1487f30c7a4ec966723556c9dfdace22d682684fbb53c"
+        },
+        {
+          "role": "native_class_legend",
+          "member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab/metadata.xml",
+          "sha256": "de2b214c57f0669a1f51755e6d0cb381f985488020711676dd18aef611f874eb"
+        },
+        {
+          "role": "rough_smooth_method",
+          "member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5msub/metadata.xml",
+          "sha256": "1ac1a2f02995d58e850d023572922daa3c882e9119c64f3c877d75222c66c937"
+        }
+      ],
+      "native_alignment": {
+        "original_depth_class_crs_transform_shape_equal": true,
+        "normalized_depth_class_crs_transform_shape_equal": true,
+        "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_transform": [
+          5.0,
+          0.0,
+          696629.03,
+          0.0,
+          -5.0,
+          3885251.86,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_dimensions": [
+          1363,
+          1424
+        ],
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "class_nodata": -32768.0,
+        "no_resampling": true
+      },
+      "all_valid_class_counts": {
+        "-100": 351816,
+        "-30": 920135,
+        "-101": 47
+      },
+      "nominal_0_300ft_class_counts": {
+        "-30": 639438
+      },
+      "nominal_shallow_depth_cells": 643293,
+      "missing_class_at_shallow_cells": 3855,
+      "unknown_codes": [],
+      "unknown_code_count": 0,
+      "positive_rough_shallow_cells": 0,
+      "positive_rough_cell_area_proxy_km2": 0.0,
+      "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
+      "method": "Original same-DEM SA:PA and/or VRM, with an undocumented numerical threshold in the inspected product-specific text. Subjective classification and hand-drawn likely artifact exclusions assigned smooth.",
+      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "depth_datum": "NAVD88",
+      "original_acquisition": [
+        "2009-06-03",
+        "2009-06-04",
+        "2009-06-05",
+        "2009-06-06",
+        "2009-06-07",
+        "2009-06-08",
+        "2009-06-09",
+        "2009-06-10"
+      ],
+      "vertical_realization": "GEOID03; original native processing and positional narrative agree.",
+      "rights": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "conditional_binding_proposal": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-south-blockg-5m-native",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "depth_archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_5mbthy",
+        "depth_cog_sha256": "8ae40064152810d480b12243f01f4392d1c1897b372a176b2fc0a1d2b3ae69aa",
+        "archive_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab",
+        "metadata_sha256": "de2b214c57f0669a1f51755e6d0cb381f985488020711676dd18aef611f874eb",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-south-native-terrain-review.json#/sources/3"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve physical-only status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
+      },
+      "native_validation": {
+        "source_id": "csumb-pge-south-blockg-5m-native",
+        "binding_sha256": "24aec2682db1f9f946470333c6cbe39788188c676f9cbdbbeb017bb5b30360c4",
+        "native_reader_passed": true,
+        "normalized_receipt_supplied_and_verified": true,
+        "physical_only_status_preserved": true,
+        "archive_and_metadata_reverified": true,
+        "class_counts_reused_from_pinned_prior_audit": true,
+        "binding_sha256_scope": "Historical source-worker validation before integration renamed the evidence receipt. Native inputs and numerical method are unchanged.",
+        "integrated_binding_sha256": "ac02a7c91794ad547cd399b09884800e6d8b51540b593780766a3b6a24a174e1"
+      },
+      "depth_gate_note": "The 47 whole-grid rough cells are in the 100\u2013200m class; zero fall within the checked 0\u2013300ft native depth screen. Preserve the existing depth limit."
+    }
+  ],
+  "artifact_mask": {
+    "version": 1,
+    "reviewed_at": "2026-10-02T07:50:04.609604+00:00",
+    "original_archive_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+    "zip_containers_inventoried": 27,
+    "nested_member_names_inventoried": 1481,
+    "arcinfo_grid_directories": 69,
+    "metadata_documents": 97,
+    "explicit_mask_name_matches": [],
+    "shapefile_members": [
+      "CC_BlkF_tracklines.zip/Tracklines/CC_BlockF_Tracklines_all.shp",
+      "CC_BlkF_tracklines.zip/Tracklines/CC_BlockF_Tracklines_bathy.shp",
+      "CC_BlkF_vectordata.zip/ContourLines/CC_BlockF_25mbth_10mcontour.shp",
+      "CC_BlkF_vectordata.zip/Footprint/cc_blockf_5mallbt_surveyfootprint.shp",
+      "CC_BlkG_tracklines.zip/Tracklines/CC_BlockG_Tracklines_all.shp",
+      "CC_BlkG_vectordata.zip/ContourLines/CC_BlockG_25mbth_10mcontour.shp",
+      "CC_BlkG_vectordata.zip/Footprint/cc_blockg_5mallbt_surveyfootprint.shp",
+      "CC_BlkH_tracklines.zip/Tracklines/CC_BlockH_Tracklines_all.shp",
+      "CC_BlkH_tracklines.zip/Tracklines/CC_BlockH_Tracklines_bathy.shp",
+      "CC_BlkH_vectordata.zip/ContourLines/CC_BlockH_25mbth_10mcontour.shp",
+      "CC_BlkH_vectordata.zip/Footprint/cc_blockh_5mallbt_surveyfootprint.shp"
+    ],
+    "narrative_mask_metadata": [
+      {
+        "zip": "CC_BlkF_2m_habitat.zip",
+        "member": "ArcViewGrids/cc_bf_2msub/metadata.xml",
+        "metadata_sha256": "40c10e07aaf0fdda32df279a968aa6722514141710f1254c392207ed99fd18e8"
+      },
+      {
+        "zip": "CC_BlkG_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/cc_bg_2msub/metadata.xml",
+        "metadata_sha256": "0ee029f6e06f9ec92823bf300e23a75e9cd6367440fb317b888d0c4a77d51b71"
+      },
+      {
+        "zip": "CC_BlkG_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/cc_bg_5msub/metadata.xml",
+        "metadata_sha256": "1ac1a2f02995d58e850d023572922daa3c882e9119c64f3c877d75222c66c937"
+      },
+      {
+        "zip": "CC_BlkH_2m_habitat.zip",
+        "member": "ArcViewGrids/cc_bh_2msub/metadata.xml",
+        "metadata_sha256": "3fdf21f31db31392405f5594d2cd4fb4be9f044d661a76c9850a52781ae6ff88"
+      }
+    ],
+    "standalone_georeferenced_artifact_mask_identified": false,
+    "interpretation": "The documented manual exclusions affect rough/smooth terrain classification. No distinct, identified spatial mask was found among the reviewed GIS products. The artifact locations cannot be recovered merely by treating every smooth class as invalid. Proprietary Fledermaus scene internals were not decoded; no claim is made about undocumented embedded objects.",
+    "inventory_sha256": "538d215c8e7ce552c3a029066e1f60fbe4d7bb944c4ea5100a25fb221eca9ef8"
+  },
+  "new_independent_survey_count": 0,
+  "new_source_qualification_count": 0,
+  "new_measured_coverage_km2": 0,
+  "public_coverage_credit_km2": 0,
+  "catalog_changes": 0,
+  "source_status_changes": 0,
+  "quality_hold_changes": 0,
+  "rank_changes": 0,
+  "publication_dispatches": 0
+}

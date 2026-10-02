@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bind original PGE South native terrain classes to reviewed depth, preserving measured support and existing source holds while refining habitat calibration and extraction.
+
 - Bind five original SCC rough-terrain grids to their native depth sources. Preserve measured coverage, tighten eligible habitat boundaries and retain all private source/spatial holds; local screening gains 89 connected outlines while habitat area decreases by 3.057 km².
 
 - Add source-bound native rough-terrain support for habitat calibration and extraction, preserving measured depth, existing quality holds and current publication checks.
