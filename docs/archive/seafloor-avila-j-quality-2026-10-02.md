@@ -3,7 +3,8 @@
 Original CSUMB Avila Block J depth remains valuable as measured support, but
 its automatic reef candidates need further artifact review. The producer's
 same-depth rough/smooth product documents vessel-heave effects and manual
-smoothing. Exact native comparisons found no producer-rough overlap for
+exclusions assigned to the smooth class, without changing native depth values.
+Exact native comparisons found no producer-rough overlap for
 832 of the 833 previously passing J candidates; none had majority overlap.
 Native examples show narrow banded terrain on broad smooth slopes.
 
