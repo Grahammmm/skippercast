@@ -194,7 +194,9 @@
     "dist/data/seafloor-scc28-terrain-review.json",
     "dist/data/seafloor-scc24-28-terrain-binding-review.json",
     "dist/data/seafloor-pge-south-native-terrain-review.json",
-    "dist/data/seafloor-pge-south-terrain-binding-review.json"
+    "dist/data/seafloor-pge-south-terrain-binding-review.json",
+    "dist/data/seafloor-pge-mid-native-terrain-review.json",
+    "dist/data/seafloor-pge-mid-terrain-binding-review.json"
   ],
   "surveys": [
     {
@@ -18857,7 +18859,8 @@
       "evidence": [
         "research/receipts/seafloor-pge-mid-c-2m-review.json#/source",
         "research/receipts/seafloor-pge-mid-c-2m-review.json#/metadata",
-        "research/receipts/seafloor-pge-mid-c-2m-review.json#/rights"
+        "research/receipts/seafloor-pge-mid-c-2m-review.json#/rights",
+        "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/0"
       ],
       "field_evidence": {
         "sha256": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/sha256",
@@ -18901,6 +18904,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "76bf92d84744ee754e90deff43ba281ac32ac9cd1bafec0f71b6ab3f62d0d53c"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-mid-blockc-2m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "depth_archive_member": "2011update_cc_blockc_bathygrids.zip/ArcViewGrids/cc_bc_2mbthy",
+        "depth_cog_sha256": "ef3401eee0dfb1c094b7dbaf541aaa1f739704cac24b6a5852004cac9295d372",
+        "archive_member": "2011update_cc_blockc_habitat.zip/ArcViewGrids/cc_bc_2mhab",
+        "metadata_sha256": "c28c6831bff94e0b958c0f846e2bf8aa169994e49443a7b6d794cc6118ce93e5",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/0"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {
@@ -18999,7 +19028,8 @@
       "evidence": [
         "research/receipts/seafloor-pge-mid-e-2m-review.json#/source",
         "research/receipts/seafloor-pge-mid-e-2m-review.json#/metadata",
-        "research/receipts/seafloor-pge-mid-e-2m-review.json#/rights"
+        "research/receipts/seafloor-pge-mid-e-2m-review.json#/rights",
+        "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/1"
       ],
       "field_evidence": {
         "sha256": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/sha256",
@@ -19043,6 +19073,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "fab59c185b49d0b624692cec857099c16c9dc46abe3640a18f9f6552fd0d147b"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-mid-blocke-2m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "depth_archive_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_2mbthy",
+        "depth_cog_sha256": "0e01df2099fe48ece7aa75ab6cb0391dae5d002ab675234b5110661d04b3869b",
+        "archive_member": "CC_BlkE_2m.5m_habitat.zip/ArcViewGrids/cc_be_2mhab",
+        "metadata_sha256": "e21be33f22cea6dc519704438ccc088a32acab6a10bde7d0bc77f9e8d095472d",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/1"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {
@@ -19070,7 +19126,8 @@
       "evidence": [
         "research/receipts/seafloor-pge-mid-c-5m-review.json#/source",
         "research/receipts/seafloor-pge-mid-c-5m-review.json#/metadata",
-        "research/receipts/seafloor-pge-mid-c-5m-review.json#/rights"
+        "research/receipts/seafloor-pge-mid-c-5m-review.json#/rights",
+        "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/2"
       ],
       "field_evidence": {
         "sha256": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/sha256",
@@ -19114,6 +19171,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "8c0969acdb198b886f325f3343993cad49ad59000b9eae9ee5b6d1a162a1a269"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-mid-blockc-5m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "depth_archive_member": "2011update_cc_blockc_bathygrids.zip/ArcViewGrids/cc_bc_5mbthy",
+        "depth_cog_sha256": "636d9d8ebde0e3dc19c1199b806c0e4445f08d320633e774002c5c337757dfe6",
+        "archive_member": "2011update_cc_blockc_habitat.zip/ArcViewGrids/cc_bc_5mhab",
+        "metadata_sha256": "1f677af0472d610134d2c2320e77dc456843584117f15b98da5dbd8e5cfc474e",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/2"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {
@@ -19141,7 +19224,8 @@
       "evidence": [
         "research/receipts/seafloor-pge-mid-e-5m-review.json#/source",
         "research/receipts/seafloor-pge-mid-e-5m-review.json#/metadata",
-        "research/receipts/seafloor-pge-mid-e-5m-review.json#/rights"
+        "research/receipts/seafloor-pge-mid-e-5m-review.json#/rights",
+        "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/3"
       ],
       "field_evidence": {
         "sha256": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/sha256",
@@ -19185,6 +19269,32 @@
           "version": "normalized-raster-content-v1",
           "sha256": "2266dc503e579f29e31b633997a973a8a9d3265cef1eee93d4868d475304eb29"
         }
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-mid-blocke-5m-native",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "depth_archive_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_5mbthy",
+        "depth_cog_sha256": "187d27919bb5aae7e5218de75036239b07631b7ccf85abba5671836b414969eb",
+        "archive_member": "CC_BlkE_2m.5m_habitat.zip/ArcViewGrids/cc_be_5mhab",
+        "metadata_sha256": "72863bf8b92bbcd47a8a69513e74a8a7aa2a10090b9049303c289f1ea9736cf0",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-mid-native-terrain-review.json#/sources/3"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {

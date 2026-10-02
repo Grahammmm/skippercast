@@ -1,0 +1,178 @@
+{
+  "reviewed_at": "2026-10-02T11:28:20.490440+00:00",
+  "scope": "Exact original native terrain bindings for pge-mid; no new acquisition, source promotion or hold removal.",
+  "new_acquisition_km2": 0,
+  "method": "Existing seafloor-habitat-v1 and csumb-native-rough-v1; native positive support affects shared calibration and extraction, never measured-depth coverage. Same-survey interpretation is not independent substrate evidence.",
+  "source_review": "research/receipts/seafloor-pge-mid-native-terrain-review.json",
+  "before_after": [
+    {
+      "reach": "morro-bay-r07",
+      "before": {
+        "selected_valid_km2": 55.921421631,
+        "physical_candidate_count": 702,
+        "habitat_count": 436,
+        "tier2_km2": 3.37061201
+      },
+      "after": {
+        "selected_valid_km2": 55.921421631,
+        "physical_candidate_count": 558,
+        "habitat_count": 314,
+        "tier2_km2": 1.906556289
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "081423affbd214730791e563bb1f4fefc7048f030755c81917846775e2b058e8",
+      "run_input_hash": "e98bc2c106a98dba9f3c6f03b4d2dda3ed59003c05a797dc0ac800f0dafde976",
+      "source_candidate_counts": {
+        "bathymetry-offshorepointbuchon-zip-fcc90bde5c": 124,
+        "csumb-pge-mid-blockc-1m-native": 112,
+        "csumb-pge-mid-blockd-1m-native": 26,
+        "csumb-pge-mid-blockc-2m-native": 289,
+        "csumb-pge-mid-blocke-2m-native": 7
+      },
+      "outputs": {
+        "cells.json": "bbe7da2554e3dbd2f57f2d2ccf93eec4a322d985cdb526ecfbae02722885d199",
+        "terrain.json": "4687ea7fdac91b373de81821957d2a3a66d3447f773988ee7106e2d80cde1cb5",
+        "habitat.geojson": "3cd56ae615e2cab2b1df4f21b5e76b0ca248e7bfee3adaa35406180047a46868",
+        "atlas-comparison.json": "0ba15e741382bb0297aa5eb9c0b6312e8dc35f80376db00e2ffe69796984bba1",
+        "held.geojson": "b3cdd6c6af36eeba9bdf2fba95a6456c0574b72bdec598c1746f55e3b8a9a655",
+        "candidates.geojson": "6000df81b4cd7c221a0caac1c389130211791d0d3c21bacb1f69dd1aae6b9090",
+        "physical.json": "7a028c9f80ac7871676ba2957205a8d51999792c9318cb4caf9c5cb1ab965216"
+      }
+    },
+    {
+      "reach": "morro-bay-r08",
+      "before": {
+        "selected_valid_km2": 60.95992344,
+        "physical_candidate_count": 1011,
+        "habitat_count": 973,
+        "tier2_km2": 7.875940858
+      },
+      "after": {
+        "selected_valid_km2": 60.95992344,
+        "physical_candidate_count": 1022,
+        "habitat_count": 984,
+        "tier2_km2": 5.916412122
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "0656027800cecc5c21f217326336c44d507889c868be38b3d67d0bb57e27fdf2",
+      "run_input_hash": "bd8e45aab0e383911fb2869708d3b1373cbef3201888219b988f211456c5f17f",
+      "source_candidate_counts": {
+        "csumb-pge-avila-blocki-2m-native": 23,
+        "csumb-pge-mid-blockd-1m-native": 324,
+        "csumb-pge-mid-blockc-2m-native": 34,
+        "csumb-pge-mid-blockd-2m-native": 440,
+        "csumb-pge-mid-blocke-2m-native": 201
+      },
+      "outputs": {
+        "cells.json": "acb0ef6188764a9cb737f68dfd98e151a33277f028b245e8dc317e62c783b281",
+        "terrain.json": "43138ecb13741db8b41172586ba97153b2679bd20d26d47e7ba3588849645b61",
+        "habitat.geojson": "6a916733211660dc008c203a4e73fc9c8b9d80951958cf041a1b04a9ad663c2b",
+        "atlas-comparison.json": "c3984194ee440e6d592093ca23fdb3ac429a78154ecbfd3ec1333d377f419eda",
+        "held.geojson": "3975b7a67506bcec7b0e6b96ade4fdd648252dca187accbcd60ae1b75d8b1c13",
+        "candidates.geojson": "081382bdd0625985955b84cd0477825f5b9daf363e403d4fb082cfc4f58f6aee",
+        "physical.json": "cdb5782fd7fed4764dbe5f15a3c61636ae0f1572cac893e48ee11a81d9e52b06"
+      }
+    }
+  ],
+  "native_review": {
+    "audit_sha256": "4ca92172d42ed2c57aefa1f193459b42b01e3ef73d262adfe437e7b4015240dd",
+    "audited_script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "numeric_candidate_count": 531,
+    "visually_reviewed_count": 18,
+    "pages_opened": 6,
+    "sample_method": "All, or uniformly spaced indices sorted by source ID and descending area; numeric diagnostics cover every feature.",
+    "native_center_rough_fraction_min": 0.9891696750902527,
+    "native_center_missing_class_cells": 0,
+    "native_depth_min_m": 18.209999084472656,
+    "native_depth_max_m": 88.87000274658203,
+    "assessment": "All 531 direct bound-source features received native numeric checks; 18 deterministic samples on six pages show localized outcrops, ridges and margins. Some linear terrain remains ambiguous without independent corroboration. Sampling does not establish exhaustive artifact absence, substrate accuracy or fish presence; no stronger source-quality claim is made."
+  },
+  "status_and_hold_changes": 0,
+  "publication": "Private geometry and diagnostic panels are excluded from this repository. The committed public ledger is unchanged; production publication and live read-back are separate.",
+  "spatial_verification": {
+    "receipt_sha256": "c8dd196dcefba28ba54b80941d617d8738ba13ad1d5bb38acfc7c0dcb835097e",
+    "reaches": [
+      {
+        "reach": "morro-bay-r07",
+        "selected_valid_km2": 55.921421631,
+        "physical_candidates": 558,
+        "screened_candidates": 314,
+        "held": 244,
+        "habitat_km2": 1.906556289,
+        "grades": {
+          "A": 2,
+          "B": 39,
+          "C": 273
+        },
+        "source_counts": {
+          "csumb-pge-mid-blockc-1m-native": 76,
+          "csumb-pge-mid-blockd-1m-native": 26,
+          "csumb-pge-mid-blockc-2m-native": 205,
+          "csumb-pge-mid-blocke-2m-native": 7
+        },
+        "datums": {
+          "NAVD88": 314
+        },
+        "restriction_touches": {
+          "cdfw-mpa": 0,
+          "noaa-federal": 0,
+          "security": 0
+        },
+        "snapshot_sha256": "136533985530db00fa9b45c897a8b87c296f8ec861f1e6bee4b10876530c7fa3",
+        "run_hash": "e98bc2c106a98dba9f3c6f03b4d2dda3ed59003c05a797dc0ac800f0dafde976",
+        "physical_hash": "601469ca73dbb6cae9438bc092b637a65499a43a065b9bc78947cc21bf198eb3",
+        "checked_outputs": {
+          "cells.json": "bbe7da2554e3dbd2f57f2d2ccf93eec4a322d985cdb526ecfbae02722885d199",
+          "terrain.json": "4687ea7fdac91b373de81821957d2a3a66d3447f773988ee7106e2d80cde1cb5",
+          "habitat.geojson": "3cd56ae615e2cab2b1df4f21b5e76b0ca248e7bfee3adaa35406180047a46868",
+          "atlas-comparison.json": "0ba15e741382bb0297aa5eb9c0b6312e8dc35f80376db00e2ffe69796984bba1",
+          "held.geojson": "b3cdd6c6af36eeba9bdf2fba95a6456c0574b72bdec598c1746f55e3b8a9a655",
+          "candidates.geojson": "6000df81b4cd7c221a0caac1c389130211791d0d3c21bacb1f69dd1aae6b9090",
+          "physical.json": "7a028c9f80ac7871676ba2957205a8d51999792c9318cb4caf9c5cb1ab965216"
+        }
+      },
+      {
+        "reach": "morro-bay-r08",
+        "selected_valid_km2": 60.95992344,
+        "physical_candidates": 1022,
+        "screened_candidates": 984,
+        "held": 38,
+        "habitat_km2": 5.916412122,
+        "grades": {
+          "A": 3,
+          "B": 43,
+          "C": 938
+        },
+        "source_counts": {
+          "csumb-pge-avila-blocki-2m-native": 21,
+          "csumb-pge-mid-blockd-1m-native": 302,
+          "csumb-pge-mid-blockc-2m-native": 30,
+          "csumb-pge-mid-blockd-2m-native": 430,
+          "csumb-pge-mid-blocke-2m-native": 201
+        },
+        "datums": {
+          "NAVD88": 984
+        },
+        "restriction_touches": {
+          "cdfw-mpa": 0,
+          "noaa-federal": 0,
+          "security": 0
+        },
+        "snapshot_sha256": "136533985530db00fa9b45c897a8b87c296f8ec861f1e6bee4b10876530c7fa3",
+        "run_hash": "bd8e45aab0e383911fb2869708d3b1373cbef3201888219b988f211456c5f17f",
+        "physical_hash": "e45c331497f58568b568bcf4a47e0a89bf2475c741777218210667ed1aac4b57",
+        "checked_outputs": {
+          "cells.json": "acb0ef6188764a9cb737f68dfd98e151a33277f028b245e8dc317e62c783b281",
+          "terrain.json": "43138ecb13741db8b41172586ba97153b2679bd20d26d47e7ba3588849645b61",
+          "habitat.geojson": "6a916733211660dc008c203a4e73fc9c8b9d80951958cf041a1b04a9ad663c2b",
+          "atlas-comparison.json": "c3984194ee440e6d592093ca23fdb3ac429a78154ecbfd3ec1333d377f419eda",
+          "held.geojson": "3975b7a67506bcec7b0e6b96ade4fdd648252dca187accbcd60ae1b75d8b1c13",
+          "candidates.geojson": "081382bdd0625985955b84cd0477825f5b9daf363e403d4fb082cfc4f58f6aee",
+          "physical.json": "cdb5782fd7fed4764dbe5f15a3c61636ae0f1572cac893e48ee11a81d9e52b06"
+        }
+      }
+    ]
+  },
+  "screened_candidate_delta": -111,
+  "screened_habitat_km2_delta": -3.423584457
+}
