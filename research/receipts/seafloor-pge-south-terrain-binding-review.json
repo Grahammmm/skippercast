@@ -1,0 +1,154 @@
+{
+  "reviewed_at": "2026-10-02T11:28:20.212328+00:00",
+  "scope": "Exact original native terrain bindings for pge-south; no new acquisition, source promotion or hold removal.",
+  "new_acquisition_km2": 0,
+  "method": "Existing seafloor-habitat-v1 and csumb-native-rough-v1; native positive support affects shared calibration and extraction, never measured-depth coverage. Same-survey interpretation is not independent substrate evidence.",
+  "source_review": "research/receipts/seafloor-pge-south-native-terrain-review.json",
+  "before_after": [
+    {
+      "reach": "morro-bay-r08",
+      "before": {
+        "selected_valid_km2": 112.082476716,
+        "physical_candidate_count": 726,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "after": {
+        "selected_valid_km2": 112.082476716,
+        "physical_candidate_count": 1046,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "717b2e32af8fbdfe727729bab94b81fd8c3f2e0a07227159faadcbde2af6b423",
+      "run_input_hash": "cc22b0c6007f95cf8a0026aaa5da505ab7a92a2b78e5f4afea9bf198dd9b3003",
+      "source_candidate_counts": {
+        "csumb-pge-avila-blocki-2m-native": 27,
+        "csumb-pge-mid-blockd-1m-native": 316,
+        "csumb-pge-mid-blockc-2m-native": 52,
+        "csumb-pge-mid-blockd-2m-native": 410,
+        "csumb-pge-mid-blocke-2m-native": 203,
+        "csumb-pge-south-blockf-2m-native": 38
+      },
+      "outputs": {
+        "cells.json": "5cff4fe3f850f15ebe5e6e8d518837f718117330c83ade5dd81f795ae872dce3",
+        "terrain.json": "dd2cfc687b1c5cb1388af11e052db0ea9e5593902b2c59b2debaba6b459b2d85",
+        "habitat.geojson": "6d18edfe75b3149104038dcbca4d0096bbcb923f0f9fa4b49f4815344e75bb90",
+        "atlas-comparison.json": "a78bb885307dac816e58d1faef4b7a2510560e60c6b67dab2c5abe2d3bfdc9cd",
+        "held.geojson": "4d5c6ac7116310c5eae3a9f42ae07139d7702e2d6e7ae388fea4dd1aa848cfb0",
+        "candidates.geojson": "d5a39118ddf1b875fb13648239183a278d09607f320bb01312bc98bfeec6d1ac",
+        "physical.json": "eb17676dafd036dd4249086111c0e3b708f857d004482f437e84c4b9fe134774"
+      }
+    },
+    {
+      "reach": "morro-bay-r09",
+      "before": {
+        "selected_valid_km2": 35.781702324,
+        "physical_candidate_count": 192,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "after": {
+        "selected_valid_km2": 35.781702324,
+        "physical_candidate_count": 201,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "07eb2024a8fe2e0d045d7bbc35ec1fa3259174bfdd0704032bb82502808f0b06",
+      "run_input_hash": "dc87c3fb18a19acf09e9ade7c41e977984fdd5df9e5313e4512142994152519a",
+      "source_candidate_counts": {
+        "csumb-pge-avila-blocki-2m-native": 201
+      },
+      "outputs": {
+        "cells.json": "b837b4470ae1f70fd7f0e8dce968d9b6105b28b3774eac16f80cd3ccc65e106b",
+        "terrain.json": "c247439718bcb45718b8b714258655751119e2bfc2e9981ee143713b6917680e",
+        "habitat.geojson": "6d18edfe75b3149104038dcbca4d0096bbcb923f0f9fa4b49f4815344e75bb90",
+        "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+        "held.geojson": "12b770b51b942749ea595e96fb48abc866a12aca45e68852626b09b3090ace1a",
+        "candidates.geojson": "9f0de3faee4a4135870155e53ca9a8ed30196bdf1f98544104f15b018bf017a3",
+        "physical.json": "c0bb3dc074c40e892e26f86b1c44dd991ed9d75b4125f690dc45d72dbc66956d"
+      }
+    },
+    {
+      "reach": "morro-bay-r10",
+      "before": {
+        "selected_valid_km2": 59.241373997,
+        "physical_candidate_count": 1639,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "after": {
+        "selected_valid_km2": 59.241373997,
+        "physical_candidate_count": 1003,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "1d22ecb47569d21381d0c891a5e84d35cd2a4472e21736ce43599c8f5f51b879",
+      "run_input_hash": "9d71b90ebd807dd71c3d172063b4b9a76722e7d84e86e3c9c1026ece62847079",
+      "source_candidate_counts": {
+        "csumb-pge-avila-blocki-2m-native": 153,
+        "csumb-pge-avila-blockj-2m-native": 850
+      },
+      "outputs": {
+        "cells.json": "79aa53983f17eea68f665db422cb63917709c2a760ab022db97406d56a7e1591",
+        "terrain.json": "f71b7e1a0c0a48d8d51618099dc1a1b93b98fe2a5f028a6dcc83e9fa36611205",
+        "habitat.geojson": "6d18edfe75b3149104038dcbca4d0096bbcb923f0f9fa4b49f4815344e75bb90",
+        "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+        "held.geojson": "48507cdb1a6f59279d5392a225dcbf4233efeeede21be5cd7e91bc6feadd8ae2",
+        "candidates.geojson": "1473a0e13e1378bdf3d5f3c3973cd4f2d7addeebae0eeaafb69921c97b62a3fa",
+        "physical.json": "ebda0e11cf93fcfb746c76d62311f04d8058b8c13d6913b0907217cacbae6ed6"
+      }
+    },
+    {
+      "reach": "point-arguello-conception-r01",
+      "before": {
+        "selected_valid_km2": 71.241712598,
+        "physical_candidate_count": 1698,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "after": {
+        "selected_valid_km2": 71.241712598,
+        "physical_candidate_count": 877,
+        "habitat_count": 0,
+        "tier2_km2": 0.0
+      },
+      "measured_cells_identical": true,
+      "run_sha256": "e82ae1c4347beca90185b155178eb206d8d977af1d5f9df8ea093bf41e8a5c27",
+      "run_input_hash": "3ea90af02476e3f0416b3be9cf347140f8a05f7fe98d278b45c485ac9fc128d7",
+      "source_candidate_counts": {
+        "csumb-scc-block17-2m-native": 246,
+        "csumb-scc-block16-2m-native": 617,
+        "csumb-pge-avila-blockj-2m-native": 14
+      },
+      "outputs": {
+        "cells.json": "66c2fdd9b5888f0667e077124f0116486ead3dee5bfbaf0a4b3c7d839239f85f",
+        "terrain.json": "a77ea97c5c9ea25089516f4d4354c70b3b300f6fc6bf124ce4e164747cf611a7",
+        "habitat.geojson": "6d18edfe75b3149104038dcbca4d0096bbcb923f0f9fa4b49f4815344e75bb90",
+        "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+        "held.geojson": "74e19ea58598c3f034dc828d68a060c992db2054d5999aa160d508fba50642a9",
+        "candidates.geojson": "6c2f37cc085ae00aaa2fbe100cfad3d136961874b041ad7843f22bdd368547c9",
+        "physical.json": "1485c6cb4d0edbe44eb0c478710d5e9f1335ebac4c9188b335363c13bc644c1e"
+      }
+    }
+  ],
+  "native_review": {
+    "audit_sha256": "8c3b983ed4b6707c393c579e793d158ad7fcabaa72bc7c6ff84bf5e2c3e1438d",
+    "audited_script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "numeric_candidate_count": 38,
+    "visually_reviewed_count": 38,
+    "pages_opened": 13,
+    "sample_method": "All, or uniformly spaced indices sorted by source ID and descending area; numeric diagnostics cover every feature.",
+    "native_center_rough_fraction_min": 0.9970059880239521,
+    "native_center_missing_class_cells": 0,
+    "native_depth_min_m": 7.929999828338623,
+    "native_depth_max_m": 44.720001220703125,
+    "assessment": "All 38 direct Block F features received native numeric checks and visual review on 13 pages. Most show localized ridges, edges and outcrops. Two isolated relief features need additional corroboration; source quality is not cleared. All other southern bound sources yield no direct candidates in these runs. The current spatial-only diagnostic finds all 38 Block F polygons clear of the configured restrictions; this does not remove source-quality or publication holds."
+  },
+  "status_and_hold_changes": 0,
+  "publication": "Private geometry and diagnostic panels are excluded from this repository. The committed public ledger is unchanged; production publication and live read-back are separate.",
+  "private_spatial_diagnostic_sha256": "c71f05efbd0004f9cfe4d9ade5cc916e1ffd103e1f6dea730df1742a626defb0",
+  "public_candidate_delta": 0
+}
