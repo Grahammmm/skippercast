@@ -100,7 +100,7 @@
       "positive_rough_cell_area_proxy_km2": 10.9237,
       "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
       "method": "Same-DEM VRM threshold 0.0005; subjectively selected with hand-drawn probable-artifact exclusions assigned smooth.",
-      "validation_limit": "Producer reports 93% agreement; validation design, sample count and reference data not established in inspected files. Do not treat 93% as independent validation or habitat confidence.",
+      "validation_limit": "Producer reports 93/100 agreement against the Vis reference field for Cc_bc_2. Sampling design and reference independence are not established. This is same-survey classification assessment, not independent habitat confidence.",
       "depth_datum": "NAVD88",
       "original_acquisition": [
         "20090410",
@@ -127,7 +127,7 @@
         "20110705",
         "20110823"
       ],
-      "vertical_realization": "unknown",
+      "vertical_realization": "Producer-reported NAVD88 Geoid09 in native-depth procdesc",
       "rights": {
         "producer": "CSUMB SFML",
         "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
@@ -243,8 +243,8 @@
       "positive_rough_shallow_cells": 1471004,
       "positive_rough_cell_area_proxy_km2": 5.884016,
       "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
-      "method": "Original same-DEM SA:PA and/or VRM; numerical threshold undocumented in inspected product-specific text; subjective classification and hand-drawn probable-artifact exclusions assigned smooth.",
-      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "method": "Original same-DEM rugosity classification; attracce reports threshold 0.0005 for the 2 m, 0\u201385 m product. Site-specific subjective classification and hand-drawn probable-artifact exclusions assigned smooth. Producer parameters describe the original product; application thresholds are unchanged.",
+      "validation_limit": "Original attracce/attraccr report 98/100 agreement (100 validation points) against the visual reference field. Sampling design and reference independence are not established; no independent video/grab validation is established. This is not a habitat-confidence percentage.",
       "depth_datum": "NAVD88",
       "original_acquisition": [
         "20090410",
@@ -267,7 +267,7 @@
         "20090602",
         "20090610"
       ],
-      "vertical_realization": "unknown",
+      "vertical_realization": "Producer-reported NAVD88 Geoid03 in native-depth procdesc",
       "rights": {
         "producer": "CSUMB SFML",
         "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
@@ -385,7 +385,7 @@
       "positive_rough_cell_area_proxy_km2": 0.04245,
       "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
       "method": "Same-DEM VRM threshold 0.0005; subjectively selected with hand-drawn probable-artifact exclusions assigned smooth.",
-      "validation_limit": "Producer reports 93% agreement; validation design, sample count and reference data not established in inspected files. Do not treat 93% as independent validation or habitat confidence.",
+      "validation_limit": "Producer method text reports 93% agreement, but its copied accuracy table is identical to C2 and explicitly evaluates Cc_bc_2 (93/100); separate 5 m validation is not established. Sampling design and reference independence remain unknown. Do not treat this duplicate table as independent evidence or habitat confidence.",
       "depth_datum": "NAVD88",
       "original_acquisition": [
         "20090410",
@@ -412,7 +412,7 @@
         "20110705",
         "20110823"
       ],
-      "vertical_realization": "unknown",
+      "vertical_realization": "Producer-reported NAVD88 Geoid09 in native-depth procdesc",
       "rights": {
         "producer": "CSUMB SFML",
         "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
@@ -530,8 +530,8 @@
       "positive_rough_shallow_cells": 43631,
       "positive_rough_cell_area_proxy_km2": 1.090775,
       "cell_area_caveat": "Native planar cell-area diagnostic; products overlap, not new coverage or public habitat.",
-      "method": "Original same-DEM SA:PA and/or VRM; numerical threshold undocumented in inspected product-specific text; subjective classification and hand-drawn probable-artifact exclusions assigned smooth.",
-      "validation_limit": "No independent video/grab ground truth or quantitative classification validation established by these inspected files.",
+      "method": "Original same-DEM rugosity classification; attracce reports threshold 0.0001 for the 5 m, 80\u2013250 m product. Site-specific subjective classification and hand-drawn probable-artifact exclusions assigned smooth. Producer parameters describe the original product; application thresholds are unchanged.",
+      "validation_limit": "Original attracce/attraccr report 50/50 agreement, but the reference set contains only one rough point and 49 smooth points. Sampling design and reference independence are not established; no independent video/grab validation is established. The overall agreement does not establish rough-habitat accuracy or habitat confidence.",
       "depth_datum": "NAVD88",
       "original_acquisition": [
         "20090410",
@@ -554,7 +554,7 @@
         "20090602",
         "20090610"
       ],
-      "vertical_realization": "unknown",
+      "vertical_realization": "Producer-reported NAVD88 Geoid03 in native-depth procdesc",
       "rights": {
         "producer": "CSUMB SFML",
         "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
