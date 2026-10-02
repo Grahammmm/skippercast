@@ -1,0 +1,682 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T05:04:32.777417+00:00",
+  "archive_source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+  "sources": [
+    {
+      "id": "csumb-bigcreek-bc-n-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy",
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "1009045e21cdedfdc5e1a13c0c9af13f5ddd67578fcae4c672701db7c0dab893",
+      "original_metadata_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy/metadata.xml",
+      "acquisition_dates": "May 14–16 and 18, 2010; August 19–20, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "8c3c1e3eb09f8e6e3ed24cc942992137a0007dc69fb19435ad0ffb69180abae7",
+        "requested_bounds_wgs84": [
+          -121.6685923555379,
+          36.08051845818481,
+          -121.61881780623428,
+          36.127220855549595
+        ],
+        "valid_pixels_in_requested_bounds": 2081700,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2081700,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "d57c01e1a9d7151f236eca5129462d5e8769b327b82b8cb6d43d026925569042"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-bc-n-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-bc-n-2m-native",
+        "catalog_index": 388,
+        "changed_fields": [
+          "license",
+          "notes",
+          "rights_review",
+          "status"
+        ],
+        "scientific_row_equal": true,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "8c3c1e3eb09f8e6e3ed24cc942992137a0007dc69fb19435ad0ffb69180abae7",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "d57c01e1a9d7151f236eca5129462d5e8769b327b82b8cb6d43d026925569042"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.6685923555379,
+          36.08051845818481,
+          -121.61881780623428,
+          36.127220855549595
+        ],
+        "normalization_reused": true,
+        "valid_cells": 2081700,
+        "nominal_shallow_cells": 2081700,
+        "new_measured_area_km2": 0
+      }
+    },
+    {
+      "id": "csumb-bigcreek-bc-n-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_5mbathy",
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "fb7305ed17b338ccd4286911439c060dcf0a02d2a8ed0e3817e5f3603419f7bf",
+      "original_metadata_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_5mbathy/metadata.xml",
+      "acquisition_dates": "May 14–16 and 18, 2010; August 19–20, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "3a266c484b37081505df6a457dbd1c1f5d09c5bb7f09e52c0f908510a14a4ff5",
+        "requested_bounds_wgs84": [
+          -121.67993857104081,
+          36.08246882704793,
+          -121.63452549942052,
+          36.12456630362192
+        ],
+        "valid_pixels_in_requested_bounds": 148238,
+        "nominal_0_300ft_pixels_in_requested_bounds": 12608,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "f317f59d1b5838a8705e3510e4894e894c6939e526f20faee5d9e0e8b59862ee"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-bc-n-5m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-bc-n-5m-native",
+        "catalog_index": 389,
+        "changed_fields": [
+          "evidence",
+          "field_evidence",
+          "license",
+          "notes",
+          "publisher",
+          "rights_review",
+          "status",
+          "year"
+        ],
+        "scientific_row_equal": false,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "3a266c484b37081505df6a457dbd1c1f5d09c5bb7f09e52c0f908510a14a4ff5",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "f317f59d1b5838a8705e3510e4894e894c6939e526f20faee5d9e0e8b59862ee"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.67993857104081,
+          36.08246882704793,
+          -121.63452549942052,
+          36.12456630362192
+        ],
+        "normalization_reused": true,
+        "valid_cells": 148238,
+        "nominal_shallow_cells": 12608,
+        "new_measured_area_km2": 0
+      }
+    },
+    {
+      "id": "csumb-bigcreek-bc-s-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_2mbathy",
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "0b0268a75dffd09185f155f0018fd87a607c27aa2f3d40c3114681c575fbdf78",
+      "original_metadata_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_2mbathy/metadata.xml",
+      "acquisition_dates": "May 16 and 18, 2010; August 20–21, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "c2d248d386201804a2f4a648e26935a55705be254eed66f741dcb8dd8fba0441",
+        "requested_bounds_wgs84": [
+          -121.63990485795757,
+          36.042488278683464,
+          -121.58742416396665,
+          36.089521912170035
+        ],
+        "valid_pixels_in_requested_bounds": 2008929,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2008929,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "97cfaf75c83fcdd237950303b57a434a27dda1c0949cedf78f80301befc44c01"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-bc-s-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-bc-s-2m-native",
+        "catalog_index": 390,
+        "changed_fields": [
+          "evidence",
+          "field_evidence",
+          "license",
+          "notes",
+          "publisher",
+          "rights_review",
+          "status",
+          "year"
+        ],
+        "scientific_row_equal": false,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "c2d248d386201804a2f4a648e26935a55705be254eed66f741dcb8dd8fba0441",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "97cfaf75c83fcdd237950303b57a434a27dda1c0949cedf78f80301befc44c01"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.63990485795757,
+          36.042488278683464,
+          -121.58742416396665,
+          36.089521912170035
+        ],
+        "normalization_reused": true,
+        "valid_cells": 2008929,
+        "nominal_shallow_cells": 2008929,
+        "new_measured_area_km2": 0
+      }
+    },
+    {
+      "id": "csumb-bigcreek-bc-s-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_5mbathy",
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "592c0edacde26353a368cfc8d7f60b6994b3a2d933e435f62de49b1b6ebcd51d",
+      "original_metadata_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_5mbathy/metadata.xml",
+      "acquisition_dates": "May 16 and 18, 2010; August 20–21, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "7d7d85c8bd31b11ade6cf148885a58d41faa281dc6f3e6dc86e9431b7622dfc5",
+        "requested_bounds_wgs84": [
+          -121.65247727840007,
+          36.04179079774861,
+          -121.60130559628361,
+          36.093066491266505
+        ],
+        "valid_pixels_in_requested_bounds": 208162,
+        "nominal_0_300ft_pixels_in_requested_bounds": 27969,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "363ad2fbec9fe2ba456f2da79254fcf8380ae010142464191e93d5e8c661c310"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-bc-s-5m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-bc-s-5m-native",
+        "catalog_index": 391,
+        "changed_fields": [
+          "evidence",
+          "field_evidence",
+          "license",
+          "notes",
+          "publisher",
+          "rights_review",
+          "status",
+          "year"
+        ],
+        "scientific_row_equal": false,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "7d7d85c8bd31b11ade6cf148885a58d41faa281dc6f3e6dc86e9431b7622dfc5",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "363ad2fbec9fe2ba456f2da79254fcf8380ae010142464191e93d5e8c661c310"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.65247727840007,
+          36.04179079774861,
+          -121.60130559628361,
+          36.093066491266505
+        ],
+        "normalization_reused": true,
+        "valid_cells": 208162,
+        "nominal_shallow_cells": 27969,
+        "new_measured_area_km2": 0
+      }
+    },
+    {
+      "id": "csumb-bigcreek-lp-2m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_2mbathy",
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "2cdc0ea9c94479493948ed143675ee1db31acd2059e259b847f46c743319ff32",
+      "original_metadata_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_2mbathy/metadata.xml",
+      "acquisition_dates": "May 16–17, 2010; August 21, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "014c36f8be5ab6cb632297c39445f0a2c6608c2547e01533bcd3d76b7a8b19da",
+        "requested_bounds_wgs84": [
+          -121.60923461972219,
+          36.00995611563809,
+          -121.53144544098275,
+          36.051650094890924
+        ],
+        "valid_pixels_in_requested_bounds": 2658222,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2658222,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1d3c7b6dde41a7e958dc89715b17be889be5e58f0c05ae438cfeef535afde3ab"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-lp-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-lp-2m-native",
+        "catalog_index": 392,
+        "changed_fields": [
+          "evidence",
+          "field_evidence",
+          "license",
+          "notes",
+          "publisher",
+          "rights_review",
+          "status",
+          "year"
+        ],
+        "scientific_row_equal": false,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "014c36f8be5ab6cb632297c39445f0a2c6608c2547e01533bcd3d76b7a8b19da",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "1d3c7b6dde41a7e958dc89715b17be889be5e58f0c05ae438cfeef535afde3ab"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.60923461972219,
+          36.00995611563809,
+          -121.53144544098275,
+          36.051650094890924
+        ],
+        "normalization_reused": true,
+        "valid_cells": 2658222,
+        "nominal_shallow_cells": 2658222,
+        "new_measured_area_km2": 0
+      }
+    },
+    {
+      "id": "csumb-bigcreek-lp-5m-native",
+      "title": "BigCreek_additional_products.tar.gz",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "year": 2010,
+      "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "bytes": 364945509,
+      "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_5mbathy",
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "original_metadata_sha256": "298e8ff5d816511105ca306bac60d8300537f9c82b00f91530647426866f1dbf",
+      "original_metadata_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_5mbathy/metadata.xml",
+      "acquisition_dates": "May 16–17, 2010; August 21, 2009 in abstract / 2010 in calendar fields.",
+      "year_basis": "2010 is latest acquisition year in either contradictory date description. Retain mixed 2009–2010 possibility.",
+      "native_adapter": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256": "769af61a51ea4ef60f2da0fe36305d573fc9a44debf06d47c034541cf2fb2bfd",
+        "requested_bounds_wgs84": [
+          -121.62045127998474,
+          36.010405408716075,
+          -121.60043217653353,
+          36.04798970144782
+        ],
+        "valid_pixels_in_requested_bounds": 128696,
+        "nominal_0_300ft_pixels_in_requested_bounds": 16659,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "9a012b53938ded62574f3d11ebe72931b013284ad7bd3cdb7007c1ce84b8fa33"
+        }
+      },
+      "rights": {
+        "source_id": "csumb-bigcreek-lp-5m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-01"
+      },
+      "row_change": {
+        "source_id": "csumb-bigcreek-lp-5m-native",
+        "catalog_index": 393,
+        "changed_fields": [
+          "evidence",
+          "field_evidence",
+          "license",
+          "notes",
+          "publisher",
+          "rights_review",
+          "status",
+          "year"
+        ],
+        "scientific_row_equal": false,
+        "source_sha256_unchanged": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "cog_sha256_unchanged": "769af61a51ea4ef60f2da0fe36305d573fc9a44debf06d47c034541cf2fb2bfd",
+        "raster_identity_unchanged": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "9a012b53938ded62574f3d11ebe72931b013284ad7bd3cdb7007c1ce84b8fa33"
+        },
+        "native_mask_preserved_with_identical_cog": true,
+        "native_window_unchanged": [
+          -121.62045127998474,
+          36.010405408716075,
+          -121.60043217653353,
+          36.04798970144782
+        ],
+        "normalization_reused": true,
+        "valid_cells": 128696,
+        "nominal_shallow_cells": 16659,
+        "new_measured_area_km2": 0
+      }
+    }
+  ],
+  "metadata": {
+    "producer": "CSUMB SFML identified separately in original XML for every selected 2 m and 5 m grid.",
+    "datum": "NAVD88 using Geoid09 per original processing description; no conversion to MLLW or chart-depth qualification.",
+    "horizontal_frame": "Native raster NAD83 / UTM zone 10N preserved.",
+    "resolution_design": "Producer specifications: 2 m for 0–85 m; 5 m for 80–250 m; 10 m for 230–1500 m. Actual 0–91.44 m valid coverage was measured in each selected original 2 m/5 m grid.",
+    "processing": "Reson/SEA sonar, POSPAC trajectory corrections, CARIS cleaning and CUBE surface, decimated xyz, Fledermaus AverageGridder and ArcInfo grids.",
+    "horizontal_accuracy": "Producer states about ±2 m, varying with depth; confidence level and independent validation unspecified.",
+    "vertical_accuracy": "Producer states about ±0.20 m, varying with depth; no delivered per-cell uncertainty.",
+    "interpolation": "Producer-gridded sonar; no measured-versus-filled mask supplied.",
+    "lineage": "Six depth/resolution products in one archived survey family, not six independent acquisitions.",
+    "spatial_scope": "Dataset includes Big Creek reserve and Lopez Point reference surveys. Survey coverage itself grants no fishing access.",
+    "update_frequency": "Static historical surveys; no scheduled reacquisition verified."
+  },
+  "access": {
+    "noaa-report": {
+      "url": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "final_url": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+      "status": 200,
+      "bytes": 367137,
+      "sha256": "f070cab093ef036531a97be6308f8dd28b9226e71a977ad696aca21f25eb50dc",
+      "retrieved_at": "2026-10-02T05:00:26.427608+00:00",
+      "headers": {
+        "last-modified": "Fri, 24 Apr 2026 17:10:58 GMT",
+        "content-type": "text/html; charset=UTF-8"
+      }
+    },
+    "archive-range": {
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "final_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+      "status": 206,
+      "bytes_read": 65536,
+      "prefix_sha256": "e71cbb4fd2d2546a6e2f9d668d24ec49b05f323a5dcbeee4d4b084ad87bf9428",
+      "retrieved_at": "2026-10-02T05:00:26.857298+00:00",
+      "headers": {
+        "last-modified": "Sat, 17 Aug 2019 15:36:55 GMT",
+        "content-length": "65536",
+        "content-range": "bytes 0-65535/364945509",
+        "content-type": "application/x-gzip"
+      },
+      "local_prefix_matches": true,
+      "cached_full_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+      "cached_bytes": 364945509
+    }
+  },
+  "producer_policy": {
+    "url": "https://csumb.edu/undersea/sfml-data-library/",
+    "status": 200,
+    "final_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "headers": {
+      "Date": "Fri, 02 Oct 2026 04:05:08 GMT",
+      "Content-Type": "text/html; charset=UTF-8"
+    },
+    "bytes": 48042,
+    "sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "retrieved_at": "2026-10-02T04:05:08.930255+00:00"
+  },
+  "coverage": {
+    "checked_at": "2026-10-02T05:03:09.918908+00:00",
+    "existing_sources": [
+      {
+        "source_id": "csumb-bigcreek-bc-n-2m-native",
+        "resolution_m": 2.0,
+        "cog_sha256": "8c3c1e3eb09f8e6e3ed24cc942992137a0007dc69fb19435ad0ffb69180abae7",
+        "existing_valid_cells": 2081700,
+        "existing_nominal_shallow_cells": 2081700,
+        "existing_shallow_footprint_km2": 8.330388219750079,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r03": 1.9696094961809028,
+          "big-sur-coast-r04": 6.360778723569148
+        }
+      },
+      {
+        "source_id": "csumb-bigcreek-bc-n-5m-native",
+        "resolution_m": 5.0,
+        "cog_sha256": "3a266c484b37081505df6a457dbd1c1f5d09c5bb7f09e52c0f908510a14a4ff5",
+        "existing_valid_cells": 148238,
+        "existing_nominal_shallow_cells": 12608,
+        "existing_shallow_footprint_km2": 0.31533762530888476,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r03": 0.11409336799681125,
+          "big-sur-coast-r04": 0.20124425731207363
+        }
+      },
+      {
+        "source_id": "csumb-bigcreek-bc-s-2m-native",
+        "resolution_m": 2.0,
+        "cog_sha256": "c2d248d386201804a2f4a648e26935a55705be254eed66f741dcb8dd8fba0441",
+        "existing_valid_cells": 2008929,
+        "existing_nominal_shallow_cells": 2008929,
+        "existing_shallow_footprint_km2": 8.039043867944454,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r04": 8.039043867944466
+        }
+      },
+      {
+        "source_id": "csumb-bigcreek-bc-s-5m-native",
+        "resolution_m": 5.0,
+        "cog_sha256": "7d7d85c8bd31b11ade6cf148885a58d41faa281dc6f3e6dc86e9431b7622dfc5",
+        "existing_valid_cells": 208162,
+        "existing_nominal_shallow_cells": 27969,
+        "existing_shallow_footprint_km2": 0.6995189941725461,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r04": 0.6995189941725476
+        }
+      },
+      {
+        "source_id": "csumb-bigcreek-lp-2m-native",
+        "resolution_m": 2.0,
+        "cog_sha256": "014c36f8be5ab6cb632297c39445f0a2c6608c2547e01533bcd3d76b7a8b19da",
+        "existing_valid_cells": 2658222,
+        "existing_nominal_shallow_cells": 2658222,
+        "existing_shallow_footprint_km2": 10.637146387846274,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r04": 1.6659673434114355,
+          "big-sur-coast-r05": 8.970301569676467
+        }
+      },
+      {
+        "source_id": "csumb-bigcreek-lp-5m-native",
+        "resolution_m": 5.0,
+        "cog_sha256": "769af61a51ea4ef60f2da0fe36305d573fc9a44debf06d47c034541cf2fb2bfd",
+        "existing_valid_cells": 128696,
+        "existing_nominal_shallow_cells": 16659,
+        "existing_shallow_footprint_km2": 0.4166462490579228,
+        "existing_by_reach_km2": {
+          "big-sur-coast-r04": 0.07378200014256558,
+          "big-sur-coast-r05": 0.33731299649033436
+        }
+      }
+    ],
+    "existing_deduplicated_shallow_km2": 26.735755577274073,
+    "existing_by_reach_km2": {
+      "big-sur-coast-r03": 2.0104342411875282,
+      "big-sur-coast-r04": 15.61257748934372,
+      "big-sur-coast-r05": 9.106315119559468
+    },
+    "new_measured_area_km2": 0,
+    "public_mapped_credit_km2": 0,
+    "reason": "All six original and normalized grids already exist in baseline physical-only catalog. Rights and publisher/year corrections add no measured footprint. Multiple resolutions deduplicated as one acquisition family; fish presence and current legal status not assessed here.",
+    "normal_reprocessing_required": true,
+    "chart_depth_qualification": false
+  },
+  "validation": {
+    "checked_at": "2026-10-02T05:02:29.064587+00:00",
+    "catalog_before_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "catalog_after_sha256": "d7654b23429d53fa29fe1895d7a66b83a9bfb380547b364350048b932102f949",
+    "catalog_written": false,
+    "in_memory_manifest_valid": true,
+    "original_row_order_preserved": true,
+    "exact_native_sources_preserved": true,
+    "unchanged_science_rows": 1,
+    "metadata_correction_rows": 5,
+    "whole_reach_adoption": false,
+    "normal_reprocessing_required": true,
+    "new_measured_area_km2": 0,
+    "public_mapped_area_change_km2": 0
+  },
+  "limits": [
+    "Zero new measured coverage: original and normalized data already exist in the baseline private catalog.",
+    "Five publisher/year metadata corrections change scientific inputs; normal processing is required. Do not claim whole-reach unchanged-science adoption.",
+    "Preserve source row order and exact raster hashes/masks.",
+    "Current whole-polygon closure screen still required; no public habitat/spot credit at this stage."
+  ]
+}

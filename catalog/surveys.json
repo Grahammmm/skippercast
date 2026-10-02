@@ -160,7 +160,8 @@
     "dist/data/seafloor-slaterock-rights-review.json",
     "dist/data/seafloor-kasler-point-native-review.json",
     "dist/data/seafloor-soberanes-point-native-review.json",
-    "dist/data/seafloor-yankee-point-native-review.json"
+    "dist/data/seafloor-yankee-point-native-review.json",
+    "dist/data/seafloor-bigcreek-native-rights-review.json"
   ],
   "surveys": [
     {
@@ -13820,10 +13821,10 @@
       "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
       "year": 2010,
-      "resolution_m": 2,
+      "resolution_m": 2.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -13833,7 +13834,7 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_2mbathy",
       "evidence": [
         "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/0"
@@ -13847,7 +13848,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -13861,8 +13862,8 @@
         "valid_pixels_in_requested_bounds": 2081700,
         "nominal_0_300ft_pixels_in_requested_bounds": 2081700,
         "native_resolution_m": [
-          2,
-          2
+          2.0,
+          2.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -13872,16 +13873,26 @@
           "version": "normalized-raster-content-v1",
           "sha256": "d57c01e1a9d7151f236eca5129462d5e8769b327b82b8cb6d43d026925569042"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
-      "publisher": "unknown",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "unknown",
-      "year": "unknown",
-      "resolution_m": 5,
+      "year": 2010,
+      "resolution_m": 5.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -13891,21 +13902,23 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/BigCreekN.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_n_5mbathy",
       "evidence": [
-        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1"
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1",
+        "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/1"
       ],
       "field_evidence": {
-        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/acquisition_dates",
+        "year": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/1/year",
         "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/vertical_datum",
         "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/resolution_m",
         "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/archive_bytes",
-        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/source_sha256"
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/1/source_sha256",
+        "publisher": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/1/publisher"
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -13919,8 +13932,8 @@
         "valid_pixels_in_requested_bounds": 148238,
         "nominal_0_300ft_pixels_in_requested_bounds": 12608,
         "native_resolution_m": [
-          5,
-          5
+          5.0,
+          5.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -13930,16 +13943,26 @@
           "version": "normalized-raster-content-v1",
           "sha256": "f317f59d1b5838a8705e3510e4894e894c6939e526f20faee5d9e0e8b59862ee"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
-      "publisher": "unknown",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "unknown",
-      "year": "unknown",
-      "resolution_m": 2,
+      "year": 2010,
+      "resolution_m": 2.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -13949,21 +13972,23 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_2mbathy",
       "evidence": [
-        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2"
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2",
+        "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/2"
       ],
       "field_evidence": {
-        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/acquisition_dates",
+        "year": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/2/year",
         "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/vertical_datum",
         "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/resolution_m",
         "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/archive_bytes",
-        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/source_sha256"
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/2/source_sha256",
+        "publisher": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/2/publisher"
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -13977,8 +14002,8 @@
         "valid_pixels_in_requested_bounds": 2008929,
         "nominal_0_300ft_pixels_in_requested_bounds": 2008929,
         "native_resolution_m": [
-          2,
-          2
+          2.0,
+          2.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -13988,16 +14013,26 @@
           "version": "normalized-raster-content-v1",
           "sha256": "97cfaf75c83fcdd237950303b57a434a27dda1c0949cedf78f80301befc44c01"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
-      "publisher": "unknown",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "unknown",
-      "year": "unknown",
-      "resolution_m": 5,
+      "year": 2010,
+      "resolution_m": 5.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -14007,21 +14042,23 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/BigCreekS.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/bc_s_5mbathy",
       "evidence": [
-        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3"
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3",
+        "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/3"
       ],
       "field_evidence": {
-        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/acquisition_dates",
+        "year": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/3/year",
         "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/vertical_datum",
         "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/resolution_m",
         "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/archive_bytes",
-        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/source_sha256"
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/3/source_sha256",
+        "publisher": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/3/publisher"
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -14035,8 +14072,8 @@
         "valid_pixels_in_requested_bounds": 208162,
         "nominal_0_300ft_pixels_in_requested_bounds": 27969,
         "native_resolution_m": [
-          5,
-          5
+          5.0,
+          5.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -14046,16 +14083,26 @@
           "version": "normalized-raster-content-v1",
           "sha256": "363ad2fbec9fe2ba456f2da79254fcf8380ae010142464191e93d5e8c661c310"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
-      "publisher": "unknown",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "unknown",
-      "year": "unknown",
-      "resolution_m": 2,
+      "year": 2010,
+      "resolution_m": 2.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -14065,21 +14112,23 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_2mbathy",
       "evidence": [
-        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4"
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4",
+        "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/4"
       ],
       "field_evidence": {
-        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/acquisition_dates",
+        "year": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/4/year",
         "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/vertical_datum",
         "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/resolution_m",
         "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/archive_bytes",
-        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/source_sha256"
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/4/source_sha256",
+        "publisher": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/4/publisher"
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -14093,8 +14142,8 @@
         "valid_pixels_in_requested_bounds": 2658222,
         "nominal_0_300ft_pixels_in_requested_bounds": 2658222,
         "native_resolution_m": [
-          2,
-          2
+          2.0,
+          2.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -14104,16 +14153,26 @@
           "version": "normalized-raster-content-v1",
           "sha256": "1d3c7b6dde41a7e958dc89715b17be889be5e58f0c05ae438cfeef535afde3ab"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
-      "publisher": "unknown",
+      "publisher": "CSU Monterey Bay Seafloor Mapping Lab",
       "landing_page": "unknown",
-      "year": "unknown",
-      "resolution_m": 5,
+      "year": 2010,
+      "resolution_m": 5.0,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
       "bytes": 364945509,
       "hold_reason": "unknown",
@@ -14123,21 +14182,23 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "BigCreek2010/LopezPt.2010_2m.5m.10m_bathygrids.zip/ArcViewGrids/lp_5mbathy",
       "evidence": [
-        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5"
+        "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5",
+        "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/5"
       ],
       "field_evidence": {
-        "year": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/acquisition_dates",
+        "year": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/5/year",
         "vertical_datum": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/vertical_datum",
         "resolution_m": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/resolution_m",
         "bytes": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/archive_bytes",
-        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/source_sha256"
+        "sha256": "docs/archive/bigcreek-nested-native-proof-2026-09-30.json#/sources/5/source_sha256",
+        "publisher": "research/receipts/seafloor-bigcreek-native-rights-review.json#/sources/5/publisher"
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Reviewed original grid metadata identifies CSUMB and latest acquisition year 2010; abstract says August 2009 while calendar fields say August 2010, both agree May 2010. NAVD88 Geoid09 retained without conversion. 2 m/5 m/10 m products are depth-dependent derivatives of the same survey, not independent evidence. No per-cell interpolation mask or uncertainty provided. Public noncommercial use only; for-profit permission not obtained; not for navigation. Existing private native source release, zero new measured-footprint credit.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
@@ -14151,8 +14212,8 @@
         "valid_pixels_in_requested_bounds": 128696,
         "nominal_0_300ft_pixels_in_requested_bounds": 16659,
         "native_resolution_m": [
-          5,
-          5
+          5.0,
+          5.0
         ],
         "vertical_datum": "NAVD88",
         "uncertainty_type": "unknown",
@@ -14162,6 +14223,16 @@
           "version": "normalized-raster-content-v1",
           "sha256": "9a012b53938ded62574f3d11ebe72931b013284ad7bd3cdb7007c1ce84b8fa33"
         }
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "5e688dae2eca47844cf9727f70d212b0492e0d28e0aa5b261acbd8911dd2ada1",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {

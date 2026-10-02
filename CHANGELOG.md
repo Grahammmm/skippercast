@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: qualify six existing Big Creek/Lopez Point native grids with preserved source identities and reviewed metadata corrections. Complete the intervening Big Sur reach screen; local results contain 284 passing habitat areas with all 184 held areas private. This releases existing measured support and does not claim new sonar coverage.
+
 - Seafloor: qualify native Kasler, Soberanes and Yankee Point 2 m depth grids. Three Monterey reaches gain 24.490 km² of selected measured support and 240 net screened habitat areas in local validation, with source datum conflicts and protected-area holds retained. Production publication is verified separately.
 
 - Seafloor: qualify native 2 m Grimes Point bathymetry and release the existing Slate Rock source under credited noncommercial terms. Two Big Sur reaches gain 416 net locally screened habitat areas. Report Grimes Point's new survey footprint separately from Slate Rock's existing private coverage; retain nominal NAVD88 depths and all publication screens.
