@@ -168,7 +168,14 @@
     "dist/data/seafloor-scc12-native-rights-review.json",
     "dist/data/seafloor-scc13-native-rights-review.json",
     "dist/data/seafloor-scc14-native-rights-review.json",
-    "dist/data/seafloor-scc15-native-rights-review.json"
+    "dist/data/seafloor-scc15-native-rights-review.json",
+    "dist/data/seafloor-pge-mid-c-1m-review.json",
+    "dist/data/seafloor-pge-mid-d-1m-review.json",
+    "dist/data/seafloor-pge-mid-c-2m-review.json",
+    "dist/data/seafloor-pge-mid-d-2m-review.json",
+    "dist/data/seafloor-pge-mid-e-2m-review.json",
+    "dist/data/seafloor-pge-mid-c-5m-review.json",
+    "dist/data/seafloor-pge-mid-e-5m-review.json"
   ],
   "surveys": [
     {
@@ -18484,6 +18491,503 @@
         "raster_identity": {
           "version": "normalized-raster-content-v1",
           "sha256": "a053e1c6ea1cc32a1a32198008aab055ac588925d0530d03c79bf4c337fdc887"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blockc-1m-native",
+      "title": "PGE Mid Block C original 1 m bathymetry (latest survey 2011)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2011,
+      "resolution_m": 1.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "2011update_cc_blockc_bathygrids.zip/ArcViewGrids/cc_bc_1mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockC 1m published grid, latest acquisition2011; combines2009/2010/2011 dates, not a per-cell acquisition date. NAVD88 Geoid09 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-c-1m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-c-1m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-c-1m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-c-1m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "0c0c3022b7ce221472b279fdfdfaaf9371f2e52255e2189fedf597a15bfd5c87",
+        "requested_bounds_wgs84": [
+          -120.869,
+          35.166,
+          -120.818,
+          35.209
+        ],
+        "valid_pixels_in_requested_bounds": 4908779,
+        "nominal_0_300ft_pixels_in_requested_bounds": 4896650,
+        "native_resolution_m": [
+          1.0,
+          1.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "8329b1bf94909e239d2e0682b1261183c3bab9897c1874b39a578a69fa685d10"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blockd-1m-native",
+      "title": "PGE Mid Block D original 1 m bathymetry (latest survey 2011)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2011,
+      "resolution_m": 1.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "2011update_cc_blockd_bathygrids.zip/ArcViewGrids/cc_bd_1mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockD 1m published grid, latest acquisition2011; combines2009/2010/2011 dates, not a per-cell acquisition date. NAVD88 Geoid09 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-d-1m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-d-1m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-d-1m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-d-1m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "e95dda4d7485ab7aa7e05b575f0e6650bdae869a8fc21a3d4b0bf78f21a6e230",
+        "requested_bounds_wgs84": [
+          -120.831,
+          35.138,
+          -120.741,
+          35.195
+        ],
+        "valid_pixels_in_requested_bounds": 16058202,
+        "nominal_0_300ft_pixels_in_requested_bounds": 16022855,
+        "native_resolution_m": [
+          1.0,
+          1.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "07a2489cea0e4a99fcf2f97c530b9c4130619987ba39c92465b0998ff32a45f1"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blockc-2m-native",
+      "title": "PGE Mid Block C original 2 m bathymetry (latest survey 2011)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2011,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "2011update_cc_blockc_bathygrids.zip/ArcViewGrids/cc_bc_2mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockC 2m published grid, latest acquisition2011; combines2009/2010/2011 dates, not a per-cell acquisition date. NAVD88 Geoid09 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-c-2m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-c-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-c-2m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-c-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "ef3401eee0dfb1c094b7dbaf541aaa1f739704cac24b6a5852004cac9295d372",
+        "requested_bounds_wgs84": [
+          -120.896,
+          35.133,
+          -120.818,
+          35.21
+        ],
+        "valid_pixels_in_requested_bounds": 8868812,
+        "nominal_0_300ft_pixels_in_requested_bounds": 8868803,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "76bf92d84744ee754e90deff43ba281ac32ac9cd1bafec0f71b6ab3f62d0d53c"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blockd-2m-native",
+      "title": "PGE Mid Block D original 2 m bathymetry (latest survey 2011)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2011,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "2011update_cc_blockd_bathygrids.zip/ArcViewGrids/cc_bd_2mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockD 2m published grid, latest acquisition2011; combines2009/2010/2011 dates, not a per-cell acquisition date. NAVD88 Geoid09 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-d-2m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-d-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-d-2m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-d-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "fbd60d36c2c7eabdc8e021debe0a8a6a31b96a15cb641bf28d635a1fb30171f1",
+        "requested_bounds_wgs84": [
+          -120.832,
+          35.104,
+          -120.741,
+          35.195
+        ],
+        "valid_pixels_in_requested_bounds": 10744998,
+        "nominal_0_300ft_pixels_in_requested_bounds": 10735668,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "15b8b78ee21a93061dbc2e94a980bfa1d17965196f884e935821bd1f5dc93500"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blocke-2m-native",
+      "title": "PGE Mid Block E original 2 m bathymetry (latest survey 2009)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_2mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockE 2m published grid, latest acquisition2009; 2009 survey. NAVD88 Geoid03 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-e-2m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-e-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-e-2m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-e-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "0e01df2099fe48ece7aa75ab6cb0391dae5d002ab675234b5110661d04b3869b",
+        "requested_bounds_wgs84": [
+          -120.856,
+          35.08,
+          -120.772,
+          35.138
+        ],
+        "valid_pixels_in_requested_bounds": 6862818,
+        "nominal_0_300ft_pixels_in_requested_bounds": 6862818,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "fab59c185b49d0b624692cec857099c16c9dc46abe3640a18f9f6552fd0d147b"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blockc-5m-native",
+      "title": "PGE Mid Block C original 5 m bathymetry (latest survey 2011)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2011,
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "2011update_cc_blockc_bathygrids.zip/ArcViewGrids/cc_bc_5mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockC 5m published grid, latest acquisition2011; combines2009/2010/2011 dates, not a per-cell acquisition date. NAVD88 Geoid09 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-c-5m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-c-5m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-c-5m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-c-5m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "636d9d8ebde0e3dc19c1199b806c0e4445f08d320633e774002c5c337757dfe6",
+        "requested_bounds_wgs84": [
+          -120.924,
+          35.133,
+          -120.842,
+          35.189
+        ],
+        "valid_pixels_in_requested_bounds": 863013,
+        "nominal_0_300ft_pixels_in_requested_bounds": 240489,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "8c0969acdb198b886f325f3343993cad49ad59000b9eae9ee5b6d1a162a1a269"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-mid-blocke-5m-native",
+      "title": "PGE Mid Block E original 5 m bathymetry (latest survey 2009)",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_Mid_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+      "bytes": 1469944696,
+      "archive_member": "CC_BlkE_2m.5m_bathygrids.zip/ArcViewGrids/cc_be_5mbthy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE Mid BlockE 5m published grid, latest acquisition2009; 2009 survey. NAVD88 Geoid03 retained without chart-depth conversion. Producer-gridded sonar with decimation and AverageGridder; per-cell interpolation mask and total numeric uncertainty unavailable. Companion resolutions and overlapping USGS derivatives are not independent acquisition evidence. Native raster spacing is not total map accuracy. CSUMB public noncommercial use only, not navigation; for-profit permission not obtained.",
+      "evidence": [
+        "research/receipts/seafloor-pge-mid-e-5m-review.json#/source",
+        "research/receipts/seafloor-pge-mid-e-5m-review.json#/metadata",
+        "research/receipts/seafloor-pge-mid-e-5m-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-mid-e-5m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "reviewed_on": "2026-10-01",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "731fd34e4f3cb0b976ecccbb53a07953e65d54b3b06af1f1939e76a56b75c851",
+        "cog_sha256": "187d27919bb5aae7e5218de75036239b07631b7ccf85abba5671836b414969eb",
+        "requested_bounds_wgs84": [
+          -120.895,
+          35.057,
+          -120.789,
+          35.139
+        ],
+        "valid_pixels_in_requested_bounds": 1510135,
+        "nominal_0_300ft_pixels_in_requested_bounds": 378179,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "2266dc503e579f29e31b633997a973a8a9d3265cef1eee93d4868d475304eb29"
         }
       }
     }
