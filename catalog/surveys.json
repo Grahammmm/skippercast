@@ -179,7 +179,9 @@
     "dist/data/seafloor-pge-avila-native-rights-review.json",
     "dist/data/seafloor-scc16-native-rights-review.json",
     "dist/data/seafloor-point-lobos-native-review.json",
-    "dist/data/seafloor-scc-character-bindings-review.json"
+    "dist/data/seafloor-scc-character-bindings-review.json",
+    "dist/data/seafloor-pge-avila-terrain-review.json",
+    "dist/data/seafloor-avila-j-quality-review.json"
   ],
   "surveys": [
     {
@@ -15699,10 +15701,12 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "usable",
+      "status": "physical-only",
       "archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
       "evidence": [
-        "catalog/csumb-morro-avila-native-sources.json#/sources/2"
+        "catalog/csumb-morro-avila-native-sources.json#/sources/2",
+        "research/receipts/seafloor-avila-j-quality-review.json#/decision",
+        "research/receipts/seafloor-pge-avila-terrain-review.json#/products/1"
       ],
       "field_evidence": {
         "year": "catalog/csumb-morro-avila-native-sources.json#/sources/2/acquisition_dates",
@@ -15713,7 +15717,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. PGE Avila native2m originals, producer rights, access and exact existing masks reverified. Block I metadata establishes2009 andNAVD88 Geoid03. Block J2m selected metadata contains only Esri creation fields; unknown acquisition year and vertical datum remain unknown, without inference from its separately documented5m derivative. No total accuracy/per-cell interpolation mask verified. Existing-source release only; zero new measured coverage. CSUMB noncommercial use only, for-profit permission not obtained, not for navigation.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. PGE Avila native2m originals, producer rights, access and exact existing masks reverified. Block I metadata establishes2009 andNAVD88 Geoid03. Block J2m selected metadata contains only Esri creation fields; unknown acquisition year and vertical datum remain unknown, without inference from its separately documented5m derivative. No total accuracy/per-cell interpolation mask verified. Existing-source release only; zero new measured coverage. CSUMB noncommercial use only, for-profit permission not obtained, not for navigation. Habitat-quality hold 2026-10-02: producer heave-artifact handling and native banded-terrain comparisons require review. Keep measured depth privately; remove this grid from public selection and shared calibration. Smooth is not an invalid-depth mask. Block I is a separate unresolved follow-up.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
@@ -15748,6 +15752,15 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "habitat_quality_hold": {
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "reviewed_on": "2026-10-02",
+        "reason": "artifact-review-required",
+        "evidence": [
+          "research/receipts/seafloor-avila-j-quality-review.json#/decision"
+        ],
+        "notes": "Retain private depth; resolve documented artifact concern and shared threshold effects before public habitat release."
       }
     },
     {

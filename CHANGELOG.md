@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hold Avila Block J habitat pending native artifact review, retain its measured depth privately, and recompute affected public source selection and shared thresholds without changing scientific rules.
+
 - Retain valid measured depth while keeping habitat from sources with unresolved artifact or interpretation reviews out of public maps and fishing exports.
 
 - Apply reviewed USGS seafloor classes to thirteen SCC depth grids; preserve measured coverage and remove sediment-backed terrain candidates without claiming independent fish evidence.
