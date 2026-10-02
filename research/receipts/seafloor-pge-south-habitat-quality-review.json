@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-02T08:30:29.737210+00:00",
+  "source_archive_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+  "decision": {
+    "status": "physical-only",
+    "public_habitat_approved": false,
+    "reason": "Unresolved source artifacts and shared-threshold dependency. Preserve measured depth privately; do not change existing public source selection.",
+    "producer_roughness_is_independent_substrate": false,
+    "producer_smooth_is_invalid_depth": false,
+    "next_action": "Qualify a source-specific artifact/positive-support method with native before/after and shared-calibration tests before a separate habitat release review."
+  },
+  "evidence": {
+    "original_ancillary": "research/receipts/seafloor-pge-south-ancillary-review.json#/terrain_interpretation",
+    "artifact_mask": "research/receipts/seafloor-pge-south-ancillary-review.json#/artifact_mask"
+  },
+  "native_candidate_comparisons": [
+    {
+      "source_id": "csumb-pge-south-blockf-2m-native",
+      "producer_member": "CC_BlkF_2m_habitat.zip/ArcViewGrids/cc_bf_2mhab",
+      "summaries": {
+        "candidates": {
+          "polygons": 196,
+          "zero_rough_overlap": 173,
+          "any_rough_overlap": 23,
+          "majority_rough": 22,
+          "area_ha": 212.12436945282317,
+          "classified_pixels": 530553,
+          "rough_pixels": 85804
+        },
+        "habitat": {
+          "polygons": 172,
+          "zero_rough_overlap": 149,
+          "any_rough_overlap": 23,
+          "majority_rough": 22,
+          "area_ha": 200.7684121277685,
+          "classified_pixels": 502149,
+          "rough_pixels": 85804
+        }
+      }
+    },
+    {
+      "source_id": "csumb-pge-south-blockg-2m-native",
+      "producer_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_2mhab",
+      "summaries": {
+        "candidates": {
+          "polygons": 163,
+          "zero_rough_overlap": 163,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 179.02995378446076,
+          "classified_pixels": 447788,
+          "rough_pixels": 0
+        },
+        "habitat": {
+          "polygons": 149,
+          "zero_rough_overlap": 149,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 168.87485205862075,
+          "classified_pixels": 422390,
+          "rough_pixels": 0
+        }
+      }
+    },
+    {
+      "source_id": "csumb-pge-south-blockh-2m-native",
+      "producer_member": "CC_BlkH_2m_habitat.zip/ArcViewGrids/cc_bh_2mhab",
+      "summaries": {
+        "candidates": {
+          "polygons": 831,
+          "zero_rough_overlap": 831,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 1573.5048162057722,
+          "classified_pixels": 3935431,
+          "rough_pixels": 0
+        },
+        "habitat": {
+          "polygons": 812,
+          "zero_rough_overlap": 812,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 1567.77131155352,
+          "classified_pixels": 3921090,
+          "rough_pixels": 0
+        }
+      }
+    },
+    {
+      "source_id": "csumb-pge-south-blockg-5m-native",
+      "producer_member": "CC_BlkG_2m.5m_habitat.zip/ArcViewGrids/cc_bg_5mhab",
+      "summaries": {
+        "candidates": {
+          "polygons": 5,
+          "zero_rough_overlap": 5,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 0.9939426519555653,
+          "classified_pixels": 401,
+          "rough_pixels": 0
+        },
+        "habitat": {
+          "polygons": 5,
+          "zero_rough_overlap": 5,
+          "any_rough_overlap": 0,
+          "majority_rough": 0,
+          "area_ha": 0.9939426519555653,
+          "classified_pixels": 401,
+          "rough_pixels": 0
+        }
+      }
+    }
+  ],
+  "private_physical_measurements": {
+    "reaches": [
+      {
+        "reach": "morro-bay-r08",
+        "before": {
+          "selected_valid_km2": 60.95992344,
+          "physical_candidate_count": 1011,
+          "habitat_count": 973,
+          "tier2_km2": 7.875940858
+        },
+        "after": {
+          "selected_valid_km2": 112.082476716,
+          "physical_candidates": 726,
+          "screened_candidates": 689,
+          "habitat_km2": 13.76186758,
+          "held": 37
+        },
+        "new_selected_measured_km2": 51.122553276000005
+      },
+      {
+        "reach": "morro-bay-r09",
+        "before": {
+          "selected_valid_km2": 31.704285477,
+          "physical_candidate_count": 196,
+          "habitat_count": 194,
+          "tier2_km2": 5.73943826
+        },
+        "after": {
+          "selected_valid_km2": 35.781702324,
+          "physical_candidates": 192,
+          "screened_candidates": 191,
+          "habitat_km2": 6.486465261,
+          "held": 1
+        },
+        "new_selected_measured_km2": 4.077416847000002
+      },
+      {
+        "reach": "morro-bay-r10",
+        "before": {
+          "selected_valid_km2": 35.428615683,
+          "physical_candidate_count": 1042,
+          "habitat_count": 965,
+          "tier2_km2": 8.955658831
+        },
+        "after": {
+          "selected_valid_km2": 59.241373997,
+          "physical_candidates": 1639,
+          "screened_candidates": 1562,
+          "habitat_km2": 15.863058243,
+          "held": 77
+        },
+        "new_selected_measured_km2": 23.812758314
+      },
+      {
+        "reach": "point-arguello-conception-r01",
+        "before": {
+          "selected_valid_km2": 39.202649616,
+          "physical_candidate_count": 915,
+          "habitat_count": 849,
+          "tier2_km2": 10.373022072
+        },
+        "after": {
+          "selected_valid_km2": 71.241712598,
+          "physical_candidates": 1698,
+          "screened_candidates": 1618,
+          "habitat_km2": 17.334135266,
+          "held": 80
+        },
+        "new_selected_measured_km2": 32.039062982000004
+      }
+    ],
+    "new_selected_measured_km2": 111.05179141900001,
+    "physical_candidate_delta": 1091,
+    "passing_pre_quality_delta": 1079,
+    "qualifier": "Before source-quality holds; private local diagnostic only, not publication eligibility."
+  },
+  "review_scope": "Independent exact native candidate/class comparison, original archive and metadata identity, and five native visual examples. The class products are same-depth interpretation, not fish-presence evidence.",
+  "shared_threshold_effects": [
+    {
+      "reach": "morro-bay-r08",
+      "before": {
+        "vrm_samples": 23779079,
+        "vrm": 0.002452257787808776,
+        "bpi_fine_m_samples": 21967606,
+        "bpi_fine_m": 0.4390881232060474
+      },
+      "with_new_sources": {
+        "vrm_samples": 36306754,
+        "vrm": 0.0009139520116150379,
+        "bpi_fine_m_samples": 34415681,
+        "bpi_fine_m": 0.3541273701491007
+      }
+    },
+    {
+      "reach": "morro-bay-r09",
+      "before": {
+        "vrm_samples": 7836440,
+        "vrm": 6.0010923334630206e-05,
+        "bpi_fine_m_samples": 7492597,
+        "bpi_fine_m": 0.23361595146609945
+      },
+      "with_new_sources": {
+        "vrm_samples": 8860344,
+        "vrm": 4.19699281337671e-05,
+        "bpi_fine_m_samples": 8515674,
+        "bpi_fine_m": 0.21920676864020924
+      }
+    },
+    {
+      "reach": "morro-bay-r10",
+      "before": {
+        "vrm_samples": 8609642,
+        "vrm": 7.094416559993988e-06,
+        "bpi_fine_m_samples": 7685386,
+        "bpi_fine_m": 0.01812362231247339
+      },
+      "with_new_sources": {
+        "vrm_samples": 14573200,
+        "vrm": 8.332987817993853e-06,
+        "bpi_fine_m_samples": 13619298,
+        "bpi_fine_m": 0.019755938716334923
+      }
+    },
+    {
+      "reach": "point-arguello-conception-r01",
+      "before": {
+        "vrm_samples": 9699643,
+        "vrm": 1.1185496987309307e-05,
+        "bpi_fine_m_samples": 9341075,
+        "bpi_fine_m": 0.02068140768876488
+      },
+      "with_new_sources": {
+        "vrm_samples": 17651491,
+        "vrm": 1.2190807865408715e-05,
+        "bpi_fine_m_samples": 17226030,
+        "bpi_fine_m": 0.027826510510410195
+      }
+    }
+  ],
+  "integration_validation": {
+    "base_main": "b4fc6b8de2874e0dec8b65b14a0114d836de40ed",
+    "scope": "Current-code private rerun after Avila J containment and source-quality dependency fix; no public candidate release.",
+    "results": [
+      {
+        "reach": "morro-bay-r08",
+        "unchanged": false,
+        "input_hash": "f50c822d8c918fcc48bb64108f2b3928c8097934ccc72139ae1a7ddc822f643e",
+        "native_candidate_geometry_metrics_ranks_identical": true,
+        "thresholds_identical": true,
+        "depth_cells_identical": true,
+        "physical_candidates_before": 726,
+        "physical_candidates_after": 726,
+        "private_held": 726,
+        "selected_valid_km2": 112.082476716,
+        "public_source_selection_unchanged": true,
+        "public_ledger_unchanged": true,
+        "outputs_verified": true,
+        "run_sha256": "2a4bbfd49d2671c4d1888c520af1c88f47ec52fc9c7ef0471250f9b389fae61c"
+      },
+      {
+        "reach": "morro-bay-r09",
+        "unchanged": false,
+        "input_hash": "5df6542c26dd6b0ed528d52f9f90cfcf3bc964dca0090d1f76de60effe45b3e1",
+        "native_candidate_geometry_metrics_ranks_identical": true,
+        "thresholds_identical": true,
+        "depth_cells_identical": true,
+        "physical_candidates_before": 192,
+        "physical_candidates_after": 192,
+        "private_held": 192,
+        "selected_valid_km2": 35.781702324,
+        "public_source_selection_unchanged": true,
+        "public_ledger_unchanged": true,
+        "outputs_verified": true,
+        "run_sha256": "fd1f0ce139b4ad9aa897ebdbbe9cd11efa5f2daedd0512c133c7dfe796829640"
+      },
+      {
+        "reach": "morro-bay-r10",
+        "unchanged": false,
+        "input_hash": "95f62c64ec46cda52dfadc195da7dcf006e406dd66813bf04effd4f889d4660c",
+        "native_candidate_geometry_metrics_ranks_identical": true,
+        "thresholds_identical": true,
+        "depth_cells_identical": true,
+        "physical_candidates_before": 1639,
+        "physical_candidates_after": 1639,
+        "private_held": 1639,
+        "selected_valid_km2": 59.241373997,
+        "public_source_selection_unchanged": true,
+        "public_ledger_unchanged": true,
+        "outputs_verified": true,
+        "run_sha256": "f746832d1dccee2b61cb8eb2cdc422bfd529aca0364e97c63146b8e1bf6e5042"
+      },
+      {
+        "reach": "point-arguello-conception-r01",
+        "unchanged": false,
+        "input_hash": "6790a1f611f38f5df3ed2e915c0ad0b5284b0c52ae65fca46ac2d729ff7d98b5",
+        "native_candidate_geometry_metrics_ranks_identical": true,
+        "thresholds_identical": true,
+        "depth_cells_identical": true,
+        "physical_candidates_before": 1698,
+        "physical_candidates_after": 1698,
+        "private_held": 1698,
+        "selected_valid_km2": 71.241712598,
+        "public_source_selection_unchanged": true,
+        "public_ledger_unchanged": true,
+        "outputs_verified": true,
+        "run_sha256": "99df9739ef9604937a30fa1717551b85371409378ba119c6e3564ce92d2ff095"
+      }
+    ]
+  }
+}

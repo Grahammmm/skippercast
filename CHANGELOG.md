@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve four original PGE South native grids as private physical sources: 111.052 km² of additional selected support and ranked candidates remain available for artifact review, with no new public fishing targets.
+
 - Hold Avila Block J habitat pending native artifact review, retain its measured depth privately, and recompute affected public source selection and shared thresholds without changing scientific rules.
 
 - Retain valid measured depth while keeping habitat from sources with unresolved artifact or interpretation reviews out of public maps and fishing exports.

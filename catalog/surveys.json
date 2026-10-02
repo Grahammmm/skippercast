@@ -181,7 +181,13 @@
     "dist/data/seafloor-point-lobos-native-review.json",
     "dist/data/seafloor-scc-character-bindings-review.json",
     "dist/data/seafloor-pge-avila-terrain-review.json",
-    "dist/data/seafloor-avila-j-quality-review.json"
+    "dist/data/seafloor-avila-j-quality-review.json",
+    "dist/data/seafloor-pge-south-f-2m-review.json",
+    "dist/data/seafloor-pge-south-g-2m-review.json",
+    "dist/data/seafloor-pge-south-h-2m-review.json",
+    "dist/data/seafloor-pge-south-g-5m-review.json",
+    "dist/data/seafloor-pge-south-ancillary-review.json",
+    "dist/data/seafloor-pge-south-habitat-quality-review.json"
   ],
   "surveys": [
     {
@@ -19107,6 +19113,298 @@
         "raster_identity": {
           "version": "normalized-raster-content-v1",
           "sha256": "821b5a025ab8b2db10a66edfbc495024bd5743678796675b05c22e419288a202"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-south-blockf-2m-native",
+      "title": "PGE South Block F 2009 original 2 m bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_South_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "bytes": 1479539208,
+      "archive_member": "CC_BlkF_2m.5m_bathygrids.zip/ArcViewGrids/cc_bf_2mbthy",
+      "derived_from": [],
+      "status": "physical-only",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE South Block F native 2 m sonar-derived grid from June 3–10, 2009. NAVD88 (GEOID03); no chart-datum conversion. Producer BASE/decimation/AverageGridder processing, with unknown per-cell uncertainty and interpolation mask. Alternate depth bands and derivatives share survey lineage. Preserve finer native detail over coarser grids. CSUMB credited noncommercial terms apply; not for navigation or for-profit use without permission. Producer rough/smooth terrain metadata reports residual bathymetric artifact effects, including vessel heave, and subjective manual exclusions. No separate georeferenced artifact mask was identified in the reviewed original GIS products, so affected bathymetry locations remain unknown. Terrain-only habitat candidates require this source-quality limitation; the same-depth derivatives are not independent rock/sand evidence. Private physical processing only pending artifact and shared-threshold review; qualified noncommercial source terms do not approve public habitat.",
+      "evidence": [
+        "research/receipts/seafloor-pge-south-f-2m-review.json#/source",
+        "research/receipts/seafloor-pge-south-f-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-south-f-2m-review.json#/rights",
+        "research/receipts/seafloor-pge-south-ancillary-review.json#/artifact_mask",
+        "research/receipts/seafloor-pge-south-habitat-quality-review.json#/decision"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-south-f-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "cog_sha256": "8c8df46a12ef66be6bc9c2c32f5cab6d68d65325e3aa07492ba28d5123c04fe9",
+        "requested_bounds_wgs84": [
+          -120.786,
+          35.079,
+          -120.68,
+          35.159
+        ],
+        "valid_pixels_in_requested_bounds": 10775530,
+        "nominal_0_300ft_pixels_in_requested_bounds": 10775530,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "4a84c2d269010a5d5656d75861425b17a778cbb94f68c4955ae80daf8cd0696f"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-south-blockg-2m-native",
+      "title": "PGE South Block G 2009 original 2 m bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_South_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "bytes": 1479539208,
+      "archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_2mbthy",
+      "derived_from": [],
+      "status": "physical-only",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE South Block G native 2 m sonar-derived grid from June 3–10, 2009. NAVD88 (GEOID03); no chart-datum conversion. Producer BASE/decimation/AverageGridder processing, with unknown per-cell uncertainty and interpolation mask. Alternate depth bands and derivatives share survey lineage. Preserve finer native detail over coarser grids. CSUMB credited noncommercial terms apply; not for navigation or for-profit use without permission. Producer rough/smooth terrain metadata reports residual bathymetric artifact effects, including vessel heave, and subjective manual exclusions. No separate georeferenced artifact mask was identified in the reviewed original GIS products, so affected bathymetry locations remain unknown. Terrain-only habitat candidates require this source-quality limitation; the same-depth derivatives are not independent rock/sand evidence. Private physical processing only pending artifact and shared-threshold review; qualified noncommercial source terms do not approve public habitat.",
+      "evidence": [
+        "research/receipts/seafloor-pge-south-g-2m-review.json#/source",
+        "research/receipts/seafloor-pge-south-g-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-south-g-2m-review.json#/rights",
+        "research/receipts/seafloor-pge-south-ancillary-review.json#/artifact_mask",
+        "research/receipts/seafloor-pge-south-habitat-quality-review.json#/decision"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-south-g-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "cog_sha256": "f522537a5ecb76722ecb544b398505e04722b0280bdaeee14f024e3504a2230e",
+        "requested_bounds_wgs84": [
+          -120.812,
+          35.025,
+          -120.749,
+          35.098
+        ],
+        "valid_pixels_in_requested_bounds": 8534132,
+        "nominal_0_300ft_pixels_in_requested_bounds": 8534132,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "2fa08214945b4b8f10fb2b21366547b42e6b16d5e06ae585d246a1f7eb00b73f"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-south-blockh-2m-native",
+      "title": "PGE South Block H 2009 original 2 m bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_South_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "bytes": 1479539208,
+      "archive_member": "CC_BlkH_2m.5m_bathygrids.zip/ArcViewGrids/cc_bh_2mbthy",
+      "derived_from": [],
+      "status": "physical-only",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE South Block H native 2 m sonar-derived grid from June 3–10, 2009. NAVD88 (GEOID03); no chart-datum conversion. Producer BASE/decimation/AverageGridder processing, with unknown per-cell uncertainty and interpolation mask. Alternate depth bands and derivatives share survey lineage. Preserve finer native detail over coarser grids. CSUMB credited noncommercial terms apply; not for navigation or for-profit use without permission. Producer rough/smooth terrain metadata reports residual bathymetric artifact effects, including vessel heave, and subjective manual exclusions. No separate georeferenced artifact mask was identified in the reviewed original GIS products, so affected bathymetry locations remain unknown. Terrain-only habitat candidates require this source-quality limitation; the same-depth derivatives are not independent rock/sand evidence. Private physical processing only pending artifact and shared-threshold review; qualified noncommercial source terms do not approve public habitat.",
+      "evidence": [
+        "research/receipts/seafloor-pge-south-h-2m-review.json#/source",
+        "research/receipts/seafloor-pge-south-h-2m-review.json#/metadata",
+        "research/receipts/seafloor-pge-south-h-2m-review.json#/rights",
+        "research/receipts/seafloor-pge-south-ancillary-review.json#/artifact_mask",
+        "research/receipts/seafloor-pge-south-habitat-quality-review.json#/decision"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-south-h-2m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "cog_sha256": "bc8b902abab04bac3c4668a77ab0832931241e62a15af3015d4e83a829c63bc7",
+        "requested_bounds_wgs84": [
+          -120.757,
+          35.025,
+          -120.64,
+          35.084
+        ],
+        "valid_pixels_in_requested_bounds": 13115742,
+        "nominal_0_300ft_pixels_in_requested_bounds": 13115742,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "16d650aafb94157fdbda48629b0f32041cd78b2737c033379fbc3941314b4741"
+        }
+      }
+    },
+    {
+      "id": "csumb-pge-south-blockg-5m-native",
+      "title": "PGE South Block G 2009 original 5 m bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_South/multibeam/data/version2/products/PGE_South_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_South_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2009,
+      "resolution_m": 5.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "NAVD88",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+      "bytes": 1479539208,
+      "archive_member": "CC_BlkG_2m.5m_bathygrids.zip/ArcViewGrids/cc_bg_5mbthy",
+      "derived_from": [],
+      "status": "physical-only",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original PGE South Block G native 5 m sonar-derived grid from June 3–10, 2009. NAVD88 (GEOID03); no chart-datum conversion. Producer BASE/decimation/AverageGridder processing, with unknown per-cell uncertainty and interpolation mask. Alternate depth bands and derivatives share survey lineage. Preserve finer native detail over coarser grids. CSUMB credited noncommercial terms apply; not for navigation or for-profit use without permission. Producer rough/smooth terrain metadata reports residual bathymetric artifact effects, including vessel heave, and subjective manual exclusions. No separate georeferenced artifact mask was identified in the reviewed original GIS products, so affected bathymetry locations remain unknown. Terrain-only habitat candidates require this source-quality limitation; the same-depth derivatives are not independent rock/sand evidence. Private physical processing only pending artifact and shared-threshold review; qualified noncommercial source terms do not approve public habitat.",
+      "evidence": [
+        "research/receipts/seafloor-pge-south-g-5m-review.json#/source",
+        "research/receipts/seafloor-pge-south-g-5m-review.json#/metadata",
+        "research/receipts/seafloor-pge-south-g-5m-review.json#/rights",
+        "research/receipts/seafloor-pge-south-ancillary-review.json#/artifact_mask",
+        "research/receipts/seafloor-pge-south-habitat-quality-review.json#/decision"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-pge-south-g-5m-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "3f23879d098fc4f7a67965270ebc60b1c0e4828225254460123d94f554530ca4",
+        "cog_sha256": "8ae40064152810d480b12243f01f4392d1c1897b372a176b2fc0a1d2b3ae69aa",
+        "requested_bounds_wgs84": [
+          -120.845,
+          35.025,
+          -120.768,
+          35.091
+        ],
+        "valid_pixels_in_requested_bounds": 1279499,
+        "nominal_0_300ft_pixels_in_requested_bounds": 643293,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "f9913a7ab27273693f5373e32e092a13cc90521e4014ce9b132d79bcb486f2c8"
         }
       }
     }
