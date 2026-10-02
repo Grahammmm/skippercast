@@ -7,17 +7,20 @@ from urllib.parse import urlsplit
 from skippercast import http
 from skippercast.platform.contracts import atomic_json
 from .io import sha256
+from .rights import CSUMB_ARCHIVES, POINT_LOBOS_ARCHIVE
 
-PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
+GENERAL_PREFIXES = ('https://cmgds.marine.usgs.gov/', 'https://pubs.usgs.gov/',
             'https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/',
             'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
             'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/')
+PREFIXES = GENERAL_PREFIXES + (POINT_LOBOS_ARCHIVE,)
 HOSTS = tuple(urlsplit(prefix).hostname for prefix in PREFIXES)
 
 
 def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000, session=None):
     url, expected = row['url'], row['sha256']
-    if not url.startswith(PREFIXES) or any(s in url.lower() for s in ('bluetopo', '/modeling/')):
+    if not (url.startswith(GENERAL_PREFIXES) or url == POINT_LOBOS_ARCHIVE) or any(
+            s in url.lower() for s in ('bluetopo', '/modeling/')):
         raise ValueError('Unreviewed original-source URL')
     if not re.fullmatch(r'[a-f0-9]{64}|unknown', expected):
         raise ValueError('Invalid source checksum')
@@ -27,9 +30,8 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
     if extension not in {'.zip', '.bag', '.tif', '.tiff'} and not (
             row.get('format') == 'arcgrid' and (
                 extension == '.tgz' and url.startswith('https://pubs.usgs.gov/') or
-                extension == '.tar.gz' and url.startswith(
-                    ('https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
-                     'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/')))):
+                extension == '.tar.gz' and (url.startswith(CSUMB_ARCHIVES)
+                                           or url == POINT_LOBOS_ARCHIVE))):
         raise ValueError('Unsupported source container')
     cache = Path(cache)
     destination = cache / expected / ('source' + extension)
