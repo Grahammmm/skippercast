@@ -20,17 +20,17 @@
         100.584
       ],
       "source_url": "https://www.adfg.alaska.gov/index.cfm?adfg=lingcod.main",
-      "evidence": "ADF&G species profile: typical rocky reefs at 30\u2013330 feet. Transfer of general West Coast habitat guidance to California; not locally calibrated.",
+      "evidence": "ADF&G species profile: typical rocky reefs at 30–330 feet. Transfer of general West Coast habitat guidance to California; not locally calibrated.",
       "evidence_scope": "General species profile from Alaska agency"
     },
     "rockfish-reef": {
-      "label": "Reef rockfish \u2014 copper habitat proxy",
+      "label": "Reef rockfish — copper habitat proxy",
       "planning_depth_m": [
         22,
         98
       ],
       "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=33863&inline=",
-      "evidence": "CDFG NFMP Appendix D, D-40\u201341: copper rockfish high-relief reef/rock-sand interfaces; Big Sur observations at 22\u201398 m. Observation band used as a planning proxy, not an optimum for all rockfish.",
+      "evidence": "CDFG NFMP Appendix D, D-40–41: copper rockfish high-relief reef/rock-sand interfaces; Big Sur observations at 22–98 m. Observation band used as a planning proxy, not an optimum for all rockfish.",
       "evidence_scope": "Central California copper rockfish; other rockfish differ"
     },
     "gopher-rockfish": {
@@ -40,7 +40,7 @@
         37
       ],
       "source_url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=33863&inline=",
-      "evidence": "CDFG NFMP Appendix D, D-41: adult gopher rockfish commonly 9\u201337 m on reefs or kelp beds.",
+      "evidence": "CDFG NFMP Appendix D, D-41: adult gopher rockfish commonly 9–37 m on reefs or kelp beds.",
       "evidence_scope": "California nearshore adult habitat"
     },
     "cabezon-shallow-reef": {
@@ -118,7 +118,7 @@
       "review_status": "reviewed",
       "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
       "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
-      "review_basis": "Fresh original FGDC metadata and native raster/VAT reviewed 2026-09-30. VALUE offsets add 10 for depth and 50/100 for slope; raster contains the 22 explicitly mapped codes. Abstract says steep slopes absent but raster includes 101\u2013113; use documented VALUE encoding, never discard those codes silently.",
+      "review_basis": "Fresh original FGDC metadata and native raster/VAT reviewed 2026-09-30. VALUE offsets add 10 for depth and 50/100 for slope; raster contains the 22 explicitly mapped codes. Abstract says steep slopes absent but raster includes 101–113; use documented VALUE encoding, never discard those codes silently.",
       "classes": {
         "1": {
           "normalized_code": 1,
@@ -238,6 +238,103 @@
       },
       "same_survey_as_depth": true,
       "lineage_note": "Paired 2008 sonar-derived bathymetry/backscatter classification with 2012 video supervision; one depth evidence line."
+    },
+    {
+      "source_id": "seafloorcharacter-offshorepointconception-zip-794d9e3e8d",
+      "source_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+      "depth_source_ids": [
+        "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+        "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+        "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+        "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b",
+        "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+        "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+        "h11953-mb-4m-mllw-3of4-bag-f90a1710f1"
+      ],
+      "review_status": "reviewed",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+      "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+      "review_basis": "Fresh original FGDC plus native raster/VAT reviewed 2026-10-02. All 19 actual codes explicitly enumerated and counts matched. Sediment class4 maps conservatively to excluded code1; original anthropogenic classes5/15 map to hard-flat code2, never hard-rugose code3. Terrain eligibility still requires existing measured roughness and final legal screening; no threshold changes. Published original class labels preserved in this binding. Actual overlap audited2026-10-02; H11953 8m omitted because no shallow/class overlap in the real source footprint.",
+      "classes": {
+        "1": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 1"
+        },
+        "2": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment, gravel, cobble and bedrock; original depth/slope-coded value 2"
+        },
+        "3": {
+          "normalized_code": 3,
+          "description": "High-backscatter, high-rugosity boulder and bedrock; original depth/slope-coded value 3"
+        },
+        "4": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment/shell hash in scour depressions; conservatively excluded from reef extraction; original depth/slope-coded value 4"
+        },
+        "5": {
+          "normalized_code": 2,
+          "description": "Hard anthropogenic material; hard-flat evidence, not natural rugose reef; original depth/slope-coded value 5"
+        },
+        "11": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 11"
+        },
+        "12": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment, gravel, cobble and bedrock; original depth/slope-coded value 12"
+        },
+        "13": {
+          "normalized_code": 3,
+          "description": "High-backscatter, high-rugosity boulder and bedrock; original depth/slope-coded value 13"
+        },
+        "14": {
+          "normalized_code": 1,
+          "description": "Medium- to coarse-grained sediment/shell hash in scour depressions; conservatively excluded from reef extraction; original depth/slope-coded value 14"
+        },
+        "15": {
+          "normalized_code": 2,
+          "description": "Hard anthropogenic material; hard-flat evidence, not natural rugose reef; original depth/slope-coded value 15"
+        },
+        "21": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 21"
+        },
+        "22": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment, gravel, cobble and bedrock; original depth/slope-coded value 22"
+        },
+        "23": {
+          "normalized_code": 3,
+          "description": "High-backscatter, high-rugosity boulder and bedrock; original depth/slope-coded value 23"
+        },
+        "61": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 61"
+        },
+        "62": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment, gravel, cobble and bedrock; original depth/slope-coded value 62"
+        },
+        "63": {
+          "normalized_code": 3,
+          "description": "High-backscatter, high-rugosity boulder and bedrock; original depth/slope-coded value 63"
+        },
+        "71": {
+          "normalized_code": 1,
+          "description": "Fine- to medium-grained smooth sediment; original depth/slope-coded value 71"
+        },
+        "72": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; coarse sediment, gravel, cobble and bedrock; original depth/slope-coded value 72"
+        },
+        "73": {
+          "normalized_code": 3,
+          "description": "High-backscatter, high-rugosity boulder and bedrock; original depth/slope-coded value 73"
+        }
+      },
+      "same_survey_as_depth": true,
+      "lineage_note": "Conservatively treated as shared sonar lineage for confidence, not independent depth or fish confirmation: character is supervised interpretation of 2008 Fugro multibeam/bathymetry-backscatter through the NOAA TopoBathy/USGS map compilation, with 2009–2010 lidar in the parent depth layer. H11952/H11953 belong to the same regional 2008 survey family; exact per-pixel line correspondence is unresolved."
     }
   ]
 }

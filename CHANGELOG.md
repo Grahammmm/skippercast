@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: use the original USGS Point Conception seafloor-character grid with seven NOAA depth products. Preserve shared survey lineage, unknown classifier accuracy and anthropogenic classes; exclude interpreted sediment from reef extraction. Local results refine 843 screened areas to 788 without adding measured bathymetric coverage.
+
 - Seafloor: qualify original NOAA H11952 1 m shallow bathymetry near Point Conception. Local processing adds 4.353 km² of selected survey support while replacing coarser habitat classifications; candidate counts and published area may decrease with finer evidence.
 
 - Seafloor: qualify 13 original SCC01–08 native grids for credited noncommercial use and screen Cambria–San Simeon r01. Reuse three verified private terrain caches, including categorical-row numeric normalization; local screening yields 611 areas across three reaches, 513 above the prior public subset. Production is verified separately.
