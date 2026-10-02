@@ -177,7 +177,8 @@
     "dist/data/seafloor-pge-mid-c-5m-review.json",
     "dist/data/seafloor-pge-mid-e-5m-review.json",
     "dist/data/seafloor-pge-avila-native-rights-review.json",
-    "dist/data/seafloor-scc16-native-rights-review.json"
+    "dist/data/seafloor-scc16-native-rights-review.json",
+    "dist/data/seafloor-point-lobos-native-review.json"
   ],
   "surveys": [
     {
@@ -19021,6 +19022,77 @@
         "raster_identity": {
           "version": "normalized-raster-content-v1",
           "sha256": "2266dc503e579f29e31b633997a973a8a9d3265cef1eee93d4868d475304eb29"
+        }
+      }
+    },
+    {
+      "id": "csumb-point-lobos-2m-native",
+      "title": "Point Lobos 2000–2006 original 2 m sonar-derived bathymetry",
+      "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz",
+      "landing_page": "https://www.ngdc.noaa.gov/ships/macginitie/PointLobos_mb.html",
+      "format": "arcgrid",
+      "kind": "bathymetry",
+      "year": 2006,
+      "resolution_m": 2.0,
+      "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+      "vertical_datum": "unknown",
+      "license": "csumb-public-use-noncommercial",
+      "sha256": "6ecad4d5f58cb459fa2b45abd46c386e095dcbc4817d736b703305b7bf220384",
+      "bytes": 267635311,
+      "archive_member": "PointLobos/PtLobos_2mbathy_hill_slope.zip/ArcViewGrids/pl_2mbathy",
+      "derived_from": [],
+      "status": "usable",
+      "hold_reason": "unknown",
+      "inspection_level": "native",
+      "lineage_status": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Native 2 m producer-gridded multibeam depths, mixed 2000/2001/2005/2006 surveys. Native bathymetry metadata describes MLLW with predicted tides, while a companion image says NAVD88; datum remains unknown. Approximate producer accuracy statements have no confidence level and no per-cell uncertainty/interpolation mask. Derived hillshade, slope and imagery are not independent surveys. Credited noncommercial use only; no navigation or for-profit permission.",
+      "evidence": [
+        "research/receipts/seafloor-point-lobos-native-review.json#/source",
+        "research/receipts/seafloor-point-lobos-native-review.json#/metadata",
+        "research/receipts/seafloor-point-lobos-native-review.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "research/receipts/seafloor-point-lobos-native-review.json#/source/sha256",
+        "bytes": "research/receipts/seafloor-point-lobos-native-review.json#/source/bytes",
+        "resolution_m": "research/receipts/seafloor-point-lobos-native-review.json#/source/resolution_m",
+        "horizontal_crs": "research/receipts/seafloor-point-lobos-native-review.json#/source/horizontal_crs",
+        "vertical_datum": "research/receipts/seafloor-point-lobos-native-review.json#/source/vertical_datum",
+        "year": "research/receipts/seafloor-point-lobos-native-review.json#/source/year"
+      },
+      "rights_review": {
+        "producer": "CSUMB SFML",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "6ecad4d5f58cb459fa2b45abd46c386e095dcbc4817d736b703305b7bf220384",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "6ecad4d5f58cb459fa2b45abd46c386e095dcbc4817d736b703305b7bf220384",
+        "cog_sha256": "558878a051d62be6b3d2b9cea7f00611fe1a45d25f94f538f75a865e256717bf",
+        "requested_bounds_wgs84": [
+          -121.983,
+          36.497,
+          -121.925,
+          36.54
+        ],
+        "valid_pixels_in_requested_bounds": 3216643,
+        "nominal_0_300ft_pixels_in_requested_bounds": 2180800,
+        "native_resolution_m": [
+          2.0,
+          2.0
+        ],
+        "vertical_datum": "unknown",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "821b5a025ab8b2db10a66edfbc495024bd5743678796675b05c22e419288a202"
         }
       }
     }

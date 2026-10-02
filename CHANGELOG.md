@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add original 2 m Point Lobos survey support: 4.019 km² of additional selected measured coverage, ranked habitat and whole-polygon MPA screening; retain unknown datum and credited noncommercial terms.
+
 Release reviewed Avila and SCC16 native source rows and complete the spatial-screen scope for three Avila/Pismo/northern Arguello reaches, preserving physical-first processing and whole-polygon exclusions.
 
 Qualify seven original PGE_Mid native grids, adding 33.91 km² of selected shallow survey support across two Morro reaches while preserving native resolution, producer rights and final spatial screening.
