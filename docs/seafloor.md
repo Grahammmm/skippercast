@@ -541,10 +541,24 @@ that PR merges. This result does not mean the layer is already served as tiles.
 
 ## Regional publication contract (M4)
 
+### Historical M4 pilot
+
+The following figures describe the initial M4 milestone at the revision below,
+not current coast-wide progress. For current committed coverage, run:
+
+```bash
+python research/scripts/seafloor_status.py --ledger dist/data/seafloor-ledger.json
+```
+
+This report derives counts and areas from the selected ledger. It deliberately
+leaves live publication unverified until manifest/hash and HTTP/range receipts
+are checked; a screened state alone is not measured or published coverage.
+
+
 M3 is accepted on main at `56ae67410f35336414b4efd989c72d4efe4f24cf`
 (PR #17). M4 adds publication; it does not add surveyed area or change grading.
 The initial ledger remains 100.713125 km² tier 1 and 16.611764 km² tier 2.
-Only three of 46 Central Coast reaches are assessed. These are habitat planning
+At that milestone, only three of 46 Central Coast reaches were assessed. These are habitat planning
 fits, not likelihoods of a catch.
 
 ```
@@ -686,3 +700,4 @@ The next runtime failure exposed a missing `jsonschema` dependency: offline CI
 installed it, but the publication workflow did not. `requirements-seafloor.txt`
 now composes the full pinned batch environment, and every job validates the
 manifest before touching data. Web/core dependencies remain unchanged.
+
