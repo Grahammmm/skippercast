@@ -91,6 +91,16 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
         'totals': ledger['totals'], 'reaches': rows,
         'selected': [{'reach': r['reach'], 'region': r['region']} for r in selected],
         'new_reaches': [r['reach'] for r in new],
+        'execution': {
+            'new_reach_batch_selected': bool(new),
+            'refresh_reaches': [r['reach'] for r in rows if r['processed']],
+            'next_action': 'process-reviewed-batch' if new else 'inspect-native-gaps',
+            'next_action_reason': 'Process selected native windows; measure the increment after running.'
+                if new else 'No unprocessed reach selected. Reuse retained native coverage masks to '
+                            'qualify an additional source; refreshing existing reaches does not establish expansion.',
+            'additional_measured_km2': None,
+            'notice': 'This is a scheduling result, not measured growth. Newly qualified sources can '
+                      'also improve processed reaches; only before/after physical receipts establish that.'},
         'source_review_queue': [{'id': r['id'], 'publisher': r['publisher'], 'title': r['title'],
                                 'status': r['status'], 'url': r['url'], 'hold_reason': r['hold_reason']}
                                for r in manifest['surveys'] if r['status'] in ('candidate', 'hold')
@@ -106,6 +116,8 @@ def report(document):
     for r in document['reaches']:
         lines.append(f"| {r['reach']} | {r['action']} | {r['tier1_km2']:.3f} | {r['tier2_km2']:.3f} | {r['screen_reviewed']} |")
     lines += ['', 'Next new batch: '+(', '.join(document['new_reaches']) or 'none'),
+              'Next acquisition/processing action: '+document['execution']['next_action'],
+              document['execution']['next_action_reason'],
               'Survey states: '+str(document['survey_status_counts']),
               'Completed privately, awaiting ledger merge: '+str(sum(r['pending_ledger_merge'] for r in document['reaches'])),
               'Qualify-source means research remains; it does not mean the seafloor is unmapped by its publisher.']
