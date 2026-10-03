@@ -1,0 +1,843 @@
+{
+  "profile": "csumb-native-rough-v1",
+  "legend": {
+    "rough": [
+      -1,
+      -31,
+      -101,
+      -201
+    ],
+    "smooth": [
+      0,
+      -30,
+      -100,
+      -200
+    ],
+    "zero_is_valid_smooth": true
+  },
+  "limitations": [
+    "Same original bathymetry lineage, not independent substrate or fish evidence.",
+    "Producer conservative masking may omit real rough terrain; unknown class coverage does not invalidate measured depths.",
+    "Metadata position/motion system specifications are not verified per-cell bathymetric uncertainty.",
+    "Existing credited noncommercial rights, depth datums and whole-polygon spatial screens remain required.",
+    "The source audit is not a claim of deduplicated geographic expansion or live publication."
+  ],
+  "new_acquisition_km2": 0,
+  "new_independent_evidence_count": 0,
+  "scope": "Source-bound SCC09–11 original2m terrain and SCC10–11 original5m terrain. SCC09 5m support remains unbound pending its original-origin precision diagnostic. No new acquisition or legal clearance.",
+  "reviewed_at": "2026-10-03T08:20:02.134479+00:00",
+  "products": [
+    {
+      "depth_source_id": "csumb-scc-block09-2m-native",
+      "archive_sha256": "4a0a318918190b1127aa90af62f547442d90d6cbeb5f86d97c8e1e7bd840b449",
+      "archive_member": "SCC_Blk09_2m.5m_habitat.zip/ArcViewGrids/scc09_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk09_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/scc09_2mhab/metadata.xml",
+        "sha256": "53c0d77dc70173fc5e5468d21f719cc13fc22e824b99fad533c28b33d9f36776"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        4357,
+        1928
+      ],
+      "native_crs": "NAD83 / UTM zone10N",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        672385.0,
+        0.0,
+        -2.0,
+        3928795.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        672385.0,
+        0.0,
+        -2.0,
+        3928795.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk09_2m.5m_bathygrids.zip/ArcViewGrids/scc09_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          672385.0,
+          0.0,
+          -2.0,
+          3928795.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          4357,
+          1928
+        ],
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "f4179313789cd8c6cdd46b3037691d960640e8faefec779bb98629367d0117cf",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-31": 447196,
+        "-30": 2919990,
+        "-1": 853582,
+        "0": 444756
+      },
+      "shallow_class_counts": {
+        "-31": 447196,
+        "-30": 2919990,
+        "-1": 853582,
+        "0": 444756
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 4687342,
+      "missing_class_at_shallow_cells": 21818,
+      "rough_shallow_cells": 1300778,
+      "rough_shallow_native_cell_area_proxy_km2": 5.203112,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false,
+      "original_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+      "original_bytes": 192865307,
+      "depth_member": "SCC_Blk09_2m.5m_bathygrids.zip/ArcViewGrids/scc09_2mbathy",
+      "native_bounds_wgs84": [
+        -121.10046970629051,
+        35.45145341587606,
+        -121.00364095979445,
+        35.48775157296773
+      ],
+      "depth_vertical_datum": "NAVD88",
+      "producer_method": [
+        "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows:\n\t0 \tDepth = 0- -30, Substrate = Smooth\n\t-1 \tDepth = 0- -30, Substrate = Rough\n\t-30 \tDepth = -30- -100, Substrate = Smooth\n\t-31\tDepth = -30- -100, Substrate = Rough\n\t-100\tDepth = -100 - -200, Substrate = Smooth\n-101\tDepth = -100 - -200, Substrate = Rough\n-200 \tDepth <= -200, Substrate = Smooth\n-201\tDepth <= -200, Substrate = Rough\n\nThe masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses.\n"
+      ],
+      "original_metadata_reviewed": true
+    },
+    {
+      "depth_source_id": "csumb-scc-block10-2m-native",
+      "archive_sha256": "bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c",
+      "archive_member": "SCC_Blk10_2m.5m_habitat.zip/ArcViewGrids/scc10_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk10_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/scc10_2mhab/metadata.xml",
+        "sha256": "5b8701bf4888262017e8c4a6a7f87a3b8472d3c801529b7a7493ad9802ee428a"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        4262,
+        1973
+      ],
+      "native_crs": "NAD83 / UTM zone10N",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        676593.0,
+        0.0,
+        -2.0,
+        3926007.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        676593.0,
+        0.0,
+        -2.0,
+        3926007.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          676593.0,
+          0.0,
+          -2.0,
+          3926007.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          4262,
+          1973
+        ],
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "4823cf7476b3a004ee2301d8136c7e7dcaaf6c14eb07954d10baf81343116608",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-30": 1790903,
+        "-31": 968855,
+        "-1": 782559,
+        "0": 974038
+      },
+      "shallow_class_counts": {
+        "-30": 1790903,
+        "-31": 968855,
+        "-1": 782559,
+        "0": 974038
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 4537986,
+      "missing_class_at_shallow_cells": 21631,
+      "rough_shallow_cells": 1751414,
+      "rough_shallow_native_cell_area_proxy_km2": 7.005656,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false,
+      "original_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version2/products/SCC_Block10_additional_products.tar.gz",
+      "original_bytes": 189695876,
+      "depth_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_2mbathy",
+      "native_bounds_wgs84": [
+        -121.05474908119015,
+        35.42477976980375,
+        -120.96000796686933,
+        35.46188813528493
+      ],
+      "depth_vertical_datum": "NAVD88",
+      "producer_method": [
+        "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows:\n\t0 \tDepth = 0- -30, Substrate = Smooth\n\t-1 \tDepth = 0- -30, Substrate = Rough\n\t-30 \tDepth = -30- -100, Substrate = Smooth\n\t-31\tDepth = -30- -100, Substrate = Rough\n\t-100\tDepth = -100 - -200, Substrate = Smooth\n-101\tDepth = -100 - -200, Substrate = Rough\n-200 \tDepth <= -200, Substrate = Smooth\n-201\tDepth <= -200, Substrate = Rough\n\nThe masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses.\n"
+      ],
+      "original_metadata_reviewed": true
+    },
+    {
+      "depth_source_id": "csumb-scc-block10-5m-native",
+      "archive_sha256": "bdfd7bc73d4dc104d23b17377232c7bdeff66eefbe2b5790d8efec8e6c0e4d3c",
+      "archive_member": "SCC_Blk10_2m.5m_habitat.zip/ArcViewGrids/scc10_5mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk10_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/scc10_5mhab/metadata.xml",
+        "sha256": "1cb8b7de43bf06f1b2898726f400eeb45705c03c149d57aa0753e978a9317108"
+      },
+      "native_resolution_m": [
+        5.0,
+        5.0
+      ],
+      "native_dimensions": [
+        1252,
+        848
+      ],
+      "native_crs": "NAD83 / UTM zone10N",
+      "nodata": -32768.0,
+      "native_transform": [
+        5.0,
+        0.0,
+        674232.5,
+        0.0,
+        -5.0,
+        3925257.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        5.0,
+        0.0,
+        674232.5,
+        0.0,
+        -5.0,
+        3925257.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_5mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          5.0,
+          0.0,
+          674232.5,
+          0.0,
+          -5.0,
+          3925257.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          1252,
+          848
+        ],
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "c9937a877aa44df18f088aa2d2bb5d379ac88dab7ad123491056951bc0202f95",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-101": 12176,
+        "-100": 183399,
+        "-31": 7499,
+        "-30": 311805
+      },
+      "shallow_class_counts": {
+        "-30": 155273,
+        "-31": 5034
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 162392,
+      "missing_class_at_shallow_cells": 2085,
+      "rough_shallow_cells": 5034,
+      "rough_shallow_native_cell_area_proxy_km2": 0.12585,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false,
+      "original_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version2/products/SCC_Block10_additional_products.tar.gz",
+      "original_bytes": 189695876,
+      "depth_member": "SCC_Blk10_2m.5m_bathygrids.zip/ArcViewGrids/scc10_5mbathy",
+      "native_bounds_wgs84": [
+        -121.08096105012382,
+        35.41622567574641,
+        -121.01110855054479,
+        35.45555042157071
+      ],
+      "depth_vertical_datum": "NAVD88",
+      "producer_method": [
+        "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows:\n\t0 \tDepth = 0- -30, Substrate = Smooth\n\t-1 \tDepth = 0- -30, Substrate = Rough\n\t-30 \tDepth = -30- -100, Substrate = Smooth\n\t-31\tDepth = -30- -100, Substrate = Rough\n\t-100\tDepth = -100 - -200, Substrate = Smooth\n-101\tDepth = -100 - -200, Substrate = Rough\n-200 \tDepth <= -200, Substrate = Smooth\n-201\tDepth <= -200, Substrate = Rough\n\nThe masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses.\n"
+      ],
+      "original_metadata_reviewed": true
+    },
+    {
+      "depth_source_id": "csumb-scc-block11-2m-native",
+      "archive_sha256": "41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d",
+      "archive_member": "SCC_Blk11_2m.5m_habitat.zip/ArcViewGrids/scc11_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk11_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/scc11_2mhab/metadata.xml",
+        "sha256": "e6ca92d95ae541c6e00740278f36c80fb3b54ff5ce30657bc90a03e2b9ebccd3"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        4867,
+        2891
+      ],
+      "native_crs": "NAD83 / UTM zone10N",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        679883.0,
+        0.0,
+        -2.0,
+        3924679.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        679883.0,
+        0.0,
+        -2.0,
+        3924679.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          679883.0,
+          0.0,
+          -2.0,
+          3924679.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          4867,
+          2891
+        ],
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "18df5e7a5e36e53bab678956d0e2ae99c972af9eb2967be6a53a635af6ec81e9",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-30": 3469368,
+        "-1": 956471,
+        "0": 1662174,
+        "-31": 626690
+      },
+      "shallow_class_counts": {
+        "-30": 3469368,
+        "-1": 956471,
+        "0": 1662174,
+        "-31": 626690
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 6744160,
+      "missing_class_at_shallow_cells": 29457,
+      "rough_shallow_cells": 1583161,
+      "rough_shallow_native_cell_area_proxy_km2": 6.332644,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false,
+      "original_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version2/products/SCC_Block11_additional_products.tar.gz",
+      "original_bytes": 257854961,
+      "depth_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_2mbathy",
+      "native_bounds_wgs84": [
+        -121.01922550174038,
+        35.39542252863218,
+        -120.91075648491069,
+        35.44933116468416
+      ],
+      "depth_vertical_datum": "NAVD88",
+      "producer_method": [
+        "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows:\n\t0 \tDepth = 0- -30, Substrate = Smooth\n\t-1 \tDepth = 0- -30, Substrate = Rough\n\t-30 \tDepth = -30- -100, Substrate = Smooth\n\t-31\tDepth = -30- -100, Substrate = Rough\n\t-100\tDepth = -100 - -200, Substrate = Smooth\n-101\tDepth = -100 - -200, Substrate = Rough\n-200 \tDepth <= -200, Substrate = Smooth\n-201\tDepth <= -200, Substrate = Rough\n\nThe masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses.\n"
+      ],
+      "original_metadata_reviewed": true
+    },
+    {
+      "depth_source_id": "csumb-scc-block11-5m-native",
+      "archive_sha256": "41f6bc2a5af4f6ab4c394f9a5d99023316aa68169d23bb1fb8e9d0547305c02d",
+      "archive_member": "SCC_Blk11_2m.5m_habitat.zip/ArcViewGrids/scc11_5mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk11_2m.5m_habitat.zip",
+        "member": "ArcViewGrids/scc11_5mhab/metadata.xml",
+        "sha256": "75e1b16c8b66d0c102148773922dec5cfb650b79e36ba3a264327a2a76456c4e"
+      },
+      "native_resolution_m": [
+        5.0,
+        5.0
+      ],
+      "native_dimensions": [
+        1093,
+        584
+      ],
+      "native_crs": "NAD83 / UTM zone10N",
+      "nodata": -32768.0,
+      "native_transform": [
+        5.0,
+        0.0,
+        677617.5,
+        0.0,
+        -5.0,
+        3922462.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        5.0,
+        0.0,
+        677617.5,
+        0.0,
+        -5.0,
+        3922462.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_5mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          5.0,
+          0.0,
+          677617.5,
+          0.0,
+          -5.0,
+          3922462.5,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          1093,
+          584
+        ],
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "1c7bc5e306280fe4c2d24731edea3f9f7118a7469ce51622f21602cdb7a0c5bd",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-100": 118877,
+        "-31": 3895,
+        "-30": 156443
+      },
+      "shallow_class_counts": {
+        "-31": 2999,
+        "-30": 54817
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 59727,
+      "missing_class_at_shallow_cells": 1911,
+      "rough_shallow_cells": 2999,
+      "rough_shallow_native_cell_area_proxy_km2": 0.074975,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false,
+      "original_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version2/products/SCC_Block11_additional_products.tar.gz",
+      "original_bytes": 257854961,
+      "depth_member": "SCC_Blk11_2m.5m_bathygrids.zip/ArcViewGrids/scc11_5mbathy",
+      "native_bounds_wgs84": [
+        -121.04401836418599,
+        35.40246127117005,
+        -120.9832129352284,
+        35.429764340351646
+      ],
+      "depth_vertical_datum": "NAVD88",
+      "producer_method": [
+        "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows:\n\t0 \tDepth = 0- -30, Substrate = Smooth\n\t-1 \tDepth = 0- -30, Substrate = Rough\n\t-30 \tDepth = -30- -100, Substrate = Smooth\n\t-31\tDepth = -30- -100, Substrate = Rough\n\t-100\tDepth = -100 - -200, Substrate = Smooth\n-101\tDepth = -100 - -200, Substrate = Rough\n-200 \tDepth <= -200, Substrate = Smooth\n-201\tDepth <= -200, Substrate = Rough\n\nThe masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses.\n"
+      ],
+      "original_metadata_reviewed": true
+    }
+  ],
+  "bounded_reach_proofs": [
+    {
+      "reach": "morro-bay-r01",
+      "status": "passed",
+      "physical_only": true,
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "before": {
+        "selected_valid_km2": 43.135426739,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 540,
+        "physical_candidate_area_km2": 5.024818145035042,
+        "source_counts": {
+          "csumb-scc-block07-2m-native": 28,
+          "csumb-scc-block08-2m-native": 317,
+          "csumb-scc-block09-2m-native": 195
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 5969249,
+          "vrm": 0.005252511240541935,
+          "bpi_fine_m_samples": 5823458,
+          "bpi_fine_m": 0.5001913386366005
+        },
+        "run_sha256": "61652e055c6accfbd21df4c190d9c83bb7f6d5380970cbcaab249611a5dee68c",
+        "input_hash": "b90323f6113bf7d42039944f3b2b4137ab52fa3e50b356950becf3d1c9ddff64",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 43.135426739,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 540,
+        "physical_candidate_area_km2": 2.4247424643332836,
+        "source_counts": {
+          "csumb-scc-block07-2m-native": 16,
+          "csumb-scc-block08-2m-native": 339,
+          "csumb-scc-block09-2m-native": 185
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 3035511,
+          "vrm": 0.009734285064041615,
+          "bpi_fine_m_samples": 2950533,
+          "bpi_fine_m": 0.6767994419404282
+        },
+        "run_sha256": "a038395dbfc026ed1bb057c18c8e123adf1ba02b72303e096aebe70053b0be56",
+        "input_hash": "f8eb72aa4c08ed71bec2d8ec10f9185f6a6a9336c623bd64c59e6011eff84ce7",
+        "physical_reused": false
+      },
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "note": "Private comparison; original support changes shared calibration/component boundaries. Measured depth, rights, source status and screens remain unchanged."
+    },
+    {
+      "reach": "morro-bay-r02",
+      "status": "passed",
+      "physical_only": true,
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "before": {
+        "selected_valid_km2": 54.170951596,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 801,
+        "physical_candidate_area_km2": 11.058272050126446,
+        "source_counts": {
+          "csumb-scc-block09-2m-native": 21,
+          "csumb-scc-block10-2m-native": 276,
+          "csumb-scc-block10-5m-native": 3,
+          "csumb-scc-block11-2m-native": 429,
+          "csumb-scc-block11-5m-native": 12,
+          "csumb-scc-block12-2m-native": 60
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 12884004,
+          "vrm": 0.0011892067268490791,
+          "bpi_fine_m_samples": 12566470,
+          "bpi_fine_m": 0.332342848972098
+        },
+        "run_sha256": "554c6cb54357dde7e92539afc27a2460297578ff6a2e434c6105f505edacbc95",
+        "input_hash": "ec039c054218f9a1f062aefd4df1f34ca3bb4997e760a2a4ff4390fd78e84e61",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 54.170951596,
+        "tier1_km2": 56.8875,
+        "physical_candidate_count": 926,
+        "physical_candidate_area_km2": 4.239910718564165,
+        "source_counts": {
+          "csumb-scc-block09-2m-native": 57,
+          "csumb-scc-block10-2m-native": 358,
+          "csumb-scc-block10-5m-native": 1,
+          "csumb-scc-block11-2m-native": 459,
+          "csumb-scc-block11-5m-native": 8,
+          "csumb-scc-block12-2m-native": 43
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 5395263,
+          "vrm": 0.003646170487627387,
+          "bpi_fine_m_samples": 5258482,
+          "bpi_fine_m": 0.46190206401615624
+        },
+        "run_sha256": "35fc9213261677157d7babe9c77d2a76bc7ae46198a418f446ad53f1ef457b54",
+        "input_hash": "c1313b10b112aebf14af5abb11a329c72c2a7cf3e27c8f91b09e93dc844e5270",
+        "physical_reused": false
+      },
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "note": "Private comparison; original support changes shared calibration/component boundaries. Measured depth, rights, source status and screens remain unchanged."
+    },
+    {
+      "reach": "morro-bay-r03",
+      "status": "passed",
+      "physical_only": true,
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "before": {
+        "selected_valid_km2": 30.351221842,
+        "tier1_km2": 31.65125,
+        "physical_candidate_count": 215,
+        "physical_candidate_area_km2": 4.162661908471806,
+        "source_counts": {
+          "csumb-scc-block11-2m-native": 3,
+          "csumb-scc-block13-2m-native": 87,
+          "csumb-scc-block12-2m-native": 125
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 7532109,
+          "vrm": 2.5681367333163507e-05,
+          "bpi_fine_m_samples": 7381984,
+          "bpi_fine_m": 0.1621950813013697
+        },
+        "run_sha256": "4d58fcbf0f7836b9b6299980800f6f027f31044d6ea4aa0f82f8a123c72a2949",
+        "input_hash": "5ba9dead9d54311ac7a1d9a73eae397091c681fd15044f992b3d143ffa9fcc63",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 30.351221842,
+        "tier1_km2": 31.65125,
+        "physical_candidate_count": 219,
+        "physical_candidate_area_km2": 4.088701353283395,
+        "source_counts": {
+          "csumb-scc-block11-2m-native": 8,
+          "csumb-scc-block13-2m-native": 86,
+          "csumb-scc-block12-2m-native": 125
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 7501376,
+          "vrm": 2.5071862182812765e-05,
+          "bpi_fine_m_samples": 7359930,
+          "bpi_fine_m": 0.1618979561079309
+        },
+        "run_sha256": "0d47e51ec2203203d9c54e05aabfcdcd9c067ba586022a235ae6b0cb52d80bf1",
+        "input_hash": "1ae985d543e304d104e12ffda2061f80112a26a0bec76bad696f382cf83b3b6c",
+        "physical_reused": false
+      },
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "note": "Private comparison; original support changes shared calibration/component boundaries. Measured depth, rights, source status and screens remain unchanged."
+    }
+  ],
+  "production_native_reader_verification": {
+    "status": "passed",
+    "sources": [
+      {
+        "source_id": "csumb-scc-block09-2m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "c84eb5037cf2eed3b1f36eba7195188c4655da652dcc7e86ecddb0ef7c5c298b",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          1928,
+          4357
+        ],
+        "resolution_m": [
+          2.0,
+          2.0
+        ]
+      },
+      {
+        "source_id": "csumb-scc-block10-2m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "731dd5cde66f4f7b16607001c850b579b041d8961a0c1445265bfc6fc304f2d6",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          1973,
+          4262
+        ],
+        "resolution_m": [
+          2.0,
+          2.0
+        ]
+      },
+      {
+        "source_id": "csumb-scc-block10-5m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "62e9c0a1cf75404b4435290d24bb6fa30d11326937cdb1dfcecc205f88a88b6a",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          848,
+          1252
+        ],
+        "resolution_m": [
+          5.0,
+          5.0
+        ]
+      },
+      {
+        "source_id": "csumb-scc-block11-2m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "92ee87ddf73e7c0df467270635b5545b08249072afb81e6ab7202af9d5dd1b6c",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          2891,
+          4867
+        ],
+        "resolution_m": [
+          2.0,
+          2.0
+        ]
+      },
+      {
+        "source_id": "csumb-scc-block11-5m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "e6377dcc265518bfeffb13aa952e6937b5d55deb45a6d41b15270cee6800b46e",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          584,
+          1093
+        ],
+        "resolution_m": [
+          5.0,
+          5.0
+        ]
+      }
+    ]
+  },
+  "native_candidate_review": {
+    "audit_sha256": "628942cd63395d2f58fd6f23181d87ec1854aee6fe96eeba341e9633c3f84d3a",
+    "script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "candidate_count": 1076,
+    "candidate_counts_by_source": {
+      "csumb-scc-block09-2m-native": 242,
+      "csumb-scc-block10-2m-native": 358,
+      "csumb-scc-block10-5m-native": 1,
+      "csumb-scc-block11-2m-native": 467,
+      "csumb-scc-block11-5m-native": 8
+    },
+    "sampled_native_views": 18,
+    "pages": [
+      {
+        "file": "page-01.png",
+        "sha256": "1eb11120e502ca7f20bab7b642d2c69ff203f8b955cd3ceb9e22da895ba62d48"
+      },
+      {
+        "file": "page-02.png",
+        "sha256": "5196a60372c7061a20fe09d5330c653401e91d86f289c5fe1aa7ccddab4f6992"
+      },
+      {
+        "file": "page-03.png",
+        "sha256": "8dc2ec88c0cd353a40523c6325c5ba9474260745a689bf022d252bdc22e90bea"
+      },
+      {
+        "file": "page-04.png",
+        "sha256": "ec9ce3ee5312f2f49bcfb5b290e3a7f985b83ac9ac979fb17b64bc73726989f1"
+      },
+      {
+        "file": "page-05.png",
+        "sha256": "c254f49572914cf2ed35e1891c44f3fc99b9bddded5fd62fe67c606f77f0ac3e"
+      },
+      {
+        "file": "page-06.png",
+        "sha256": "490605830f84d81f46c5ecd9c07a8895d09c2a414199b6ebc8bf7a24cc469cac"
+      }
+    ],
+    "all_numeric_diagnostics_reviewed": true,
+    "primary_all_pages_reviewed": true,
+    "native_depth_min_m": 7.260000228881836,
+    "native_depth_max_m": 91.43000030517578,
+    "minimum_rough_native_center_fraction": 0.9851851851851852,
+    "class_nodata_centers": 0,
+    "limitation": "Native-center checks and18 uniformly spaced context views; some linear terrain visible. Same-survey interpretation, not exhaustive artifact exclusion or substrate ground truth."
+  },
+  "deferred_support_bindings": [
+    {
+      "source_id": "csumb-scc-block09-5m-native",
+      "status": "alignment-diagnostic-pending",
+      "reason": "Original depth and terrain have same5m size/shape/CRS, but xorigins differ9.686e-7m; current exact-alignment check rejects. No resampling or source-status change; retain measured depth.",
+      "native_shape": [
+        1042,
+        1349
+      ],
+      "depth_xorigin": 670637.5,
+      "terrain_xorigin": 670637.5000009686
+    }
+  ]
+}
