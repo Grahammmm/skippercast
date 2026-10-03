@@ -187,7 +187,13 @@ def reconcile(header, topography, count, dispersion, beams, *, epsg):
                             | ((minimum <= 0) & (maximum > 0)))
     safe = supported & grid_valid & checked & ~crossing
     shape = (h, w)
-    arrays = [-topography, expected_count.reshape(shape), dispersion,
+    # Both readers print decimal depths at different precision. After the
+    # unchanged grid/table parity check, retain the table-derived order statistic
+    # with its own contributor extrema. Mixing the supplied rounded grid median
+    # with table extrema can place a median outside its range after float32
+    # storage. This does not recover unprinted source precision or repair beams.
+    median_delta = np.abs(topography.ravel()[check]-expected_z[check])
+    arrays = [-expected_z.reshape(shape), expected_count.reshape(shape), dispersion,
               minimum.reshape(shape), maximum.reshape(shape)]
     return arrays, safe.reshape(shape), {
         'original_good_beams_in_grid': int(len(keys)), 'occupied_bins': int(supported.sum()),
@@ -197,6 +203,8 @@ def reconcile(header, topography, count, dispersion, beams, *, epsg):
         'safe_nominal_shallow_bins': int((safe & (minimum > 0) & (maximum <= 91.44)).sum()),
         'independently_checked_bins': int(check.sum()),
         'count_support_mismatches': 0,
+        'stored_depth_basis': 'reconciled complete printed beam-table order statistic',
+        'maximum_grid_table_median_difference_m': float(median_delta.max()) if median_delta.size else 0.,
         'median_method': 'upper order statistic of positive-up topography (not middle-pair average)',
         'dispersion_method': 'sample RMS around selected median, not calibrated uncertainty'}
 
