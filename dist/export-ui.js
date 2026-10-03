@@ -1,6 +1,6 @@
 import {getRegion,getRegionDirectory} from './region.js';
 import {esc} from './marine-charts.js';
-import {buildExport,offlineNotes,readDraft,draftKey} from './trip-export.js';
+import {buildExport,offlineNotes,readDraft,draftKey,exportEvidenceLabel,isMeasuredTarget,exportPresetTargets} from './trip-export.js';
 import {navigate} from '../web/state.ts';
 import {track} from '../web/telemetry.ts';
 import {loadReefTrip} from './reef-trip-data.js';
@@ -21,6 +21,7 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
   let raw=null;try{raw=localStorage.getItem(draftKey(region.id));}catch{}
   const tripAtlas={...atlas,targets:[...atlas.targets],areas:[...atlas.areas]};
   const draft=readDraft(raw,atlas,today);let search='',storageOK=true,ranked=false,filtersDirty=false,ports=[],canonical=null;
+  let allowResearch=false;
   let restorePending=!!draft.rankedPlan,restoring=false,selectionRevision=0,selectionLoading=false;
   let savedPort;try{savedPort=localStorage.getItem(HOME_PORT_KEY);}catch{}
   root.innerHTML=`<div class="export-card export-plan">
@@ -42,8 +43,10 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
       </div><p class="export-note">Distance is straight-line reference only. Habitat ranks stay fixed; check the selected day’s conditions separately.</p></details>
       <p><button id="export-map">Show ranked spots on map</button> <button id="export-conditions">Check trip conditions</button></p>
       <details><summary>How ranking and confidence work</summary><p>3/3 Strong, 2/3 Good, 1/3 Secondary habitat fit. The combined target uses the weaker of the two fits. We select distinct reefs at least 0.15 nm apart; fewer than your limit may qualify.</p><p>Confidence index: original survey 25 points, valid metric support up to 25, fine resolution up to 20, interpreted substrate coverage up to 20, known survey year 5, documented independent support 5. Unknown interpolation flags cap it at 90%. This is an evidence rubric, not a statistical probability of catching fish. Reef depths are nominal; verify them on your sounder.</p></details>
-      <p>Start with a set, then check only the spots you want. Current map and filtered sets use your species and depth filters.</p>
-      <div class="export-presets"><button data-scope="map">Current map</button><button data-scope="filtered">Filtered spots</button><button data-scope="region">Whole region</button><button data-scope="none">Clear selection</button></div>
+      <label class="export-check"><input id="export-research" type="checkbox"><span><strong>Research-coordinate export · opt in</strong><small>Include historical research references that are not chart-depth qualified. Verify the bottom and depth on your chart and sounder. This choice does not bypass protected-area checks.</small></span></label>
+      <p class="export-note">The default picker contains measured reefs from a current publication. Their survey depths remain nominal. Research-coordinate export is a separate capability from qualified fishing targets; saved research selections are retained but need this session’s opt-in before download.</p>
+      <p>Start with a set, then check only the spots you want. Current map selects loaded measured reefs in view plus opted-in research references. Filtered research uses the map’s species and depth filters; Best available uses the trip filters above.</p>
+      <div class="export-presets"><button data-scope="map">Current map</button><button data-scope="filtered" id="export-filtered-research" disabled>Filtered research references</button><button data-scope="region">Whole region</button><button data-scope="none">Clear selection</button></div>
       <p id="export-scope-status" role="status"></p>
       <label>Find a spot<input id="export-search" type="search" placeholder="Name, ID or grade" autocomplete="off"></label><div id="export-spot-list" class="export-spot-list" role="group" aria-label="Choose fishing spots"></div>
       </div></details>
@@ -75,7 +78,7 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
     if(restorePending)throw Error('Saved ranked plan needs current reef data. Restore it or select Best available again.');
     if(filtersDirty)throw Error("Trip filters changed. Select Best available again before exporting.");
     if(draft.layers.exclusions&&draft.avoidScope==='map'&&!map.getSize().x)throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
-    const b=map.getBounds();return {atlas:tripAtlas,screen,ids:draft.ids,layers:draft.layers,region,title:`${draft.name||'My fishing day'} · ${draft.date||today}`,bounds:draft.avoidScope==='region'?region.mpa.bounds:[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()]};
+    const b=map.getBounds();return {allowResearch,atlas:tripAtlas,screen,ids:draft.ids,layers:draft.layers,region,title:`${draft.name||'My fishing day'} · ${draft.date||today}`,bounds:draft.avoidScope==='region'?region.mpa.bounds:[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()]};
   }
   const resultTargets=()=>draft.ids.map(id=>tripAtlas.targets.find(t=>t.id===id)).filter(Boolean);
   function updateSummary(){
@@ -96,16 +99,17 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
   }
   function renderList(){
     const list=$('export-spot-list');if(!list)return;
-    const matches=tripAtlas.targets.filter(t=>(!ranked||t.trip_rank)&&`${t.id} ${t.label} ${t.habitat_grade}`.toLowerCase().includes(search)).sort((a,b)=>ranked?a.trip_rank-b.trip_rank:0);
-    list.innerHTML=matches.map(t=>`<label class="export-check"><input type="checkbox" data-spot="${esc(t.id)}" ${draft.ids.includes(t.id)?'checked':''}><span><strong>${esc(t.trip_rank?'#'+t.trip_rank+' · '+fitLabel(t.trip_fit)+' · '+t.evidence_confidence.percent+'% confidence':t.label)}</strong><small>${esc(t.trip_rank?t.name:t.id)} · grade ${esc(t.habitat_grade)} · ${esc(t.canonical_habitat?t.neighborhood_depth_ft.map(n=>Math.round(n)).join('–'):t.center_depth_ft)} ft</small>${t.trip_rank?`<small>${esc(t.terrain_interpretation)}</small>`:''}</span></label>`).join('')||'<p>No matching spots. Your existing selection is retained.</p>';
+    const matches=tripAtlas.targets.filter(t=>(isMeasuredTarget(t)||allowResearch||draft.ids.includes(t.id))&&(!ranked||t.trip_rank)&&`${t.id} ${t.label} ${t.habitat_grade}`.toLowerCase().includes(search)).sort((a,b)=>ranked?a.trip_rank-b.trip_rank:0);
+    list.innerHTML=matches.map(t=>`<label class="export-check"><input type="checkbox" data-spot="${esc(t.id)}" ${draft.ids.includes(t.id)?'checked':''}><span><strong>${esc(t.trip_rank?'#'+t.trip_rank+' · '+fitLabel(t.trip_fit)+' · '+t.evidence_confidence.percent+'% confidence':t.label)}</strong><small>${esc(exportEvidenceLabel(t))}</small><small>${esc(t.trip_rank?t.name:t.id)} · grade ${esc(t.habitat_grade)} · ${esc(t.canonical_habitat?t.neighborhood_depth_ft.map(n=>Math.round(n)).join('–'):t.center_depth_ft)} ft</small>${t.trip_rank?`<small>${esc(t.terrain_interpretation)}</small>`:''}</span></label>`).join('')||'<p>No matching measured reefs loaded. Select Best available to load the current screened publication, or deliberately opt in to research references. Your existing selection is retained.</p>';
   }
   function open(){navigation.showView('export');updateSummary();$('export-panel').scrollTop=0;$('export-heading').tabIndex=-1;$('export-heading').focus({preventScroll:true});}
-  function add(id){if(!tripAtlas.targets.some(t=>t.id===id))return;selectionRevision++;if(ranked&&!tripAtlas.targets.find(t=>t.id===id)?.trip_rank){ranked=false;document.dispatchEvent(new CustomEvent('skippercast:trip-ranked',{detail:{targets:[],areas:[]}}));}if(!draft.ids.includes(id)){draft.ids.push(id);track('spot_saved');}persist();renderList();updateSummary();}
+  function add(id){if(!tripAtlas.targets.some(t=>t.id===id))return;selectionRevision++;if(ranked&&!tripAtlas.targets.find(t=>t.id===id)?.trip_rank){ranked=false;document.dispatchEvent(new CustomEvent('skippercast:trip-ranked',{detail:{targets:[],areas:[]}}));}if(!isMeasuredTarget(tripAtlas.targets.find(t=>t.id===id))&&!allowResearch)$('export-scope-status').textContent='Saved research reference. Enable Research-coordinate export to include it in a download.';if(!draft.ids.includes(id)){draft.ids.push(id);track('spot_saved');}persist();renderList();updateSummary();}
   $('export-region').onchange=()=>{persist();const url=new URL(location.href);url.searchParams.set('region',$('export-region').value);for(const key of ['view','focus','spot','target'])url.searchParams.delete(key);url.hash='export';navigate(url);};
   for(const [id,key] of [['export-name','name'],['export-date','date']])$(id).addEventListener('input',()=>{selectionRevision++;draft[key]=$(id).value;persist();});
   $('export-search')?.addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderList();});
   root.addEventListener('change',e=>{
     selectionRevision++;
+    if(e.target.id==='export-research'){allowResearch=e.target.checked;$('export-filtered-research').disabled=!allowResearch;renderList();}
     if(e.target.dataset.spot){const id=e.target.dataset.spot;draft.ids=e.target.checked?[...new Set([...draft.ids,id])]:draft.ids.filter(x=>x!==id);}
     if(e.target.dataset.layer)draft.layers[e.target.dataset.layer]=e.target.checked;
     if(e.target.id==='export-avoid-scope')draft.avoidScope=e.target.value;
@@ -113,10 +117,11 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
   });
   root.addEventListener('click',e=>{
     const scope=e.target.closest('[data-scope]')?.dataset.scope;if(!scope)return;
+    if(scope==='filtered'&&!allowResearch){$('export-scope-status').textContent='Enable Research-coordinate export to use filtered research references.';return;}
     selectionRevision++;
     ranked=false;filtersDirty=false;restorePending=false;draft.rankedPlan=null;document.dispatchEvent(new CustomEvent('skippercast:trip-ranked',{detail:{targets:[],areas:[]}}));
     if(scope==='map'&&!map.getSize().x){$('export-scope-status').textContent='Open the map to choose an area first. Your selection is retained.';return;}
-    const targets=scope==='region'?atlas.targets:scope==='none'?[]:getVisible().filter(t=>scope==='filtered'||map.getBounds().contains([t.latitude,t.longitude]));
+    const targets=exportPresetTargets({scope,targets:tripAtlas.targets,visible:getVisible(),allowResearch,contains:t=>map.getBounds().contains([t.latitude,t.longitude])});
     draft.ids=targets.map(t=>t.id);persist();renderList();updateSummary();
     $('export-scope-status').textContent=`${draft.ids.length} spots selected. ${scope==='region'?'Whole-region selection ignores map filters. Review individual spots below.':'Your previous selection has been replaced.'}`;
   });
@@ -210,7 +215,7 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
   return {open,add,conditions(target){onConditions({date:draft.date,target,species:target.trip_species});},review(id){add(id);open();},mount(container,target){
     if(!tripAtlas.targets.some(t=>t.id===target.id))return;
     const row=document.createElement('div');row.className='button-row';
-    const addButton=document.createElement('button');addButton.textContent=draft.ids.includes(target.id)?'Added to day plan':'Add to day plan';
+    const addButton=document.createElement('button');addButton.textContent=draft.ids.includes(target.id)?'Added to day plan':isMeasuredTarget(target)?'Add to day plan':'Save research reference';
     addButton.onclick=()=>{add(target.id);addButton.textContent='Added to day plan';};
     const review=document.createElement('button');review.textContent='Review & export';review.onclick=open;
     row.append(addButton,review);container.append(row);

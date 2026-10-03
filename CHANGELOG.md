@@ -1,5 +1,7 @@
 # Changelog
 
+- Separate measured reef trip exports from research-coordinate references with explicit session opt-in and per-point evidence labels; preserve saved selections and all spatial/publication checks.
+
 ## Unreleased
 
 - Seafloor: complete the remaining Arguello permanent spatial review so all 33 Monterey–Point Conception reaches can be screened. Reuse physical terrain; retain all 32 affected candidates as MPA exclusions, including four security overlaps. No new measured coverage or public fishing locations is claimed.

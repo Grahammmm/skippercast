@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildExport, DEFAULT_LAYERS, draftKey, offlineNotes, readDraft} from '../dist/trip-export.js';
+import {buildExport, DEFAULT_LAYERS, draftKey, offlineNotes, readDraft,exportTargets,exportEvidenceLabel,exportPresetTargets} from '../dist/trip-export.js';
 import {geometryTrack} from '../dist/gpx.js';
 import {geometryIntersects, pointInGeometry} from '../dist/geo-screen.js';
 
@@ -53,7 +53,7 @@ function screenFixture(features = []) {
 }
 
 const request = (overrides = {}) => ({
-  atlas: atlasFixture(), screen: screenFixture(), ids: ['a'], region: REGION, now: NOW, ...overrides,
+  allowResearch:true, atlas: atlasFixture(), screen: screenFixture(), ids: ['a'], region: REGION, now: NOW, ...overrides,
 });
 const segmentsIn = xml => [...xml.matchAll(/<trkseg>([\s\S]*?)<\/trkseg>/g)].map(([, segment]) =>
   [...segment.matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)"\/>/g)].map(([, lat, lon]) => [Number(lon), Number(lat)]));
@@ -217,4 +217,46 @@ test('GPX escapes text and strips XML-forbidden controls without creating routes
   assert.match(result.gpx, /Plan &lt;one&gt; &amp; &quot;two&quot;/);
   assert.match(result.gpx, /Keep &quot;this&quot; &apos;note&apos;/);
   assert.doesNotMatch(result.gpx, /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|<rte>/);
+});
+
+
+test('research references require boolean opt-in; selected legacy drafts remain reviewable', () => {
+  const atlas=atlasFixture();
+  for(const consent of [undefined,false,'true',1])assert.throws(()=>buildExport(request({atlas,allowResearch:consent})),/explicit opt-in/);
+  const draft=readDraft(JSON.stringify({ids:['a'],allowResearch:true}),atlas,'2026-09-22');
+  assert.deepEqual(draft.ids,['a']);
+  assert.equal(draft.allowResearch,undefined); // Consent never silently restores from saved data.
+  assert.equal(buildExport(request({atlas,allowResearch:true})).counts.waypoints,1);
+  assert.deepEqual(exportTargets(atlas.targets),[]);
+  assert.match(exportEvidenceLabel(atlas.targets[0]),/Research coordinate.*not chart-depth qualified/);
+});
+
+test('measured scope preserves canonical publication and whole-reef screening gates', () => {
+  const atlas=atlasFixture();atlas.targets[0].canonical_habitat=true;
+  atlas.publication={status:'ready',expires_at:'2026-09-23T18:00:00Z'};
+  assert.deepEqual(exportTargets(atlas.targets).map(t=>t.id),['a']);
+  assert.deepEqual(exportTargets(atlas.targets,true).map(t=>t.id),['a','b']);
+  assert.equal(buildExport(request({atlas,allowResearch:false})).counts.waypoints,1);
+  atlas.publication.expires_at='2026-09-21T18:00:00Z';
+  assert.throws(()=>buildExport(request({atlas,allowResearch:true})),/expired/);
+  atlas.publication.expires_at='2026-09-23T18:00:00Z';
+  assert.throws(()=>buildExport(request({atlas,allowResearch:true,screen:{...screenFixture(),geometryAllowed:()=>false}})),/whole-boundary/);
+});
+
+
+test('map and region presets include loaded measured reefs independently of legacy visible research',()=>{
+ const targets=atlasFixture().targets;const measured={...targets[0],id:'canonical',canonical_habitat:true};
+ const input={targets:[...targets,measured],visible:targets,contains:t=>t.id==='canonical'};
+ assert.deepEqual(exportPresetTargets({...input,scope:'map'}).map(t=>t.id),['canonical']);
+ assert.deepEqual(exportPresetTargets({...input,scope:'region'}).map(t=>t.id),['canonical']);
+ assert.throws(()=>exportPresetTargets({...input,scope:'filtered'}),/explicit opt-in/);
+ assert.deepEqual(exportPresetTargets({...input,scope:'filtered',allowResearch:true}).map(t=>t.id),['a','b']);
+ assert.deepEqual(exportPresetTargets({...input,scope:'none'}),[]);
+});
+
+test('MLLW research waypoints retain explicit research class in GPX as well as notes',()=>{
+ const atlas=atlasFixture();atlas.targets[0].vertical_datum='MLLW';
+ const result=buildExport(request({atlas,allowResearch:true}));
+ assert.match(result.gpx,/Research coordinate.*not chart-depth qualified/);
+ assert.match(offlineNotes(result,REGION,{name:'test',date:'2026-09-22'}),/Research coordinate.*not chart-depth qualified/);
 });

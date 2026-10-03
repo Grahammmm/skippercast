@@ -1,3 +1,4 @@
+export const exportEvidenceLabel=t=>t?.canonical_habitat===true?'Measured reef · current screening required · nominal survey depth':'Research coordinate · not chart-depth qualified';
 export const xml = (value) =>
   String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(
     /[&<>"']/g,
@@ -36,6 +37,7 @@ export function featuresGPX(atlas,features,title,options={}) {
   const points=selected.map(t=>{
   const notes = [
     t.label,
+    exportEvidenceLabel(t),
     t.terrain_interpretation,
     `Terrain ${t.habitat_grade} ${t.habitat_score}/100; not catch probability.`,
     t.canonical_habitat ? `Interior reef reference point; point depth not sampled; reef ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum||'unknown datum'} nominal.` : `Center ${t.center_depth_ft} ft; nearby ${t.neighborhood_depth_ft.join("–")} ft ${t.vertical_datum === 'MLLW' ? 'MLLW' : 'source raster, vertical datum unverified; research only, not chart-depth qualified'}.`,

@@ -1,7 +1,17 @@
 // Shared export contract. Rendering and hardware instructions do not decide what is safe to serialize.
-import {tripFeatures, featuresGPX, geometryTrack, xml} from './gpx.js';
+import {tripFeatures, featuresGPX, geometryTrack, xml, exportEvidenceLabel} from './gpx.js';
 
 export const DEFAULT_LAYERS={waypoints:true,outlines:false,alignments:false,exclusions:false};
+// Research coordinates require deliberate consent for this export session.
+export const isMeasuredTarget=t=>t?.canonical_habitat===true;
+export const exportTargets=(targets,allowResearch=false)=>targets.filter(t=>isMeasuredTarget(t)||allowResearch===true);
+export {exportEvidenceLabel};
+export function exportPresetTargets({scope,targets,visible=[],contains=()=>true,allowResearch=false}) {
+  if(scope==='none')return [];
+  if(scope==='filtered'&&allowResearch!==true)throw Error('Filtered research references require explicit opt-in.');
+  const candidates=scope==='region'?targets:scope==='filtered'?visible:[...targets.filter(isMeasuredTarget),...visible.filter(t=>!isMeasuredTarget(t))];
+  return [...new Map(exportTargets(candidates,allowResearch).filter(t=>scope!=='map'||contains(t)).map(t=>[t.id,t])).values()];
+}
 export const draftKey=region=>`skippercast.export.v1.${region}`;
 const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
 export function readDraft(raw,atlas,today) {
@@ -26,7 +36,7 @@ function extent(geometry){
 }
 const overlap=(a,b)=>a[0]<=b[2]&&a[2]>=b[0]&&a[1]<=b[3]&&a[3]>=b[1];
 const validPoint=t=>Number.isFinite(t.latitude)&&Math.abs(t.latitude)<=90&&Number.isFinite(t.longitude)&&Math.abs(t.longitude)<=180;
-export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title='SkipperCast fishing day',bounds,now=new Date()}) {
+export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title='SkipperCast fishing day',bounds,now=new Date(),allowResearch=false}) {
   if(!screen?.ready())throw Error('Protected-area checks are unavailable or older than 36 hours. Return to the map and refresh before exporting.');
   const features=ids.length?tripFeatures(atlas,ids,layers):{selected:[],waypoints:[],areas:[],drifts:[]};
   if(features.selected.some(t=>t.canonical_habitat) && (atlas.publication?.status!=='ready'
@@ -47,13 +57,14 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
   const geometry=[...features.areas,...features.drifts,...exclusions].map(f=>f.geometry);
   const vertices=geometry.map(g=>pairs(g).length/2);
   const counts={waypoints:features.waypoints.length,outlines:features.areas.length,alignments:features.drifts.length,exclusions:exclusions.length,tracks:geometry.length,trackPoints:vertices.reduce((n,x)=>n+x,0),largestTrack:Math.max(0,...vertices)};
+  if(features.selected.some(t=>!isMeasuredTarget(t))&&allowResearch!==true)throw Error('Research coordinates need explicit opt-in. Enable Research-coordinate export or select measured reefs.');
   const stamp=now.toISOString();
   const gpx=featuresGPX(atlas,features,title,{exclusions,checkedAt:snapshot?.checked_at,createdAt:stamp});
-  return {gpx,counts,features,exclusions,created_at:stamp,boundary_checked_at:snapshot?.checked_at||null,region_id:region.id,source_validation_date:atlas.source_validation_date||null,layers:{...layers},avoid_bounds:exportBounds};
+  return {gpx,counts,features,allowResearch:allowResearch===true,exclusions,created_at:stamp,boundary_checked_at:snapshot?.checked_at||null,region_id:region.id,source_validation_date:atlas.source_validation_date||null,layers:{...layers},avoid_bounds:exportBounds};
 }
 const safeLink=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?xml(u.href):'';}catch{return '';}};
 export function offlineNotes(result,region,draft) {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · SkipperCast</title><style>body{font:17px/1.55 system-ui,sans-serif;max-width:760px;margin:auto;padding:24px;color:#173d47}article{border-top:1px solid #ccd9db;padding:16px 0}h1{line-height:1.2}h2{font-size:1.2em}a{color:#006c65;overflow-wrap:anywhere}dt{font-weight:bold}dd{margin:0 0 12px}pre{white-space:pre-wrap}@media print{body{padding:0}article{break-inside:avoid}}</style><h1>${xml(draft.name)}</h1><p>${xml(region.name)} · Planned date ${xml(draft.date)}</p><p>Created ${xml(result.created_at)}. Protected-area source check ${xml(result.boundary_checked_at||'current session')}.</p><p>${result.counts.waypoints} waypoints · ${result.counts.tracks} reference tracks. WGS84 coordinates. Habitat research, not verified fish presence or navigation routes.</p><p><strong>Before departure:</strong> check current regulations, closures, marine conditions and harbor access. This file does not update offline. The planned date is a label, not a future clearance. Follow your official navigation chart and sounder.</p><p><a href="https://skippercast.com/?region=${xml(region.id)}#map">Reopen this region</a> · <a href="${safeLink(region.regulations_url)}">Official regional regulations</a></p>
-  ${result.features.selected.map(t=>`<article><h2>${xml(t.id)} · ${xml(t.label)}</h2><p>${xml(t.latitude)}, ${xml(t.longitude)} · ${t.canonical_habitat?'Interior reef reference point':xml(t.center_depth_ft)+' ft center'} · ${xml(t.neighborhood_depth_ft.join('–'))} ft nearby (${xml(t.vertical_datum === 'MLLW' ? 'survey MLLW' : 'source raster; vertical datum unverified, research only')})</p><dl><dt>Structure</dt><dd>${xml(t.terrain_interpretation)}</dd><dt>Priority</dt><dd>${xml(t.habitat_grade)} · ${xml(t.habitat_score)}/100 terrain score, not catch probability.</dd><dt>Evidence</dt><dd>${xml(t.evidence_status)} ${xml(t.ais_status)} Survey ${xml(t.survey_year)}.</dd><dt>Approach notes</dt><dd>${xml(t.special_note||'Locate structure and fish on your sounder; measure your actual drift before setting up.')} Fixed alignment tracks do not predict drift or provide a safe approach.</dd></dl><a href="${safeLink(t.source_url)}">Survey source</a></article>`).join('')}
+  ${result.features.selected.map(t=>`<article><h2>${xml(t.id)} · ${xml(t.label)}</h2><p>${xml(t.latitude)}, ${xml(t.longitude)} · ${t.canonical_habitat?'Interior reef reference point':xml(t.center_depth_ft)+' ft center'} · ${xml(t.neighborhood_depth_ft.join('–'))} ft nearby (${xml(t.vertical_datum === 'MLLW' ? 'survey MLLW' : 'source raster; vertical datum unverified, research only')})</p><dl><dt>Structure</dt><dd>${xml(t.terrain_interpretation)}</dd><dt>Priority</dt><dd>${xml(t.habitat_grade)} · ${xml(t.habitat_score)}/100 terrain score, not catch probability.</dd><dt>Export class</dt><dd>${xml(exportEvidenceLabel(t))}</dd><dt>Evidence</dt><dd>${xml(t.evidence_status)} ${xml(t.ais_status)} Survey ${xml(t.survey_year)}.</dd><dt>Approach notes</dt><dd>${xml(t.special_note||'Locate structure and fish on your sounder; measure your actual drift before setting up.')} Fixed alignment tracks do not predict drift or provide a safe approach.</dd></dl><a href="${safeLink(t.source_url)}">Survey source</a></article>`).join('')}
   ${result.exclusions.length?`<article><h2>AVOID reference outlines</h2><ul>${result.exclusions.map(f=>`<li>${xml(f.properties.FULLNAME||f.properties.NAME)}</li>`).join('')}</ul><p>Includes whole outlines intersecting the chosen coverage. Outline tracks carry no protected-area fill or enforcement behavior on a chartplotter. They are a static reference, not a complete legal clearance.</p></article>`:''}<details><summary>Export record</summary><p>Atlas validation: ${xml(result.source_validation_date||"unavailable")}. Included layers: ${xml(Object.entries(result.layers).filter(([,v])=>v).map(([k])=>k).join(", "))}. AVOID selection bounds (west, south, east, north): ${xml(result.avoid_bounds.join(", "))}.</p></details><p>Forecast imagery, bathymetry tiles, live drift predictions and unqualified habitat previews are not embedded in GPX.</p></html>`;
 }
