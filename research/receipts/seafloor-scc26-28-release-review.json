@@ -1,0 +1,382 @@
+{
+  "version": 1,
+  "reviewed_at": "2026-10-03T00:35:13.943057+00:00",
+  "original_policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+  "review_date_local": "2026-10-02",
+  "policy_reopened": true,
+  "sources": [
+    {
+      "id": "csumb-scc-block26-2m-native",
+      "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+      "source_bytes": 132219786,
+      "depth_archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
+      "depth_cog_sha256": "97759f53f377e86a2ba8f72fde4934c05b3c6145e5fdc9c5a64464c252bfd158",
+      "normalized_raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "588eed5d0124441685b2b970a4c6c45179b9e70adb90105f9c9cb5c26eb08e65"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block26-2m-native",
+        "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "depth_archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
+        "depth_cog_sha256": "97759f53f377e86a2ba8f72fde4934c05b3c6145e5fdc9c5a64464c252bfd158",
+        "archive_member": "SCC_Blk26_2m_habitat.zip/ArcViewGrids/scc26_2mhab",
+        "metadata_sha256": "38f087cb9a3a5923f508863492f0afaf6a40428d7194b1a83d6e4ed0644663f2",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc26-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "native_bounds_wgs84": [
+        -120.6967696506804,
+        34.63266160492491,
+        -120.61753968977561,
+        34.66999064085413
+      ],
+      "acquisition_dates": [
+        "20100908",
+        "20100924",
+        "20100925",
+        "20100929"
+      ],
+      "native_datum": "NAVD88 Geoid09",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "publication_terms": {
+        "source_id": "csumb-scc-block26-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block26/multibeam/data/version2/products/SCC_Block26_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-02"
+      },
+      "original_terrain_review": "research/receipts/seafloor-scc26-terrain-review.json",
+      "changed_catalog_fields": [
+        "evidence",
+        "license",
+        "notes",
+        "rights_review",
+        "status"
+      ],
+      "native_scientific_fields_unchanged": true,
+      "new_acquisition_km2": 0
+    },
+    {
+      "id": "csumb-scc-block27-2m-native",
+      "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+      "source_bytes": 99165563,
+      "depth_archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
+      "depth_cog_sha256": "0f8137f416ebab20fc3fdbd3fc29cb462411f0552b35de28d106e0a9e9ced764",
+      "normalized_raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "f6d5f520784500fa6e39ace0b535052900c9d56064c70bb0eeb16683819287cd"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block27-2m-native",
+        "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+        "depth_archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
+        "depth_cog_sha256": "0f8137f416ebab20fc3fdbd3fc29cb462411f0552b35de28d106e0a9e9ced764",
+        "archive_member": "SCC_Blk27_2m_habitat.zip/ArcViewGrids/scc27_2mhab",
+        "metadata_sha256": "3d186b802faae94dc836f0f6a022d2f80f83405120d9e39e293e613aef8f1d14",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc27-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "native_bounds_wgs84": [
+        -120.67077098222825,
+        34.585637081284055,
+        -120.62906303760742,
+        34.63860085449485
+      ],
+      "acquisition_dates": [
+        "20100912",
+        "20100914",
+        "20100924"
+      ],
+      "native_datum": "NAVD88 Geoid09",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "publication_terms": {
+        "source_id": "csumb-scc-block27-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block27/multibeam/data/version2/products/SCC_Block27_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-02"
+      },
+      "original_terrain_review": "research/receipts/seafloor-scc27-terrain-review.json",
+      "changed_catalog_fields": [
+        "evidence",
+        "license",
+        "notes",
+        "rights_review",
+        "status"
+      ],
+      "native_scientific_fields_unchanged": true,
+      "new_acquisition_km2": 0
+    },
+    {
+      "id": "csumb-scc-block28-2m-native",
+      "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+      "source_bytes": 54389235,
+      "depth_archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
+      "depth_cog_sha256": "2eec7d236d1fdc5c8114a3e33ed149038e910af2a20c08d7af22c6961c6ad259",
+      "normalized_raster_identity": {
+        "version": "normalized-raster-content-v1",
+        "sha256": "f7369cc41465a3a6db0f712c935b599976dab70f318eff5274f67f3433b33352"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block28-2m-native",
+        "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+        "depth_archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
+        "depth_cog_sha256": "2eec7d236d1fdc5c8114a3e33ed149038e910af2a20c08d7af22c6961c6ad259",
+        "archive_member": "SCC_Blk28_2m_habitat.zip/ArcViewGrids/scc28_2mhab",
+        "metadata_sha256": "b559d9a114f03ddb4c9635a5fd6ec3c9464f42f29060d6abe7c6fac57032c247",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-scc28-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "native_bounds_wgs84": [
+        -120.66980717187812,
+        34.55301691637625,
+        -120.62939696625409,
+        34.58927741958899
+      ],
+      "acquisition_dates": [
+        "20100907",
+        "20100911",
+        "20100912"
+      ],
+      "native_datum": "NAVD88 Geoid09",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
+      },
+      "publication_terms": {
+        "source_id": "csumb-scc-block28-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block28/multibeam/data/version2/products/SCC_Block28_additional_products.tar.gz",
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+        "commercial_use": "permission-required",
+        "navigation_use": false,
+        "reviewed_on": "2026-10-02"
+      },
+      "original_terrain_review": "research/receipts/seafloor-scc28-terrain-review.json",
+      "changed_catalog_fields": [
+        "evidence",
+        "license",
+        "notes",
+        "rights_review",
+        "status"
+      ],
+      "native_scientific_fields_unchanged": true,
+      "new_acquisition_km2": 0
+    }
+  ],
+  "independent_readiness": {
+    "decision": "Recommend exact sources for focused source promotion; retain every candidate spatial/metric hold.",
+    "receipt_sha256": "784b3f9a2563d583bcd18bfb0f466a8b208f1bfd89f4b389ec1f354e7187d3f5",
+    "direct_candidate_count": 38,
+    "direct_candidate_mpa_intersections": 38,
+    "current_direct_public_candidate_count": 0,
+    "native_diagnostics": {
+      "SCC26": {
+        "features": 4,
+        "depth_min_m": 11.88,
+        "depth_max_m": 19.53
+      },
+      "SCC27": {
+        "features": 24,
+        "min_rough_center_fraction": 0.9927272727272727,
+        "depth_min_m": 6.71,
+        "depth_max_m": 22.41
+      },
+      "SCC28": {
+        "features": 10,
+        "min_rough_center_fraction": 0.9988532110091743,
+        "depth_min_m": 7.34,
+        "depth_max_m": 17.25
+      }
+    },
+    "limits": "All direct geometries were visually reviewed; same-DEM support is not independent substrate or fish evidence. SCC28 retains coastal edge/metric limitations."
+  },
+  "unknowns_retained": [
+    "Per-cell sounding uncertainty",
+    "Measured-versus-interpolated mask",
+    "Acquisition independence from overlapping producer products",
+    "Sampling design and independence of producer visual agreement"
+  ],
+  "candidate_gates_unchanged": true,
+  "screen_scope_unchanged": true,
+  "new_acquisition_km2": 0,
+  "public_before_after": {
+    "results": [
+      {
+        "reach": "point-arguello-conception-r05",
+        "selected_valid_km2_before": 28.12201953,
+        "selected_valid_km2_after": 38.99181167,
+        "eligible_existing_depth_delta_km2": 10.86979214,
+        "new_acquisition_km2": 0,
+        "physical_before": 29,
+        "physical_after": 32,
+        "screened_before": 0,
+        "screened_after": 0,
+        "habitat_km2_before": 0.0,
+        "habitat_km2_after": 0.0,
+        "held_after": 32,
+        "held_by_reason": {
+          "screen-scope-unreviewed": 32
+        },
+        "direct_newly_qualified_source_features": 4,
+        "direct_source_counts": {
+          "csumb-scc-block26-2m-native": 4
+        },
+        "direct_mpa_intersections": 4,
+        "passing_restriction_touches": {},
+        "screen_status": "held",
+        "screen_snapshot_sha256": "136533985530db00fa9b45c897a8b87c296f8ec861f1e6bee4b10876530c7fa3",
+        "before_input_hash": "d66d3f4372a7fb2e0460d842d5e9aa590f3b75018eae937816acdc8dbc3cd73d",
+        "after_input_hash": "ca4ff510717339316372f8f1c4d00f12382ed17d0d446b1adf40351329b1d090",
+        "physical_geometry_equal_existing_private": true,
+        "after_output_hashes": {
+          "cells.json": "33e3f6f10349115f7bb6efe46226b1a3292c0d5306500f3f8f12a28e1cc0c3ff",
+          "terrain.json": "19ae686ee7e92d0995661d08f994be07e5334c1fe675cd13d8cd49402c456e79",
+          "habitat.geojson": "6d18edfe75b3149104038dcbca4d0096bbcb923f0f9fa4b49f4815344e75bb90",
+          "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+          "held.geojson": "bbd949bb5dca71026e1987da9a976d3a997c6c43931a58fc4e34b06eeb5a007b",
+          "candidates.geojson": "d93763d72618ade9e9f0d77ec419b0debaa63f6cfb773acfa854bdcde978ce57",
+          "physical.json": "bcda3c39b93eaf39ac5d57eff1bac485deb28194bad80141439b563586d049a5"
+        }
+      },
+      {
+        "reach": "point-arguello-conception-r06",
+        "selected_valid_km2_before": 56.900908883,
+        "selected_valid_km2_after": 82.65503479,
+        "eligible_existing_depth_delta_km2": 25.754125907,
+        "new_acquisition_km2": 0,
+        "physical_before": 947,
+        "physical_after": 840,
+        "screened_before": 452,
+        "screened_after": 430,
+        "habitat_km2_before": 2.838981687,
+        "habitat_km2_after": 2.262807267,
+        "held_after": 410,
+        "held_by_reason": {
+          "habitat-contract-incomplete": 95,
+          "metric-support-incomplete": 95,
+          "overlap-cdfw-mpa": 69,
+          "overlap-security": 320
+        },
+        "direct_newly_qualified_source_features": 34,
+        "direct_source_counts": {
+          "csumb-scc-block27-2m-native": 24,
+          "csumb-scc-block28-2m-native": 10
+        },
+        "direct_mpa_intersections": 34,
+        "passing_restriction_touches": {
+          "cdfw-mpa": 0,
+          "noaa-federal": 0,
+          "security": 0
+        },
+        "screen_status": "ready",
+        "screen_snapshot_sha256": "136533985530db00fa9b45c897a8b87c296f8ec861f1e6bee4b10876530c7fa3",
+        "before_input_hash": "492ffcd7ee2ec2de89675f9029d6262e10bdb0e5109b757d1990e1cb2fcdf054",
+        "after_input_hash": "280ff04108106a195d30cad202100cc3d9123d7623ecbdf616662c812a573c69",
+        "physical_geometry_equal_existing_private": true,
+        "after_output_hashes": {
+          "cells.json": "70033a1358cf00299bb645c6a0207c743cf0baa4596ce8887672fca0f1fcf9f6",
+          "terrain.json": "36719a3606bdac351d4f8b78b03597cf7caef0ddf798d98947372817294f1f48",
+          "habitat.geojson": "675a1ae23b092ea3046a0002a9572fbf0b610b70346d2a9270ae71b78af1de25",
+          "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+          "held.geojson": "823cccb7f5787fb562f262636d9673702b3b959d37184b4fa433772b47fa8d4c",
+          "candidates.geojson": "da55219ad4359456d4da30c4cbc2fd17decac76a3cf472a28a72d657a2cce557",
+          "physical.json": "bde6a787a555042828cf3774195a6b82378e55bba4dd7809b02233fd633a3594"
+        }
+      }
+    ],
+    "eligible_existing_depth_delta_km2": 36.623918047,
+    "physical_before": 976,
+    "physical_after": 872,
+    "screened_before": 452,
+    "screened_after": 430,
+    "public_habitat_delta_km2": -0.57617442,
+    "new_acquisition_km2": 0,
+    "newly_qualified_direct_screened_candidates": 0,
+    "measured_depth_note": "Existing private native survey support now participates in the public-source selection; no new acoustic acquisition or wholly new scientific dataset. Public/private area overlaps must not be added.",
+    "current_screen_note": "Both complete affected calibration groups checked against the retained current, hash-verified snapshot; production refreshes it. r05 stays scope-held."
+  }
+}
