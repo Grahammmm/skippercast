@@ -1,0 +1,534 @@
+{
+  "profile": "csumb-native-rough-v1",
+  "legend": {
+    "rough": [
+      -1,
+      -31,
+      -101,
+      -201
+    ],
+    "smooth": [
+      0,
+      -30,
+      -100,
+      -200
+    ],
+    "zero_is_valid_smooth": true
+  },
+  "limitations": [
+    "Same original bathymetry lineage, not independent substrate or fish evidence.",
+    "Producer conservative masking may omit real rough terrain; unknown class coverage does not invalidate measured depths.",
+    "Metadata position/motion system specifications are not verified per-cell bathymetric uncertainty.",
+    "Existing credited noncommercial rights, depth datums and whole-polygon spatial screens remain required.",
+    "The source audit is not a claim of deduplicated geographic expansion or live publication.",
+    "BSS product metadata specifies depth-dependent 2 m / 5 m / 10 m grids. This batch selects the original delivered 2 m grids only, preserving their exact valid-depth pixels and unknown interpolation masks; it does not imply 2 m acquisition precision throughout the 300-foot band."
+  ],
+  "new_acquisition_km2": 0,
+  "new_independent_evidence_count": 0,
+  "scope": "BSS01\u201303 original 2 m terrain-support review",
+  "reviewed_at": "2026-10-03T10:34:04.945785+00:00",
+  "products": [
+    {
+      "source_id": "bss-block01-additional-products-tar-gz-fbfc03dfd0",
+      "source_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+      "source_bytes": 137751332,
+      "depth_archive_member": "BSS_Block01/Bathymetry/ArcViewGrids/bss01_2mbathy",
+      "archive_member": "BSS_Block01/Habitat/ArcViewGrids/bss01_2mhab",
+      "metadata_sha256": "9cf24d12d8e42ccbd28ffd863033a99abadba09edc8fc4338ad13b5faa6bb878",
+      "native_shape": [
+        2210,
+        3166
+      ],
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_crs": "EPSG:26910",
+      "native_transform": [
+        2.0,
+        0.0,
+        645337.0,
+        0.0,
+        -2.0,
+        3959733.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "native_alignment": "exact",
+      "class_counts": {
+        "0": 613023,
+        "-30": 4207885,
+        "-1": 162376,
+        "-31": 4057
+      },
+      "valid_shallow_cells": 5001340,
+      "rough_shallow_cells": 166433,
+      "shallow_class_nodata_cells": 13999,
+      "same_survey_as_depth": true,
+      "independent_confirmation": false,
+      "original_metadata": [
+        {
+          "archive_member": "BSS_Block01/Habitat/ArcViewGrids/bss01_2mhab/metadata.xml",
+          "sha256": "9cf24d12d8e42ccbd28ffd863033a99abadba09edc8fc4338ad13b5faa6bb878",
+          "process_description": [
+            "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows: 0 Depth = 0- -30, Substrate = Smooth -1 Depth = 0- -30, Substrate = Rough -30 Depth = -30- -100, Substrate = Smooth -31 Depth = -30- -100, Substrate = Rough -100 Depth = -100 - -200, Substrate = Smooth -101 Depth = -100 - -200, Substrate = Rough -200 Depth <= -200, Substrate = Smooth -201 Depth <= -200, Substrate = Rough The masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses."
+          ]
+        },
+        {
+          "archive_member": "BSS_Block01/Habitat/ArcViewGrids/bss01_2msub/metadata.xml",
+          "sha256": "5c6bdb4a467cb79a65f82b7e12bb2f5920953ee7b5fb19d57eb0f7fb43e32595",
+          "process_description": [
+            "Kappa statistical test included in Attribute Accuracy section. Identification of rough habitat was accomplished using two different rugosity indices: surface:planar area (SA:PA) ratio and vector ruggedness measure (VRM) analysis of the bathymetric DEM. Surface:planar area ratio and VRM grids were produced using the Benthic Terrain Modeler (http://www.csc.noaa.gov/products/btm/) and VRM toolboxes for ArcGIS, respectively. The SA:PA ratio or VRM analysis grid was reclassified into two categories (\"rough\" and \"smooth\") using a varying threshold for the break value between the two classes (every cell with a SA:PA ratio or VRM above the threshold value was classified as \"rough\"). The threshold value used was site-specific and chosen subjectively after visually examining reclassification results. Because of the confounding effects of artifacts in the bathymetric DEM, the rugosity analysis was subject to misclassification of habitat in some areas; this was especially problematic in areas that were clearly identifiable as flat sedimented plains, but where DEM artifacts caused by ship heave inflated the rugosity values and thus resulted in misclassification as rough habitat. To minimize this problem, a hand-drawn mask was created to exclude these probable non-rough areas from the reclassification of the rugosity results, and the masked areas were then assigned to the smooth class. This process still resulted in some misclassification errors of both omission and commission, but an attempt was made to minimize these errors and produce a conservative estimate of rough habitat distribution and abundance. 2m: VRM Method Used, Threshold- 0.0005 / Overall % agreement= 99"
+          ]
+        }
+      ],
+      "same_survey_interpretation_note": "Subjective producer-selected roughness threshold and hand-drawn artifact masking; reported classification agreement is not independent fish/substrate confirmation."
+    },
+    {
+      "source_id": "bss-block02-additional-products-tar-gz-21e4c4026d",
+      "source_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+      "source_bytes": 134535568,
+      "depth_archive_member": "BSS_Block02/Bathymetry/ArcViewGrids/bss02_2mbathy",
+      "archive_member": "BSS_Block02/Habitat/ArcViewGrids/bss02_2mhab",
+      "metadata_sha256": "c9054b1406701c3f9467738af7a9ef2837099e564970eea68cb7351014adc57b",
+      "native_shape": [
+        2435,
+        3913
+      ],
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_crs": "EPSG:26910",
+      "native_transform": [
+        2.0,
+        0.0,
+        643049.0,
+        0.0,
+        -2.0,
+        3962703.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "native_alignment": "exact",
+      "class_counts": {
+        "0": 961549,
+        "-1": 14287,
+        "-30": 4013018,
+        "-31": 16716
+      },
+      "valid_shallow_cells": 5021485,
+      "rough_shallow_cells": 31003,
+      "shallow_class_nodata_cells": 15915,
+      "same_survey_as_depth": true,
+      "independent_confirmation": false,
+      "original_metadata": [
+        {
+          "archive_member": "BSS_Block02/Habitat/ArcViewGrids/bss02_2mhab/metadata.xml",
+          "sha256": "c9054b1406701c3f9467738af7a9ef2837099e564970eea68cb7351014adc57b",
+          "process_description": [
+            "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows: 0 Depth = 0- -30, Substrate = Smooth -1 Depth = 0- -30, Substrate = Rough -30 Depth = -30- -100, Substrate = Smooth -31 Depth = -30- -100, Substrate = Rough -100 Depth = -100 - -200, Substrate = Smooth -101 Depth = -100 - -200, Substrate = Rough -200 Depth <= -200, Substrate = Smooth -201 Depth <= -200, Substrate = Rough The masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses."
+          ]
+        },
+        {
+          "archive_member": "BSS_Block02/Habitat/ArcViewGrids/bss02_2msub/metadata.xml",
+          "sha256": "f56f7a7d762ca60f1ca70f6ecae13261cb4e5ed93d1140f6a5446aa6480a6933",
+          "process_description": [
+            "Kappa statistical test included in Attribute Accuracy section. Identification of rough habitat was accomplished using two different rugosity indices: surface:planar area (SA:PA) ratio and vector ruggedness measure (VRM) analysis of the bathymetric DEM. Surface:planar area ratio and VRM grids were produced using the Benthic Terrain Modeler (http://www.csc.noaa.gov/products/btm/) and VRM toolboxes for ArcGIS, respectively. The SA:PA ratio or VRM analysis grid was reclassified into two categories (\"rough\" and \"smooth\") using a varying threshold for the break value between the two classes (every cell with a SA:PA ratio or VRM above the threshold value was classified as \"rough\"). The threshold value used was site-specific and chosen subjectively after visually examining reclassification results. Because of the confounding effects of artifacts in the bathymetric DEM, the rugosity analysis was subject to misclassification of habitat in some areas; this was especially problematic in areas that were clearly identifiable as flat sedimented plains, but where DEM artifacts caused by ship heave inflated the rugosity values and thus resulted in misclassification as rough habitat. To minimize this problem, a hand-drawn mask was created to exclude these probable non-rough areas from the reclassification of the rugosity results, and the masked areas were then assigned to the smooth class. This process still resulted in some misclassification errors of both omission and commission, but an attempt was made to minimize these errors and produce a conservative estimate of rough habitat distribution and abundance. 2m: VRM Method Used, Threshold- 0.0005 / Overall % agreement= 100"
+          ]
+        }
+      ],
+      "same_survey_interpretation_note": "Subjective producer-selected roughness threshold and hand-drawn artifact masking; reported classification agreement is not independent fish/substrate confirmation."
+    },
+    {
+      "source_id": "bss-block03-additional-products-tar-gz-ad317d80e0",
+      "source_sha256": "0414c642e74e52773ebe4c36d01220cfef5bf7f5f71d8cb2627a399863e64e83",
+      "source_bytes": 179158386,
+      "depth_archive_member": "BSS_Block03/Bathymetry/ArcViewGrids/bss03_2mbathy",
+      "archive_member": "BSS_Block03/Habitat/ArcViewGrids/bss03_2mhab",
+      "metadata_sha256": "127eaddad020b871af4e6d3d368807910b931369686177f0253f469962148aed",
+      "native_shape": [
+        3197,
+        3849
+      ],
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_crs": "EPSG:26910",
+      "native_transform": [
+        2.0,
+        0.0,
+        641021.0,
+        0.0,
+        -2.0,
+        3965351.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "native_alignment": "exact",
+      "class_counts": {
+        "-1": 60545,
+        "0": 761615,
+        "-31": 41894,
+        "-30": 4748263
+      },
+      "valid_shallow_cells": 5630223,
+      "rough_shallow_cells": 102439,
+      "shallow_class_nodata_cells": 17906,
+      "same_survey_as_depth": true,
+      "independent_confirmation": false,
+      "original_metadata": [
+        {
+          "archive_member": "BSS_Block03/Habitat/ArcViewGrids/bss03_2msub/metadata.xml",
+          "sha256": "3b20fc2ca1309fc8fa9c472a0859d5139e59980a6f7f716aa3e10e9264f58bf7",
+          "process_description": [
+            "Kappa statistical test included in Attribute Accuracy section. Identification of rough habitat was accomplished using two different rugosity indices: surface:planar area (SA:PA) ratio and vector ruggedness measure (VRM) analysis of the bathymetric DEM. Surface:planar area ratio and VRM grids were produced using the Benthic Terrain Modeler (http://www.csc.noaa.gov/products/btm/) and VRM toolboxes for ArcGIS, respectively. The SA:PA ratio or VRM analysis grid was reclassified into two categories (\"rough\" and \"smooth\") using a varying threshold for the break value between the two classes (every cell with a SA:PA ratio or VRM above the threshold value was classified as \"rough\"). The threshold value used was site-specific and chosen subjectively after visually examining reclassification results. Because of the confounding effects of artifacts in the bathymetric DEM, the rugosity analysis was subject to misclassification of habitat in some areas; this was especially problematic in areas that were clearly identifiable as flat sedimented plains, but where DEM artifacts caused by ship heave inflated the rugosity values and thus resulted in misclassification as rough habitat. To minimize this problem, a hand-drawn mask was created to exclude these probable non-rough areas from the reclassification of the rugosity results, and the masked areas were then assigned to the smooth class. This process still resulted in some misclassification errors of both omission and commission, but an attempt was made to minimize these errors and produce a conservative estimate of rough habitat distribution and abundance. 2m: VRM Method Used, Threshold- 0.0005 / Overall % agreement= 97 5m: VRM Method Used, Threshold- 0.00005 / Overall % agreement= 97"
+          ]
+        },
+        {
+          "archive_member": "BSS_Block03/Habitat/ArcViewGrids/bss03_2mhab/metadata.xml",
+          "sha256": "127eaddad020b871af4e6d3d368807910b931369686177f0253f469962148aed",
+          "process_description": [
+            "Rough and smooth habitat areas determined by surface:planar area (SA:PA) ratio and/or vector ruggedness analyses of the bathymetric DEM (see Substrate_Analysis metadata for more information) were stratified by depth zones to produce depth-stratified habitat grids. Depth zones used were 0 - -30m, -30 - -100m, -100 - -200m, and <= -200m. Cell values in the depth-stratified habitat grid signify both depth zone and substrate as follows: 0 Depth = 0- -30, Substrate = Smooth -1 Depth = 0- -30, Substrate = Rough -30 Depth = -30- -100, Substrate = Smooth -31 Depth = -30- -100, Substrate = Rough -100 Depth = -100 - -200, Substrate = Smooth -101 Depth = -100 - -200, Substrate = Rough -200 Depth <= -200, Substrate = Smooth -201 Depth <= -200, Substrate = Rough The masking process used in the initial creation of the substrate data layer, which was used to minimize misclassification due to noise and artifacts, produces a conservative estimate of total rough (potential rock) substrate, especially in deeper locations such as canyon walls and the steeply sloped continental margin. In these areas, increased noise and high slope can confound the area ratio-based substrate classification, so a vector ruggedness measure was employed in place of the standard SA:PA ratio analyses."
+          ]
+        }
+      ],
+      "same_survey_interpretation_note": "Subjective producer-selected roughness threshold and hand-drawn artifact masking; reported classification agreement is not independent fish/substrate confirmation."
+    }
+  ],
+  "production_native_reader_verification": {
+    "status": "passed",
+    "sources": [
+      {
+        "source_id": "bss-block01-additional-products-tar-gz-fbfc03dfd0",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "bss-block01-additional-products-tar-gz-fbfc03dfd0",
+          "source_sha256": "6895c639d38e73f9871e185c8e79b4a99db002c537afb18ebdb4396d0e417548",
+          "depth_archive_member": "BSS_Block01/Bathymetry/ArcViewGrids/bss01_2mbathy",
+          "depth_cog_sha256": "b0471c40a28db3a32d06e4d5540c4131cfbf87f25973353a4f5bf41b0562e82a",
+          "archive_member": "BSS_Block01/Habitat/ArcViewGrids/bss01_2mhab",
+          "metadata_sha256": "9cf24d12d8e42ccbd28ffd863033a99abadba09edc8fc4338ad13b5faa6bb878",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-bss01-03-native-terrain-review.json#/products/0"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "source_receipt_cog_sha256": "b0471c40a28db3a32d06e4d5540c4131cfbf87f25973353a4f5bf41b0562e82a",
+        "native_grid_verified": true,
+        "native_shape": [
+          2210,
+          3166
+        ]
+      },
+      {
+        "source_id": "bss-block02-additional-products-tar-gz-21e4c4026d",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "bss-block02-additional-products-tar-gz-21e4c4026d",
+          "source_sha256": "4f17b2ef8b172914e06e9d9c83647a9d4e6f569d350a65d63af92a7394c23c5d",
+          "depth_archive_member": "BSS_Block02/Bathymetry/ArcViewGrids/bss02_2mbathy",
+          "depth_cog_sha256": "6329ac2c63c4391b57a7236242d32ea8dbae478f03e2886fc9ebfc39a79cf03a",
+          "archive_member": "BSS_Block02/Habitat/ArcViewGrids/bss02_2mhab",
+          "metadata_sha256": "c9054b1406701c3f9467738af7a9ef2837099e564970eea68cb7351014adc57b",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-bss01-03-native-terrain-review.json#/products/1"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "source_receipt_cog_sha256": "6329ac2c63c4391b57a7236242d32ea8dbae478f03e2886fc9ebfc39a79cf03a",
+        "native_grid_verified": true,
+        "native_shape": [
+          2435,
+          3913
+        ]
+      },
+      {
+        "source_id": "bss-block03-additional-products-tar-gz-ad317d80e0",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "bss-block03-additional-products-tar-gz-ad317d80e0",
+          "source_sha256": "0414c642e74e52773ebe4c36d01220cfef5bf7f5f71d8cb2627a399863e64e83",
+          "depth_archive_member": "BSS_Block03/Bathymetry/ArcViewGrids/bss03_2mbathy",
+          "depth_cog_sha256": "4c1eb66cacd80a5c05e8b2a60f1a098bc3892a4e0343a3d6b35bdb40c942c1da",
+          "archive_member": "BSS_Block03/Habitat/ArcViewGrids/bss03_2mhab",
+          "metadata_sha256": "127eaddad020b871af4e6d3d368807910b931369686177f0253f469962148aed",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-bss01-03-native-terrain-review.json#/products/2"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "source_receipt_cog_sha256": "4c1eb66cacd80a5c05e8b2a60f1a098bc3892a4e0343a3d6b35bdb40c942c1da",
+        "native_grid_verified": true,
+        "native_shape": [
+          3197,
+          3849
+        ]
+      }
+    ]
+  },
+  "bounded_reach_proofs": [
+    {
+      "reach": "south-big-sur-san-simeon-r01",
+      "status": "passed",
+      "physical_only": false,
+      "publication_held": true,
+      "scope": "Production-eligible source set; normal runner with missing screen, all physical-only sources excluded",
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "before": {
+        "selected_valid_km2": 35.920569123,
+        "tier1_km2": 38.879375,
+        "physical_candidate_count": 353,
+        "roughness_thresholds": {
+          "vrm_samples": 7906255,
+          "vrm": 4.1479390347376466e-05,
+          "bpi_fine_m_samples": 7697974,
+          "bpi_fine_m": 0.17238650140002573
+        },
+        "physical_candidate_area_km2": 6.624770926247404,
+        "source_counts": {
+          "bss-block03-additional-products-tar-gz-ad317d80e0": 20,
+          "csumb-bss-block05-2m-native": 47,
+          "csumb-bss-block05-5m-native": 10,
+          "csumb-bss-block04-2m-native": 199,
+          "csumb-bss-block04-5m-native": 1,
+          "csumb-bss-block06-2m-native": 60,
+          "csumb-bss-block06-5m-native": 15,
+          "csumb-bss-block03-5m-native": 1
+        },
+        "run_sha256": "70fdc94cf2cdcd9cc7e0147bab45287914b7c51a7287a93e90c0cd18d42c5977",
+        "input_hash": "491086d5a98e8521ea3e627365f8c846219d27c067ab1fbee18ebb5bcbbfc59f",
+        "physical_input_hash": "5a5380dc2c3d67e295ec30f8dd98d7175d8af33500f6f68f58c962d040f0654a",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 35.920569123,
+        "tier1_km2": 38.879375,
+        "physical_candidate_count": 337,
+        "roughness_thresholds": {
+          "vrm_samples": 7737094,
+          "vrm": 4.155633723712526e-05,
+          "bpi_fine_m_samples": 7552929,
+          "bpi_fine_m": 0.17360766868755342
+        },
+        "physical_candidate_area_km2": 6.4904390204270745,
+        "source_counts": {
+          "bss-block03-additional-products-tar-gz-ad317d80e0": 2,
+          "csumb-bss-block05-2m-native": 47,
+          "csumb-bss-block05-5m-native": 10,
+          "csumb-bss-block04-2m-native": 200,
+          "csumb-bss-block04-5m-native": 1,
+          "csumb-bss-block06-2m-native": 61,
+          "csumb-bss-block06-5m-native": 15,
+          "csumb-bss-block03-5m-native": 1
+        },
+        "run_sha256": "87c742c6a97e022acabf88e55753696de2fde872c03fc68b17dff9443bb273a7",
+        "input_hash": "d88e17e40b238ce7c0d2a839358397220297fb3b3d20abbabee675987c689f5e",
+        "physical_input_hash": "e2e2bbce47ed0390816454f036b9822765d665f5455c4989a064102ed3263544",
+        "physical_reused": false
+      }
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r02",
+      "status": "passed",
+      "physical_only": false,
+      "publication_held": true,
+      "scope": "Production-eligible source set; normal runner with missing screen, all physical-only sources excluded",
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "before": {
+        "selected_valid_km2": 55.452019066,
+        "tier1_km2": 57.586875,
+        "physical_candidate_count": 608,
+        "roughness_thresholds": {
+          "vrm_samples": 13277615,
+          "vrm": 2.22930630116025e-05,
+          "bpi_fine_m_samples": 13060319,
+          "bpi_fine_m": 0.15795507809716144
+        },
+        "physical_candidate_area_km2": 11.337564456092183,
+        "source_counts": {
+          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 184,
+          "bss-block02-additional-products-tar-gz-21e4c4026d": 175,
+          "bss-block03-additional-products-tar-gz-ad317d80e0": 231,
+          "csumb-bss-block03-5m-native": 18
+        },
+        "run_sha256": "a20bfe3b2f3293ffa3acb87b85fc8e131b32ba17874d9db579283fc633e331c3",
+        "input_hash": "dad7c3513aab807c16d8b4cc721a74ca84f3a72b99c7d843e1cba900cedac6d2",
+        "physical_input_hash": "7b68e43503ae96d140b771f25e6b2754b2470c529b9ddd1daaa3736a459ccefc",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 55.452019066,
+        "tier1_km2": 57.586875,
+        "physical_candidate_count": 66,
+        "roughness_thresholds": {
+          "vrm_samples": 332631,
+          "vrm": 0.006145547144114971,
+          "bpi_fine_m_samples": 308832,
+          "bpi_fine_m": 0.8792236971720322
+        },
+        "physical_candidate_area_km2": 0.24719964747660383,
+        "source_counts": {
+          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 26,
+          "bss-block02-additional-products-tar-gz-21e4c4026d": 8,
+          "bss-block03-additional-products-tar-gz-ad317d80e0": 27,
+          "csumb-bss-block03-5m-native": 5
+        },
+        "run_sha256": "04b8f8a01939f51f2990ae1640575860ba2e05e9a2092491fc3ab447766e562f",
+        "input_hash": "065727fcd47b83304adb0a6a0f8521ce61ee8e16af3b8744f549b4b10f85da18",
+        "physical_input_hash": "938e19ae585e0c2a7752cb091604233d461244c308e58a7c8a35832f9fd74357",
+        "physical_reused": false
+      }
+    },
+    {
+      "reach": "south-big-sur-san-simeon-r03",
+      "status": "passed",
+      "physical_only": false,
+      "publication_held": true,
+      "scope": "Production-eligible source set; normal runner with missing screen, all physical-only sources excluded",
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "before": {
+        "selected_valid_km2": 70.103262405,
+        "tier1_km2": 73.8525,
+        "physical_candidate_count": 839,
+        "roughness_thresholds": {
+          "vrm_samples": 4844115,
+          "vrm": 0.004316071979701519,
+          "bpi_fine_m_samples": 4707483,
+          "bpi_fine_m": 0.6732135937769161
+        },
+        "physical_candidate_area_km2": 3.8623627745782305,
+        "source_counts": {
+          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 13,
+          "csumb-scc-block01-2m-native": 347,
+          "csumb-scc-block02-2m-native": 447,
+          "csumb-scc-block03-2m-native": 30,
+          "csumb-scc-block04-2m-native": 2
+        },
+        "run_sha256": "76f323847aee13206732f674404e6645216e996f0d1462c90d08ba73739996f3",
+        "input_hash": "22c26680e36fb57f1c1e22a9e733e0dc9b7536b2c6097d0a7f38dedfafc28dae",
+        "physical_input_hash": "2b59e15101ea2a03aee3232d3ce888e41c33ca874954680b9b06836ce4cf1bd0",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 70.103262405,
+        "tier1_km2": 73.8525,
+        "physical_candidate_count": 719,
+        "roughness_thresholds": {
+          "vrm_samples": 3714201,
+          "vrm": 0.005748715251684189,
+          "bpi_fine_m_samples": 3609685,
+          "bpi_fine_m": 0.7656026494347734
+        },
+        "physical_candidate_area_km2": 2.83085853214448,
+        "source_counts": {
+          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 13,
+          "csumb-scc-block01-2m-native": 276,
+          "csumb-scc-block02-2m-native": 401,
+          "csumb-scc-block03-2m-native": 27,
+          "csumb-scc-block04-2m-native": 2
+        },
+        "run_sha256": "ba5401a22cc3ea64995420e1de225104d387ee9603c549cbfc5386c6a95b20dc",
+        "input_hash": "e53d6180ee282a2ca8d17e097649f2ac58b4fa0e210f594cabe09f740f1025a4",
+        "physical_input_hash": "592cb7182109f71e90558c9257cb9744cba6df54430ecd35fcea52bab6b5a10f",
+        "physical_reused": false
+      }
+    }
+  ],
+  "native_candidate_review": {
+    "audit_sha256": "c74f62badfc9e8e5ed7651aeae46aebba7138fca47d96d05ab673beeb2a54911",
+    "script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "candidate_count": 76,
+    "candidate_counts_by_source": {
+      "bss-block01-additional-products-tar-gz-fbfc03dfd0": 39,
+      "bss-block02-additional-products-tar-gz-21e4c4026d": 8,
+      "bss-block03-additional-products-tar-gz-ad317d80e0": 29
+    },
+    "sampled_native_views": 18,
+    "pages": [
+      {
+        "file": "page-01.png",
+        "sha256": "8cec5c84bb2b817d487a4079f435e1837b5eba96f9aced7264e0ba7cb16c28c5"
+      },
+      {
+        "file": "page-02.png",
+        "sha256": "99b080ca37987e976d98abd4d1f19fd3b4207b68ca2d5b6bd74b55e9ddc20dbb"
+      },
+      {
+        "file": "page-03.png",
+        "sha256": "51bbbbea4ba5a56d867518a31269c0f7c816c7935d3551163846fe601ecb3228"
+      },
+      {
+        "file": "page-04.png",
+        "sha256": "aa0ec5ab2c466d35115fb0e2fce998e0f0fb0be06f49c3379ca3330e0d113683"
+      },
+      {
+        "file": "page-05.png",
+        "sha256": "a120bd4b434ae1afed359762c9c5c820531188b49a378ec8fdc774a489ac13f0"
+      },
+      {
+        "file": "page-06.png",
+        "sha256": "b2d6dedd7b3aa438bdb7bcd9783e249ee6eba98f938bfe57ada712c93bec8c37"
+      }
+    ],
+    "all_numeric_diagnostics_reviewed": true,
+    "primary_all_pages_reviewed": true,
+    "native_depth_min_m": 7.670000076293945,
+    "native_depth_max_m": 81.41000366210938,
+    "minimum_rough_native_center_fraction": 0.9971830985915493,
+    "class_nodata_centers": 0,
+    "limitation": "All numeric diagnostics and sampled native views reviewed. Outcrops, linear ridges, low relief and nearshore/missing-data edges remain visible; producer interpretation is not exhaustive artifact exclusion or substrate ground truth. Unsampled candidates are not individually visually verified."
+  }
+}
