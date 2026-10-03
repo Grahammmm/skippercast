@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Let bounded original-sonar triage use a pinned private native-gap snapshot on a processing host without copying the raster cache. Preserve topology, depth/quality checks and publication holds; this screening tool adds no mapped area by itself.
+
 - Recover the measured seafloor layer automatically after temporary publication updates, with bounded retries and expiry checks; preserve screening holds and manual layer-off choices.
 
 - Refine Cambria/Point Estero habitat with original SCC04–06 native terrain classes, retaining measured depth, existing rankings and all source/publication restrictions. No new surveyed area is claimed.

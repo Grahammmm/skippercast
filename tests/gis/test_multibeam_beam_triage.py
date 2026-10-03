@@ -8,7 +8,8 @@ from pyproj import Transformer
 from shapely.geometry import Point, Polygon
 from shapely.geometry.polygon import orient
 
-from research.scripts.triage_multibeam_beams import COLUMNS, esri_polygon, triage
+from research.scripts.triage_multibeam_beams import COLUMNS, esri_polygon, load_native_gap_query, triage
+from research.scripts.discover_noaa_multibeam_footprints import gap_sectors
 from tests.gis.test_multibeam_gap_discovery import cell, snapshot
 
 pytestmark = pytest.mark.gis
@@ -141,3 +142,86 @@ def test_tiny_sliver_at_large_projected_coordinates_keeps_orientation():
 def test_deep_filter_requires_verified_native_masks(tmp_path):
     with pytest.raises(ValueError, match='requires checked native masks'):
         triage(*fixture(tmp_path, [beam()]), exclude_measured_deep=True)
+
+
+def saved_query(folder, target):
+    groups, identity = gap_sectors(folder)
+    # A fixture represents a previously verified native snapshot. The caller
+    # must pin its bytes; this test does not fabricate actual source coverage.
+    identity.update(native_support_inputs_sha256='b'*64, native_support_sha256='c'*64,
+                    retained_run_sha256='d'*64)
+    payload = {'groups': groups, 'coverage_snapshot': identity}
+    target.write_text(json.dumps(payload))
+    return target, hashlib.sha256(target.read_bytes()).hexdigest()
+
+
+def test_pinned_query_matches_existing_triage_without_original_cache(tmp_path):
+    table, receipt, folder = fixture(tmp_path, [beam(), beam(80, supported=True), beam(92)])
+    query, pin = saved_query(folder, tmp_path/'private-query.json')
+    original = triage(table, receipt, folder, table_kind='all')
+    # No raster/cache or coverage directory is read through this path.
+    result = triage(table, receipt, gap_query=query, gap_query_sha256=pin, table_kind='all')
+    for key in ('evaluated_beam_rows', 'good_nominal_shallow_rows', 'good_shallow_rows_in_gaps',
+                'by_gap_group', 'gap_depth_min_m', 'gap_depth_max_m'):
+        assert result[key] == original[key]
+    assert result['gap_query_sha256'] == pin
+    assert result['new_measured_km2'] == result['new_public_locations'] == 0
+    assert any('not proof of current coverage' in v for v in result['limitations'])
+
+
+@pytest.mark.parametrize('pin', [None, 'a'*63, 'A'*64, 'b'*64])
+def test_query_requires_matching_explicit_pin(tmp_path, pin):
+    _, _, folder = fixture(tmp_path, [beam()])
+    query, _ = saved_query(folder, tmp_path/'private-query.json')
+    with pytest.raises(ValueError, match='pin|hash mismatch'):
+        load_native_gap_query(query, pin)
+
+
+@pytest.mark.parametrize('problem', ['native_identity', 'duplicate', 'mixed_reach', 'crs', 'deep_identity'])
+def test_pinned_bytes_do_not_replace_native_identity_or_topology_checks(tmp_path, problem):
+    _, _, folder = fixture(tmp_path, [beam()])
+    query, _ = saved_query(folder, tmp_path/'private-query.json')
+    payload = json.loads(query.read_text())
+    if problem == 'native_identity':
+        del payload['coverage_snapshot']['native_support_sha256']
+    elif problem == 'duplicate':
+        payload['groups'].append(payload['groups'][0])
+    elif problem == 'mixed_reach':
+        payload['groups'][0]['id'] = 'different-reach-gap-0001'
+    elif problem == 'crs':
+        payload['groups'][0]['query_geometry']['spatialReference']['wkid'] = 4326
+    else:
+        payload['coverage_snapshot']['measured_deep_mask_sha256'] = 'e'*64
+        payload['coverage_snapshot']['measured_deep_method'] = 'unverified'
+    query.write_text(json.dumps(payload))
+    with pytest.raises(ValueError):
+        load_native_gap_query(query, hashlib.sha256(query.read_bytes()).hexdigest())
+
+
+def test_saved_query_keeps_holes_and_inclusive_boundaries(tmp_path):
+    _, _, folder = fixture(tmp_path, [beam()])
+    query, _ = saved_query(folder, tmp_path/'private-query.json')
+    payload = json.loads(query.read_text())
+    geometry = payload['groups'][0]['query_geometry']
+    geometry['rings'] = [ring([(0,0),(10,0),(10,10),(0,10)], True),
+                         ring([(2,2),(8,2),(8,8),(2,8)], False)]
+    query.write_text(json.dumps(payload))
+    groups, _ = load_native_gap_query(query, hashlib.sha256(query.read_bytes()).hexdigest())
+    shape = esri_polygon(groups[0]['query_geometry'])
+    assert shape.covers(Point(0,5)) and shape.covers(Point(2,5))
+    assert not shape.covers(Point(5,5))
+
+
+def test_saved_query_cannot_mix_cache_options(tmp_path):
+    table, receipt, folder = fixture(tmp_path, [beam()])
+    query, pin = saved_query(folder, tmp_path/'private-query.json')
+    with pytest.raises(ValueError, match='mixed with cache'):
+        triage(table, receipt, folder, gap_query=query, gap_query_sha256=pin)
+
+
+def test_query_read_is_bounded(tmp_path, monkeypatch):
+    _, _, folder = fixture(tmp_path, [beam()])
+    query, pin = saved_query(folder, tmp_path/'private-query.json')
+    monkeypatch.setattr('research.scripts.triage_multibeam_beams.MAX_GAP_QUERY_BYTES', 10)
+    with pytest.raises(ValueError, match='read bound'):
+        load_native_gap_query(query, pin)
