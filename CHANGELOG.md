@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Seafloor: complete the remaining Arguello permanent spatial review so all 33 Monterey–Point Conception reaches can be screened. Reuse physical terrain; retain all 32 affected candidates as MPA exclusions, including four security overlaps. No new measured coverage or public fishing locations is claimed.
+
 - Add an isolated government-only seafloor input scope for separately reviewed commercial releases, retaining indirect calibration, whole-polygon screening and publication gates.
 
 - Make browser map checks independent of live boundary-feed timing, retaining the production MPA gates and testing that unavailable current checks still withhold fishing targets.

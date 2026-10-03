@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-03",
+  "reviewed_reaches": [
+    "point-arguello-conception-r05"
+  ],
+  "baseline_main": "275255e9938159339dabd2bba8b66f26cc2a7b9c",
+  "scope": {
+    "whole_reference_envelope_wgs84": [
+      -120.76437472411433,
+      34.63737961446801,
+      -120.60065430016473,
+      34.72309675895168
+    ],
+    "reference_cells": 1006,
+    "reference_square_area_km2": 62.875,
+    "reference_cells_sha256": "8de292a4fd7cd299d789958454bed47d2bc186bbd6e80f9f6137cc788f22d490",
+    "reference_band_is_not_measured_coverage": true,
+    "screen_bounds_unchanged": true
+  },
+  "inventory_review": {
+    "source_date": "2026-09-30",
+    "retrieved_at": "2026-10-03",
+    "parts": [
+      {
+        "part": "165",
+        "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-30/title-33.xml?part=165",
+        "bytes": 1795572,
+        "sha256": "c4a28f54cd872a7383bd0d99b5f29947a7829d9682aa716d39d68e3c216c9df7"
+      },
+      {
+        "part": "334",
+        "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-30/title-33.xml?part=334",
+        "bytes": 620303,
+        "sha256": "4b7d8e089cd85bb7aa9b50a3a850dfe3f588a4df06f9ac3cfb3d9c331be38367"
+      }
+    ],
+    "part165_delta": {
+      "old_source_date": "2026-09-28",
+      "current_source_date": "2026-09-30",
+      "old_sha256": "34e4440edf340f14e2bb22fb2deef3f4c61b0fa4937787ca9badf7b2883b16e3",
+      "current_sha256": "c4a28f54cd872a7383bd0d99b5f29947a7829d9682aa716d39d68e3c216c9df7",
+      "old_sections": 361,
+      "current_sections": 360,
+      "changes": [
+        {
+          "section": "165.T01-0936",
+          "old_head": "\u00a7 165.T01-0936 Safety Zone; Aerial Displays, Upper Bay, New York, NY.",
+          "new_head": null,
+          "change": "removed"
+        }
+      ],
+      "california_fixed_section_changes": []
+    },
+    "finding": "Part334 is byte-identical to the earlier reviewed inventory. Part165 only removed an expired NewYork temporary aerial-display safety zone; all California sections are unchanged. Existing fixed exclusions and mobile/trip-time notices cover this envelope."
+  },
+  "permanent_screen_basis": {
+    "vandenberg": "33CFR334.1130: Zone4 stopping/loitering prohibition remains excluded with the existing unknown-datum coastal envelope and250m margin. Zone3 and other danger-zone closures announced for launches remain trip-time checks. No current launch-day clearance is granted.",
+    "north_south_notice_review": "Entire reference-cell envelope lies south of FortOrd334.1150, Monterey165.1183 mobile-vessel waters, Diablo165.1155 and Morro entrance165.1196; existing outside-scope/mobile section hash checks remain required.",
+    "cdfw": "All original statewide MPA polygons, including boundary touches, remain conservative whole-polygon exclusions.",
+    "noaa": "All original reviewed GEA/CCA/YRCA polygons remain conservative whole-polygon exclusions.",
+    "restrictions_removed": 0
+  },
+  "fresh_snapshot": {
+    "checked_at": "2026-10-03T03:02:08.495580+00:00",
+    "sha256": "54922e03af038c95b38b3b57c5073546c26c986a162ee52c1d3cee1dcdf8d6e8",
+    "layers": [
+      {
+        "id": "cdfw-mpa",
+        "checked_at": "2026-10-03T03:01:33.044630+00:00",
+        "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
+        "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+        "feature_count": 155
+      },
+      {
+        "id": "noaa-federal",
+        "checked_at": "2026-10-03T03:01:33.044642+00:00",
+        "sha256": "6d333ec4238199c054d01eedf5d4603bcc5b082d284e5967656424dac963434a",
+        "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
+        "feature_count": 29
+      },
+      {
+        "id": "security",
+        "checked_at": "2026-10-03T03:02:08.495580+00:00",
+        "sha256": "d3a6617e6ab0049631540f505d65df96a39153eafd65596682ad1c942c478d20",
+        "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
+        "feature_count": 3
+      }
+    ],
+    "security_evidence": {
+      "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
+      "titles_sha256": "e77f77da94cc6a394739f198539fdcf39b3e8ceddd4ab3631f1f6202604d784d",
+      "sections": [
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
+          "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
+          "up_to_date_as_of": "2026-10-01"
+        },
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=334.1130",
+          "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
+          "up_to_date_as_of": "2026-10-01"
+        },
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1196",
+          "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
+          "up_to_date_as_of": "2026-10-01"
+        },
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=334.1150",
+          "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
+          "up_to_date_as_of": "2026-10-01",
+          "classification": "outside-reviewed-scope"
+        },
+        {
+          "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1183",
+          "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
+          "up_to_date_as_of": "2026-10-01",
+          "classification": "trip-time-vessel-restriction"
+        }
+      ],
+      "up_to_date_as_of": "2026-10-01"
+    }
+  },
+  "before_after": {
+    "selected_native_support_km2": 38.99181167,
+    "physical_candidates": 32,
+    "screened_candidates": 0,
+    "held_candidates": 32,
+    "before_scope_status": "habitat-held-for-screen",
+    "after_scope_status": "habitat-screened",
+    "before_hold_reasons": {
+      "screen-scope-unreviewed": 32
+    },
+    "after_hold_reasons": {
+      "overlap-cdfw-mpa": 32,
+      "overlap-security": 4
+    },
+    "physical_reused": true,
+    "physical_input_hash": "96ec47e2e7ab38dfb72f510b8995f71257ca71d2f29248ac18dd7532278a6a0a",
+    "physical_output_hashes": {
+      "cells.json": "a50aa1e440f156789d00c0bf82b95444aad58bbb7c600ed83b2c18b39cd514c6",
+      "terrain.json": "6b70d0f8aa973ad89dd3fa8fb51ece03d4c14e2d1fcf4c2a4b256e5a967d4b65",
+      "candidates.geojson": "d93763d72618ade9e9f0d77ec419b0debaa63f6cfb773acfa854bdcde978ce57",
+      "atlas-comparison.json": "8f8bd1a03028e7b2f20a9ad2cdeef9d04cc09437c9ea660759a89a81462a007e",
+      "physical.json": "64313a670f6605077ef3dd56048fda618133170d77ce4ec17b9b2a0dc05d5334"
+    },
+    "selected_support_delta_km2": 0,
+    "new_acquisition_km2": 0,
+    "new_public_locations": 0,
+    "screen_seconds": 0.26059216691646725
+  },
+  "validation": {
+    "tests": "42 passed;3684 subtests passed, GIS screen and ledger/manifest/rights contracts",
+    "geometry": "All32 candidates remain whole-polygon MPA-held and unexportable;4 also security-held. Zero passed candidate polygons. Physical geometry/depth/grades/ranks/output hashes unchanged.",
+    "publication": "Only the unresolved planning-screen scope is completed. Native coverage gaps, source-quality holds, unknown datums, producer rights, season/gear and current notices are unchanged. All33 corridor reaches now have reviewed permanent spatial scope; this is not complete native seafloor coverage."
+  }
+}
