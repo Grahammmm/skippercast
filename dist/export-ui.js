@@ -109,7 +109,7 @@ export function initExport({atlas,screen,map,getVisible,navigation,onConditions=
   $('export-search')?.addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderList();});
   root.addEventListener('change',e=>{
     selectionRevision++;
-    if(e.target.id==='export-research'){allowResearch=e.target.checked;$('export-filtered-research').disabled=!allowResearch;renderList();}
+    if(e.target.id==='export-research'){allowResearch=e.target.checked;$('export-filtered-research').disabled=!allowResearch;$('export-scope-status').textContent=allowResearch?'Research-coordinate export enabled for this session. Review the evidence class for each selected point.':'Research-coordinate export disabled. Saved research selections are retained but cannot be downloaded.';renderList();}
     if(e.target.dataset.spot){const id=e.target.dataset.spot;draft.ids=e.target.checked?[...new Set([...draft.ids,id])]:draft.ids.filter(x=>x!==id);}
     if(e.target.dataset.layer)draft.layers[e.target.dataset.layer]=e.target.checked;
     if(e.target.id==='export-avoid-scope')draft.avoidScope=e.target.value;
