@@ -59,6 +59,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [engineering/telemetry.md](engineering/telemetry.md) | Client funnel events and error reports: what is sent, when nothing is, retention |
 | [engineering/testing.md](engineering/testing.md) | Test layers, what each covers and how to add a fixture |
 | [engineering/adr/](engineering/adr/README.md) | Architecture decision records |
+| [plans/text-advisor/](plans/text-advisor/README.md) | Build plan for the Text Advisor (iMessage/SMS fishing advisor, skipper intake, social pipeline, admin): decisions, architecture, data model, task breakdown |
 
 Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [CONTRIBUTING.md](../CONTRIBUTING.md) and [CHANGELOG.md](../CHANGELOG.md).
 
