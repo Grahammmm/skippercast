@@ -162,6 +162,16 @@ resume identities fail before network queries. A legal-only refresh can reuse
 the physical support cache. The uncovered planning geometry still has unknown
 local depth and is never counted as new measured coverage or habitat.
 
+For nominal 300 ft acquisition, optionally add `--exclude-measured-deep` with
+`--cache-root`. The planning reference extends to 100 m, so some apparent gaps
+are already measured deeper than 91.44 m. This option subtracts only valid native
+depths above that ceiling from acquisition query polygons, clipped to reviewed
+source bounds and owned cells. Masked, nonfinite and unmeasured pixels remain
+unknown. `excluded_non_target_query_m2` records search reduction, never completed
+shallow coverage or habitat. Datum, precision and unknown interpolation limits
+remain explicit. Resume requires the same mode and checked mask identities;
+do not rerun finished catalog searches just because the filter became available.
+
 Timebox one unresolved source to about 45 minutes. Record `access-failed`,
 `format-unsupported`, `license-unclear`, `no-valid-cells`, `coarse-only` or
 `duplicate` with the evidence and next action. Source holds do not imply the
