@@ -42,6 +42,9 @@ class RolloutTests(unittest.TestCase):
             with patch.object(rollout, 'load_manifest', return_value={'surveys': [usable, candidate]}):
                 result = rollout.plan(root, max_new=1)
                 self.assertEqual(result['new_reaches'], ['r01'])
+                self.assertTrue(result['execution']['new_reach_batch_selected'])
+                self.assertEqual(result['execution']['next_action'], 'process-reviewed-batch')
+                self.assertIsNone(result['execution']['additional_measured_km2'])
                 self.assertEqual(result['reaches'][2]['action'], 'qualify-source')
                 self.assertTrue(all(r['tier1_km2'] == 0 for r in result['reaches']))
                 self.assertTrue(all(not r['screen_reviewed'] for r in result['reaches']))
@@ -71,6 +74,15 @@ class RolloutTests(unittest.TestCase):
                 self.assertEqual(advanced['new_reaches'], ['r02'])
                 self.assertTrue(advanced['reaches'][0]['pending_ledger_merge'])
                 self.assertEqual(advanced['reaches'][0]['tier1_km2'], 0)
+                maintenance = rollout.plan(root, max_new=1,
+                    progress={'r01': {'status': 'complete'}, 'r02': {'status': 'complete'}})
+                self.assertEqual(maintenance['new_reaches'], [])
+                self.assertEqual(maintenance['execution']['refresh_reaches'], ['r01', 'r02'])
+                self.assertFalse(maintenance['execution']['new_reach_batch_selected'])
+                self.assertEqual(maintenance['execution']['next_action'], 'inspect-native-gaps')
+                self.assertIsNone(maintenance['execution']['additional_measured_km2'])
+                self.assertEqual(maintenance['selected'], [
+                    {'reach': 'r01', 'region': 'central'}, {'reach': 'r02', 'region': 'central'}])
                 with self.assertRaisesRegex(ValueError, 'Unknown'):
                     rollout.plan(root, region='typo')
                 ref.write_text('{}')

@@ -218,6 +218,8 @@ Qualify seven original PGE_Mid native grids, adding 33.91 km² of selected shall
 
 ### Internal
 
+- Give the seafloor planner an explicit acquisition action when no new reach is selected, while preserving freshness work and unverified growth. Shorten the mapping skill and retain detailed source/release recipes and historical evidence in linked references.
+
 - Release process: version tags publish GitHub Releases whose notes are the matching CHANGELOG section; see [release process](docs/operations/release-process.md).
 - Seafloor runner setup now installs the schema validator and checks the manifest before processing or publishing.
 - Seafloor publication: regional PMTiles, private survey recovery and a scheduled main-only workflow with checksum, restriction-expiry and public HTTP Range checks. The first Morro Bay archive contains 1,006 screened candidates; live acceptance follows a successful post-merge dispatch.
