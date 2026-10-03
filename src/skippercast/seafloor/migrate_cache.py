@@ -24,6 +24,9 @@ def migrate_numeric_cache(reach_id, *, root=REPO, private=False, apply=False):
     from .run import VERSION
     scope_name(reach_id)
     root = Path(root)
+    from .source_scope import processing_scope
+    if processing_scope(root) != 'all':
+        raise ValueError('Scoped government inputs require normal processing, not numeric migration')
     folder = root/'var/seafloor'/('private-reaches' if private else 'reaches')/reach_id
     receipt = read_json(folder/'run.json')
     physical = read_json(folder/'physical.json')

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an isolated government-only seafloor input scope for separately reviewed commercial releases, retaining indirect calibration, whole-polygon screening and publication gates.
+
 - Qualify SCC26–28 native depth for credited noncommercial mapping, retaining MPA, security and edge-support holds while refining all affected habitat calibration.
 
 - Refine Avila habitat with the original native terrain classes, retaining measured depth and Block J's private quality hold.
