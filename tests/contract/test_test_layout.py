@@ -1,4 +1,4 @@
-"""The Python test layout stays what docs/engineering/testing.md describes.
+"""The test layout stays what docs/engineering/testing.md describes.
 
 Layers are directories (tests/unit, tests/contract, tests/integration, tests/gis and
 research/tests with its gis/ subfolder); pytest markers come from the directory, so
@@ -27,6 +27,16 @@ def top_level_imports(path):
 
 
 class LayoutTest(unittest.TestCase):
+    def test_node_test_modules_match_the_standard_suite_glob(self):
+        # npm test and CI deliberately share this top-level glob. Detect test
+        # modules outside it instead of trusting contributors to run them by hand.
+        directory = ROOT / 'tests'
+        collected = set(directory.glob('test_*.mjs'))
+        modules = {p for p in directory.rglob('*.mjs')
+                   if 'node:test' in p.read_text(encoding='utf-8')}
+        missed = sorted(p.relative_to(ROOT).as_posix() for p in modules - collected)
+        self.assertEqual(missed, [], 'Node test modules must match tests/test_*.mjs')
+
     def test_every_module_is_in_a_layer(self):
         misplaced = [p.relative_to(ROOT).as_posix() for p in layer_modules()
                      if p.parent.relative_to(ROOT).as_posix() not in LAYERS]

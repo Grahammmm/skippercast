@@ -63,7 +63,10 @@ Before a PR, run the full list in [AGENTS.md → Before opening a PR](../../AGEN
 
 Other `scripts/check_*.py` files are not tests: `check_feed_freshness.py` and `check_saved_trips.py` run in scheduled workflows against production, and `check_estero_review_change.py`, `check_nbs_modeling_scheme.py` and `check_point_buchon_rov_access_change.py` watch external sources for research.
 
-Known gap: `tests/species-fit.test.mjs` does not match the CI glob `tests/test_*.mjs`, so it never runs in CI (guide P2-09 renames it; left to the Node test owner).
+`npm test` and CI collect the same top-level `tests/test_*.mjs` glob, including
+`test_species_fit.mjs`. The test-layout contract rejects any `.mjs` module under
+`tests/` that uses `node:test` but falls outside that glob; name new Node tests
+accordingly rather than relying on a separate manual command.
 
 ## Claims pins
 
