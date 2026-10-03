@@ -108,7 +108,10 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
     raw_handle = tempfile.TemporaryDirectory(prefix="skippercast-recent-intel-")
     raw_dir = Path(raw_handle.name)
     # The engine is a third-party tool. Do not pass account tokens or browser access.
-    env = {k: v for k, v in os.environ.items() if k in ("PATH", "LANG", "LC_ALL", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "PYTHONPATH")}
+    # setup-python's shared Linux interpreter needs its configured library path
+    # even before the engine can start. Keep this runtime setting, not the full
+    # parent environment (which may contain provider/account credentials).
+    env = {k: v for k, v in os.environ.items() if k in ("PATH", "LANG", "LC_ALL", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "PYTHONPATH", "LD_LIBRARY_PATH")}
     env["FROM_BROWSER"] = "off"
     env["LAST30DAYS_CONFIG_DIR"] = ""  # documented clean/no-config mode
     env["LAST30DAYS_DEFAULT_SEARCH"] = ",".join(config["source_set"])
@@ -126,6 +129,8 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
         try:
             completed = runner(cmd, env=env, capture_output=True, text=True, timeout=180)
             if completed.returncode:
+                if completed.returncode == 127 and "error while loading shared libraries" in (completed.stderr or ""):
+                    raise RuntimeError("engine runtime unavailable: shared library loader failed")
                 raise RuntimeError("engine exit " + str(completed.returncode))
             raw = json.loads(path.read_text())
             items = normalize(raw, region, query["id"], now, config["lookback_days"])

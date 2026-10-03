@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from tests._support import ROOT
 
 
@@ -14,6 +15,46 @@ NOW = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
 
 
 class RecentIntelTests(unittest.TestCase):
+    def test_runtime_library_path_survives_but_credentials_do_not(self):
+        config = json.loads((ROOT / "catalog/recent-intel-watchlist.json").read_text())
+        config["regions"] = [{"id": "morro-bay", "queries": [{"id": "reef", "text": "Morro Bay lingcod"}]}]
+        # A real child process simulates an interpreter requiring its host
+        # library path before it can emit the upstream JSON contract.
+        runtime_path = "/synthetic/python/lib"
+        if module.os.environ.get("LD_LIBRARY_PATH"):
+            runtime_path += module.os.pathsep + module.os.environ["LD_LIBRARY_PATH"]
+        fixture = '''import json, os, sys
+if os.environ.get("LD_LIBRARY_PATH") != EXPECTED_LIBRARY_PATH:
+    sys.stderr.write("error while loading shared libraries: synthetic-runtime.so")
+    sys.exit(127)
+assert "OPENAI_API_KEY" not in os.environ
+assert "CLOUDFLARE_API_TOKEN" not in os.environ
+assert "HOME" not in os.environ
+assert os.environ["FROM_BROWSER"] == "off"
+assert os.environ["LAST30DAYS_CONFIG_DIR"] == ""
+output = next(a.split("=", 1)[1] for a in sys.argv if a.startswith("--output="))
+with open(output, "w") as f:
+    json.dump({"schema_version": "1.3", "results": [], "source_status": {"reddit": "no-results", "grounding": "no-results"}}, f)
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = Path(tmp) / "engine.py"
+            engine.write_text(fixture.replace("EXPECTED_LIBRARY_PATH", repr(runtime_path)))
+            with patch.dict(module.os.environ, {"LD_LIBRARY_PATH": runtime_path, "OPENAI_API_KEY": "synthetic-private", "CLOUDFLARE_API_TOKEN": "synthetic-private"}):
+                result = module.gather(config, engine, Path(tmp) / "out", NOW)
+            self.assertEqual(result["health"]["jobs_usable"], 1)
+            self.assertEqual(result["checks"]["morro-bay/reef"]["status"], "ok")
+
+    def test_loader_failure_is_specific_without_publishing_raw_stderr(self):
+        config = json.loads((ROOT / "catalog/recent-intel-watchlist.json").read_text())
+        config["regions"] = [{"id": "morro-bay", "queries": [{"id": "reef", "text": "Morro Bay lingcod"}]}]
+        def runner(*args, **kwargs):
+            return type("Result", (), {"returncode": 127, "stderr": "error while loading shared libraries: /private/synthetic-path.so"})()
+        with tempfile.TemporaryDirectory() as tmp:
+            result = module.gather(config, Path(__file__), Path(tmp), NOW, runner=runner)
+        self.assertEqual(result["health"]["jobs_usable"], 0)
+        self.assertEqual(result["checks"]["morro-bay/reef"]["issue"], "engine runtime unavailable: shared library loader failed")
+        self.assertNotIn("/private", json.dumps(result))
+
     def test_rejects_unrelated_and_undated_results(self):
         raw = {"schema_version": "1.3", "source_status": {"reddit": "ok"}, "results": [
             {"title": "Morro Bay lingcod report", "summary": "A trip report", "url": "https://example.org/a?utm_source=x",

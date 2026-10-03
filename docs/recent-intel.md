@@ -14,6 +14,12 @@ The current workflow runs once daily at 4:17 a.m. Pacific, alongside the existin
 
 Run locally using Python 3.12 or later:
 
+The collector passes only an allowlisted environment to the engine. It retains
+`LD_LIBRARY_PATH` because Linux shared Python installations configured by
+`actions/setup-python` need it to start; provider tokens, home/config discovery
+and browser cookies remain excluded. A shared-library loader failure is reported
+as a fixed runtime diagnostic, without publishing raw stderr or host paths.
+
 ```bash
 python scripts/collect_recent_intel.py --engine var/last30days-upstream/skills/last30days/scripts/last30days.py --output var/recent-intel
 python -m pytest tests/integration/test_recent_intel.py -v
