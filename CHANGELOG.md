@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Add bounded no-fill point-bin diagnostics with independent statistic checks before lidar ingestion. Keep useful shallow measurements for future shore-fishing and spearfishing research without claiming ranked or published fishing locations.
+
 - Let bounded original-sonar triage use a pinned private native-gap snapshot on a processing host without copying the raster cache. Preserve topology, depth/quality checks and publication holds; this screening tool adds no mapped area by itself.
 
 - Recover the measured seafloor layer automatically after temporary publication updates, with bounded retries and expiry checks; preserve screening holds and manual layer-off choices.
