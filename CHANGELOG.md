@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Inspect geographic seafloor grids with their original angular registration and explicit ground-spacing ranges. Preserve native values and masks, existing metric-adapter guards and caches; interpolated DEM pixels remain unqualified for measured habitat.
+
 - Reject acquisition-gap snapshots that omit or change surveys already used by the map. Check native source bindings before requests, preserve private physical work, and resume through unchanged measurement/rights-only refreshes without repeating source queries.
 
 - Keep private sonar-grid medians consistent with their checked contributor depth ranges when the official readers print different precision. Preserve strict integrity checks, original outputs and source/publication holds.

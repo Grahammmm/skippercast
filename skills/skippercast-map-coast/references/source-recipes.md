@@ -1,5 +1,31 @@
 # Source Recipes
 
+## Geographic native grids
+
+The production native adapter requires a projected grid in metres. Preserve
+that guard. A GeoTIFF in latitude/longitude degrees cannot be qualified by
+copying `raster.res` into `resolution_m`, or by declaring its advertised metre
+grid spacing without checking the native registration.
+
+For one cached single-band grid, run the offline research inspection first:
+
+```bash
+PYTHONPATH=src:. python -m research.scripts.inspect_native_grid_units \
+  --source ORIGINAL_TIF --bounds WEST SOUTH EAST NORTH \
+  --value-convention elevation-m-positive-up --vertical-datum unknown \
+  --max-pixels 25000000 --output PRIVATE_INSPECTION_JSON
+```
+
+Use the publisher's actual metre-value convention and datum; the command records
+these as operator declarations, not verified metadata. It preserves original
+values, masks, affine and CRS, reports angular increments separately from
+ellipsoidal ground-spacing ranges, and checks a bounded requested window.
+Projected grids in feet get explicit unit conversion only for inspection.
+The receipt does not normalize, rank or qualify a source for terrain/publication
+and does not invalidate existing native COG caches. Valid DEM nodes may still
+be interpolated. Resolve original sounding/class support independently before
+designing any metric preparation recipe; a pixel count is not measured area.
+
 ## The repeatable source batch
 
 Qualify a whole producer product/window that intersects several reaches, rather
