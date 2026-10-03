@@ -120,7 +120,28 @@ PYTHONPATH=src:. python research/scripts/triage_multibeam_beams.py \
 ```
 
 Use `--table-kind all` for a complete reader table. No network or terrain rebuild
-is needed. Good-beam points in gaps establish a useful acquisition lead, not
+is needed. When processing originals remotely, the coordinator can save the
+`groups` and `coverage_snapshot` returned by native `gap_sectors` as a private
+JSON query. Pin its SHA-256 in the task receipt and transfer just that mask to
+the processing host, rather than copying/rebuilding the entire raster cache:
+
+```bash
+PYTHONPATH=src:. python research/scripts/triage_multibeam_beams.py \
+  --beam-table PRIVATE_ALL_GOOD_TSV --beam-receipt PRIVATE_READER_RECEIPT \
+  --table-kind all --native-gap-query PRIVATE_NATIVE_QUERY_JSON \
+  --native-gap-query-sha256 COORDINATOR_PIN \
+  --output PRIVATE_AGGREGATE_RECEIPT_JSON
+```
+
+Do not combine saved-query mode with coverage/cache/deep-filter options; the
+selected mask already fixes that policy. Hashes preserve snapshot identity,
+not freshness. Before gridding or publication, verify the retained run and
+source inputs still match. Keep the query geometry private and return only
+aggregate coordination evidence. Original format IDs other than 57 require a
+bounded official-reader test with independently matching `mbinfo` good counts;
+changing the ID alone does not qualify a new sonar source.
+
+Good-beam points in gaps establish a useful acquisition lead, not
 gridded coverage, habitat area, fish presence or publication permission. Do not
 buffer points, accept a survey hull or fill between tracks to claim measured
 area. The next stage must review gridding/valid support, sampling resolution,
