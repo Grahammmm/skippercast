@@ -129,6 +129,26 @@ in the source datum. Unknown datum prevents stronger depth claims, not basic
 physical habitat work. Known filled/interpolated cells do not create habitat.
 Same-acquisition bathymetry and backscatter are one evidence line.
 
+Before downloading a new survey for a processed reach, narrow catalog searches
+with its retained coverage checkpoint. The existing discovery tool accepts
+zero-native-support planning cells instead of a whole reach envelope:
+
+```bash
+PYTHONPATH=src:. python research/scripts/discover_noaa_multibeam_footprints.py \
+  --coverage-folder var/seafloor/reaches/REACH_ID \
+  --max-cells 128 --max-groups 3 \
+  --output var/seafloor/source-review/REACH_ID-gap-leads.json
+```
+
+The tool verifies `coverage-cells.json` against `coverage-checkpoint.json`, queries
+exact EPSG:3310 polygons, excludes partial-support cells, and preserves the
+coverage/input hashes. Reuse the receipt; `--resume-from PREVIOUS_RECEIPT`
+continues at `next_group` only when the checkpoint, coverage hash and
+`query_batch_cells` are unchanged. A changed snapshot starts a new search. These 250 m cells use a provisional reference depth band: they are
+acquisition priorities, not verified shallow-water footprints or new measured
+area. Partial-support gaps require native masks rather than a whole-cell query.
+Catalog hulls still need actual local depth/support and same-acquisition checks.
+
 Timebox one unresolved source to about 45 minutes. Record `access-failed`,
 `format-unsupported`, `license-unclear`, `no-valid-cells`, `coarse-only` or
 `duplicate` with the evidence and next action. Source holds do not imply the
