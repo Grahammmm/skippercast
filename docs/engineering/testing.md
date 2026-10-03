@@ -89,6 +89,8 @@ Then call `worker.fetch(new Request(...), env)` with `env = {DB, FEEDS, IDENTITY
 
 ## Adding a fixture
 
+Browser map tests use `e2e/boundary-fixture.ts` for simulated current checks of the committed regional MPA polygons and additional-closure source hashes. The ArcGIS query must match that region's configured envelope. This keeps the marker tests independent of snapshot age and upstream feed availability; production freshness, exclusions and timeouts are unchanged. A per-test route can override the fixture. `e2e/boundaries.spec.ts` verifies both successful loading without the upstream feed and continued withholding when a stale snapshot has no current check.
+
 - **Small and synthetic first.** Most tests build their input inline (for example the 3×3 forecast tile in `tests/test_model_api.mjs`). Prefer that: it documents exactly which values matter.
 - **Recorded provider responses** go in `tests/fixtures/<provider>-<what>.json` (today: `gefs-wave-probability.json`, read by `tests/unit/test_pipeline_intelligence.py` as `ROOT / 'tests/fixtures/gefs-wave-probability.json'`). Keep them small (trim to the fields and cells the test needs), strip anything personal or credential-like, and note the source URL and retrieval date in the test or a neighbouring comment. `check_repository.py` scans fixtures like every other file.
 - **Binary fixtures** (a tiny GeoTIFF, BAG or PMTiles) must be added to `scripts/web-vendor-sha256.json` with their SHA-256, or `check_repository.py` fails with "unexpected or changed binary file requires review". Keep them to a few kilobytes; never commit downloaded surveys (see `.gitignore` and [CONTRIBUTING.md](../../CONTRIBUTING.md)).
