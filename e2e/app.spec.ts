@@ -76,20 +76,39 @@ test('a port in the same region moves the map without reloading and keeps the fo
   expect(pageErrors).toEqual([]);
 });
 
-test('export downloads a GPX file of the chosen spots', async ({page, pageErrors}, info) => {
+test('research export requires session consent and downloads labeled GPX', async ({page, pageErrors}, info) => {
   await openMap(page);
   await page.locator('[data-nav="export"]').click();
   await expect(page).toHaveURL(/#export$/);
   const download = page.locator('#export-download');
   await expect(download).toBeVisible({timeout: 30_000});
   await checkA11y(page, 'export', info.project.name);
-  if (await download.isDisabled()) await page.locator('#export-content input[type="checkbox"]').first().check();
+  const consent = page.locator('#export-research');
+  await expect(consent).not.toBeChecked();
+  await expect(page.locator('#export-filtered-research')).toBeDisabled();
+  await expect(page.locator('#export-spot-list input[data-spot]')).toHaveCount(0);
+  await expect(download).toBeDisabled();
+  await consent.check();
+  const spot = page.locator('#export-spot-list input[data-spot]').first();
+  await spot.check();
+  await expect(download).toBeEnabled();
+  await consent.uncheck();
+  await expect(spot).toBeChecked();
+  await expect(download).toBeDisabled();
+  await expect(page.locator('#export-validation')).toContainText('explicit opt-in');
+  await page.reload();
+  await expect(consent).not.toBeChecked();
+  await expect(page.locator('#export-spot-list input[data-spot]')).toHaveCount(1);
+  await expect(page.locator('#export-spot-list input[data-spot]')).toBeChecked();
+  await expect(download).toBeDisabled();
+  await consent.check();
   await expect(download).toBeEnabled();
   const [file] = await Promise.all([page.waitForEvent('download'), download.click()]);
   expect(file.suggestedFilename()).toMatch(/\.gpx$/);
   const gpx = await readFile(await file.path(), 'utf8');
   expect(gpx).toMatch(/^<\?xml[^>]*\?>\s*<gpx[\s>]/);
-  expect(gpx).toMatch(/<wpt |<trk>/);
+  expect(gpx).toMatch(/<wpt /);
+  expect(gpx).toContain('Research coordinate · not chart-depth qualified');
   expect(pageErrors).toEqual([]);
 });
 
