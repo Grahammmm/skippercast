@@ -219,6 +219,63 @@ area. The next stage must review gridding/valid support, sampling resolution,
 navigation, datum, sound-speed corrections, source rights and normal adapters.
 Overlapping files from one cruise remain one survey evidence line.
 
+### Private original-beam grid reconciliation
+
+For a raw-swath lead, first reconcile a bounded grid against the complete good
+original beam tables. Do not filter those tables to 91.44 m before gridding:
+a bin can contain both shallow and deep contributors. Keep every input and
+output hash, no background grid, no spline fill, ping decimation or averaging.
+Run this research stage beside the retained originals on a suitably sized host;
+it is not a product adapter or catalog promotion.
+
+The currently tested MB-System `mbgrid` executable has SHA-256
+`9ebca2e54b861c333e97ac0bdf89d3f89b7bcc2d8bfe50f496ba17d540ceea33`.
+Use recorded `-A2 -F2 -C0 -G4 -M -P1 -U0`, exact square-meter bins with
+`-E...meters!`, explicit UTM zone and a bounded geographic `-R` window.
+The corresponding all-good `mblist -F57 -MA -OXYzFMN#` executable is pinned in
+the normalizer. These options are specific to the tested executable, not a
+portable prescription for another MB-System build.
+
+A real two-file test found that this pinned median-topography executable,
+without `-U`, admitted 702,695 of 719,469 good soundings inside the window. The
+original-epoch first-contributor 300-second diagnostic reproduced that admitted
+total. A separate `-U0` run retained all 719,469; independent count, upper-median
+and dispersion reconciliation then passed. Preserve the failed prototype and
+its receipt. Never alter its receipt, silently fit registration to its output,
+or waive a parity mismatch. Recheck this behavior for any different binary.
+The original [median gridding source](https://github.com/dwcaress/MB-System/blob/master/src/utilities/mbgrid.cc)
+is a diagnostic reference; the executable test establishes the pinned behavior.
+
+```bash
+PYTHONPATH=src:. python research/scripts/prepare_multibeam_grid.py \
+  --topography PRIVATE_ROOT.asc.gz --count PRIVATE_ROOT_num.asc.gz \
+  --dispersion PRIVATE_ROOT_sd.asc.gz --grid-receipt PRIVATE_GRID_RECEIPT \
+  --beam PRIVATE_FULL_BEAMS_TSV_GZ PRIVATE_BEAM_RECEIPT \
+  --native-root PRIVATE_ORIGINAL_FOLDER --output PRIVATE_SUPPORT_COG
+# Repeat --beam once per original input, in datalist order.
+```
+
+The grid receipt records `command`, `binary_sha256`, `returncode`, original
+`inputs` (`path`, `bytes`, `sha256`) and `outputs` (`path`, `sha256`); missing datum
+stays unknown. ASCII output roles must match the command's `-O` root. The
+normalizer reopens native bytes and verifies full decompressed table/grid hashes,
+then independently checks occupied-bin support, sounding counts, the upper
+order-statistic median and sample RMS dispersion. Dispersion is not calibrated
+uncertainty. ESRI corners and the writer's ten-significant-digit rounding are
+explicit: all plausible neighboring boundary bins are withheld, not shifted.
+
+The private five-band COG retains positive-down depth, good-sounding count,
+median dispersion, and contributor minimum/maximum depth. Missing cells,
+registration ambiguity and bins crossing zero or 91.44 m are masked. Grids
+retain deeper noncrossing support for later reviewed derivatives; only positive
+bins with all contributors at most 91.44 m qualify for the nominal target band.
+Derived bin spacing is not native sonar resolution or accuracy. A passing
+receipt still says `source_qualified=false`, `exportable=false` and reports
+zero new coverage/candidates/public locations. Navigation, acquisition processing,
+sampling adequacy, rights and the production adapter must be reviewed separately
+before physical coverage can be credited. MPA/closure screening remains last,
+before publication or fishing export.
+
 ## Reviewed originals awaiting publication rights
 
 Do not mislabel non-government data as public domain. When a native original
