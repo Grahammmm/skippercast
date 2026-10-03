@@ -21,13 +21,17 @@ def normalize_measurement_row(row):
     row = deepcopy(row)
     if row['resolution_m'] != 'unknown':
         row['resolution_m'] = _measurement_float(row['resolution_m'])
+    if row.get('grid_preparation'):
+        row['grid_preparation']['grid_spacing_m'] = _measurement_float(row['grid_preparation']['grid_spacing_m'])
     profile = row.get('resolution_profile')
     if profile:
         for field in ('fine_to_depth_m', 'coarse_resolution_m'):
             profile[field] = _measurement_float(profile[field])
     review = row.get('adapter_review')
     if review:
-        for field in ('requested_bounds_wgs84', 'native_resolution_m'):
+        for field in ('requested_bounds_wgs84', 'native_resolution_m', 'grid_spacing_m'):
+            if field not in review or review[field] == 'unknown':
+                continue
             review[field] = [_measurement_float(value) for value in review[field]]
     return row
 
@@ -55,6 +59,14 @@ def validate_manifest(document, root=REPO):
         raise ValueError('Duplicate survey product')
     for row in rows:
         validator.validate(row)
+        if row.get('format') == 'measured-multibeam-grid':
+            from .adapters.multibeam_grid import validate_binding
+            binding = validate_binding(row)
+            review = row.get('adapter_review')
+            if review and (review['grid_spacing_m'] != [binding['grid_spacing_m']]*2
+                    or review['preparation_receipt_sha256'] != binding['preparation_receipt_sha256']
+                    or review['native_sampling'] != binding['native_sampling']):
+                raise ValueError('Private grid review conflicts with preparation binding')
         if row.get('terrain_support'):
             from .terrain_support import validate_binding
             validate_binding(row)
@@ -79,7 +91,7 @@ def validate_manifest(document, root=REPO):
             bbox(receipt['requested_bounds_wgs84'])
             if (receipt['source_sha256'] != row['sha256']
                     or receipt['vertical_datum'] != row['vertical_datum']
-                    or max(receipt['native_resolution_m']) != row['resolution_m']
+                    or review_spacing(receipt) != row['resolution_m']
                     or receipt['nominal_0_300ft_pixels_in_requested_bounds'] > receipt['valid_pixels_in_requested_bounds']):
                 raise ValueError('Usable source conflicts with its native adapter receipt')
         if row['id'] in row['derived_from'] or not set(row['derived_from']) <= set(ids):
@@ -100,30 +112,39 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
     """Promote only after explicit rights review and a successful native adapter run."""
     from skippercast.platform.contracts import public_url
     public_url(rights_url)
+    if row.get('format') == 'measured-multibeam-grid' and not physical_only:
+        raise ValueError('Derived multibeam support is private-only; public rights not qualified')
     if not physical_only:
         from .rights import source_rights
         source_rights(row)
         if row['license'] != 'public-domain-us-gov' and rights_url != row['rights_review']['policy_url']:
             raise ValueError('Producer policy URL conflicts with rights review')
     if (receipt['source_id'] != row['id'] or receipt['source_sha256'] != row['sha256']
-            or receipt['adapter_version'] != 'original-native-adapters-v1'
+            or receipt['adapter_version'] != ('measured-multibeam-grid-v1' if row.get('format') == 'measured-multibeam-grid' else 'original-native-adapters-v1')
             or not 0 < receipt['nominal_0_300ft_pixels_in_requested_bounds']
                    <= receipt['valid_pixels_in_requested_bounds']):
         raise ValueError('A matching native adapter receipt with shallow-water pixels is required')
     result = deepcopy(row)
     result.update(status='physical-only' if physical_only else 'usable', hold_reason='unknown', bytes=receipt['source_bytes'],
                   horizontal_crs=receipt['horizontal_crs'], vertical_datum=receipt['vertical_datum'],
-                  resolution_m=max(receipt['native_resolution_m']))
+                  resolution_m=review_spacing(receipt))
     result['adapter_review'] = {key: receipt[key] for key in (
         'adapter_version', 'source_sha256', 'cog_sha256', 'requested_bounds_wgs84',
         'valid_pixels_in_requested_bounds', 'nominal_0_300ft_pixels_in_requested_bounds',
         'native_resolution_m', 'vertical_datum', 'uncertainty_type', 'interpolation_mask')}
+    if row.get('format') == 'measured-multibeam-grid':
+        for key in ('native_sampling', 'grid_spacing_m', 'preparation_receipt_sha256'):
+            result['adapter_review'][key] = receipt[key]
     result['adapter_review']['rights_source_url'] = rights_url
     if 'raster_identity' in receipt:
         result['adapter_review']['raster_identity'] = receipt['raster_identity']
     result['notes'] = ('Opened through original-native-adapters-v1; native-resolution COG cached by source hash. '
                        'Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. '
                        'Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.')
+    if row.get('format') == 'measured-multibeam-grid':
+        result['notes'] = ('Reviewed measured-support bins derived from original irregular soundings. '
+                           'Grid spacing is not native acquisition resolution or calibrated accuracy. '
+                           'Unknown datum/accuracy/correction history retained; one acquisition lineage.')
     if physical_only:
         result['notes'] += ' Private physical processing only; rights are not granted and publication/export remain prohibited.'
     return result
@@ -136,7 +157,7 @@ def promote_draft(path, *, rights_url, root=REPO, physical_only=False):
     before invoking this command. Native bytes and normalized output must still
     match; a draft or a URL alone cannot approve a source.
     """
-    from .ingest import ingest
+    from .source_ingest import ingest
     root = Path(root)
     draft = read_json(Path(path))
     row, previous = draft['row'], draft['adapter_review']
@@ -150,3 +171,7 @@ def promote_draft(path, *, rights_url, root=REPO, physical_only=False):
     validate_manifest(document, root)
     atomic_json(root/'catalog/surveys.json', document, indent=2)
     return qualified['id']
+
+
+def review_spacing(receipt):
+    return max(receipt['grid_spacing_m'] if receipt.get('adapter_version') == 'measured-multibeam-grid-v1' else receipt['native_resolution_m'])

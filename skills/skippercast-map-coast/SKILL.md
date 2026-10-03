@@ -276,6 +276,44 @@ sampling adequacy, rights and the production adapter must be reviewed separately
 before physical coverage can be credited. MPA/closure screening remains last,
 before publication or fishing export.
 
+### Import a reviewed private measured-bin grid
+
+The `measured-multibeam-grid` adapter connects the preceding private support COG
+to the existing physical terrain pipeline. It is deliberately local/cache-only:
+`--fetch` never downloads a dataset landing page or invents a derived artifact.
+Do not label it `usgs-geotiff`, use its sounding-count band as uncertainty, or
+claim its bin spacing is native sonar resolution.
+
+Review a candidate row with the original source landing URL, derivative COG
+`sha256`/`bytes`, `resolution_m` equal to the processing bin spacing, unknown
+vertical datum where applicable, and explicit `grid_preparation` fields:
+`profile=measured-multibeam-grid-v1`, `preparation_receipt_sha256`,
+`preparation_code_sha256`, `native_sampling=irregular-original-soundings`,
+`grid_spacing_m` and `minimum_good_soundings=3`. The same-stem JSON beside the
+private COG must be the unchanged preparation receipt. Import the pair through
+`skippercast.seafloor.source_ingest.ingest(row, bounds, root=..., local=...)`, retain its reviewed draft, and use
+`promote-survey --physical-only` before `run --physical-only`.
+
+Three good contributors is a conservative sparse-bin policy for this profile,
+not proof of independent samples, calibrated accuracy or complete insonification
+of the bin. The adapter excludes sparse, nonfinite, masked and mixed-depth bins,
+retains all five diagnostic bands and exact registration, and does no smoothing,
+resampling or fill. The receipt explicitly separates `native_resolution_m=unknown`
+from `grid_spacing_m`; downstream derivatives use the latter as processing scale.
+Coverage measures represented valid bins, not sonar beam-footprint area.
+The gateway preserves the original native adapter and its cache keys. Derived
+keys bind the private adapter, shared window helper and raster-identity code;
+unchanged native inputs do not require a blanket COG rebuild.
+
+New source rows and private products stay in the isolated processing root until
+source review is complete. This initial format permits only candidate/private
+status with unqualified release rights. Publication/export and government
+public-domain relabeling are rejected. Producer attribution, compatible derivative
+license, navigation/accuracy limits and whole-polygon spatial screening need a
+separate reviewed release contract. Sparse-bin holds must not prevent processing
+other sources. Record source-only represented area separately from new area
+deduplicated against the existing coverage union.
+
 ## Reviewed originals awaiting publication rights
 
 Do not mislabel non-government data as public domain. When a native original

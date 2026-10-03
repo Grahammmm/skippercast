@@ -5,7 +5,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from skippercast.platform.contracts import REPO, ID, atomic_json, read_json
-from .ingest import ingest
+from .source_ingest import ingest
+from .manifest import review_spacing
 
 
 def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', local=None,
@@ -32,7 +33,7 @@ def add_survey(url, bounds, *, ident=None, format_name=None, member='unknown', l
                    notes='Private draft; metadata and rights require review before catalog inclusion.')
     saved, downloaded, unchanged = ingest(row, bounds, root=root, fetch=fetch, local=local)
     row.update(status='candidate', sha256=saved['source_sha256'], bytes=saved['source_bytes'],
-               resolution_m=max(saved['native_resolution_m']), horizontal_crs=saved['horizontal_crs'],
+               resolution_m=review_spacing(saved), horizontal_crs=saved['horizontal_crs'],
                vertical_datum=saved['vertical_datum'], hold_reason='unknown')
     destination = root / 'var/seafloor/drafts' / (row['id'] + '.json')
     atomic_json(destination, {'row': row, 'adapter_review': saved,

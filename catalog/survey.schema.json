@@ -109,7 +109,8 @@
         "arcgrid",
         "csumb",
         "vector",
-        "unknown"
+        "unknown",
+        "measured-multibeam-grid"
       ]
     },
     "kind": {
@@ -284,7 +285,10 @@
       ],
       "properties": {
         "adapter_version": {
-          "const": "original-native-adapters-v1"
+          "enum": [
+            "original-native-adapters-v1",
+            "measured-multibeam-grid-v1"
+          ]
         },
         "source_sha256": {
           "type": "string",
@@ -311,13 +315,20 @@
           "minimum": 1
         },
         "native_resolution_m": {
-          "type": "array",
-          "minItems": 2,
-          "maxItems": 2,
-          "items": {
-            "type": "number",
-            "exclusiveMinimum": 0
-          }
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            {
+              "const": "unknown"
+            }
+          ]
         },
         "vertical_datum": {
           "enum": [
@@ -332,7 +343,10 @@
           "minLength": 1
         },
         "interpolation_mask": {
-          "const": "unknown"
+          "enum": [
+            "unknown",
+            "none"
+          ]
         },
         "rights_source_url": {
           "type": "string",
@@ -354,6 +368,22 @@
               "pattern": "^[a-f0-9]{64}$"
             }
           }
+        },
+        "native_sampling": {
+          "const": "irregular-original-soundings"
+        },
+        "grid_spacing_m": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "preparation_receipt_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
         }
       }
     },
@@ -397,6 +427,42 @@
         },
         "for_profit_permission": {
           "const": "required-not-obtained"
+        }
+      }
+    },
+    "grid_preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "preparation_receipt_sha256",
+        "preparation_code_sha256",
+        "native_sampling",
+        "grid_spacing_m",
+        "minimum_good_soundings"
+      ],
+      "properties": {
+        "profile": {
+          "const": "measured-multibeam-grid-v1"
+        },
+        "preparation_receipt_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "preparation_code_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "native_sampling": {
+          "const": "irregular-original-soundings"
+        },
+        "grid_spacing_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 20
+        },
+        "minimum_good_soundings": {
+          "const": 3
         }
       }
     }
@@ -478,6 +544,82 @@
         "required": [
           "rights_review"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": "measured-multibeam-grid"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "grid_preparation"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "candidate",
+              "physical-only"
+            ]
+          },
+          "license": {
+            "const": "unknown"
+          },
+          "kind": {
+            "const": "bathymetry"
+          },
+          "adapter_review": {
+            "required": [
+              "native_sampling",
+              "grid_spacing_m",
+              "preparation_receipt_sha256"
+            ],
+            "properties": {
+              "adapter_version": {
+                "const": "measured-multibeam-grid-v1"
+              },
+              "native_resolution_m": {
+                "const": "unknown"
+              },
+              "interpolation_mask": {
+                "const": "none"
+              },
+              "uncertainty_type": {
+                "const": "unknown"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "grid_preparation": false,
+          "adapter_review": {
+            "properties": {
+              "adapter_version": {
+                "const": "original-native-adapters-v1"
+              },
+              "native_resolution_m": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "interpolation_mask": {
+                "const": "unknown"
+              },
+              "native_sampling": false,
+              "grid_spacing_m": false,
+              "preparation_receipt_sha256": false
+            }
+          }
+        }
       }
     }
   ]
