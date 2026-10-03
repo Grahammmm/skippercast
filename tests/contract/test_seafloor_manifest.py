@@ -2,6 +2,8 @@
 from copy import deepcopy
 import json
 import math
+import subprocess
+import sys
 import unittest
 from research.lib.receipts import RECEIPTS, locate
 from tests._support import ROOT
@@ -30,6 +32,25 @@ def resolve(reference):
 
 
 class InventoryTests(unittest.TestCase):
+    def test_private_grid_candidate_validation_needs_no_gis_imports(self):
+        row=deepcopy(next(r for r in ROWS if r['status']=='usable'))
+        for key in ('adapter_review','rights_review','resolution_profile','terrain_support','habitat_quality_hold'):
+            row.pop(key,None)
+        row.update(format='measured-multibeam-grid',status='candidate',license='unknown',
+            archive_member='unknown',resolution_m=5,derived_from=[])
+        row['grid_preparation']={'profile':'measured-multibeam-grid-v1',
+            'preparation_receipt_sha256':'a'*64,'preparation_code_sha256':'b'*64,
+            'native_sampling':'irregular-original-soundings','grid_spacing_m':5,'minimum_good_soundings':3}
+        # Subprocess prevents already-loaded GIS modules hiding an eager import.
+        code="""import json,sys
+for name in ('numpy','rasterio','pyproj','scipy'):
+    sys.modules[name]=None
+from skippercast.seafloor.manifest import validate_manifest
+validate_manifest({'surveys':[json.loads(sys.argv[1])]})
+"""
+        result=subprocess.run([sys.executable,'-c',code,json.dumps(row)],cwd=ROOT,text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_native_terrain_support_requires_exact_depth_lineage_and_review(self):
         from jsonschema import ValidationError
         from skippercast.seafloor.manifest import validate_manifest

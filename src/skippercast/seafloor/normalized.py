@@ -47,6 +47,10 @@ def verify_review(receipt, review, path):
                   'nominal_0_300ft_pixels_in_requested_bounds'):
         if receipt[field] != review[field]:
             raise ValueError('Normalized source differs from reviewed '+field)
+    if receipt.get('adapter_version') == 'measured-multibeam-grid-v1':
+        for field in ('grid_spacing_m', 'native_sampling', 'preparation_receipt_sha256'):
+            if receipt[field] != review.get(field):
+                raise ValueError('Derived grid differs from reviewed '+field)
     identity = review.get('raster_identity')
     if identity is not None:
         if identity.get('version') != VERSION or raster_identity(path) != identity:

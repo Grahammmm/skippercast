@@ -236,6 +236,18 @@ def feature_for_patch(grid, polygon, stats, rough, rules, reach):
                  + (' Broad area, not an individual pile.' if resolution > 4 else '')}
     if source.get('terrain_support'):
         properties['terrain_support'] = feature_evidence(source)
+    if source.get('format') == 'measured-multibeam-grid':
+        properties['interpolation_mask'] = 'none'
+        properties['hold_reasons'].append('derived-multibeam-source-review')
+        properties['measured_support'] = {
+            'native_sampling': source['grid_preparation']['native_sampling'],
+            'native_resolution_m': 'unknown', 'grid_spacing_m': resolution,
+            'minimum_good_soundings': source['grid_preparation']['minimum_good_soundings'],
+            'uncertainty_type': 'unknown', 'calibrated_accuracy': 'unknown',
+            'full_bin_insonification': 'unverified', 'independent_confirmation': False,
+            'preparation_receipt_sha256': source['grid_preparation']['preparation_receipt_sha256']}
+        properties['label'] += (' Derived support bins from irregular soundings; '
+            'spacing is not acquisition resolution or calibrated accuracy. Source review pending.')
     if source.get('habitat_quality_hold'):
         # A valid depth raster may still contain unresolved terrain artifacts.
         # Preserve geometry and ranking for review; a legal pass cannot clear it.

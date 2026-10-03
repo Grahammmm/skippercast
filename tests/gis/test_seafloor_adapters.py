@@ -138,6 +138,11 @@ class AdapterTests(unittest.TestCase):
             self.assertTrue(reused)
             self.assertFalse(downloaded)
             request.assert_not_called()
+        # A new-format gateway must reuse the legacy normalized pair verbatim,
+        # rather than changing every native COG key just to add a dispatch.
+        from skippercast.seafloor.source_ingest import ingest as ingest_source
+        with patch('skippercast.seafloor.ingest.raster_copy',side_effect=AssertionError('No rebuild')):
+            self.assertEqual(ingest_source(row,bounds,root=self.root),(first,False,True))
         cogs = list((self.root / 'var/seafloor/cache').glob('*/*.tif'))
         self.assertEqual(len(cogs), 1)
         with rasterio.open(cogs[0]) as source:

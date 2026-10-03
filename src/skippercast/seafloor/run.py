@@ -19,7 +19,7 @@ from shapely.ops import transform, unary_union
 
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry, classify_cells, footprint
-from .ingest import ingest
+from .source_ingest import ingest
 from .io import sha256
 from .manifest import load_manifest, physical_source
 from .terrain import derivatives, summarize
