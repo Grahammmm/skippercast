@@ -335,6 +335,82 @@ def test_legal_only_run_change_reuses_physical_support(monkeypatch):
         assert after['retained_run_sha256'] != before['retained_run_sha256']
 
 
+def deep_fixture_source(folder, cache, value=95, masked=False):
+    """Replace the unsurveyed column with an explicitly checked native sample."""
+    import numpy as np
+    import rasterio
+    path = next((cache/('2'*64)).glob('*.tif'))
+    with rasterio.open(path, 'r+') as ds:
+        depth = ds.read(1); depth[:, 4] = value; ds.write(depth, 1)
+        if masked:
+            mask = np.full((5, 5), 255, dtype='uint8'); mask[2, 4] = 0; ds.write_mask(mask)
+    update_native_fixture_source(folder, cache, 1)
+
+
+def test_measured_95m_is_not_a_missing_shallow_survey_or_new_habitat():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        deep_fixture_source(folder, cache)
+        default, _ = gap_sectors(folder, cache_root=cache)
+        assert rings_geometry(default[0]).area == pytest.approx(12500)  # Reproducible false search.
+        result = discover_gaps(folder, lambda u: pytest.fail('Measured deeper water needs no acquisition'),
+                               cache_root=cache, exclude_measured_deep=True)
+        assert result['group_count'] == result['queried_group_count'] == 0
+        assert result['coverage_snapshot']['excluded_non_target_query_m2'] == pytest.approx(12500)
+        assert result['new_measured_km2'] == 0 and not result['exportable'] and not result['fishing_target']
+        assert json.loads((folder/'coverage-cells.json').read_text())['cells'][0]['valid_area_m2'] == 37500
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), 0, -1])
+def test_nonfinite_and_nonpositive_depth_remains_unknown(value):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder); deep_fixture_source(folder, cache, value)
+        groups, receipt = gap_sectors(folder, cache_root=cache, exclude_measured_deep=True)
+        assert rings_geometry(groups[0]).area == pytest.approx(12500)
+        assert receipt['excluded_non_target_query_m2'] == 0
+
+
+def test_depth_mask_holes_and_owned_edges_survive_deep_exclusion():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder); deep_fixture_source(folder, cache, masked=True)
+        snapshot(folder, [cell(-270,-1420,37500), cell(-269,-1420)])
+        cp_path = folder/'coverage-checkpoint.json'; cp = json.loads(cp_path.read_text())
+        cp['physical_input_hash'] = json.loads((folder/'run.json').read_text())['physical_input_hash']
+        cp_path.write_text(json.dumps(cp))
+        groups, receipt = gap_sectors(folder, max_cells=1, cache_root=cache, exclude_measured_deep=True)
+        geometries = [rings_geometry(g) for g in groups]
+        assert len(groups) == 2 and geometries[0].area == pytest.approx(2500)
+        assert geometries[0].contains(Point(-67275,-354875))  # Masked 95 m is still missing data.
+        assert geometries[1].area == pytest.approx(62500)
+        assert geometries[0].intersection(geometries[1]).area == 0
+        assert receipt['excluded_non_target_query_m2'] == pytest.approx(10000)
+
+
+def test_deep_exclusion_requires_verified_masks_and_mode_bound_resume():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        with pytest.raises(ValueError, match='requires checked native masks'):
+            discover_gaps(folder, lambda u: pytest.fail('Missing masks cannot query'), exclude_measured_deep=True)
+        first = discover_gaps(folder, fake_fetch, cache_root=cache)
+        resume = folder/'resume.json'; resume.write_text(json.dumps(first))
+        with pytest.raises(ValueError, match='differs'):
+            discover_gaps(folder, fake_fetch, cache_root=cache, exclude_measured_deep=True, resume_from=resume)
+
+
+def test_deep_cache_reuses_masks_but_rejects_corrupt_geometry(monkeypatch):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder); deep_fixture_source(folder, cache)
+        before = gap_sectors(folder, cache_root=cache, exclude_measured_deep=True)
+        import rasterio
+        monkeypatch.setattr(rasterio, 'open', lambda *a, **kw: pytest.fail('Checked deep geometry must be reused'))
+        assert gap_sectors(folder, cache_root=cache, exclude_measured_deep=True) == before
+        p = next((folder/'acquisition-support').glob('deep-*.json'))
+        data = json.loads(p.read_text()); data['geometry']['coordinates'] = []; p.write_text(json.dumps(data))
+        with pytest.raises(ValueError, match='deep geometry failed verification'):
+            discover_gaps(folder, lambda u: pytest.fail('Corrupt deep cache cannot query'), cache_root=cache,
+                          exclude_measured_deep=True)
+
+
 def test_self_consistent_substituted_cog_cannot_override_pinned_source_review():
     with TemporaryDirectory() as temp:
         folder = Path(temp); cache = native_fixture(folder)
@@ -373,3 +449,46 @@ def test_lossless_cog_encoding_can_use_reviewed_scientific_identity():
         cp['physical_input_hash'] = physical; cp_path.write_text(json.dumps(cp))
         groups, _ = gap_sectors(folder, cache_root=cache)
         assert rings_geometry(groups[0]).area == pytest.approx(12500)
+
+
+@pytest.mark.parametrize('value, excluded', [(91.44, 0), (91.4401, 12500)])
+def test_deep_exclusion_respects_nominal_ceiling_and_shallow_overlap(value, excluded):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder); deep_fixture_source(folder, cache, value)
+        groups, receipt = gap_sectors(folder, cache_root=cache, exclude_measured_deep=True)
+        assert groups == []
+        assert receipt['excluded_non_target_query_m2'] == pytest.approx(excluded)
+        # Source 0 is deeper in column 3; source 1 still supplies shallow support.
+        assert receipt['native_support_sha256']
+        assert json.loads((folder/'coverage-cells.json').read_text())['cells'][0]['valid_area_m2'] == 37500
+
+
+def test_deep_mask_window_seams_preserve_identical_query_geometry(monkeypatch):
+    from skippercast.seafloor import raster
+    with TemporaryDirectory() as one, TemporaryDirectory() as two:
+        first = Path(one); a = native_fixture(first); deep_fixture_source(first, a, masked=True)
+        expected, identity = gap_sectors(first, cache_root=a, exclude_measured_deep=True)
+        original = raster.chunks
+        monkeypatch.setattr(raster, 'chunks', lambda window: original(window, size=2))
+        second = Path(two); b = native_fixture(second); deep_fixture_source(second, b, masked=True)
+        actual, changed = gap_sectors(second, cache_root=b, exclude_measured_deep=True)
+        assert rings_geometry(actual[0]).symmetric_difference(rings_geometry(expected[0])).area == 0
+        assert changed['excluded_non_target_query_m2'] == identity['excluded_non_target_query_m2']
+
+
+def test_deep_mask_uses_the_verified_run_snapshot_even_if_run_is_replaced(monkeypatch):
+    from research.scripts import discover_noaa_multibeam_footprints as module
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder); deep_fixture_source(folder, cache)
+        original_bytes = (folder/'run.json').read_bytes()
+        checked = module.native_support
+        def replaced(*args, **kwargs):
+            result = checked(*args, **kwargs)
+            changed = json.loads(original_bytes); changed['source_receipts'] = []
+            (folder/'run.json').write_text(json.dumps(changed))
+            return result
+        monkeypatch.setattr(module, 'native_support', replaced)
+        groups, identity = gap_sectors(folder, cache_root=cache, exclude_measured_deep=True)
+        assert groups == []  # The verified 95 m pixels still exclude the original false query.
+        assert identity['retained_run_sha256'] == hashlib.sha256(original_bytes).hexdigest()
+        assert identity['retained_run_sha256'] != hashlib.sha256((folder/'run.json').read_bytes()).hexdigest()

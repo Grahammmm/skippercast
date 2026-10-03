@@ -125,7 +125,8 @@ def native_support(folder, cache_root, cells, checkpoint):
     run_path = folder / "run.json"
     if run_path.stat().st_size > 10_000_000:
         raise ValueError("Retained run exceeds read bound")
-    run = json.loads(run_path.read_bytes())
+    run_raw = run_path.read_bytes()
+    run = json.loads(run_raw)
     inputs = dict(run["inputs"])
     inputs.pop("screen", None)
     inputs.pop("screen_implementation_sha256", None)
@@ -185,16 +186,87 @@ def native_support(folder, cache_root, cells, checkpoint):
         if support.intersection(cell_geometry(cell)).area + .001 < cell["valid_area_m2"]:
             raise ValueError("Native support contradicts retained cell coverage")
     return support, {"native_support_inputs_sha256": key, "native_support_sha256": sha256(saved_path),
-                     "retained_run_sha256": sha256(run_path)}
+                     "retained_run_sha256": hashlib.sha256(run_raw).hexdigest()}, paths
 
 
-def gap_sectors(folder, max_cells=128, cache_root=None):
+def measured_deep_support(folder, cells, support_identity, verified_paths):
+    """Discovery-only mask: valid native depth >91.44 m is outside this target.
+
+    Caller has verified the complete retained source set with native_support.
+    Keep masked/nonfinite pixels unknown; do not interpolate, buffer or credit
+    these pixels as shallow coverage. Source datum and grid precision still apply.
+    """
+    import numpy as np
+    import rasterio
+    import shapely
+    from rasterio.features import shapes
+    from rasterio.windows import Window
+    from pyproj import Transformer
+    from shapely.geometry import box, mapping, shape
+    from shapely.ops import transform, unary_union
+    from skippercast.seafloor.coverage import cell_geometry
+    from skippercast.seafloor.raster import chunks
+    from skippercast.seafloor.io import sha256
+    from skippercast.platform.contracts import atomic_json
+
+    identity = {"native_support_inputs_sha256": support_identity["native_support_inputs_sha256"],
+                "method": "valid-native-depth-above-91.44m-v1"}
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    saved_path = folder / "acquisition-support" / ("deep-" + key + ".json")
+    if saved_path.exists():
+        if saved_path.stat().st_size > 100_000_000:
+            raise ValueError("Measured deep geometry exceeds read bound")
+        saved = json.loads(saved_path.read_bytes())
+        geometry = saved["geometry"]
+        if (saved["inputs"] != identity or saved["geometry_sha256"] !=
+                hashlib.sha256(json.dumps(geometry, sort_keys=True).encode()).hexdigest()):
+            raise ValueError("Measured deep geometry failed verification")
+        support = shape(geometry)
+    else:
+        scope = unary_union([cell_geometry(c) for c in cells])
+        project = Transformer.from_crs(4326, 3310, always_xy=True).transform
+        pieces = []
+        for path, receipt in verified_paths:
+            if sha256(path) != receipt["cog_sha256"]:
+                raise ValueError("Native source changed before measured deep exclusion")
+            review = transform(project, shapely.segmentize(box(*receipt["requested_bounds_wgs84"]), .001)).intersection(scope)
+            with rasterio.open(path) as source:
+                if source.descriptions[0] != "depth_m_positive_down":
+                    raise ValueError("Measured deep exclusion requires normalized positive-down depth")
+                to_grid = Transformer.from_crs(source.crs, 3310, always_xy=True).transform
+                for window in chunks(Window(0, 0, source.width, source.height)):
+                    bounds = rasterio.windows.bounds(window, source.transform)
+                    if not transform(to_grid, shapely.segmentize(box(*bounds), 100)).intersects(review):
+                        continue
+                    depth = source.read(1, window=window, masked=True)
+                    values = depth.filled(np.nan)
+                    deep = ~np.ma.getmaskarray(depth) & np.isfinite(values) & (values > 91.44)
+                    for geometry, value in shapes(deep.astype("uint8"), mask=deep, transform=source.window_transform(window)):
+                        if value:
+                            part = transform(to_grid, shapely.segmentize(shape(geometry), 100)).intersection(review)
+                            if not part.is_empty:
+                                pieces.append(part)
+        support = unary_union(pieces)
+        geometry = mapping(support)
+        if len(json.dumps(geometry).encode()) > 100_000_000:
+            raise ValueError("Measured deep geometry exceeds write bound")
+        atomic_json(saved_path, {"inputs": identity, "geometry": geometry,
+                    "geometry_sha256": hashlib.sha256(json.dumps(geometry, sort_keys=True).encode()).hexdigest()})
+    if not support.is_valid:
+        raise ValueError("Invalid measured deep geometry")
+    return support, {"measured_deep_mask_sha256": sha256(saved_path),
+                     "measured_deep_method": identity["method"]}
+
+
+def gap_sectors(folder, max_cells=128, cache_root=None, exclude_measured_deep=False):
     """Bound catalog queries to hash-checked zero-native-support cells.
 
     The reference band is provisional. These are acquisition priorities, not
     proof of shallow water, an exact remaining-area denominator or fish sites.
     Partial-support cells need checked native masks via cache_root; never label
     their full square a gap. The default remains zero-support cells only.
+    Optional deeper-depth exclusion is acquisition triage only, not shallow
+    coverage or habitat completion. Missing data always stays in the query mask.
     """
     from pyproj import Transformer
     from shapely.geometry import box
@@ -240,9 +312,16 @@ def gap_sectors(folder, max_cells=128, cache_root=None):
             if cell.get("source_id") != "unknown" or cell.get("available_source_ids") != [] or cell.get("tier") != 0:
                 raise ValueError("Zero-area cell has contradictory native support")
             pending.append((ident, x, y, box(x*250, y*250, (x+1)*250, (y+1)*250)))
+    if exclude_measured_deep and cache_root is None:
+        raise ValueError("Measured deep exclusion requires checked native masks")
     support_identity = {}
     if cache_root is not None:
-        support, support_identity = native_support(folder, cache_root, cells, checkpoint)
+        support, support_identity, verified_paths = native_support(folder, cache_root, cells, checkpoint)
+        deep = None
+        if exclude_measured_deep:
+            deep, deep_identity = measured_deep_support(folder, cells, support_identity, verified_paths)
+            support_identity.update(deep_identity)
+        excluded_area = 0.0
         pending = []
         for cell in cells:
             if cell["band_area_m2"] <= 0:
@@ -251,8 +330,14 @@ def gap_sectors(folder, max_cells=128, cache_root=None):
             _, x, y = ident.split(":")
             x, y = int(x), int(y)
             gap = box(x*250, y*250, (x+1)*250, (y+1)*250).difference(support)
+            if deep is not None:
+                remainder = gap.difference(deep)
+                excluded_area += gap.area - remainder.area
+                gap = remainder
             if gap.area > .001:
                 pending.append((ident, x, y, gap))
+        if deep is not None:
+            support_identity["excluded_non_target_query_m2"] = round(excluded_area, 6)
     pending.sort(key=lambda row: (row[2], row[1]))
     project = Transformer.from_crs(3310, 4326, always_xy=True).transform
     groups = []
@@ -277,12 +362,12 @@ def gap_sectors(folder, max_cells=128, cache_root=None):
                     **support_identity}
 
 
-def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None, cache_root=None):
+def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None, cache_root=None, exclude_measured_deep=False):
     if isinstance(max_groups, bool) or not isinstance(max_groups, int) or not 1 <= max_groups <= 50:
         raise ValueError("Gap query run must contain 1–50 groups")
     if isinstance(start_group, bool) or not isinstance(start_group, int) or start_group < 0:
         raise ValueError("Gap start group must be a nonnegative integer")
-    groups, receipt = gap_sectors(folder, max_cells, cache_root=cache_root)
+    groups, receipt = gap_sectors(folder, max_cells, cache_root=cache_root, exclude_measured_deep=exclude_measured_deep)
     if resume_from is not None:
         previous = json.loads(Path(resume_from).read_text())
         if (previous.get("scope") != "noaa-ncei-zero-native-support-discovery"
@@ -317,7 +402,7 @@ def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_g
             "status": "complete-bounded-query", "sectors": rows,
             "unique_footprint_object_ids": len({i["object_id"] for row in rows for i in row["footprints"]}),
             "fishing_target": False, "exportable": False, "new_measured_km2": 0,
-            "limitations": "Hash-checked coverage snapshot; not a claim of current coverage unless inputs remain current. Planning cells use a provisional reference band, not verified local depths. Catalog intersection requires native depth/support/rights review. No gap-area or habitat credit. Partial-support cells are excluded unless checked native masks are explicitly supplied; native mode subtracts the union of all retained sources."}
+            "limitations": "Hash-checked coverage snapshot; not a claim of current coverage unless inputs remain current. Planning cells use a provisional reference band, not verified local depths. Catalog intersection requires native depth/support/rights review. No gap-area or habitat credit. Partial-support cells are excluded unless checked native masks are explicitly supplied; native mode subtracts the union of all retained sources. Optional measured-deep exclusion removes valid native depths above 91.44 m only from acquisition queries; it grants no shallow coverage, habitat or publication credit. Datum, precision and unknown interpolation remain source limitations."}
 
 
 def main():
@@ -326,13 +411,16 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--coverage-folder", type=Path, help="Checked reach coverage snapshot; overrides browse sectors")
     parser.add_argument("--cache-root", type=Path, help="Opt in to native-mask gaps using the retained run and checked normalized cache, including partial support")
+    parser.add_argument("--exclude-measured-deep", action="store_true", help="Skip valid native depths above 91.44 m in source discovery only; requires --cache-root")
     parser.add_argument("--max-cells", type=int, default=128)
     parser.add_argument("--max-groups", type=int, default=3)
     parser.add_argument("--resume-from", type=Path, help="Continue a bounded receipt only if coverage hashes and batch size match")
     args = parser.parse_args()
     if args.cache_root is not None and args.coverage_folder is None:
         parser.error("--cache-root requires --coverage-folder")
-    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from, cache_root=args.cache_root)
+    if args.exclude_measured_deep and args.cache_root is None:
+        parser.error("--exclude-measured-deep requires --cache-root")
+    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from, cache_root=args.cache_root, exclude_measured_deep=args.exclude_measured_deep)
               if args.coverage_folder else discover(json.loads(args.sectors.read_text())["sectors"]))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
