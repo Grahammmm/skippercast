@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Reject acquisition-gap snapshots that omit or change surveys already used by the map. Check native source bindings before requests, preserve private physical work, and resume through unchanged measurement/rights-only refreshes without repeating source queries.
+
 - Keep private sonar-grid medians consistent with their checked contributor depth ranges when the official readers print different precision. Preserve strict integrity checks, original outputs and source/publication holds.
 
 - Add bounded no-fill point-bin diagnostics with independent statistic checks before lidar ingestion. Keep useful shallow measurements for future shore-fishing and spearfishing research without claiming ranked or published fishing locations.

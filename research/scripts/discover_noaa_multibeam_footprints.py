@@ -258,7 +258,75 @@ def measured_deep_support(folder, cells, support_identity, verified_paths):
                      "measured_deep_method": identity["method"]}
 
 
-def gap_sectors(folder, max_cells=128, cache_root=None, exclude_measured_deep=False):
+def published_source_guard(folder, reach, checkpoint, ledger_path, catalog_path):
+    """Reject a retained snapshot that omits/changes published native inputs.
+
+    This checks contributor consistency, not current processing, survey quality
+    or publication clearance. Extra private inputs can remain in the snapshot.
+    Rights-only changes do not change measured support or require rebuilding it.
+    """
+    def bounded(path, limit):
+        path = Path(path)
+        if path.stat().st_size > limit:
+            raise ValueError("Current-source guard input exceeds read bound")
+        raw = path.read_bytes()
+        return json.loads(raw), hashlib.sha256(raw).hexdigest()
+
+    ledger, ledger_hash = bounded(ledger_path, 100_000_000)
+    catalog, catalog_hash = bounded(catalog_path, 100_000_000)
+    run, run_hash = bounded(Path(folder) / "run.json", 10_000_000)
+    inputs = dict(run["inputs"])
+    inputs.pop("screen", None)
+    inputs.pop("screen_implementation_sha256", None)
+    if (run.get("physical_input_hash") != checkpoint["physical_input_hash"]
+            or hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+            != checkpoint["physical_input_hash"]):
+        raise ValueError("Current-source guard run differs from coverage checkpoint")
+    targets = [row for row in ledger["reaches"] if row.get("id") == reach]
+    if len(targets) != 1:
+        raise ValueError("Current-source guard needs one matching ledger reach")
+    required = targets[0].get("surveys_used")
+    if (not isinstance(required, list) or any(not isinstance(x, str) or not x for x in required)
+            or len(required) != len(set(required))):
+        raise ValueError("Invalid published contributor list")
+    rows = catalog if isinstance(catalog, list) else catalog["surveys"]
+    current = {row["id"]: row for row in rows}
+    retained = {row["id"]: row for row in inputs["sources"]}
+    if len(current) != len(rows) or len(retained) != len(inputs["sources"]):
+        raise ValueError("Duplicate source identities in current-source guard")
+    missing = sorted(set(required) - retained.keys())
+    if missing:
+        raise ValueError("Stale gap snapshot omits published contributors: " + ", ".join(missing))
+    if set(required) - current.keys():
+        raise ValueError("Published contributors absent from current catalog")
+
+    def native_binding(row):
+        review = row.get("adapter_review", {})
+        return {**{key: row.get(key) for key in
+                   ("sha256", "format", "archive_member", "resolution_m", "horizontal_crs", "vertical_datum")},
+                "review": {key: review.get(key) for key in
+                           ("adapter_version", "cog_sha256", "raster_identity", "requested_bounds_wgs84")}}
+
+    changed = sorted(ident for ident in retained.keys() & current.keys()
+                     if native_binding(retained[ident]) != native_binding(current[ident]))
+    if changed:
+        raise ValueError("Stale gap snapshot has changed native bindings: " + ", ".join(changed))
+    binding_hash = hashlib.sha256(json.dumps({
+        "required": sorted(required),
+        "retained_current_bindings": {ident: native_binding(current[ident])
+                                      for ident in sorted(retained.keys() & current.keys())},
+    }, sort_keys=True).encode()).hexdigest()
+    return {"version": "published-native-contributors-v1", "status": "passed",
+            "binding_sha256": binding_hash,
+            "ledger_sha256": ledger_hash, "catalog_sha256": catalog_hash,
+            "retained_run_sha256": run_hash, "published_contributors_checked": sorted(required),
+            "retained_extra_source_ids": sorted(retained.keys() - set(required)),
+            "current_coverage_claim": False,
+            "limitation": "Published-contributor consistency only; native masks, processing freshness, private source quality and publication still need separate verification."}
+
+
+def gap_sectors(folder, max_cells=128, cache_root=None, exclude_measured_deep=False,
+                current_ledger=None, current_catalog=None):
     """Bound catalog queries to hash-checked zero-native-support cells.
 
     The reference band is provisional. These are acquisition priorities, not
@@ -291,6 +359,10 @@ def gap_sectors(folder, max_cells=128, cache_root=None, exclude_measured_deep=Fa
     reach, cells = payload.get("reach"), payload.get("cells")
     if not isinstance(reach, str) or not reach or not isinstance(cells, list):
         raise ValueError("Coverage snapshot lacks reach/cells")
+    if (current_ledger is None) != (current_catalog is None):
+        raise ValueError("Current-source check requires both ledger and catalog")
+    guard = (published_source_guard(folder, reach, checkpoint, current_ledger, current_catalog)
+             if current_ledger is not None else {"status": "not-checked", "current_coverage_claim": False})
     pending, seen = [], set()
     for cell in cells:
         ident = cell.get("id")
@@ -359,20 +431,32 @@ def gap_sectors(folder, max_cells=128, cache_root=None, exclude_measured_deep=Fa
                     "checkpoint_sha256": hashlib.sha256(checkpoint_raw).hexdigest(),
                     "zero_support_cell_count": sum(c["valid_area_m2"] == 0 and c["band_area_m2"] > 0 for c in cells),
                     "partial_support_cells_excluded": 0 if cache_root is not None else sum(0 < c["valid_area_m2"] < 62500 for c in cells),
+                    "published_source_guard": guard,
                     **support_identity}
 
 
-def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None, cache_root=None, exclude_measured_deep=False):
+def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None, cache_root=None, exclude_measured_deep=False,
+                  current_ledger=None, current_catalog=None):
     if isinstance(max_groups, bool) or not isinstance(max_groups, int) or not 1 <= max_groups <= 50:
         raise ValueError("Gap query run must contain 1–50 groups")
     if isinstance(start_group, bool) or not isinstance(start_group, int) or start_group < 0:
         raise ValueError("Gap start group must be a nonnegative integer")
-    groups, receipt = gap_sectors(folder, max_cells, cache_root=cache_root, exclude_measured_deep=exclude_measured_deep)
+    groups, receipt = gap_sectors(folder, max_cells, cache_root=cache_root, exclude_measured_deep=exclude_measured_deep,
+                                 current_ledger=current_ledger, current_catalog=current_catalog)
     if resume_from is not None:
         previous = json.loads(Path(resume_from).read_text())
+        def query_identity(snapshot):
+            # Audit-file hashes may change on a timestamp/rights-only refresh.
+            # The native binding fingerprint, masks and batching must not change.
+            snapshot = dict(snapshot or {})
+            guard = dict(snapshot.get("published_source_guard", {}))
+            guard.pop("ledger_sha256", None)
+            guard.pop("catalog_sha256", None)
+            snapshot["published_source_guard"] = guard
+            return snapshot
         if (previous.get("scope") != "noaa-ncei-zero-native-support-discovery"
                 or previous.get("status") != "complete-bounded-query"
-                or previous.get("coverage_snapshot") != receipt
+                or query_identity(previous.get("coverage_snapshot")) != query_identity(receipt)
                 or previous.get("query_batch_cells") != max_cells
                 or isinstance(previous.get("next_group"), bool)
                 or not isinstance(previous.get("next_group"), int)
@@ -412,6 +496,9 @@ def main():
     parser.add_argument("--coverage-folder", type=Path, help="Checked reach coverage snapshot; overrides browse sectors")
     parser.add_argument("--cache-root", type=Path, help="Opt in to native-mask gaps using the retained run and checked normalized cache, including partial support")
     parser.add_argument("--exclude-measured-deep", action="store_true", help="Skip valid native depths above 91.44 m in source discovery only; requires --cache-root")
+    parser.add_argument("--current-ledger", type=Path, default=Path("dist/data/seafloor-ledger.json"), help="Require the snapshot to include unchanged native inputs already used by this ledger reach")
+    parser.add_argument("--current-catalog", type=Path, default=Path("catalog/surveys.json"))
+    parser.add_argument("--allow-historical-snapshot", action="store_true", help="Explicit historical research only: omit the published-contributor consistency check; never assert current coverage")
     parser.add_argument("--max-cells", type=int, default=128)
     parser.add_argument("--max-groups", type=int, default=3)
     parser.add_argument("--resume-from", type=Path, help="Continue a bounded receipt only if coverage hashes and batch size match")
@@ -420,7 +507,9 @@ def main():
         parser.error("--cache-root requires --coverage-folder")
     if args.exclude_measured_deep and args.cache_root is None:
         parser.error("--exclude-measured-deep requires --cache-root")
-    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from, cache_root=args.cache_root, exclude_measured_deep=args.exclude_measured_deep)
+    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from, cache_root=args.cache_root, exclude_measured_deep=args.exclude_measured_deep,
+                           current_ledger=None if args.allow_historical_snapshot else args.current_ledger,
+                           current_catalog=None if args.allow_historical_snapshot else args.current_catalog)
               if args.coverage_folder else discover(json.loads(args.sectors.read_text())["sectors"]))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
