@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Refine San Simeon/Cambria habitat with the original SCC01–03 native terrain classes, preserving measured depth, producer terms and all spatial screens. Source qualification adds no new surveyed area.
+
 - Qualify the original 2 m Monastery Beach–Cypress Point grid for the measured habitat pipeline; preserve mixed 2000–2006 dates, unknown datum and credited noncommercial terms. Source qualification alone adds no published fishing locations.
 
 - Seafloor: complete the remaining Arguello permanent spatial review so all 33 Monterey–Point Conception reaches can be screened. Reuse physical terrain; retain all 32 affected candidates as MPA exclusions, including four security overlaps. No new measured coverage or public fishing locations is claimed.
