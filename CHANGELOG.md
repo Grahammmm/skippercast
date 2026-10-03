@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Make browser map checks independent of live boundary-feed timing, retaining the production MPA gates and testing that unavailable current checks still withhold fishing targets.
+
 - Qualify SCC26–28 native depth for credited noncommercial mapping, retaining MPA, security and edge-support holds while refining all affected habitat calibration.
 
 - Refine Avila habitat with the original native terrain classes, retaining measured depth and Block J's private quality hold.
