@@ -359,3 +359,52 @@ checks need a canonical TMPDIR path rather than the `/var` symlink alias; retain
 the real checks and do not weaken modulepreload assertions to mask this.
 
 Regional publishers retain a batch-bound result under the private publication receipt prefix. The ledger job names ready, held and failed regions from those receipts; missing receipts are incomplete, and measured ledger totals never prove live publication. A failed-jobs-only retry reuses the prepared batch; rerunning all jobs creates a new batch and may repeat processing.
+
+## Original bathymetric lidar: test usefulness before building an adapter
+
+Verify the original point file, delivered CRS/datum and publisher class semantics.
+For NOAA/USACE collections, a related DEM can be interpolated, and similarly
+dated collections can contain different topographic versus bathymetric members.
+Inspect tile headers and publisher elevation extrema before acquiring a bounded
+member. Related point files/DEMs and renamed aliases share acquisition lineage.
+Pulse frequency, point count and output bin spacing do not establish resolution.
+
+Use a pinned LAS reader and preserve source record order, integer XYZ, scales,
+offsets, classification/flags, original point-source ID and raw GPS encoding.
+Check decoded/header counts and declared-coordinate quantization separately from
+survey accuracy. Resolve adjusted GPS encoding before interpreting timestamps:
+negative adjusted time alone is valid; unexplained date inconsistencies remain
+explicit. Never invent an acquisition epoch or change coordinates to fit a grid.
+
+Before normalization, diagnose COMPLETE quality-accepted contributors, including
+above-datum and deeper-than-limit returns. Record duplicate handling against
+original identities; do not call a return count independent observations. The
+research-only `research/scripts/inspect_point_bins.py` provides `bin_points`,
+`verify_reference` and `supported_bins` for a bounded metric-coordinate test.
+It uses a fixed, zero-anchored half-open lattice, positive-down upper depth
+median and independently checked count/min/max/residual RMS. This is a distinct
+point diagnostic, not MB-System grid parity or a product LAS adapter.
+Residual RMS around the median is neither sample standard deviation nor
+calibrated uncertainty. The diagnostic does not select classifications or prove
+that its caller supplied a complete source; bind the reader/cache receipt first.
+
+Apply count and nominal depth limits AFTER binning. Any above-datum, zero-depth
+or too-deep contributor excludes its entire bin from nominal shallow support.
+Do not fill holes or coarsen a sparse source to force terrain rankings. Use the
+unchanged habitat depth band, derivative masks and neighborhood requirements.
+Intersect represented bin geometry with the verified existing native-support
+gap, but do not label occupied/represented bins as fully measured area or
+credit them to the product ledger. A snapshot hash proves identity, not freshness.
+
+Preserve useful shallow measurements, outlines and source knowledge even when
+they do not support boat-reef rankings. They may support later shore-fishing or
+spearfishing habitat research. Retain depth/datum, resolution, support, source-age
+and rights limitations; do not infer shore access, dive safety, fish presence or
+method-specific legal clearance. Final public recommendations still require
+source qualification and current whole-polygon restrictions.
+
+If the bounded test shows no adequate habitat support, retain a negative boat-
+ranking receipt and the shallow recovery objects, then select another source.
+Only build a lidar-specific reviewed preparation/product adapter when an actual
+test demonstrates useful support. Never label lidar as measured multibeam to
+bypass a format-specific provenance gate.
