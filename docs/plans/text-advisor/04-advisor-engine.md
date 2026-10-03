@@ -19,6 +19,8 @@ half-done.
 
 In order; the first that applies ends the turn.
 
+0. `ADVISOR_REPLIES_ENABLED=false` → store, mark the inbound `held`, no
+   model call, no reply (the soft kill switch, 11).
 1. `contact.status === 'blocked'` → drop silently.
 2. Daily cap (OP-3): `messages_today >= ADVISOR_DAILY_MESSAGES_PER_CONTACT`
    → one reply per day: "You've hit today's limit with me. Back tomorrow, or
@@ -95,9 +97,9 @@ headers and `pause_turn` handling as `lookupBoat`):
 - `tools`: the set below, filtered by role (anglers never see skipper tools;
   nobody sees admin tools).
 - `max_tokens: 700`, `temperature: 0.3`.
-- Loop: at most 4 tool rounds, 30 s total; after that, the last text is the
-  reply or, if none, "Let me check on that and get back to you" plus a
-  `review.conversation` action with reason `tool_loop`.
+- Loop: at most 4 tool rounds, 30 s total; a fifth `tool_use` is not
+  executed: the last text is the reply or, if none, "Let me check on that and
+  get back to you" plus a `review.conversation` action with reason `tool_loop`.
 
 The reply is the final assistant text, post-processed: strip markdown, cap
 at 3 SMS segments unless the intent is a list, append at most one link (the
@@ -209,16 +211,17 @@ first three.
   'advisor:' + intent`, `outcome`, model, tokens, turns) and one
   `console.log` line, like `recordLookupUsage`.
 
-## Tests (`tests/advisor/test_engine.mjs`, `test_tools.mjs`, `test_prompts.mjs`)
+## Tests (`tests/test_advisor_engine.mjs`, `test_advisor_tools.mjs`, `test_advisor_prompts.mjs`)
 
 - Guards and commands: table-driven, no fetcher.
 - Deterministic flows: a pending report + `y`, + a correction, + nonsense.
 - Model turns: a fake fetcher replays recorded responses from
-  `tests/advisor/fixtures/engine/<case>.json` (request → response pairs,
+  `tests/fixtures/advisor/engine/<case>.json` (request → response pairs,
   including a tool-use round). Cases: the six few-shots plus `rules_without_tool`
-  (guard fires), `tool_loop` (5 rounds → escalate), `pause_turn`, HTTP 529.
+  (guard fires), `tool_loop` (a fifth tool_use → escalate), `pause_turn`, HTTP 529.
 - Prompt tests: the system prompt contains each required phrase above; no
-  fixture contains a real phone number (regex), enforced by `test_privacy.mjs`.
+  fixture contains a non-fictional phone number (the 02 § privacy regex),
+  enforced by `test_advisor_privacy.mjs`.
 - An opt-in live eval `scripts/advisor/eval.mjs` (needs `ANTHROPIC_API_KEY`,
   never in CI) runs the fixture prompts against the real model and prints a
   diff for a human to judge before changing prompts.

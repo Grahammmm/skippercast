@@ -39,9 +39,11 @@ The ADR for the decisions that are hard to reverse is
 2. Before each task, re-read the referenced section of the specific document;
    the breakdown is deliberately terse and the documents hold the detail.
 3. Everything ships behind `TEXT_ADVISOR_ENABLED` (default off) and the
-   `ENABLE_ADVISOR` deploy variable. Merging to `main` never changes the
-   live site until the owner flips those. This is what lets the work land in
-   small PRs over weeks while other work continues.
+   `ENABLE_ADVISOR` deploy variable, both repository variables applied by a
+   deploy (there is no dashboard editing; `wrangler deploy` rewrites vars on
+   every `main` commit). Merging to `main` never changes the live site until
+   the owner flips those. This is what lets the work land in small PRs over
+   weeks while other work continues.
 4. When a document and the code disagree, the code was wrong or the document
    is stale: fix the document in the same PR, so the plan stays true.
 5. Anything marked **Owner** in the breakdown needs the owner (accounts,

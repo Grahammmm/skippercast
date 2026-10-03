@@ -5,7 +5,21 @@ One task = one branch = one PR, named `claude/ta-<id-lowercase>` (for example
 to five days of agent work including tests. **Owner** tasks are the owner's
 to do; the engineering side ships the scripts and runbooks they need and
 then waits. Every code task ends with the checks in `AGENTS.md` § "Before
-opening a PR" plus `node --test tests/advisor/test_*.mjs`.
+opening a PR" (the `node --test tests/test_*.mjs` glob already covers
+`tests/test_advisor_*.mjs`).
+
+`.github/CODEOWNERS` gives the owner every file under `server/`,
+`.github/workflows/`, `wrangler.jsonc`, `deployments/` and `docs/legal/`, so
+**nearly every task below needs the owner's approval on GitHub** in addition
+to the independent review `AGENTS.md` requires. The "owner approval" marker
+is kept only on tasks that touch workflows, `deployments/`, `docs/legal/` or
+secrets, where the owner must also *do* something.
+
+Catalog data and code: `AGENTS.md` says to split source data from app code.
+The `catalog/advisor/*.json` files are the advisor's own seed data with no
+other consumer, so the tasks that introduce them ship them with the code
+that reads them (one PR), stated here as the deliberate exception; later
+edits to those files are their own S PRs.
 
 Dependencies are strict: do not start a task before its dependencies are
 merged to `main`. Tasks in the same phase with no dependency between them can
@@ -19,24 +33,24 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-F1 · Settings, flags, bindings and mount points · S · needs owner approval (CODEOWNERS)
 - Stories: none directly; enables everything.
 - Depends: —
-- Files: `server/advisor/settings.ts`, `server/advisor/types.ts`, `server/env.ts`, `server/app.ts`, `scripts/wrangler_config.mjs`, `server/routes/advisor.ts` (empty router with `/api/advisor/health` only), `tests/advisor/test_settings.mjs`, `tests/test_wrangler_config.mjs`, `tests/test_worker_types.mjs`, `package.json` (test glob), `docs/engineering/api-reference.md`.
-- Build: `advisorSettings(env)` parses every var in 01 with the same validation style as `lookupSettings`; `features()` gains `advisor`; `deployConfig` adds the R2 bucket, the queue pair and `TEXT_ADVISOR_ENABLED`; `app.ts` mounts `advisorPublic` after `jobs` only when the flag is on; `GET /api/advisor/health` answers `{enabled, channel, providers}` with no secrets.
-- Tests: settings defaults and overrides; deploy config with and without `ENABLE_ADVISOR`; route is 404 when the flag is off and 200 when on; `env.ts` matches `wrangler.jsonc` keys.
+- Files: `server/advisor/settings.ts`, `server/advisor/types.ts`, `server/advisor/gate.ts`, `server/env.ts`, `server/app.ts`, `scripts/wrangler_config.mjs`, `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml` (advisor vars through `env`; bucket and queue creation under `ENABLE_ADVISOR`), `server/routes/advisor.ts` (router with the gate middleware and `/api/advisor/health` only), `tests/test_advisor_settings.mjs`, `tests/test_wrangler_config.mjs`, `tests/test_worker_routes.mjs`, `docs/engineering/api-reference.md`.
+- Build: `advisorSettings(env)` parses every var in 01 with the same validation style as `lookupSettings`; `features()` gains `advisor`; `deployConfig` adds the R2 bucket and the queue pair and copies `TEXT_ADVISOR_ENABLED`/`ADVISOR_*` from the environment into `vars`; `app.ts` mounts `advisorPublic` after `jobs` unconditionally and `gate.ts` answers 404 per request when the flag is off; `GET /api/advisor/health` answers `{enabled, channel, providers}` with no secrets.
+- Tests: settings defaults and overrides; deploy config with and without `ENABLE_ADVISOR` (bindings, vars); the route is 404 with the flag off and 200 on, using two `env` objects against the same `app`; the `Env` type matches `wrangler.jsonc` and every `env.X` read.
 - Done when: `main` deploys unchanged behaviour; the health route exists behind the flag.
 
 ### TA-F2 · Core schema, contacts and privacy primitives · M
 - Stories: FC-4 (data model side), privacy invariants.
 - Depends: TA-F1
-- Files: `db/schema.ts`, `drizzle/0006_advisor_core.sql` (+ journal, snapshot, via `pnpm db:generate`), `server/advisor/contacts.ts`, `server/advisor/log.ts` (`advisorLog`), `scripts/advisor/grant-admin.mjs`, `tests/advisor/test_contacts.mjs`, `tests/advisor/test_privacy.mjs`, `tests/test_migrations.mjs` (passes unchanged).
+- Files: `db/schema.ts`, `drizzle/0006_advisor_core.sql` (+ journal, snapshot, via `pnpm db:generate -- --name advisor_core`), `server/advisor/contacts.ts`, `server/advisor/log.ts` (`advisorLog`), `scripts/advisor/grant-admin.mjs`, `tests/test_advisor_contacts.mjs`, `tests/test_advisor_privacy.mjs`, `tests/test_migrations.mjs` (passes unchanged).
 - Build: tables in 02 for migration 0006 (`advisor_contacts`, `advisor_boats` with `status`, `advisor_crew`, `advisor_messages`, `advisor_media`, `advisor_reports`, `advisor_report_edits`, `advisor_reviews`, `users.role`); `phoneHash`, `encryptPhone`, `decryptPhone` (AES-GCM via WebCrypto, key from `ADVISOR_PHONE_KEY`), `e164(input)` normalizer (US default, rejects short codes), `findOrCreateContact`, `applyStop`, `forgetContact` (the D1 batch in 02), `exportContact`.
 - Tests: hash is deterministic and keyed; encrypt/decrypt round-trip; e164 cases; forget-me deletes every row and nulls `advisor_reports.contact_id`; `advisorLog` redacts numbers; the fixture directory contains no E.164.
 - Done when: migrations apply on a fresh D1 in `wrangler dev`; `grant-admin.mjs` sets `role` for a given user id.
 
 ### TA-F3 · Queue consumer skeleton and cron hook · M · needs owner approval (`server/index.ts`, `wrangler.jsonc` touched)
 - Depends: TA-F2
-- Files: `server/advisor/consumer.ts`, `server/advisor/cron.ts`, `server/advisor/analytics.ts`, `server/index.ts`, `tests/advisor/test_consumer.mjs`, `tests/advisor/test_cron.mjs`.
-- Build: `AdvisorMessage = {message_id}`; `consumeAdvisor(batch, env, deps)` loads the row, marks `processing`, runs a pluggable `handler` (the engine lands in TA-E1; here a stub that replies "SkipperCast is warming up"), applies actions, acks or retries with backoff, DLQ consumer acks and writes the apology at most hourly; `runInline(env, message_id, ctx)` for no-queue deployments; `advisorCron(env, now)` with slot scheduling by `job_state` keys (idempotent, each slot a function registry) and the relay watchdog stub; `recordAdvisorTurn`, `recordPublish`.
-- Tests: ack/retry/DLQ paths with a fake batch; idempotent outbound ids; cron slot runs once per window; analytics points carry no ids.
+- Files: `server/advisor/consumer.ts`, `server/advisor/cron.ts`, `server/advisor/analytics.ts`, `server/index.ts`, `tests/test_advisor_consumer.mjs`, `tests/test_advisor_cron.mjs`.
+- Build: `AdvisorMessage = {message_id}`; `consumeAdvisor(batch, env, deps)` loads the row, marks `processing`, runs a pluggable `handler` (the engine lands in TA-E1; here a stub that replies "SkipperCast is warming up"), applies actions, acks or retries with backoff, DLQ consumer acks and writes the apology at most hourly; `runInline(env, message_id, ctx)` for no-queue deployments; `advisorCron(env, now)` with `runSlot` exactly as defined in 01 § cron slots (local-time slots claimed in `job_state`) and the relay watchdog stub; `recordAdvisorTurn`, `recordPublish`, and the `advisor` field (blob6) on `recordCron` with the `server/analytics.ts` header updated for the three new/changed kinds.
+- Tests: ack/retry/DLQ paths with a fake batch; idempotent outbound ids; a slot runs once per local day and not before its time, across a DST change; analytics points carry no ids.
 
 ### TA-O1 · Owner: number, Apple Account, iPhone, Mac mini, BlueBubbles, tunnel · Owner
 - Depends: — (parallel with phase 0)
@@ -48,7 +62,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-C1 · BlueBubbles adapter and webhook · L · owner approval (deploy secret lines)
 - Stories: FC-1 (transport), OP-7 (health).
 - Depends: TA-F3
-- Files: `server/advisor/channels/index.ts`, `channels/bluebubbles.ts`, `server/routes/advisor.ts` (`POST /api/advisor/inbound/bluebubbles/:token`), `scripts/advisor/relay-check.mjs`, `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml`, `tests/advisor/fixtures/bluebubbles/*.json`, `tests/advisor/test_bluebubbles.mjs`, `docs/operations/runbooks/advisor-relay-setup.md`, `docs/operations/runbooks/advisor-relay-down.md`.
+- Files: `server/advisor/channels/index.ts`, `channels/bluebubbles.ts`, `server/routes/advisor.ts` (`POST /api/advisor/inbound/bluebubbles/:token`), `scripts/advisor/relay-check.mjs`, `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml`, `tests/fixtures/advisor/bluebubbles/*.json`, `tests/test_advisor_bluebubbles.mjs`, `docs/operations/runbooks/advisor-relay-setup.md`, `docs/operations/runbooks/advisor-relay-down.md`.
 - Build: 03 § BlueBubbles in full; the inbound route (token check, 64 KB cap, normalize, dedupe, persist, enqueue or inline, 200 fast); `splitForChannel`; relay watchdog in `cron.ts` (`advisor.relay` state, hold logic).
 - Tests: every fixture normalizes as specified (text, photo, video, SMS-forwarded MMS, reaction ignored, group ignored, echo ignored, send error marks row); token mismatch 401; duplicate provider id is a no-op; send builds the right chat GUID and multipart; health parses `server/info`.
 - Done when: with the owner's relay, texting the number gets the stub reply within 5 s (manual check recorded in the PR).
@@ -56,32 +70,32 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-C2 · Twilio adapter (dark) · M
 - Stories: OP-7.
 - Depends: TA-C1
-- Files: `channels/twilio.ts`, `server/routes/advisor.ts` (`/inbound/twilio/:token`, `/inbound/twilio-status/:token`), fixtures, `tests/advisor/test_twilio.mjs`, deploy secret lines (`TWILIO_*`).
-- Build: 03 § Twilio: signature validation with the public URL, form parsing, media fetch with Basic auth, send with `MediaUrl`, status callback, 21610 → stopped.
+- Files: `channels/twilio.ts`, `server/routes/advisor.ts` (`/inbound/twilio/:token`, `/inbound/twilio-status/:token`), fixtures, `tests/test_advisor_twilio.mjs`, deploy secret lines (`TWILIO_*`).
+- Build: 03 § Twilio: signature validation with the public URL, form parsing, media fetch with Basic auth, send with `MediaUrl`, status callback, 21610 → stopped; confirm against Twilio's current docs which of STOP/HELP are forwarded to the webhook and record it in 03.
 - Tests: signature vectors computed in the test from a known token; STOP forwarded path; media parameters; send body shape.
 
 ### TA-C3 · Web chat adapter, API and island · M
 - Stories: WH-2 (transport), FC-1 on web.
 - Depends: TA-C1
-- Files: `channels/web.ts`, routes `/api/advisor/web/message`, `/api/advisor/web/upload`, `web/advisor/chat.tsx`, `dist/chat.html`, `dist/advisor/chat.css`, `tests/advisor/test_web_chat.mjs`, `e2e/advisor-chat.spec.ts`.
+- Files: `channels/web.ts`, routes `/api/advisor/web/message`, `/api/advisor/web/upload`, `web/advisor/chat.tsx`, `dist/chat.html`, `dist/advisor/chat.css`, `tests/test_advisor_web_chat.mjs`, `e2e/advisor-chat.spec.ts`.
 - Build: 08 § web chat; the `sc_adv` cookie; inline engine run; rate limits.
 - Tests: cookie issued once; message round trip with the stub handler; upload size cap; Playwright: open panel, send, see reply.
 
 ### TA-C4 · Media intake, EXIF strip, R2 storage, upload link, media serving · L
 - Stories: SC-1, SC-3, SP-3 (storage side), OP-2 (storage side), privacy principle 7.
 - Depends: TA-C1
-- Files: `server/advisor/media.ts` (download, sniff, `stripJpegMetadata`, `stripPngMetadata`, SOF size read, sha256 dedupe, R2 put), routes `GET /u/:token`, `POST /api/advisor/upload/:token`, `GET /media/:id.:ext`, `dist/upload.html`, `tests/advisor/test_media.mjs` with crafted JPEG/PNG fixtures (built in the test from bytes, no binaries committed except two tiny files).
-- Tests: APP1 removed, APP0 kept, image still decodes (checked by a marker re-walk); PNG chunks removed with CRCs intact; sniffing rejects a renamed HTML file; dedupe links the second upload; token expiry; media route 404 when `publish_state='private'`.
+- Files: `server/advisor/media.ts` (download, sniff incl. HEIC, `stripJpegMetadata` keeping APP0 and the ICC APP2, `stripPngMetadata`, SOF size read, sha256 dedupe, R2 put), routes `GET /u/:token`, `POST /api/advisor/upload/:token`, `GET /media/:id.:ext`, `dist/upload.html` (JavaScript `fetch` upload; `form-action 'none'` blocks a plain form), `tests/test_advisor_media.mjs` with crafted JPEG/PNG fixtures (built in the test from bytes, no binaries committed except two tiny files).
+- Tests: APP1 removed, APP0 and ICC APP2 kept, other APPn removed, image still decodes (checked by a marker re-walk); PNG chunks removed with CRCs intact; sniffing rejects a renamed HTML file and accepts HEIC; dedupe links the second upload; token expiry; media route 404 when `publish_state='private'`.
 
 ### TA-C5 · Threat model, privacy scan, data-rights rows · S · owner approval (`docs/legal/`)
 - Depends: TA-C4
-- Files: `docs/legal/threat-model.md` (new section), `scripts/check_repository.py` (scan `tests/advisor/fixtures` for phone numbers and real handles), `docs/legal/data-rights-register.md` (skipper content with consent; Meta platform terms), `CONTRIBUTING.md` (one line: advisor transcripts and media are private records).
+- Files: `docs/legal/threat-model.md` (new section), `scripts/check_repository.py` (the 02 § privacy regex over `tests/fixtures/advisor/` and `docs/plans/text-advisor/`; handles against `catalog/advisor/fixture-handles.json`), `docs/legal/data-rights-register.md` (skipper content with consent; Meta platform terms), `CONTRIBUTING.md` (one line: advisor transcripts and media are private records).
 
 ### TA-C6 · Contact card, deep links, source attribution · S
 - Stories: FC-3, FC-5.
 - Depends: TA-C1
 - Files: `pages/contact-card.ts`, routes `/contact.vcf`, `/text`, `/qr/text.svg`, `server/advisor/intents.ts` (source marker parsing `[via <source>]`), tests.
-- Tests: vCard fields; `/text?s=ig&m=hi` redirects to `sms:` with the marker appended; first message strips the marker and stores `source`.
+- Tests: vCard fields; `/text?s=ig&m=hi` redirects to `sms:<number>?&body=` with the marker appended; first message strips the marker and stores `source`. Manual check on one iPhone and one Android recorded in the PR.
 
 ### TA-C7 · Runbooks: relay down, port to Twilio, 10DLC package · S
 - Stories: OP-7.
@@ -97,22 +111,22 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-E1 · Engine core: guards, commands, language, model loop, rules guard, links · L
 - Stories: FC-1, FC-2, FC-4, FC-6, OP-3, OP-4, WH-1 (links).
 - Depends: TA-C1, TA-C4
-- Files: `server/advisor/engine.ts`, `intents.ts`, `links.ts`, `prompts/system.ts`, `prompts/examples.ts`, `tools/index.ts` (registry, role filtering), `tools/update_profile.ts`, `tools/escalate.ts`, `tools/send_upload_link.ts`, `tools/send_contact_card.ts`, fixtures `tests/advisor/fixtures/engine/`, `tests/advisor/test_engine.mjs`, `test_prompts.mjs`, `scripts/advisor/eval.mjs`, `consumer.ts` (wire the engine as the handler).
+- Files: `server/advisor/engine.ts`, `intents.ts`, `links.ts`, `prompts/system.ts`, `prompts/examples.ts`, `tools/index.ts` (registry, role filtering), `tools/update_profile.ts`, `tools/escalate.ts`, `tools/send_upload_link.ts`, `tools/send_contact_card.ts`, fixtures `tests/fixtures/advisor/engine/`, `tests/test_advisor_engine.mjs`, `test_advisor_prompts.mjs`, `scripts/advisor/eval.mjs`, `consumer.ts` (wire the engine as the handler).
 - Build: 04 in full except the data tools; the system prompt is written here and the PR asks the owner to read it.
 - Tests: as listed in 04 § tests. The rules guard test feeds a reply containing "14 inch minimum" with no `get_rules` call and asserts the replacement and the review item.
 
 ### TA-E2 · Data tools: port report (interim), conditions, rules (interim), species, strategy, trips · M
 - Stories: FR-1 (interim), FR-2 (data), AD-1, AD-2, AD-3, ID-2 (data).
 - Depends: TA-E1
-- Files: `tools/get_port_report.ts`, `get_conditions.ts`, `get_rules.ts`, `get_species.ts`, `get_strategy.ts`, `get_trips.ts`, `answers/advice.ts`, `catalog/advisor/public-grounds.json`, `catalog/advisor/port-aliases.json`, `catalog/advisor/species-synonyms.json`, `tests/advisor/test_tools.mjs`.
-- Build: until TA-A0 lands, `get_rules` reads `dist/data/regulations*.json` directly and always returns `stale: true` (so every rules answer says "double-check"); `get_port_report` returns skipper reports only (no daily answer yet). `get_conditions` reuses the feed helpers from `server/trips.ts` (import, don't copy) and the advisory records from the daily feed.
+- Files: `tools/get_port_report.ts`, `get_conditions.ts`, `get_rules.ts`, `get_species.ts`, `get_strategy.ts`, `get_trips.ts`, `answers/advice.ts`, `answers/confidence.ts`, `answers/comfort.ts`, `catalog/advisor/public-grounds.json`, `catalog/advisor/port-aliases.json`, `catalog/advisor/species-synonyms.json`, `catalog/advisor/species-extra.json`, `tests/test_advisor_tools.mjs`.
+- Build: until TA-A0 lands, `get_rules` reads `dist/data/regulations*.json` directly and always returns `stale: true` (so every rules answer says "double-check"); `get_port_report` returns skipper reports only (no daily answer yet). `get_conditions` reads the regional feeds with `readFeed` and its own parsers (06 § planning); `answers/confidence.ts` and `answers/comfort.ts` are the server re-implementations pinned by test to the `web/` fixtures.
 - Tests: each tool against feed fixtures already in `tests/fixtures`; `get_strategy` never returns a coordinate (regex over the output); public-grounds allowlist filters a non-public spot name.
 
 ### TA-V1 · Vision interface, Claude provider, thresholds, synthetic fixtures · M
 - Stories: OP-8, ID-1, ID-3, SC-1 (reading), OP-2 (detection).
 - Depends: TA-C4
-- Files: `vision/index.ts`, `vision/claude.ts`, `prompts/vision.ts`, `catalog/advisor/lookalikes.json`, `catalog/advisor/protected.json`, `tests/advisor/fixtures/vision/`, `tests/advisor/test_vision.mjs`, `scripts/advisor/make-fixture-images.mjs` (SVG → PNG at build time; committed PNGs under 50 KB).
-- Tests: schema-forced tool output parses into each result type; thresholds table; cache in `classification_json`; global cap; 10-minute skip after failure.
+- Files: `vision/index.ts`, `vision/claude.ts`, `prompts/vision.ts`, `catalog/advisor/lookalikes.json`, `catalog/advisor/protected.json`, `tests/fixtures/advisor/vision/`, `tests/test_advisor_vision.mjs`, `scripts/advisor/make-fixture-images.mjs` (SVG → PNG at build time; committed PNGs under 50 KB).
+- Tests: schema-forced tool output parses into each result type; thresholds table; cache in `classification_json`; global cap; 10-minute skip after failure; an original over 4.5 MB is routed to the media job and re-queued rather than sent.
 
 ### TA-V2 · Hermes provider and conformance script · S
 - Stories: OP-8.
@@ -124,13 +138,13 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-I1 · Skipper registration, consent, crew, verification state, boat slug · M
 - Stories: SK-1, SK-2, SK-3, SK-4 (state), FC-2 for skippers.
 - Depends: TA-E1
-- Files: `intake/skippers.ts`, `tools/register_boat.ts`, `tools/add_crew.ts`, `tools/remove_crew.ts`, `engine.ts` (stage 2 registration and consent flows), fixtures, `tests/advisor/test_skippers.mjs`.
+- Files: `intake/skippers.ts`, `tools/register_boat.ts`, `tools/add_crew.ts`, `tools/remove_crew.ts`, `engine.ts` (stage 2 registration and consent flows), fixtures, `tests/test_advisor_skippers.mjs`.
 - Tests: the state machine over a scripted conversation in English and Spanish; port alias matching; consent recorded with the message id; crew invite text sent through the adapter and credited on reply; only the owner can remove crew.
 
-### TA-I2 · Reports: count board, plain text, confirmation, corrections, auto-publish · L
-- Stories: SC-1, SC-2, SC-4, SC-5 (design), FR-4 (dates), SK-5 (data for the page).
+### TA-I2 · Reports: count board, plain text, confirmation, corrections, auto-publish offer (dark) · L
+- Stories: SC-1, SC-2, SC-4, FR-4 (dates), SK-5 (data for the page); SC-5 (Next) is built here behind `ADVISOR_AUTO_PUBLISH_AFTER` because it is the same code path, and stays off.
 - Depends: TA-I1, TA-V1
-- Files: `intake/reports.ts` (`draftFromBoard`, `parseCountText`, `parseCorrection`, publish, invalidate), `tools/read_count_board.ts`, `propose_report.ts`, `edit_report.ts`, `engine.ts` (pending-confirm flow, pre-router for count text), `tests/advisor/test_reports.mjs` with a table of 40 count-text and 20 correction phrasings (en/es).
+- Files: `intake/reports.ts` (`draftFromBoard`, `parseCountText`, `parseCorrection`, publish, invalidate), `tools/read_count_board.ts`, `propose_report.ts`, `edit_report.ts`, `engine.ts` (pending-confirm flow, pre-router for count text), `tests/test_advisor_reports.mjs` with a table of 40 count-text and 20 correction phrasings (en/es).
 - Tests: grammar table; uncertain lines get `?`; unique constraint turns a second board into an edit; `clean_reports` increments and resets; `y`/`n`/correction/other paths; `auto` toggles.
 
 ### TA-I3 · Angler photo sharing and fish-ID flow glue · S
@@ -144,13 +158,13 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-A0 · Migration 0007 and the rules importer · M
 - Stories: OP-6 (data).
 - Depends: TA-F2
-- Files: `db/schema.ts`, `drizzle/0007_advisor_answers.sql`, `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/advisor/test_rules.mjs`.
+- Files: `db/schema.ts`, `drizzle/0007_advisor_answers.sql` (`pnpm db:generate -- --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
 - Tests: importer maps every species in the regulations files to a row; staleness by `review_due`; the tool never returns `retired`; `review` rows are `stale: true`.
 
 ### TA-A1 · Daily answers: generator, cron, pre-router, both languages · M
 - Stories: FR-1, FR-4, FC-6 (daily es).
 - Depends: TA-A0, TA-I2
-- Files: `answers/reports.ts`, `prompts/daily.ts`, `cron.ts` (05:30 slot and the publish-time invalidation), `engine.ts` (pre-router match), fixtures, `tests/advisor/test_daily.mjs`.
+- Files: `answers/reports.ts`, `prompts/daily.ts`, `cron.ts` (05:30 slot and the publish-time invalidation), `engine.ts` (pre-router match), fixtures, `tests/test_advisor_daily.mjs`.
 - Tests: inputs hash changes when a report publishes; no reports → the "no reports in three days" text; unverified boats anonymized; length ≤ 480; no `%`; Spanish output present.
 
 ### TA-A2 · Planning brief with advisories and the confidence ladder · M
@@ -185,20 +199,21 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-M1 · `advisor-media` runner job: derived images and graphics · L · owner approval (workflow)
 - Stories: SP-4 (story image), SO-2 (graphic), SK-5 (page images), SP-5.
 - Depends: TA-C4, TA-F3
-- Files: `.github/workflows/advisor-media.yml`, `scripts/advisor/media_job.py`, `catalog/advisor/graphics.json`, `pyproject.toml` (`[project.optional-dependencies] advisor = ["Pillow>=10", "pillow-heif"]`), routes `GET /api/advisor/jobs/media`, `POST /api/advisor/jobs/media-done` (job OIDC auth via `server/job-auth.ts`), `server/advisor/media.ts` (pending list, done handler, dispatch trigger via the watchdog's Actions client), `tests/unit/test_advisor_media_job.py`, `tests/advisor/test_media_jobs.mjs`.
-- Build: 09 § derived images; the job is idempotent (skips keys that exist with the same source sha); Story footer and daily graphic drawn from the JSON layout; `ffprobe` validation when available (skips cleanly when absent, allow-listed in `scripts/pytest_report.py`).
+- Files: `.github/workflows/advisor-media.yml` (`workflow_dispatch` only, self-hosted runner, job-level `if`), `scripts/advisor/media_job.py`, `catalog/advisor/graphics.json`, `pyproject.toml` (`[project.optional-dependencies] advisor = ["Pillow==<exact>", "pillow-heif==<exact>"]`: `tests/contract/test_packaging.py` requires exact pins), `scripts/pytest_report.py` (allow-list the skip reason `ffprobe is not installed on this runner`), `server/job-auth.ts` (parameterised audience path and workflow list), `deployments/production.json` (`scheduler.workflows`), `server/watchdog.ts` (export `dispatchWorkflow`), routes `GET /api/advisor/jobs/media`, `POST /api/advisor/jobs/media-done`, `server/advisor/media.ts` (pending list, done handler, dispatch on demand and from cron while pending), `tests/unit/test_advisor_media_job.py`, `tests/test_advisor_media_jobs.mjs`, `tests/test_job_auth.mjs` (new cases).
+- Owner step: create `R2_ADVISOR_TOKEN` (R2 read/write scoped to `skippercast-advisor-media`) as a GitHub secret.
+- Build: 09 § derived images; the job is idempotent (skips keys that exist with the same source sha); Story footer and daily graphic drawn from the JSON layout; HEIC conversion; `ffprobe` validation when available (skips with the exact allow-listed reason when absent).
 - Tests: Python: resize bounds, footer text present (pixel check of the band colour), graphic renders from a fixture payload; Node: endpoints auth and payload shapes.
 
 ### TA-W1 · Public pages: port, species, boat, sitemap, telemetry source · L
 - Stories: WH-4, SK-5, WH-1 (targets), FC-5 (CTA).
 - Depends: TA-I2, TA-A1, TA-A3, TA-M1
-- Files: `pages/render.ts`, `pages/port.ts`, `pages/species.ts`, `pages/boat.ts`, `pages/sitemap.ts`, `dist/advisor/pages.css`, `routes/advisor.ts` (routes, edge cache with `advisor.pages.version`), `web/telemetry.ts` (`s` source if missing), `dist/robots.txt` (if present) or the assets route, `e2e/advisor-pages.spec.ts`, `tests/advisor/test_pages.mjs`.
+- Files: `pages/render.ts`, `pages/port.ts`, `pages/species.ts`, `pages/boat.ts`, `pages/sitemap.ts`, `web/advisor/copy.ts` (all page strings; added to `scripts/check_copy.mjs`), `dist/advisor/pages.css`, `scripts/build-worker.mjs` and `server/globals.d.ts` (`ADVISOR_ASSETS` define), `routes/advisor.ts` (routes, edge cache keyed on `advisor.pages.version` as in 05), `web/telemetry.ts` (`s` source if missing), `dist/robots.txt` (if present) or the assets route, `e2e/advisor-pages.spec.ts`, `tests/test_advisor_pages.mjs`.
 - Tests: escaping (a boat named `<script>` renders inert); verified/unverified rendering; cache key bump after publish; copy lint passes; axe check in e2e.
 
 ### TA-W2 · Admin shell, health, review queue · L
 - Stories: OP-1, OP-2, SK-4, OP-7 (banner).
 - Depends: TA-I2, TA-F2
-- Files: `server/middleware/admin.ts` (`requireAdmin`), `routes/admin.ts`, `admin/queue.ts`, `admin/skippers.ts` (verify/reject), `web/admin/app.tsx`, `web/admin/queue.tsx`, `dist/admin.html`, `dist/advisor/admin.css`, `routes/account.ts` (`is_admin` on `/api/session`), tests, `e2e/admin.spec.ts` (signs in with the Playwright passkey fixture used by `e2e/app.spec.ts`, grants the role in the test D1, approves a seeded review).
+- Files: `server/middleware/admin.ts` (`requireAdmin`), `routes/admin.ts` (also `GET /admin` → `/admin.html`), `admin/queue.ts`, `admin/skippers.ts` (verify/reject), `web/admin/app.tsx`, `web/admin/queue.tsx`, `dist/admin.html`, `dist/advisor/admin.css`, `routes/account.ts` (`is_admin` on `/api/session`), tests, `e2e/admin.spec.ts` (signs in with the passkey fixture used by `e2e/app.spec.ts`; grants the role by running, from the spec via `child_process`, `npx wrangler d1 execute skippercast --local --persist-to .wrangler/e2e-state --config <the e2e wrangler config e2e/serve.mjs writes> --command "UPDATE users SET role='admin' WHERE id=…"` after the account exists; approves a seeded review).
 - Tests: 404 for non-admins; decisions update the referenced rows (media approve → `approved`, report edit → edit row + version, skipper verify → `verified_at` and the text to the skipper via the fake adapter); keyboard shortcuts.
 
 ### TA-W3 · Admin skippers, contacts, invite · M
@@ -220,7 +235,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-S0 · Migration 0008, Graph client, token script, health · M
 - Stories: SO-4 (client), SP-10 (quota).
 - Depends: TA-F2, TA-W2
-- Files: `db/schema.ts`, `drizzle/0008_advisor_social.sql` (`advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/advisor/fixtures/meta/`, `tests/advisor/test_meta.mjs`.
+- Files: `db/schema.ts`, `drizzle/0008_advisor_social.sql` (`pnpm db:generate -- --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
 - Tests: `appsecret_proof` value for a known pair; retry on code 4/17/32; error bodies logged without tokens; quota parse.
 
 ### TA-S1 · Drafts and captions, review items, backfill · M
@@ -310,7 +325,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 | SC-2 | TA-I2 |
 | SC-3 | TA-C4, TA-I2 (queued media), TA-S1 |
 | SC-4 | TA-I2 |
-| SC-5 (Next) | TA-I2 (offer built; default off) |
+| SC-5 (Next) | TA-I2 (offer built dark; default off) |
 | FR-1 | TA-E2 (interim), TA-A1 |
 | FR-2 | TA-A2 |
 | FR-4 | TA-A1, TA-I2 |

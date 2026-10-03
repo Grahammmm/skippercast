@@ -34,8 +34,9 @@ same account running BlueBubbles. Nothing else on that account.
    owner's password manager, not in the repo.
 2. Create the Apple Account; sign in on the iPhone; Settings › Messages › Send
    & Receive shows the number ticked. Enable Messages in iCloud.
-3. Mac mini: macOS Sonoma or Sequoia (not Tahoe until BlueBubbles' Private API
-   works there); same Apple Account; Messages › iMessage shows the number;
+3. Mac mini: a macOS version BlueBubbles' current release notes list as
+   supported (the runbook says where to check); same Apple Account;
+   Messages › iMessage shows the number;
    iPhone › Messages › Text Message Forwarding › the Mac: on.
 4. Install the BlueBubbles server. Set a long server password. Enable the
    Private API only if typing indicators and read receipts are wanted (needs
@@ -108,6 +109,10 @@ the first are prefixed `(2/3)` only on SMS.
 
 ## BlueBubbles adapter (`channels/bluebubbles.ts`)
 
+Every BlueBubbles endpoint below is under `/api/v1/` (`/api/v1/message/text`,
+`/api/v1/attachment/<guid>/download`, `/api/v1/ping`, …); the prefix is
+omitted in the text for brevity.
+
 - Base URL `BLUEBUBBLES_URL`, every call appends `?password=<BLUEBUBBLES_PASSWORD>`
   and sends `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers. 15 s
   timeout; one retry on network error, none on 4xx.
@@ -132,8 +137,9 @@ the first are prefixed `(2/3)` only on SMS.
   on SMS sends). Result `providerId = data.guid`.
 - **health**: `GET /api/v1/ping` and `GET /api/v1/server/info` (records the
   server version and whether the Private API is loaded) under 10 s.
-- Fixtures: `tests/advisor/fixtures/bluebubbles/*.json` with real payload
-  shapes (phone numbers replaced by `+15555550100` series), covering a text,
+- Fixtures: `tests/fixtures/advisor/bluebubbles/*.json` with real payload
+  shapes (phone numbers replaced by the fictional `+15555550100` series),
+  covering a text,
   a photo, a video, an SMS-forwarded MMS, a reaction, a group message, an
   outbound echo and a send error.
 
@@ -145,10 +151,12 @@ the first are prefixed `(2/3)` only on SMS.
   query, never from the `Host` header. `From`, `To`, `Body`, `NumMedia`,
   `MediaUrl0..N`, `MediaContentType0..N`; `providerId = MessageSid`; media
   `fetch` uses Basic auth `AccountSid:AuthToken`. Twilio's default opt-out
-  handling still forwards STOP, so the engine's STOP path runs; HELP is not
-  forwarded, so the Twilio console's HELP auto-reply text is set to the same
-  wording as the engine's `help` reply (documented in the runbook).
-  Answer `<Response/>` with `text/xml`.
+  handling auto-replies to STOP and HELP itself; whether each keyword is also
+  forwarded to the webhook is confirmed in TA-C2 against Twilio's current
+  docs, and the engine's STOP/HELP paths run on whatever is forwarded. The
+  Twilio console's HELP auto-reply text is set to the same wording as the
+  engine's `help` reply (documented in the runbook). Answer `<Response/>`
+  with `text/xml`.
 - **send**: `POST https://api.twilio.com/2010-04-01/Accounts/<sid>/Messages.json`
   with `To`, `From=TWILIO_FROM`, `Body`, `MediaUrl` (public derived JPEG URL
   on skippercast.com), `StatusCallback` = `/api/advisor/inbound/twilio-status/<token>`
@@ -189,8 +197,9 @@ skipper gets the confirmation by text.
   The first reply to a new contact attaches it on iMessage (as a file) and
   links it on SMS.
 - `GET /text?s=<source>&m=<message>` redirects to
-  `sms:<ADVISOR_NUMBER>&body=<message>` (iOS and Android both open the
-  composer with a pre-filled first text). `s` is recorded by the engine from
+  `sms:<ADVISOR_NUMBER>?&body=<message>` (the `?&body=` form is the one both
+  iOS and Android open with the body pre-filled; TA-C6 verifies on both and
+  branches on user agent only if a device rejects it). `s` is recorded by the engine from
   the pre-filled body, which starts with an invisible marker:
   the body is `"<message> [via <source>]"` and the engine strips and stores
   the source. Instagram bio and post CTAs use `https://skippercast.com/text?s=ig`.

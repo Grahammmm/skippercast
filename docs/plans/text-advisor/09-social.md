@@ -68,10 +68,10 @@ these):
 Meta GETs `image_url`/`video_url` without auth, so the Worker serves
 `GET /media/<media_id>.jpg` and `GET /media/<media_id>.mp4` for media with
 `publish_state in ('approved','posted')` and `GET /media/post/<post_id>/<name>`
-for generated graphics, with `Content-Type` set and no bot blocking (the
-security headers middleware is not applied to `/media/*`; `robots.txt`
-disallows indexing `/media/`). URLs stay valid at least 24 h after the
-container is created.
+for generated graphics, with `Content-Type` set and no bot blocking
+(`robots.txt` disallows indexing `/media/`; the security headers every
+response carries do not affect a fetch). URLs stay valid at least 24 h after
+the container is created.
 
 ## Derived images and graphics: the `advisor-media` runner job
 
@@ -80,15 +80,23 @@ graphic, the roundup carousel) does **not** run in the Worker. It runs as a
 GitHub Actions job on the owner's self-hosted runner (`DATA_RUNNER`), the
 same place the data jobs run, in Python with Pillow:
 
-- `.github/workflows/advisor-media.yml`: `workflow_dispatch` plus a 15-minute
-  schedule guarded by `vars.ENABLE_ADVISOR`. The Worker triggers it on demand
-  through the Actions API with the existing `GITHUB_TOKEN` watchdog pattern
-  (`server/watchdog.ts` already dispatches workflows), so a new approved
-  photo is processed within a minute, not fifteen.
+- `.github/workflows/advisor-media.yml`: `workflow_dispatch` only (no
+  schedule: a 15-minute schedule falling back to GitHub-hosted runners would
+  burn minutes), `runs-on: ${{ vars.DATA_RUNNER }}` with a job-level
+  `if: vars.ENABLE_ADVISOR == 'true' && vars.DATA_RUNNER != ''`. The Worker
+  triggers it on demand through `dispatchWorkflow(env, 'advisor-media.yml')`
+  (exported from `server/watchdog.ts`, 01 § touch points) whenever media or
+  a graphic request becomes pending, and the cron re-dispatches every 15
+  minutes while anything is still pending, so a new approved photo is
+  processed within a minute.
 - `scripts/advisor/media_job.py` (Python, stdlib + Pillow, under `scripts/`
   since it is product code, not research): lists pending work from
-  `GET /api/advisor/jobs/media` (job OIDC auth, same as `/api/jobs/check`),
-  downloads originals from R2 with `R2_PUBLISH_TOKEN`, writes
+  `GET /api/advisor/jobs/media` with a GitHub OIDC token requested for
+  `audience: <public_origin>/api/advisor/jobs` (TA-M1 parameterises
+  `server/job-auth.ts` and adds `advisor-media.yml` to
+  `deployments/production.json` `scheduler.workflows`), downloads originals
+  from R2 with `R2_ADVISOR_TOKEN` (scoped to the private media bucket; an
+  owner step in TA-M1), writes
   `public.jpg`, `thumb.jpg`, `story.jpg`, daily and roundup graphics,
   uploads them, and `POST /api/advisor/jobs/media-done` with the keys and
   dimensions. Templates: `dist/advisor/story-template.svg` is rendered by
@@ -165,7 +173,7 @@ Graph API client (`social/meta.ts`): raw `fetch`, `appsecret_proof`
 (HMAC-SHA256 of the token with the app secret) on every call, 20 s timeout,
 error bodies logged with `code`/`subcode` only, a tiny retry on 5xx and on
 code 4 / 17 / 32 (rate limits) with backoff, and a `fetcher` injection for
-tests. Fixtures in `tests/advisor/fixtures/meta/`.
+tests. Fixtures in `tests/fixtures/advisor/meta/`.
 
 ## Stories (SP-4)
 

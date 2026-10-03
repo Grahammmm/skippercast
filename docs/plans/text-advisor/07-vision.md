@@ -47,8 +47,13 @@ that tries each provider in order. A provider is skipped for 10 minutes
 after a failure (state in `job_state` key `advisor.vision.<name>.down_until`),
 so a dead Hermes costs one failed call, not one per message. Each result is
 cached in `advisor_media.classification_json` keyed by method name, so a
-retried message never re-runs vision. Images are downscaled to ≤ 1568 px on
-the long side before any provider call (saves tokens, same for both).
+retried message never re-runs vision. The Worker never decodes images: a
+provider receives the metadata-stripped original. An original over 4.5 MB
+(the Claude per-image limit is 5 MB; a 48 MP iPhone JPEG can exceed it) is
+not sent; the consumer dispatches the media job (09), waits for `public.jpg`
+(≤ 1440 px) by re-queueing the message with `retry({delaySeconds: 30})` up
+to 4 times, and classifies from that. The skipper's reply arrives after the
+job runs, normally under a minute.
 
 Global cap `ADVISOR_GLOBAL_DAILY_VISION` applies to the Claude provider only.
 
@@ -77,7 +82,7 @@ advisor's thresholds assume calibrated-ish 0..1); `species_key` must be
 one of the keys sent, or null with the free-text `label`.
 
 A conformance script `scripts/advisor/vision-conformance.mjs` posts the
-fixture images under `tests/advisor/fixtures/vision/` to a URL and checks
+fixture images under `tests/fixtures/advisor/vision/` to a URL and checks
 the response shapes and thresholds, so the Hermes side can test itself.
 
 ## Claude provider (`vision/claude.ts`)
@@ -104,7 +109,7 @@ Prompts (`prompts/vision.ts`):
   partial, blurry, or several fish are shown.
 
 Usage goes to `recordLlm(env, 'advisor:vision:<method>', outcome, usage)`.
-Fixtures: `tests/advisor/fixtures/vision/*.json` recorded responses, plus
+Fixtures: `tests/fixtures/advisor/vision/*.json` recorded responses, plus
 six synthetic test images (generated SVG→PNG in the repo under 50 KB each:
 a drawn count board, a drawn fish silhouette, a blank, a photo-like scene
 with a stick figure) so the pipeline runs end to end offline. No real
@@ -124,8 +129,13 @@ customer photos ever enter the repo.
 
 Metadata is stripped in the consumer before storage and before any provider
 sees the image (TA-C4): a JPEG marker walk drops every APPn segment except
-APP0 (so EXIF, GPS, XMP and ICC go) without decoding; PNG `eXIf`, `tEXt`,
-`iTXt` and `zTXt` chunks are dropped the same way. Providers receive the
+APP0 (JFIF) and an APP2 segment whose payload starts with `ICC_PROFILE`
+(kept so Display P3 photos do not shift colour; EXIF, GPS, XMP and
+everything else go) without decoding; PNG `eXIf`, `tEXt`, `iTXt` and `zTXt`
+chunks are dropped the same way. The sniffer accepts `image/heic` and
+`image/heif` (iMessage can deliver HEIC when the sender's camera format is
+High Efficiency): a HEIC is stored and routed to the media job for
+conversion before any provider sees it. Providers receive the
 stripped original (iPhone JPEGs are 2–4 MB, within the Claude image limit;
 the client sends `width`/`height` from the JPEG SOF header so a provider can
 decline absurd sizes). Derived images (`public.jpg` ≤ 1440 px, `thumb.jpg`
@@ -134,4 +144,5 @@ are produced by the `advisor-media` runner job (09 § derived images) with
 Pillow from the layout spec in `catalog/advisor/graphics.json`. HEIC from
 iPhones arrives as JPEG via Messages on iMessage; a HEIC from the upload page
 is converted by the job (`pillow-heif` on the runner) or, failing that, the
-person is asked for a JPEG.
+person is asked for a JPEG. Species keys in results are `catalog/species.json`
+keys or `catalog/advisor/species-extra.json` keys (02).

@@ -9,17 +9,17 @@ fixture; a test that needs a local secret skips with an allow-listed reason.
 
 | Layer | Where | Covers |
 | --- | --- | --- |
-| Node unit (`node:test`) | `tests/advisor/test_*.mjs` (added to the `pnpm test` glob) | settings, contacts and crypto, adapters, media stripping, engine stages, tools, intake parsers, answers, vision clients, Meta client, publishing, admin API, pages rendering, cron slots |
-| Recorded-response fixtures | `tests/advisor/fixtures/{bluebubbles,twilio,meta,engine,vision}/` | provider payloads and model responses, scrubbed; a fixture file has a `source` comment saying how it was captured and what was replaced |
+| Node unit (`node:test`) | `tests/test_advisor_*.mjs` (directly in `tests/`, matched by the existing `tests/test_*.mjs` glob that CI and `tests/contract/test_test_layout.py` enforce) | settings, contacts and crypto, adapters, media stripping, engine stages, tools, intake parsers, answers, vision clients, Meta client, publishing, admin API, pages rendering, cron slots |
+| Recorded-response fixtures | `tests/fixtures/advisor/{bluebubbles,twilio,meta,engine,vision}/` | provider payloads and model responses, scrubbed; a fixture file has a `source` comment saying how it was captured and what was replaced |
 | Python unit | `tests/unit/test_advisor_media_job.py` | the runner image job |
 | Playwright | `e2e/advisor-chat.spec.ts`, `e2e/advisor-pages.spec.ts`, `e2e/admin.spec.ts` | web chat, public pages (with axe), admin queue |
-| Contract | `tests/contract/test_research_boundary.py` (unchanged) and a new `tests/advisor/test_boundaries.mjs` | `server/advisor/` imports nothing from `research/`; admin actions are reachable only from `routes/admin.ts` or the admin-test path; no module outside `channels/` calls `decryptPhone` |
-| Privacy | `tests/advisor/test_privacy.mjs`, `scripts/check_repository.py` | no E.164 or 10-digit runs in fixtures or docs; analytics blobs never contain ids; `advisorLog` redaction |
+| Contract | `tests/contract/test_research_boundary.py` (unchanged) and a new `tests/test_advisor_boundaries.mjs` | `server/advisor/` imports nothing from `research/` or `web/`; admin actions are reachable only from `routes/admin.ts` or the admin-test path; no module outside `channels/` calls `decryptPhone` |
+| Privacy | `tests/test_advisor_privacy.mjs`, `scripts/check_repository.py` | no non-fictional E.164 in fixtures or plan docs (02 § privacy invariants regex); analytics blobs never contain ids; `advisorLog` redaction |
 | Live evals (opt-in) | `scripts/advisor/eval.mjs`, `scripts/advisor/vision-conformance.mjs`, `scripts/advisor/relay-check.mjs` | real model, real Hermes, real relay; never in CI |
 
 ### Engine golden conversations
 
-`tests/advisor/fixtures/engine/conversations/*.json` hold scripted
+`tests/fixtures/advisor/engine/conversations/*.json` hold scripted
 multi-turn conversations: an array of `{in, expect: {reply_contains[],
 reply_not_contains[], intent, actions[]}}`. The runner feeds each `in`
 through `runTurn` with the recorded model responses and asserts. Required
@@ -40,15 +40,15 @@ conversations at TA-P1:
 8. Daily cap reached; global cap reached.
 9. Web visitor links a phone number with the code.
 
-## Staging
+## No staging environment
 
-`workers.dev` stays the staging URL (the deploy config keeps `workers_dev`
-on). The advisor can be exercised on staging with `TEXT_ADVISOR_ENABLED=true`
-there, a second BlueBubbles webhook URL pointing at staging, and the same
-relay: BlueBubbles can register several webhooks, so staging receives real
-messages too, which is fine during the dark phase because staging's
-`ADVISOR_CHANNEL` is `web` (no outbound text) until the owner says
-otherwise. Production keeps the flag off until TA-P1.
+There is one Worker, one config, one D1: the `workers.dev` host serves the
+same code and variables as skippercast.com, so it is not a staging
+deployment. Dark testing is `wrangler dev` with the fixtures and the
+Playwright suite; the relay can be pointed at a `wrangler dev` instance
+through a temporary tunnel for a manual end-to-end check before TA-P1 (the
+relay-setup runbook has the steps), and the pilot is the first live run.
+Production keeps `TEXT_ADVISOR_ENABLED` off until TA-P1.
 
 ## Launch checklist (TA-P1)
 
@@ -78,15 +78,16 @@ otherwise. Production keeps the flag off until TA-P1.
 - [ ] Threat model section merged (TA-C5).
 - [ ] `CHANGELOG.md` line and a release tag.
 
-Flip order: `ENABLE_ADVISOR=true` (deploy adds bindings) → verify health →
-`TEXT_ADVISOR_ENABLED=true` → `ADVISOR_SOCIAL_ENABLED=true` on the first
-day a skipper report exists.
+Flip order (each step is a repository-variable change plus a deploy; there
+is no dashboard editing, 01 § flags): `ENABLE_ADVISOR=true` (bindings) →
+verify health → `TEXT_ADVISOR_ENABLED=true` → `ADVISOR_SOCIAL_ENABLED=true`
+on the first day a skipper report exists.
 
 ## Kill switches and rollback
 
 | Problem | Action |
 | --- | --- |
-| Bad replies | `TEXT_ADVISOR_ENABLED=false`: inbound is stored and acked, nothing is sent; users get silence rather than wrong answers; the admin dashboard shows the backlog. Re-enable after the prompt fix; the backlog is *not* replayed (messages older than 1 h are marked `dropped`). |
+| Bad replies | `ADVISOR_REPLIES_ENABLED=false` (soft): inbound is stored, acked and marked `held`; nothing is sent and no model is called; users get silence rather than wrong answers; the admin dashboard shows the backlog. Re-enable after the prompt fix; the backlog is *not* replayed (held messages older than 1 h are marked `dropped`). `TEXT_ADVISOR_ENABLED=false` (hard): every advisor route answers 404 and the relay's webhook deliveries fail; use only for a security incident. Both are repository variables plus a deploy. |
 | Runaway spend | lower `ADVISOR_GLOBAL_DAILY_LLM` / `_VISION`; both are read per request. |
 | Social mistake | `ADVISOR_SOCIAL_ENABLED=false`; delete the post on Meta by hand (runbook); set the post `rejected`. |
 | Relay down | runbook advisor-relay-down; held messages release automatically on recovery. |

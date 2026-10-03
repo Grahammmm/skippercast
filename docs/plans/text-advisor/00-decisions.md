@@ -25,7 +25,7 @@ Avila), built so other regions are configuration.
 | --- | --- | --- |
 | D1 | **Channel: self-hosted iMessage + SMS on a number SkipperCast owns.** A real SIM/eSIM in a spare iPhone, a dedicated Mac mini running the BlueBubbles server, both signed into one dedicated Apple Account. Twilio on the *same* number is the fallback if the relay breaks or Apple cuts it off; nobody is ever told a new number. WhatsApp is Next, not MVP. | The Worker never talks to iMessage directly. It talks to a **channel adapter interface** (`server/advisor/channels/`), with three implementations: `bluebubbles`, `twilio`, `web`. Switching is configuration (`ADVISOR_CHANNEL`), not code. The port-to-Twilio runbook is a deliverable, not an afterthought. |
 | D2 | **Vision: the Hermes local classifier first, Claude vision as fallback.** Nothing in this repo does image reading today; the owner's Hermes machine (Ubuntu, Tailscale) will expose a classifier. Its exact interface is not yet known. | One **vision provider interface** (`server/advisor/vision/`) with two providers behind it. The Hermes provider is built against a contract this plan defines (`07-vision.md`); if Hermes cannot meet it, the owner decides whether to adapt Hermes or ship Claude-only. Claude vision is complete and tested on its own, so the feature never waits on Hermes. |
-| D3 | **MVP scope stays as the doc marks it**, plus FC-6 (Spanish), WH-4 (port and species pages), OP-6 (rules table), OP-7 (channel fallback), OP-8 (vision providers). SP-2 (Facebook cross-post) is absorbed into SO-4. | The work breakdown covers 52 MVP stories. Social automation that needs Meta app review (SP-8, SP-9) is scheduled so engineering is done while review runs, and ships dark until approval. |
+| D3 | **MVP scope stays as the doc marks it**, plus FC-6 (Spanish), WH-4 (port and species pages), OP-6 (rules table), OP-7 (channel fallback), OP-8 (vision providers). SP-2 (Facebook cross-post) is absorbed into SO-4. | The work breakdown covers the 50 MVP stories in the doc (the story-to-task map in 10 lists each); SC-5's auto-publish offer is built dark in the same task as reports because it is one code path, but stays off (Next). Social automation that needs Meta app review (SP-8, SP-9) is scheduled so engineering is done while review runs, and ships dark until approval. |
 | D4 | **Admin lives on skippercast.com**, passkey-gated, under `/admin/*`. | New `server/routes/admin.ts` plus a small Preact admin app under `web/admin/`. Admin is a role column on `users`, granted by the owner through a one-off script, never self-serve. |
 | D5 | **No social assets exist yet.** | Phase S0 in the breakdown creates them; Meta app review is on the critical path for SP-8/SP-9 only. |
 | D6 | **`claude/email-sign-in` is superseded.** The advisor takes migrations `0006` onward and adds phone identity on the existing `users` table. | That branch is closed with a note in its PR-less commit; if email sign-in returns later it is rebuilt on `0009+`. |
@@ -79,14 +79,16 @@ blocking either.
 
 - **Everything new lives under `server/advisor/`, `server/routes/advisor.ts`,
   `server/routes/admin.ts`, `web/advisor/`, `web/admin/`, `dist/advisor/`,
-  `dist/admin/`, `catalog/advisor/`, `scripts/advisor/`, `tests/advisor/` and
+  `dist/admin/`, `catalog/advisor/`, `scripts/advisor/`, `tests/test_advisor_*.mjs`, `tests/fixtures/advisor/` and
   `docs/plans/text-advisor/`.** Shared files are touched only where listed in
   `01-architecture.md` § "Touch points in existing files", each in a small,
   obvious diff.
-- **Dark by default.** `server/app.ts` mounts the advisor routes only when
-  `TEXT_ADVISOR_ENABLED=true`; the deploy adds its bindings only when the repo
-  variable `ENABLE_ADVISOR=true` (same pattern as `ENABLE_QUEUES`). Migrations
-  add tables and columns only; no existing column changes.
+- **Dark by default.** The advisor routes answer 404 unless the repository
+  variable `TEXT_ADVISOR_ENABLED=true` is deployed; the deploy adds its
+  bindings only when `ENABLE_ADVISOR=true` (same pattern as `ENABLE_QUEUES`).
+  All advisor settings are repository variables, never dashboard edits
+  (01 § flags). Migrations add tables and columns only; no existing column
+  changes.
 - **No new paid service without the owner.** The Mac mini, the SIM, Twilio,
   a possible Sendblue trial, Meta ads: all owner steps.
 - **Codex's lane is untouched.** No changes under `src/skippercast/`,

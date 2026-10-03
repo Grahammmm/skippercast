@@ -63,9 +63,8 @@ verified. The admin queue item shows the boat fields, the contact's channel
 and first messages, and an "approve" button that sets `verified_at`,
 `verified_by`, re-renders the boat page and texts the skipper: "{name} is
 verified. Your page: skippercast.com/boats/{slug}". Admin can also "reject"
-(boat stays, flagged `rejected` in a `status` column added to the boat in
-0006: `pending`, `verified`, `rejected`) and the contact is told the team
-will reach out.
+(boat `status='rejected'`; the column is in 02) and the contact is told the
+team will reach out.
 
 ## The boat page (SK-5)
 
@@ -74,9 +73,11 @@ last 30 days of reports as a table (date, trip, anglers, counts kept/released,
 "edited" marker when `version > 1`), the last 12 approved or posted photos
 (derived public JPEGs, credited), booking link or phone, Instagram link,
 and the "Text SkipperCast for today's report" CTA. Cached at the edge for
-5 minutes; purged on publish, edit and verification by bumping a
-`advisor.pages.version` value in `job_state` that is part of the cache key
-(the existing `cached()`/`cacheKey()` helpers in `server/edge-cache.ts`).
+5 minutes with the existing `cached()`/`cacheKey()` helpers in
+`server/edge-cache.ts`; `cacheKey` has no version slot, so the pages pass
+`build: build() + ':' + pagesVersion`, where `pagesVersion` is the
+`job_state` key `advisor.pages.version` (one D1 read per request; the
+value is bumped on publish, edit and verification, which is the purge).
 
 ## Count-board photo → report (SC-1)
 

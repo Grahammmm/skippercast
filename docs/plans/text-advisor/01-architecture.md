@@ -38,6 +38,11 @@ server and a Cloudflare Tunnel.
 
 1. **Webhook** `POST /api/advisor/inbound/bluebubbles` (or `/twilio`). It is
    mounted *before* the private gate in `server/app.ts`, like `/api/jobs/check`.
+   The advisor router's first middleware (`server/advisor/gate.ts`) reads
+   `advisorSettings(c.env).enabled` per request and answers
+   `json({error: 'Not found'}, 404)` when `TEXT_ADVISOR_ENABLED` is not
+   `true`; `app` is a module-level singleton and `env` exists only per
+   request, so the mount itself is unconditional.
    Authentication: BlueBubbles sends no signature, so the webhook URL carries a
    secret path segment (`/api/advisor/inbound/bluebubbles/<ADVISOR_WEBHOOK_TOKEN>`)
    and the Mac is also the only origin the Tunnel allows; Twilio is verified by
@@ -145,25 +150,38 @@ dist/admin.html, dist/chat.html    page shells (Vite picks up every dist/*.html)
 dist/advisor/              static assets for pages (css), graphics templates for daily posts
 catalog/advisor/           seed data: rules import map, hashtags, caption styles, species look-alikes, ports → IG handles
 scripts/advisor/           one-off owner scripts: grant-admin.mjs, import-rules.mjs, meta-token.mjs, relay-check.mjs
-tests/advisor/             node:test files test_*.mjs (added to the `node --test tests/test_*.mjs` glob: see 11)
+tests/test_advisor_*.mjs   node:test files; they must sit directly in tests/ to match the
+                           `tests/test_*.mjs` glob CI runs (tests/contract/test_test_layout.py enforces it)
+tests/fixtures/advisor/    recorded provider and model payloads: bluebubbles/, twilio/, meta/, engine/, vision/
 docs/plans/text-advisor/   this plan
 docs/operations/runbooks/advisor-*.md   relay-down, port-to-twilio, meta-token-expired, queue-stuck
 ```
 
 ## Feature flags, bindings, variables and secrets
 
-Deploy-time (repository variable, read by `scripts/wrangler_config.mjs`):
+Deploy-time (repository variables, read by `scripts/wrangler_config.mjs` and
+`scripts/cloudflare_deploy.sh` from the deploy workflow's `env`). There is no
+dashboard editing: `wrangler deploy` runs on every `main` commit and rewrites
+the Worker's `vars` from the config, so every advisor setting is a repository
+variable and changing one means a deploy (the workflow has
+`workflow_dispatch`).
 
 | Variable | Effect |
 | --- | --- |
-| `ENABLE_ADVISOR=true` | Adds to the deploy config: R2 bucket `ADVISOR_MEDIA` (`skippercast-advisor-media`, private), queue `skippercast-advisor` with DLQ `skippercast-advisor-dlq` (producer binding `ADVISOR_QUEUE`), and the var `TEXT_ADVISOR_ENABLED=true`. Requires `ENABLE_QUEUES` semantics copied, not shared: the advisor queue is its own consumer entry. |
+| `ENABLE_ADVISOR=true` | Bindings only. `cloudflare_deploy.sh` creates (idempotently, like the trip queues) the private R2 bucket `skippercast-advisor-media` and the queues `skippercast-advisor` and `skippercast-advisor-dlq`; `deployConfig` adds the bucket as `ADVISOR_MEDIA`, the queue producer `ADVISOR_QUEUE` and both consumer entries. The advisor queue is its own consumer entry, not shared with the trip queue. |
+| `TEXT_ADVISOR_ENABLED`, `ADVISOR_*` (every var below) | `deployConfig` copies each of these that is present in `process.env` into `config.vars`, so the table below is also the list of repository variables. |
 
-Runtime vars (Worker `vars`, all optional, read only through `advisorSettings()`):
+Runtime vars (all optional, read only through `advisorSettings()`):
 
 | Var | Default | Meaning |
 | --- | --- | --- |
-| `TEXT_ADVISOR_ENABLED` | `false` | Master switch. Off: no advisor routes mount, cron hooks no-op, consumer acks and drops. |
+| `TEXT_ADVISOR_ENABLED` | `false` | Hard switch. Off: every advisor route (webhooks included) answers 404, cron hooks no-op, the consumer acks and drops. |
+| `ADVISOR_REPLIES_ENABLED` | `true` | Soft switch for bad-reply incidents: `false` keeps webhooks and the consumer running (inbound is stored, acked, marked `held`) but nothing is sent and no model is called. |
+| `ADVISOR_NUMBER` | — | The owned number, E.164; used in the contact card, links and prompts. |
 | `ADVISOR_CHANNEL` | `bluebubbles` | Which adapter sends outbound texts: `bluebubbles` or `twilio`. Inbound webhooks for both are always mounted so a port-in-progress loses nothing. |
+| `BLUEBUBBLES_PRIVATE_API` | `false` | `true` enables typing-indicator and read-receipt calls (needs the Private API on the Mac). |
+| `ADVISOR_ADMIN_CONTACT_ID` | — | The owner's contact id for the text-based admin fallback (08). |
+| `ADVISOR_INBOX_PUBLIC_REPLIES` | `false` | Public replies to non-keyword Instagram comments (09). |
 | `ADVISOR_MODEL` | `claude-sonnet-5` | Text model. Same validation as `BOAT_AI_MODEL`. |
 | `ADVISOR_VISION_MODEL` | `claude-sonnet-5` | Claude vision fallback model. |
 | `ADVISOR_VISION_PROVIDERS` | `hermes,claude` | Ordered provider chain. `claude` alone is valid. |
@@ -192,7 +210,9 @@ secret disables the feature that needs it with a logged warning):
 | `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | Graph API app, webhook verification |
 | `META_IG_USER_ID`, `META_IG_TOKEN` | Instagram professional account id and long-lived token |
 | `META_PAGE_ID`, `META_PAGE_TOKEN` | Facebook Page id and non-expiring Page token |
-| `ADVISOR_PHONE_KEY` | 32-byte key (base64) for AES-GCM encryption of phone numbers at rest |
+| `ADVISOR_PHONE_KEY` | 32-byte master key (base64); HKDF derives the phone-hash and phone-encryption subkeys (02) |
+| `CF_ANALYTICS_TOKEN` | already a GitHub secret for `ops-report.yml`; also passed to the Worker for the admin funnel's Analytics Engine SQL reads (08) |
+| `R2_ADVISOR_TOKEN` | GitHub secret only (never the Worker): an R2 token scoped to `skippercast-advisor-media` for the media runner job; `R2_PUBLISH_TOKEN` is scoped to the feeds bucket and is not reused |
 
 Each secret is added to `scripts/cloudflare_deploy.sh` and
 `.github/workflows/deploy-cloudflare.yml` in the task that first needs it
@@ -206,15 +226,20 @@ it. Each is a few lines.
 
 | File | Change |
 | --- | --- |
-| `server/app.ts` | After `app.route('/', jobs);` add `if (advisorEnabled) app.route('/', advisorPublic);` (webhooks, pages, web chat). After `app.route('/', privacy);` add `app.route('/', admin);` (guarded again inside by `requireAdmin`). The flag is read once from `env` via a tiny middleware that sets `c.var.advisor` so route modules stay pure. |
-| `server/env.ts` | Add the bindings, vars and secrets listed above, each commented like the existing ones. `tests/test_worker_types.mjs` checks this list against `wrangler.jsonc`, so the optional bindings follow the `ANALYTICS?`/`TRIP_QUEUE?` pattern. |
-| `server/index.ts` | In `scheduled()`: add `advisorCron(env, started)` to the `Promise.all`, its result into `recordCron`'s extra fields. In `queue()`: branch on `batch.queue` for `ADVISOR_QUEUE_NAME` and `ADVISOR_DLQ_NAME` before the trip-check path. The generic type of the default export becomes a union of message types. |
-| `scripts/wrangler_config.mjs` | `features()` gains `advisor`; `deployConfig` appends the advisor queue consumers/producers, the R2 bucket and the var. `tests/test_wrangler_config.mjs` gets the matching case. |
-| `db/schema.ts` | New tables appended (02). Existing tables untouched except `users`: two nullable columns `role` and `phone_hash` (02). |
-| `drizzle/0006_advisor_core.sql` … | Generated with `pnpm db:generate`, never hand-written; journal and snapshot committed. |
-| `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml` | Secret pass-through lines. |
-| `vite.config.mjs` | Nothing: `pages()` already picks up `dist/admin.html` and `dist/chat.html`. |
-| `package.json` | No new runtime dependency. (`twilio`, `@anthropic-ai/sdk` and `preact-render-to-string` were considered and rejected: the raw-fetch pattern in `server/boat-lookup.ts` is the house style, and server HTML is small.) Test script: `"test": "node --test tests/test_*.mjs tests/advisor/test_*.mjs"`. |
+| `server/app.ts` | After `app.route('/', jobs);` add `app.route('/', advisorPublic);` (webhooks, pages, web chat; the router gates itself per request, see § request flow). After `app.route('/', privacy);` add `app.route('/', admin);` (guarded inside by `requireAdmin`). |
+| `server/env.ts` | Add the bindings, vars and secrets listed above, each commented like the existing ones. `tests/test_worker_routes.mjs` checks the typed `Env` against `wrangler.jsonc` and against every `env.X` read under `server/`, so the optional bindings follow the `ANALYTICS?`/`TRIP_QUEUE?` pattern and every new var is declared before it is read. |
+| `server/index.ts` | In `scheduled()`: add `advisorCron(env, started)` to the `Promise.all`; its one-word outcome goes into `recordCron` as a new `advisor` field (blob6; documented in the `server/analytics.ts` header with the new `advisor_turn` and `publish` kinds). In `queue()`: branch on `batch.queue` for `ADVISOR_QUEUE_NAME` and `ADVISOR_DLQ_NAME` before the trip-check path. The generic type of the default export becomes a union of message types. |
+| `scripts/wrangler_config.mjs` | `features()` gains `advisor`; `deployConfig` appends the advisor queue consumers/producer and the R2 bucket, and copies `TEXT_ADVISOR_ENABLED` and every `ADVISOR_*` present in the environment into `vars`. `tests/test_wrangler_config.mjs` gets the matching cases. |
+| `db/schema.ts` | New tables appended (02). Existing tables untouched except `users`: one nullable column `role` (02). |
+| `drizzle/0006_advisor_core.sql` … | Generated with `pnpm db:generate -- --name advisor_core` (drizzle-kit's `--name` gives the file its name), never hand-written; journal and snapshot committed. |
+| `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml` | Under `ENABLE_ADVISOR=true`: create the bucket and the two queues before the deploy (same idempotent `queues info`/`create` and `r2 bucket create` pattern as the trip queues); pass the advisor vars through `env`; secret pass-through lines. |
+| `server/job-auth.ts`, `deployments/production.json` | `validJobClaims` pins `aud` to `/api/jobs/check` and `workflow_ref` to `scheduler.workflow` (`live-conditions.yml`). TA-M1 parameterises both: `verifyJobToken(token, policy, {audiencePath, workflows})`, and `deployments/production.json` gains `scheduler.workflows: ["live-conditions.yml", "advisor-media.yml"]` (the existing `workflow` key stays for the trip job). The media job requests its token with `audience: <public_origin>/api/advisor/jobs`. |
+| `server/watchdog.ts` | Export `dispatchWorkflow(env, file, ref = 'main')` built from the private `github()` helper, so the advisor can trigger `advisor-media.yml` without a second GitHub client. |
+| `scripts/build-worker.mjs`, `server/globals.d.ts` | A new build-time define `ADVISOR_ASSETS` (the Vite manifest entries for `advisor/pages.css`, `advisor/admin.css`, `advisor/chat.css` → hashed paths) so server-rendered pages can link hashed stylesheets; `SHELLS` maps only HTML. |
+| `scripts/check_copy.mjs` | `copyFiles()` also lints `web/advisor/copy.ts`, where every user-facing string of the server-rendered pages lives (the templates import from it), so page copy stays under the copy lint. |
+| `vite.config.mjs` | Nothing: `pages()` already picks up `dist/admin.html`, `dist/chat.html` and `dist/upload.html`. |
+| `package.json` | No new runtime dependency (`twilio`, `@anthropic-ai/sdk` and `preact-render-to-string` were considered and rejected: the raw-fetch pattern in `server/boat-lookup.ts` is the house style, and server HTML is small). No change to the `test` script: advisor tests are `tests/test_advisor_*.mjs` and the existing glob runs them. |
+| `pyproject.toml`, `scripts/pytest_report.py` | TA-M1: the `advisor` extra with exact pins (`tests/contract/test_packaging.py` requires `name==x.y.z`) and the allow-listed skip reason for a runner without `ffprobe`. |
 | `docs/README.md`, `docs/engineering/api-reference.md`, `CHANGELOG.md`, `docs/engineering/adr/README.md` | Index lines. |
 | `docs/legal/threat-model.md` | A new section for the webhook surface, the relay and the media bucket (task TA-C5). |
 | `docs/legal/data-rights-register.md` | Row for skipper-submitted content (consent recorded per SK-2) and for Meta content terms. |
@@ -229,12 +254,12 @@ Nothing under `src/`, `regions/`, `research/`, `atlas/`, `catalog/*.json`
   double-post or double-draft.
 - A send that fails after the provider accepted it (timeout) is marked
   `unknown`; the next cron run reconciles by querying the provider
-  (BlueBubbles `GET /message/:guid`, Twilio message status) before any retry.
+  (BlueBubbles `GET /api/v1/message/:guid`, Twilio message status) before any retry.
 - The DLQ consumer logs counts and acks; the contact gets one apology text
   ("Sorry, something went wrong on my end. Please send that again.") at most
   once per hour, recorded in `advisor_contacts.last_error_notice_at`.
 - The relay watchdog (`cron.ts`): every 15 minutes `GET {BLUEBUBBLES_URL}/api/v1/ping`;
-  three consecutive failures write `advisor_health.relay=down`, log an error
+  three consecutive failures write `job_state` key `advisor.relay` = `down`, log an error
   line (Cloudflare alerting picks it up like the trip watchdog), and the
   admin dashboard shows the banner. Outbound sends while `down` are held
   (status `held`) for up to 6 hours, then the Twilio adapter is tried only if
@@ -257,3 +282,20 @@ Nothing under `src/`, `regions/`, `research/`, `atlas/`, `catalog/*.json`
 - Admin role: `users.role='admin'` set by `scripts/advisor/grant-admin.mjs`
   (runs `wrangler d1 execute` with the owner's user id). Admin routes require
   a passkey session *and* the role; the Origin check applies as today.
+- `securityHeaders` runs on every response (`app.use('*')`), including
+  `/media/*` and the upload page; nothing opts out. CSP on an image response
+  does not stop Meta fetching it. The upload page therefore submits with a
+  JavaScript `fetch` (`connect-src 'self'` allows it), not a `<form>`
+  (`form-action 'none'`).
+
+## Cron slots
+
+The only trigger is the existing `*/15 * * * *` (UTC). `cron.ts` defines
+`runSlot(env, name, {local: 'HH:MM', tz: 'America/Los_Angeles'}, fn)`: on each
+tick it computes the local date and time; if the local time is at or past
+`local` and `job_state` key `advisor.slot.<name>` is not today's local date,
+it claims the key with the same UPSERT-with-WHERE idiom as
+`scheduleTripChecks` and runs `fn`. A slot therefore runs once per local day,
+within 15 minutes of its time, and never twice. Weekly slots carry a
+`weekday`. Every local time quoted in 05–09 is a slot name defined in one
+table in `cron.ts`.

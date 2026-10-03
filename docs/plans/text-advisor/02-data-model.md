@@ -1,7 +1,8 @@
 # 02. Data model, storage, retention and privacy
 
 All tables are D1 (SQLite) through Drizzle, declared in `db/schema.ts` and
-migrated with `pnpm db:generate` (drizzle-kit). `tests/test_migrations.mjs`
+migrated with `pnpm db:generate -- --name <name>` (drizzle-kit; without
+`--name` it invents a random file name). `tests/test_migrations.mjs`
 fails if the schema and the committed migrations disagree, so **never
 hand-write a migration**. Ids are `text` primary keys: random 16-byte
 base64url for user-facing rows, deterministic hashes where idempotency needs
@@ -14,8 +15,8 @@ without the later tables:
 | Migration | Tables | Phase |
 | --- | --- | --- |
 | `0006_advisor_core` | `advisor_contacts`, `advisor_boats`, `advisor_crew`, `advisor_messages`, `advisor_media`, `advisor_reports`, `advisor_report_edits`, `advisor_reviews`; `users.role` | 1 (channel + intake) |
-| `0007_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 2 (angler answers) |
-| `0008_advisor_social` | `advisor_posts`, `advisor_post_stats` | 3 (social) |
+| `0007_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 3 (angler answers) |
+| `0008_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
 
 Column conventions: `*_at` ISO strings; `*_json` columns hold JSON text and
 are validated on read by a small parser in `server/advisor/types.ts`
@@ -34,9 +35,10 @@ One row per person (phone number) or web visitor.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | text PK | random |
-| `phone_hash` | text, unique, nullable | `HMAC-SHA256(ADVISOR_PHONE_KEY, e164)` hex. Null for web-only contacts. |
-| `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(ADVISOR_PHONE_KEY, e164))`. Decrypted only to send. |
+| `phone_hash` | text, unique, nullable | `HMAC-SHA256(K_hash, e164)` hex, where `K_hash = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'hash')`. Null for web-only contacts. |
+| `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
+| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0008) |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -69,6 +71,7 @@ Indexes: `contact_boat (boat_id)`, `contact_seen (last_seen_at)`.
 | `booking_url` | text, nullable | https only |
 | `phone_public` | text, nullable | a number the skipper wants on the boat page (not the contact's) |
 | `owner_contact_id` | text | the skipper's contact |
+| `status` | text | `pending` (default), `verified`, `rejected` (SK-4) |
 | `verified_at` | text, nullable | SK-4; set by admin |
 | `verified_by` | text, nullable | users.id of the admin |
 | `consent_photos_at` | text, nullable | SK-2; "yes" by text, recorded with the message id in `consent_message_id` |
@@ -110,6 +113,7 @@ Every inbound and outbound message on every channel.
 | `error` | text, nullable | short reason, no payloads |
 | `in_reply_to` | text, nullable | for outbound: the inbound message id |
 | `tokens_in`, `tokens_out` | integer, nullable | summed model usage for this turn (also goes to analytics) |
+| `created_by` | text, nullable | null for the engine; `users.id` when an admin replied from the queue |
 | `created_at` | text | |
 | `sent_at` | text, nullable | |
 
@@ -189,7 +193,7 @@ The admin queue (OP-1). One row per thing needing a human.
 | `id` | text PK | deterministic `sha256(kind + ':' + ref_id + ':' + reason)[:32]` so repeats update rather than duplicate |
 | `kind` | text | `media` (person in photo, angler submission), `report` (flagged or unverified-boat first report), `post` (every social draft until auto-approval exists), `skipper` (new registration), `conversation` (refusal, abuse, low confidence), `rule` (change-watch flagged a page) |
 | `ref_id` | text | the row in the kind's table |
-| `reason` | text | short code: `has_person`, `angler_photo`, `new_skipper`, `unverified_boat`, `refused`, `low_confidence`, `rule_source_changed`, `social_draft` |
+| `reason` | text | short code: `has_person`, `angler_photo`, `new_skipper`, `unverified_boat`, `owner_forgotten`, `refused`, `low_confidence`, `rules_without_tool`, `tool_loop`, `rule_source_changed`, `social_draft` |
 | `status` | text | `open`, `approved`, `edited`, `rejected` |
 | `note` | text, nullable | admin note |
 | `opened_at`, `decided_at` | text | |
@@ -205,8 +209,8 @@ The only source of regulations the advisor may quote (OP-6).
 | --- | --- | --- |
 | `id` | text PK | random |
 | `region` | text | region id, or `*` for statewide |
-| `jurisdiction` | text | e.g. `cdfw-central` (matches `jurisdictions/*.json` keys) |
-| `species_key` | text | from `catalog/species.json`, or a group key like `rockfish` |
+| `jurisdiction` | text | a `jurisdictions/*.json` id: `california-central`, `california-southern`, `california-san-francisco`, `california-mendocino`, `california-northern` |
+| `species_key` | text | from `catalog/species.json` or `catalog/advisor/species-extra.json` (sub-species such as `vermilion`, `canary`, `yelloweye`, `cowcod`, `cabezon`, each with a `parent` catalog key) |
 | `species_label` | text | |
 | `size_min_in` | real, nullable | minimum length, inches |
 | `size_max_in` | real, nullable | slot upper bound |
@@ -336,7 +340,7 @@ before deleting the contact (the send needs the number).
 **"send me my data"**: writes the export to R2 and texts a signed link valid
 24 hours (`GET /api/advisor/export/<token>`).
 
-## Privacy invariants (tested in `tests/advisor/test_privacy.mjs`)
+## Privacy invariants (tested in `tests/test_advisor_privacy.mjs`)
 
 - No table stores a phone number in clear. `phone_enc` decrypts only inside
   `channels/*.send()`; the decrypted value never reaches logs or analytics.
@@ -344,5 +348,9 @@ before deleting the contact (the send needs the number).
   patterns, intents, outcomes, counts and timings.
 - `console.log` lines in `server/advisor/` go through `advisorLog()` which
   strips anything matching an E.164 pattern or a 10-digit run before writing.
-- `check_repository.py`'s private-material scan is extended (task TA-C5) with
-  the fixture directory for the advisor so no real transcript can be committed.
+- `check_repository.py`'s private-material scan is extended (task TA-C5): over
+  `tests/fixtures/advisor/` and `docs/plans/text-advisor/` it rejects any
+  E.164 match `\+1\d{10}` except the fictional `+1555` series
+  (`\+1555\d{7}` and `+1\d{3}555\d{4}`), and any Instagram handle not in
+  `catalog/advisor/fixture-handles.json`. No bare 10-digit rule (it would hit
+  repository ids and timestamps).

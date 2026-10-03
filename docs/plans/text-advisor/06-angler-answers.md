@@ -15,8 +15,10 @@ Next). Code: `server/advisor/answers/*.ts` and the tools in 04.
   (verified boats only; unverified counted as "another boat reports…" without
   the name), the `landing-reports` confidence and species from the daily
   feed (`readFeed` of `data` → `reports[]`, the same records `dist/bite-evidence.js`
-  uses, with the Insufficient/Low/Moderate label computed by the same rules
-  in `web/confidence.ts`), the live conditions summary (wind, seas,
+  uses, with the Insufficient/Low/Moderate label computed by
+  `answers/confidence.ts`, a server re-implementation of the ladder in
+  `web/confidence.ts`; `server/` does not import from `web/`, so the test
+  pins both to the same fixtures), the live conditions summary (wind, seas,
   advisories) for today, and the active rules with any `stale` flags.
 - Generation is one model call with a fixed template prompt
   (`prompts/daily.ts`), output ≤ 480 chars, in both languages (two calls, or
@@ -49,9 +51,14 @@ plus the raw latest reports for a nuanced question.
    (→ both days), ISO dates; beyond the forecast horizon (7 days) → say so.
 2. Conditions for the day's fishing window (06:00–14:00 local unless the
    person said otherwise): from the regional forecast feed the trip checker
-   already reads (`server/trips.ts` `FeedCache` helpers are reused, not
-   copied): wind, gusts, seas, swell period and direction, and the comfort
-   rubric word from `web/score.ts` for the reference boat (the person's own
+   already reads: `server/trips.ts` exports only the `FeedCache` type, so
+   `answers/planning.ts` calls `readFeed(region.intelligence_feed)` and the
+   daily feed itself with its own small parsers (tested against the same
+   fixtures `tests/test_trip_queue.mjs` uses): wind, gusts, seas, swell
+   period and direction, and the comfort rubric word for the reference boat,
+   computed by `answers/comfort.ts` (a server copy of the few lines of
+   `web/score.ts` it needs, pinned by test to `web/score.ts` fixtures; the
+   person's own
    boat is unknown by text; say "for a mid-size center console"). Never a
    catch number.
 3. Advisories: NWS alerts for the port's zones from the daily feed; a Small

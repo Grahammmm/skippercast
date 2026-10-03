@@ -12,15 +12,22 @@ server-rendered page families so links in texts land on fast, shareable,
 indexable pages that work without JavaScript. They are rendered in the
 Worker by `pages/render.ts`, a 40-line template helper (tagged template
 `html` with auto-escaping, `raw()` for trusted fragments), styled by
-`dist/advisor/pages.css` (built by Vite as part of `dist/chat.html`'s
-stylesheet set, so it gets the hashed asset path through the page map). No
-new dependency.
+`dist/advisor/pages.css`. Vite hashes that file as part of `dist/chat.html`'s
+stylesheet set, and `scripts/build-worker.mjs` exposes the hashed paths to
+the Worker as the `ADVISOR_ASSETS` define (01 § touch points) because
+`SHELLS` maps HTML pages only. Every user-facing string in the templates is
+imported from `web/advisor/copy.ts`, which `scripts/check_copy.mjs` lints
+(the templates themselves are not under the lint). No new dependency.
 
 | Route | Content | Cache |
 | --- | --- | --- |
 | `GET /ports/<port-id>` | Port name and region; today's daily answer; published reports from verified boats, last 14 days, newest first (date, boat → boat page, trip, anglers, counts); unverified boats as "another boat" rows; conditions snapshot (reuses the API the map uses); active advisories; the boats list; species in season for the port (from `coastal-directory` data); "Text SkipperCast" CTA with the `sms:` link and a QR image (`/qr/text.svg`, generated once, static). | edge 5 min, key includes `advisor.pages.version` |
 | `GET /species/<key>` | Species name, photo-free ID notes and look-alike cues (`lookalikes.json`), the rules card from `advisor_rules` with source and reviewed date (`#rules` anchor; `stale` rows show "under review"), recent catches of this species across ports (counts by date), the strategy summary (same source as `get_strategy`), CTA. | edge 15 min |
 | `GET /boats/<slug>` | 05 § boat page. | edge 5 min |
+
+Edge caching uses `cached()`/`cacheKey()` with
+`build: build() + ':' + pagesVersion` (05 § boat page); the TTLs above are
+the `Cache-Control` max-age.
 | `GET /contact.vcf`, `GET /text`, `GET /u/<token>`, `GET /media/<id>.jpg` | 03. | varies |
 
 Each page has `<title>`, description, canonical, Open Graph image (the port
@@ -50,7 +57,10 @@ opens a panel. The island:
 ## Admin (OP-1, OP-5, OP-6, SK-4, social approvals)
 
 `dist/admin.html` + `web/admin/app.tsx` (Preact, hash-routed views) talking
-to `server/routes/admin.ts`. Access: passkey session (`requireUser`) and
+to `server/routes/admin.ts`. The URL is `/admin.html` (the shell Vite
+emits; views are `#queue`, `#skippers`, `#rules`, `#posts`, `#funnel`,
+`#health`); `routes/admin.ts` also answers `GET /admin` with a redirect to
+`/admin.html`. Access: passkey session (`requireUser`) and
 `requireAdmin` (`users.role='admin'`, else 404 so the page's existence is
 not confirmed to non-admins). All admin mutations are `POST` with the
 Origin check that `requireUser` already applies.
