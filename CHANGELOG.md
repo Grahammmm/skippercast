@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Qualify the original 2 m Monastery Beach–Cypress Point grid for the measured habitat pipeline; preserve mixed 2000–2006 dates, unknown datum and credited noncommercial terms. Source qualification alone adds no published fishing locations.
+
 - Seafloor: complete the remaining Arguello permanent spatial review so all 33 Monterey–Point Conception reaches can be screened. Reuse physical terrain; retain all 32 affected candidates as MPA exclusions, including four security overlaps. No new measured coverage or public fishing locations is claimed.
 
 - Add an isolated government-only seafloor input scope for separately reviewed commercial releases, retaining indirect calibration, whole-polygon screening and publication gates.

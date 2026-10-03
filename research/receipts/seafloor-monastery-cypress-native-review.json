@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-03T06:17:20.857832+00:00",
+  "source": {
+    "id": "csumb-monastery-cypress-2m-native",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/MonasteryBeach/multibeam/data/version2/products/Monastery_additional_products.tar.gz",
+    "landing_page": "https://www.ngdc.noaa.gov/ships/macginitie/MonasteryBeach_mb.html",
+    "publisher": "CSUMB SFML (NOAA NCEI distributor)",
+    "sha256": "2d07ac0cb8868b71759c16e4dade3ed895e4d2a2e07bc4b494ea2b3f7ecc1336",
+    "bytes": 322166166,
+    "resolution_m": 2.0,
+    "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
+    "vertical_datum": "unknown",
+    "year": 2006,
+    "archive_member": "Monastery_to_CypressPt/Mstr_CyPt_2mbathy_hill_slope.zip/ArcViewGrids/m_c2mbathy",
+    "native_grid_dimensions": [
+      3646,
+      3626
+    ],
+    "native_raster_bounds_wgs84": [
+      -122.00716344705309,
+      36.519279035903146,
+      -121.92526849716546,
+      36.58570894197616
+    ],
+    "cog_sha256": "a73f3d2bf9b2492c8a18cad07151acea9e26f6630216c6ab0dc521fa991ac47d",
+    "cog_bytes": 12106941,
+    "depth_basis": "nominal",
+    "native_valid_pixels": 5601340,
+    "nominal_0_300ft_pixels": 4320084,
+    "valid_nominal_shallow_native_footprint_km2": 17.290492287054896
+  },
+  "metadata": {
+    "original_member": "Monastery_to_CypressPt/Mstr_CyPt_2mbathy_hill_slope.zip/ArcViewGrids/m_c2mbathy/metadata.xml",
+    "sha256": "4070f82552b814581d566c7981dad1a14c945b58e498a1c6e326840a76548130",
+    "survey_years": [
+      2000,
+      2001,
+      2003,
+      2004,
+      2005,
+      2006
+    ],
+    "datum_statement": "Original bathymetry metadata describes adjustment to MLLW using predicted local tides. The separate NCEI 2000 raw-survey collection metadata uses generic MSL / EPSG:5715. These differing scopes do not establish a verified datum for the composite grid; normalized depth datum remains unknown.",
+    "horizontal_accuracy": "Producer approximate ±2m, varies with depth; confidence level unspecified.",
+    "vertical_accuracy": "Producer approximate ±20cm, varies with depth; confidence level unspecified; no uncertainty band.",
+    "processing": "CARIS cleaned soundings exported shoal-biased at1m, gridded in Fledermaus AverageGridder to2m, exported original ArcInfo grid; retained producer mask, no separate interpolation mask.",
+    "lineage": "Composite original, not an independent source from derived backscatter/hillshade/slope or USGS compilations sharing the same survey. Exact overlap lineage is unresolved, no independence bonus."
+  },
+  "rights": {
+    "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+    "checked_policy_sha256": "264c8cd165f7202fb8f9c128245e5da90b0a4497a0b5e704b67982c953348e63",
+    "review": {
+      "producer": "CSUMB SFML",
+      "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+      "source_sha256": "2d07ac0cb8868b71759c16e4dade3ed895e4d2a2e07bc4b494ea2b3f7ecc1336",
+      "reviewed_on": "2026-10-02",
+      "allowed_use": "noncommercial",
+      "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+      "navigation_use": false,
+      "for_profit_permission": "required-not-obtained"
+    },
+    "limitation": "General producer public-use policy permits credited noncommercial display; for-profit permission not obtained. NOAA hosting grants no new rights."
+  },
+  "acquisition_benefit": {
+    "retained_reach": "monterey-point-sur-r01",
+    "physical_input_hash": "abf5e90efc21c8c9649fe7ecae6ff7c34319e0ceedd0640a6b4459911970c0ba",
+    "gap_mask_sha256": "988b79cb94f3d32dd91a18ef158527d451db4c4c01cb4b82511a57b9c0230e0d",
+    "provisional_gap_intersection_m2": 21400.828107252564,
+    "limitations": "Source native nominal0–91.44m pixels intersect retained masks. Historical checked snapshot, not a new qualified reach result or release. Fragmented boundaries and approximate2m horizontal uncertainty limit interpretation of the small delta."
+  },
+  "validation": {
+    "adapter": "original-native-adapters-v1",
+    "native_resolution_preserved": true,
+    "datum_conversion": false,
+    "source_bytes_and_normalized_bytes_checked": true,
+    "normalized_content_identity": {
+      "version": "normalized-raster-content-v1",
+      "sha256": "e6fdb1b47482735e13cad8ffee9fa42bd90a3f33445547020f4e2bfed8a45f5c"
+    }
+  },
+  "fishing_target": false,
+  "exportable": false,
+  "new_measured_km2": 0,
+  "new_published_locations": 0,
+  "disposition": "Original native source qualified for credited noncommercial processing; physical habitat and whole-polygon publication screening remain separate."
+}
