@@ -42,6 +42,73 @@ def fake_fetch(url):
     return {'features': [{'attributes': {'OBJECTID': 1, 'DOWNLOAD_URL': 'https://www.ncei.noaa.gov/'}}]}, 'd'*64
 
 
+def current_inputs(folder, *, retained=('one',), published=('one',)):
+    sources = [{'id': ident, 'sha256': 'c' * 64, 'format': 'arcgrid',
+                'resolution_m': 2, 'archive_member': 'original', 'vertical_datum': 'unknown'}
+               for ident in retained]
+    inputs = {'sources': sources}
+    physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    checkpoint = json.loads((folder/'coverage-checkpoint.json').read_text())
+    checkpoint['physical_input_hash'] = physical_hash
+    (folder/'coverage-checkpoint.json').write_text(json.dumps(checkpoint))
+    (folder/'run.json').write_text(json.dumps({'inputs': inputs, 'physical_input_hash': physical_hash}))
+    ledger = folder/'ledger.json'; catalog = folder/'catalog.json'
+    ledger.write_text(json.dumps({'reaches': [{'id': 'test-reach', 'surveys_used': list(published)}]}))
+    catalog.write_text(json.dumps({'surveys': sources + [dict(sources[0], id=ident)
+                                                        for ident in published if ident not in retained]}))
+    return ledger, catalog
+
+
+def test_current_source_guard_rejects_stale_valid_snapshot_before_network():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); snapshot(folder, [cell(-270, -1420)])
+        ledger, catalog = current_inputs(folder, published=('one', 'two'))
+        with pytest.raises(ValueError, match='omits published contributors: two'):
+            discover_gaps(folder, lambda _: pytest.fail('No request for stale gaps'),
+                          current_ledger=ledger, current_catalog=catalog)
+
+
+def test_rights_only_refresh_resumes_but_new_published_contributor_does_not():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); snapshot(folder, [cell(-270+i, -1420) for i in range(3)])
+        ledger, catalog = current_inputs(folder, retained=('one', 'private-new'))
+        before = discover_gaps(folder, fake_fetch, max_cells=1, max_groups=1,
+                               current_ledger=ledger, current_catalog=catalog)
+        resume = folder/'resume.json'; resume.write_text(json.dumps(before))
+        current = json.loads(catalog.read_text()); current['surveys'][0]['license'] = 'new-review'
+        catalog.write_text(json.dumps(current))
+        after = discover_gaps(folder, fake_fetch, max_cells=1, max_groups=1, resume_from=resume,
+                              current_ledger=ledger, current_catalog=catalog)
+        assert after['start_group'] == 1 and after['next_group'] == 2
+        assert after['coverage_snapshot']['published_source_guard']['binding_sha256'] == before['coverage_snapshot']['published_source_guard']['binding_sha256']
+        assert after['new_measured_km2'] == 0
+        current = json.loads(ledger.read_text()); current['reaches'][0]['surveys_used'] += ['private-new']
+        ledger.write_text(json.dumps(current))
+        with pytest.raises(ValueError, match='Resume receipt differs'):
+            discover_gaps(folder, lambda _: pytest.fail('Changed contributors invalidate resume'),
+                          max_cells=1, max_groups=1, resume_from=resume,
+                          current_ledger=ledger, current_catalog=catalog)
+
+
+def test_cli_checks_published_sources_by_default_and_marks_explicit_history(monkeypatch, tmp_path):
+    from research.scripts.discover_noaa_multibeam_footprints import main
+    snapshot(tmp_path, [cell(-270, -1420, 62500)])
+    ledger, catalog = current_inputs(tmp_path, published=('one', 'two'))
+    (tmp_path/'dist/data').mkdir(parents=True); (tmp_path/'catalog').mkdir()
+    (tmp_path/'dist/data/seafloor-ledger.json').write_bytes(ledger.read_bytes())
+    (tmp_path/'catalog/surveys.json').write_bytes(catalog.read_bytes())
+    monkeypatch.chdir(tmp_path)
+    args = ['discover', '--coverage-folder', str(tmp_path), '--output', str(tmp_path/'out.json')]
+    monkeypatch.setattr('sys.argv', args)
+    with pytest.raises(ValueError, match='omits published contributors'):
+        main()
+    assert not (tmp_path/'out.json').exists()
+    monkeypatch.setattr('sys.argv', args + ['--allow-historical-snapshot'])
+    main()
+    guard = json.loads((tmp_path/'out.json').read_text())['coverage_snapshot']['published_source_guard']
+    assert guard == {'status': 'not-checked', 'current_coverage_claim': False}
+
+
 def test_queries_exact_zero_support_cells_and_excludes_partial_support():
     with TemporaryDirectory() as temp:
         folder = Path(temp)
