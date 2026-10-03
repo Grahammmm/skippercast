@@ -30,14 +30,14 @@
     "status": "passed",
     "sources": [
       {
-        "source_id": "csumb-scc-block04-2m-native",
+        "source_id": "csumb-scc-block07-2m-native",
         "status": "passed",
-        "normalized_receipt_sha256": "1a2d0c4378b0e04067621632d2270c9828cda641d2ec9e798de4330aacfc28f6",
+        "normalized_receipt_sha256": "7454facf794387cca1d03c3ad4ece2e702bdf0cd2406b7caddbd0786ceb31cb3",
         "depth_bytes_and_scientific_identity_verified": true,
         "original_archive_metadata_and_alignment_verified": true,
         "shape": [
-          1944,
-          6855
+          2389,
+          4338
         ],
         "resolution_m": [
           2.0,
@@ -45,14 +45,29 @@
         ]
       },
       {
-        "source_id": "csumb-scc-block05-2m-native",
+        "source_id": "csumb-scc-block07-5m-native",
         "status": "passed",
-        "normalized_receipt_sha256": "20931e11e946630047a22a2a601f7f604edc964282a841be71f03fbd70077e2f",
+        "normalized_receipt_sha256": "6ae660284a8e4d043100de6df5cff30b19d418f29dee2878e03cb8fdb32943a6",
         "depth_bytes_and_scientific_identity_verified": true,
         "original_archive_metadata_and_alignment_verified": true,
         "shape": [
-          2115,
-          5948
+          982,
+          1073
+        ],
+        "resolution_m": [
+          5.0,
+          5.0
+        ]
+      },
+      {
+        "source_id": "csumb-scc-block08-2m-native",
+        "status": "passed",
+        "normalized_receipt_sha256": "aca852519c69d105b1eb405d5bd975238fc524a976d635ccb8dafe90e20527f9",
+        "depth_bytes_and_scientific_identity_verified": true,
+        "original_archive_metadata_and_alignment_verified": true,
+        "shape": [
+          2590,
+          4790
         ],
         "resolution_m": [
           2.0,
@@ -60,127 +75,23 @@
         ]
       },
       {
-        "source_id": "csumb-scc-block06-2m-native",
+        "source_id": "csumb-scc-block08-5m-native",
         "status": "passed",
-        "normalized_receipt_sha256": "d11c20ec32c24c5e3f824ecbe36de1eecd20927d55124918f5ab37a04e7777a3",
+        "normalized_receipt_sha256": "b8b097862e1bd4290b5fbfa03d447823e5078156ee5f12f12b541780495c0376",
         "depth_bytes_and_scientific_identity_verified": true,
         "original_archive_metadata_and_alignment_verified": true,
         "shape": [
-          2512,
-          4391
+          932,
+          1088
         ],
         "resolution_m": [
-          2.0,
-          2.0
+          5.0,
+          5.0
         ]
       }
     ]
   },
   "bounded_reach_proofs": [
-    {
-      "reach": "south-big-sur-san-simeon-r03",
-      "status": "passed",
-      "physical_only": true,
-      "measured_cells_identical": true,
-      "source_selection_identical": true,
-      "before": {
-        "selected_valid_km2": 70.103262405,
-        "tier1_km2": 73.8525,
-        "physical_candidate_count": 865,
-        "physical_candidate_area_km2": 4.079294559464473,
-        "source_counts": {
-          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 13,
-          "csumb-scc-block01-2m-native": 358,
-          "csumb-scc-block02-2m-native": 463,
-          "csumb-scc-block03-2m-native": 29,
-          "csumb-scc-block04-2m-native": 2
-        },
-        "roughness_thresholds": {
-          "vrm_samples": 5093883,
-          "vrm": 0.004077624063938856,
-          "bpi_fine_m_samples": 4940458,
-          "bpi_fine_m": 0.657591425454839
-        },
-        "run_input_hash": "d32fd337cd7f5a5b45a6dea903503009328b296bb868d09ebe1443806563c738",
-        "run_sha256": "1a9e43e647198c7bff2307cea955de70794eb055ebc8ea7b668b40868dc13143",
-        "physical_reused": false
-      },
-      "after": {
-        "selected_valid_km2": 70.103262405,
-        "tier1_km2": 73.8525,
-        "physical_candidate_count": 839,
-        "physical_candidate_area_km2": 3.862362774325527,
-        "source_counts": {
-          "bss-block01-additional-products-tar-gz-fbfc03dfd0": 13,
-          "csumb-scc-block01-2m-native": 347,
-          "csumb-scc-block02-2m-native": 447,
-          "csumb-scc-block03-2m-native": 30,
-          "csumb-scc-block04-2m-native": 2
-        },
-        "roughness_thresholds": {
-          "vrm_samples": 4844115,
-          "vrm": 0.004316071979701519,
-          "bpi_fine_m_samples": 4707483,
-          "bpi_fine_m": 0.6732135937769161
-        },
-        "run_input_hash": "443dd402959b5f39115764a0b52bbd00b6d9e0832e5deacd62dd3e54e2c2c679",
-        "run_sha256": "574eabb8a88803c28d14bc08261dbf8bee3bc196d18629de9f38f27e63655bb4",
-        "physical_reused": false
-      },
-      "new_acquisition_km2": 0,
-      "new_public_locations": 0,
-      "note": "Private screen-deferred comparison. Shared calibration may change unbound contributors. Candidate components and terrain interpretation are not new measured coverage."
-    },
-    {
-      "reach": "cambria-san-simeon-r01",
-      "status": "passed",
-      "physical_only": true,
-      "measured_cells_identical": true,
-      "source_selection_identical": true,
-      "before": {
-        "selected_valid_km2": 49.586900426,
-        "tier1_km2": 52.315625,
-        "physical_candidate_count": 462,
-        "physical_candidate_area_km2": 7.718066445243624,
-        "source_counts": {
-          "csumb-scc-block03-2m-native": 154,
-          "csumb-scc-block04-2m-native": 256,
-          "csumb-scc-block05-2m-native": 52
-        },
-        "roughness_thresholds": {
-          "vrm_samples": 9860094,
-          "vrm": 0.000532995443791151,
-          "bpi_fine_m_samples": 9632567,
-          "bpi_fine_m": 0.33609190285147966
-        },
-        "run_input_hash": "b4953800740bd0bc563ea7bb140cb4caf6ed587cc6f7b939d7534e92df303968",
-        "run_sha256": "325de5d5ae9b7f6ebfe77253cced4bb137397460e2adbabef9aabefe930cb8d4",
-        "physical_reused": false
-      },
-      "after": {
-        "selected_valid_km2": 49.586900426,
-        "tier1_km2": 52.315625,
-        "physical_candidate_count": 340,
-        "physical_candidate_area_km2": 1.2587181339221132,
-        "source_counts": {
-          "csumb-scc-block03-2m-native": 170,
-          "csumb-scc-block04-2m-native": 162,
-          "csumb-scc-block05-2m-native": 8
-        },
-        "roughness_thresholds": {
-          "vrm_samples": 1937091,
-          "vrm": 0.007717143278568983,
-          "bpi_fine_m_samples": 1854165,
-          "bpi_fine_m": 0.7064118502642012
-        },
-        "run_input_hash": "91d5f0832d3bf75ac97f55aa1b0cd9a9b63830f1fc90c42bbc50f365d62d9f5c",
-        "run_sha256": "fa52d9f7de5e650dbdfef945add59c93576c11a76039dfb4c3e3c853345f935d",
-        "physical_reused": false
-      },
-      "new_acquisition_km2": 0,
-      "new_public_locations": 0,
-      "note": "Private screen-deferred comparison. Shared calibration may change unbound contributors. Candidate components and terrain interpretation are not new measured coverage."
-    },
     {
       "reach": "cambria-san-simeon-r02",
       "status": "passed",
@@ -188,28 +99,6 @@
       "measured_cells_identical": true,
       "source_selection_identical": true,
       "before": {
-        "selected_valid_km2": 62.784835494,
-        "tier1_km2": 65.8475,
-        "physical_candidate_count": 290,
-        "physical_candidate_area_km2": 11.380444852795693,
-        "source_counts": {
-          "csumb-scc-block04-2m-native": 2,
-          "csumb-scc-block05-2m-native": 41,
-          "csumb-scc-block06-2m-native": 168,
-          "csumb-scc-block07-2m-native": 73,
-          "csumb-scc-block08-2m-native": 6
-        },
-        "roughness_thresholds": {
-          "vrm_samples": 15003612,
-          "vrm": 0.00012462299491744488,
-          "bpi_fine_m_samples": 14677359,
-          "bpi_fine_m": 0.29915200280263954
-        },
-        "run_input_hash": "6b55de9e105685db5a2560d82ea952c2f763ab145c7426435657822e66a8df1a",
-        "run_sha256": "47ae39d643e646943fa88c90883f9baa4493faa750f4d862a848fac59a720d23",
-        "physical_reused": false
-      },
-      "after": {
         "selected_valid_km2": 62.784835494,
         "tier1_km2": 65.8475,
         "physical_candidate_count": 391,
@@ -227,30 +116,125 @@
           "bpi_fine_m_samples": 6367732,
           "bpi_fine_m": 0.43981665894667293
         },
-        "run_input_hash": "e7314e5d68e8b6413a92709017eacec5652ca0684d7e89fba0bb1d9394f1e197",
         "run_sha256": "f2ead3b973011019d4e29b4261442a8c3de1ca7dec6ee15750b4f4c742dbec84",
+        "input_hash": "e7314e5d68e8b6413a92709017eacec5652ca0684d7e89fba0bb1d9394f1e197",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 62.784835494,
+        "tier1_km2": 65.8475,
+        "physical_candidate_count": 281,
+        "physical_candidate_area_km2": 0.9558074636770527,
+        "source_counts": {
+          "csumb-scc-block04-2m-native": 3,
+          "csumb-scc-block05-2m-native": 55,
+          "csumb-scc-block06-2m-native": 102,
+          "csumb-scc-block07-2m-native": 120,
+          "csumb-scc-block08-2m-native": 1
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 1690877,
+          "vrm": 0.009960928931832314,
+          "bpi_fine_m_samples": 1599699,
+          "bpi_fine_m": 0.8321740486477153
+        },
+        "run_sha256": "1cc84b344ca210c7ea93b64cc46fff79b55b8ec316d57d0317627d1539f2d058",
+        "input_hash": "cdabaabd321dd508258339f645d234beb3273f61f3f70afe31218d48357d10c5",
         "physical_reused": false
       },
       "new_acquisition_km2": 0,
       "new_public_locations": 0,
-      "note": "Private screen-deferred comparison. Shared calibration may change unbound contributors. Candidate components and terrain interpretation are not new measured coverage."
+      "note": "Private comparison; rough-support classification changes shared calibration and component boundaries. No new acquisition or legal clearance."
+    },
+    {
+      "reach": "morro-bay-r01",
+      "status": "passed",
+      "physical_only": true,
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "before": {
+        "selected_valid_km2": 43.135426739,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 460,
+        "physical_candidate_area_km2": 8.209351251764286,
+        "source_counts": {
+          "csumb-scc-block07-2m-native": 32,
+          "csumb-scc-block08-2m-native": 299,
+          "csumb-scc-block09-2m-native": 129
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 9850536,
+          "vrm": 0.0025630653835833073,
+          "bpi_fine_m_samples": 9624079,
+          "bpi_fine_m": 0.41328008439473474
+        },
+        "run_sha256": "9f103f8943af35cd946675d1e20d9fc07693a96b7c5a87f9d5dd43f7512c1ed7",
+        "input_hash": "7b491b67c572fa51f500975c88f456b2d53686031147694042849a6cdf9a2fb8",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 43.135426739,
+        "tier1_km2": 45.5,
+        "physical_candidate_count": 540,
+        "physical_candidate_area_km2": 5.024818145035042,
+        "source_counts": {
+          "csumb-scc-block07-2m-native": 28,
+          "csumb-scc-block08-2m-native": 317,
+          "csumb-scc-block09-2m-native": 195
+        },
+        "roughness_thresholds": {
+          "vrm_samples": 5969249,
+          "vrm": 0.005252511240541935,
+          "bpi_fine_m_samples": 5823458,
+          "bpi_fine_m": 0.5001913386366005
+        },
+        "run_sha256": "61652e055c6accfbd21df4c190d9c83bb7f6d5380970cbcaab249611a5dee68c",
+        "input_hash": "b90323f6113bf7d42039944f3b2b4137ab52fa3e50b356950becf3d1c9ddff64",
+        "physical_reused": false
+      },
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "note": "Private comparison; rough-support classification changes shared calibration and component boundaries. No new acquisition or legal clearance."
     }
   ],
   "native_candidate_review": {
-    "audit_sha256": "b7838f9021a3cb88bd2e877748d7ba8ef0ee437379b410f8eb9bf503eec7ae2d",
-    "audited_script_sha256": "163ee0cc2055b4ae2b30814f533b1aee76427c2c48e878ea7001ee1ce6f47798",
-    "numeric_candidate_count": 457,
-    "visually_sampled_count": 18,
-    "pages_opened": 6,
-    "sample_method": "All, or uniformly spaced indices sorted by source ID and descending area; numeric diagnostics cover every feature.",
-    "source_resolution_m": 2,
-    "native_center_rough_fraction_min": 0.991869918699187,
-    "native_center_nodata_count": 0,
-    "depth_min_m": 6.449999809265137,
-    "depth_max_m": 81.2699966430664,
-    "assessment": "All 457 directly bound physical candidates checked against original depth and class centers; 18 deterministic panels show localized outcrops, ridges and rough/smooth transitions. Some contexts retain parallel noise patterns; this is not exhaustive acquisition-artifact, sounding-accuracy or substrate verification. Original categorical support was not altered; ranks and scoring constants remain unchanged.",
-    "source_resolver": "Exact normalized receipts used by retained physical runs; checksums and reviewed scientific identities verified, excluding legacy unknown-datum cache files.",
-    "public_locations": 0
+    "audit_sha256": "ca8b817215cd1bdcef97c6d5c23d8c24faf698d765bd861d9440d80bfe8cdee3",
+    "script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "candidate_count": 466,
+    "sampled_native_views": 18,
+    "pages": [
+      {
+        "file": "page-01.png",
+        "sha256": "9f084ad655afc90962d89cc3bab59ad59099f690506d22c04ed635c6ceedef46"
+      },
+      {
+        "file": "page-02.png",
+        "sha256": "d3e5babce346623e79e5001bf45c3e40ad77059ac2b7576c56773fc8e4a23f7f"
+      },
+      {
+        "file": "page-03.png",
+        "sha256": "af870b0e1428d0e959b7a859752981b7adf0f3fe3f75ef556c5f5ea9f2a4ed30"
+      },
+      {
+        "file": "page-04.png",
+        "sha256": "14b9c425ca33382e5d0c951e99b6a5deb5e91b7db1d33fde0d038014c795ffce"
+      },
+      {
+        "file": "page-05.png",
+        "sha256": "8c8cb72e2058e92fea441d8b6634f961cef9167bc703c8bd1b242202d9875700"
+      },
+      {
+        "file": "page-06.png",
+        "sha256": "32fd2011d78fbebefefcceac236bd5e826028c7bd230f98a6361345866f1249a"
+      }
+    ],
+    "all_numeric_diagnostics_reviewed": true,
+    "primary_all_pages_reviewed": true,
+    "native_depth_min_m": 6.550000190734863,
+    "native_depth_max_m": 80.95999908447266,
+    "minimum_rough_native_center_fraction": 0.9906542056074766,
+    "class_nodata_centers": 0,
+    "limitation": "Native-center diagnostics and18 uniformly spaced views, not exhaustive artifact exclusion or substrate ground truth."
   },
   "products": [
     {
