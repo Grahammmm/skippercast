@@ -42,36 +42,38 @@ class SourceRightsTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 source_rights(bad, today=NOW.date())
 
-    def test_point_lobos_namespace_requires_unchanged_producer_review(self):
+    def test_exact_macginitie_products_require_unchanged_producer_review(self):
         row = csumb_row()
-        url = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
-               'PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz')
-        row['url'] = url
-        receipt = dict(row['adapter_review'], source_id=row['id'],
-                       source_bytes=row['bytes'], horizontal_crs=row['horizontal_crs'])
-        public = qualify_row(row, receipt, rights_url=CSUMB_POLICY)
-        validate_manifest({'surveys': [public]}, ROOT)
-        rights = source_rights(public, today=NOW.date())
-        self.assertEqual(rights['commercial_use'], 'permission-required')
-        self.assertFalse(rights['navigation_use'])
-        with self.assertRaisesRegex(ValueError, 'For-profit'):
-            source_rights(public, use='for-profit', today=NOW.date())
-        bad = deepcopy(row)
-        bad['rights_review']['source_sha256'] = '0'*64
-        with self.assertRaises(ValueError):
-            source_rights(bad, today=NOW.date())
-        for bad_url in (url.replace('/PointLobos/', '/OtherSurvey/'),
-                    url.replace('/PointLobos/', '/PointLobos/../OtherSurvey/'),
-                    url.replace('/PointLobos/', '/PointLobos/%2e%2e/OtherSurvey/'),
-                    url.replace('/PointLobos/', '/PointLobos/%252e%252e/OtherSurvey/'),
-                    url + '/../OtherSurvey/original.tar.gz',
-                    url + '?redirect=OtherSurvey',
-                    url.replace('PointLobos_additional_products.tar.gz', 'another.tar.gz'),
-                        url.replace('/PointLobos/', '/PointLobos-other/'),
-                        url.replace('data.ngdc.noaa.gov/', 'data.ngdc.noaa.gov.evil.test/'),
-                        url.replace('https:', 'http:')):
-            with self.subTest(url=bad_url), self.assertRaises(ValueError):
-                source_rights(dict(row, url=bad_url), today=NOW.date())
+        for survey, filename in (('PointLobos', 'PointLobos_additional_products.tar.gz'),
+                                 ('MonasteryBeach', 'Monastery_additional_products.tar.gz')):
+            url = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
+                   + survey + '/multibeam/data/version2/products/' + filename)
+            row['url'] = url
+            receipt = dict(row['adapter_review'], source_id=row['id'],
+                           source_bytes=row['bytes'], horizontal_crs=row['horizontal_crs'])
+            public = qualify_row(row, receipt, rights_url=CSUMB_POLICY)
+            validate_manifest({'surveys': [public]}, ROOT)
+            rights = source_rights(public, today=NOW.date())
+            self.assertEqual(rights['commercial_use'], 'permission-required')
+            self.assertFalse(rights['navigation_use'])
+            with self.assertRaisesRegex(ValueError, 'For-profit'):
+                source_rights(public, use='for-profit', today=NOW.date())
+            bad = deepcopy(row)
+            bad['rights_review']['source_sha256'] = '0'*64
+            with self.assertRaises(ValueError):
+                source_rights(bad, today=NOW.date())
+            for bad_url in (url.replace('/' + survey + '/', '/OtherSurvey/'),
+                        url.replace('/' + survey + '/', '/' + survey + '/../OtherSurvey/'),
+                        url.replace('/' + survey + '/', '/' + survey + '/%2e%2e/OtherSurvey/'),
+                        url.replace('/' + survey + '/', '/' + survey + '/%252e%252e/OtherSurvey/'),
+                        url + '/../OtherSurvey/original.tar.gz',
+                        url + '?redirect=OtherSurvey',
+                        url.replace(filename, 'another.tar.gz'),
+                            url.replace('/' + survey + '/', '/' + survey + '-other/'),
+                            url.replace('data.ngdc.noaa.gov/', 'data.ngdc.noaa.gov.evil.test/'),
+                            url.replace('https:', 'http:')):
+                with self.subTest(url=bad_url), self.assertRaises(ValueError):
+                    source_rights(dict(row, url=bad_url), today=NOW.date())
 
     def test_paid_deployment_cannot_enable_noncommercial_sources_or_weaken_policy(self):
         import tempfile

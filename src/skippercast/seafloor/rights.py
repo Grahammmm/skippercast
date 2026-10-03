@@ -8,6 +8,9 @@ CSUMB_CREDIT = ('Data used in this study were acquired, processed, archived, and
 CSUMB_NOTICE = 'Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.'
 POINT_LOBOS_ARCHIVE = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
                      'PointLobos/multibeam/data/version2/products/PointLobos_additional_products.tar.gz')
+MONASTERY_ARCHIVE = ('https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/'
+                     'MonasteryBeach/multibeam/data/version2/products/Monastery_additional_products.tar.gz')
+CSUMB_EXACT_ARCHIVES = frozenset((POINT_LOBOS_ARCHIVE, MONASTERY_ARCHIVE))
 CSUMB_ARCHIVES = (
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/',
@@ -35,7 +38,7 @@ def source_rights(row, *, use="noncommercial", today=None):
             or review.get('navigation_use') is not False
             or review.get('for_profit_permission') != 'required-not-obtained'
             or not (row.get('url', '').startswith(CSUMB_ARCHIVES)
-                    or row.get('url') == POINT_LOBOS_ARCHIVE)
+                    or row.get('url') in CSUMB_EXACT_ARCHIVES)
             or not ('CSUMB' in row.get('publisher', '') or 'CSU Monterey Bay' in row.get('publisher', ''))):
         raise ValueError('Source publication rights are unqualified or conflict with producer review')
     try:
