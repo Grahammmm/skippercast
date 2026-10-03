@@ -121,7 +121,7 @@
       "metadata_sha256": "9d545bc5c408502d987e3bfec9b53ed54430c7baa5659bbb81baa62f341ed526"
     },
     "lineage": "This block replaces earlier Vandenberg MPA-only coverage. Producer habitat, substrate, VRM, slope and TPI layers share the same bathymetry; do not count them as independent surveys.",
-    "artifact_mask": "Narrative describes manually smoothing likely artifacts. No separately named georeferenced artifact mask identified in inspected archive inventory; proprietary Fledermaus scene internals were not decoded.",
+    "artifact_mask": "Narrative describes manually assigning likely-artifact exclusions to the smooth class; it does not establish modification of measured depth. No separately named georeferenced artifact mask identified in inspected archive inventory; proprietary Fledermaus scene internals were not decoded.",
     "ground_truth_scope": "No independent seabed video/sample product identified in inspected archive inventory. This does not establish that none exists elsewhere."
   },
   "acoustic_texture_review": {

@@ -198,7 +198,8 @@
     "dist/data/seafloor-pge-mid-native-terrain-review.json",
     "dist/data/seafloor-pge-mid-terrain-binding-review.json",
     "dist/data/seafloor-pge-avila-native-terrain-review.json",
-    "dist/data/seafloor-pge-avila-terrain-binding-review.json"
+    "dist/data/seafloor-pge-avila-terrain-binding-review.json",
+    "dist/data/seafloor-scc26-28-release-review.json"
   ],
   "surveys": [
     {
@@ -15896,7 +15897,7 @@
       "resolution_m": 2,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
       "bytes": 132219786,
       "hold_reason": "unknown",
@@ -15905,11 +15906,12 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "SCC_Blk26_2m_bathygrids.zip/ArcViewGrids/scc26_2mbathy",
       "evidence": [
         "catalog/csumb-scc-south-native-sources.json#/sources/0",
-        "research/receipts/seafloor-scc26-terrain-review.json#/products/0"
+        "research/receipts/seafloor-scc26-terrain-review.json#/products/0",
+        "research/receipts/seafloor-scc26-28-release-review.json#/sources/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/0/acquisition_dates",
@@ -15920,7 +15922,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Qualified for credited noncommercial public use under the reviewed original-producer policy; for-profit and navigation use remain prohibited. Candidate-level metric and spatial holds remain required. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
@@ -15971,6 +15973,16 @@
           "research/receipts/seafloor-scc26-terrain-review.json#/products/0"
         ],
         "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "79ad0fa8da6fd15862883dbfa2ad1fd012db0587f5ca46fd4b5c41ff23fb16f8",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
@@ -15981,7 +15993,7 @@
       "resolution_m": 2,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
       "bytes": 99165563,
       "hold_reason": "unknown",
@@ -15990,11 +16002,12 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "SCC_Blk27_2m_bathygrids.zip/ArcViewGrids/scc27_2mbathy",
       "evidence": [
         "catalog/csumb-scc-south-native-sources.json#/sources/1",
-        "research/receipts/seafloor-scc27-terrain-review.json#/products/0"
+        "research/receipts/seafloor-scc27-terrain-review.json#/products/0",
+        "research/receipts/seafloor-scc26-28-release-review.json#/sources/1"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/1/acquisition_dates",
@@ -16005,7 +16018,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Qualified for credited noncommercial public use under the reviewed original-producer policy; for-profit and navigation use remain prohibited. Candidate-level metric and spatial holds remain required. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
@@ -16056,6 +16069,16 @@
           "research/receipts/seafloor-scc27-terrain-review.json#/products/0"
         ],
         "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "412810f1bc7d087f26b285cd5d6146d5c71f3bdc1ab9dca9e4c6744d209f0ac8",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {
@@ -16066,7 +16089,7 @@
       "resolution_m": 2,
       "horizontal_crs": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4269]],CONVERSION[\"UTM zone 10N\",METHOD[\"Transverse Mercator\",ID[\"EPSG\",9807]],PARAMETER[\"Latitude of natural origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8801]],PARAMETER[\"Longitude of natural origin\",-123,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8802]],PARAMETER[\"Scale factor at natural origin\",0.9996,SCALEUNIT[\"unity\",1],ID[\"EPSG\",8805]],PARAMETER[\"False easting\",500000,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"METERS\",1],ID[\"EPSG\",8807]],ID[\"EPSG\",16010]],CS[Cartesian,2],AXIS[\"easting\",east,ORDER[1],LENGTHUNIT[\"METERS\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"METERS\",1]]]",
       "vertical_datum": "NAVD88",
-      "license": "unknown",
+      "license": "csumb-public-use-noncommercial",
       "sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
       "bytes": 54389235,
       "hold_reason": "unknown",
@@ -16075,11 +16098,12 @@
       "format": "arcgrid",
       "kind": "bathymetry",
       "derived_from": [],
-      "status": "physical-only",
+      "status": "usable",
       "archive_member": "SCC_Blk28_2m_bathygrids.zip/ArcViewGrids/scc28_2mbathy",
       "evidence": [
         "catalog/csumb-scc-south-native-sources.json#/sources/2",
-        "research/receipts/seafloor-scc28-terrain-review.json#/products/0"
+        "research/receipts/seafloor-scc28-terrain-review.json#/products/0",
+        "research/receipts/seafloor-scc26-28-release-review.json#/sources/2"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-south-native-sources.json#/sources/2/acquisition_dates",
@@ -16090,7 +16114,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Private physical processing only; rights are not granted and publication/export remain prohibited. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Qualified for credited noncommercial public use under the reviewed original-producer policy; for-profit and navigation use remain prohibited. Candidate-level metric and spatial holds remain required. Source-specific native rough-terrain support now constrains calibration and habitat extraction; measured-depth validity is unchanged. Same-survey interpretation does not establish substrate or current fish presence.",
       "adapter_review": {
         "adapter_version": "original-native-adapters-v1",
         "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
@@ -16141,6 +16165,16 @@
           "research/receipts/seafloor-scc28-terrain-review.json#/products/0"
         ],
         "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+      },
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "1dc5394f5926638188f12e3ac6b2aab445da18a356554a5ab9a1254091159492",
+        "producer": "CSUMB SFML",
+        "reviewed_on": "2026-10-02",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained"
       }
     },
     {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Qualify SCC26–28 native depth for credited noncommercial mapping, retaining MPA, security and edge-support holds while refining all affected habitat calibration.
+
 - Refine Avila habitat with the original native terrain classes, retaining measured depth and Block J's private quality hold.
 
 - Recover missing feed worktrees after runner cleanup so recurring source discovery can load its inputs, while preserving locked and unrelated worktrees.
