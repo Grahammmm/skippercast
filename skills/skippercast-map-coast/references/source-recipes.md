@@ -193,6 +193,14 @@ order-statistic median and sample RMS dispersion. Dispersion is not calibrated
 uncertainty. ESRI corners and the writer's ten-significant-digit rounding are
 explicit: all plausible neighboring boundary bins are withheld, not shifted.
 
+After that unchanged parity check, store the order-statistic depth from the
+complete printed beam table with its contributor extrema. The official grid and
+beam readers can print depths at different precision; mixing their medians and
+extrema can fail the strict range check even for a single sounding. Preserve the
+supplied grid and table hashes, record the maximum median difference and stored
+depth basis, and retain the existing parity tolerance. This does not recover
+unprinted source precision, improve accuracy or repair source positions.
+
 The private five-band COG retains positive-down depth, good-sounding count,
 median dispersion, and contributor minimum/maximum depth. Missing cells,
 registration ambiguity and bins crossing zero or 91.44 m are masked. Grids

@@ -170,3 +170,34 @@ def test_grid_roles_cannot_be_swapped(tmp_path):
     grids, receipt, pairs, _ = setup_batch(tmp_path)
     with pytest.raises(ValueError, match='roles'):
         prepare([grids[1],grids[0],grids[2]],receipt,pairs,tmp_path,tmp_path/'out.tif')
+
+
+@pytest.mark.parametrize('offset', [-0.00004, 0.00004])
+def test_printed_reader_precision_preserves_strict_contributor_range(tmp_path, monkeypatch, offset):
+    """A real raw-survey failure: rounded grid median escapes printed extrema."""
+    h, z, c, sd, points = fixture_arrays()
+    z[0, 0] = -47.9794 + offset; c[0, 0] = 3; sd[0, 0] = 0
+    lon, lat = points[0, :2]
+    points = np.vstack([[[lon, lat, 47.9794]]*3, points[2:]])
+    monkeypatch.setattr(__import__(__name__, fromlist=['fixture_arrays']),
+                        'fixture_arrays', lambda: (h, z, c, sd, points))
+    grids, receipt, pairs, _ = setup_batch(tmp_path)
+    output = tmp_path/'normalized.tif'
+    result = prepare(grids, receipt, pairs, tmp_path, output)
+    from rasterio.windows import Window
+    from skippercast.seafloor.adapters.multibeam_grid import supported_window
+    with rasterio.open(output) as ds:
+        values, supported = supported_window(ds, Window(0, 0, 1, 1))
+    assert supported[0, 0]
+    assert values[0, 0, 0] == values[3, 0, 0] == values[4, 0, 0] == np.float32(47.9794)
+    assert result['count_support_mismatches'] == 0
+    assert result['maximum_grid_table_median_difference_m'] == pytest.approx(abs(offset))
+    assert result['stored_depth_basis'].startswith('reconciled complete printed')
+    assert not result['source_qualified'] and not result['exportable']
+
+
+def test_reader_precision_does_not_expand_median_parity_tolerance():
+    h, z, c, sd, points = fixture_arrays()
+    z[0, 0] += 0.0002
+    with pytest.raises(ValueError, match='median or dispersion parity'):
+        reconcile(h, z, c, sd, points, epsg=32610)
