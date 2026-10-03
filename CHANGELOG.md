@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an isolated government-only seafloor input scope for separately reviewed commercial releases, retaining indirect calibration, whole-polygon screening and publication gates.
+
 - Make browser map checks independent of live boundary-feed timing, retaining the production MPA gates and testing that unavailable current checks still withhold fishing targets.
 
 - Qualify SCC26–28 native depth for credited noncommercial mapping, retaining MPA, security and edge-support holds while refining all affected habitat calibration.

@@ -29,6 +29,7 @@ from .terrain_support import verify_sources as verify_terrain_support
 from .screen import load_snapshot, input_identity, screen_candidates
 from .resolution_profile import fine_detail_valid
 from .normalized import verify_review
+from .source_scope import scoped_manifest
 
 VERSION = 'native-coverage-habitat-v2'
 
@@ -116,7 +117,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     scope = unary_union([cell_geometry(c) for c in cells])
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
     sources = []
-    manifest = load_manifest(root)
+    manifest, source_scope = scoped_manifest(root, load_manifest(root))
     for row in manifest['surveys']:
         if not physical_source(row, physical_only=physical_only):
             continue
@@ -136,7 +137,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         verify_review(receipt, row['adapter_review'], selected_path)
         sources.append({'row': row, 'path': selected_path, 'receipt': receipt})
     rules = validate_rules(read_json(root / 'catalog/habitat-rules.json'))
-    bindings = resolve_bindings(rules, manifest)
+    bindings = resolve_bindings(rules, manifest, scoped=source_scope is not None)
     source_ids = {s['row']['id'] for s in sources}
     bindings = {key: value for key, value in bindings.items() if key in source_ids}
     verify_sources(bindings, root=root, fetch=fetch)
@@ -153,7 +154,9 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
               'scoring_sha256': sha256(Path(__file__).parents[1] / 'atlas/scoring.py'),
               'requirements_sha256': sha256(root / 'requirements-survey.txt'),
               'implementation': {n: sha256(Path(__file__).parent / n)
-                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py')}}
+                                 for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py', 'source_scope.py')}}
+    if source_scope is not None:
+        inputs['source_scope'] = source_scope
     physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
@@ -197,6 +200,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         tier1_checkpoint = sum(c['band_area_m2'] for c in classified if c['tier'] == 1)/1e6
         band_checkpoint = sum(c['band_area_m2'] for c in classified)/1e6
         atomic_json(folder/'coverage-checkpoint.json', {
+            **({'source_scope': source_scope} if source_scope is not None else {}),
             'physical_input_hash': physical_hash,
             'catalog_sha256': sha256(root/'catalog/surveys.json'),
             'rules_sha256': sha256(root/'catalog/habitat-rules.json'),

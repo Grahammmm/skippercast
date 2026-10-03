@@ -25,7 +25,7 @@ PHYSICAL = ('cells.json', 'terrain.json', 'candidates.geojson', 'atlas-compariso
 OUTPUTS = (*PHYSICAL, 'physical.json', 'habitat.geojson', 'held.geojson')
 RELEASE_FIELDS = {'status', 'license', 'rights_review', 'hold_reason', 'notes'}
 IMPLEMENTATION = ('coverage.py', 'terrain.py', 'run.py', 'habitat.py',
-                  'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py')
+                  'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py', 'source_scope.py')
 
 
 def digest(value):
@@ -40,6 +40,9 @@ def adopt_private(reach_id, *, root=REPO):
     """Adopt into a new public cache; never overwrite an existing reach."""
     from .run import VERSION
     root = Path(root)
+    from .source_scope import processing_scope
+    if processing_scope(root) != 'all':
+        raise ValueError('Scoped government inputs require normal processing, not private adoption')
     reaches = read_json(root/'catalog/reaches.json')
     if not any(r['id'] == reach_id for r in reaches['reaches']):
         raise ValueError('Unknown reach')

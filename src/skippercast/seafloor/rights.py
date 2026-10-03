@@ -88,11 +88,14 @@ def check_deployment(root):
     import json
     from pathlib import Path
     use = deployment_use(root)
-    rows = json.loads((Path(root)/'catalog/surveys.json').read_text())['surveys']
+    from .source_scope import scoped_manifest
+    manifest, scope = scoped_manifest(root, json.loads((Path(root)/'catalog/surveys.json').read_text()))
+    rows = manifest['surveys']
     for row in rows:
         if row['status'] == 'usable':
             source_rights(row, use=use)
-    return {'source_use': use, 'usable_sources': sum(r['status'] == 'usable' for r in rows)}
+    return {'source_use': use, 'usable_sources': sum(r['status'] == 'usable' for r in rows),
+            **({'source_scope': scope} if scope is not None else {})}
 
 
 if __name__ == '__main__':

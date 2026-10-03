@@ -14,6 +14,7 @@ from skippercast.platform.contracts import REPO, read_json
 from .coverage import cell_geometry
 from .io import sha256
 from .manifest import load_manifest, physical_source
+from .source_scope import scoped_manifest
 
 
 def private_progress(root, ledger, manifest):
@@ -49,7 +50,7 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
     regions = {r['region'] for r in ledger['reaches']}
     if region and region not in regions and region != ledger['scope']:
         raise ValueError('Unknown seafloor region')
-    manifest = load_manifest(root)
+    manifest, source_scope = scoped_manifest(root, load_manifest(root))
     if physical_only and progress is None:
         progress = private_progress(root, ledger, manifest)
     reference = root/'var/seafloor/reference/cells.json'
@@ -85,6 +86,7 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
                  key=lambda r: (-r['reviewed_window_band_estimate_km2'], r['reach']))[:max_new]
     selected = [r for r in rows if r['processed']] + new
     return {'version': 1, 'scope': region or ledger['scope'], 'physical_only': physical_only,
+        **({'source_scope': source_scope} if source_scope is not None else {}),
         'survey_status_counts': dict(Counter(r['status'] for r in manifest['surveys'])),
         'totals': ledger['totals'], 'reaches': rows,
         'selected': [{'reach': r['reach'], 'region': r['region']} for r in selected],
