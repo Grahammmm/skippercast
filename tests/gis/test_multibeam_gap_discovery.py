@@ -174,3 +174,202 @@ def test_large_polygon_uses_post_instead_of_exceeding_url_limits(monkeypatch):
     assert seen[0].data.startswith(b'geometry=')
     module.fetch_json(module.LAYER + '?f=json')
     assert isinstance(seen[1], str)
+
+
+def native_fixture(folder):
+    """Two measured masks fill four columns; the fifth is not measured shallow."""
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+    cache = folder/'cache'; receipts, sources = [], []
+    for index in range(2):
+        source_hash = str(index+1)*64
+        inputs = {'source_id': f'source-{index}', 'source_sha256': source_hash}
+        key = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+        path = cache/source_hash/(key+'.tif'); path.parent.mkdir(parents=True)
+        depth = np.full((5, 5), np.nan, dtype='float32')
+        if index == 0:
+            depth[:, :3] = 30
+            depth[:, 3] = 91.4401  # Just outside the nominal ceiling; not support.
+        else:
+            depth[:, 3] = 91.44  # The ceiling itself is included.
+            depth[:, 4] = 0      # Zero is not submerged support.
+        with rasterio.open(path, 'w', driver='GTiff', width=5, height=5, count=1,
+                           dtype='float32', nodata=np.nan, crs='EPSG:3310',
+                           transform=from_origin(-67500, -354750, 50, 50)) as dst:
+            dst.write(depth, 1); dst.set_band_description(1, 'depth_m_positive_down')
+        receipt = {'inputs': inputs, 'source_id': inputs['source_id'], 'source_sha256': source_hash,
+                   'cog_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                   'requested_bounds_wgs84': [-125, 34, -118, 38],
+                   'native_resolution_m': [50,50], 'vertical_datum': 'unknown',
+                   'valid_pixels_in_requested_bounds': int(np.isfinite(depth).sum()),
+                   'nominal_0_300ft_pixels_in_requested_bounds': int(((depth>0)&(depth<=91.44)).sum())}
+        path.with_suffix('.json').write_text(json.dumps(receipt))
+        receipts.append(receipt); sources.append({'id': inputs['source_id'], 'sha256': source_hash,
+                                                 'adapter_review': dict(receipt)})
+    snapshot(folder, [cell(-270, -1420, 37500)])
+    inputs = {'sources': sources}
+    physical = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    checkpoint = folder/'coverage-checkpoint.json'; cp = json.loads(checkpoint.read_text())
+    cp['physical_input_hash'] = physical; checkpoint.write_text(json.dumps(cp))
+    (folder/'run.json').write_text(json.dumps({'inputs': inputs, 'physical_input_hash': physical,
+                                            'source_receipts': receipts}))
+    return cache
+
+
+def rings_geometry(group):
+    # Esri exterior clockwise, holes anticlockwise, including disconnected parts.
+    rings = group['query_geometry']['rings']
+    outers = [Polygon(r) for r in rings if not Polygon(r).exterior.is_ccw]
+    holes = [Polygon(r) for r in rings if Polygon(r).exterior.is_ccw]
+    return unary_union(outers).difference(unary_union(holes))
+
+
+def test_native_masks_find_partial_gap_without_querying_any_supported_bottom(monkeypatch):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        assert gap_sectors(folder)[0] == []  # Reproduces the excluded-partial blocker.
+        groups, receipt = gap_sectors(folder, cache_root=cache)
+        gap = rings_geometry(groups[0])
+        assert gap.area == pytest.approx(12500)
+        assert gap.bounds == (-67300, -355000, -67250, -354750)
+        assert not gap.contains(Point(-67325, -354875))  # Overlapping second source fills this.
+        assert receipt['partial_support_cells_excluded'] == 0
+        assert receipt['zero_support_cell_count'] == 0
+        from skippercast.seafloor import coverage
+        monkeypatch.setattr(coverage, 'footprint', lambda *a, **k: pytest.fail('Reuse checked mask'))
+        assert gap_sectors(folder, cache_root=cache) == (groups, receipt)
+        result = discover_gaps(folder, fake_fetch, cache_root=cache)
+        assert result['new_measured_km2'] == 0 and not result['exportable']
+
+
+@pytest.mark.parametrize('corruption', ['raster', 'run', 'missing-source', 'geometry'])
+def test_native_mask_corruption_never_queries(corruption):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        gap_sectors(folder, cache_root=cache)
+        if corruption == 'raster':
+            next(cache.glob('*/*.tif')).write_bytes(b'corrupt')
+        elif corruption == 'geometry':
+            p = next((folder/'acquisition-support').glob('*.json'))
+            d = json.loads(p.read_text()); d['geometry']['coordinates'] = []
+            p.write_text(json.dumps(d))
+        else:
+            p = folder/'run.json'; d = json.loads(p.read_text())
+            if corruption == 'run': d['inputs']['sources'].pop()
+            else: d['source_receipts'].pop()
+            p.write_text(json.dumps(d))
+        with pytest.raises(ValueError, match='verification|checkpoint|complete'):
+            discover_gaps(folder, lambda u: pytest.fail('Corrupt support must not query'), cache_root=cache)
+
+
+def test_resume_cannot_switch_from_whole_cells_to_native_masks():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        result = discover_gaps(folder, fake_fetch)
+        p = folder/'resume.json'; p.write_text(json.dumps(result))
+        with pytest.raises(ValueError, match='differs'):
+            discover_gaps(folder, fake_fetch, cache_root=cache, resume_from=p)
+
+
+def update_native_fixture_source(folder, cache, index, *, fill=False, hole=False):
+    import rasterio
+    import numpy as np
+    p = next((cache/(str(index+1)*64)).glob('*.tif'))
+    with rasterio.open(p, 'r+') as ds:
+        if fill:
+            values = ds.read(1); values[:, 4] = 30; ds.write(values, 1)
+        if hole:
+            mask = np.full((5,5), 255, dtype='uint8'); mask[2,1] = 0; ds.write_mask(mask)
+    receipt = json.loads(p.with_suffix('.json').read_text())
+    receipt['cog_sha256'] = hashlib.sha256(p.read_bytes()).hexdigest()
+    p.with_suffix('.json').write_text(json.dumps(receipt))
+    run_path = folder/'run.json'; run = json.loads(run_path.read_text())
+    run['source_receipts'][index] = receipt
+    run['inputs']['sources'][index]['adapter_review'] = dict(receipt)
+    run['physical_input_hash'] = hashlib.sha256(json.dumps(run['inputs'], sort_keys=True).encode()).hexdigest()
+    run_path.write_text(json.dumps(run))
+    cp_path = folder/'coverage-checkpoint.json'; cp = json.loads(cp_path.read_text())
+    cp['physical_input_hash'] = run['physical_input_hash']; cp_path.write_text(json.dumps(cp))
+
+
+def test_union_can_fully_cover_a_cell_with_only_partially_selected_support():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        update_native_fixture_source(folder, cache, 1, fill=True)
+        result = discover_gaps(folder, lambda u: pytest.fail('Fully covered union needs no request'), cache_root=cache)
+        assert result['queried_group_count'] == 0
+
+
+def test_native_nodata_hole_and_owned_edges_survive_geometry_batching():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        update_native_fixture_source(folder, cache, 0, hole=True)
+        snapshot(folder, [cell(-270,-1420,35000), cell(-269,-1420)])
+        cp_path = folder/'coverage-checkpoint.json'; cp = json.loads(cp_path.read_text())
+        cp['physical_input_hash'] = json.loads((folder/'run.json').read_text())['physical_input_hash']
+        cp_path.write_text(json.dumps(cp))
+        groups, _ = gap_sectors(folder, max_cells=1, cache_root=cache)
+        geometries = [rings_geometry(g) for g in groups]
+        assert len(groups) == 2
+        assert geometries[0].area == pytest.approx(15000)
+        assert geometries[0].contains(Point(-67425,-354875))  # Native mask hole.
+        assert geometries[1].area == pytest.approx(62500)
+        assert geometries[0].intersection(geometries[1]).area == 0
+        assert unary_union(geometries).area == pytest.approx(77500)
+
+
+def test_legal_only_run_change_reuses_physical_support(monkeypatch):
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        groups, before = gap_sectors(folder, cache_root=cache)
+        p = folder/'run.json'; run = json.loads(p.read_text())
+        run['inputs']['screen'] = {'version': 'new-legal-screen'}
+        run['inputs']['screen_implementation_sha256'] = 'b'*64
+        p.write_text(json.dumps(run))
+        from skippercast.seafloor import coverage
+        monkeypatch.setattr(coverage, 'footprint', lambda *a, **k: pytest.fail('Legal change must not reread masks'))
+        after_groups, after = gap_sectors(folder, cache_root=cache)
+        assert after_groups == groups
+        assert after['native_support_sha256'] == before['native_support_sha256']
+        assert after['retained_run_sha256'] != before['retained_run_sha256']
+
+
+def test_self_consistent_substituted_cog_cannot_override_pinned_source_review():
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        original_run = json.loads((folder/'run.json').read_text())
+        update_native_fixture_source(folder, cache, 1, fill=True)
+        substituted = json.loads((folder/'run.json').read_text())
+        # Preserve the pinned source rows/physics; substitute only the external receipt/cache.
+        substituted['inputs'] = original_run['inputs']
+        substituted['physical_input_hash'] = original_run['physical_input_hash']
+        (folder/'run.json').write_text(json.dumps(substituted))
+        cp = json.loads((folder/'coverage-checkpoint.json').read_text())
+        cp['physical_input_hash'] = original_run['physical_input_hash']
+        (folder/'coverage-checkpoint.json').write_text(json.dumps(cp))
+        with pytest.raises(ValueError, match='reviewed manifest'):
+            discover_gaps(folder, lambda u: pytest.fail('Substituted raster must not query'), cache_root=cache)
+
+
+def test_lossless_cog_encoding_can_use_reviewed_scientific_identity():
+    import rasterio.shutil
+    from skippercast.seafloor.normalized import raster_identity
+    with TemporaryDirectory() as temp:
+        folder = Path(temp); cache = native_fixture(folder)
+        p = next((cache/('1'*64)).glob('*.tif'))
+        run_path = folder/'run.json'; run = json.loads(run_path.read_text())
+        review = run['inputs']['sources'][0]['adapter_review']
+        review['raster_identity'] = raster_identity(p)
+        physical = hashlib.sha256(json.dumps(run['inputs'], sort_keys=True).encode()).hexdigest()
+        run['physical_input_hash'] = physical
+        temp_path = p.with_suffix('.reencoded.tif'); rasterio.shutil.copy(p, temp_path, driver='GTiff', compress='DEFLATE')
+        temp_path.replace(p)
+        receipt = run['source_receipts'][0]
+        receipt['cog_sha256'] = hashlib.sha256(p.read_bytes()).hexdigest()
+        assert receipt['cog_sha256'] != review['cog_sha256']
+        p.with_suffix('.json').write_text(json.dumps(receipt)); run_path.write_text(json.dumps(run))
+        cp_path = folder/'coverage-checkpoint.json'; cp = json.loads(cp_path.read_text())
+        cp['physical_input_hash'] = physical; cp_path.write_text(json.dumps(cp))
+        groups, _ = gap_sectors(folder, cache_root=cache)
+        assert rings_geometry(groups[0]).area == pytest.approx(12500)
