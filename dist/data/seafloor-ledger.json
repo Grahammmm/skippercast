@@ -3321,7 +3321,7 @@
     "band_km2": 3307.514375,
     "tier0_km2": 1744.249375,
     "tier1_km2": 1563.265,
-    "tier2_km2": 96.196329,
+    "tier2_km2": 77.565069,
     "tier3_km2": 0,
     "unknown_reference_within_band_cells_km2": 5.018125,
     "selected_valid_km2": 1494.565937
@@ -3349,12 +3349,12 @@
         "csumb-scc-block13-2m-native",
         "csumb-scc-block14-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:36:22.156488+00:00",
+      "last_survey_run": "2026-10-03T11:02:18.309112+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 11.854559458,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "3672d46f755bef98bddc329da04bda9f85c39449c3eed6865f7cc4dbf2a9123e",
+      "survey_run_hash": "3d4d38edc3488d2d8573825b9c71852d243ec5a83ef5b966cba64f5b8f23b63c",
       "held_candidate_count": 0,
       "roughness_thresholds": {
         "vrm_samples": 143926,
@@ -3380,7 +3380,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3408,11 +3408,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3422,9 +3422,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3432,7 +3432,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -3514,12 +3514,12 @@
         "csumb-scc-block12-2m-native",
         "csumb-scc-block13-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:36:42.718449+00:00",
+      "last_survey_run": "2026-10-03T11:02:40.283632+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 30.351221842,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "8983d90e503f7b12767c251609e3c418818a2d00611dbc661ac22584e16eb544",
+      "survey_run_hash": "c02e204a50a1ec4e0c6d280df1d63a41cc98892016291abebd60e0da6cc640b5",
       "held_candidate_count": 5,
       "roughness_thresholds": {
         "vrm_samples": 553405,
@@ -3545,7 +3545,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3573,11 +3573,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3587,9 +3587,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3597,7 +3597,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -3676,12 +3676,12 @@
         "csumb-scc-block14-2m-native",
         "csumb-scc-block15-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:36:54.504773+00:00",
+      "last_survey_run": "2026-10-03T11:02:54.316349+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 19.302560467,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "b9c4017a29005d552cbcf07e1800dcee2325c29a6ca8a7b771c4f31b61e17528",
+      "survey_run_hash": "990c7869f1e4991fa126f5b12a4600c5512744ad192965f17470dbbf2e029ed9",
       "habitat_count": 14,
       "held_candidate_count": 0,
       "habitat_by_grade": {
@@ -3691,7 +3691,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3719,11 +3719,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3733,9 +3733,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3743,7 +3743,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -3841,12 +3841,12 @@
         "csumb-scc-block11-5m-native",
         "csumb-scc-block12-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:36:21.219876+00:00",
+      "last_survey_run": "2026-10-03T11:02:39.387189+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 54.170951596,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "e0fa2202f08a351d70523fa0ba928a5c15f45a1d70be6e136f0e0f14eb47eed3",
+      "survey_run_hash": "758c1eec6129a458a7898c4294c18acb627efbb71a749e14ed87c52526ab2228",
       "held_candidate_count": 26,
       "roughness_thresholds": {
         "vrm_samples": 3365780,
@@ -3872,7 +3872,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3900,11 +3900,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3914,9 +3914,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3924,7 +3924,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4007,12 +4007,12 @@
         "csumb-scc-block14-2m-native",
         "csumb-scc-block15-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:36:52.180645+00:00",
+      "last_survey_run": "2026-10-03T11:03:08.779424+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 59.525159317,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "7de38ffd3f2fdeb6a39e6e7651cdfb17f7ee9ef1069ea82ea12769b64118e885",
+      "survey_run_hash": "f6c43fea2567e2438391917c57ea94c93f3eb410d3b403b8008df104452a7de5",
       "habitat_count": 376,
       "held_candidate_count": 33,
       "habitat_by_grade": {
@@ -4024,7 +4024,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4052,11 +4052,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4066,9 +4066,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4076,7 +4076,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4176,12 +4176,12 @@
         "csumb-scc-block10-2m-native",
         "csumb-scc-block10-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:37:25.325017+00:00",
+      "last_survey_run": "2026-10-03T11:03:43.768724+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 43.135426739,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "269186a31cfd3027beb96c349e7d2c0303699f5bdf14b490b1198cee19e4ac72",
+      "survey_run_hash": "9e1043c1ce0863576e5b374269c6f477cc11d1065cbf92a5f7d6143edced5e8a",
       "habitat_count": 469,
       "held_candidate_count": 71,
       "habitat_by_grade": {
@@ -4193,7 +4193,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4221,11 +4221,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4235,9 +4235,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4245,7 +4245,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4346,12 +4346,12 @@
         "csumb-pge-mid-blocke-2m-native",
         "csumb-pge-mid-blocke-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:41:53.596239+00:00",
+      "last_survey_run": "2026-10-03T11:03:32.374007+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.921421631,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "db7a8070680b723b4d2862afe499e04775264ea7e34e3181f68a20c8d321744f",
+      "survey_run_hash": "6e9f112f7404977c52ccce52278647879b734e6ca6b8f78a8252089c23265639",
       "habitat_count": 314,
       "held_candidate_count": 244,
       "habitat_by_grade": {
@@ -4363,7 +4363,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4391,11 +4391,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4405,9 +4405,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4415,7 +4415,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4515,12 +4515,12 @@
         "csumb-scc-block08-2m-native",
         "csumb-scc-block08-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:40:40.086777+00:00",
+      "last_survey_run": "2026-10-03T11:05:08.334516+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 62.784835494,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "b1ad37a470c922047fe65d824127447fcfd85362e09ddf772d0f4cccbef60eeb",
+      "survey_run_hash": "75ceca22b6e0addf920042d6fc3cb8dab4723362de5980786312c472ca7d3db3",
       "habitat_count": 65,
       "held_candidate_count": 216,
       "habitat_by_grade": {
@@ -4532,7 +4532,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4560,11 +4560,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4574,9 +4574,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4584,7 +4584,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4682,12 +4682,12 @@
         "csumb-pge-mid-blocke-2m-native",
         "csumb-pge-mid-blocke-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:43:06.752414+00:00",
+      "last_survey_run": "2026-10-03T11:04:33.640999+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 60.95992344,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "2135f0915dbf9bf6cbc6cb76c7f05a4267af0c373a0ed5ca59501e4d47372442",
+      "survey_run_hash": "68acee3c88df124f5ebb25c07b9e814c908fb491f033a482c44c9987db23c0af",
       "habitat_count": 967,
       "held_candidate_count": 25,
       "habitat_by_grade": {
@@ -4699,7 +4699,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4727,11 +4727,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4741,9 +4741,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4751,7 +4751,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -4849,12 +4849,12 @@
         "csumb-scc-block05-2m-native",
         "csumb-scc-block05-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:41:00.925369+00:00",
+      "last_survey_run": "2026-10-03T11:05:35.845550+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 49.586900426,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "7ea30e8a62e949245a2f7e9909f073b474ae3af9a6c9e092663f5d275a814584",
+      "survey_run_hash": "1c37c1944658d529da145243d13d54372999ff6912fe90da08007b73b5e6ab7a",
       "habitat_count": 310,
       "held_candidate_count": 30,
       "habitat_by_grade": {
@@ -4865,7 +4865,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4893,11 +4893,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4907,9 +4907,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4917,7 +4917,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5010,12 +5010,12 @@
       "surveys_used": [
         "csumb-pge-avila-blocki-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:43:23.520752+00:00",
+      "last_survey_run": "2026-10-03T11:04:48.133686+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 29.619600545,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "29eba9d83f2b798e0e8521a5bd1a2e6867a5060251795891bbd452c94e7f6dc4",
+      "survey_run_hash": "0e7bff4dc8262a2523ceaed40ab8de19be49028f6a1e4fe854f8e622294f5d4c",
       "habitat_count": 144,
       "held_candidate_count": 2,
       "habitat_by_grade": {
@@ -5026,7 +5026,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5054,11 +5054,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5068,9 +5068,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5078,7 +5078,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5168,12 +5168,12 @@
       "surveys_used": [
         "csumb-pge-avila-blocki-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:40:21.460914+00:00",
+      "last_survey_run": "2026-10-03T11:04:03.045326+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 6.040838581,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "647483b7bf9f1f006586d0c1176925c32d299fecc5bf0bc3cb3ef3e472d26b6f",
+      "survey_run_hash": "cbe8f740ce589e6a4c9b100108e08e3ce12b8c6a595de239fa24e6308b2ac9ee",
       "habitat_count": 0,
       "held_candidate_count": 0,
       "habitat_by_grade": {},
@@ -5181,7 +5181,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5209,11 +5209,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5223,9 +5223,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5233,7 +5233,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5311,18 +5311,18 @@
       "band_km2": 92.726875,
       "tier0_km2": 18.874375,
       "tier1_km2": 73.8525,
-      "tier2_km2": 0.476124332,
+      "tier2_km2": 0.381160154,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.18875,
       "polygons_by_grade": {
-        "A": 3,
-        "B": 16,
-        "C": 31
+        "A": 1,
+        "B": 19,
+        "C": 29
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 37,
-        "metric-support-incomplete": 37,
-        "overlap-cdfw-mpa": 776
+        "habitat-contract-incomplete": 36,
+        "metric-support-incomplete": 36,
+        "overlap-cdfw-mpa": 656
       },
       "surveys_used": [
         "bss-block01-additional-products-tar-gz-fbfc03dfd0",
@@ -5333,24 +5333,24 @@
         "csumb-scc-block04-2m-native",
         "csumb-scc-block04-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:41:37.727579+00:00",
+      "last_survey_run": "2026-10-03T11:06:08.423867+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 70.103262405,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "3fcbceca13b5e58307f9bf2baffbf97377c789a35449134c1cd301067931c706",
-      "habitat_count": 50,
-      "held_candidate_count": 789,
+      "survey_run_hash": "a0c634636f8fc0a4a9a52b5ed412e1c8ea37a1671e915e1c3055a362448bd38f",
+      "habitat_count": 49,
+      "held_candidate_count": 670,
       "habitat_by_grade": {
-        "A": 3,
-        "B": 16,
-        "C": 31
+        "A": 1,
+        "B": 19,
+        "C": 29
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5378,11 +5378,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5392,9 +5392,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5402,7 +5402,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5453,14 +5453,14 @@
           }
         ]
       },
-      "physical_candidate_count": 839,
+      "physical_candidate_count": 719,
       "processing_incomplete": false,
-      "physical_input_hash": "2b59e15101ea2a03aee3232d3ce888e41c33ca874954680b9b06836ce4cf1bd0",
+      "physical_input_hash": "592cb7182109f71e90558c9257cb9744cba6df54430ecd35fcea52bab6b5a10f",
       "roughness_thresholds": {
-        "vrm_samples": 4844115,
-        "vrm": 0.004316071979701519,
-        "bpi_fine_m_samples": 4707483,
-        "bpi_fine_m": 0.6732135937769161
+        "vrm_samples": 3714201,
+        "vrm": 0.005748715251684189,
+        "bpi_fine_m_samples": 3609685,
+        "bpi_fine_m": 0.7656026494347734
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -5493,12 +5493,12 @@
         "csumb-scc-block16-2m-native",
         "csumb-scc-block17-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:41:57.398969+00:00",
+      "last_survey_run": "2026-10-03T11:05:40.787353+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 37.988569789,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "b0d735e74b7ac8d04620f02e92f1456298029a8c80360129166aa32ef9d7d2aa",
+      "survey_run_hash": "305cfd0273713878405a1f31c4f808d04e596be8e705803dc8e4cdafb3c2ee3b",
       "habitat_count": 0,
       "held_candidate_count": 0,
       "habitat_by_grade": {},
@@ -5506,7 +5506,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5534,11 +5534,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5548,9 +5548,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5558,7 +5558,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5636,17 +5636,17 @@
       "band_km2": 70.735,
       "tier0_km2": 13.148125,
       "tier1_km2": 57.586875,
-      "tier2_km2": 10.768023271,
+      "tier2_km2": 0.22242025,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.169375,
       "polygons_by_grade": {
-        "A": 3,
-        "B": 4,
-        "C": 549
+        "A": 0,
+        "B": 6,
+        "C": 49
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 52,
-        "metric-support-incomplete": 51
+        "habitat-contract-incomplete": 11,
+        "metric-support-incomplete": 11
       },
       "surveys_used": [
         "bss-block01-additional-products-tar-gz-fbfc03dfd0",
@@ -5654,24 +5654,23 @@
         "bss-block03-additional-products-tar-gz-ad317d80e0",
         "csumb-bss-block03-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:42:08.559598+00:00",
+      "last_survey_run": "2026-10-03T11:07:11.684598+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.452019066,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "ddf9bfabb79fb8e07950422c51755d03c8d07a26a80de2a089eec42d3ad9550e",
-      "habitat_count": 556,
-      "held_candidate_count": 52,
+      "survey_run_hash": "dcff405cbb81ffe019d5f62b5823784aacfc123552f1a96f5a3c7f2881bcd9b2",
+      "habitat_count": 55,
+      "held_candidate_count": 11,
       "habitat_by_grade": {
-        "A": 3,
-        "B": 4,
-        "C": 549
+        "B": 6,
+        "C": 49
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5699,11 +5698,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5713,9 +5712,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5723,7 +5722,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5774,14 +5773,14 @@
           }
         ]
       },
-      "physical_candidate_count": 608,
+      "physical_candidate_count": 66,
       "processing_incomplete": false,
-      "physical_input_hash": "7b68e43503ae96d140b771f25e6b2754b2470c529b9ddd1daaa3736a459ccefc",
+      "physical_input_hash": "938e19ae585e0c2a7752cb091604233d461244c308e58a7c8a35832f9fd74357",
       "roughness_thresholds": {
-        "vrm_samples": 13277615,
-        "vrm": 2.22930630116025e-05,
-        "bpi_fine_m_samples": 13060319,
-        "bpi_fine_m": 0.15795507809716144
+        "vrm_samples": 332631,
+        "vrm": 0.006145547144114971,
+        "bpi_fine_m_samples": 308832,
+        "bpi_fine_m": 0.8792236971720322
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -5819,12 +5818,12 @@
         "csumb-scc-block19-2m-native",
         "csumb-scc-block20-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:42:56.396048+00:00",
+      "last_survey_run": "2026-10-03T11:06:00.797368+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 72.671626676,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "bdfcd64fa5cf305d878b62602445dec70512ff91b5fbe93223885b590952d911",
+      "survey_run_hash": "a6687e53831d61ac1d21de9a58c047a9f2b98a880f4dace96b942f928310a96a",
       "habitat_count": 206,
       "held_candidate_count": 10,
       "habitat_by_grade": {
@@ -5835,7 +5834,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5863,11 +5862,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5877,9 +5876,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5887,7 +5886,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -5965,17 +5964,17 @@
       "band_km2": 53.0675,
       "tier0_km2": 14.188125,
       "tier1_km2": 38.879375,
-      "tier2_km2": 6.415418019,
+      "tier2_km2": 6.307299789,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.07,
       "polygons_by_grade": {
         "A": 3,
         "B": 4,
-        "C": 307
+        "C": 299
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 39,
-        "metric-support-incomplete": 37
+        "habitat-contract-incomplete": 31,
+        "metric-support-incomplete": 29
       },
       "surveys_used": [
         "bss-block03-additional-products-tar-gz-ad317d80e0",
@@ -5987,24 +5986,24 @@
         "csumb-bss-block06-2m-native",
         "csumb-bss-block06-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:42:32.380615+00:00",
+      "last_survey_run": "2026-10-03T11:08:08.863240+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 35.920569123,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "95c7e457c228281adccebb9d1e5fab5c9b787be5a15680a35e162432b1395242",
-      "habitat_count": 314,
-      "held_candidate_count": 39,
+      "survey_run_hash": "7d9e34ed016021f4fd6b63b4de96587990881f4ffb9026dacf9f5bb75e7612c2",
+      "habitat_count": 306,
+      "held_candidate_count": 31,
       "habitat_by_grade": {
         "A": 3,
         "B": 4,
-        "C": 307
+        "C": 299
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6032,11 +6031,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6046,9 +6045,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6056,7 +6055,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6107,14 +6106,14 @@
           }
         ]
       },
-      "physical_candidate_count": 353,
+      "physical_candidate_count": 337,
       "processing_incomplete": false,
-      "physical_input_hash": "5a5380dc2c3d67e295ec30f8dd98d7175d8af33500f6f68f58c962d040f0654a",
+      "physical_input_hash": "e2e2bbce47ed0390816454f036b9822765d665f5455c4989a064102ed3263544",
       "roughness_thresholds": {
-        "vrm_samples": 7906255,
-        "vrm": 4.1479390347376466e-05,
-        "bpi_fine_m_samples": 7697974,
-        "bpi_fine_m": 0.17238650140002573
+        "vrm_samples": 7737094,
+        "vrm": 4.155633723712526e-05,
+        "bpi_fine_m_samples": 7552929,
+        "bpi_fine_m": 0.17360766868755342
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -6134,13 +6133,13 @@
       "band_km2": 53.9875,
       "tier0_km2": 10.74625,
       "tier1_km2": 43.24125,
-      "tier2_km2": 3.822069494,
+      "tier2_km2": 0.651934128,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.000625,
       "polygons_by_grade": {
-        "A": 1,
-        "B": 2,
-        "C": 40
+        "A": 0,
+        "B": 0,
+        "C": 99
       },
       "held_by_reason": {
         "habitat-contract-incomplete": 7,
@@ -6152,24 +6151,22 @@
         "csumb-scc-block21-2m-native",
         "csumb-scc-block22-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:43:35.451930+00:00",
+      "last_survey_run": "2026-10-03T11:06:34.784380+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 41.445754655,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "dea0449f5051d5c6e9f2f909787fbc81eb7b72d8692474ad9e5b863d2369686e",
-      "habitat_count": 43,
+      "survey_run_hash": "a4622340d30f18abe7273c6055e2ec77b7c3cfc8e34e930d5663727dd6a4060b",
+      "habitat_count": 99,
       "held_candidate_count": 7,
       "habitat_by_grade": {
-        "A": 1,
-        "B": 2,
-        "C": 40
+        "C": 99
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6197,11 +6194,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6211,9 +6208,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6221,7 +6218,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6272,14 +6269,14 @@
           }
         ]
       },
-      "physical_candidate_count": 50,
+      "physical_candidate_count": 106,
       "processing_incomplete": false,
-      "physical_input_hash": "a8773cc5c7be0607ef182785a23752e3520044f810385210f76f1246b5d9d7c6",
+      "physical_input_hash": "218e6952884e343bff0bc43ec4081c67484f6cd6b59d8d6eb076806a303b408d",
       "roughness_thresholds": {
-        "vrm_samples": 4776004,
-        "vrm": 9.417172987014055e-05,
-        "bpi_fine_m_samples": 4655971,
-        "bpi_fine_m": 0.22631685686382563
+        "vrm_samples": 661119,
+        "vrm": 0.005527222994714975,
+        "bpi_fine_m_samples": 637486,
+        "bpi_fine_m": 0.5756042939458262
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -6321,12 +6318,12 @@
         "csumb-bss-block09-2m-native",
         "csumb-bss-block09-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:45:00.232842+00:00",
+      "last_survey_run": "2026-10-03T11:08:31.819140+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 22.66896488,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "f9d4a986a26d8b01d14dad3428247c055ea919b05aad6afb8855c42746352aac",
+      "survey_run_hash": "c339fa5b0d02cf7f73a264fa01855664a1b0aac2ab850e304ba1ac473382d3bb",
       "habitat_count": 239,
       "held_candidate_count": 23,
       "habitat_by_grade": {
@@ -6338,7 +6335,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6366,11 +6363,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6380,9 +6377,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6390,7 +6387,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6468,18 +6465,18 @@
       "band_km2": 210.5575,
       "tier0_km2": 138.65875,
       "tier1_km2": 71.89875,
-      "tier2_km2": 8.166707745,
+      "tier2_km2": 3.454268075,
       "tier3_km2": 0,
       "unknown_reference_within_band_cells_km2": 0.194375,
       "polygons_by_grade": {
         "A": 0,
-        "B": 11,
-        "C": 150
+        "B": 30,
+        "C": 495
       },
       "held_by_reason": {
-        "habitat-contract-incomplete": 7,
-        "metric-support-incomplete": 7,
-        "overlap-cdfw-mpa": 58
+        "habitat-contract-incomplete": 19,
+        "metric-support-incomplete": 19,
+        "overlap-cdfw-mpa": 120
       },
       "surveys_used": [
         "csumb-scc-block22-2m-native",
@@ -6487,23 +6484,23 @@
         "csumb-scc-block24-2m-native",
         "csumb-scc-block25-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:44:58.923839+00:00",
+      "last_survey_run": "2026-10-03T11:06:54.021521+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 69.353977618,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "f33b32938a7eb21ec05783cda75fe1ece88787a6ec807e5634a1abb667f725b0",
-      "habitat_count": 161,
-      "held_candidate_count": 64,
+      "survey_run_hash": "a04b569ede8cf5027f327fbf4fdf18500a73185cac152d697ae69ff4595108d1",
+      "habitat_count": 525,
+      "held_candidate_count": 134,
       "habitat_by_grade": {
-        "B": 11,
-        "C": 150
+        "B": 30,
+        "C": 495
       },
       "screen": {
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6531,11 +6528,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6545,9 +6542,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6555,7 +6552,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6606,14 +6603,14 @@
           }
         ]
       },
-      "physical_candidate_count": 225,
+      "physical_candidate_count": 659,
       "processing_incomplete": false,
-      "physical_input_hash": "a4af8bb4d7ff346574ea7bdb327b17a35c542ad1fdada9e4f319d136bb0a2098",
+      "physical_input_hash": "426798136c87012ce0ca88cbdc306c901b90c72aeadf898e550baa377b52398d",
       "roughness_thresholds": {
-        "vrm_samples": 10417851,
-        "vrm": 0.0022870551329106092,
-        "bpi_fine_m_samples": 10231626,
-        "bpi_fine_m": 0.4677542443305989
+        "vrm_samples": 3908326,
+        "vrm": 0.00708134425804019,
+        "bpi_fine_m_samples": 3840761,
+        "bpi_fine_m": 0.7242253715669067
       },
       "atlas_comparison": {
         "atlas_target_count": 132,
@@ -6657,12 +6654,12 @@
         "csumb-bss-block11-5m-native",
         "csumb-bss-block12-5m-native"
       ],
-      "last_survey_run": "2026-10-03T10:45:21.144256+00:00",
+      "last_survey_run": "2026-10-03T11:08:58.713087+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 31.383397804,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "f62dabeb244ccbd85aedf02eb4223420daa385c4645d8edd426df9ae0ef49e4a",
+      "survey_run_hash": "0dc68e1b0e9a4dfeff5c623b663743bb96cdd92130caea3052d7002976781416",
       "habitat_count": 149,
       "held_candidate_count": 21,
       "habitat_by_grade": {
@@ -6674,7 +6671,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6702,11 +6699,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6716,9 +6713,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6726,7 +6723,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6821,12 +6818,12 @@
         "csumb-scc-block25-2m-native",
         "csumb-scc-block26-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:45:27.486429+00:00",
+      "last_survey_run": "2026-10-03T11:07:21.140470+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 38.99181167,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "bd2463d814f00d87bc8da1c197a1a2f5689865e2e942b3b253e6e08d67033cab",
+      "survey_run_hash": "a69fef6cdc543627aec3b4dd66a5ee01604ed1bdd07adff9bdc7dc690709227e",
       "habitat_count": 0,
       "held_candidate_count": 32,
       "habitat_by_grade": {},
@@ -6834,7 +6831,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -6862,11 +6859,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -6876,9 +6873,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -6886,7 +6883,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -6984,12 +6981,12 @@
         "csumb-bigcreek-bc-s-5m-native",
         "csumb-bigcreek-lp-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:45:36.053382+00:00",
+      "last_survey_run": "2026-10-03T11:09:14.597612+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 15.061897453,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "c22237cd9ab8ccd4c87e8b205c5f364a21bf0c5d50c2f20ee83bd6b160325c49",
+      "survey_run_hash": "4d344379e1a515a0462fc0026a86023170aa12618758429b796b042d13aaa66a",
       "habitat_count": 4,
       "held_candidate_count": 134,
       "habitat_by_grade": {
@@ -7000,7 +6997,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7028,11 +7025,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7042,9 +7039,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7052,7 +7049,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7153,12 +7150,12 @@
         "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
         "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
       ],
-      "last_survey_run": "2026-10-03T10:45:49.933161+00:00",
+      "last_survey_run": "2026-10-03T11:07:40.727922+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 82.65503479,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "6138fd8c33748f3509686865cff7c59e33eb56a53c9f740e5b9ee7d204002d48",
+      "survey_run_hash": "3fb7cbf5a84a5361b809f227b36f60bfa57aead6c21678af8df7bff8e8e17ace",
       "habitat_count": 430,
       "held_candidate_count": 410,
       "habitat_by_grade": {
@@ -7168,7 +7165,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7196,11 +7193,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7210,9 +7207,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7220,7 +7217,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7316,12 +7313,12 @@
         "csumb-grimes-point-2m-native",
         "csumb-slaterock-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:46:30.492260+00:00",
+      "last_survey_run": "2026-10-03T11:09:12.564626+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 15.695354008,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "a8d651202e5f994ce421bdf854d57cec35ce503ef58fb6c88c431460cc473aef",
+      "survey_run_hash": "ae9fed8dbdf87cbbd371750fb760d845c55257d65326af0dac356a479ea45cc4",
       "habitat_count": 131,
       "held_candidate_count": 29,
       "habitat_by_grade": {
@@ -7333,7 +7330,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7361,11 +7358,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7375,9 +7372,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7385,7 +7382,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7484,12 +7481,12 @@
         "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
         "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
       ],
-      "last_survey_run": "2026-10-03T10:44:46.251259+00:00",
+      "last_survey_run": "2026-10-03T11:07:47.214285+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 56.089512589,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "a4f7692c0d0ae03081da87477335d9ec72cb34a59930ba9408869f0e4e1aa30f",
+      "survey_run_hash": "c8035a81f5b44b2ba37516e6c9d5fc84a19de1d74781960928b03f878210d800",
       "habitat_count": 187,
       "held_candidate_count": 38,
       "habitat_by_grade": {
@@ -7500,7 +7497,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7528,11 +7525,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7542,9 +7539,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7552,7 +7549,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7647,12 +7644,12 @@
         "csumb-grimes-point-2m-native",
         "csumb-slaterock-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:46:53.704626+00:00",
+      "last_survey_run": "2026-10-03T11:09:39.280611+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 18.588504882,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "986e163443e6be04e26287f7e8ecb92a935f77ec837c9a9f6b7b71ea34eb79fc",
+      "survey_run_hash": "6be1b699f28cc0ca3a1732ac6a546d33d41db210b1ec89a8cbd22cc87d5e3f22",
       "habitat_count": 339,
       "held_candidate_count": 30,
       "habitat_by_grade": {
@@ -7664,7 +7661,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7692,11 +7689,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7706,9 +7703,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7716,7 +7713,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7813,12 +7810,12 @@
         "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
         "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b"
       ],
-      "last_survey_run": "2026-10-03T10:45:02.376433+00:00",
+      "last_survey_run": "2026-10-03T11:08:07.182189+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 41.780300878,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "83c617f6a19ab541cb1b1bbf9c052dc730b0c74608505f99bad2fca73c1bcbc3",
+      "survey_run_hash": "9d15bacdfdd7af8a8149b5e8e6258c257c422c7cf4884ba8e9fd661c8d91054f",
       "habitat_count": 149,
       "held_candidate_count": 115,
       "habitat_by_grade": {
@@ -7829,7 +7826,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -7857,11 +7854,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -7871,9 +7868,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -7881,7 +7878,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -7976,12 +7973,12 @@
         "csumb-cooperpoint-2m-native",
         "csumb-point-sur-2m-native"
       ],
-      "last_survey_run": "2026-10-03T10:47:19.006502+00:00",
+      "last_survey_run": "2026-10-03T11:10:08.835896+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 36.752042069,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "931d3219318e6e11558c98b7054e8637dadf851a31027fe69c4926863ed3937f",
+      "survey_run_hash": "4ed0b247b3792d1dbcd2a8b8bce7f81a8ef5d45294eaacd78c1f115d077e2eac",
       "habitat_count": 72,
       "held_candidate_count": 248,
       "habitat_by_grade": {
@@ -7993,7 +7990,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8021,11 +8018,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8035,9 +8032,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8045,7 +8042,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8143,12 +8140,12 @@
         "usgs-1998-sgf5g-native",
         "usgs-1998-sur5g-native"
       ],
-      "last_survey_run": "2026-10-03T10:47:01.924785+00:00",
+      "last_survey_run": "2026-10-03T11:09:31.188790+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 101.767106375,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "43ea1548f6e4917f2a6eb9018519a094f62b11104d571480450567c04d917f50",
+      "survey_run_hash": "06f35773a3a0177c5f9425f8522cd7b34a8f923abd10575f6baed763a5539d21",
       "habitat_count": 530,
       "held_candidate_count": 372,
       "habitat_by_grade": {
@@ -8160,7 +8157,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8188,11 +8185,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8202,9 +8199,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8212,7 +8209,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8309,12 +8306,12 @@
         "csumb-yankee-point-2m-native",
         "usgs-1998-sgf5g-native"
       ],
-      "last_survey_run": "2026-10-03T10:47:31.739281+00:00",
+      "last_survey_run": "2026-10-03T11:09:51.262630+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 26.958270868,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "9971728da2ca77e788b2bff0b766f105dff3f6b7b17bece325915d1cff8d6fab",
+      "survey_run_hash": "6f796c85ab2543af81aafbef581f1c991df64c5a6bb5afc379f5e60311e2ba06",
       "habitat_count": 265,
       "held_candidate_count": 67,
       "habitat_by_grade": {
@@ -8326,7 +8323,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8354,11 +8351,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8368,9 +8365,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8378,7 +8375,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8476,12 +8473,12 @@
         "csumb-yankee-point-2m-native",
         "usgs-1998-sgf5g-native"
       ],
-      "last_survey_run": "2026-10-03T10:48:00.640328+00:00",
+      "last_survey_run": "2026-10-03T11:10:33.775462+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 13.366680718,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "97a3f7128405cfc7863ea6fe9b6247ad737b41046b4fdafe4290b83e7f0ea48b",
+      "survey_run_hash": "f206c2601a1855b1b2af21349c0d016efc73dd3d3c3fcaca81ccb97ffa078125",
       "habitat_count": 19,
       "held_candidate_count": 214,
       "habitat_by_grade": {
@@ -8491,7 +8488,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8519,11 +8516,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8533,9 +8530,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8543,7 +8540,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8639,12 +8636,12 @@
         "csumb-monastery-cypress-2m-native",
         "usgs-1998-sgf5g-native"
       ],
-      "last_survey_run": "2026-10-03T10:46:55.932303+00:00",
+      "last_survey_run": "2026-10-03T11:10:18.980045+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 21.132650472,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "d1c2941e62e9b86e58ac3480471cb18f04d959f6c6754c8b36ec6f3867b6fa3d",
+      "survey_run_hash": "476c38e550c40df4ff5df4099387e1fa77e3ed55aa4270256eda879aa29d4fd3",
       "habitat_count": 272,
       "held_candidate_count": 45,
       "habitat_by_grade": {
@@ -8656,7 +8653,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8684,11 +8681,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8698,9 +8695,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8708,7 +8705,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8800,12 +8797,12 @@
       "surveys_used": [
         "bathymetry-2m-offshoremonterey-zip-172dbd1794"
       ],
-      "last_survey_run": "2026-10-03T10:47:51.579491+00:00",
+      "last_survey_run": "2026-10-03T11:11:04.205295+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.387306678,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "9a7fe0c7b871d190112b7166f5bfe05b907ec16dbee6ef09ef3bdf1475d5bab5",
+      "survey_run_hash": "cfe9b85865b1323c13ce0a6ca683b2e90013dee70b81b75ff83f67beea7f724f",
       "habitat_count": 0,
       "held_candidate_count": 313,
       "habitat_by_grade": {},
@@ -8815,7 +8812,7 @@
         "reasons": [
           "screen-scope-unreviewed"
         ],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -8843,11 +8840,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -8857,9 +8854,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -8867,7 +8864,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -8959,12 +8956,12 @@
       "surveys_used": [
         "bathymetry-2m-offshoremonterey-zip-172dbd1794"
       ],
-      "last_survey_run": "2026-10-03T10:48:02.535130+00:00",
+      "last_survey_run": "2026-10-03T11:11:13.834442+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 25.320745427,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "7181493069fdc53b144d94ffebe9746eb6cf4f79624f64dd2890d721913c1d6c",
+      "survey_run_hash": "8486bf5ecd5e2a0887b8456b4fe87060dfcdd10437b4b474ef936d1da7da0fdb",
       "habitat_count": 0,
       "held_candidate_count": 67,
       "habitat_by_grade": {},
@@ -8974,7 +8971,7 @@
         "reasons": [
           "screen-scope-unreviewed"
         ],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -9002,11 +8999,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -9016,9 +9013,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -9026,7 +9023,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
@@ -9118,12 +9115,12 @@
       "surveys_used": [
         "bathymetry-2m-offshoremonterey-zip-172dbd1794"
       ],
-      "last_survey_run": "2026-10-03T10:48:11.195379+00:00",
+      "last_survey_run": "2026-10-03T11:11:21.570970+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 24.777176874,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "5336da40cf1f1f607ddc1ab75e5b1fe56576d9e8e8c536df83c399663127cf8a",
+      "survey_run_hash": "59cbfa453d1f7fb900a9dfb9eb40e5491f926c166602a3963e6dafc56309e6f6",
       "habitat_count": 0,
       "held_candidate_count": 10,
       "habitat_by_grade": {},
@@ -9133,7 +9130,7 @@
         "reasons": [
           "screen-scope-unreviewed"
         ],
-        "snapshot_sha256": "2cc86fe0f4211b3623f097704c398c237144c53cdc8befab40d8aed5230d0fd1",
+        "snapshot_sha256": "b32050fe795555bedb88956b4edc6a4b8275f04dda77b0fe673b3c00af13139f",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -9161,11 +9158,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-03T10:34:22.603701+00:00",
+        "snapshot": "2026-10-03T11:01:02.426780+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738736+00:00",
+            "checked_at": "2026-10-03T11:00:43.336444+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -9175,9 +9172,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:09.738756+00:00",
-            "file": "noaa-federal-de429f6604adf6933205631e5cc8f9cd1ba0114cfcbbd7fe47a2da4a8c2e8661.json",
-            "sha256": "313c0d1a127794c89f9095666c00297bf960903abc27ade697142f1f8cc75111",
+            "checked_at": "2026-10-03T11:00:43.336466+00:00",
+            "file": "noaa-federal-fb0e2583962a36ee3fefdfcf596215ea6ba482c9ddee155d6adf13f58e176ea1.json",
+            "sha256": "d9976c9a76faad78856cb5dc888089bf0c0681c2951d37ecb8dd33c45452f11f",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -9185,7 +9182,7 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-03T10:34:22.603701+00:00",
+            "checked_at": "2026-10-03T11:01:02.426780+00:00",
             "file": "security-fbc7f19e0ab391a6b84e5ba2bac695b65d48d507a1e8e5cd05ffbeb7cedaaf40.json",
             "sha256": "4daca9ce6a799d8a4cdbdc2bdaa321c2a78f5a99dfdfd8ea12433f5f908cfe3a",
             "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-33.xml?section=165.1155",
