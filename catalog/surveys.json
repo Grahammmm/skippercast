@@ -196,7 +196,9 @@
     "dist/data/seafloor-pge-south-native-terrain-review.json",
     "dist/data/seafloor-pge-south-terrain-binding-review.json",
     "dist/data/seafloor-pge-mid-native-terrain-review.json",
-    "dist/data/seafloor-pge-mid-terrain-binding-review.json"
+    "dist/data/seafloor-pge-mid-terrain-binding-review.json",
+    "dist/data/seafloor-pge-avila-native-terrain-review.json",
+    "dist/data/seafloor-pge-avila-terrain-binding-review.json"
   ],
   "surveys": [
     {
@@ -15705,7 +15707,8 @@
       "status": "usable",
       "archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
       "evidence": [
-        "catalog/csumb-morro-avila-native-sources.json#/sources/1"
+        "catalog/csumb-morro-avila-native-sources.json#/sources/1",
+        "research/receipts/seafloor-pge-avila-native-terrain-review.json#/sources/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-morro-avila-native-sources.json#/sources/1/acquisition_dates",
@@ -15751,6 +15754,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-avila-blocki-2m-native",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "depth_archive_member": "CC_BlkI_2m.5m_bathygrids.zip/ArcViewGrids/cc_bi_2mbthy",
+        "depth_cog_sha256": "f965e1c61ab335f2d3496d770337dfcb4f7d65f8f7ace632ca0828cacecaa4c1",
+        "archive_member": "CC_BlkI_2m_habitat.zip/ArcViewGrids/cc_bi_2mhab",
+        "metadata_sha256": "9104a6b6739a02bbc4463d85185464fec381691654dfa6808c1c71afabc94447",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-avila-native-terrain-review.json#/sources/0"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {
@@ -15775,7 +15804,8 @@
       "evidence": [
         "catalog/csumb-morro-avila-native-sources.json#/sources/2",
         "research/receipts/seafloor-avila-j-quality-review.json#/decision",
-        "research/receipts/seafloor-pge-avila-terrain-review.json#/products/1"
+        "research/receipts/seafloor-pge-avila-terrain-review.json#/products/1",
+        "research/receipts/seafloor-pge-avila-native-terrain-review.json#/sources/1"
       ],
       "field_evidence": {
         "year": "catalog/csumb-morro-avila-native-sources.json#/sources/2/acquisition_dates",
@@ -15830,6 +15860,32 @@
           "research/receipts/seafloor-avila-j-quality-review.json#/decision"
         ],
         "notes": "Retain private depth; resolve documented artifact concern and shared threshold effects before public habitat release."
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-pge-avila-blockj-2m-native",
+        "source_sha256": "6227d55f46cc5754fc871852d9444a2d619b38edf9b99114be2d8a15f0d78fab",
+        "depth_archive_member": "CC_BlkJ_2m.5m_bathygrids.zip/CC_BlkJ_2m.5m_bathygrids/ArcViewGrids/cc_bj_2mbthy",
+        "depth_cog_sha256": "c97cc58c8ff155f267b2b8ff245ceffcef76fff040bb85af115a1b75de658700",
+        "archive_member": "CC_BlkJ_2m_habitat.zip/ArcViewGrids/cc_bj_2mhab",
+        "metadata_sha256": "8cab75ce08df5e528a60564a828a00dbbc179e17aad9b3ae6c56511c165d559b",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-02",
+        "evidence": [
+          "research/receipts/seafloor-pge-avila-native-terrain-review.json#/sources/1"
+        ],
+        "notes": "Same-depth producer positive rough-terrain support only. Subjective rugosity and manual smooth exclusions are not an acquisition-artifact mask or independent substrate evidence. Preserve existing source status, quality holds, native depths and final spatial gates. Missing classes do not generate habitat."
       }
     },
     {
