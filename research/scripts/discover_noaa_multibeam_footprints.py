@@ -109,12 +109,92 @@ def discover(sectors, fetch=fetch_json):
             "limitations": "Footprints may cross a browse box without measured cells at shore–300 ft; raw and processed files need native resolution, datum, uncertainty, source-age, rights and habitat checks. Repeated survey IDs/footprints across sectors are not new mapped area."}
 
 
-def gap_sectors(folder, max_cells=128):
+def native_support(folder, cache_root, cells, checkpoint):
+    """Reuse checked normalized masks; never reconstruct support from area totals."""
+    from shapely.geometry import mapping, shape
+    from shapely.ops import unary_union
+    from skippercast.seafloor.coverage import cell_geometry, footprint
+    from skippercast.seafloor.io import sha256
+    from skippercast.platform.contracts import atomic_json
+    from skippercast.seafloor import coverage, raster
+    from skippercast.seafloor.normalized import verify_review
+    import rasterio
+    import pyproj
+    import shapely
+
+    run_path = folder / "run.json"
+    if run_path.stat().st_size > 10_000_000:
+        raise ValueError("Retained run exceeds read bound")
+    run = json.loads(run_path.read_bytes())
+    inputs = dict(run["inputs"])
+    inputs.pop("screen", None)
+    inputs.pop("screen_implementation_sha256", None)
+    if (hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest() != checkpoint["physical_input_hash"]
+            or run.get("physical_input_hash") != checkpoint["physical_input_hash"]):
+        raise ValueError("Native support run differs from coverage checkpoint")
+    expected = {r["id"]: r["sha256"] for r in inputs["sources"]}
+    source_rows = {r["id"]: r for r in inputs["sources"]}
+    receipts = run["source_receipts"]
+    if (len(expected) != len(inputs["sources"]) or len(receipts) != len(expected) or
+            {r["source_id"]: r["source_sha256"] for r in receipts} != expected):
+        raise ValueError("Native support lacks the complete retained source set")
+    paths = []
+    for receipt in receipts:
+        source_hash, cog_hash = receipt["source_sha256"], receipt["cog_sha256"]
+        if any(not re.fullmatch(r"[a-f0-9]{64}", value) for value in (source_hash, cog_hash)):
+            raise ValueError("Invalid native source identity")
+        key = hashlib.sha256(json.dumps(receipt["inputs"], sort_keys=True).encode()).hexdigest()
+        path = Path(cache_root) / source_hash / (key + ".tif")
+        saved_path = path.with_suffix(".json")
+        if not saved_path.exists() or json.loads(saved_path.read_bytes()) != receipt or sha256(path) != cog_hash:
+            raise ValueError("Native support cache failed verification")
+        row = source_rows[receipt["source_id"]]
+        if (receipt["inputs"].get("source_id") != row["id"] or
+                receipt["inputs"].get("source_sha256") != row["sha256"]):
+            raise ValueError("Native support receipt input identity differs from source")
+        verify_review(receipt, row["adapter_review"], path)
+        paths.append((path, receipt))
+    identity = {"physical_input_hash": checkpoint["physical_input_hash"],
+                "coverage_cells_sha256": checkpoint["cells_sha256"],
+                "source_receipts": receipts,
+                "implementation": {"discovery": sha256(Path(__file__)), "coverage": sha256(Path(coverage.__file__)), "raster": sha256(Path(raster.__file__))},
+                "runtime": {"rasterio": rasterio.__version__, "pyproj": pyproj.__version__, "shapely": shapely.__version__}}
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    saved_path = folder / "acquisition-support" / (key + ".json")
+    if saved_path.exists():
+        if saved_path.stat().st_size > 100_000_000:
+            raise ValueError("Native support geometry exceeds read bound")
+        saved = json.loads(saved_path.read_bytes())
+        geometry = saved["geometry"]
+        if (saved["inputs"] != identity or saved["geometry_sha256"] !=
+                hashlib.sha256(json.dumps(geometry, sort_keys=True).encode()).hexdigest()):
+            raise ValueError("Native support geometry failed verification")
+        support = shape(geometry)
+    else:
+        scope = unary_union([cell_geometry(c) for c in cells])
+        support = unary_union([footprint(p, r["requested_bounds_wgs84"], clip=scope) for p, r in paths])
+        geometry = mapping(support)
+        if len(json.dumps(geometry).encode()) > 100_000_000:
+            raise ValueError("Native support geometry exceeds write bound")
+        atomic_json(saved_path, {"inputs": identity, "geometry": geometry,
+                    "geometry_sha256": hashlib.sha256(json.dumps(geometry, sort_keys=True).encode()).hexdigest()})
+    if not support.is_valid:
+        raise ValueError("Invalid native support geometry")
+    # Union support may exceed the single chosen source's area, but not fall below it.
+    for cell in cells:
+        if support.intersection(cell_geometry(cell)).area + .001 < cell["valid_area_m2"]:
+            raise ValueError("Native support contradicts retained cell coverage")
+    return support, {"native_support_inputs_sha256": key, "native_support_sha256": sha256(saved_path),
+                     "retained_run_sha256": sha256(run_path)}
+
+
+def gap_sectors(folder, max_cells=128, cache_root=None):
     """Bound catalog queries to hash-checked zero-native-support cells.
 
     The reference band is provisional. These are acquisition priorities, not
     proof of shallow water, an exact remaining-area denominator or fish sites.
-    Partial-support cells need a native mask; never label their full square a gap.
+    Partial-support cells need checked native masks via cache_root; never label
+    their full square a gap. The default remains zero-support cells only.
     """
     from pyproj import Transformer
     from shapely.geometry import box
@@ -159,13 +239,26 @@ def gap_sectors(folder, max_cells=128):
         if valid == 0 and band > 0:
             if cell.get("source_id") != "unknown" or cell.get("available_source_ids") != [] or cell.get("tier") != 0:
                 raise ValueError("Zero-area cell has contradictory native support")
-            pending.append((ident, x, y))
+            pending.append((ident, x, y, box(x*250, y*250, (x+1)*250, (y+1)*250)))
+    support_identity = {}
+    if cache_root is not None:
+        support, support_identity = native_support(folder, cache_root, cells, checkpoint)
+        pending = []
+        for cell in cells:
+            if cell["band_area_m2"] <= 0:
+                continue
+            ident = cell["id"]
+            _, x, y = ident.split(":")
+            x, y = int(x), int(y)
+            gap = box(x*250, y*250, (x+1)*250, (y+1)*250).difference(support)
+            if gap.area > .001:
+                pending.append((ident, x, y, gap))
     pending.sort(key=lambda row: (row[2], row[1]))
     project = Transformer.from_crs(3310, 4326, always_xy=True).transform
     groups = []
     for start in range(0, len(pending), max_cells):
         batch = pending[start:start + max_cells]
-        polygon = unary_union([box(x*250, y*250, (x+1)*250, (y+1)*250) for _, x, y in batch])
+        polygon = unary_union([geometry for _, _, _, geometry in batch])
         polygons = [polygon] if polygon.geom_type == "Polygon" else list(polygon.geoms)
         rings = []
         for part in polygons:
@@ -179,16 +272,17 @@ def gap_sectors(folder, max_cells=128):
     return groups, {"reach": reach, "cells_sha256": digest,
                     "physical_input_hash": checkpoint["physical_input_hash"],
                     "checkpoint_sha256": hashlib.sha256(checkpoint_raw).hexdigest(),
-                    "zero_support_cell_count": len(pending),
-                    "partial_support_cells_excluded": sum(0 < c["valid_area_m2"] < 62500 for c in cells)}
+                    "zero_support_cell_count": sum(c["valid_area_m2"] == 0 and c["band_area_m2"] > 0 for c in cells),
+                    "partial_support_cells_excluded": 0 if cache_root is not None else sum(0 < c["valid_area_m2"] < 62500 for c in cells),
+                    **support_identity}
 
 
-def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None):
+def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_group=0, resume_from=None, cache_root=None):
     if isinstance(max_groups, bool) or not isinstance(max_groups, int) or not 1 <= max_groups <= 50:
         raise ValueError("Gap query run must contain 1–50 groups")
     if isinstance(start_group, bool) or not isinstance(start_group, int) or start_group < 0:
         raise ValueError("Gap start group must be a nonnegative integer")
-    groups, receipt = gap_sectors(folder, max_cells)
+    groups, receipt = gap_sectors(folder, max_cells, cache_root=cache_root)
     if resume_from is not None:
         previous = json.loads(Path(resume_from).read_text())
         if (previous.get("scope") != "noaa-ncei-zero-native-support-discovery"
@@ -223,7 +317,7 @@ def discover_gaps(folder, fetch=fetch_json, max_cells=128, max_groups=3, start_g
             "status": "complete-bounded-query", "sectors": rows,
             "unique_footprint_object_ids": len({i["object_id"] for row in rows for i in row["footprints"]}),
             "fishing_target": False, "exportable": False, "new_measured_km2": 0,
-            "limitations": "Hash-checked coverage snapshot; not a claim of current coverage unless inputs remain current. Zero-support 250 m planning cells use a provisional reference band, not verified local depths. Catalog intersection requires native depth/support/rights review. Partial-support cells are excluded; no whole-cell gap-area or habitat credit."}
+            "limitations": "Hash-checked coverage snapshot; not a claim of current coverage unless inputs remain current. Planning cells use a provisional reference band, not verified local depths. Catalog intersection requires native depth/support/rights review. No gap-area or habitat credit. Partial-support cells are excluded unless checked native masks are explicitly supplied; native mode subtracts the union of all retained sources."}
 
 
 def main():
@@ -231,11 +325,14 @@ def main():
     parser.add_argument("--sectors", type=Path, default=Path("dist/data/coastal-sectors.json"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--coverage-folder", type=Path, help="Checked reach coverage snapshot; overrides browse sectors")
+    parser.add_argument("--cache-root", type=Path, help="Opt in to native-mask gaps using the retained run and checked normalized cache, including partial support")
     parser.add_argument("--max-cells", type=int, default=128)
     parser.add_argument("--max-groups", type=int, default=3)
     parser.add_argument("--resume-from", type=Path, help="Continue a bounded receipt only if coverage hashes and batch size match")
     args = parser.parse_args()
-    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from)
+    if args.cache_root is not None and args.coverage_folder is None:
+        parser.error("--cache-root requires --coverage-folder")
+    result = (discover_gaps(args.coverage_folder, max_cells=args.max_cells, max_groups=args.max_groups, resume_from=args.resume_from, cache_root=args.cache_root)
               if args.coverage_folder else discover(json.loads(args.sectors.read_text())["sectors"]))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

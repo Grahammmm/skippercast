@@ -149,6 +149,19 @@ acquisition priorities, not verified shallow-water footprints or new measured
 area. Partial-support gaps require native masks rather than a whole-cell query.
 Catalog hulls still need actual local depth/support and same-acquisition checks.
 
+When the useful gaps are inside partially supported cells, add
+`--cache-root var/seafloor/cache` to the same command. This opt-in mode verifies
+the retained `run.json` physical identity, the complete normalized source set
+and every COG hash. It reuses `coverage.footprint` to union the valid nominal
+0–91.44 m masks, then subtracts that union from owned planning cells. It does
+not infer gap shapes from coverage percentages or query a whole partially
+mapped square. The private `acquisition-support/` cache retains code, runtime,
+cell and source identities; later searches reuse it without terrain extraction.
+Missing files, incomplete source sets, inconsistent cell support or changed
+resume identities fail before network queries. A legal-only refresh can reuse
+the physical support cache. The uncovered planning geometry still has unknown
+local depth and is never counted as new measured coverage or habitat.
+
 Timebox one unresolved source to about 45 minutes. Record `access-failed`,
 `format-unsupported`, `license-unclear`, `no-valid-cells`, `coarse-only` or
 `duplicate` with the evidence and next action. Source holds do not imply the
