@@ -1,5 +1,10 @@
 # Seafloor pipeline
 
+An explicit [government-only input scope](archive/seafloor-government-input-scope-2026-10-03.md)
+is available for separately reviewed commercial releases. It selects originals
+before all physical processing and calibration; it does not filter mixed output
+or publish to the existing aliases. Default noncommercial processing is unchanged.
+
 Build a graded habitat planning map from original surveys, starting at Morro
 Bay and extending from Monterey Bay to Point Conception. Completion means every
 Central Coast reach is mapped or explicitly recorded as a hold or true gap, and

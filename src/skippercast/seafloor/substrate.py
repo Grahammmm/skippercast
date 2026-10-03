@@ -18,10 +18,14 @@ from .fetch import fetch_source
 from skippercast.platform.contracts import public_url
 
 
-def resolve_bindings(rules, manifest):
+def resolve_bindings(rules, manifest, *, scoped=False):
     rows = {row['id']: row for row in manifest['surveys']}
     result = {}
     for binding in rules['substrate_bindings']:
+        # A source absent from an explicit input scope contributes no classes.
+        # Missing rows in the ordinary complete catalog remain an error.
+        if scoped and binding['source_id'] not in rows:
+            continue
         row = rows[binding['source_id']]
         if row['status'] in {'hold', 'withdrawn'}:
             continue
@@ -35,6 +39,8 @@ def resolve_bindings(rules, manifest):
         if any(category['normalized_code'] not in (1, 2, 3) for category in binding['classes'].values()):
             raise ValueError('Unreviewed normalized substrate class')
         for depth_id in binding['depth_source_ids']:
+            if scoped and depth_id not in rows:
+                continue
             if depth_id in result:
                 raise ValueError('Ambiguous substrate binding for depth product')
             result[depth_id] = {'binding': binding, 'row': row}
