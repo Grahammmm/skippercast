@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {forecastFixture} from './forecast-fixture.ts';
 import AxeBuilder from '@axe-core/playwright';
 import {test as base, expect, type Page} from '@playwright/test';
+import {stubBoundaryChecks} from './boundary-fixture.ts';
 
 export const AXE_DIR = join(import.meta.dirname, '..', 'test-results', 'axe');
 const BLOCKING = new Set(['serious', 'critical']);
@@ -20,6 +21,9 @@ export const test = base.extend<{pageErrors: string[]}>({
     await context.route('**/api/forecast?*', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
     const fixtureNow = Date.now();
     await context.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)}));
+    // A stale committed snapshot must not make UI checks depend on today's
+    // upstream MPA feed. The real fail-closed checks still run on these polygons.
+    await stubBoundaryChecks(context);
     // A returning visitor who finished the first-run steps; tests open area links.
     await context.addInitScript(() => { try { localStorage.setItem('skippercast-first-run-v1', 'done'); } catch { /* storage blocked */ } });
     await use(context);
