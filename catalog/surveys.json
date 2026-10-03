@@ -206,7 +206,8 @@
     "dist/data/seafloor-scc04-06-native-terrain-review.json",
     "dist/data/seafloor-scc07-08-native-terrain-review.json",
     "dist/data/seafloor-scc09-11-native-terrain-review.json",
-    "dist/data/seafloor-scc12-14-native-terrain-review.json"
+    "dist/data/seafloor-scc12-14-native-terrain-review.json",
+    "dist/data/seafloor-scc15-17-native-terrain-review.json"
   ],
   "surveys": [
     {
@@ -14857,7 +14858,8 @@
       "status": "usable",
       "archive_member": "SCC_Blk17_2m_bathygrids.zip/ArcViewGrids/scc17_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-gap-native-sources.json#/sources/1"
+        "catalog/csumb-scc-gap-native-sources.json#/sources/1",
+        "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/2"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-gap-native-sources.json#/sources/1/acquisition_dates",
@@ -14903,6 +14905,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block17-2m-native",
+        "source_sha256": "fc040d3d8ba3efc063d2a2554b0195b8504b3fbcbbbc0cdfc2fa4a416d652bd4",
+        "depth_archive_member": "SCC_Blk17_2m_bathygrids.zip/ArcViewGrids/scc17_2mbathy",
+        "depth_cog_sha256": "5b38165790404a34b2a9db4294501a28cc9b292d992e3a5fcd1c99346087f5d8",
+        "archive_member": "SCC_Blk17_2m_habitat.zip/ArcViewGrids/scc17_2mhab",
+        "metadata_sha256": "a7fb736b4936b251e8585eddcda423fcef71598af9298a92a5059f1db9d79152",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-03",
+        "evidence": [
+          "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/2"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15089,7 +15117,8 @@
       "archive_member": "SCC_Blk16_2m_bathygrids.zip/ArcViewGrids/scc16_2mbathy",
       "evidence": [
         "catalog/csumb-scc-conception-native-sources.json#/sources/1",
-        "research/receipts/seafloor-scc16-native-rights-review.json#/sources/0"
+        "research/receipts/seafloor-scc16-native-rights-review.json#/sources/0",
+        "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/1"
       ],
       "field_evidence": {
         "year": "research/receipts/seafloor-scc16-native-rights-review.json#/sources/0/metadata/acquisition_dates",
@@ -15135,6 +15164,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block16-2m-native",
+        "source_sha256": "2cb88a94697cf1c1f21b01c9cbae156d16596772fa09acadb810279388917b05",
+        "depth_archive_member": "SCC_Blk16_2m_bathygrids.zip/ArcViewGrids/scc16_2mbathy",
+        "depth_cog_sha256": "9e2ae0e276496473f9b53fd06cccae39c41aecd870e0f55a11850c06081e09f6",
+        "archive_member": "SCC_Blk16_2m_habitat.zip/ArcViewGrids/scc16_2mhab",
+        "metadata_sha256": "cb5b920bc31da0845a9dced38b4c189eda6acb0fe6ab36d137721ec812093ef2",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-03",
+        "evidence": [
+          "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/1"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
@@ -15388,7 +15443,8 @@
       "status": "usable",
       "archive_member": "SCC_Blk15_2m_bathygrid.zip/ArcViewGrids/scc15_2mbathy",
       "evidence": [
-        "catalog/csumb-scc-shelf-next-native-sources.json#/sources/2"
+        "catalog/csumb-scc-shelf-next-native-sources.json#/sources/2",
+        "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/0"
       ],
       "field_evidence": {
         "year": "catalog/csumb-scc-shelf-next-native-sources.json#/sources/2/acquisition_dates",
@@ -15434,6 +15490,32 @@
         "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
         "navigation_use": false,
         "for_profit_permission": "required-not-obtained"
+      },
+      "terrain_support": {
+        "profile": "csumb-native-rough-v1",
+        "depth_source_id": "csumb-scc-block15-2m-native",
+        "source_sha256": "4af04d4783e6729c43c794f5f9704e5d467a5106256f7bdb6a1ebba05889f5ee",
+        "depth_archive_member": "SCC_Blk15_2m_bathygrid.zip/ArcViewGrids/scc15_2mbathy",
+        "depth_cog_sha256": "d9e311f40aaf964c060a4a9d0b3ae97199fe946aafc1f8a58e30052607d52877",
+        "archive_member": "SCC_Blk15_2m_habitat.zip/ArcViewGrids/scc15_2mhab",
+        "metadata_sha256": "e6f7b873066bd702f7e81b9152e64cddf13913aa8f78a8aaa1a57a84a9eb221f",
+        "rough_codes": [
+          -1,
+          -31,
+          -101,
+          -201
+        ],
+        "smooth_codes": [
+          0,
+          -30,
+          -100,
+          -200
+        ],
+        "reviewed_on": "2026-10-03",
+        "evidence": [
+          "research/receipts/seafloor-scc15-17-native-terrain-review.json#/products/0"
+        ],
+        "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
       }
     },
     {
