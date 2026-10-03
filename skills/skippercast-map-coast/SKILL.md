@@ -180,6 +180,45 @@ license or unsupported-format holds need review/code, not endless retries.
 The scheduler processes usable sources only; it does not automatically resolve
 held licenses or discover missing native formats.
 
+### Original sonar leads without a finished grid
+
+Use the producer's [MB-System reader](https://github.com/dwcaress/MB-System),
+not a guessed binary decoder. Its official
+[MBARI image](https://github.com/dwcaress/MB-System/blob/master/docker/README.md)
+can provide `mbinfo` and `mblist` on a suitable Linux host. Pin the image digest,
+record actual reader version and binary hash, and retain original compressed and
+native file checksums. A task-local reader environment avoids replacing system
+packages. Do not bulk-download a cruise before a bounded file test.
+
+`mbinfo -F57 -I ORIGINAL_FILE -V` checks format 57 depth/quality statistics.
+For actual sounding positions, use `mblist -F57 -I ORIGINAL_FILE -MA -OXYzFMN#`:
+longitude, latitude, positive-down meters, beam flag, epoch time, ping and beam.
+`-MA` is essential: the default coordinates describe vessel navigation rather
+than all seafloor beam positions. Default validity checking excludes bad/null
+beams; `-U2` retains those for a separate quality audit. Never use `-W` (feet),
+decimation or ping averaging in a table labeled with this contract.
+
+Retain a private table receipt with those exact `columns`, reader command/hash,
+`stdout_sha256` and `rows`. A separately filtered nominal 0–91.44 m good-beam
+subset needs its own `shallow_sha256` and `good_nominal_shallow_rows`. The shared
+offline triage verifies decompressed bytes/counts and the existing gap checkpoint:
+
+```bash
+PYTHONPATH=src:. python research/scripts/triage_multibeam_beams.py \
+  --beam-table PRIVATE_SHALLOW_TSV_GZ --beam-receipt PRIVATE_READER_RECEIPT \
+  --coverage-folder var/seafloor/reaches/REACH_ID \
+  --cache-root var/seafloor/cache --exclude-measured-deep \
+  --output var/seafloor/source-review/REACH_ID-beam-triage.json
+```
+
+Use `--table-kind all` for a complete reader table. No network or terrain rebuild
+is needed. Good-beam points in gaps establish a useful acquisition lead, not
+gridded coverage, habitat area, fish presence or publication permission. Do not
+buffer points, accept a survey hull or fill between tracks to claim measured
+area. The next stage must review gridding/valid support, sampling resolution,
+navigation, datum, sound-speed corrections, source rights and normal adapters.
+Overlapping files from one cruise remain one survey evidence line.
+
 ## Reviewed originals awaiting publication rights
 
 Do not mislabel non-government data as public domain. When a native original
