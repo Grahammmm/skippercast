@@ -1,0 +1,572 @@
+{
+  "profile": "csumb-native-rough-v1",
+  "legend": {
+    "rough": [
+      -1,
+      -31,
+      -101,
+      -201
+    ],
+    "smooth": [
+      0,
+      -30,
+      -100,
+      -200
+    ],
+    "zero_is_valid_smooth": true
+  },
+  "limitations": [
+    "Same original bathymetry lineage, not independent substrate or fish evidence.",
+    "Producer conservative masking may omit real rough terrain; unknown class coverage does not invalidate measured depths.",
+    "Metadata position/motion system specifications are not verified per-cell bathymetric uncertainty.",
+    "Existing credited noncommercial rights, depth datums and whole-polygon spatial screens remain required.",
+    "The source audit is not a claim of deduplicated geographic expansion or live publication."
+  ],
+  "new_acquisition_km2": 0,
+  "new_independent_evidence_count": 0,
+  "scope": "SCC21\u201323 original 2 m terrain-support review",
+  "reviewed_at": "2026-10-03T09:57:23.485854+00:00",
+  "products": [
+    {
+      "depth_source_id": "csumb-scc-block21-2m-native",
+      "archive_sha256": "ee0efb3b2f3491f006965a384c9abc5e2a46955139dcb8cf07d4e6c9364797ea",
+      "archive_member": "SCC_Blk21_2m_habitat.zip/ArcViewGrids/scc21_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk21_2m_habitat.zip",
+        "member": "ArcViewGrids/scc21_2mhab/metadata.xml",
+        "file": "var/seafloor/scc21-23-terrain-review/csumb-scc-block21-2m-native/original-metadata.xml",
+        "sha256": "e4b4d3d1155ea36fd0cae1d9e078d84a6d883fba4b46faf70dd618126191edb3"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        2818,
+        1970
+      ],
+      "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        712215.0,
+        0.0,
+        -2.0,
+        3859575.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        712215.0,
+        0.0,
+        -2.0,
+        3859575.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk21_2m_bathygrids.zip/ArcViewGrids/scc21_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          712215.0,
+          0.0,
+          -2.0,
+          3859575.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          2818,
+          1970
+        ],
+        "native_depth_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "376781e1a650e2084f0b7f2c45ddf7fa20001a92d76bc2a0790955f21b44547c",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "0": 2709252,
+        "-1": 306881,
+        "-30": 296368
+      },
+      "shallow_class_counts": {
+        "0": 2709252,
+        "-1": 306881,
+        "-30": 296368
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 3326733,
+      "missing_class_at_shallow_cells": 14232,
+      "rough_shallow_cells": 306881,
+      "rough_shallow_native_cell_area_proxy_km2": 1.227524,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false
+    },
+    {
+      "depth_source_id": "csumb-scc-block22-2m-native",
+      "archive_sha256": "969013b219d82777318dcc5e36aeb94674af97a6c11e628c8abcdab8eecb906c",
+      "archive_member": "SCC_Blk22_2m_habitat.zip/ArcViewGrids/scc22_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk22_2m_habitat.zip",
+        "member": "ArcViewGrids/scc22_2mhab/metadata.xml",
+        "file": "var/seafloor/scc21-23-terrain-review/csumb-scc-block22-2m-native/original-metadata.xml",
+        "sha256": "6ab023913f979700845e37a726c0c18270168e1139baf64a60637fc87144f729"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        3356,
+        2331
+      ],
+      "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        710987.0,
+        0.0,
+        -2.0,
+        3856275.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        710987.0,
+        0.0,
+        -2.0,
+        3856275.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk22_2m_bathygrids.zip/ArcViewGrids/scc22_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          710987.0,
+          0.0,
+          -2.0,
+          3856275.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          3356,
+          2331
+        ],
+        "native_depth_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "1d9caddc112e211b652f0751409f77dc1e88ba5cd27eeed32ffd906e494b3470",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-31": 266007,
+        "-30": 3349682,
+        "-1": 1319082,
+        "0": 1354872
+      },
+      "shallow_class_counts": {
+        "-31": 266007,
+        "-30": 3349682,
+        "-1": 1319082,
+        "0": 1354872
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 6305269,
+      "missing_class_at_shallow_cells": 15626,
+      "rough_shallow_cells": 1585089,
+      "rough_shallow_native_cell_area_proxy_km2": 6.340356,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false
+    },
+    {
+      "depth_source_id": "csumb-scc-block23-2m-native",
+      "archive_sha256": "f638f6ed43f213798d6a395d1b70e5559b586ebb60197ec840f69aef139c1e76",
+      "archive_member": "SCC_Blk23_2m_habitat.zip/ArcViewGrids/scc23_2mhab",
+      "original_metadata": {
+        "zip": "SCC_Blk23_2m_habitat.zip",
+        "member": "ArcViewGrids/scc23_2mhab/metadata.xml",
+        "file": "var/seafloor/scc21-23-terrain-review/csumb-scc-block23-2m-native/original-metadata.xml",
+        "sha256": "a3e1e6ea218cae393ae6c7392b7f2d9163b368a2220073c36254fb94efe8c801"
+      },
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_dimensions": [
+        3404,
+        1974
+      ],
+      "native_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+      "nodata": -32768.0,
+      "native_transform": [
+        2.0,
+        0.0,
+        709945.0,
+        0.0,
+        -2.0,
+        3852169.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "normalized_depth_transform": [
+        2.0,
+        0.0,
+        709945.0,
+        0.0,
+        -2.0,
+        3852169.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "original_depth_alignment": {
+        "archive_member": "SCC_Blk23_2m_bathygrids.zip/ArcViewGrids/scc23_2mbathy",
+        "crs_equal": true,
+        "transform_equal": true,
+        "shape_equal": true,
+        "native_depth_transform": [
+          2.0,
+          0.0,
+          709945.0,
+          0.0,
+          -2.0,
+          3852169.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "native_depth_dimensions": [
+          3404,
+          1974
+        ],
+        "native_depth_crs": "PROJCS[\"unnamed\",GEOGCS[\"NAD83\",DATUM[\"North_American_Datum_1983\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6269\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4269\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-123],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"METERS\",1],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+        "native_depth_nodata": -3.4028234663852886e+38
+      },
+      "depth_cog_sha256": "6a42c5cab39642e4e6f108fee72768acb9329930e70c8a66357c2e5a91ad0688",
+      "identical_native_alignment": true,
+      "resampling_performed": false,
+      "all_valid_class_counts": {
+        "-31": 295361,
+        "-30": 3287787,
+        "-1": 1450061,
+        "0": 382583
+      },
+      "shallow_class_counts": {
+        "-31": 295361,
+        "-30": 3287787,
+        "-1": 1450061,
+        "0": 382583
+      },
+      "unrecognized_original_labels": [],
+      "unrecognized_shallow_cells": 0,
+      "legend_fully_resolved": true,
+      "native_shallow_depth_cells": 5431647,
+      "missing_class_at_shallow_cells": 15855,
+      "rough_shallow_cells": 1745422,
+      "rough_shallow_native_cell_area_proxy_km2": 6.981688,
+      "interpretation": "Producer rough/smooth terrain interpretation from the same bathymetry; not rock/sand ground truth. Zero is a valid smooth value.",
+      "unknown_label_action": "Preserve raw values as unresolved; do not normalize, bind, or count them as rough or smooth.",
+      "new_independent_evidence_count": 0,
+      "publication_change": false
+    }
+  ],
+  "production_native_reader_verification": {
+    "status": "passed",
+    "sources": [
+      {
+        "source_id": "csumb-scc-block21-2m-native",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "csumb-scc-block21-2m-native",
+          "source_sha256": "ee0efb3b2f3491f006965a384c9abc5e2a46955139dcb8cf07d4e6c9364797ea",
+          "depth_archive_member": "SCC_Blk21_2m_bathygrids.zip/ArcViewGrids/scc21_2mbathy",
+          "depth_cog_sha256": "376781e1a650e2084f0b7f2c45ddf7fa20001a92d76bc2a0790955f21b44547c",
+          "archive_member": "SCC_Blk21_2m_habitat.zip/ArcViewGrids/scc21_2mhab",
+          "metadata_sha256": "e4b4d3d1155ea36fd0cae1d9e078d84a6d883fba4b46faf70dd618126191edb3",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-scc21-23-native-terrain-review.json#/products/0"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "shape": [
+          1970,
+          2818
+        ],
+        "source_receipt_cog_sha256": "376781e1a650e2084f0b7f2c45ddf7fa20001a92d76bc2a0790955f21b44547c",
+        "native_grid_verified": true,
+        "rejected_legacy_receipts": []
+      },
+      {
+        "source_id": "csumb-scc-block22-2m-native",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "csumb-scc-block22-2m-native",
+          "source_sha256": "969013b219d82777318dcc5e36aeb94674af97a6c11e628c8abcdab8eecb906c",
+          "depth_archive_member": "SCC_Blk22_2m_bathygrids.zip/ArcViewGrids/scc22_2mbathy",
+          "depth_cog_sha256": "1d9caddc112e211b652f0751409f77dc1e88ba5cd27eeed32ffd906e494b3470",
+          "archive_member": "SCC_Blk22_2m_habitat.zip/ArcViewGrids/scc22_2mhab",
+          "metadata_sha256": "6ab023913f979700845e37a726c0c18270168e1139baf64a60637fc87144f729",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-scc21-23-native-terrain-review.json#/products/1"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "shape": [
+          2331,
+          3356
+        ],
+        "source_receipt_cog_sha256": "1d9caddc112e211b652f0751409f77dc1e88ba5cd27eeed32ffd906e494b3470",
+        "native_grid_verified": true,
+        "rejected_legacy_receipts": []
+      },
+      {
+        "source_id": "csumb-scc-block23-2m-native",
+        "binding": {
+          "profile": "csumb-native-rough-v1",
+          "depth_source_id": "csumb-scc-block23-2m-native",
+          "source_sha256": "f638f6ed43f213798d6a395d1b70e5559b586ebb60197ec840f69aef139c1e76",
+          "depth_archive_member": "SCC_Blk23_2m_bathygrids.zip/ArcViewGrids/scc23_2mbathy",
+          "depth_cog_sha256": "6a42c5cab39642e4e6f108fee72768acb9329930e70c8a66357c2e5a91ad0688",
+          "archive_member": "SCC_Blk23_2m_habitat.zip/ArcViewGrids/scc23_2mhab",
+          "metadata_sha256": "a3e1e6ea218cae393ae6c7392b7f2d9163b368a2220073c36254fb94efe8c801",
+          "rough_codes": [
+            -1,
+            -31,
+            -101,
+            -201
+          ],
+          "smooth_codes": [
+            0,
+            -30,
+            -100,
+            -200
+          ],
+          "reviewed_on": "2026-10-03",
+          "evidence": [
+            "research/receipts/seafloor-scc21-23-native-terrain-review.json#/products/2"
+          ],
+          "notes": "Producer-interpreted rough terrain restricts habitat calibration and extraction; same survey as depth, not independent substrate evidence. Smooth/NoData is unsupported habitat, never invalid depth. Existing rights, source status and whole-polygon spatial screening remain required."
+        },
+        "shape": [
+          1974,
+          3404
+        ],
+        "source_receipt_cog_sha256": "6a42c5cab39642e4e6f108fee72768acb9329930e70c8a66357c2e5a91ad0688",
+        "native_grid_verified": true,
+        "rejected_legacy_receipts": []
+      }
+    ]
+  },
+  "bounded_reach_proofs": [
+    {
+      "reach": "point-arguello-conception-r03",
+      "status": "passed",
+      "physical_only": false,
+      "publication_held": true,
+      "scope": "Production-eligible source set; normal runner with missing screen, all physical-only sources excluded",
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "before": {
+        "selected_valid_km2": 41.445754655,
+        "tier1_km2": 43.24125,
+        "physical_candidate_count": 50,
+        "roughness_thresholds": {
+          "vrm_samples": 4776004,
+          "vrm": 9.417172987014055e-05,
+          "bpi_fine_m_samples": 4655971,
+          "bpi_fine_m": 0.22631685686382563
+        },
+        "physical_candidate_area_km2": 3.8350843840265836,
+        "source_counts": {
+          "csumb-scc-block19-2m-native": 3,
+          "csumb-scc-block20-2m-native": 14,
+          "csumb-scc-block21-2m-native": 11,
+          "csumb-scc-block22-2m-native": 22
+        },
+        "run_sha256": "9e1cd86658c981bf8bce7075e4cda3d7a8249b5d1ddb53efa7257106ee9baa99",
+        "input_hash": "6434ee28db65f17c70d2cb289faf10d1e7ea35d0ab8716d4967b5916117246f8",
+        "physical_input_hash": "a8773cc5c7be0607ef182785a23752e3520044f810385210f76f1246b5d9d7c6",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 41.445754655,
+        "tier1_km2": 43.24125,
+        "physical_candidate_count": 106,
+        "roughness_thresholds": {
+          "vrm_samples": 661119,
+          "vrm": 0.005527222994714975,
+          "bpi_fine_m_samples": 637486,
+          "bpi_fine_m": 0.5756042939458262
+        },
+        "physical_candidate_area_km2": 0.671253529141805,
+        "source_counts": {
+          "csumb-scc-block19-2m-native": 6,
+          "csumb-scc-block20-2m-native": 8,
+          "csumb-scc-block21-2m-native": 46,
+          "csumb-scc-block22-2m-native": 46
+        },
+        "run_sha256": "cfed2a4ddb823a582550016c3dd023970a8474c68354b6ef93f1c7b10387a635",
+        "input_hash": "a6c2f7fd8b313605886df44bf08f0da974388f6afe8c0d83f174201fca1bb1d4",
+        "physical_input_hash": "218e6952884e343bff0bc43ec4081c67484f6cd6b59d8d6eb076806a303b408d",
+        "physical_reused": false
+      }
+    },
+    {
+      "reach": "point-arguello-conception-r04",
+      "status": "passed",
+      "physical_only": false,
+      "publication_held": true,
+      "scope": "Production-eligible source set; normal runner with missing screen, all physical-only sources excluded",
+      "measured_cells_identical": true,
+      "source_selection_identical": true,
+      "new_acquisition_km2": 0,
+      "new_public_locations": 0,
+      "before": {
+        "selected_valid_km2": 69.353977618,
+        "tier1_km2": 71.89875,
+        "physical_candidate_count": 225,
+        "roughness_thresholds": {
+          "vrm_samples": 10417851,
+          "vrm": 0.0022870551329106092,
+          "bpi_fine_m_samples": 10231626,
+          "bpi_fine_m": 0.4677542443305989
+        },
+        "physical_candidate_area_km2": 10.734042854719304,
+        "source_counts": {
+          "csumb-scc-block22-2m-native": 88,
+          "csumb-scc-block23-2m-native": 57,
+          "csumb-scc-block24-2m-native": 80
+        },
+        "run_sha256": "899d275a01873eba6424f2949cac1222c476f33d44437b44dbc0c49a0303228f",
+        "input_hash": "6abf7fdc6a9237a85474616489140df3730fbe17936a45626784066ec6c20d24",
+        "physical_input_hash": "a4af8bb4d7ff346574ea7bdb327b17a35c542ad1fdada9e4f319d136bb0a2098",
+        "physical_reused": false
+      },
+      "after": {
+        "selected_valid_km2": 69.353977618,
+        "tier1_km2": 71.89875,
+        "physical_candidate_count": 659,
+        "roughness_thresholds": {
+          "vrm_samples": 3908326,
+          "vrm": 0.00708134425804019,
+          "bpi_fine_m_samples": 3840761,
+          "bpi_fine_m": 0.7242253715669067
+        },
+        "physical_candidate_area_km2": 4.026391097010584,
+        "source_counts": {
+          "csumb-scc-block22-2m-native": 217,
+          "csumb-scc-block23-2m-native": 270,
+          "csumb-scc-block24-2m-native": 172
+        },
+        "run_sha256": "f156c260532d14d7d7be39204eec78553d9ebf762f1e3f1a8fbc8d995d9aacfc",
+        "input_hash": "8f22c8a4920eb91407e7d4b2655decc49477087d3c8f0aa259b0ca4da3a3e55b",
+        "physical_input_hash": "426798136c87012ce0ca88cbdc306c901b90c72aeadf898e550baa377b52398d",
+        "physical_reused": false
+      }
+    }
+  ],
+  "native_candidate_review": {
+    "audit_sha256": "464d53dc07ad90dea293e26e03322c1b6437da3fce2b69c87e29808896a49e99",
+    "script_sha256": "fe3fa319a6b6d6a87278b93f04f767c4898d1a53d10b17b3395449d973b8396f",
+    "candidate_count": 579,
+    "candidate_counts_by_source": {
+      "csumb-scc-block21-2m-native": 46,
+      "csumb-scc-block22-2m-native": 263,
+      "csumb-scc-block23-2m-native": 270
+    },
+    "sampled_native_views": 18,
+    "pages": [
+      {
+        "file": "page-01.png",
+        "sha256": "06beef47c05775f1e8b57ec42bffe8e18ad23c483d164b814a6a46e507b02969"
+      },
+      {
+        "file": "page-02.png",
+        "sha256": "95a572a9331255be73f46f45155e70eaa3d7d617d50496a1b2ab94ff26c7b40c"
+      },
+      {
+        "file": "page-03.png",
+        "sha256": "789f3656364d636c82d16c609875af0cc4047444acd1249df6443d6848a3b386"
+      },
+      {
+        "file": "page-04.png",
+        "sha256": "3cf633bfe5389786214dd0e00f98451d3df83d8424b0101d50db81a38325160e"
+      },
+      {
+        "file": "page-05.png",
+        "sha256": "2a46fb417eb9b5ad77ff887e08f7629521cd0143f60f1d5cf77dd8bbeeb816f9"
+      },
+      {
+        "file": "page-06.png",
+        "sha256": "10e9d7bf5739221d4e18748882806b3619f8f87bc7d1635eb1d179263525e0bd"
+      }
+    ],
+    "all_numeric_diagnostics_reviewed": true,
+    "primary_all_pages_reviewed": true,
+    "native_depth_min_m": 7.619999885559082,
+    "native_depth_max_m": 38.970001220703125,
+    "minimum_rough_native_center_fraction": 0.9891696750902527,
+    "class_nodata_centers": 0,
+    "limitation": "All numeric diagnostics and sampled native views reviewed. Outcrops, linear ridges, low relief and nearshore/missing-data edges remain visible; producer interpretation is not exhaustive artifact exclusion or substrate ground truth. Unsampled candidates are not individually visually verified."
+  }
+}
