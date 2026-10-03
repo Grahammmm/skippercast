@@ -81,7 +81,9 @@ export function publishedReachCount(manifest) {
   return Object.keys(manifest?.reach_inputs || {}).length;
 }
 
-export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {}) {
+export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch,
+  setTimeoutImpl = globalThis.setTimeout, clearTimeoutImpl = globalThis.clearTimeout,
+  now = Date.now } = {}) {
   const $ = (id) => document.getElementById(id);
   const toggle = $('layer-seafloor'), cellsToggle = $('layer-seafloor-cells'), viewSelect = $('seafloor-view'), status = $('seafloor-status');
   const box = $('seafloor-options');
@@ -95,6 +97,22 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = () => L.DomUtil.create('div', 'seafloor-key');
   let archive = null, manifest = null, state = 'idle', loading = 0;
+  let timer = null, retryAttempt = 0, disposed = false;
+  const retryDelays = [30000, 60000, 120000, 240000, 300000];
+  const cancelTimer = () => { if (timer !== null) clearTimeoutImpl(timer); timer = null; };
+  function schedule(delay) {
+    if (disposed) return;
+    cancelTimer();
+    timer = setTimeoutImpl(() => { timer = null; enable({ retry: true }); }, delay);
+    timer?.unref?.(); // Node-only fixture handles must not keep the test process alive.
+  }
+  function currentPublication() {
+    if (state !== 'ready') return false;
+    if (Date.parse(manifest?.expires_at) > now()) return true;
+    state = 'expired'; ++loading; archive = null; tiles.clear(); show(false);
+    setStatus('Seafloor screening has expired and is being refreshed');
+    return false;
+  }
   const tiles = new Map();   // "z/x/y" -> {habitat, cells} | Promise
 
   const setStatus = (text) => { status.textContent = text; };
@@ -111,7 +129,7 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
   }
 
   async function draw() {
-    if (!toggle.checked || state !== 'ready') return;
+    if (disposed || !toggle.checked || !currentPublication()) return;
     const zoom = map.getZoom();
     habitatLayer.clearLayers(); cellsLayer.clearLayers();
     legend.getContainer().innerHTML = legendHTML(viewSelect.value);
@@ -126,7 +144,7 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
     let parts;
     try { parts = await Promise.all(wanted.map(([z, x, y]) => tile(z, x, y))); }
     catch { if (token === loading) setStatus('Seafloor habitat could not load · try again'); return; }
-    if (token !== loading || !toggle.checked) return;
+    if (token !== loading || !toggle.checked || !currentPublication()) return;
     const habitat = dedupeById(parts.flatMap((p) => p.habitat));
     if (cellsToggle.checked) {
       for (const f of dedupeById(parts.flatMap((p) => p.cells))) {
@@ -147,15 +165,29 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
     setStatus(`${habitat.length} habitat candidate${habitat.length === 1 ? '' : 's'} in view · unverified; nominal depth · ${publishedReachCount(manifest)} published reach inputs in this region`);
   }
 
-  async function enable() {
+  async function enable({ retry = false } = {}) {
+    if (disposed) return;
+    cancelTimer();
+    // A pending refresh must never leave an old publication visible past expiry.
+    state = 'checking'; show(false);
+    if (!retry) retryAttempt = 0;
     const request = ++enabling; ++loading;
     if (!toggle.checked) { show(false); setStatus('Off'); return; }
     setStatus('Checking seafloor publication…');
-    const gate = await loadManifest(region, fetchImpl);
+    const gate = await loadManifest(region, fetchImpl, now());
     if (request !== enabling || !toggle.checked) return;
     box.hidden = gate.published === false;
     state = gate.state;
-    if (gate.state !== 'ready') { show(false); archive = null; tiles.clear(); setStatus(gate.reason); return; }
+    if (gate.state !== 'ready') {
+      show(false); archive = null; tiles.clear(); setStatus(gate.reason);
+      if (gate.published !== false && ['updating', 'unavailable'].includes(gate.state)) {
+        const delay = retryDelays[retryAttempt++];
+        if (delay) { setStatus(`${gate.reason} · retrying in ${delay / 1000}s`); schedule(delay); }
+        else setStatus(`${gate.reason} · toggle layer to retry`);
+      }
+      return;
+    }
+    retryAttempt = 0;
     if (manifest?.archive_sha256 !== gate.manifest.archive_sha256) { archive = null; tiles.clear(); }
     manifest = gate.manifest;
     try {
@@ -167,17 +199,23 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
       if (request !== enabling || !toggle.checked) return;
       state = 'unavailable'; archive = null; show(false); setStatus('Seafloor layer unavailable · try again later'); return;
     }
+    if (!currentPublication()) return;
+    // Hide/recheck when the reviewed publication expires, even without map movement.
+    schedule(Math.min(Date.parse(manifest.expires_at) - now(), 2147483647));
     show(true); draw();
   }
 
   // Only regions with a publication get the control; a 404 hides it.
   loadManifest(region, fetchImpl).then((gate) => {
+    if (disposed) return;
     box.hidden = gate.published === false;
     if (!toggle.checked) setStatus(gate.state === 'ready' ? 'Off · turn on to show screened habitat candidates' : gate.reason);
   });
 
-  toggle.addEventListener('change', () => { explicitChoice = toggle.checked; enable(); });
+  function toggleChanged() { if (disposed) return; explicitChoice = toggle.checked; enable(); }
+  toggle.addEventListener('change', toggleChanged);
   function targetChanged() {
+    if (disposed) return;
     const defaults = habitatDefaults(species?.value);
     toggle.checked = explicitChoice ?? defaults.enabled;
     if (defaults.enabled) viewSelect.value = defaults.view;
@@ -188,5 +226,16 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch } = {
   cellsToggle.addEventListener('change', draw);
   viewSelect.addEventListener('change', draw);
   map.on('moveend', draw);
-  return { enable, draw, state: () => state };
+  function dispose() {
+    if (disposed) return;
+    disposed = true; cancelTimer(); ++enabling; ++loading; state = 'disposed'; show(false);
+    archive = null; tiles.clear();
+    toggle.removeEventListener?.('change', toggleChanged);
+    species?.removeEventListener?.('change', targetChanged);
+    cellsToggle.removeEventListener?.('change', draw);
+    viewSelect.removeEventListener?.('change', draw);
+    map.off?.('moveend', draw); map.off?.('unload', dispose);
+  }
+  map.on('unload', dispose);
+  return { enable, draw, dispose, state: () => state };
 }

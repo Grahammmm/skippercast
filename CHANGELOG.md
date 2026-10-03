@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Recover the measured seafloor layer automatically after temporary publication updates, with bounded retries and expiry checks; preserve screening holds and manual layer-off choices.
+
 - Refine Cambria/Point Estero habitat with original SCC04–06 native terrain classes, retaining measured depth, existing rankings and all source/publication restrictions. No new surveyed area is claimed.
 
 - Refine San Simeon/Cambria habitat with the original SCC01–03 native terrain classes, preserving measured depth, producer terms and all spatial screens. Source qualification adds no new surveyed area.

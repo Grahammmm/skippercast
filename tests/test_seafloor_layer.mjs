@@ -55,7 +55,8 @@ test('regional screened habitat opens for reef targets, respects off, and skips 
   globalThis.document={getElementById:id=>elements.get(id)};
   globalThis.Option=class{constructor(label,id){this.value=id;}};
   globalThis.location={href:'https://skippercast.com/'};
-  const layer=()=>({addTo(){return this;},remove(){},clearLayers(){}});
+  let visible=0;
+  const layer=()=>({shown:false,addTo(){if(!this.shown){this.shown=true;visible++;}return this;},remove(){if(this.shown){this.shown=false;visible--;}},clearLayers(){}});
   globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({...layer(),getContainer:()=>({})})};
   const map={createPane:()=>({style:{}}),on(){},getZoom:()=>9};
   let opened=0;
@@ -88,4 +89,57 @@ test('defaults distinguish reef fishing from pelagic targets and count actual pu
   assert.equal(habitatDefaults('lingcod').view,'fit_lingcod');
   assert.equal(publishedReachCount({reach_inputs:{a:'x',b:'y',c:'z',d:'w'}}),4);
   assert.equal(publishedReachCount({}),0);
+});
+
+test('transient publication recovers automatically, retries are bounded, and off cancels recovery', async t => {
+  const {initSeafloor}=await import('../dist/seafloor-layer.js');
+  const elements=new Map();
+  for(const id of ['species-select','layer-seafloor','layer-seafloor-cells','seafloor-view','seafloor-status','seafloor-options']){
+    const handlers={}; elements.set(id,{value:id==='species-select'?'reef':'terrain',checked:false,hidden:false,textContent:'',add(){},
+      addEventListener(name,fn){handlers[name]=fn;},change(){handlers.change?.();}});
+  }
+  const saved={document:globalThis.document,L:globalThis.L,Option:globalThis.Option,pmtiles:globalThis.pmtiles,location:globalThis.location};
+  t.after(()=>{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}});
+  globalThis.document={getElementById:id=>elements.get(id)};globalThis.Option=class{};
+  globalThis.location={href:'https://skippercast.com/'};
+  let visible=0;
+  const layer=()=>({shown:false,addTo(){if(!this.shown){this.shown=true;visible++;}return this;},remove(){if(this.shown){this.shown=false;visible--;}},clearLayers(){}});
+  globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({...layer(),getContainer:()=>({})})};
+  let opened=0;globalThis.pmtiles={PMTiles:class{constructor(){opened++;}async getHeader(){return {};}}};
+  const map={createPane:()=>({style:{}}),on(){},getZoom:()=>9};
+  const ready={status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z',layers:{habitat:9}};
+  let pendingFetch=null;
+  let response={status:'updating'}, clock=Date.parse('2030-01-01T00:00:00Z'), next=0;
+  const timers=new Map(), settle=()=>new Promise(resolve=>setImmediate(resolve));
+  const reader=initSeafloor(map,()=>{}, {fetchImpl:async()=>{if(pendingFetch)await pendingFetch;return {ok:true,status:200,json:async()=>response};},now:()=>clock,
+    setTimeoutImpl(fn,delay){const id=++next;timers.set(id,{fn,delay});return id;},clearTimeoutImpl(id){timers.delete(id);}});
+  t.after(()=>reader.dispose());await settle();
+  assert.equal(reader.state(),'updating');assert.equal(opened,0);
+  assert.equal(timers.size,1,'updating publication schedules automatic recovery');
+  assert.equal([...timers.values()][0].delay,30000);
+  const fire=async()=>{const [id,event]=timers.entries().next().value;timers.delete(id);event.fn();await settle();};
+  response=ready;await fire();assert.equal(reader.state(),'ready');assert.equal(opened,1);
+  response={status:'updating'};await reader.enable();
+  const delays=[];while(timers.size){delays.push([...timers.values()][0].delay);await fire();}
+  assert.deepEqual(delays,[30000,60000,120000,240000,300000]);
+  assert.match(elements.get('seafloor-status').textContent,/toggle layer to retry/);
+  await reader.enable();assert.equal(timers.size,1);
+  const toggle=elements.get('layer-seafloor');toggle.checked=false;toggle.change();await settle();assert.equal(timers.size,0);
+  toggle.checked=true;response={status:'held'};toggle.change();await settle();
+  assert.equal(reader.state(),'held');assert.equal(timers.size,0);assert.equal(opened,1);
+  response=ready;await reader.enable();assert.equal(reader.state(),'ready');assert.equal(timers.size,1);
+  assert.equal(visible,3);
+  let release;pendingFetch=new Promise(resolve=>{release=resolve;});
+  clock=Date.parse(ready.expires_at);await fire();
+  assert.equal(visible,0,'expiry hides all layers before a pending fetch completes');
+  assert.equal(reader.state(),'checking');
+  release();await settle();pendingFetch=null;
+  assert.equal(reader.state(),'expired');assert.equal(timers.size,0);
+  clock=Date.parse('2030-01-01T00:00:00Z');await reader.enable();assert.equal(visible,3);
+  pendingFetch=new Promise(resolve=>{release=resolve;});
+  const refresh=reader.enable();assert.equal(visible,0,'manual/species refresh hides old layers synchronously');
+  reader.dispose();release();await refresh;pendingFetch=null;
+  elements.get('species-select').change();toggle.change();elements.get('layer-seafloor-cells').change();
+  await reader.enable();await reader.draw();await settle();
+  assert.equal(reader.state(),'disposed');assert.equal(visible,0);assert.equal(timers.size,0);
 });
