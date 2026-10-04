@@ -537,6 +537,45 @@ tests. Fixtures in `tests/fixtures/advisor/meta/`.
   the switch off, derived files, holds, the admin routes, the cron hook and the
   `/media` story and video routes with ranges.
 
+### As built (TA-S3)
+
+- **Containers.** `publish.ts` `tagsOf(post)` reads `collaborators_json` (valid
+  usernames, at most 3) and `user_tags_json` (`{username, x, y}` with x and y
+  0-1, at most 20); a Story takes neither. Collaborators go on a photo's image
+  container, a Reel and a carousel's parent container; user tags on a photo's
+  image container, or on a carousel's first image item (the post's tags carry no
+  item index). `meta.ts igContainerParams` still drops anything Meta does not
+  take for that container kind.
+- **Status on publish.** A post published to Instagram with collaborators gets
+  `collab_status='invited'` with its `ig_media_id`; otherwise it stays null.
+- **The invite read.** Meta's IG Media node has a `collaborators` edge
+  ("users who are added as collaborators on an Instagram Media object",
+  Instagram API with Facebook Login only; the IG Media reference, checked
+  2026-10-04). Its fields come from Ayrshare's documentation of the same call
+  (Meta's edge page could not be fetched from here):
+  `GET /<ig-media-id>/collaborators?fields=id,username,invite_status`, where
+  `invite_status` is `Accepted`, `Pending` or `Declined`, and only accounts that
+  allow collaborator tagging are listed. The Dec 2025 collaboration-invite
+  endpoints appear to be the invitee's side (tools built on them list and answer
+  invites sent to the account), which a publisher does not need. If the first
+  live read shows other field names, `igCollaborators` is the one place to
+  change.
+  `meta.ts igCollaborators` reads the edge (lower-case usernames; an unknown
+  status is null). `publish.ts collabTick`, called by `advisorCron` on every
+  tick, runs at most hourly (`job_state` `advisor.collab.checked_at`): posted or
+  partial posts with an `ig_media_id`, `collab_status='invited'` and
+  `posted_at` in the last 14 days, oldest first, 20 a run, one try each. The
+  post's status from its own collaborators: any `Pending`, unknown or not listed
+  -> stays `invited`; else any `Declined` -> `declined`; else `accepted`. A
+  failed read changes nothing and is logged with Meta's codes only. After 14
+  days an unanswered invite stays `invited`.
+- **Admin.** The post card shows "Collaboration invite" with the status
+  (invited, accepted, declined); `collab_status` is in the post's JSON.
+- **Tests.** `tests/test_advisor_social_publish.mjs` (TA-S3 section): the
+  parameters on each container kind, bad stored values dropped, no status
+  without collaborators or Instagram, `igCollaborators` parsing, the status
+  rule, the hourly read with its window, a failed read and the switch.
+
 ## Stories (SP-4)
 
 Cron 07:00 local: for each verified boat's count-board photo from the

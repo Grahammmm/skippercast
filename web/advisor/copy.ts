@@ -170,6 +170,8 @@ export const ADMIN_COPY = {
   scheduleClear: 'Clear time',
   retryPost: 'Retry the failed part',
   publishedTo: 'Published to',
+  collabStatus: 'Collaboration invite',
+  collabStatuses: {invited: 'Invited, waiting for an answer', accepted: 'Accepted', declined: 'Declined'} as Record<string, string>,
   scheduleSaved: 'Schedule saved.',
   publishOutcomes: {posted: 'Posted.', partial: 'Partly posted; the error says which part failed.', failed: 'Publishing failed; the error says why.',
     pending: 'Instagram is still processing the video; the next run finishes it.', deferred: 'Waiting for the photos to be prepared; the next run posts it.',

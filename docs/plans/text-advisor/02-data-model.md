@@ -366,6 +366,10 @@ As built (TA-S2): `advisor.publish.lock.<post id>` (the publishing lease, an ISO
 expiry) and `advisor.publish.<post id>` (progress without a column:
 `{ig_children, ig_started_at, ig_error, fb_photos, fb_error}`, deleted when the
 post is `posted`). A posted post's media move from `approved` to `posted`.
+As built (TA-S3): `advisor.collab.checked_at` (the hourly collaborator-invite
+read's throttle, an ISO time). `advisor_posts.collab_status` is set to
+`invited` when a post goes to Instagram with collaborators and to `accepted` or
+`declined` from Meta's `invite_status` (09 § As built (TA-S3)).
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 

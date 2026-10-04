@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "17841400000000101",
+      "username": "ritag",
+      "invite_status": "Accepted"
+    },
+    {
+      "id": "17841400000000102",
+      "username": "deckhand.example",
+      "invite_status": "Pending"
+    }
+  ]
+}

@@ -231,6 +231,25 @@ export async function igPermalink(cfg: MetaConfig, mediaId: string): Promise<str
   return typeof r.permalink === 'string' && /^https:\/\/(?:www\.)?instagram\.com\//.test(r.permalink) ? r.permalink : null;
 }
 
+export type InviteStatus = 'accepted' | 'pending' | 'declined';
+export interface Collaborator {id: string | null; username: string; invite_status: InviteStatus | null}
+/**
+ * GET /<ig-media-id>/collaborators?fields=id,username,invite_status (TA-S3): the
+ * collaborators invited on a published media and where each invite stands
+ * (Meta's `invite_status` is `Accepted`, `Pending` or `Declined`; only accounts
+ * that allow collaborator tagging are listed). Usernames come back lower-case.
+ */
+export async function igCollaborators(cfg: MetaConfig, mediaId: string): Promise<Collaborator[]> {
+  const r = await graph<{data?: {id?: unknown; username?: unknown; invite_status?: unknown}[]}>(cfg, 'GET', `/${requireId(mediaId, 'media')}/collaborators`,
+    {fields: 'id,username,invite_status'});
+  return (Array.isArray(r.data) ? r.data : []).flatMap(c => {
+    if (typeof c?.username !== 'string' || !/^[A-Za-z0-9._]{1,30}$/.test(c.username)) return [];
+    const status = typeof c.invite_status === 'string' ? c.invite_status.toLowerCase() : '';
+    return [{id: typeof c.id === 'string' && ID.test(c.id) ? c.id : null, username: c.username.toLowerCase(),
+      invite_status: status === 'accepted' || status === 'pending' || status === 'declined' ? status : null}];
+  });
+}
+
 // ---- Facebook Page ------------------------------------------------------------------------------
 
 /**

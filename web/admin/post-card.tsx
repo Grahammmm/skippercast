@@ -31,6 +31,7 @@ export function PostDetail({post}: {post: Post}) {
           {post.user_tags.length ? <><dt>{COPY.userTags}</dt><dd>{post.user_tags.map(t => `@${t.username}`).join(', ')}</dd></> : null}
           <dt>{COPY.scheduledFor}</dt><dd>{post.scheduled_for ? when(post.scheduled_for) : COPY.notScheduled}</dd>
           {post.ig_media_id || post.fb_post_id || post.fb_story_id ? <><dt>{COPY.publishedTo}</dt><dd>{publishedTo(post)}</dd></> : null}
+          {post.collab_status ? <><dt>{COPY.collabStatus}</dt><dd>{COPY.collabStatuses[post.collab_status] ?? post.collab_status}</dd></> : null}
           {post.error ? <><dt>{COPY.postError}</dt><dd>{post.error}</dd></> : null}
           {post.media.some(m => m.has_person) ? <><dt>{COPY.personBox}</dt><dd>{post.media.filter(m => m.has_person).map(m => m.publish_state).join(', ')}</dd></> : null}
         </dl>

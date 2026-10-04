@@ -28,6 +28,13 @@
 //      done -> `partial` with the error; none done -> `failed`. A failed surface is not tried again
 //      until the admin retries (opts.retry), and a retry runs only the surfaces without an id.
 //
+// TA-S3 (SP-7, SO-5): the post's collaborators (at most 3 usernames; feed images, carousels and
+// Reels, never Stories) and user tags (`{username, x, y}`; images only: a photo's container, or a
+// carousel's first image item) go on the containers from collaborators_json and user_tags_json.
+// A post published with collaborators gets collab_status 'invited'; collabTick (the cron, at most
+// hourly) then reads GET /<ig_media_id>/collaborators for invite_status: any still pending (or not
+// listed) -> invited, else any declined -> declined, else accepted, for 14 days after posting.
+//
 // Per-post progress that has no column (carousel children, the Page's unpublished photo ids, a
 // surface's error while the other is still pending) lives in job_state advisor.publish.<id>.
 // Errors kept on the post are MetaError messages (edge, HTTP status, Meta's code and subcode):
@@ -41,10 +48,10 @@ import {teamSender} from '../consumer.ts';
 import {channelFor} from '../channels/index.ts';
 import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
 import type {PostRow} from '../admin/posts.ts';
-import {TARGETS_FOR, captionStats} from './drafts.ts';
+import {COLLABORATORS_MAX, HANDLE, TARGETS_FOR, USER_TAGS_MAX, captionStats} from './drafts.ts';
 import type {Target} from './drafts.ts';
-import {MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
-import type {Fetcher, IgContainerInput, MetaConfig} from './meta.ts';
+import {MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igCollaborators, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
+import type {Fetcher, IgContainerInput, MetaConfig, UserTag} from './meta.ts';
 import type {ConsumerDeps, AdvisorContactRow} from '../types.ts';
 import type {Env} from '../../env.ts';
 
@@ -57,6 +64,10 @@ export const QUOTA_DEFER_MS = 3600_000;            // 09: quota used up -> sched
 export const DEFAULT_QUOTA = 50;                   // 09: 50 API posts per 24 h when Meta's config omits quota_total
 export const LEASE_MS = 10 * 60_000;
 export const STATE_PREFIX = 'advisor.publish.';
+export const COLLAB_KEY = 'advisor.collab.checked_at';  // TA-S3: the collab read's hourly throttle
+export const COLLAB_EVERY_MS = 3600_000 - 60_000;       // hourly (a little under, so a tick is never skipped)
+export const COLLAB_WINDOW_MS = 14 * 86400_000;         // invites are read for 14 days after posting
+export const COLLAB_PER_RUN = 20;
 export const LOCK_PREFIX = 'advisor.publish.lock.';
 
 export type PublishOutcome = 'posted' | 'partial' | 'failed' | 'pending' | 'deferred' | 'quota' | 'held' | 'busy' | 'skipped' | 'error';
@@ -148,26 +159,40 @@ interface Run {
   clock: () => number; at: () => string; tries: number; sleep: (ms: number) => Promise<void>; deps: PublishDeps;
 }
 
-/** The Instagram container input of one media item for a feed post. */
-const itemInput = (run: Run, m: MediaRow): IgContainerInput => {
+/** TA-S3: the post's collaborators (valid usernames, at most 3) and user tags (valid, x and y 0-1, at most 20), never on a story. */
+export function tagsOf(post: Pick<PostRow, 'kind' | 'collaborators_json' | 'user_tags_json'>): {collaborators: string[]; user_tags: UserTag[]} {
+  if (post.kind === 'story') return {collaborators: [], user_tags: []};
+  const collaborators = [...new Set(parse<unknown[]>(post.collaborators_json, []).filter((h): h is string => typeof h === 'string' && HANDLE.test(h)))].slice(0, COLLABORATORS_MAX);
+  const user_tags = parse<unknown[]>(post.user_tags_json, []).flatMap(raw => {
+    const tag = raw as {username?: unknown; x?: unknown; y?: unknown} | null;
+    const x = Number(tag?.x), y = Number(tag?.y);
+    return typeof tag?.username === 'string' && HANDLE.test(tag.username) && x >= 0 && x <= 1 && y >= 0 && y <= 1 ? [{username: tag.username, x, y}] : [];
+  }).slice(0, USER_TAGS_MAX);
+  return {collaborators, user_tags};
+}
+
+/** The Instagram container input of one media item for a feed post; the user tags go on the first image item. */
+const itemInput = (run: Run, m: MediaRow, tags: UserTag[]): IgContainerInput => {
   const urls = mediaUrls(run.base, m.id);
-  return m.kind === 'video' ? {kind: 'carousel_item', video_url: urls.video} : {kind: 'carousel_item', image_url: urls.feed};
+  return m.kind === 'video' ? {kind: 'carousel_item', video_url: urls.video} : {kind: 'carousel_item', image_url: urls.feed, ...(tags.length ? {user_tags: tags} : {})};
 };
 
 /** The containers for this post (children first for a carousel); the parent's id. Stores every id the moment Meta returns it. */
 async function createContainer(run: Run): Promise<Step | {status: 'created'; id: string}> {
   const {post, media, cfg, db, state} = run, ig = run.env.META_IG_USER_ID!;
   const caption = post.caption || undefined, urls = mediaUrls(run.base, media[0]!.id), video = media[0]!.kind === 'video';
+  const {collaborators, user_tags} = tagsOf(post), collab = collaborators.length ? {collaborators} : {};
   let input: IgContainerInput;
   if (post.kind === 'story') input = video ? {kind: 'story', video_url: urls.video} : {kind: 'story', image_url: urls.story};
-  else if (post.kind === 'reel') input = {kind: 'reel', video_url: urls.video, ...(caption ? {caption} : {}), share_to_feed: true};
+  else if (post.kind === 'reel') input = {kind: 'reel', video_url: urls.video, ...(caption ? {caption} : {}), share_to_feed: true, ...collab};
   else if (media.length === 1) {
     if (video) return {status: 'error', error: 'a single video goes out as a reel'};
-    input = {kind: 'image', image_url: urls.feed, ...(caption ? {caption} : {})};
+    input = {kind: 'image', image_url: urls.feed, ...(caption ? {caption} : {}), ...collab, ...(user_tags.length ? {user_tags} : {})};
   } else {
     const children = (state.ig_children ?? []).slice(0, media.length);
+    const tagged = media.findIndex(m => m.kind === 'image');
     for (let i = children.length; i < media.length; i++) {
-      children.push(await igContainer(cfg, ig, itemInput(run, media[i]!)));
+      children.push(await igContainer(cfg, ig, itemInput(run, media[i]!, i === tagged ? user_tags : [])));
       state.ig_children = [...children];
       state.ig_started_at ??= run.at();
       await writeState(db, post.id, state, run.at());
@@ -181,7 +206,7 @@ async function createContainer(run: Run): Promise<Step | {status: 'created'; id:
         return step;
       }
     }
-    input = {kind: 'carousel', children, ...(caption ? {caption} : {})};
+    input = {kind: 'carousel', children, ...(caption ? {caption} : {}), ...collab};
   }
   const id = await igContainer(cfg, ig, input);
   await db.prepare('UPDATE advisor_posts SET ig_container_id=?,updated_at=? WHERE id=?').bind(id, run.at(), post.id).run();
@@ -214,8 +239,10 @@ async function publishInstagram(run: Run): Promise<Step> {
       return step;
     }
     const mediaId = await igPublish(cfg, ig, container);
-    await db.prepare('UPDATE advisor_posts SET ig_media_id=?,updated_at=? WHERE id=?').bind(mediaId, run.at(), post.id).run();
-    post.ig_media_id = mediaId;
+    // TA-S3: collaborators were invited with the container; the cron reads their answers.
+    const invited = post.kind !== 'story' && tagsOf(post).collaborators.length > 0;
+    await db.prepare('UPDATE advisor_posts SET ig_media_id=?,collab_status=?,updated_at=? WHERE id=?').bind(mediaId, invited ? 'invited' : null, run.at(), post.id).run();
+    post.ig_media_id = mediaId; post.collab_status = invited ? 'invited' : null;
     advisorLog('info', 'advisor_post_published', {surface: 'instagram', kind: post.kind});
     const permalink = await igPermalink(cfg, mediaId).catch(() => null);
     if (permalink) await notifySkipper(run.env, post, permalink, run.deps).catch(error => advisorLog('warn', 'advisor_post_notify_failed', {reason: short(error)}));
@@ -382,4 +409,54 @@ export async function publishDue(env: Env, now: number = Date.now(), deps: Publi
   const outcomes: PublishOutcome[] = [];
   for (const {id} of due) outcomes.push((await publish(env, id, {pollTries: CRON_POLL_TRIES, ...deps})).outcome);
   return {status: 'ran', outcomes};
+}
+
+// ---- TA-S3: collaborator invites ---------------------------------------------------------------------
+
+export type CollabStatus = 'invited' | 'accepted' | 'declined';
+/** The post's collab_status from Meta's list: any of ours pending or not listed -> invited; else any declined -> declined; else accepted. */
+export function collabStatusOf(invited: readonly string[], listed: readonly {username: string; invite_status: string | null}[]): CollabStatus {
+  const status = invited.map(name => listed.find(c => c.username === name.toLowerCase())?.invite_status ?? 'pending');
+  if (status.some(s => s !== 'accepted' && s !== 'declined')) return 'invited';
+  return status.includes('declined') ? 'declined' : 'accepted';
+}
+
+export interface CollabTickResult {status: 'off' | 'throttled' | 'ran'; read: number; changed: number}
+
+/**
+ * The cron's collab read (TA-S3), at most once an hour (job_state
+ * advisor.collab.checked_at): posted or partial posts with an Instagram media
+ * id, collab_status 'invited' and posted in the last 14 days, oldest first, at
+ * most COLLAB_PER_RUN, each one GET /<ig_media_id>/collaborators. A read that
+ * fails leaves the post as it was; a changed status is written.
+ */
+export async function collabTick(env: Env, now: number = Date.now(), deps: Pick<PublishDeps, 'fetcher' | 'sleep'> = {}): Promise<CollabTickResult> {
+  const db = env.DB;
+  if (!db || !advisorSettings(env).socialEnabled || !metaConfigured(env)) return {status: 'off', read: 0, changed: 0};
+  const at = new Date(now).toISOString(), cutoff = new Date(now - COLLAB_EVERY_MS).toISOString();
+  const claimed = await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at WHERE job_state.value<=?')
+    .bind(COLLAB_KEY, at, at, cutoff).run();
+  if (!claimed.meta.changes) return {status: 'throttled', read: 0, changed: 0};
+  const cfg = metaConfig(env, {...(deps.fetcher ? {fetcher: deps.fetcher} : {}), ...(deps.sleep ? {sleep: deps.sleep} : {}), attempts: 1})!;
+  const posts = (await db.prepare(`SELECT id,kind,collaborators_json,user_tags_json,ig_media_id FROM advisor_posts WHERE collab_status='invited' AND ig_media_id IS NOT NULL
+    AND status IN ('posted','partial') AND posted_at>=? ORDER BY posted_at, id LIMIT ?`).bind(new Date(now - COLLAB_WINDOW_MS).toISOString(), COLLAB_PER_RUN)
+    .all<Pick<PostRow, 'id' | 'kind' | 'collaborators_json' | 'user_tags_json' | 'ig_media_id'>>()).results;
+  let read = 0, changed = 0;
+  for (const post of posts) {
+    const invited = tagsOf(post).collaborators;
+    if (!invited.length) continue;
+    try {
+      const listed = await igCollaborators(cfg, post.ig_media_id!);
+      read++;
+      const next = collabStatusOf(invited, listed);
+      if (next !== 'invited') {
+        const r = await db.prepare("UPDATE advisor_posts SET collab_status=?,updated_at=? WHERE id=? AND collab_status='invited'").bind(next, at, post.id).run();
+        changed += r.meta.changes ? 1 : 0;
+      }
+    } catch (error) {
+      advisorLog('warn', 'advisor_collab_read_failed', {reason: short(error)});
+    }
+  }
+  if (changed) advisorLog('info', 'advisor_collab_updated', {count: changed});
+  return {status: 'ran', read, changed};
 }

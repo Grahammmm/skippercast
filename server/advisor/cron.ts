@@ -21,6 +21,7 @@
 //
 // TA-S2: social/publish.ts publishDue also runs on every tick (not a slot): approved posts whose
 // time has come, and a video still processing on Instagram, while ADVISOR_SOCIAL_ENABLED is on.
+// TA-S3: collabTick reads the collaborator invites of recent posts, at most hourly.
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
@@ -38,7 +39,7 @@ import type {DailyDeps} from './answers/reports.ts';
 // TA-A4: the CDFW change-watch slot.
 import {watchRuleSources} from './admin/rules.ts';
 // TA-S2: publishing due posts every tick.
-import {publishDue} from './social/publish.ts';
+import {publishDue, collabTick} from './social/publish.ts';
 import type {PublishDeps} from './social/publish.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
@@ -188,6 +189,9 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     const published = await publishDue(env, now, {consumer: deps.consumer ?? {channelFor}, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {}), ...deps.publish})
       .catch(error => { advisorLog('error', 'advisor_publish_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
     if (!published) partial = true;
+    // TA-S3: collaborator invite answers, at most hourly.
+    await collabTick(env, now, {...(deps.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps.publish?.sleep ? {sleep: deps.publish.sleep} : {})})
+      .catch(error => { advisorLog('error', 'advisor_collab_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
     for (const slot of deps.slots ?? SLOTS) {
       const outcome = await runSlot(env, slot.name, slot.time, (e, n) => slot.run(e, n, deps), now);
       if (outcome === 'failed') partial = true;
