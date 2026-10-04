@@ -22,9 +22,8 @@ export const EXAMPLES: readonly Example[] = [
   ]},
   {name: 'trip-planning-advisory', language: 'en', turns: [
     {from: 'person', text: 'Is Saturday worth going for rockfish out of Port San Luis? 22 ft boat'},
-    {from: 'tool', text: '[get_conditions port=port-san-luis date=Saturday -> SMALL CRAFT ADVISORY Sat until 3 pm; NW 15-20 kt, gusts 25; seas 7 ft at 9 s.]'},
-    {from: 'tool', text: '[get_rules species_key=rockfish -> season open, row stale: true]'},
-    {from: 'SkipperCast', text: "SMALL CRAFT ADVISORY posted for Sat until 3 pm. NW 15-20 kt, gusts to 25, seas 7 ft at 9 s: rough for a 22 footer. Rockfish season shows open, but double-check the current rules before you go: {{link:rules:rockfish}} Check the latest NWS forecast before you go."},
+    {from: 'tool', text: '[get_conditions port=port-san-luis date=Saturday species=rockfish -> advisory_line: SMALL CRAFT ADVISORY posted for Sat. NW 15-20 kt, gusts 25; seas 7 ft at 9 s; comfort: rough for the reference boat. Season: shows open, rule due for review (double-check). Recent reports: Example Boat One, Thu: rockfish limits. confidence_phrase: recent reported activity: Low. closer: Check the latest NWS forecast before you go.]'},
+    {from: 'SkipperCast', text: "SMALL CRAFT ADVISORY posted for Sat. NW 15-20 kt, gusts to 25, seas 7 ft at 9 s: rough for a 22 footer. Rockfish season shows open, but that rule is due for review, so double-check: {{link:rules:rockfish}} Example Boat One had rockfish limits Thu; recent reported activity: Low. Check the latest NWS forecast before you go."},
   ]},
   {name: 'fish-id-rules', language: 'en', turns: [
     {from: 'person', text: '[photo] what is this'},
@@ -52,9 +51,8 @@ export const EXAMPLES: readonly Example[] = [
   ]},
   {name: 'trip-planning-advisory-es', language: 'es', turns: [
     {from: 'person', text: '¿Vale la pena ir el sábado por rocote desde Port San Luis? Tengo una lancha de 22 pies'},
-    {from: 'tool', text: '[get_conditions port=port-san-luis date=sábado -> SMALL CRAFT ADVISORY sáb hasta las 3 pm; NW 15-20 nudos, rachas de 25; olas de 7 pies a 9 s.]'},
-    {from: 'tool', text: '[get_rules species_key=rockfish -> temporada abierta, fila stale: true]'},
-    {from: 'SkipperCast', text: 'Hay SMALL CRAFT ADVISORY el sábado hasta las 3 pm. NW 15-20 nudos, rachas de 25, olas de 7 pies a 9 s: pesado para una lancha de 22 pies. La temporada de rocote aparece abierta, pero revisa las reglas vigentes antes de salir: {{link:rules:rockfish}} Revisa el pronóstico más reciente del NWS antes de salir.'},
+    {from: 'tool', text: '[get_conditions port=port-san-luis date=sábado species=rocote -> advisory_line: SMALL CRAFT ADVISORY (aviso del NWS) para el sábado. NW 15-20 nudos, rachas de 25; olas de 7 pies a 9 s; pesado para una lancha mediana. Temporada: aparece abierta, regla en revisión (vuelve a revisarla). Reportes recientes: Example Boat One, jue: límite de rocote. confidence_phrase: actividad reciente reportada: Low. closer: Revisa el pronóstico más reciente del NWS antes de salir.]'},
+    {from: 'SkipperCast', text: 'SMALL CRAFT ADVISORY (aviso del NWS) para el sábado. NW 15-20 nudos, rachas de 25, olas de 7 pies a 9 s: pesado para una lancha de 22 pies. La temporada de rocote aparece abierta, pero esa regla está en revisión, así que vuelve a revisarla: {{link:rules:rockfish}} Example Boat One sacó el límite de rocote el jueves; actividad reciente reportada: Low. Revisa el pronóstico más reciente del NWS antes de salir.'},
   ]},
 ];
 

@@ -176,6 +176,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-E2, TA-A1
 - Files: `answers/planning.ts`, `tools/get_conditions.ts` (date parsing, window), `prompts/system.ts` (confidence words section), tests with a feed fixture carrying a Small Craft Advisory.
 - Tests: advisory first; horizon message beyond 7 days; weekend → two days; only the three confidence words appear.
+- As built: `get_conditions` with `species` returns the brief (no new tool); `answers/planning.ts`; the engine puts the advisory line first when a reply does not lead with it. One PR with TA-A5 and TA-A6 (branch `claude/ta-a2-a6`). See 06 § As built (TA-A2).
 
 ### TA-A3 · Species pages data, look-alikes review, protected list · S
 - Stories: ID-2, WH-4 (data).

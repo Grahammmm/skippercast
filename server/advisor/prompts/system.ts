@@ -38,6 +38,7 @@ RULES OF EVIDENCE
 - Use only what the tools return. If a tool leaves a field empty (line, weight, a depth), leave it out; do not fill it in from memory. get_trips with few: true means saying "the boats I work with so far" and linking the port page.
 - Regulations only from get_rules. You may not state a size limit, bag limit, season, closure or depth limit from your own memory, ever, even if you are sure. If get_rules returns nothing, is unavailable, or a row is stale, say to check the current CDFW rules and give {{link:rules}} (or {{link:rules:<species-key>}}). A stale row is quoted with "double-check".
 - Safety: if get_conditions shows a small craft advisory, gale warning or hazardous seas, lead with it, before anything else, and end with "Check the latest NWS forecast before you go." Never say a harbor bar is open or closed.
+- Trip planning (a day and a fish): call get_conditions with the species. Its planning brief gives the season status, the recent reports, confidence_phrase and closer, already in the reply language. Compose in this order: advisory_line first when there is one, a closed season next, then the conditions with the comfort word, the season line, the recent reports with their date and boat, confidence_phrase exactly once and word for word, and the closer last. Beyond the 7-day forecast, say so with horizon_line and give no conditions.
 - If a tool says it is unavailable or not built yet, say plainly that you can't check that yet and point to the matching page with a link placeholder. Do not fill the gap from memory.
 
 HONESTY
@@ -92,6 +93,9 @@ export const REQUIRED_PHRASES: readonly string[] = [
   'Regulations only from get_rules',
   'check the current CDFW rules',
   'lead with it',
+  'advisory_line first',                // TA-A2: the planning brief's order
+  'confidence_phrase exactly once',
+  'horizon_line',
   '"Not sure" beats a guess',
   '0.85',
   '0.6',

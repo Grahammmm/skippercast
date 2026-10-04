@@ -386,3 +386,66 @@ from the text above:
   update that changes those numbers regenerates the port's answer on the
   next question (one call per port per change).
 
+
+## As built (TA-A2)
+
+The planning brief is `server/advisor/answers/planning.ts` (`tripConditions`,
+`planningBrief`, `advisoryLine`, `seasonFor`, `leadsWithAdvisory`, `fit`).
+Where the code differs from § "Is Saturday worth going" above:
+
+- **Exposure.** No `plan_trip` tool: `get_conditions` takes an optional
+  `species` and then returns the brief as its `planning` field (the smaller
+  change: one tool, one call, the `conditions` intent, no registry or role
+  change). Without `species` it returns what it did (TA-E2), plus
+  `advisory_line`. The signature is `planningBrief(env, {port, date, species,
+  startHour?, endHour?}, {now, language, deps, contact, settings})`; 06's
+  `boatType?` is not taken (the person's boat is unknown by text, so the
+  comfort word stays the reference boat's).
+- **Dates.** As TA-E2 (`parseTripDate`): English and Spanish weekdays, today/hoy,
+  tomorrow/mañana, pasado mañana, this weekend/fin de semana (two days; on a
+  Sunday only Sunday), `next <weekday>`, ISO. Beyond seven days the result has
+  `beyond_horizon: true`, no conditions and no advisories, and `horizon_line`
+  ("The forecast only reaches 7 days out, so I can't call the weather for Thu
+  yet. Ask me again closer to the day."); the season and recent activity still
+  come back.
+- **Advisory first.** `advisory_line` is written in the reply language from the
+  alerts that overlap each day's window: "SMALL CRAFT ADVISORY posted for Sat
+  and Sun." / "SMALL CRAFT ADVISORY (aviso del NWS) para el sábado y el
+  domingo." (gale first; the NWS event name stays English, in capitals). The
+  closer is `planning.closer` ("Check the latest NWS forecast before you go." /
+  "Revisa el pronóstico más reciente del NWS antes de salir."). The engine
+  backstop is in 04 § As built (TA-A2).
+- **Season.** `lookupRules` for the species (its own row, else its group's:
+  a vermilion uses the rockfish row), checked with `seasonOpen` on every trip
+  date: `open`, `closed` (on any of the dates) or `no_rule`, with `stale` and a
+  line in the reply language. The lines carry no number (the season dates,
+  sizes and limits are `get_rules`' to quote), so a planning call does not
+  satisfy the rules guard; a stale row's line says "double-check"; no row says
+  to check the current CDFW rules. The note puts a closed season right after
+  the advisory.
+- **Recent activity.** `dailyInputs` for the port and today (TA-A1's inputs:
+  published skipper reports of three days, a verified boat by name, any other
+  as "a boat"), narrowed to the species' count lines (at most three reports),
+  and the landing's trips for the species in the seven days before today,
+  labelled "reported by the landing". The brief reads each feed once (a
+  per-call memo around the feed reader), so the conditions, the inputs and the
+  ladder share one read.
+- **Confidence.** One ladder word for the species asked about, not the region
+  target: the landing's `reportEvidence` for the feed species the catalog files
+  it under (vermilion → rockfish; `reef` stays the lingcod-and-rockfish group),
+  so lingcod trips are not rockfish evidence. A published skipper report of the
+  species in the three days lifts Insufficient to Low (positive reports exist,
+  coverage weaker: `docs/bite-evidence.md`'s Low), never to Moderate. Dungeness
+  is always Insufficient (boat reports are no crab evidence). The brief carries
+  the word and `confidence_phrase` ("recent reported activity: Low" /
+  "actividad reciente reportada: Low"; the word stays English, as in TA-A1) and
+  no other confidence word; the prompt says to use the phrase exactly once.
+- **Size.** The engine passes the model at most 4000 characters of a tool
+  result (`TOOL_RESULT_MAX`, now in `tools/tool.ts`); a longer JSON would be cut
+  and no longer parse, so `fit` drops the advisory headlines first, then the
+  oldest skipper reports, then count lines past three.
+- **Prompt.** RULES OF EVIDENCE has the planning order (advisory_line first, a
+  closed season, conditions and comfort, the season line, reports with date and
+  boat, `confidence_phrase` exactly once, the closer last; `horizon_line` past
+  seven days); the planning few-shots (en, es) call `get_conditions` with the
+  species.

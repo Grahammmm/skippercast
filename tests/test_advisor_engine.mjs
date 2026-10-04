@@ -308,7 +308,8 @@ dbTest('notifyAdmin texts the admin-test contact for new skipper and media revie
 // ---- stage 3: recorded model turns -------------------------------------------------------
 
 test('fixtures: every recorded case is complete', () => {
-  const required = ['first-contact', 'whats-biting', 'trip-planning-advisory', 'fish-id-rules', 'rig-question', 'refusal', 'rules-without-tool', 'tool-loop', 'pause-turn', 'http-529'];
+  const required = ['first-contact', 'whats-biting', 'trip-planning-advisory', 'fish-id-rules', 'rig-question', 'refusal', 'rules-without-tool', 'tool-loop', 'pause-turn', 'http-529',
+    'trip-planning-brief', 'trip-planning-backstop'];   // TA-A2: the planning brief and the advisory backstop
   const names = engineFixtures.map(f => f.replace(/\.json$/, ''));
   for (const name of required) assert.ok(names.includes(name), name);
   for (const name of names) { const f = engineFixture(name); assert.ok(f._source && f.description && f.message !== undefined && f.exchanges.length && f.expect, name); }
@@ -324,8 +325,11 @@ for (const file of engineFixtures) {
     const message = inbound(sql, f.message, {media: f.media ? ['m-fixture'] : null});
     const attempt = quiet(() => run(env, contactRow(sql), message, {fetcher: api.fetcher}));
     if (f.expect.throws) { await assert.rejects(attempt, new RegExp(f.expect.throws)); assert.equal(api.requests.length, 2, 'one retry'); return; }
-    const {value: result} = await attempt;
+    const {value: result, lines} = await attempt;
     assert.equal(api.remaining(), 0, 'every recorded response was used');
+    // TA-A2: a log line the case must (or must not) write, such as the advisory backstop's.
+    if (f.expect.log) assert.ok(lines.some(l => l.includes(f.expect.log)), `logged ${f.expect.log}`);
+    if (f.expect.log_not) assert.ok(!lines.some(l => l.includes(f.expect.log_not)), `did not log ${f.expect.log_not}`);
     // Request shape (04 § stage 3).
     for (const request of api.requests) {
       assert.equal(request.max_tokens, MAX_TOKENS); assert.equal(request.temperature, TEMPERATURE); assert.equal(request.model, 'claude-sonnet-5');

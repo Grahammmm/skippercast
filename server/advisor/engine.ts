@@ -35,6 +35,7 @@ import {resolveLinks, portRegion, portName} from './links.ts';
 import {resolvePort} from './answers/resolve.ts';
 import {systemPrompt, REFUSAL_EN, ABUSE_EN} from './prompts/system.ts';
 import {toolsForRole, claudeTools, dispatchTool, isWebOnly} from './tools/index.ts';
+import {TOOL_RESULT_MAX} from './tools/tool.ts';
 import type {AdvisorTool, ToolContext} from './tools/index.ts';
 import {uploadLinkText} from './tools/send_upload_link.ts';
 import {contactCardAction} from './tools/send_contact_card.ts';
@@ -51,6 +52,8 @@ import {ANGLER_FLOWS} from './intake/anglers.ts';
 // TA-A1: the plain "what's biting" pre-router and the day's answer in the situation brief.
 import {DAILY_FLOWS, storedDaily} from './answers/reports.ts';
 import {capReply, rulesGuard, stripMarkdown} from './reply.ts';
+// TA-A2: the advisory backstop on planning turns.
+import {leadsWithAdvisory} from './answers/planning.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -221,7 +224,11 @@ interface ApiResponse {content?: ContentBlock[]; stop_reason?: string; usage?: R
 const count = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
 class BudgetSpent extends Error { constructor() { super('advisor turn budget spent'); this.name = 'BudgetSpent'; } }
 
-export interface ModelTurn {text: string; toolsCalled: string[]; usableRules: boolean; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget'}
+export interface ModelTurn {
+  text: string; toolsCalled: string[]; usableRules: boolean; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget';
+  /** TA-A2: the first get_conditions result with an advisory: its line (reply language) and events, for the advisory backstop. */
+  advisory?: {line: string; events: string[]} | null;
+}
 
 /**
  * Claude with tools: at most MAX_TOOL_ROUNDS executed tool rounds; a fifth
@@ -242,6 +249,7 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
   const request = {model: settings.model, max_tokens: MAX_TOKENS, temperature: TEMPERATURE, system: args.system, tools: claudeTools(tools), messages};
   const toolsCalled: string[] = [], actions: Action[] = [];
   let usableRules = false, rounds = 0, pauses = 0, lastText = '', carry = '';
+  let advisory: ModelTurn['advisory'] = null;
 
   async function call(): Promise<ApiResponse> {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -282,8 +290,8 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         continue;
       }
       const uses = content.filter(b => b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string');
-      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'ok'};
-      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'tool_loop'};
+      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'ok', advisory};
+      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'tool_loop', advisory};
       rounds++;
       const results: unknown[] = [];
       for (const use of uses) {
@@ -292,15 +300,25 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         if (use.name === 'get_rules' && !out.isError && !(out.result as {unavailable?: unknown})?.unavailable) usableRules = true;
         // TA-I3: identify_fish quotes the rules table too (06 § fish ID step 3); a current row counts, a stale one does not.
         if (use.name === 'identify_fish' && !out.isError && (out.result as {rules?: {stale?: boolean} | null})?.rules?.stale === false) usableRules = true;
+        // TA-A2: a planning turn whose conditions carry an advisory must lead with it (AD-4); runTurn checks the reply.
+        if (use.name === 'get_conditions' && !out.isError && !advisory) advisory = advisoryOf(out.result);
         if (out.actions) actions.push(...out.actions);
-        results.push({type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out.result ?? null).slice(0, 4000), ...(out.isError ? {is_error: true} : {})});
+        results.push({type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out.result ?? null).slice(0, TOOL_RESULT_MAX), ...(out.isError ? {is_error: true} : {})});
       }
       messages.push({role: 'assistant', content}, {role: 'user', content: results});
     }
   } catch (error) {
-    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'budget'};
+    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'budget', advisory};
     throw error;
   }
+}
+
+/** A get_conditions result's advisory line and events, when it says to lead with one. */
+function advisoryOf(result: unknown): {line: string; events: string[]} | null {
+  const r = result as {lead_with_advisory?: unknown; advisory_line?: unknown; advisories?: {event?: unknown}[]} | null;
+  if (r?.lead_with_advisory !== true || typeof r.advisory_line !== 'string' || !Array.isArray(r.advisories)) return null;
+  const events = r.advisories.map(a => a?.event).filter((e): e is string => typeof e === 'string' && e.length > 0);
+  return events.length ? {line: r.advisory_line, events} : null;
 }
 
 // ---- the turn ----------------------------------------------------------------------------
@@ -437,6 +455,12 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
       actions.push({type: 'review_open', kind: 'conversation', refId: message.id, reason: 'rules_without_tool'});
       advisorLog('warn', 'advisor_rules_guard', {intent});
     }
+  }
+  // TA-A2 (AD-4): a deterministic backstop like the rules guard: when the turn's conditions had an advisory and the
+  // reply does not lead with it, the advisory line goes first.
+  if (turn.advisory && !leadsWithAdvisory(reply, turn.advisory.events)) {
+    reply = `${turn.advisory.line} ${reply}`;
+    advisorLog('warn', 'advisor_advisory_backstop', {intent, events: turn.advisory.events.length});
   }
   const resolved = resolveLinks(reply, settings.publicBase);
   reply = LIST_INTENTS.has(intent) ? resolved.text : capReply(resolved.text, resolved.links);

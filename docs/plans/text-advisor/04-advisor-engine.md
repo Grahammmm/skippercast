@@ -410,3 +410,21 @@ and the web chat route). Where the code differs from the text above:
   lingcod?"), since the plain one never reaches the model; the stage 3 caps
   test does the same.
 
+
+## As built (TA-A2)
+
+- `get_conditions` takes `species` and returns the planning brief (06 § As
+  built (TA-A2)); it always returns `advisory_line` in the reply language when
+  there is an advisory.
+- **Advisory backstop** (AD-4), after the rules guard and before links: when a
+  turn's first `get_conditions` result had `lead_with_advisory` and the reply's
+  first sentence does not name one of its events in capitals ("SMALL CRAFT
+  ADVISORY"; a Spanish "Hay SMALL CRAFT ADVISORY…" passes), the engine puts
+  `advisory_line` in front and logs `advisor_advisory_backstop`. Deterministic,
+  like the rules guard; no review is opened. The 480-character cap keeps
+  sentences from the start, so the advisory survives it.
+- `TOOL_RESULT_MAX` (4000) lives in `tools/tool.ts`; the engine and the
+  planning brief share it.
+- New engine fixtures `trip-planning-brief` (the reply leads; no backstop) and
+  `trip-planning-backstop` (the reply does not lead; the line is put first and
+  logged); the model-turn runner checks `expect.log` / `expect.log_not`.

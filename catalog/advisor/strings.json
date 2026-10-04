@@ -561,6 +561,54 @@
     "daily_landing_one": {
       "en": "The landing reports 1 trip with {species} this week; recent reported activity: {label}.",
       "es": "El muelle reporta 1 viaje con {species} esta semana; actividad reciente reportada: {label}."
+    },
+    "day_today": {
+      "en": "today",
+      "es": "hoy"
+    },
+    "day_tomorrow": {
+      "en": "tomorrow",
+      "es": "mañana"
+    },
+    "words_and": {
+      "en": "{a} and {b}",
+      "es": "{a} y {b}"
+    },
+    "planning_advisory": {
+      "en": "{event} posted for {days}.",
+      "es": "{event} (aviso del NWS) para {days}."
+    },
+    "planning_beyond_horizon": {
+      "en": "The forecast only reaches {days} days out, so I can't call the weather for {day} yet. Ask me again closer to the day.",
+      "es": "El pronóstico solo llega a {days} días, así que todavía no puedo decirte cómo estará {day}. Pregúntame más cerca del día."
+    },
+    "nws_closer": {
+      "en": "Check the latest NWS forecast before you go.",
+      "es": "Revisa el pronóstico más reciente del NWS antes de salir."
+    },
+    "planning_season_open": {
+      "en": "The {species} season shows open for that day. Sizes and limits: {link}",
+      "es": "La temporada de {species} aparece abierta para ese día. Tallas y límites: {link}"
+    },
+    "planning_season_open_stale": {
+      "en": "The {species} season shows open, but that rule is due for review, so double-check before you go: {link}",
+      "es": "La temporada de {species} aparece abierta, pero esa regla está en revisión, así que vuelve a revisarla antes de salir: {link}"
+    },
+    "planning_season_closed": {
+      "en": "The {species} season is closed for that day: {link}",
+      "es": "La temporada de {species} está cerrada para ese día: {link}"
+    },
+    "planning_season_closed_stale": {
+      "en": "The {species} season shows closed for that day, but that rule is due for review, so double-check: {link}",
+      "es": "La temporada de {species} aparece cerrada para ese día, pero esa regla está en revisión, así que vuelve a revisarla: {link}"
+    },
+    "planning_season_none": {
+      "en": "I have no reviewed rule for {species}, so check the current CDFW rules: {link}",
+      "es": "No tengo una regla revisada para {species}, así que revisa las reglas vigentes de CDFW: {link}"
+    },
+    "planning_confidence": {
+      "en": "recent reported activity: {label}",
+      "es": "actividad reciente reportada: {label}"
     }
   }
 }

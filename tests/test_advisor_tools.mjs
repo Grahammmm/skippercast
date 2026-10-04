@@ -473,6 +473,149 @@ dbTest('get_strategy: first_time until the contact has asked a strategy question
   assert.equal(viaAssets.areas[0].name, 'Pecho Rock', 'a named plan area that is allowlisted comes first');
 });
 
+// ---- TA-A2: the planning brief (06 § planning, FR-2, AD-4) --------------------------------------
+
+const planning = await import('../server/advisor/answers/planning.ts');
+const {statesRuleNumber} = await import('../server/advisor/reply.ts');
+const LADDER = /\b(?:Insufficient|Low|Moderate|High)\b/g;
+/** A rules row as scripts/advisor/import-rules.mjs writes it (jurisdiction-wide). */
+function addRule(sql, key, over = {}) {
+  const r = {season_open: '04-01', season_close: '12-31', bag_limit: 10, status: 'active', reviewed_at: '2026-09-01', review_due: '2026-12-31', ...over};
+  sql.prepare(`INSERT INTO advisor_rules(id,region,jurisdiction,species_key,species_label,bag_limit,season_open,season_close,source_name,source_url,reviewed_at,review_due,status,updated_by,updated_at)
+    VALUES(?,'*','california-central',?,?,?,?,?,'CDFW Central Region rules','https://wildlife.ca.gov/Fishing/Ocean',?,?,?,'test','2026-09-01T00:00:00Z')`)
+    .run(`rule-${key}`, key, key, r.bag_limit, r.season_open, r.season_close, r.reviewed_at, r.review_due, r.status);
+}
+/** The daily fixture with its NWS alert moved to [onset, ends] (local ISO times). */
+function alertFeed(onset, ends) {
+  const daily = DAILY();
+  const alert = daily.sources['alerts-PZZ645'].data.alerts[0];
+  Object.assign(alert, {sent: onset, effective: onset, onset, expires: ends, ends});
+  return daily;
+}
+const plan = (input, over = {}) => TOOL_BY_NAME.get('get_conditions').run(input, {...dataCtx(over), ...(over.language ? {language: over.language} : {})}).then(r => r.result);
+
+dbTest('planning brief: advisory first, then the season, the recent reports, one ladder phrase and the closer; no percentage', async () => {
+  const {sql, db} = advisorDatabase();
+  seedBoats(sql);
+  addRule(sql, 'rockfish');
+  const out = await plan({port: 'morro-bay', date: 'today', species: 'rockfish'}, {db});
+  const keys = Object.keys(out);
+  assert.ok(keys.indexOf('advisory_line') < keys.indexOf('days') && keys.indexOf('days') < keys.indexOf('planning'), 'the advisory comes before the numbers and the brief');
+  assert.equal(out.advisory_line, 'SMALL CRAFT ADVISORY posted for today.');
+  assert.equal(out.lead_with_advisory, true);
+  const p = out.planning;
+  assert.deepEqual([p.species_key, p.species_name], ['rockfish', 'rockfish']);
+  assert.deepEqual([p.season.status, p.season.stale, p.season.checked], ['open', false, '2026-09-01']);
+  assert.equal(p.season.line, 'The rockfish season shows open for that day. Sizes and limits: {{link:rules:rockfish}}');
+  // The daily answer's inputs: published reports of the last three days, the unverified boat as "a boat", only rockfish lines.
+  assert.deepEqual(p.recent_activity.skipper_reports.map(r => [r.date, r.boat, r.counts.map(c => c.label)]),
+    [['2026-09-27', 'Example Boat One', ['vermilion']], ['2026-09-26', 'a boat', ['vermilion']], ['2026-09-25', 'Example Boat One', ['vermilion']]]);
+  assert.equal(p.recent_activity.skipper_reports[0].day, 'Sun');
+  assert.deepEqual([p.recent_activity.landing.label, p.recent_activity.landing.trips], ['reported by the landing', 1]);
+  assert.deepEqual([p.confidence, p.confidence_phrase], ['Low', 'recent reported activity: Low']);
+  assert.equal(p.closer, 'Check the latest NWS forecast before you go.');
+  assert.match(p.note, /advisory_line first/);
+  const json = JSON.stringify(out);
+  assert.doesNotMatch(json, /\d\s*%/);
+  assert.doesNotMatch(json, /\bprobab|\bchance|\bodds\b|\blikely\b|\bhotspot/i);
+  assert.deepEqual(json.match(LADDER), ['Low', 'Low'], 'one ladder word, in confidence and its phrase only');
+  for (const line of [p.season.line, out.advisory_line, p.confidence_phrase, p.closer]) assert.equal(statesRuleNumber(line), false, line);
+  assert.ok(json.length < 4000, `fits the engine's 4000-character tool result (${json.length})`);
+  // A long brief is trimmed to fit the engine's tool-result limit (a cut JSON would not parse): headlines first, then old reports.
+  const counts = Array.from({length: 10}, () => ({label: 'vermilion rockfish', kept: 10, released: 1}));
+  const big = {filler: 'y'.repeat(2200), advisories: Array.from({length: 4}, () => ({event: 'Gale Warning', headline: 'x'.repeat(200), zone: 'PZZ645', onset: null, ends: null})),
+    planning: {recent_activity: {skipper_reports: Array.from({length: 3}, () => ({date: '2026-09-27', day: 'Sun', boat: 'B', counts: [...counts]}))}}};
+  const fitted = planning.fit(big);
+  assert.ok(JSON.stringify(fitted).length <= 3900);
+  assert.deepEqual([fitted.advisories.length, fitted.advisories[0].headline, fitted.planning.recent_activity.skipper_reports.length], [4, null, 2]);
+  // Without a species, get_conditions is what it was: no brief.
+  const plain = await plan({port: 'morro-bay', date: 'today'}, {db});
+  assert.equal(plain.planning, undefined);
+  assert.equal(plain.advisory_line, out.advisory_line);
+});
+
+dbTest('planning brief: a closed season comes first in the note; a stale row says double-check; no row sends to CDFW', async () => {
+  const {sql, db} = advisorDatabase();
+  addRule(sql, 'lingcod', {season_open: '2026-04-01', season_close: '2026-09-15'});
+  addRule(sql, 'halibut', {status: 'review'});
+  addRule(sql, 'rockfish', {season_open: '2026-04-01', season_close: '2026-09-15', review_due: '2026-09-01'});
+  const ling = (await plan({port: 'morro-bay', date: 'today', species: 'lings'}, {db})).planning;
+  assert.deepEqual([ling.species_key, ling.season.status, ling.season.stale], ['lingcod', 'closed', false]);
+  assert.equal(ling.season.line, 'The lingcod season is closed for that day: {{link:rules:lingcod}}');
+  assert.match(ling.note, /advisory_line first.*then a closed season/);
+  const hali = (await plan({port: 'morro-bay', date: 'today', species: 'halibut'}, {db})).planning;
+  assert.deepEqual([hali.season.status, hali.season.stale], ['open', true]);
+  assert.match(hali.season.line, /due for review, so double-check before you go/);
+  const reds = (await plan({port: 'morro-bay', date: 'today', species: 'vermilion'}, {db})).planning;
+  assert.deepEqual([reds.season.status, reds.season.stale], ['closed', true], 'a vermilion uses the rockfish row, past its review date');
+  assert.match(reds.season.line, /shows closed for that day, but that rule is due for review, so double-check/);
+  assert.equal(reds.confidence, 'Low', 'the landing\'s rockfish trip counts for a vermilion');
+  const salmon = (await plan({port: 'morro-bay', date: 'today', species: 'salmon'}, {db})).planning;
+  assert.deepEqual([salmon.season.status, salmon.confidence], ['no_rule', 'Insufficient']);
+  assert.equal(salmon.season.line, 'I have no reviewed rule for Chinook salmon, so check the current CDFW rules: {{link:rules:salmon}}');
+  const crab = (await plan({port: 'morro-bay', date: 'today', species: 'cangrejo'}, {db})).planning;
+  assert.deepEqual([crab.species_key, crab.confidence], ['dungeness', 'Insufficient'], 'boat reports are no crab evidence');
+  const unknown = (await plan({port: 'morro-bay', date: 'today', species: 'unicorn fish'}, {db})).planning;
+  assert.deepEqual([unknown.species_key, unknown.season, unknown.confidence], [null, null, 'Insufficient']);
+  assert.match(unknown.note, /not recognised/);
+});
+
+dbTest('planning brief: beyond seven days says so with no numbers; the weekend is two days with the advisory on the day it covers', async () => {
+  const {db} = advisorDatabase();
+  const wed = Date.parse('2026-09-30T17:00:00Z');
+  const far = await plan({port: 'morro-bay', date: 'next thursday', species: 'rockfish'}, {db, now: wed});
+  assert.deepEqual([far.beyond_horizon, far.days, far.advisories], [true, undefined, undefined]);
+  assert.equal(far.horizon_line, "The forecast only reaches 7 days out, so I can't call the weather for Thu yet. Ask me again closer to the day.");
+  assert.equal(far.planning.season.status, 'no_rule', 'the season and the recent activity still come back');
+  const fri = Date.parse('2026-10-02T19:00:00Z');
+  const satOnly = feedsFrom(alertFeed('2026-10-03T12:00:00-07:00', '2026-10-03T23:00:00-07:00'));
+  const weekend = await plan({port: 'morro-bay', date: 'this weekend', species: 'rockfish'}, {db, now: fri, feeds: satOnly});
+  assert.deepEqual(weekend.dates, ['2026-10-03', '2026-10-04']);
+  assert.equal(weekend.days.length, 2);
+  assert.equal(weekend.advisory_line, 'SMALL CRAFT ADVISORY posted for tomorrow.');
+  const both = feedsFrom(alertFeed('2026-10-03T12:00:00-07:00', '2026-10-04T23:00:00-07:00'));
+  assert.equal((await plan({port: 'morro-bay', date: 'this weekend', species: 'rockfish'}, {db, now: Date.parse('2026-09-30T17:00:00Z'), feeds: both})).advisory_line,
+    'SMALL CRAFT ADVISORY posted for Sat and Sun.');
+  const es = await plan({port: 'morro-bay', date: 'el fin de semana', species: 'rocote'}, {db, now: Date.parse('2026-09-30T17:00:00Z'), feeds: both, language: 'es'});
+  assert.equal(es.advisory_line, 'SMALL CRAFT ADVISORY (aviso del NWS) para el sábado y el domingo.');
+  assert.deepEqual([es.planning.species_name, es.planning.confidence_phrase, es.planning.closer],
+    ['rocote', 'actividad reciente reportada: Low', 'Revisa el pronóstico más reciente del NWS antes de salir.']);
+  assert.equal(es.planning.season.line, 'No tengo una regla revisada para rocote, así que revisa las reglas vigentes de CDFW: {{link:rules:rockfish}}');
+  const calm = await plan({port: 'morro-bay', date: 'this weekend', species: 'rockfish'}, {db, now: Date.parse('2026-10-05T17:00:00Z')});
+  assert.deepEqual([calm.lead_with_advisory, calm.advisory_line], [false, undefined]);
+  for (const r of [far, weekend, es, calm]) assert.doesNotMatch(JSON.stringify(r), /\d\s*%/);
+});
+
+dbTest('planning brief: the ladder is the landing\'s for the species (Moderate on the test_evidence feed); a skipper report lifts Insufficient to Low, never further', async () => {
+  const {sql, db} = advisorDatabase();
+  const now = Date.parse('2026-09-21T19:00:00Z');
+  const feed = evidenceFeed(now);
+  for (const r of feed.reports) r.port = 'Morro Bay';
+  const ling = (await plan({port: 'morro-bay', date: 'today', species: 'lingcod'}, {db, now, feeds: feedsFrom(feed)})).planning;
+  assert.deepEqual([ling.confidence, ling.confidence_phrase], ['Moderate', 'recent reported activity: Moderate']);
+  assert.equal(ling.recent_activity.landing.trips, 7);
+  const rock = (await plan({port: 'morro-bay', date: 'today', species: 'rockfish'}, {db, now, feeds: feedsFrom(feed)})).planning;
+  assert.equal(rock.confidence, 'Insufficient', 'lingcod trips are not rockfish evidence');
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,status,created_at,updated_at) VALUES('b1','example-one','Example Boat One','Example Landing','morro-bay','morro-bay','verified','2026-09-01','2026-09-01')`).run();
+  sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,trip_type,anglers,counts_json,source,status,verified,published_at,created_at,updated_at)
+    VALUES('r1','b1','morro-bay','morro-bay','2026-09-20','full-day',20,?,'text-r1','published',1,'2026-09-20T22:00:00Z','2026-09-20','2026-09-20')`)
+    .run(JSON.stringify([{species_key: 'rockfish', label: 'vermilion', kept: 30, released: 0}]));
+  const lifted = (await plan({port: 'morro-bay', date: 'today', species: 'rockfish'}, {db, now, feeds: feedsFrom(feed)})).planning;
+  assert.deepEqual([lifted.confidence, lifted.recent_activity.skipper_reports.length], ['Low', 1]);
+  for (const p of [ling, rock, lifted]) {
+    assert.ok(CONFIDENCE_WORDS.includes(p.confidence));
+    assert.equal(JSON.stringify(p).match(LADDER).length, 2, 'exactly one confidence phrase');
+  }
+});
+
+test('leadsWithAdvisory: the event in capitals in the first sentence', () => {
+  const ev = ['Small Craft Advisory'];
+  assert.equal(planning.leadsWithAdvisory('SMALL CRAFT ADVISORY posted for Sat. Seas 7 ft.', ev), true);
+  assert.equal(planning.leadsWithAdvisory('Hay SMALL CRAFT ADVISORY el sábado. Olas de 7 pies.', ev), true, 'Spanish keeps the NWS name');
+  assert.equal(planning.leadsWithAdvisory('Seas 7 ft. SMALL CRAFT ADVISORY posted for Sat.', ev), false, 'not first');
+  assert.equal(planning.leadsWithAdvisory('Small craft advisory for Sat.', ev), false, 'not in capitals');
+});
+
 dbTest('get_trips: verified boats only, by most recent report; trip types from 60 days; few when under two; https booking links only', async () => {
   const {sql, db} = advisorDatabase();
   seedBoats(sql);
