@@ -161,6 +161,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-F2
 - Files: `db/schema.ts`, `drizzle/0008_advisor_answers.sql` (`pnpm db:generate --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
 - Tests: importer maps every species in the regulations files to a row; staleness by `review_due`; the tool never returns `retired`; `review` rows are `stale: true`.
+- As built: one PR with TA-E2 (branch `claude/ta-a0-e2`). Rows are per jurisdiction (`region='*'`); `Region.jurisdiction_id` is now typed in `server/types.ts`. `get_rules` answers an empty `rules` list (not `unavailable`) when nothing matches, which satisfies the rules guard; the prompt sends people to CDFW. See 02 § advisor_rules "As built".
 
 ### TA-A1 · Daily answers: generator, cron, pre-router, both languages · M
 - Stories: FR-1, FR-4, FC-6 (daily es).

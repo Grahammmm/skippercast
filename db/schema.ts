@@ -160,3 +160,26 @@ export const advisorReviews=sqliteTable('advisor_reviews',{
   status:text('status').notNull().default('open'),note:text('note'),
   openedAt:text('opened_at').notNull(),decidedAt:text('decided_at'),decidedBy:text('decided_by'),
 },t=>[index('review_open').on(t.status,t.openedAt)]);
+
+// Text Advisor answers (docs/plans/text-advisor/02-data-model.md, migration 0008).
+// advisor_rules is the only source of regulations the advisor may quote (OP-6,
+// principle 4). Seeded by scripts/advisor/import-rules.mjs as status 'review'
+// (nothing is quotable as current until an admin marks a row 'active'); a row
+// past review_due is quoted with "double-check" or not at all; 'retired' rows
+// are never returned. region is a region id or '*' for the whole jurisdiction.
+export const advisorRules=sqliteTable('advisor_rules',{
+  id:text('id').primaryKey(),region:text('region').notNull(),jurisdiction:text('jurisdiction').notNull(),
+  speciesKey:text('species_key').notNull(),speciesLabel:text('species_label').notNull(),
+  sizeMinIn:real('size_min_in'),sizeMaxIn:real('size_max_in'),bagLimit:integer('bag_limit'),bagNotes:text('bag_notes'),
+  seasonOpen:text('season_open'),seasonClose:text('season_close'),depthLimitFt:integer('depth_limit_ft'),
+  areaNotes:text('area_notes'),gearNotes:text('gear_notes'),sourceName:text('source_name').notNull(),sourceUrl:text('source_url').notNull(),
+  reviewedAt:text('reviewed_at').notNull(),reviewDue:text('review_due').notNull(),status:text('status').notNull().default('review'),
+  updatedBy:text('updated_by').notNull(),updatedAt:text('updated_at').notNull(),
+},t=>[index('rule_lookup').on(t.region,t.speciesKey,t.status),index('rule_due').on(t.reviewDue)]);
+
+// One answer per port per day (FR-1): key '<port>:<YYYY-MM-DD>', regenerated
+// when inputs_hash (report ids, conditions snapshot, rules used) changes.
+export const advisorDailyAnswers=sqliteTable('advisor_daily_answers',{
+  key:text('key').primaryKey(),textEn:text('text_en').notNull(),textEs:text('text_es').notNull(),
+  inputsHash:text('inputs_hash').notNull(),generatedAt:text('generated_at').notNull(),
+});

@@ -252,6 +252,29 @@ Seeded by `scripts/advisor/import-rules.mjs` from `dist/data/regulations*.json`
 (each imported row starts as `review` until an admin marks it `active`, so
 nothing is quotable before a human has looked).
 
+As built (TA-A0): `scripts/advisor/import-rules.mjs` reads each
+`jurisdictions/<id>.json`'s `regulations_asset` (four files under
+`dist/data/` plus `dist/regions/southern-california/regulations.json` for
+`california-southern`) and any other `dist/data/regulations*.json`, and
+writes one row per jurisdiction and species with `region='*'` (the files are
+per management area, not per region; `lookupRules` matches a region through
+its `region.json` `jurisdiction_id`). The rockfish entry also yields rows for
+the sub-species its text names (the copper, canary and vermilion/sunset
+sub-limits, the no-retention species, cabezon and greenling in the group
+limit); a name with no catalog or species-extra key (quillback, sunset) is
+`species_key='other'` with the label kept. `size_min_in` and `bag_limit` are
+read only when the text leads with the number; the full sentences go to
+`bag_notes`, `gear_notes` and `area_notes`. A closed season (no window) is
+`season_open`/`season_close` null with `bag_limit` 0 and an `area_notes`
+starting "Closed:". `review_due` is 90 days, or the season end when that is
+sooner and not yet past. Ids are `sha256(jurisdiction|region|species_key|label
+for other)[:32]`; each statement is an upsert that changes a row only when
+its imported content changed, and then puts it back into `review` (a
+`retired` row stays retired). `updated_by` is `import-rules`.
+`server/advisor/answers/rules.ts` has `lookupRules` (a sub-species also gets
+its parent group's rows, marked `applies_as: 'group'`; region rows before
+`*` rows) and `markJurisdictionForReview` (for TA-A4).
+
 ## `advisor_daily_answers` (migration 0008)
 
 The "one answer per port per day" cache (FR-1).
