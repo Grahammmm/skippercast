@@ -194,7 +194,7 @@ omitted in the text for brevity.
     ordinary text and reaches the engine's STOP/START/HELP paths; `OptOutType`
     is not read. The owner confirms the forwarding on the Twilio console (send
     STOP and HELP to the number and check the advisor's inbound rows) during
-    the port runbook, and TA-C7's runbook records the result. 02 § STOP's
+    the port runbook (step 5), and records the result here. 02 § STOP's
     "still forwards the message" stays a claim until then. If the engine
     confirms a forwarded STOP itself, Twilio refuses that send with 21610,
     which only re-applies the stop; TA-E1 may skip the confirmation on Twilio
@@ -223,8 +223,8 @@ omitted in the text for brevity.
   Standard with an EIN, or Sole Proprietor without; ~$4.50 brand, $15
   campaign vetting, $1.50–2/month, up to 5 business days) before any SMS is
   sent from Twilio. The campaign description and sample messages live in
-  `docs/operations/runbooks/advisor-port-to-twilio.md` so they are ready to
-  paste.
+  [the port runbook](../../operations/runbooks/advisor-port-to-twilio.md#10dlc-package)
+  so they are ready to paste.
 
 ## Web adapter (`channels/web.ts`)
 
@@ -279,24 +279,37 @@ is a Twilio media URL).
 
 ## Runbook: relay down and port to Twilio (OP-7)
 
-`docs/operations/runbooks/advisor-port-to-twilio.md` (task TA-C7) contains,
-in full: the diagnosis steps (ping, tunnel status, Messages.app signed in,
-iPhone online, Apple Account alerts), the restart procedure, and the one-way
-switch:
+Two runbooks (task TA-C1 wrote the first, TA-C7 the second):
 
-1. Set `ADVISOR_CHANNEL=twilio` only *after* steps 2–5.
-2. Before the port completes, deregister iMessage for the number (on the
+- [Relay down](../../operations/runbooks/advisor-relay-down.md): the
+  diagnosis steps (ping, tunnel status, Messages.app signed in, iPhone online,
+  Apple Account alerts), the restart procedure, the held backlog, and when to
+  escalate (relay down more than 48 h, the Apple Account suspended, or two
+  outages in a month).
+- [Move the number to Twilio](../../operations/runbooks/advisor-port-to-twilio.md):
+  the one-way switch, in order, with the paste-ready 10DLC package and the
+  HELP/STOP wording.
+
+The switch, in short:
+
+0. Readiness at TA-O3: Twilio account, 10DLC brand and campaign approved,
+   `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` in secrets, `TWILIO_FROM` unset.
+1. Decide by the relay-down runbook's escalation rule.
+2. Deregister iMessage for the number while the SIM still works (on the
    iPhone: Messages › iMessage off, FaceTime off; or Apple's deregister page,
-   which needs an SMS code so do it while the SIM still works).
+   which needs an SMS code).
 3. Port request in Twilio with LOA, bill, account number, PIN; choose a FOC
-   date; expect 3–15 business days; SMS live up to 3 days later.
-4. 10DLC must already be approved (done at TA-O3 as a standing readiness step
-   even though Twilio sends nothing until the switch).
-5. Set `TWILIO_FROM=<ADVISOR_NUMBER>`, run `relay-check.mjs --twilio`, then
-   flip `ADVISOR_CHANNEL`. Held outbound messages (`status='held'`) are
-   released by the next cron run.
+   date; expect 3–15 business days; SMS live up to 3 business days later.
+4. While waiting nothing changes; held replies age out after 6 hours.
+5. Port day: the number joins the campaign's Messaging Service; the inbound
+   webhook is set in the console; the HELP auto-reply gets the engine's help
+   wording; `TWILIO_FROM` is set, `relay-check.mjs --twilio` passes, then
+   `ADVISOR_CHANNEL=twilio` and a deploy. Held outbound messages
+   (`status='held'`) younger than 6 hours are released by the next cron run.
+   STOP/HELP forwarding is checked and recorded in § Twilio adapter.
 6. Tell users nothing. The contact card and every link already carry the
-   number. Update `docs/plans/text-advisor/README.md` status log.
+   number. Retire the relay; update `docs/plans/text-advisor/README.md`
+   status log.
 
 What is lost: blue bubbles and full-size inbound photos (Twilio compresses
 MMS; the upload link covers skippers). What is kept: every conversation,

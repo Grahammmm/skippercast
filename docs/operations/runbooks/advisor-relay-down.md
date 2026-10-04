@@ -51,11 +51,12 @@ npx wrangler d1 execute skippercast --remote --command \
 
 ## When to stop fixing the relay
 
-Escalate to the port-to-Twilio runbook (`advisor-port-to-twilio.md`, written in task TA-C7) when any of these holds:
+Escalate to [move the number to Twilio](advisor-port-to-twilio.md) when any of these holds:
 
-- the dedicated Apple Account is locked or disabled and recovery fails, or Apple keeps signing Messages out;
-- the iPhone's number will not register for iMessage again after a day;
-- the Mac hardware has failed and no replacement is available within a day;
-- BlueBubbles stops supporting the macOS version the Mac can run, with no fix in sight.
+- the relay has been down for **more than 48 hours** despite the restart order above;
+- the dedicated **Apple Account is suspended, locked or disabled** and recovery has not restored it (or Apple keeps signing Messages out);
+- **two outages in one month** (each long enough to mark the relay `down`).
 
-The port is one-way (the number becomes SMS-only for good), takes 3–15 business days, and needs 10DLC approved in advance (TA-O3). Setting `ADVISOR_CHANNEL=twilio` is the runbook's last step, never a first response: while the relay is down and the channel is still `bluebubbles`, replies stay held for 6 hours; once `ADVISOR_CHANNEL=twilio` is deployed, the next cron tick sends any remaining held rows through Twilio.
+Hardware or software with no fix in sight (the Mac has failed with no replacement within a day, the iPhone's number will not register for iMessage again, or BlueBubbles drops support for the macOS the Mac can run) counts as the first rule: it will be down for more than 48 hours.
+
+The port is one-way (the number becomes SMS-only for good), takes 3–15 business days, and needs 10DLC approved in advance (TA-O3, the port runbook's step 0). Setting `ADVISOR_CHANNEL=twilio` is that runbook's last step, never a first response: while the relay is down and the channel is still `bluebubbles`, replies stay held for 6 hours; once `ADVISOR_CHANNEL=twilio` is deployed, the next cron tick sends any remaining held rows through Twilio.

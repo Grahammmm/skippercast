@@ -19,7 +19,7 @@ Keep a note as you go (in your password manager, never in the repository) of: th
 
 1. Buy a prepaid or cheap postpaid line on a major US carrier (all of them allow port-out). Choose a local area code if you can.
 2. Put the SIM (or eSIM) in the spare iPhone.
-3. In the carrier's account pages, find and record the **account number** and set a **port-out (transfer) PIN**. You need both only if the number ever moves to Twilio (the port-to-Twilio runbook, `advisor-port-to-twilio.md`, written in TA-C7), but they are hardest to find when you need them.
+3. In the carrier's account pages, find and record the **account number** and set a **port-out (transfer) PIN**. You need both only if the number ever moves to Twilio ([move the number to Twilio](advisor-port-to-twilio.md)), but they are hardest to find when you need them.
 4. Turn off carrier voicemail-to-text and any carrier "message+" app on that line; plain SMS is what forwards to the Mac.
 
 ## 2. Create the dedicated Apple Account
