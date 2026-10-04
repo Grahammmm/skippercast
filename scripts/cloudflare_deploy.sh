@@ -146,6 +146,10 @@ secrets = {name: os.environ[source] for name, source in [
     ('ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'),       # AI boat lookup
     ('GITHUB_TOKEN', 'WATCHDOG_GITHUB_TOKEN'),        # cron watchdog restarts the live refresh
     ('EXTRA_ORIGINS', 'EXTRA_ORIGINS'),               # e.g. https://skippercast.<you>.workers.dev
+    # Text Advisor phone-number key (docs/plans/text-advisor/02-data-model.md). The source is
+    # SECRET_-prefixed because scripts/wrangler_config.mjs copies ADVISOR_* environment names
+    # into the Worker's plain vars and refuses secret names there.
+    ('ADVISOR_PHONE_KEY', 'SECRET_ADVISOR_PHONE_KEY'),
 ] if os.environ.get(source)}
 print(json.dumps(secrets))
 PY

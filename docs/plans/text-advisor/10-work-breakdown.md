@@ -41,7 +41,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-F2 · Core schema, contacts and privacy primitives · M
 - Stories: FC-4 (data model side), privacy invariants.
 - Depends: TA-F1
-- Files: `db/schema.ts`, `drizzle/0006_advisor_core.sql` (+ journal, snapshot, via `pnpm db:generate -- --name advisor_core`), `server/advisor/contacts.ts`, `server/advisor/log.ts` (`advisorLog`), `scripts/advisor/grant-admin.mjs`, `tests/test_advisor_contacts.mjs`, `tests/test_advisor_privacy.mjs`, `tests/test_migrations.mjs` (passes unchanged).
+- Files: `db/schema.ts`, `drizzle/0006_advisor_core.sql` (+ journal, snapshot, via `pnpm db:generate --name advisor_core`), `server/advisor/contacts.ts`, `server/advisor/log.ts` (`advisorLog`), `scripts/advisor/grant-admin.mjs`, `tests/test_advisor_contacts.mjs`, `tests/test_advisor_privacy.mjs`, `tests/test_migrations.mjs` (passes unchanged).
 - Build: tables in 02 for migration 0006 (`advisor_contacts`, `advisor_boats` with `status`, `advisor_crew`, `advisor_messages`, `advisor_media`, `advisor_reports`, `advisor_report_edits`, `advisor_reviews`, `users.role`); `phoneHash`, `encryptPhone`, `decryptPhone` (AES-GCM via WebCrypto, key from `ADVISOR_PHONE_KEY`), `e164(input)` normalizer (US default, rejects short codes), `findOrCreateContact`, `applyStop`, `forgetContact` (the D1 batch in 02), `exportContact`.
 - Tests: hash is deterministic and keyed; encrypt/decrypt round-trip; e164 cases; forget-me deletes every row and nulls `advisor_reports.contact_id`; `advisorLog` redacts numbers; the fixture directory contains no E.164.
 - Done when: migrations apply on a fresh D1 in `wrangler dev`; `grant-admin.mjs` sets `role` for a given user id.
@@ -158,7 +158,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-A0 · Migration 0007 and the rules importer · M
 - Stories: OP-6 (data).
 - Depends: TA-F2
-- Files: `db/schema.ts`, `drizzle/0007_advisor_answers.sql` (`pnpm db:generate -- --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
+- Files: `db/schema.ts`, `drizzle/0007_advisor_answers.sql` (`pnpm db:generate --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
 - Tests: importer maps every species in the regulations files to a row; staleness by `review_due`; the tool never returns `retired`; `review` rows are `stale: true`.
 
 ### TA-A1 · Daily answers: generator, cron, pre-router, both languages · M
@@ -235,7 +235,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 ### TA-S0 · Migration 0008, Graph client, token script, health · M
 - Stories: SO-4 (client), SP-10 (quota).
 - Depends: TA-F2, TA-W2
-- Files: `db/schema.ts`, `drizzle/0008_advisor_social.sql` (`pnpm db:generate -- --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
+- Files: `db/schema.ts`, `drizzle/0008_advisor_social.sql` (`pnpm db:generate --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
 - Tests: `appsecret_proof` value for a known pair; retry on code 4/17/32; error bodies logged without tokens; quota parse.
 
 ### TA-S1 · Drafts and captions, review items, backfill · M
