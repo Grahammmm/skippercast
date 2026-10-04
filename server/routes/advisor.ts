@@ -43,9 +43,19 @@ import {verifyExportToken} from '../advisor/exports.ts';
 // TA-M1: the advisor-media runner job's two endpoints, behind a GitHub Actions identity.
 import {verifyJobToken} from '../job-auth.ts';
 import type {JobClaims, JobScope} from '../job-auth.ts';
-import {deployment} from '../config.ts';
+import {deployment, build} from '../config.ts';
 import {body, budget} from '../http.ts';
 import {mediaJobWork, mediaJobDone} from '../advisor/media.ts';
+// TA-W1: the public pages, their cache key and the sitemap.
+import {cacheKey, cached} from '../edge-cache.ts';
+import {pageLanguage, pageResponse} from '../advisor/pages/render.ts';
+import {pagesVersion, notFoundPage} from '../advisor/pages/data.ts';
+import type {PageDeps} from '../advisor/pages/data.ts';
+import {portPage, PORT_MAX_AGE} from '../advisor/pages/port.ts';
+import {speciesPage, speciesPageKey, SPECIES_MAX_AGE} from '../advisor/pages/species.ts';
+import {boatPage, BOAT_MAX_AGE} from '../advisor/pages/boat.ts';
+import {sitemapXml, robotsTxt, SITEMAP_PATH, SITEMAP_MAX_AGE} from '../advisor/pages/sitemap.ts';
+import type {PageLanguage} from '../../web/advisor/copy.ts';
 
 export const advisorPublic = new Hono<AppEnv>();
 
@@ -436,3 +446,65 @@ advisorPublic.post('/api/advisor/jobs/media-done', async c => {
   return json(result);
 });
 // TA-M1 end.
+
+// ---- TA-W1: public port, species and boat pages, the sitemap and robots.txt ------------
+// (08 § Public pages, 05 § The boat page.) Server-rendered HTML in English or
+// Spanish (?lang=es, else Accept-Language), cached at the edge under the build
+// and the job_state pages version (one D1 read per request), so a publish, an
+// edit, a verification or a photo decision is the purge. The per-IP limit
+// applies only to renders the cache could not answer.
+
+/** Test seam: the feed reader and clock the page reads use (the engine's EngineDeps shape). */
+export const pagesDeps: PageDeps = {};
+advisorPublic.use(SITEMAP_PATH, gate);
+
+type Render = (env: Env, language: PageLanguage, settings: ReturnType<typeof advisorSettings>) => Promise<string | null>;
+
+/** The cache key of a page: path, the resolved language, the build and the pages version. */
+export const pageCacheKey = (url: URL, language: PageLanguage, version: string): Request =>
+  cacheKey(`${url.origin}${url.pathname}?lang=${language}`, {params: ['lang'], build: `${build()}:${version}`});
+
+async function servePage(c: Context<AppEnv>, maxAge: number, render: Render): Promise<Response> {
+  const env = c.env, url = new URL(c.req.url);
+  const language = pageLanguage(url, c.req.header('accept-language'));
+  const settings = advisorSettings(env);
+  try {
+    if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
+    const key = pageCacheKey(url, language, await pagesVersion(env.DB));
+    return await cached(key, waitUntil(c), async () => {
+      const body = await render(env, language, settings);
+      return {response: body === null ? pageResponse(notFoundPage(language, settings, url.pathname), {status: 404, language}) : pageResponse(body, {maxAge, language})};
+    }, async () => await overLimit(env.PUBLIC_LIMITER, 'advisor-page:' + clientIP(c.req.raw)) ? tooManyRequests() : null);
+  } catch (error) {
+    advisorLog('error', 'advisor_page_failed', {reason: String((error as Error)?.message).slice(0, 200)});
+    return json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+}
+
+advisorPublic.get('/ports/:id', c => servePage(c, PORT_MAX_AGE, (env, language, settings) => portPage(env, c.req.param('id'), language, settings, pagesDeps)));
+
+advisorPublic.get('/species/:key', async c => {
+  const segment = c.req.param('key'), key = speciesPageKey(segment);
+  // A synonym or another spelling of a page key (california-halibut, Lingcod) moves to the page's own address.
+  if (key && key !== segment) return new Response(null, {status: 301, headers: {Location: `/species/${key}${new URL(c.req.url).search}`, 'Cache-Control': 'public, max-age=86400'}});
+  return servePage(c, SPECIES_MAX_AGE, (env, language, settings) => key ? speciesPage(env, key, language, settings, pagesDeps) : Promise.resolve(null));
+});
+
+advisorPublic.get('/boats/:slug', c => servePage(c, BOAT_MAX_AGE, (env, language, settings) => boatPage(env, c.req.param('slug'), language, settings, pagesDeps)));
+
+advisorPublic.get(SITEMAP_PATH, async c => {
+  const env = c.env;
+  if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
+  const key = cacheKey(new URL(SITEMAP_PATH, c.req.url), {params: [], build: `${build()}:${await pagesVersion(env.DB)}`});
+  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase), {status: 200, headers: {
+    'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': `public, max-age=${SITEMAP_MAX_AGE}`, 'X-Content-Type-Options': 'nosniff'}})}));
+});
+
+// No robots.txt is published: while the advisor is dark the request falls through to the
+// static site exactly as before; when it is on, the Worker answers with the sitemap line.
+advisorPublic.get('/robots.txt', async (c, next) => {
+  const settings = advisorSettings(c.env);
+  if (!settings.enabled) { await next(); return; }
+  return new Response(robotsTxt(settings.publicBase), {status: 200, headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
+});
+// TA-W1 end.

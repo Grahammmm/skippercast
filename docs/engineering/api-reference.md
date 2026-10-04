@@ -240,6 +240,24 @@ The "text us" deep link for the site, Instagram and print. Gated like every advi
 
 A QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr` for print and the site, as SVG (byte mode, error correction M, a four-module quiet zone; `server/advisor/pages/qr.ts`, no dependency). Gated like every advisor path; needs no number. `Content-Type: image/svg+xml; charset=utf-8`, `Cache-Control: public, max-age=86400`.
 
+### `GET /ports/<port-id>`, `GET /species/<key>`, `GET /boats/<slug>`
+
+The advisor's public pages ([08 · Public pages](../plans/text-advisor/08-website.md), `server/advisor/pages/`). Gated like every advisor path. Server-rendered HTML (`Content-Type: text/html; charset=utf-8`, `Content-Language`, `Vary: Accept-Language`) in English, or in Spanish with `?lang=es` or a first `Accept-Language` range of `es`; `?lang=en` forces English.
+
+- **Port** (`<port-id>` from `catalog/home-ports.json` whose region is built): today's daily answer (stored when current, else composed from the same facts; never a model call), published skipper reports of the last 14 days (verified boats linked, others "Another boat"), today's fishing-window conditions and advisories, the port's verified boats, and the coastal-directory species with today's state from `advisor_rules` (open, closed, under review, check the rules). `Cache-Control: public, max-age=300`.
+- **Species** (a `catalog/advisor/species-pages.json` key; a synonym such as `california-halibut` → `301` to the key): names, description, field marks and look-alikes, the rules card at `#rules` (every jurisdiction's active and review rows with source and reviewed date; stale rows "Under review"; a species without rows shows its group's), recent catches from verified boats (14 days, by date and port), method notes. `Cache-Control: public, max-age=900`.
+- **Boat** (`slug` of a `verified` or `pending` boat): verified badge or "Not verified yet" (pending pages carry `noindex`), the last 30 days of published reports ("edited" when `version > 1`), up to 12 approved or posted photos through `/media/<id>.jpg`, booking link, phone and Instagram. `Cache-Control: public, max-age=300`.
+
+Edge-cached (`server/edge-cache.ts`) under the path, the resolved language and `build:<job_state advisor.pages.version>`, which publishing, editing, verifying a boat and deciding a photo bump; other query parameters (`s`) are not part of the key. Per-IP `PUBLIC_LIMITER` (`advisor-page:<ip>`, `429`) only for renders the cache could not answer. Unknown ids, rejected boats → `404` HTML page (`noindex`, `no-store`). `503` without storage.
+
+### `GET /sitemap-advisor.xml`
+
+Gated. The port pages of active regions, every species page and verified boats' pages, each with its `?lang=es` alternate (`xhtml:link`) and, for boats, the latest report date as `lastmod`. `Content-Type: application/xml; charset=utf-8`, `Cache-Control: public, max-age=3600`, edge-cached under the pages version.
+
+### `GET /robots.txt`
+
+While `TEXT_ADVISOR_ENABLED=true`: `User-agent: *`, `Allow: /` and `Sitemap: <ADVISOR_PUBLIC_BASE>/sitemap-advisor.xml` (`Cache-Control: public, max-age=3600`). Otherwise the request falls through to the static site, which publishes no `robots.txt`.
+
 ## Scheduler
 
 ### `POST /api/jobs/check`
@@ -334,7 +352,7 @@ Decisions (`server/advisor/admin/decisions.ts`, shared with the text admin fallb
 
 | Kind | approve | edit (`patch`) | reject |
 | --- | --- | --- | --- |
-| `media` | `publish_state` `private`/`queued` → `approved`, and the advisor-media job requested for `public.jpg` (TA-M1) | `{credit}`: the credit set, then approved (the job requested too) | → `rejected` (also from `approved`) |
+| `media` | `publish_state` `private`/`queued` → `approved`, the advisor-media job requested for `public.jpg` (TA-M1) and the pages version bumped | `{credit}`: the credit set, then approved (the job requested and the pages version bumped too) | → `rejected` (also from `approved`, which bumps the pages version) |
 | `report` | a `draft`/`pending_confirm` report published (`verified` frozen; not a skipper confirmation: no `confirmed_at`, no clean count) | report fields (`report_date`, `trip_type`, `anglers`, `counts`, `notes`): an `advisor_report_edits` row with no contact or message, `version + 1` | `status='rejected'`; a published one also bumps the pages version and drops the port's daily answer |
 | `skipper` | `new_skipper`: the boat `verified`, `verified_at`, `verified_by`, the pages version bumped, and 05's verification text to the owner through their channel; other reasons only close the review | `400` (TA-W3) | `new_skipper`: the boat `rejected` and 05's reject text |
 | `conversation` | closes; with `reply` (1–1,000 characters), the text goes to the contact through its channel as an outbound row with `created_by` = the admin and `in_reply_to` the flagged message | `400` | closes |
@@ -358,4 +376,4 @@ Texts a decision sends have deterministic ids (the review id and the decision), 
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait), `tests/test_advisor_admin.mjs` (admin gate, queue, decisions, media bytes, health), `e2e/admin.spec.ts` (an admin approves a review in the browser). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait), `tests/test_advisor_admin.mjs` (admin gate, queue, decisions, media bytes, health), `e2e/admin.spec.ts` (an admin approves a review in the browser), `tests/test_advisor_pages.mjs` (public pages, sitemap, robots.txt). See [testing](testing.md).

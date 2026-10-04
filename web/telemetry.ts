@@ -13,12 +13,25 @@
 import {region as currentRegion} from './state.ts';
 
 export const ENDPOINT = '/api/telemetry';
-export const FUNNEL = ['port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install'] as const;
+export const FUNNEL = ['port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install',
+  // TA-W1: the Text Advisor's public pages (docs/plans/text-advisor/08-website.md § Telemetry): a view of each page family and the "Text SkipperCast" click.
+  'advisor_port_view', 'advisor_species_view', 'advisor_boat_view', 'advisor_cta'] as const;
 export type FunnelEvent = typeof FUNNEL[number];
+/**
+ * TA-W1: where a visit came from, the page URL's `s` parameter: links in the
+ * advisor's texts (`txt`), Instagram and Facebook posts (`ig`, `fb`) and the
+ * printed QR code (`qr`). Any other value is not sent.
+ */
+export const SOURCES = ['txt', 'ig', 'fb', 'qr'] as const;
+export type Source = typeof SOURCES[number];
+/** The visit source in a page URL's `s` parameter, or '' when it has none or an unknown one. */
+export function sourceFrom(href: string): Source | '' {
+  try { const s = new URL(href).searchParams.get('s'); return (SOURCES as readonly string[]).includes(s ?? '') ? s as Source : ''; } catch { return ''; }
+}
 export type ErrorKind = 'error' | 'rejection';
 
 export type Event =
-  | {type: 'funnel'; name: FunnelEvent; region?: string}
+  | {type: 'funnel'; name: FunnelEvent; region?: string; source?: Source}
   | {type: 'error'; kind: ErrorKind; message: string; source?: string; line?: number; column?: number; request_id?: string};
 
 /** Per page load: at most this many distinct errors and this many events in all. */
@@ -78,6 +91,8 @@ export interface TelemetryOptions {
   build: string;
   /** The region shown now ('' when none). */
   region?: () => string;
+  /** TA-W1: the visit source (sourceFrom), '' when none. */
+  source?: () => Source | '';
   schedule?: (run: () => void, ms: number) => unknown;
 }
 
@@ -90,7 +105,7 @@ export interface Telemetry {
 }
 
 /** The batching core, free of browser globals so it can be tested directly. */
-export function createTelemetry({send, build, region = () => '', schedule = (run, ms) => setTimeout(run, ms)}: TelemetryOptions): Telemetry {
+export function createTelemetry({send, build, region = () => '', source = () => '', schedule = (run, ms) => setTimeout(run, ms)}: TelemetryOptions): Telemetry {
   const queue: Event[] = [], seen = new Set<string>();
   const safeBuild = BUILD.test(build) ? build : 'dev';
   let total = 0, errors = 0, timer = false, requestId = '';
@@ -123,7 +138,8 @@ export function createTelemetry({send, build, region = () => '', schedule = (run
       const key = `f:${name}:${where}`;
       if (seen.has(key)) return;
       seen.add(key);
-      push({type: 'funnel', name, ...(where ? {region: where} : {})}, options.flush);
+      const from = source();
+      push({type: 'funnel', name, ...(where ? {region: where} : {}), ...((SOURCES as readonly string[]).includes(from) ? {source: from as Source} : {})}, options.flush);
     },
     error(kind, value, where = {}) {
       if (errors >= MAX_ERRORS) return;
@@ -167,6 +183,7 @@ export function initTelemetry(): Telemetry | null {
     send: body => navigator.sendBeacon(ENDPOINT, body),
     build: meta,
     region: () => currentRegion.value || new URL(location.href).searchParams.get('region') || '',
+    source: () => sourceFrom(location.href),
   });
   active = telemetry;
   addEventListener('error', event => {

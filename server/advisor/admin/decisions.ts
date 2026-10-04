@@ -12,10 +12,14 @@
 // answers 'repeated'.
 //
 //   kind          approve                         edit                            reject
-//   media         publish_state approved,         credit set, approved,           publish_state rejected
-//                 media job requested             media job requested
+//   media         publish_state approved,         credit set, approved,           publish_state rejected,
+//                 media job requested, pages      media job requested, pages      (pages version bumped if it
+//                 version bumped                  version bumped                  was approved)
 //   report        published (if pending)          applyEdit: edit row, version+1  status rejected
+//                 (publishReport bumps the pages  (applyEdit bumps them for a     (a published one bumps them)
+//                 version)                        published report)
 //   skipper       new_skipper: verified + text    -                               new_skipper: rejected + text
+//                 (either bumps the pages version)
 //   conversation  closed; with `reply`: sent as   -                               closed
 //                 the team through the channel
 //   rule          closed (TA-A4 edits the rule)   -                               closed
@@ -117,8 +121,12 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
         await db.prepare('UPDATE advisor_media SET credit=? WHERE id=?').bind(credit, review.ref_id).run();
       }
       const ok = input.decision !== 'reject';
-      await db.prepare(`UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN (${ok ? "'private','queued'" : "'private','queued','approved'"})`)
+      const prior = (await db.prepare('SELECT publish_state FROM advisor_media WHERE id=?').bind(review.ref_id).first<{publish_state: string}>())?.publish_state;
+      const r = await db.prepare(`UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN (${ok ? "'private','queued'" : "'private','queued','approved'"})`)
         .bind(ok ? 'approved' : 'rejected', review.ref_id).run();
+      // TA-W1: a photo approved, re-credited or taken back after approval changes the boat page (the pages
+      // version is the purge); rejecting a photo that was never public changes no page.
+      if (input.decision === 'edit' || (r.meta.changes && (ok || prior === 'approved'))) await bumpPagesVersion(db, deps.now);
       // TA-M1: an approved photo needs its public.jpg (upright, 07 § orientation) for the pages and Meta.
       if (ok) await requestMediaJob(env, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
       break;

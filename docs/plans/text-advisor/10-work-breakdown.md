@@ -220,6 +220,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-I2, TA-A1, TA-A3, TA-M1
 - Files: `pages/render.ts`, `pages/port.ts`, `pages/species.ts`, `pages/boat.ts`, `pages/sitemap.ts`, `web/advisor/copy.ts` (all page strings; added to `scripts/check_copy.mjs`), `dist/advisor/pages.css`, `scripts/build-worker.mjs` and `server/globals.d.ts` (`ADVISOR_ASSETS` define), `routes/advisor.ts` (routes, edge cache keyed on `advisor.pages.version` as in 05), `web/telemetry.ts` (`s` source if missing), `dist/robots.txt` (if present) or the assets route, `e2e/advisor-pages.spec.ts`, `tests/test_advisor_pages.mjs`.
 - Tests: escaping (a boat named `<script>` renders inert); verified/unverified rendering; cache key bump after publish; copy lint passes; axe check in e2e.
+- As built: three page families, the sitemap, `robots.txt` from the Worker while on, `ADVISOR_ASSETS` from the chat page's manifest entry, the `s` source and four funnel events in telemetry, page cache bumps on text-admin decisions; `tests/test_advisor_pages.mjs`, `e2e/advisor-pages.spec.ts`. See 08 § As built (TA-W1).
 
 ### TA-W2 · Admin shell, health, review queue · L
 - Stories: OP-1, OP-2, SK-4, OP-7 (banner).
