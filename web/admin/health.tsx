@@ -1,6 +1,7 @@
 // The admin Health view (08 § Admin, Health; TA-W2): relay state, the message
 // queue, vision providers, today's caps and the media job, from
-// GET /api/admin/health. Meta's token and quota arrive with TA-S0.
+// GET /api/admin/health. TA-S0: whether Meta is configured and the Instagram
+// publishing quota (the Page token of the Facebook-Login route does not expire).
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {when} from './api.ts';
 import type {Health} from './api.ts';
@@ -62,7 +63,14 @@ export function HealthView({health, failed, onRefresh}: {health: Health | null; 
           </section>
           <section aria-labelledby="h-meta">
             <h2 id="h-meta">{COPY.meta}</h2>
-            <p class="admin-muted">{COPY.metaLater}</p>
+            {health.meta.configured ? (
+              <dl class="admin-fields">
+                <Row label={COPY.metaConfigured} value={COPY.enabled} tone="go" />
+                <Row label={COPY.metaQuota} value={health.meta.quota_usage === null ? COPY.metaQuotaUnavailable : `${health.meta.quota_usage} / ${health.meta.quota_total ?? '—'}`}
+                  tone={health.meta.quota_usage === null ? 'caution' : health.meta.quota_total !== null && health.meta.quota_usage >= health.meta.quota_total ? 'rough' : undefined} />
+                <Row label={COPY.metaChecked} value={when(health.meta.checked_at) || '—'} />
+              </dl>
+            ) : <p class="admin-muted">{COPY.metaNotConfigured}</p>}
           </section>
         </div>
       )}

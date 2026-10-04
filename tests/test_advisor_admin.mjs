@@ -418,7 +418,7 @@ dbTest('the media route serves admins only: thumb.jpg, then public.jpg, then a v
   assert.equal((await body('/api/admin/media/p1', OTHER))[0], 404);
 });
 
-dbTest('health: relay state, queued messages older than 2 minutes, held outbound, vision skips, today\'s caps, open reviews; Meta waits for TA-S0', async () => {
+dbTest('health: relay state, queued messages older than 2 minutes, held outbound, vision skips, today\'s caps, open reviews; Meta not configured (TA-S0)', async () => {
   const {sql, env, real} = setup();
   const now = Date.now(), day = Math.floor(now / 86400000);
   addContact(sql, {id: 'c1'});
@@ -448,7 +448,7 @@ dbTest('health: relay state, queued messages older than 2 minutes, held outbound
   assert.deepEqual(h.caps.vision, {used: 3, limit: 400});
   assert.equal(h.reviews.open, 1);
   assert.equal(h.media_jobs.pending, 3, 'the queued and the sideways image and the graphic; not the derived one or a private upright one');
-  assert.equal(h.meta, null);
+  assert.deepEqual(h.meta, {configured: false, quota_usage: null, quota_total: null, checked_at: null, error: null}, 'no META_* secrets: no Meta call (test_advisor_meta.mjs covers the quota)');
   assert.deepEqual([h.enabled, h.replies_enabled, h.channel], [true, true, 'bluebubbles']);
 });
 

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "app_id": "100000000000999",
+    "type": "PAGE",
+    "is_valid": true,
+    "expires_at": 0,
+    "data_access_expires_at": 0,
+    "scopes": [
+      "pages_show_list",
+      "instagram_content_publish"
+    ]
+  }
+}

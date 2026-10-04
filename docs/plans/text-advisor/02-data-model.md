@@ -329,6 +329,12 @@ Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
 PK `(post_id, platform, day)`.
 
+As built (TA-S0): migration `0011_advisor_social` creates both tables as
+above (`kind`, `region`, `media_json`, `caption`, `targets_json`, `status`
+default `draft`, `created_by` and the times not null; the stats' counters
+default 0) and adds `advisor_contacts.ig_sid` with the unique index
+`contact_ig_sid`.
+
 ## Reusing `job_state`
 
 Advisor cron state uses the existing `job_state` table with keys prefixed

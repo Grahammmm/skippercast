@@ -174,7 +174,11 @@ export const ADMIN_COPY = {
   mediaPending: 'Images and graphics waiting',
   openReviews: 'Open reviews',
   meta: 'Instagram and Facebook',
-  metaLater: 'Arrives with the social step',
+  metaConfigured: 'Publishing',
+  metaNotConfigured: 'Not configured: the META_* secrets are not set (owner step TA-O4).',
+  metaQuota: 'Instagram posts in the last 24 hours',
+  metaQuotaUnavailable: 'Could not read the quota from Meta',
+  metaChecked: 'Quota checked',
   // Skippers (TA-W3)
   skippersHeading: 'Skippers',
   inviteHeading: 'Invite a skipper',

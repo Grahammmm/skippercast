@@ -46,6 +46,7 @@ import type {FunnelDays, SqlFetcher} from '../advisor/admin/funnel.ts';
 // TA-A4: the rules editor.
 import {listRules, createRule, editRule, retireRule} from '../advisor/admin/rules.ts';
 import type {RuleOutcome} from '../advisor/admin/rules.ts';
+import type {Fetcher} from '../advisor/social/meta.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -77,8 +78,8 @@ const MEDIA_ID = /^[\w-]{1,64}$/;
 const VIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 export const thumbKey = (id: string): string => `advisor/derived/${id}/thumb.jpg`;   // 02 § R2, written by the advisor-media job (TA-M1)
 
-/** What the admin routes take besides the consumer's deps (tests): the funnel's Analytics Engine SQL reader. */
-export interface AdminDeps extends ConsumerDeps {analyticsSql?: SqlFetcher | null}
+/** What the admin routes take besides the consumer's deps (tests): the funnel's Analytics Engine SQL reader and the Graph API fetcher (TA-S0). */
+export interface AdminDeps extends ConsumerDeps {analyticsSql?: SqlFetcher | null; metaFetcher?: Fetcher}
 
 /** The admin routes; `deps` lets tests pass a recording channel (production uses channels/index.ts channelFor). */
 export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
@@ -138,7 +139,7 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
       'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
   });
 
-  admin.get('/api/admin/health', async c => json(await adminHealth(c.env)));
+  admin.get('/api/admin/health', async c => json(await adminHealth(c.env, (deps.now ?? Date.now)(), deps.metaFetcher ? {metaFetcher: deps.metaFetcher} : {})));
 
   // ---- TA-W3: skippers, crew, invites, contacts ----
   const now = (): number => (deps.now ?? Date.now)();

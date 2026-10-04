@@ -266,6 +266,74 @@ error bodies logged with `code`/`subcode` only, a tiny retry on 5xx and on
 code 4 / 17 / 32 (rate limits) with backoff, and a `fetcher` injection for
 tests. Fixtures in `tests/fixtures/advisor/meta/`.
 
+### As built (TA-S0)
+
+- **Client.** `server/advisor/social/meta.ts`. `GRAPH_VERSION` is `v26.0` (the
+  versions page, checked 2026-10-04: released 2026-07-29), `GRAPH_BASE`
+  `https://graph.facebook.com/v26.0`. `graph(cfg, method, path, params)` adds
+  `access_token` and `appsecret_proof` (lowercase hex HMAC-SHA256 of the token
+  keyed with `META_APP_SECRET`) to the query of a GET or the
+  `application/x-www-form-urlencoded` body of a POST, with a 20 s timeout. It
+  retries an HTTP 5xx or error code 4, 17, 32 or 613 (613 added to 09's list:
+  Meta's "calls within one hour" limit) up to three tries in all, waiting 2 s
+  then 8 s; a network failure or timeout is retried only for a GET (a POST may
+  have been applied). Failures throw `MetaError` and log `advisor_meta_error`
+  with `edge` (the path's last word, or `node` for an id), `status`, `code`,
+  `subcode`, `fbtrace_id`, `attempt` and `retrying` only: never the URL, the
+  body, Meta's message (it can echo parameters) or a token. `cfg.attempts`
+  lowers the tries (the health read uses 1); `fetcher` and `sleep` are injected
+  by tests. Ids are checked against `^[\w.-]{1,64}$` before they reach a path.
+- **Helpers.** `igContainer` (kinds `image`, `reel` = `REELS`, `story` =
+  `STORIES` with an image or video, `carousel_item`, `carousel` = `CAROUSEL`
+  with 2-10 children; captions dropped for stories and carousel items,
+  `collaborators` (≤ 3) only on images, Reels and carousels, `user_tags` only
+  on images and carousel items; media URLs must be https), `igContainerStatus`
+  (`fields=status_code,status`), `igPublish` (`media_publish creation_id`),
+  `igPublishingLimit` (`content_publishing_limit?fields=quota_usage,config`,
+  parsed to `{quota_usage, quota_total, quota_duration}`), `igPermalink`,
+  `fbPhoto` (`/photos` with `url`, `message`, and `published=false` plus
+  `scheduled_publish_time` when scheduled), `fbVideoReel` (the 3-phase upload:
+  `video_reels upload_phase=start`, then `POST
+  rupload.facebook.com/video-upload/v26.0/<video_id>` with the headers
+  `Authorization: OAuth <token>` and `file_url`, then `upload_phase=finish
+  video_state=PUBLISHED description`), `fbPhotoStory` (an unpublished `/photos`
+  then `/photo_stories photo_id`) and `pageInfo` (`id,name,
+  instagram_business_account{id,username}`). The rupload call is the one
+  request without `appsecret_proof`: that host is not the Graph API and takes
+  the token as an `Authorization` header only.
+- **Config.** `metaConfigured(env)` needs `META_APP_SECRET`, `META_PAGE_TOKEN`,
+  `META_IG_USER_ID` and `META_PAGE_ID`; the Page token serves both surfaces on
+  the Facebook-Login route, so `META_IG_TOKEN` stays declared in `env.ts` and
+  unused. The deploy (`deploy-cloudflare.yml`, `cloudflare_deploy.sh`) uploads
+  `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_IG_USER_ID`,
+  `META_PAGE_ID` and `META_PAGE_TOKEN` as Worker secrets, each only when set.
+- **Token script.** `scripts/advisor/meta-token.mjs` reads `META_APP_ID` and
+  `META_APP_SECRET` from the environment (never argv), prints the Facebook Login
+  dialog URL (`v26.0/dialog/oauth`, the scopes of step 4, `response_type=code`,
+  a random `state`) with Meta's `https://www.facebook.com/connect/login_success.html`
+  as the redirect (it must be in the app's Valid OAuth Redirect URIs;
+  `--redirect-uri` overrides), takes the pasted landing address (the `state`
+  must match) or a bare code, exchanges it for a short-lived and then a
+  long-lived user token, lists `/me/accounts` with the proof, picks the only
+  Page or `--page <id>`, and prints `META_PAGE_ID`, `META_PAGE_TOKEN` and
+  `META_IG_USER_ID`. It checks `content_publishing_limit` with the Page token
+  (proves `instagram_content_publish`), asks for `account_type` and fails on
+  anything but `BUSINESS`; Meta does not document that field for the IG User
+  node on this route, so when it is refused the script says so and asks the
+  owner to confirm Business in the Instagram app. `debug_token` reports whether
+  the Page token expires (`expires_at: 0`). Nothing is written to disk.
+- **Health.** `GET /api/admin/health` `meta` is `{configured, quota_usage,
+  quota_total, checked_at, error}`: not configured makes no call; otherwise one
+  `content_publishing_limit` read (one try) at most every 10 minutes, cached in
+  `job_state` `advisor.meta.quota` (failures too, as `error: 'unavailable'`), so
+  the banner's once-a-minute health read does not spend Meta's rate limit.
+  There is no token expiry line: the Page token does not expire.
+- **Schema.** Migration `0011_advisor_social` (02): `advisor_posts`,
+  `advisor_post_stats`, `advisor_contacts.ig_sid` with the unique index
+  `contact_ig_sid`.
+- **Tests.** `tests/test_advisor_meta.mjs` with the recorded responses in
+  `tests/fixtures/advisor/meta/` (placeholder ids and tokens only).
+
 ## Stories (SP-4)
 
 Cron 07:00 local: for each verified boat's count-board photo from the

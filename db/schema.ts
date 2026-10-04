@@ -79,12 +79,14 @@ export const advisorContacts=sqliteTable('advisor_contacts',{
   channel:text('channel').notNull(),role:text('role').notNull().default('angler'),boatId:text('boat_id'),
   displayName:text('display_name'),language:text('language').notNull().default('en'),homePort:text('home_port'),
   targetsJson:text('targets_json'),source:text('source'),status:text('status').notNull().default('active'),
+  // 0011 (TA-S0): the Instagram-scoped user id of a DM contact (09 § Inbox); unique, null for everyone else.
+  igSid:text('ig_sid'),
   // Inbound messages processed on messages_day (YYYY-MM-DD, America/Los_Angeles), for the OP-3 cap.
   messagesToday:integer('messages_today').notNull().default(0),messagesDay:text('messages_day'),
   lastSeenAt:text('last_seen_at').notNull(),lastErrorNoticeAt:text('last_error_notice_at'),
   createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
 },t=>[uniqueIndex('contact_phone_hash').on(t.phoneHash),uniqueIndex('contact_web_session').on(t.webSession),
-  index('contact_boat').on(t.boatId),index('contact_seen').on(t.lastSeenAt)]);
+  index('contact_boat').on(t.boatId),index('contact_seen').on(t.lastSeenAt),uniqueIndex('contact_ig_sid').on(t.igSid)]);
 
 // A skipper's boat. status pending -> verified/rejected by an admin (SK-4); photo
 // consent is recorded with the message that gave it (SK-2). owner_contact_id is
@@ -187,3 +189,27 @@ export const advisorDailyAnswers=sqliteTable('advisor_daily_answers',{
   key:text('key').primaryKey(),textEn:text('text_en').notNull(),textEs:text('text_es').notNull(),
   inputsHash:text('inputs_hash').notNull(),generatedAt:text('generated_at').notNull(),
 });
+
+// Text Advisor social (docs/plans/text-advisor/02-data-model.md, 09; migration 0011).
+// A post in any state: drafts (social/drafts.ts) wait for one admin approval;
+// publishing (TA-S2) fills the Meta ids. media_json is the ordered advisor_media
+// ids; collaborators_json up to 3 IG usernames; user_tags_json [{username,x,y}];
+// targets_json the surfaces (instagram, facebook, instagram_story, facebook_story).
+export const advisorPosts=sqliteTable('advisor_posts',{
+  id:text('id').primaryKey(),kind:text('kind').notNull(),region:text('region').notNull(),boatId:text('boat_id'),
+  mediaJson:text('media_json').notNull(),caption:text('caption').notNull(),collaboratorsJson:text('collaborators_json'),
+  userTagsJson:text('user_tags_json'),targetsJson:text('targets_json').notNull(),status:text('status').notNull().default('draft'),
+  scheduledFor:text('scheduled_for'),igContainerId:text('ig_container_id'),igMediaId:text('ig_media_id'),
+  fbPostId:text('fb_post_id'),fbStoryId:text('fb_story_id'),collabStatus:text('collab_status'),error:text('error'),
+  createdBy:text('created_by').notNull(),approvedBy:text('approved_by'),approvedAt:text('approved_at'),postedAt:text('posted_at'),
+  createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
+},t=>[index('post_status_time').on(t.status,t.scheduledFor),index('post_boat').on(t.boatId)]);
+
+// Insights per post, platform and fetch day (SP-10, TA-S7); 0 where a metric is unavailable.
+export const advisorPostStats=sqliteTable('advisor_post_stats',{
+  postId:text('post_id').notNull(),platform:text('platform').notNull(),day:text('day').notNull(),
+  views:integer('views').notNull().default(0),reach:integer('reach').notNull().default(0),likes:integer('likes').notNull().default(0),
+  comments:integer('comments').notNull().default(0),saved:integer('saved').notNull().default(0),shares:integer('shares').notNull().default(0),
+  follows:integer('follows').notNull().default(0),profileVisits:integer('profile_visits').notNull().default(0),linkTaps:integer('link_taps').notNull().default(0),
+  rawJson:text('raw_json').notNull(),fetchedAt:text('fetched_at').notNull(),
+},t=>[primaryKey({columns:[t.postId,t.platform,t.day]})]);

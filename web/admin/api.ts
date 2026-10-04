@@ -24,7 +24,7 @@ export interface Health {
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
   media_jobs: {pending: number};
   reviews: {open: number};
-  meta: null;
+  meta: {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null};
 }
 
 // ---- TA-W3: Skippers and Contacts (server/advisor/admin/skippers.ts) ----

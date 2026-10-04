@@ -1,0 +1,9 @@
+{
+  "error": {
+    "message": "Error validating access token: the session is invalid. access_token=EAAB-PLACEHOLDER-TOKEN",
+    "type": "OAuthException",
+    "code": 190,
+    "error_subcode": 460,
+    "fbtrace_id": "APLACEHOLDERTRACE90"
+  }
+}
