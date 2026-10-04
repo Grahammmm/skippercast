@@ -80,6 +80,10 @@ jobs:
           BLUEBUBBLES_PASSWORD: ${{ secrets.BLUEBUBBLES_PASSWORD }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          # TA-C2: Twilio adapter (port-to-Twilio runbook); TWILIO_FROM only after a port.
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
           # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).

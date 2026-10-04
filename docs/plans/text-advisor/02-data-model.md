@@ -361,7 +361,8 @@ Runs weekly from `advisorCron` (Sunday 09:00 UTC slot) and is idempotent.
 
 **STOP** (FC-4): `status='stopped'`; no outbound of any kind; an inbound
 `START` reactivates. Twilio enforces STOP on SMS itself and still forwards the
-message, so the handler runs on both channels.
+message, so the handler runs on both channels. (Forwarding is unverified as of
+TA-C2; see 03 § Twilio adapter, "As built".)
 
 **"forget me"** (FC-4, `forgetContact` in `server/advisor/contacts.ts`): R2
 first (originals under `advisor/media/<contact_id>/`, each of its media's

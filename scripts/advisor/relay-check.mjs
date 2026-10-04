@@ -15,7 +15,12 @@
 //   node scripts/advisor/relay-check.mjs --to +1XXXXXXXXXX
 //
 // Options: --to <E.164 US number> (required unless --no-send), --no-send, --timeout <ms> (default 15000).
-// --twilio is reserved for the port-to-Twilio runbook (TA-C7) and is refused here.
+//
+// TA-C2: --twilio checks the Twilio account instead (port-to-Twilio runbook, step 5):
+//   TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_FROM=+1XXXXXXXXXX \
+//   node scripts/advisor/relay-check.mjs --twilio --to +1XXXXXXXXXX
+// It fetches the account (GET /2010-04-01/Accounts/<sid>.json), sends one SMS from
+// TWILIO_FROM to --to (skip with --no-send) and prints the message sid. Never the token.
 
 import {pathToFileURL} from 'node:url';
 
@@ -127,12 +132,64 @@ export async function runChecks({env, args, fetcher = fetch, log = console.log})
   return {passed, results};
 }
 
+// ---- TA-C2: --twilio ---------------------------------------------------------------
+
+const TWILIO_API = 'https://api.twilio.com/2010-04-01';
+
+/** The Twilio account check and one test SMS; `log` prints a line. Returns {passed, results, sid}. */
+export async function runTwilioChecks({env, args, fetcher = fetch, log = console.log}) {
+  const results = [];
+  const secrets = [env.TWILIO_AUTH_TOKEN];
+  const record = (name, ok, detail) => { results.push({name, ok, detail}); log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ': ' + scrub(detail, secrets) : ''}`); return ok; };
+  const need = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', ...(args.send ? ['TWILIO_FROM'] : [])];
+  const missing = need.filter(k => !env[k]);
+  if (missing.length) { record('environment', false, `missing ${missing.join(', ')}`); return {passed: false, results, sid: null}; }
+  const sid = String(env.TWILIO_ACCOUNT_SID).trim();
+  if (!/^AC[0-9a-f]{32}$/.test(sid)) { record('environment', false, 'TWILIO_ACCOUNT_SID must look like AC followed by 32 hex characters'); return {passed: false, results, sid: null}; }
+  const from = args.send ? e164(env.TWILIO_FROM) : null, to = args.to ? e164(args.to) : null;
+  if (args.send && !from) { record('environment', false, 'TWILIO_FROM must be a US number such as +18055550100'); return {passed: false, results, sid: null}; }
+  if (args.send && !to) { record('environment', false, '--to must be a US number such as +18055550100 (or pass --no-send)'); return {passed: false, results, sid: null}; }
+  record('environment', true, `account ${sid.slice(0, 6)}…${from ? `, from ${masked(from)}, to ${masked(to)}` : ''}`);
+
+  const headers = {Authorization: 'Basic ' + Buffer.from(`${sid}:${String(env.TWILIO_AUTH_TOKEN).trim()}`).toString('base64'), Accept: 'application/json'};
+  const call = async (path, form) => {
+    const init = {method: form ? 'POST' : 'GET', headers: {...headers}, signal: AbortSignal.timeout(args.timeout)};
+    if (form) { init.headers['Content-Type'] = 'application/x-www-form-urlencoded'; init.body = form.toString(); }
+    const response = await fetcher(`${TWILIO_API}/Accounts/${sid}${path}`, init);
+    let body = null;
+    try { body = JSON.parse(await response.text()); } catch { body = null; }
+    const code = body?.code ?? body?.error_code ?? null;
+    const error = response.ok ? null : `HTTP ${response.status}${code ? ` (Twilio error ${code}${response.status === 401 ? ': check the sid and auth token' : ''})` : ''}`;
+    return {ok: !error, status: response.status, body, error};
+  };
+  const attempt = async (name, fn) => { try { return await fn(); } catch (error) { record(name, false, error?.name === 'TimeoutError' ? 'timed out' : error?.message); return null; } };
+
+  const account = await attempt('account', () => call('.json'));
+  if (account) record('account', account.ok, account.ok ? `status ${account.body?.status ?? 'unknown'}${account.body?.type ? `, ${account.body.type}` : ''}` : account.error);
+  if (!account?.ok) return {passed: false, results, sid: null};
+
+  let messageSid = null;
+  if (args.send) {
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const sent = await attempt('send SMS', () => call('/Messages.json', new URLSearchParams({To: to, From: from, Body: `SkipperCast relay check (Twilio SMS) ${stamp} UTC`})));
+    if (sent) {
+      messageSid = typeof sent.body?.sid === 'string' ? sent.body.sid : null;
+      record('send SMS', sent.ok && Boolean(messageSid), sent.ok ? (messageSid ? `accepted, sid ${messageSid}, status ${sent.body?.status ?? 'unknown'}; confirm it arrived on the phone` : 'no message sid in the response') : sent.error);
+    }
+  } else log('SKIP  send (--no-send)');
+
+  const passed = results.every(r => r.ok);
+  log('');
+  log(`${passed ? 'PASS' : 'FAIL'}: ${results.filter(r => r.ok).length}/${results.length} checks passed.`);
+  if (passed && args.send) log('Check the phone: one SMS from the advisor number should have arrived.');
+  return {passed, results, sid: messageSid};
+}
+
 async function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); } catch (error) { console.error(error.message); process.exit(2); }
-  if (args.help) { console.log('Usage: node scripts/advisor/relay-check.mjs --to +1XXXXXXXXXX [--no-send] [--timeout ms]\nReads BLUEBUBBLES_URL, BLUEBUBBLES_PASSWORD, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET from the environment.'); return; }
-  if (args.twilio) { console.error('--twilio is not available yet (the Twilio adapter lands in TA-C2; see the port-to-Twilio runbook).'); process.exit(2); }
-  const {passed} = await runChecks({env: process.env, args});
+  if (args.help) { console.log('Usage: node scripts/advisor/relay-check.mjs [--twilio] --to +1XXXXXXXXXX [--no-send] [--timeout ms]\nReads BLUEBUBBLES_URL, BLUEBUBBLES_PASSWORD, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET from the environment;\nwith --twilio, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM instead.'); return; }
+  const {passed} = await (args.twilio ? runTwilioChecks : runChecks)({env: process.env, args});
   process.exit(passed ? 0 : 1);
 }
 

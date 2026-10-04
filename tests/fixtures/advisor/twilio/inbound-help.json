@@ -1,0 +1,33 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging inbound webhook (application/x-www-form-urlencoded POST, shown as its parameters) as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "HELP. Twilio may answer it with the console's HELP auto-reply; if forwarded, the engine sees it as text.",
+  "_expect": {
+    "inbound": 1,
+    "from": "+15555550101",
+    "text": "HELP",
+    "media": 0
+  },
+  "params": {
+    "ToCountry": "US",
+    "ToState": "CA",
+    "SmsMessageSid": "SM6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f",
+    "NumMedia": "0",
+    "ToCity": "",
+    "FromZip": "",
+    "SmsSid": "SM6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f",
+    "FromState": "CA",
+    "SmsStatus": "received",
+    "FromCity": "",
+    "Body": "HELP",
+    "FromCountry": "US",
+    "To": "+15555550100",
+    "MessagingServiceSid": "",
+    "ToZip": "",
+    "NumSegments": "1",
+    "MessageSid": "SM6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f",
+    "AccountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "From": "+15555550101",
+    "ApiVersion": "2010-04-01",
+    "OptOutType": "HELP"
+  }
+}

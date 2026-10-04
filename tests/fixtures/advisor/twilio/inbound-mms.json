@@ -1,0 +1,36 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging inbound webhook (application/x-www-form-urlencoded POST, shown as its parameters) as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "An MMS with two photos and a caption (NumMedia=2).",
+  "_expect": {
+    "inbound": 1,
+    "from": "+15555550101",
+    "text": "Count board from today",
+    "media": 2
+  },
+  "params": {
+    "ToCountry": "US",
+    "ToState": "CA",
+    "SmsMessageSid": "MM2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+    "NumMedia": "2",
+    "ToCity": "",
+    "FromZip": "",
+    "SmsSid": "MM2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+    "FromState": "CA",
+    "SmsStatus": "received",
+    "FromCity": "",
+    "Body": "Count board from today",
+    "FromCountry": "US",
+    "To": "+15555550100",
+    "MessagingServiceSid": "",
+    "ToZip": "",
+    "NumSegments": "1",
+    "MessageSid": "MM2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+    "AccountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "From": "+15555550101",
+    "ApiVersion": "2010-04-01",
+    "MediaUrl0": "https://api.twilio.com/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/Messages/MM2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b/Media/ME3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+    "MediaContentType0": "image/jpeg",
+    "MediaUrl1": "https://api.twilio.com/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/Messages/MM2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b/Media/ME4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
+    "MediaContentType1": "image/png"
+  }
+}

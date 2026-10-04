@@ -5,6 +5,8 @@
 // outbound goes through channelFor(env, contact).
 import {advisorSettings} from '../settings.ts';
 import {bluebubbles} from './bluebubbles.ts';
+// TA-C2: the Twilio adapter replaces its stub.
+import {twilio} from './twilio.ts';
 import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, OutboundMessage, SendResult} from '../types.ts';
 
@@ -60,16 +62,16 @@ export class ChannelNotImplemented extends Error {
   constructor(name: string) { super(`${name} channel not implemented`); this.name = 'ChannelNotImplemented'; }
 }
 
-/** A placeholder adapter: every call throws ChannelNotImplemented. Replaced by TA-C2 (twilio) and TA-C3 (web). */
+/** A placeholder adapter: every call throws ChannelNotImplemented. TA-C2 replaced twilio's; TA-C3 replaces web's. */
 export function stubAdapter(name: AdapterName): ChannelAdapter {
   const fail = async (): Promise<never> => { throw new ChannelNotImplemented(name); };
   return {name, normalize: fail, send: fail, health: fail, fetchMediaByRef: fail, capabilities: {media: false, maxMediaBytes: 0, typing: false, read: false, segments: null}};
 }
 
-/** Every adapter by name. TA-C2 and TA-C3 replace their stubs here. */
+/** Every adapter by name. TA-C3 replaces the web stub here. */
 export const ADAPTERS: Record<AdapterName, ChannelAdapter> = {
   bluebubbles,
-  twilio: stubAdapter('twilio'),
+  twilio,   // TA-C2
   web: stubAdapter('web'),
 };
 

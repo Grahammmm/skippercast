@@ -9,6 +9,8 @@ import {gate} from '../advisor/gate.ts';
 import {advisorSettings} from '../advisor/settings.ts';
 import {relayState} from '../advisor/relay.ts';
 import {ADAPTERS} from '../advisor/channels/index.ts';
+// TA-C2: the Twilio status callback and its empty TwiML reply.
+import {statusCallback as twilioStatusCallback, TWIML_EMPTY} from '../advisor/channels/twilio.ts';
 import type {ChannelAdapter} from '../advisor/channels/index.ts';
 import {advisorLog} from '../advisor/log.ts';
 // TA-C4: shared inbound path, media intake, upload links and media serving.
@@ -55,8 +57,9 @@ async function dispatch(c: Context<AppEnv>, id: string): Promise<void> {
   await dispatchInbound(c.env, id, ctx ? p => ctx.waitUntil(p) : undefined);
 }
 
-/** One provider webhook: token, rate limit, normalize, store each message, dispatch, 200 {}. */
-async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token: string): Promise<Response> {
+/** One provider webhook: token, rate limit, normalize, store each message, dispatch, 200 {} (or the adapter's `accepted` reply). */
+// TA-C2: `accepted` lets Twilio's webhook answer TwiML instead of {}.
+async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token: string, accepted: () => Response = () => json({})): Promise<Response> {
   const env = c.env;
   if (await overLimit(env.PUBLIC_LIMITER, 'advisor-inbound:' + clientIP(c.req.raw))) return tooManyRequests();
   if (!await sameSecret(token, env.ADVISOR_WEBHOOK_TOKEN ?? '')) {
@@ -69,7 +72,7 @@ async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token
     if (!env.DB) throw Error('storage unavailable');
     const result = await adapter.normalize(c.req.raw, env);
     if (result === 'unauthorized') { advisorLog('warn', 'advisor_webhook_unauthorized', {channel: adapter.name, count: 1}); return json({error: 'Unauthorized'}, 401); }
-    if (result === 'ignore') return json({});
+    if (result === 'ignore') return accepted();
     let duplicates = 0;
     for (const message of result) {
       const id = await storeInbound(env, message);
@@ -77,7 +80,7 @@ async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token
       await dispatch(c, id);
     }
     if (duplicates) advisorLog('info', 'advisor_webhook_duplicate', {channel: adapter.name, count: duplicates});
-    return json({});
+    return accepted();
   } catch (error) {
     const client = error instanceof ClientError;
     advisorLog(client ? 'warn' : 'error', 'advisor_webhook_failed', {channel: adapter.name, type: client ? 'validation' : 'dependency', reason: String((error as Error)?.message).slice(0, 200)});
@@ -87,6 +90,36 @@ async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token
 
 // BlueBubbles sends no signature: the path carries ADVISOR_WEBHOOK_TOKEN (03 § owner checklist step 6).
 advisorPublic.post('/api/advisor/inbound/bluebubbles/:token', c => inboundWebhook(c, ADAPTERS.bluebubbles, c.req.param('token')));
+
+// TA-C2: Twilio webhooks (03 § Twilio adapter). Both carry ADVISOR_WEBHOOK_TOKEN in
+// the path like BlueBubbles' and are also signed (X-Twilio-Signature over
+// ADVISOR_PUBLIC_BASE + path + sorted form params); the adapter checks the signature.
+const twiml = (): Response => new Response(TWIML_EMPTY, {status: 200, headers: {'Content-Type': 'text/xml; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
+advisorPublic.post('/api/advisor/inbound/twilio/:token', c => inboundWebhook(c, ADAPTERS.twilio, c.req.param('token'), twiml));
+
+// Delivery status for a message we sent: our outbound row by provider_id becomes sent or failed. 204.
+advisorPublic.post('/api/advisor/inbound/twilio-status/:token', async c => {
+  const env = c.env;
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-inbound:' + clientIP(c.req.raw))) return tooManyRequests();
+  if (!await sameSecret(c.req.param('token'), env.ADVISOR_WEBHOOK_TOKEN ?? '')) {
+    advisorLog('warn', 'advisor_webhook_unauthorized', {channel: 'twilio-status', count: 1, configured: Boolean(env.ADVISOR_WEBHOOK_TOKEN)});
+    return json({error: 'Unauthorized'}, 401);
+  }
+  // Answered here, not by the shared onError: the path carries the token.
+  try {
+    if (!env.DB) throw Error('storage unavailable');
+    if (await twilioStatusCallback(c.req.raw, env) === 'unauthorized') {
+      advisorLog('warn', 'advisor_webhook_unauthorized', {channel: 'twilio-status', count: 1});
+      return json({error: 'Unauthorized'}, 401);
+    }
+    return new Response(null, {status: 204});
+  } catch (error) {
+    const client = error instanceof ClientError;
+    advisorLog(client ? 'warn' : 'error', 'advisor_webhook_failed', {channel: 'twilio-status', type: client ? 'validation' : 'dependency', reason: String((error as Error)?.message).slice(0, 200)});
+    return client ? json({error: (error as Error).message}, 400) : json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+});
+// TA-C2 end.
 
 // ---- TA-C4: upload link and media serving ----------------------------------------
 // (03 § Uploads for compressed channels, 02 § R2, 09 § Media that Meta fetches.)

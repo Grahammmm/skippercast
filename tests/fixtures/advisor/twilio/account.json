@@ -1,0 +1,18 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging Account fetch response as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "GET /Accounts/<sid>.json for an active account.",
+  "_expect": {
+    "status": 200
+  },
+  "response": {
+    "auth_token": "[redacted in fixture]",
+    "date_created": "Thu, 01 Oct 2026 12:00:00 +0000",
+    "date_updated": "Thu, 01 Oct 2026 12:00:00 +0000",
+    "friendly_name": "SkipperCast",
+    "owner_account_sid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "sid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "status": "active",
+    "type": "Full",
+    "uri": "/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.json"
+  }
+}

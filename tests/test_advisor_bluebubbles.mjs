@@ -164,12 +164,14 @@ test('splitForChannel: limits, paragraph then sentence boundaries, (n/m) prefixe
 
 // ---- channelFor -----------------------------------------------------------------
 
-test('channelFor: web for a web-only contact, else ADVISOR_CHANNEL; twilio and web are stubs until TA-C2/TA-C3', async () => {
+test('channelFor: web for a web-only contact, else ADVISOR_CHANNEL; web is a stub until TA-C3 (TA-C2 replaced twilio)', async () => {
   assert.equal(channelFor({}, {phone_enc: 'x', web_session: null}).name, 'bluebubbles');
   assert.equal(channelFor({ADVISOR_CHANNEL: 'twilio'}, {phone_enc: 'x', web_session: null}).name, 'twilio');
   assert.equal(channelFor({}, {phone_enc: null, web_session: 'h'}).name, 'web');
   assert.equal(ADAPTERS.bluebubbles.name, 'bluebubbles');
-  await assert.rejects(ADAPTERS.twilio.send({id: 'x', to: 'y'}, {}), ChannelNotImplemented);
+  // TA-C2: the Twilio adapter is real now; unconfigured, it fails the send instead of throwing.
+  assert.deepEqual(await ADAPTERS.twilio.send({id: 'x', to: 'y'}, {}), {providerId: null, status: 'failed', error: 'not-configured'});
+  await assert.rejects(ADAPTERS.web.send({id: 'x', to: 'y'}, {}), ChannelNotImplemented);
   await assert.rejects(ADAPTERS.web.normalize(new Request('https://x.test'), {}), /not implemented/);
 });
 

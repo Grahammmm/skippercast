@@ -157,6 +157,11 @@ secrets = {name: os.environ[source] for name, source in [
     ('BLUEBUBBLES_PASSWORD', 'BLUEBUBBLES_PASSWORD'),
     ('CF_ACCESS_CLIENT_ID', 'CF_ACCESS_CLIENT_ID'),
     ('CF_ACCESS_CLIENT_SECRET', 'CF_ACCESS_CLIENT_SECRET'),
+    # TA-C2: Twilio (SMS/MMS after a port; runbook: docs/operations/runbooks/advisor-port-to-twilio.md).
+    # TWILIO_FROM stays unset until the port completes.
+    ('TWILIO_ACCOUNT_SID', 'TWILIO_ACCOUNT_SID'),
+    ('TWILIO_AUTH_TOKEN', 'TWILIO_AUTH_TOKEN'),
+    ('TWILIO_FROM', 'TWILIO_FROM'),
 ] if os.environ.get(source)}
 print(json.dumps(secrets))
 PY
