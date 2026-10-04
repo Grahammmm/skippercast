@@ -187,7 +187,8 @@ test('migration 0006 creates every advisor table and index on a fresh database',
   const {DatabaseSync} = await import('node:sqlite'), sql = new DatabaseSync(':memory:');
   const entry = journal().entries.find(e => e.tag.startsWith('0006_'));
   assert.equal(entry?.tag, '0006_advisor_core');
-  for (const {tag} of journal().entries) sql.exec(migrationSql(tag));
+  // Up to 0007 (0007 only adds a column): later migrations add the later tables.
+  for (const {tag} of journal().entries.filter(e => e.idx <= 7)) sql.exec(migrationSql(tag));
   const names = type => sql.prepare('SELECT name FROM sqlite_master WHERE type=?').all(type).map(r => r.name);
   const tables = names('table'), indexes = names('index');
   for (const t of ['advisor_contacts', 'advisor_boats', 'advisor_crew', 'advisor_messages', 'advisor_media', 'advisor_reports', 'advisor_report_edits', 'advisor_reviews'])
@@ -201,7 +202,7 @@ test('migration 0006 creates every advisor table and index on a fresh database',
     assert.equal(unique(u), 1, u);
   const columns = t => sql.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
   assert.ok(columns('users').includes('role')); assert.ok(columns('advisor_boats').includes('status')); assert.ok(columns('advisor_messages').includes('created_by'));
-  assert.ok(!columns('advisor_contacts').includes('ig_sid'), 'ig_sid is migration 0008');
+  assert.ok(!columns('advisor_contacts').includes('ig_sid'), 'ig_sid is migration 0009');
   assert.deepEqual(sql.prepare("SELECT name, pk FROM pragma_table_info('advisor_crew') WHERE pk>0 ORDER BY pk").all().map(r => r.name), ['boat_id', 'contact_id']);
 });
 

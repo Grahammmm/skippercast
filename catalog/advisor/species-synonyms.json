@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-04",
+  "method": "Words anglers and crews text for a species (05 § counts, 06), mapped to catalog/species.json or catalog/advisor/species-extra.json keys. Matched whole-word, case-insensitively, accents optional, longest phrase first. 'reds' maps to vermilion as the Central Coast crews use it; a skipper's count keeps its own label (05). No rule or catch claim. Slang that is too often another word in a text (cab, blues, bugs, goats) is left out on purpose.",
+  "species": {
+    "lingcod": {
+      "en": [
+        "lingcod",
+        "lingcods",
+        "ling",
+        "lings",
+        "ling cod"
+      ],
+      "es": [
+        "lingcod",
+        "bacalao lingcod"
+      ]
+    },
+    "rockfish": {
+      "en": [
+        "rockfish",
+        "rockfishes",
+        "rock cod",
+        "rockcod",
+        "rockcods",
+        "rcg",
+        "rock fish"
+      ],
+      "es": [
+        "rocote",
+        "rocotes",
+        "pez roca",
+        "peces roca",
+        "rocoti"
+      ]
+    },
+    "vermilion": {
+      "en": [
+        "vermilion",
+        "vermilions",
+        "vermillion",
+        "vermillions",
+        "reds",
+        "red rockfish",
+        "red rockcod",
+        "red snapper"
+      ],
+      "es": [
+        "colorado",
+        "colorados",
+        "rocote colorado"
+      ]
+    },
+    "copper": {
+      "en": [
+        "copper",
+        "coppers",
+        "copper rockfish"
+      ],
+      "es": [
+        "cobrizo",
+        "rocote cobrizo"
+      ]
+    },
+    "canary": {
+      "en": [
+        "canary",
+        "canaries",
+        "canary rockfish"
+      ],
+      "es": [
+        "canario",
+        "rocote canario"
+      ]
+    },
+    "yelloweye": {
+      "en": [
+        "yelloweye",
+        "yelloweyes",
+        "yelloweye rockfish"
+      ],
+      "es": [
+        "ojo amarillo"
+      ]
+    },
+    "cowcod": {
+      "en": [
+        "cowcod",
+        "cowcods"
+      ],
+      "es": []
+    },
+    "bocaccio": {
+      "en": [
+        "bocaccio",
+        "bocaccios",
+        "salmon grouper"
+      ],
+      "es": [
+        "bocaccio"
+      ]
+    },
+    "chilipepper": {
+      "en": [
+        "chilipepper",
+        "chilipeppers",
+        "chili pepper"
+      ],
+      "es": []
+    },
+    "black": {
+      "en": [
+        "black rockfish"
+      ],
+      "es": []
+    },
+    "blue": {
+      "en": [
+        "blue rockfish"
+      ],
+      "es": []
+    },
+    "gopher": {
+      "en": [
+        "gopher",
+        "gophers",
+        "gopher rockfish"
+      ],
+      "es": []
+    },
+    "cabezon": {
+      "en": [
+        "cabezon",
+        "cabezons",
+        "cabbie",
+        "cabbies"
+      ],
+      "es": [
+        "cabezón",
+        "cabezones"
+      ]
+    },
+    "kelp-greenling": {
+      "en": [
+        "greenling",
+        "greenlings",
+        "kelp greenling"
+      ],
+      "es": []
+    },
+    "halibut": {
+      "en": [
+        "halibut",
+        "halis",
+        "hali",
+        "halibuts",
+        "california halibut"
+      ],
+      "es": [
+        "lenguado",
+        "lenguados",
+        "lenguado de california"
+      ]
+    },
+    "pacific-halibut": {
+      "en": [
+        "pacific halibut"
+      ],
+      "es": [
+        "halibut del pacífico"
+      ]
+    },
+    "salmon": {
+      "en": [
+        "salmon",
+        "king salmon",
+        "kings",
+        "chinook",
+        "chinook salmon"
+      ],
+      "es": [
+        "salmón",
+        "salmon",
+        "salmones"
+      ]
+    },
+    "albacore": {
+      "en": [
+        "albacore",
+        "albie",
+        "albies",
+        "longfin"
+      ],
+      "es": [
+        "albacora"
+      ]
+    },
+    "bluefin": {
+      "en": [
+        "bluefin",
+        "bluefin tuna",
+        "bft"
+      ],
+      "es": [
+        "atún aleta azul",
+        "aleta azul"
+      ]
+    },
+    "yellowfin": {
+      "en": [
+        "yellowfin",
+        "yellowfin tuna",
+        "yft"
+      ],
+      "es": [
+        "atún aleta amarilla",
+        "aleta amarilla"
+      ]
+    },
+    "yellowtail": {
+      "en": [
+        "yellowtail",
+        "yt",
+        "forkies"
+      ],
+      "es": [
+        "jurel",
+        "jureles"
+      ]
+    },
+    "white-seabass": {
+      "en": [
+        "white seabass",
+        "white sea bass",
+        "wsb",
+        "seabass",
+        "sea bass"
+      ],
+      "es": [
+        "corvina blanca",
+        "corvinas"
+      ]
+    },
+    "dungeness": {
+      "en": [
+        "dungeness",
+        "dungeness crab",
+        "crab",
+        "crabs",
+        "dungies"
+      ],
+      "es": [
+        "cangrejo",
+        "cangrejos",
+        "jaiba",
+        "jaibas"
+      ]
+    },
+    "kelp-bass": {
+      "en": [
+        "kelp bass",
+        "calico",
+        "calicos",
+        "calico bass"
+      ],
+      "es": [
+        "cabrilla"
+      ]
+    },
+    "sand-bass": {
+      "en": [
+        "sand bass",
+        "barred sand bass",
+        "sandies"
+      ],
+      "es": []
+    },
+    "spotted-bass": {
+      "en": [
+        "spotted bay bass",
+        "spotted sand bass",
+        "bay bass"
+      ],
+      "es": []
+    },
+    "sheephead": {
+      "en": [
+        "sheephead",
+        "sheepshead"
+      ],
+      "es": [
+        "vieja",
+        "viejas"
+      ]
+    },
+    "whitefish": {
+      "en": [
+        "whitefish",
+        "ocean whitefish"
+      ],
+      "es": [
+        "pierna"
+      ]
+    },
+    "bonito": {
+      "en": [
+        "bonito",
+        "bonitos",
+        "boneheads"
+      ],
+      "es": [
+        "bonito"
+      ]
+    },
+    "barracuda": {
+      "en": [
+        "barracuda",
+        "barracudas",
+        "barries",
+        "cuda"
+      ],
+      "es": [
+        "barracuda"
+      ]
+    },
+    "dorado": {
+      "en": [
+        "dorado",
+        "dorados",
+        "mahi",
+        "mahi mahi"
+      ],
+      "es": [
+        "dorado"
+      ]
+    },
+    "lobster": {
+      "en": [
+        "lobster",
+        "lobsters",
+        "spiny lobster"
+      ],
+      "es": [
+        "langosta",
+        "langostas"
+      ]
+    }
+  }
+}

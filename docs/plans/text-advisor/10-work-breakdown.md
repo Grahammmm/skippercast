@@ -121,6 +121,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Files: `tools/get_port_report.ts`, `get_conditions.ts`, `get_rules.ts`, `get_species.ts`, `get_strategy.ts`, `get_trips.ts`, `answers/advice.ts`, `answers/confidence.ts`, `answers/comfort.ts`, `catalog/advisor/public-grounds.json`, `catalog/advisor/port-aliases.json`, `catalog/advisor/species-synonyms.json`, `catalog/advisor/species-extra.json`, `tests/test_advisor_tools.mjs`.
 - Build: until TA-A0 lands, `get_rules` reads `dist/data/regulations*.json` directly and always returns `stale: true` (so every rules answer says "double-check"); `get_port_report` returns skipper reports only (no daily answer yet). `get_conditions` reads the regional feeds with `readFeed` and its own parsers (06 § planning); `answers/confidence.ts` and `answers/comfort.ts` are the server re-implementations pinned by test to the `web/` fixtures.
 - Tests: each tool against feed fixtures already in `tests/fixtures`; `get_strategy` never returns a coordinate (regex over the output); public-grounds allowlist filters a non-public spot name.
+- As built: one PR with TA-A0 (so `get_rules` reads the table, not the files); the confidence ladder is copied from `dist/bite-evidence.js` (the plan said `web/confidence.ts`); `catalog/advisor/species-extra.json` needed no new keys (the synonyms file maps slang to existing keys). See 06 § As built (TA-E2).
 
 ### TA-V1 · Vision interface, Claude provider, thresholds, synthetic fixtures · M
 - Stories: OP-8, ID-1, ID-3, SC-1 (reading), OP-2 (detection).
@@ -161,6 +162,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-F2
 - Files: `db/schema.ts`, `drizzle/0008_advisor_answers.sql` (`pnpm db:generate --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
 - Tests: importer maps every species in the regulations files to a row; staleness by `review_due`; the tool never returns `retired`; `review` rows are `stale: true`.
+- As built: one PR with TA-E2 (branch `claude/ta-a0-e2`). Rows are per jurisdiction (`region='*'`); `Region.jurisdiction_id` is now typed in `server/types.ts`. `get_rules` answers an empty `rules` list (not `unavailable`) when nothing matches, which satisfies the rules guard; the prompt sends people to CDFW. See 02 § advisor_rules "As built".
 
 ### TA-A1 · Daily answers: generator, cron, pre-router, both languages · M
 - Stories: FR-1, FR-4, FC-6 (daily es).

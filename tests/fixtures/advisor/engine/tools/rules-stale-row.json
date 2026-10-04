@@ -1,0 +1,47 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. The rule numbers in the reply come from the imported rules table (dist/data/regulations.json, Central), not from the model.",
+  "description": "A real get_rules call (TA-A0) that returns a stale row: the guard does not fire, so the reply may quote the rule, and it says double-check with the rules link.",
+  "message": "can I keep a vermilion?",
+  "exchanges": [
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {"type": "tool_use", "id": "toolu_51", "name": "get_rules", "input": {"species_key": "vermilion"}}
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {"input_tokens": 100, "output_tokens": 40, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+        }
+      }
+    },
+    {
+      "request": {"tool_result_for": "toolu_51"},
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {"type": "text", "text": "Vermilion count toward the 10-fish rockfish limit, at most 2 vermilion/sunset per angler (CDFW Central Region rules). That rule is due for review, so double-check before you keep one: {{link:rules:vermilion}}"}
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {"input_tokens": 100, "output_tokens": 40, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "rules",
+    "texts": 1,
+    "reply_contains": ["double-check", "at most 2 vermilion", "/species/vermilion?s=txt#rules"]
+  }
+}

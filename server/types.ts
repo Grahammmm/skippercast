@@ -9,6 +9,8 @@ export interface Region {
   forecast_points: ForecastPoint[]; marine_zones: MarineZones;
   contexts?: Record<string, {marine_zones?: MarineZones} | undefined>;
   intelligence_feed: string; daily_feed: string; habitat_feed?: string;
+  /** The jurisdictions/<id>.json whose rules apply (advisor_rules.jurisdiction). */
+  jurisdiction_id?: string; landing_names?: string[];
   harbor: {information_url: string};
 }
 export interface Deployment {

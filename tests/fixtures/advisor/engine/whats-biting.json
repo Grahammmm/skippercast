@@ -1,6 +1,6 @@
 {
   "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
-  "description": "What's biting: get_port_report (a stub until TA-E2) then a reply with a port link placeholder.",
+  "description": "What's biting: get_port_report (TA-E2) on the committed daily-feed fixture: no skipper reports yet, the landing's Starfire trip with its Low label; the reply cites the landing and links the port.",
   "message": "What's biting out of Morro Bay?",
   "exchanges": [
     {
@@ -50,7 +50,14 @@
     {
       "request": {
         "tool_result_for": "toolu_01",
-        "tool_result_contains": "not built yet"
+        "tool_result_contains": [
+          "\"daily\":null",
+          "\"skipper_reports\":[]",
+          "reported by the landing",
+          "Starfire",
+          "\"confidence\":\"Low\"",
+          "\"catch_probability\":null"
+        ]
       },
       "response": {
         "status": 200,
@@ -62,7 +69,7 @@
           "content": [
             {
               "type": "text",
-              "text": "I can't pull the latest Morro Bay reports by text yet. The port page has what we have: {{link:port:morro-bay}} Which species are you after?"
+              "text": "No skipper reports out of Morro Bay in the last two weeks yet. The landing reported Starfire on Sun Sep 27: copper rockfish and bocaccio for 28 anglers, plus 8 lingcod. Recent reported activity: Low. Full picture: {{link:port:morro-bay}}"
             }
           ],
           "stop_reason": "end_turn",
@@ -81,10 +88,13 @@
     "intent": "reports",
     "texts": 1,
     "reply_contains": [
+      "reported Starfire",
+      "Recent reported activity: Low",
       "https://skippercast.com/ports/morro-bay?s=txt"
     ],
     "reply_not_contains": [
-      "{{"
+      "{{",
+      "%"
     ]
   }
 }
